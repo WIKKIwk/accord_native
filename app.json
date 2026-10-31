@@ -36,6 +36,13 @@
       ],
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Bo‘yoq hisoboti uchun rasm tanlashga ruxsat bering.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Material va qolip QR kodlarini skanerlash uchun kamera ruxsati kerak."

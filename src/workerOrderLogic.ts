@@ -1,6 +1,65 @@
 type Obj = Record<string, any>;
 export type QueueCursor = { epoch?: unknown; rev?: unknown };
 
+const paintFields = ['Mix', '1w Oq', '7w Oq', 'Qora', 'Sariq', 'Qizil', 'Ko‘k', 'Spirt'];
+export const paintOptions = [
+  { name: 'Mix', category: 'colors', fields: [] },
+  { name: 'Pantone', category: 'colors', fields: [] },
+  ...['Oq', 'Sariq', 'Qizil', 'Ko‘k', 'Tilla', 'Kumush', 'Qora'].map(name => ({ name, category: 'colors', fields: paintFields })),
+  { name: 'Lak', category: 'lacquers', fields: ['OPV lak', 'MAT lak'] },
+  { name: 'Spirtlar', category: 'solvents', fields: ['Aralashmalar', 'Etil', 'Metoxil', 'Rasvavitel', 'Izopropel'] },
+];
+
+export function returnedPaintItemsFromDraft(paint: Record<string, string>, dynamic: Record<string, string[]>) {
+  function valuesFor(usage: string, name: string, labels: string[]) {
+    return Object.fromEntries(labels.flatMap(label => {
+      const value = paint[`${usage}:${name}:${label}`]?.trim();
+      return value ? [[label, value.replace(',', '.')]] : [];
+    }));
+  }
+  return ['rasxot', 'astatka'].flatMap(usage => [
+    ...paintOptions.flatMap(option => {
+      const values = valuesFor(usage, option.name, [...option.fields, ...(dynamic[`${usage}:${option.name}`] ?? [])]);
+      return Object.keys(values).length ? [{ usage, category: option.category, name: option.name, values }] : [];
+    }),
+    ...(() => {
+      const values = valuesFor(usage, 'Pantone Mix', dynamic[`${usage}:Pantone Mix`] ?? []);
+      return Object.keys(values).length ? [{ usage, category: 'colors', name: 'Mix', values }] : [];
+    })(),
+  ]);
+}
+
+export function matchesMaterialAssignment(row: Obj, orderId: string, apparatus: string): boolean {
+  const station = typeof row.apparatus_id === 'string' && row.apparatus_id.trim() ? row.apparatus_id : row.apparatus;
+  return row.order_id === orderId && station === apparatus;
+}
+
+export function materialStartReadiness(interaction: Obj, section: Obj | undefined, orderWidth: unknown) {
+  if (interaction.start_materials_mode !== 'scan_required') return { ready: true, reason: '', unavailable: false };
+  if (section?.status !== 'ready' || !section.data) return { ready: false, reason: 'Homashyo qoidasi yuklanmadi', unavailable: true };
+  const data = section.data;
+  const assigned: string[] = Array.isArray(data.assigned_barcodes) ? data.assigned_barcodes.filter((value: unknown): value is string => typeof value === 'string' && !!value.trim()) : [];
+  const staged = Array.isArray(data.staged_barcodes) ? data.staged_barcodes : [];
+  const ids = new Set(assigned.map(value => value.trim().toUpperCase()));
+  if (data.requires_material === true && !assigned.length) return { ready: false, reason: 'Ish boshlash uchun homashyo biriktirilmagan', unavailable: true };
+  if (data.assignments_satisfied !== true) {
+    const rows: Obj[] = Array.isArray(data.assignments) ? data.assignments : [];
+    const relevant = rows.filter(row => ids.has(String(row.barcode ?? '').trim().toUpperCase()));
+    if (relevant.some(row => row.execution_status === 'needs_cutting')) return { ready: false, reason: 'Homashyo biriktirilgan, lekin apparatingizga katta. Rezka kutilmoqda', unavailable: true };
+    const mismatch = relevant.find(row => row.execution_status === 'width_mismatch');
+    if (mismatch) {
+      const roll = Number(mismatch.roll_width_mm);
+      const order = Number(orderWidth);
+      const detail = roll > 0 && order > 0 ? ` Rulon eni: ${roll} mm. Order eni: ${order} mm.` : '';
+      return { ready: false, reason: `Homashyo biriktirilgan, lekin rulon eni orderga kichik.${detail}`, unavailable: true };
+    }
+    return { ready: false, reason: 'Majburiy homashyo guruhlari to‘liq biriktirilmagan', unavailable: true };
+  }
+  if (data.policy === 'state_all' && assigned.length && !staged.length) return { ready: false, reason: 'Apparat oldiga homashyo olib kelinmagan', unavailable: true };
+  if (data.scan_satisfied !== true) return { ready: false, reason: data.policy === 'requirement_groups' ? 'Avval har bir majburiy guruhdan minimum homashyo QR scan qiling' : 'Avval state’dagi barcha homashyolarni QR scan qiling', unavailable: false };
+  return { ready: true, reason: '', unavailable: false };
+}
+
 /** Only a scoped, current server control can enable production actions. */
 export function validOrderControl(bootstrap: Obj | null, apparatus: string, orderId: string, baseline: QueueCursor | null): boolean {
   const state = bootstrap?.control_state;
@@ -10,9 +69,25 @@ export function validOrderControl(bootstrap: Obj | null, apparatus: string, orde
       !Number.isInteger(state.rev) || state.rev < 0 || !control || !control.interaction ||
       !Array.isArray(control.allowed_actions) || control.allowed_actions.some((action: unknown) => typeof action !== 'string') ||
       typeof control.state !== 'string' || typeof state.queue_state !== 'string' ||
+      typeof control.previous_stage_ready !== 'boolean' || typeof control.complete_requires_full_report !== 'boolean' ||
       (state.queue_state && control.state.toLowerCase() !== state.queue_state.toLowerCase()) ||
       !['active', 'freeze_requested', 'frozen'].includes(state.order_control)) return false;
-  const mode = control.interaction.mode;
+  const interaction = control.interaction;
+  const mode = interaction.mode;
+  const openingMode = interaction.opening_wip_mode ?? 'not_required';
+  if (!['hidden', 'scan_required'].includes(interaction.start_materials_mode) ||
+      !['not_required', 'scan_required', 'waiting'].includes(interaction.previous_wip_mode) ||
+      !['not_required', 'scan_required', 'waiting'].includes(openingMode) ||
+      !['not_required', 'scan_required'].includes(interaction.qolip_mode) ||
+      ['material_scan_required', 'assigned_materials_display_only', 'material_intake_allowed'].some(key => typeof interaction[key] !== 'boolean') ||
+      (control.allowed_actions.includes('resume') && typeof interaction.resume_input_required !== 'boolean') ||
+      (interaction.qolip_automatic_confirmation !== undefined && typeof interaction.qolip_automatic_confirmation !== 'boolean') ||
+      (interaction.qolip_policy_revision !== undefined && (!Number.isInteger(interaction.qolip_policy_revision) || interaction.qolip_policy_revision < 0)) ||
+      (interaction.qolip_automatic_confirmation === true && (interaction.qolip_mode !== 'scan_required' || !Number.isInteger(interaction.qolip_policy_revision))) ||
+      (interaction.start_materials_mode === 'scan_required') !== interaction.material_scan_required ||
+      (interaction.previous_wip_mode !== 'not_required' && !String(control.previous_stage ?? '').trim()) ||
+      (openingMode !== 'not_required' && interaction.previous_wip_mode !== 'not_required' &&
+        !(openingMode === 'scan_required' && interaction.previous_wip_mode === 'scan_required'))) return false;
   const stateModes: Record<string, string[]> = {
     pending: ['fresh_start', 'fresh_start_blocked', 'requeued_waiting', 'requeued_ready', 'waiting_previous_stage'],
     print_preflight: ['fresh_start', 'fresh_start_blocked', 'freeze_requested'],
@@ -37,17 +112,41 @@ export function validOrderControl(bootstrap: Obj | null, apparatus: string, orde
     const actions = control.state === 'in_progress' ? ['pause'] : control.state === 'print_preflight' ? ['freeze'] : [];
     if (control.allowed_actions.length !== actions.length || actions.some(action => !control.allowed_actions.includes(action))) return false;
   }
+  if (['fresh_start_blocked', 'requeued_waiting', 'waiting_previous_stage'].includes(mode) &&
+      (typeof interaction.blocking_reason_code !== 'string' || !interaction.blocking_reason_code.trim())) return false;
+  if (control.closing_output_batch_id &&
+      (control.state !== 'paused' || mode !== 'paused' || !control.allowed_actions.includes('complete'))) return false;
+  if (control.temporarily_paused !== undefined && typeof control.temporarily_paused !== 'boolean') return false;
+  if (control.temporarily_paused === true && (control.state !== 'paused' || mode !== 'paused')) return false;
+  if ((control.temporary_pause != null || control.cancel_start != null) &&
+      (control.state !== 'in_progress' || mode !== 'in_progress' || control.temporarily_paused === true)) return false;
   const hold = control.print_preflight;
+  if (hold !== undefined && (!hold || typeof hold.hold_id !== 'string' || !hold.hold_id.trim() ||
+      typeof hold.idempotency_key !== 'string' || !hold.idempotency_key.trim() ||
+      typeof hold.order_id !== 'string' || !hold.order_id.trim() || typeof hold.apparatus !== 'string' || !hold.apparatus.trim() ||
+      !Number.isInteger(hold.revision ?? 0) || (hold.revision ?? 0) < 0 ||
+      !['held', 'running', 'passed', 'failed', 'cancelled', 'consumed'].includes(hold.status))) return false;
   if (hold && ['held', 'running'].includes(hold.status) &&
       !(control.state === 'print_preflight' && ((mode === 'fresh_start_blocked' && !control.allowed_actions.length) ||
         (mode === 'freeze_requested' && control.allowed_actions.length === 1 && control.allowed_actions[0] === 'freeze')))) return false;
-  if (state.order_control === 'frozen' && (control.interaction.mode !== 'frozen' || control.allowed_actions.length)) return false;
-  if (state.order_control === 'active' && (control.state === 'frozen' || control.interaction.mode === 'frozen' ||
-      control.stage_control_state === 'frozen')) return false;
-  const freezeRequested = state.order_control === 'freeze_requested' || control.stage_control_state === 'freeze_requested';
-  if (freezeRequested && control.interaction.mode === 'freeze_requested' && !control.freeze_request) return false;
-  if (freezeRequested && control.interaction.mode !== 'freeze_requested' && control.allowed_actions.length) return false;
-  if (!freezeRequested && control.interaction.mode === 'freeze_requested') return false;
+  let orderControl = state.order_control;
+  if (orderControl === 'active' && ['frozen', 'freeze_requested'].includes(control.stage_control_state)) {
+    if (!String(control.stage_node_id ?? '').trim()) return false;
+    if (control.stage_control_state === 'freeze_requested' &&
+        (control.freeze_request?.scope !== 'stage' || control.freeze_request?.stage_node_id !== control.stage_node_id)) return false;
+    orderControl = control.stage_control_state;
+  }
+  if (orderControl === 'frozen' && (mode !== 'frozen' || control.allowed_actions.length)) return false;
+  if (orderControl === 'freeze_requested' && mode === 'freeze_requested') {
+    const request = control.freeze_request;
+    const wildcard = request && (request.scope ?? 'order') === 'order' && !request.stage_node_id && !request.target_apparatus && !request.target_session_id && !request.target_worker_ref;
+    if (!request || typeof request.request_id !== 'string' || !request.request_id.trim() || request.status !== 'pending' ||
+        (!String(request.target_apparatus ?? '').trim() && !wildcard) ||
+        (control.state !== 'print_preflight' && !wildcard && !String(request.target_session_id ?? '').trim())) return false;
+  } else if (orderControl === 'freeze_requested') {
+    if (state.order_control !== 'freeze_requested' || control.allowed_actions.length ||
+        !['fresh_start_blocked', 'requeued_waiting', 'waiting_previous_stage', 'frozen', 'completed'].includes(mode)) return false;
+  } else if (orderControl === 'active' && (mode === 'frozen' || control.state === 'frozen' || mode === 'freeze_requested')) return false;
   if (baseline && typeof baseline.epoch === 'string' && baseline.epoch &&
       (baseline.epoch !== state.epoch || (typeof baseline.rev === 'number' && state.rev < baseline.rev))) return false;
   return true;
