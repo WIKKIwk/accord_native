@@ -1,6 +1,6 @@
 import { Button, Host } from '@expo/ui';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
 import { readWorkerActionControl, reactivationTarget, runWorkerMenuAction, workerActionRequest, workerLongPressMenu, type ReactivationTarget, type WorkerMenu, type WorkerMenuAction } from '../workerLongPress';
 import type { QueueCursor } from '../workerOrderLogic';
@@ -9,6 +9,7 @@ import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 import { WorkerAlert } from './WorkerAlert';
 import type { WorkerAlertData } from './workerDialogTypes';
+import { WorkerIconButton } from './WorkerIconButton';
 
 type Props = { session: Session; apparatusId: string; apparatusName: string; order: QueueOrder; completed: boolean; getCursor: () => QueueCursor | null; onChoose: (action: 'astatka' | 'complete') => void; onResult: (message: string, showNotice: boolean) => void };
 type Reactivation = { target: ReactivationTarget | null; reason: string; stage: string };
@@ -106,6 +107,13 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
   const actionButton = (action: WorkerMenuAction, variant: 'filled' | 'outlined' | 'text' = 'outlined') => <Host key={action} matchContents={{ vertical: true }} style={styles.host}><Button label={labels[action]} variant={variant} disabled={busy} onPress={() => choose(action)} /></Host>;
 
   return <View style={styles.content}>
+    {Platform.OS === 'ios' && <View style={styles.header}>
+      <View style={styles.heading}>
+        <Text style={[styles.title, { color: colors.text }]}>Amallar</Text>
+        <Text style={[styles.body, { color: colors.muted }]}>{[order.code, order.title].filter(Boolean).join(' · ')}</Text>
+      </View>
+      <WorkerIconButton icon="close" label="Yopish" onPress={() => close?.()} tonal />
+    </View>}
     {loading && <ActivityIndicator color={colors.icon} />}
     {!!error && <Text style={styles.error}>{error}</Text>}
     {completed && reactivation && <>
@@ -126,4 +134,4 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
   </View>;
 }
 
-const styles = StyleSheet.create({ content: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 }, title: { fontSize: 20, fontWeight: '600', lineHeight: 27 }, body: { fontSize: 14, lineHeight: 20 }, host: { width: '100%' }, error: { color: '#a52626', fontSize: 14 } });
+const styles = StyleSheet.create({ content: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', gap: 12 }, heading: { flex: 1 }, title: { fontSize: 20, fontWeight: '600', lineHeight: 27 }, body: { fontSize: 14, lineHeight: 20 }, host: { width: '100%' }, error: { color: '#a52626', fontSize: 14 } });

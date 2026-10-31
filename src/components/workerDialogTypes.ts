@@ -6,7 +6,7 @@ export type WorkerAlertProps = { alert: WorkerAlertData | null; onDismiss: () =>
 export type WorkerFormDialogProps = {
   visible: boolean; title: string; children: ReactNode;
   confirmLabel: string; onConfirm: () => void; confirmDisabled?: boolean;
-  cancelLabel?: string; onCancel: () => void; cancelDisabled?: boolean;
+  cancelLabel?: string; onCancel: () => void; cancelDisabled?: boolean; preventDismiss?: boolean;
 };
 
 export type WorkerRadioChoiceProps = { label: string; selected: boolean; disabled?: boolean; onPress: () => void };

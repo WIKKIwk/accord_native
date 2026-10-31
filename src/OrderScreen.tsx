@@ -3,7 +3,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerOrderThumbnail } from './components/WorkerOrderThumbnail';
@@ -76,6 +76,8 @@ function NativeButton({ label, onPress, disabled, variant, height }: { label: st
 
 export function OrderScreen({ session, apparatusId, orderId, preview, queueCursor, initialAction, onClose, onChanged }: Props) {
   const colors = useWorkerColors();
+  const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
+  const sheetCard = Platform.OS === 'ios' ? PlatformColor('secondarySystemGroupedBackground') : colors.surface;
   const closeSheet = useContext(WorkerSheetCloseContext) ?? onClose;
   const [detail, setDetail] = useState<Obj | null>(null);
   const [bootstrap, setBootstrap] = useState<Obj | null>(null);
@@ -629,7 +631,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     const imageId = preview?.imageId || String(order.image_id ?? '');
     if (imageId) query.set('image_id', imageId);
     const url = new URL(`/v1/mobile/admin/production-maps/order-image/view?${query}`, session.baseUrl);
-    return <View style={[styles.imageViewer, { backgroundColor: colors.field }]}>
+    return <View style={[styles.imageViewer, { backgroundColor: sheetBackground }]}>
       <View style={styles.imageHeader}><Text style={[styles.section, { color: colors.text }]}>Buyurtma rasmi</Text><WorkerIconButton icon="close" label="Rasmni yopish" onPress={() => setImageOpen(false)} tonal /></View>
       {token && url.protocol === 'https:' && url.origin === session.baseUrl && !imageError ? <Image source={{ uri: url.toString(), headers: { Authorization: `Bearer ${token}` }, cacheKey: JSON.stringify(['order-image', session.imageCacheScope, session.baseUrl, orderId, imageId]) }} style={styles.image} contentFit="contain" cachePolicy="memory-disk" onError={() => setImageError(true)} /> : <Text style={{ color: colors.muted }}>Rasm mavjud emas.</Text>}
     </View>;
@@ -661,13 +663,13 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     setNewPaintField(''); newPaintFieldValue.set(''); setError('');
   }
 
-  return <View style={[styles.screen, { backgroundColor: colors.field }]}><ScrollView nestedScrollEnabled contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-    <View style={styles.header}>
+  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps="handled">
+    <View style={[styles.header, Platform.OS === 'ios' && iosStyles.header]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Buyurtma rasmini ochish" onPress={() => { setImageError(false); setImageOpen(true); }}><WorkerOrderThumbnail session={session} orderId={orderId} imageId={preview?.imageId ?? ''} active size={44} backgroundColor={colors.surface} iconColor={colors.muted} /></Pressable>
       <View style={styles.heading}><Text style={[styles.small, { color: colors.muted }]}>Buyurtma raqami:</Text><Text numberOfLines={1} style={[styles.code, { color: colors.text }]}>{code}</Text></View>
       <WorkerIconButton icon="close" label="Yopish" onPress={closeSheet} tonal />
     </View>
-    {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: colors.surface }]}>
+    {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }]}>
       {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
         <NativeButton label="Kameraga ruxsat berish" onPress={() => { void askPermission(); }} />}
       <Text style={[styles.scannerText, { color: colors.muted }]}>Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling</Text>
@@ -679,7 +681,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
         </View>}
       </>}
     </View>}
-    <View style={[styles.card, { backgroundColor: colors.surface }]}>
+    <View style={[styles.card, { backgroundColor: sheetCard }]}>
     {loading && <ActivityIndicator color={colors.icon} />}
     {!!error && !selected && !delivery && <Text style={styles.error}>{error}</Text>}
     {!!success && <Text style={styles.success}>{success}</Text>}
@@ -727,6 +729,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   </ScrollView>
     <WorkerFormDialog visible={!!selected} title={paintEditor ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori'}
       cancelLabel={paintEditor ? 'Orqaga' : 'Bekor qilish'} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
+      preventDismiss={paintEditor}
       confirmLabel={paintEditor ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash'}
       confirmDisabled={busy || photoBusy || (!paintEditor && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && loadedDraftScope !== draftScope)))}
       onConfirm={() => { if (paintEditor) { setError(''); setPaintEditor(false); } else void submit(selected); }}>
@@ -761,4 +764,5 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       onChoose={setDeliveryChoice} onCancel={() => setDelivery(null)} onConfirm={() => { void confirmMaterialDelivery(); }} />
   </View>;
 }
+const iosStyles = StyleSheet.create({ content: { paddingHorizontal: 16, paddingTop: 8 }, header: { paddingHorizontal: 0 } });
 const styles = StyleSheet.create({ screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},header:{flexDirection:'row',alignItems:'center',paddingHorizontal:14,paddingVertical:8,gap:10},heading:{flex:1},code:{fontSize:22,fontWeight:'600'},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},section:{fontSize:20,fontWeight:'600',color:'#192b4d',marginBottom:4},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},field:{gap:3},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},imageViewer:{flex:1,padding:16},imageHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},image:{flex:1,width:'100%'},scannerPanel:{borderRadius:18,padding:12,alignItems:'center',gap:10},quickCamera:{width:218,height:218,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},flex:{flex:1}});

@@ -1,6 +1,6 @@
 import { Button, Host } from '@expo/ui';
 import { useCallback, useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, PlatformColor, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import type { CompletedOrder } from '../workerApi';
@@ -24,6 +24,8 @@ function kind(batch: Batch) {
 
 export function WorkerWipHistory({ session, order, onClose }: Props) {
   const colors = useWorkerColors();
+  const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
+  const sheetCard = Platform.OS === 'ios' ? PlatformColor('secondarySystemGroupedBackground') : colors.surface;
   const close = useContext(WorkerSheetCloseContext) ?? onClose;
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,16 +71,16 @@ export function WorkerWipHistory({ session, order, onClose }: Props) {
     <View style={styles.header}><View style={styles.flex}><Text style={[styles.heading, { color: colors.text }]}>Rulonlar tarixi</Text><Text style={{ color: colors.muted }}>{[order.code, order.title].filter(Boolean).join(' · ')}</Text></View><WorkerIconButton icon="close" label="Yopish" onPress={close} tonal /></View>
     {loading ? <ActivityIndicator color={colors.icon} /> : null}
     {!!error && <><Text style={styles.error}>{error}</Text><Host matchContents={{ vertical: true }}><Button label="Qayta urinish" onPress={() => { setLoading(true); setError(''); setReload(old => old + 1); }} /></Host></>}
-    {!loading && !error && <View style={[styles.card, { backgroundColor: colors.surface }]}><Text style={[styles.heading, { color: colors.text }]}>Jami: {batches.length} ta rulon</Text><Text style={{ color: colors.muted }}>Brutto: {metric(totals.gross, totals.grossCount, 'kg')} · Netto: {metric(totals.net, totals.netCount, 'kg')}</Text><Text style={{ color: colors.muted }}>Metr: {metric(totals.meters, totals.meterCount, 'm')}</Text>{!batches.length && <Text style={{ color: colors.muted }}>Rulonlar topilmadi.</Text>}</View>}
+    {!loading && !error && <View style={[styles.card, { backgroundColor: sheetCard }]}><Text style={[styles.heading, { color: colors.text }]}>Jami: {batches.length} ta rulon</Text><Text style={{ color: colors.muted }}>Brutto: {metric(totals.gross, totals.grossCount, 'kg')} · Netto: {metric(totals.net, totals.netCount, 'kg')}</Text><Text style={{ color: colors.muted }}>Metr: {metric(totals.meters, totals.meterCount, 'm')}</Text>{!batches.length && <Text style={{ color: colors.muted }}>Rulonlar topilmadi.</Text>}</View>}
   </>;
-  return <View style={styles.flex}><FlatList nestedScrollEnabled style={{ backgroundColor: colors.field }} contentContainerStyle={styles.content} data={batches} keyExtractor={batch => String(batch.batch_id)} ListHeaderComponent={header} renderItem={({ item, index }) => {
+  return <View style={styles.flex}><FlatList nestedScrollEnabled style={{ backgroundColor: sheetBackground }} contentContainerStyle={styles.content} data={batches} keyExtractor={batch => String(batch.batch_id)} ListHeaderComponent={header} renderItem={({ item, index }) => {
     const title = value(item.label_item_name) || value(item.label_item_code) || `Rulon ${index + 1}`;
     const rows = [
       ['Miqdor', `${item.produced_qty ?? '—'} ${value(item.uom)}`.trim()], ['Boshlangan', date(item.started_at_unix)], ['Yakunlangan', date(item.completed_at_unix)],
       ['Aparat', value(item.apparatus)], ['Joylashuv', value(item.current_location) || value(item.current_apparatus)],
       ['Keyingi aparat', value(item.next_apparatus)], ['Ishchi', value(item.worker_display_name) || value(item.executor_name) || value(item.worker_ref)],
     ].filter(row => row[1]);
-    return <Pressable onPress={() => setAlert({ title, message: [...rows.map(row => `${row[0]}: ${row[1]}`), value(item.qr_payload) ? `QR: ${value(item.qr_payload)}` : ''].filter(Boolean).join('\n') })} style={[styles.card, { backgroundColor: colors.surface }]}>
+    return <Pressable onPress={() => setAlert({ title, message: [...rows.map(row => `${row[0]}: ${row[1]}`), value(item.qr_payload) ? `QR: ${value(item.qr_payload)}` : ''].filter(Boolean).join('\n') })} style={[styles.card, { backgroundColor: sheetCard }]}>
       <Text style={[styles.heading, { color: colors.text }]}>{index + 1}. {title} · {kind(item)}</Text>
       {rows.map(([label, text]) => <Text key={label} style={{ color: colors.muted }}>{label}: {text}</Text>)}
     </Pressable>;
