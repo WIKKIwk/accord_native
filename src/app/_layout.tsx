@@ -1,18 +1,14 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import { useWorkerColors } from '../components/useWorkerColors';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
-
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
-  );
+export default function RootLayout() {
+  const colors = useWorkerColors();
+  useEffect(() => {
+    if (Platform.OS === 'android') void SystemUI.setBackgroundColorAsync(colors.background);
+  }, [colors.background]);
+  return <><StatusBar style="auto" /><Stack screenOptions={{ headerShown: false, contentStyle: Platform.OS === 'android' ? { backgroundColor: colors.background } : undefined }} /></>;
 }
