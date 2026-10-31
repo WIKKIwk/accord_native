@@ -54,9 +54,11 @@ export function WorkerDrawer({ visible, onOpen, onClose, onSelect, displayName, 
             </Column>
           </Host>
         </ScrollView>
-        <Host matchContents={{ vertical: true }} style={styles.logout}>
-          <Button label="Chiqish" variant="filled" onPress={() => select('logout')} />
-        </Host>
+        <View style={styles.logout}>
+          <Host matchContents={{ vertical: true }} style={styles.logoutHost}>
+            <Button label="Chiqish" variant="filled" style={{ width: '100%' }} onPress={() => select('logout')} />
+          </Host>
+        </View>
       </View>}>
       {children}
     </Drawer>
@@ -70,4 +72,5 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   items: { width: '100%' },
   logout: { width: '100%', paddingHorizontal: 12 },
+  logoutHost: { width: '100%' },
 });
