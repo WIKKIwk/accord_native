@@ -631,7 +631,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
   }
   if (scanner === 'paintPhoto') return <View style={styles.cameraScreen}><CameraView ref={camera} style={styles.camera} mode="picture" onCameraReady={() => setCameraReady(true)} /><Text style={styles.cameraText}>Bo‘yoq hisobotini suratga oling</Text><NativeButton label={photoBusy ? 'Yuklanmoqda…' : 'Suratga olish'} disabled={photoBusy || !cameraReady} variant="filled" onPress={() => { void takePaintPhoto(); }} /><NativeButton label="Bekor qilish" disabled={photoBusy} onPress={() => setScanner(null)} /></View>;
-  if (scanner) return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang'}</Text><NativeButton label="Bekor qilish" onPress={() => setScanner(null)} /></View>;
+  if (scanner) return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang'}</Text><NativeButton label="Bekor qilish" onPress={() => setScanner(null)} /></View>;
   if (imageOpen) {
     const token = activeSessionToken(session);
     const query = new URLSearchParams({ order_id: orderId });
@@ -677,9 +677,9 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={closeSheet} style={[styles.close, { backgroundColor: colors.surface }]}><SymbolView name={{ android: 'close', ios: 'xmark', web: 'close' }} size={21} tintColor={colors.icon} /></Pressable>
     </View>
     {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: colors.surface }]}>
-      {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
+      {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
         <NativeButton label="Kameraga ruxsat berish" onPress={() => { void askPermission(); }} />}
-      <Text style={[styles.scannerText, { color: colors.muted }]}>Qolip yoki homashyo QR kodini tirqishga olib keling</Text>
+      <Text style={[styles.scannerText, { color: colors.muted }]}>Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling</Text>
       {interaction.opening_wip_mode !== 'scan_required' && <>
         <Pressable accessibilityRole="button" accessibilityLabel="Kodni qo‘lda kiritish" onPress={() => setManualScanVisible(value => !value)} style={styles.manualToggle}>
           <SymbolView name={{ android: 'edit', ios: 'pencil', web: 'edit' }} size={20} tintColor={colors.icon} />

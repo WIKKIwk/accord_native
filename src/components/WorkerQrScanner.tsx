@@ -90,11 +90,11 @@ export function WorkerQrScanner({ session, apparatusId, onClose, onOrder }: Prop
       <Column spacing={8}>
         <Button label="‹ Orqaga" variant="text" onPress={onClose} />
         <Text textStyle={{ fontSize: 22, fontWeight: '700', color: '#172a20' }}>QR skanerlash</Text>
-        <Text textStyle={{ fontSize: 14, color: '#52635a' }}>Rulon QR kodini skanerlang. Buyurtma ochiladi.</Text>
+        <Text textStyle={{ fontSize: 14, color: '#52635a' }}>Rulon kodini kamera markaziga olib keling. Buyurtma ochiladi.</Text>
       </Column>
     </Host>
     {!apparatusId ? <View style={styles.message}><Host matchContents colorScheme="light"><Text>Avval aparatni tanlang.</Text></Host></View>
-      : permission?.granted ? <CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr'] }} onBarcodeScanned={busy || !!error ? undefined : ({ data }) => { void scan(data); }} />
+      : permission?.granted ? <CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }} onBarcodeScanned={busy || !!error ? undefined : ({ data }) => { void scan(data); }} />
       : <View style={styles.message}><Host matchContents colorScheme="light"><Button label="Kameraga ruxsat berish" onPress={() => { void requestPermission(); }} /></Host></View>}
     {busy ? <ActivityIndicator size="large" color="#285140" style={styles.status} /> : null}
     {error ? <Host matchContents={{ vertical: true }} style={styles.message} colorScheme="light" seedColor="#285140"><Column spacing={8}>
