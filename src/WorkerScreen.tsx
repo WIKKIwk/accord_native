@@ -33,8 +33,10 @@ export function WorkerScreen({ session, onLogout }: Props) {
   const [headerSize, setHeaderSize] = useState(70);
   const [orderFontLoaded] = useFonts({
     'GoogleSans-Regular': require('../assets/fonts/GoogleSans-Regular.ttf'),
+    'GoogleSans-Medium': require('../assets/fonts/GoogleSans-Medium.ttf'),
   });
   const orderFontFamily = orderFontLoaded ? 'GoogleSans-Regular' : undefined;
+  const orderHeadlineFontFamily = orderFontLoaded ? 'GoogleSans-Medium' : undefined;
   const [queue, setQueue] = useState<WorkerQueue | null>(null);
   const [machineId, setMachineId] = useState('');
   const [activeOrder, setActiveOrder] = useState<{ apparatusId: string; orderId: string } | null>(null);
@@ -128,14 +130,14 @@ export function WorkerScreen({ session, onLogout }: Props) {
           {queue && !queue.machines.length ? <ListItem supportingText="Administrator aparatni hisobingizga biriktirishi kerak.">Bosma aparati topilmadi</ListItem> : null}
           {tabId === 'completed' && !completed.length && !loading ? <ListItem>Tugallangan buyurtmalar yo‘q</ListItem> : null}
           {tabId === 'completed' ? completed.map((order, index) => (
-            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} first={index === 0} last={index === completed.length - 1} fontFamily={orderFontFamily}
+            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} first={index === 0} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
               onPress={() => Alert.alert([order.code, order.title].filter(Boolean).join(' · '), [order.customer, order.issueNote].filter(Boolean).join('\n') || 'Tugallangan buyurtma')} />
           )) : null}
           {pageMachine && !pageOrders.length && !loading ? <ListItem>Buyurtmalar topilmadi</ListItem> : null}
           {tabId !== 'completed' ? pageOrders.map((order, index) => (
-            <WorkerOrderListItem key={order.id} first={index === 0} last={index === pageOrders.length - 1} fontFamily={orderFontFamily}
+            <WorkerOrderListItem key={order.id} first={index === 0} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
               onPress={() => setActiveOrder({ apparatusId: tabId, orderId: order.id })} />

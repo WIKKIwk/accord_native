@@ -1,9 +1,9 @@
 import { ListItem, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { clickable, clip, padding, Shapes } from '@expo/ui/jetpack-compose/modifiers';
 
-type Props = { headline: string; supportingText: string; onPress: () => void; first?: boolean; last?: boolean; fontFamily?: string };
+type Props = { headline: string; supportingText: string; onPress: () => void; first?: boolean; last?: boolean; fontFamily?: string; headlineFontFamily?: string };
 
-export function WorkerOrderListItem({ headline, supportingText, onPress, first = false, last = false, fontFamily }: Props) {
+export function WorkerOrderListItem({ headline, supportingText, onPress, first = false, last = false, fontFamily, headlineFontFamily }: Props) {
   const colors = useMaterialColors();
   return <ListItem colors={{ containerColor: colors.surface }} modifiers={[
     padding(16, first ? 0 : 1, 16, last ? 12 : 1),
@@ -14,7 +14,7 @@ export function WorkerOrderListItem({ headline, supportingText, onPress, first =
     clickable(onPress),
   ]}>
     <ListItem.HeadlineContent>
-      <Text style={fontFamily ? { fontFamily } : undefined}>{headline}</Text>
+      <Text style={headlineFontFamily ? { fontFamily: headlineFontFamily } : { fontWeight: '500' }}>{headline}</Text>
     </ListItem.HeadlineContent>
     {supportingText ? <ListItem.SupportingContent>
       <Text style={fontFamily ? { fontFamily } : undefined}>{supportingText}</Text>

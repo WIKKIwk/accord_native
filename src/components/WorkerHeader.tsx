@@ -31,7 +31,9 @@ export function WorkerHeader({ search, onSearchChange, onMenu, onProfile }: Prop
             onChangeText={onSearchChange}
             placeholder="Buyurtmani izlash"
             placeholderTextColor={colors.muted}
+            textAlign="center"
             textStyle={{ color: colors.text, fontSize: 15 }}
+            style={{ width: '100%', paddingHorizontal: 40 }}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
@@ -53,8 +55,8 @@ export function WorkerHeader({ search, onSearchChange, onMenu, onProfile }: Prop
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingTop: 6, paddingBottom: 6, minHeight: 70 },
   iconButton: { width: 38, height: 48, justifyContent: 'center', alignItems: 'center' },
-  field: { flex: 1, minHeight: 56, flexDirection: 'row', alignItems: 'center', borderRadius: 30, paddingLeft: 16, paddingRight: 4 },
+  field: { flex: 1, minHeight: 56, flexDirection: 'row', alignItems: 'center', borderRadius: 30, paddingHorizontal: 4 },
   inputHost: { flex: 1 },
-  clear: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  clear: { position: 'absolute', right: 4, width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   profile: { width: 38, height: 48, justifyContent: 'center', alignItems: 'center' },
 });
