@@ -1,8 +1,10 @@
-import { Column, Host } from '@expo/ui/jetpack-compose';
-import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Column, Host, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Children, isValidElement, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { RefreshControl, View } from 'react-native';
 import { GestureDetector, useNativeGesture, type PanGesture } from 'react-native-gesture-handler';
 import Animated, { useAnimatedScrollHandler, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import { WorkerOrderListItem } from './WorkerOrderListItem';
+import { WorkerOrderPalette } from './workerOrderPalette';
 
 type Props = {
   children: ReactNode; onRefresh: () => Promise<void>; active: boolean; pagerGesture?: PanGesture;
@@ -12,6 +14,7 @@ type Props = {
 
 export function WorkerQueueList({ children, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset }: Props) {
   const [refreshing, setRefreshing] = useState(false);
+  const colors = useMaterialColors();
   const ownHeaderOffset = useSharedValue(0);
   const scrollGestureConfig = useMemo(() => ({ requireToFail: pagerGesture }), [pagerGesture]);
   const scrollGesture = useNativeGesture(scrollGestureConfig);
@@ -46,8 +49,10 @@ export function WorkerQueueList({ children, onRefresh, active, pagerGesture, hea
     },
   });
 
-  return <GestureDetector gesture={scrollGesture}><Animated.FlatList style={{ flex: 1 }} contentContainerStyle={{ paddingTop: topInset }} data={Children.toArray(children)}
-    onScroll={onScroll} scrollEventThrottle={16} nestedScrollEnabled removeClippedSubviews={false}
+  return <WorkerOrderPalette.Provider value={colors}><GestureDetector gesture={scrollGesture}><Animated.FlatList style={{ flex: 1 }} contentContainerStyle={{ paddingTop: topInset }} data={Children.toArray(children)}
+    onScroll={onScroll} scrollEventThrottle={16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
     refreshControl={<RefreshControl refreshing={refreshing} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} />}
-    renderItem={({ item }) => <View collapsable={false}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>{item}</Column></Host></View>} /></GestureDetector>;
+    renderItem={({ item }) => <View collapsable={false}>{isValidElement(item) && item.type === WorkerOrderListItem
+      ? item
+      : <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>{item}</Column></Host>}</View>} /></GestureDetector></WorkerOrderPalette.Provider>;
 }
