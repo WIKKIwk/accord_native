@@ -254,6 +254,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
+              statusText={statusLabel[order.state] ?? order.state} statusDetail={order.customer}
               onLongPress={() => openOrderActions(tabId, order, false)}
               onPress={() => { if (loadedScope !== windowScope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order }); }} />
           )) : null}

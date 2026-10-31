@@ -7,17 +7,25 @@ import { orderCardAppearance, type OrderCardTone } from '../workerOrderAppearanc
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
 
-type Props = { headline: string; supportingText: string; onPress: () => void; onLongPress?: () => void; session: Session; orderId: string; imageId: string; imageActive: boolean; cardTone?: OrderCardTone; first?: boolean; last?: boolean; fontFamily?: string; headlineFontFamily?: string };
+type Props = { headline: string; supportingText: string; statusText?: string; statusDetail?: string; onPress: () => void; onLongPress?: () => void; session: Session; orderId: string; imageId: string; imageActive: boolean; cardTone?: OrderCardTone; first?: boolean; last?: boolean; fontFamily?: string; headlineFontFamily?: string };
 
-export function WorkerOrderListItem({ headline, supportingText, onPress, onLongPress, session, orderId, imageId, imageActive, cardTone = 'neutral', fontFamily, headlineFontFamily }: Props) {
+const statusColors: Partial<Record<OrderCardTone, string>> = {
+  print_preflight: '#BF5AF2', print_preflight_passed: '#30D158', in_progress: '#30D158',
+  waiting_next_stage: '#0A84FF', paused: '#FFD60A', frozen: '#FF453A', issue: '#FF453A', completed: '#30D158',
+};
+
+export function WorkerOrderListItem({ headline, supportingText, statusText, statusDetail, onPress, onLongPress, session, orderId, imageId, imageActive, cardTone = 'neutral', fontFamily, headlineFontFamily }: Props) {
   const colors = useWorkerColors();
   const dark = useColorScheme() === 'dark';
+  const queueStatus = dark && statusText !== undefined;
   const status = dark && cardTone === 'history_completed' ? { label: 'Tugallangan', color: '#30D158' }
-    : dark && cardTone === 'history_partial' ? { label: 'Qisman', color: '#FFD60A' } : null;
-  const appearance = orderCardAppearance(status ? 'neutral' : cardTone, dark ? '#101410' : '#FFFFFF', dark);
+    : dark && cardTone === 'history_partial' ? { label: 'Qisman', color: '#FFD60A' }
+    : queueStatus && statusText ? { label: statusText, color: statusColors[cardTone] ?? '#8E8E93' } : null;
+  const appearance = orderCardAppearance(status || queueStatus ? 'neutral' : cardTone, dark ? '#101410' : '#FFFFFF', dark);
   const modifiers = [...(appearance.gradientColors ? [background({ type: 'linearGradient', colors: appearance.gradientColors, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } })] : appearance.color ? [listRowBackground(appearance.color)] : []), ...(onLongPress ? [onLongPressGesture(onLongPress)] : [])];
   const textStyle = fontFamily ? { fontFamily } : undefined;
-  const details = supportingText ? <Text textStyle={textStyle} modifiers={[foregroundStyle({ type: 'color', color: appearance.secondary ?? 'secondaryLabel' })]}>{supportingText}</Text> : null;
+  const detailsText = queueStatus ? statusDetail ?? '' : supportingText;
+  const details = detailsText ? <Text textStyle={textStyle} modifiers={[foregroundStyle({ type: 'color', color: appearance.secondary ?? 'secondaryLabel' })]}>{detailsText}</Text> : null;
   return <ListItem onPress={onPress} modifiers={modifiers} leading={<WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active={imageActive} backgroundColor={colors.field} iconColor={colors.muted} />} supportingText={status ? <VStack alignment="leading" spacing={2}>
     {details}
     <Text modifiers={[font({ textStyle: 'caption', weight: 'medium' }), foregroundStyle(status.color)]}>{`● ${status.label}`}</Text>

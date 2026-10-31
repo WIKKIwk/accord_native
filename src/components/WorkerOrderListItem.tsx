@@ -4,7 +4,7 @@ import { orderCardAppearance, type OrderCardTone } from '../workerOrderAppearanc
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
 
-type Props = { headline: string; supportingText: string; onPress: () => void; onLongPress?: () => void; session: Session; orderId: string; imageId: string; imageActive: boolean; cardTone?: OrderCardTone; first?: boolean; last?: boolean; fontFamily?: string; headlineFontFamily?: string };
+type Props = { headline: string; supportingText: string; statusText?: string; statusDetail?: string; onPress: () => void; onLongPress?: () => void; session: Session; orderId: string; imageId: string; imageActive: boolean; cardTone?: OrderCardTone; first?: boolean; last?: boolean; fontFamily?: string; headlineFontFamily?: string };
 
 export function WorkerOrderListItem({ headline, supportingText, onPress, onLongPress, session, orderId, imageId, imageActive, cardTone = 'neutral', fontFamily, headlineFontFamily }: Props) {
   const colors = useWorkerColors();
