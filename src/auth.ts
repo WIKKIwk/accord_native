@@ -8,6 +8,7 @@ export type Session = {
   assigned_apparatus: string[];
   assigned_apparatus_labels: string[];
   baseUrl: string;
+  imageCacheScope: string;
 };
 
 type Credentials = { baseUrl: string; phone: string; code: string; ref: string; role: string };
@@ -21,6 +22,7 @@ let activeSession: Session | null = null;
 let sessionEpoch = 0;
 let storageQueue: Promise<void> = Promise.resolve();
 let refreshing: { session: Session; epoch: number; promise: Promise<boolean> } | null = null;
+const newImageCacheScope = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 
 function inStorageOrder<T>(action: () => Promise<T>): Promise<T> {
   const result = storageQueue.then(action);
@@ -52,6 +54,7 @@ function parseSession(value: unknown): Session | null {
       token: raw.token.trim(), baseUrl: normalizeServer(raw.baseUrl),
       profile: raw.profile as Record<string, unknown>, capabilities: strings(raw.capabilities),
       assigned_apparatus: strings(raw.assigned_apparatus), assigned_apparatus_labels: strings(raw.assigned_apparatus_labels),
+      imageCacheScope: typeof raw.imageCacheScope === 'string' && raw.imageCacheScope ? raw.imageCacheScope : newImageCacheScope(),
     };
   } catch { return null; }
 }
@@ -105,7 +108,13 @@ export async function loadSession(): Promise<Session | null> {
     else {
       try {
         const [token, metadata] = await Promise.all([SecureStore.getItemAsync(TOKEN_KEY), SecureStore.getItemAsync(SESSION_KEY)]);
-        if (token && metadata) result = parseSession({ ...JSON.parse(metadata), token });
+        if (token && metadata) {
+          const stored = JSON.parse(metadata) as Record<string, unknown>;
+          result = parseSession({ ...stored, token });
+          if (result && !stored.imageCacheScope) {
+            await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify({ ...stored, imageCacheScope: result.imageCacheScope })).catch(() => {});
+          }
+        }
       } catch { result = null; }
     }
     if (epoch !== sessionEpoch) return null;
@@ -164,7 +173,7 @@ async function authenticate(server: string, phone: string, code: string): Promis
   let body: Record<string, unknown>;
   try { body = await response.json() as Record<string, unknown>; }
   catch { throw new Error('Server javobini o‘qib bo‘lmadi.'); }
-  const session = parseSession({ ...body, baseUrl: server });
+  const session = parseSession({ ...body, baseUrl: server, imageCacheScope: newImageCacheScope() });
   if (!session) throw new Error('Server noto‘g‘ri sessiya qaytardi.');
   return session;
 }
@@ -209,6 +218,7 @@ export async function refreshSession(session: Session, failedToken: string): Pro
       if (credentials.baseUrl !== session.baseUrl || credentials.ref !== account.ref || credentials.role !== account.role || !credentials.phone || !credentials.code) return false;
       const next = await authenticate(credentials.baseUrl, credentials.phone, credentials.code);
       if (!sameIdentity(session, next)) return false;
+      next.imageCacheScope = session.imageCacheScope;
       return await inStorageOrder(async () => {
         if (activeSession !== session || epoch !== sessionEpoch) return false;
         await writeSession(next);

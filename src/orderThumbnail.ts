@@ -1,74 +1,97 @@
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 
-type CachedImage = { uri: string | null; expires: number };
-type ImageCache = { entries: Map<string, CachedImage>; pending: Map<string, Promise<string | null>> };
-const caches = new WeakMap<Session, ImageCache>();
+const missing = new WeakMap<Session, Map<string, number>>();
+const checks = new WeakMap<Session, Map<string, Promise<boolean>>>();
 const waiting: (() => void)[] = [];
 let running = 0;
 
-async function withThumbnailSlot<T>(load: () => Promise<T>): Promise<T> {
-  if (running >= 4) await new Promise<void>(resolve => waiting.push(resolve));
-  else running++;
-  try { return await load(); }
-  finally {
+function imageKey(orderId: string, imageId: string): string {
+  return JSON.stringify([orderId, imageId]);
+}
+
+function thumbnailPath(orderId: string, imageId: string): string {
+  const query = new URLSearchParams({ order_id: orderId, variant: 'thumb-v1' });
+  if (imageId) query.set('image_id', imageId);
+  return `/v1/mobile/admin/production-maps/order-image/view?${query}`;
+}
+
+export function thumbnailSource(session: Session, orderId: string, imageId: string) {
+  const url = new URL(thumbnailPath(orderId, imageId), session.baseUrl);
+  if (!orderId || url.protocol !== 'https:' || url.origin !== session.baseUrl) return null;
+  const freshness = Math.floor(Date.now() / (imageId ? 86400000 : 30000));
+  return {
+    uri: url.toString(),
+    cacheKey: JSON.stringify(['order-thumbnail', session.imageCacheScope, session.baseUrl, orderId, imageId, freshness]),
+  };
+}
+
+export function isThumbnailMissing(session: Session, orderId: string, imageId: string): boolean {
+  const entries = missing.get(session);
+  const key = imageKey(orderId, imageId);
+  const expires = entries?.get(key) ?? 0;
+  if (expires > Date.now()) return true;
+  entries?.delete(key);
+  return false;
+}
+
+/** Limit native image requests and release a slot on completion or unmount. */
+export function scheduleThumbnail(start: (finish: () => void) => void): () => void {
+  let started = false;
+  let finished = false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    if (timeout) clearTimeout(timeout);
+    if (!started) {
+      const index = waiting.indexOf(run);
+      if (index !== -1) waiting.splice(index, 1);
+      return;
+    }
     const next = waiting.shift();
     if (next) next(); else running--;
-  }
+  };
+  const run = () => {
+    started = true;
+    timeout = setTimeout(finish, 15000);
+    start(finish);
+  };
+  if (running < 4) { running++; run(); } else waiting.push(run);
+  return finish;
 }
 
-function asDataUri(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Image read failed'));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-/** Fetch the same authorized, versioned thumbnail used by V2's worker list. */
-export function loadOrderThumbnail(session: Session, orderId: string, imageId: string): Promise<string | null> {
-  if (!activeSessionToken(session) || !orderId) return Promise.resolve(null);
-  let cache = caches.get(session);
-  if (!cache) { cache = { entries: new Map(), pending: new Map() }; caches.set(session, cache); }
-  const currentCache = cache;
-  const key = JSON.stringify([orderId, imageId]);
-  const cached = cache.entries.get(key);
-  if (cached && cached.expires > Date.now()) {
-    cache.entries.delete(key);
-    cache.entries.set(key, cached);
-    return Promise.resolve(cached.uri);
-  }
-  cache.entries.delete(key);
-  const pending = cache.pending.get(key);
-  if (pending) return pending;
-
-  const request = withThumbnailSlot(async () => {
-    if (!activeSessionToken(session)) return null;
-    const query = new URLSearchParams({ order_id: orderId, variant: 'thumb-v1' });
-    if (imageId) query.set('image_id', imageId);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    try {
-      const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/order-image/view?${query}`, { signal: controller.signal });
-      if (!activeSessionToken(session)) return null;
-      const missing = response.status === 404;
-      const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? '';
-      if (!missing && (!response.ok || !contentType.startsWith('image/'))) return null;
-      const blob = missing ? null : await response.blob();
-      // React Native's network Blob can omit the response MIME type.
-      const uri = blob ? await asDataUri(blob.slice(0, blob.size, contentType)) : null;
-      if (!activeSessionToken(session)) return null;
-      const ttl = missing ? 15000 : imageId ? 86400000 : 30000;
-      // Keep thumbnails session-local and bounded; large responses are displayed but not retained.
-      if (!uri || uri.length <= 256 * 1024) {
-        currentCache.entries.set(key, { uri, expires: Date.now() + ttl });
-        while (currentCache.entries.size > 96) currentCache.entries.delete(currentCache.entries.keys().next().value!);
-      }
-      return uri;
-    } catch { return null; }
-    finally { clearTimeout(timeout); }
-  }).finally(() => { currentCache.pending.delete(key); });
-  cache.pending.set(key, request);
+/** expo-image errors lack HTTP status. Check failed loads through the usual auth retry. */
+export function retryThumbnail(session: Session, orderId: string, imageId: string, failedToken: string): Promise<boolean> {
+  const token = activeSessionToken(session);
+  if (!token) return Promise.resolve(false);
+  if (token !== failedToken) return Promise.resolve(true);
+  let pending = checks.get(session);
+  if (!pending) { pending = new Map(); checks.set(session, pending); }
+  const key = imageKey(orderId, imageId);
+  const existing = pending.get(key);
+  if (existing) return existing;
+  const current = pending;
+  const request = new Promise<boolean>(resolve => {
+    scheduleThumbnail(finish => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      void authorizedFetch(session, thumbnailPath(orderId, imageId), { signal: controller.signal })
+        .then(response => {
+          if (!activeSessionToken(session)) return false;
+          if (response.status === 404) {
+            let entries = missing.get(session);
+            if (!entries) { entries = new Map(); missing.set(session, entries); }
+            entries.set(key, Date.now() + 15000);
+            while (entries.size > 96) entries.delete(entries.keys().next().value!);
+          }
+          return response.ok;
+        })
+        .catch(() => false)
+        .then(resolve)
+        .finally(() => { clearTimeout(timeout); finish(); });
+    });
+  }).finally(() => { current.delete(key); });
+  current.set(key, request);
   return request;
 }
