@@ -56,7 +56,7 @@ export function WorkerDrawer({ visible, onOpen, onClose, onSelect, displayName, 
         </ScrollView>
         <View style={styles.logout}>
           <Host matchContents={{ vertical: true }} style={styles.logoutHost}>
-            <Button label="Chiqish" variant="filled" style={{ width: '100%' }} onPress={() => select('logout')} />
+            <Button label="Chiqish" variant="filled" style={{ width: '100%', height: 56 }} onPress={() => select('logout')} />
           </Host>
         </View>
       </View>}>
