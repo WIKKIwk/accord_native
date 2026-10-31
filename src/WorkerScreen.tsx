@@ -5,7 +5,7 @@ import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import type { Session } from './auth';
-import { loadWorkerQueue, queueFromSnapshot, type WorkerQueue } from './workerApi';
+import { loadWorkerQueue, queueFromSnapshot, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
 import { OrderScreen } from './OrderScreen';
 import { subscribeWorkerLive } from './workerLive';
 import { WorkerHeader } from './components/WorkerHeader';
@@ -19,6 +19,8 @@ import { WorkerOrderListItem } from './components/WorkerOrderListItem';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerQueueList } from './components/WorkerQueueList';
 import { WorkerQueueFilter } from './components/WorkerQueueFilter';
+import { WorkerOrderSheet } from './components/WorkerOrderSheet';
+import { WorkerWipHistory } from './components/WorkerWipHistory';
 import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 
 type Props = { session: Session; onLogout: () => void };
@@ -41,7 +43,8 @@ export function WorkerScreen({ session, onLogout }: Props) {
   const orderHeadlineFontFamily = orderFontLoaded ? 'GoogleSans-Medium' : undefined;
   const [queue, setQueue] = useState<WorkerQueue | null>(null);
   const [machineId, setMachineId] = useState('');
-  const [activeOrder, setActiveOrder] = useState<{ apparatusId: string; orderId: string } | null>(null);
+  const [activeOrder, setActiveOrder] = useState<{ apparatusId: string; orderId: string; preview?: QueueOrder } | null>(null);
+  const [historyOrder, setHistoryOrder] = useState<CompletedOrder | null>(null);
   const [section, setSection] = useState<'home' | 'profile'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -94,7 +97,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
     return () => clearTimeout(timer);
   }, [reload, search, limitReady]);
   useEffect(() => {
-    if (activeOrder || loadedScope !== windowScope || !queueRef.current) return;
+    if (loadedScope !== windowScope || !queueRef.current) return;
     return subscribeWorkerLive(session, searchScope, () => { void reload(); }, undefined,
       () => queueRef.current?.snapshot ?? null,
       snapshot => {
@@ -106,9 +109,8 @@ export function WorkerScreen({ session, onLogout }: Props) {
         setQueue(updated);
         setLoading(false);
       }, queueLimit);
-  }, [session, searchScope, windowScope, queueLimit, reload, activeOrder, loadedScope]);
+  }, [session, searchScope, windowScope, queueLimit, reload, loadedScope]);
 
-  if (activeOrder) return <OrderScreen session={session} apparatusId={activeOrder.apparatusId} orderId={activeOrder.orderId} onClose={() => setActiveOrder(null)} onChanged={() => { void reload(); }} />;
   const selectedMachine = queue?.machines.find(machine => machine.id === machineId);
   const completedMatches = (queue?.completed ?? []).filter(order => !searchScope || [order.code, order.title, order.customer].some(value => value.toLocaleLowerCase().includes(searchScope.toLocaleLowerCase())));
   const completed = queueLimit === 0 ? completedMatches : completedMatches.slice(0, queueLimit);
@@ -160,7 +162,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
-              onPress={() => Alert.alert([order.code, order.title].filter(Boolean).join(' · '), [order.customer, order.issueNote].filter(Boolean).join('\n') || 'Tugallangan buyurtma')} />
+              onPress={() => setHistoryOrder(order)} />
           )) : null}
           {pageMachine && !pageOrders.length && !loading ? <ListItem>Buyurtmalar topilmadi</ListItem> : null}
           {tabId !== 'completed' ? pageOrders.map((order, index) => (
@@ -168,7 +170,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
-              onPress={() => { if (loadedScope !== windowScope) { Alert.alert('Navbat yangilanmoqda', 'Buyurtmani ochishdan avval yangilanishini kuting.'); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id }); }} />
+              onPress={() => { if (loadedScope !== windowScope) { Alert.alert('Navbat yangilanmoqda', 'Buyurtmani ochishdan avval yangilanishini kuting.'); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order }); }} />
           )) : null}
           <Spacer size={88} />
           </WorkerQueueList>;
@@ -179,6 +181,12 @@ export function WorkerScreen({ session, onLogout }: Props) {
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
       </View>
       <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={navBarHeight + insets.bottom + 16} />
+      {activeOrder ? <WorkerOrderSheet onClose={() => setActiveOrder(null)}>
+        <OrderScreen session={session} apparatusId={activeOrder.apparatusId} orderId={activeOrder.orderId} preview={activeOrder.preview} queueCursor={queue?.snapshot ?? null} onClose={() => setActiveOrder(null)} onChanged={() => { void reload(); }} />
+      </WorkerOrderSheet> : null}
+      {historyOrder ? <WorkerOrderSheet dismissible onClose={() => setHistoryOrder(null)}>
+        <WorkerWipHistory session={session} order={historyOrder} onClose={() => setHistoryOrder(null)} />
+      </WorkerOrderSheet> : null}
     </SafeAreaView>
     </WorkerDrawer>
   );

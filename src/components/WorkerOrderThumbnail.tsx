@@ -5,14 +5,14 @@ import { StyleSheet, View } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
 import { isThumbnailMissing, retryThumbnail, scheduleThumbnail, thumbnailSource } from '../orderThumbnail';
 
-type Props = { session: Session; orderId: string; imageId: string; active: boolean; backgroundColor: string; iconColor: string };
+type Props = { session: Session; orderId: string; imageId: string; active: boolean; backgroundColor: string; iconColor: string; size?: number };
 
-export const WorkerOrderThumbnail = memo(function WorkerOrderThumbnail({ session, orderId, imageId, active, backgroundColor, iconColor }: Props) {
+export const WorkerOrderThumbnail = memo(function WorkerOrderThumbnail({ session, orderId, imageId, active, backgroundColor, iconColor, size = 40 }: Props) {
   const [laidOut, setLaidOut] = useState(false);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const source = useMemo(() => laidOut ? thumbnailSource(session, orderId, imageId) : null, [laidOut, session, orderId, imageId]);
   const onLoaded = useCallback(() => { if (source) setLoadedKey(source.cacheKey); }, [source]);
-  return <View accessible={false} pointerEvents="none" onLayout={laidOut ? undefined : () => setLaidOut(true)} style={[styles.thumbnail, { backgroundColor }]}>
+  return <View accessible={false} pointerEvents="none" onLayout={laidOut ? undefined : () => setLaidOut(true)} style={[styles.thumbnail, { backgroundColor, width: size, height: size, borderRadius: size * 0.25 }]}>
     <SymbolView name={{ ios: 'photo', android: 'image', web: 'image' }} size={20} tintColor={iconColor} />
     {source && (active || loadedKey === source.cacheKey) && !isThumbnailMissing(session, orderId, imageId)
       ? <ThumbnailRequest key={source.cacheKey} session={session} orderId={orderId} imageId={imageId} source={source} onLoaded={onLoaded} /> : null}
