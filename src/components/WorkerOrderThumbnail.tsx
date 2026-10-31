@@ -8,8 +8,9 @@ import { isThumbnailMissing, retryThumbnail, scheduleThumbnail, thumbnailSource 
 type Props = { session: Session; orderId: string; imageId: string; active: boolean; backgroundColor: string; iconColor: string };
 
 export const WorkerOrderThumbnail = memo(function WorkerOrderThumbnail({ session, orderId, imageId, active, backgroundColor, iconColor }: Props) {
-  const source = active ? thumbnailSource(session, orderId, imageId) : null;
-  return <View accessible={false} pointerEvents="none" style={[styles.thumbnail, { backgroundColor }]}>
+  const [laidOut, setLaidOut] = useState(false);
+  const source = active && laidOut ? thumbnailSource(session, orderId, imageId) : null;
+  return <View accessible={false} pointerEvents="none" onLayout={laidOut ? undefined : () => setLaidOut(true)} style={[styles.thumbnail, { backgroundColor }]}>
     <SymbolView name={{ ios: 'photo', android: 'image', web: 'image' }} size={20} tintColor={iconColor} />
     {active && source && !isThumbnailMissing(session, orderId, imageId)
       ? <ThumbnailRequest key={source.cacheKey} session={session} orderId={orderId} imageId={imageId} source={source} /> : null}
@@ -32,8 +33,13 @@ function ThumbnailRequest({ session, orderId, imageId, source }: {
   }, []);
   useEffect(() => {
     if (!token || failed) return;
-    const cancel = scheduleThumbnail(release => { finish.current = release; setStarted(true); });
-    return () => { cancel(); finish.current = null; };
+    let cancel: (() => void) | undefined;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        cancel = scheduleThumbnail(release => { finish.current = release; setStarted(true); });
+      });
+    });
+    return () => { cancelAnimationFrame(frame); cancel?.(); finish.current = null; };
   }, [token, failed, attempt]);
 
   const endRequest = () => { finish.current?.(); finish.current = null; };

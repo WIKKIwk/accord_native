@@ -18,8 +18,8 @@ export function WorkerOrderListItem({ headline, supportingText, onPress, session
     }]}>
       <WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active={imageActive} backgroundColor={colors.surfaceContainerHighest} iconColor={colors.onSurfaceVariant} />
       <View style={styles.text}>
-        <Text style={[styles.headline, { color: colors.onSurface, fontFamily: headlineFontFamily, fontWeight: headlineFontFamily ? undefined : '500' }]}>{headline}</Text>
-        {supportingText ? <Text style={[styles.supporting, { color: colors.onSurfaceVariant, fontFamily }]}>{supportingText}</Text> : null}
+        <Text numberOfLines={1} style={[styles.headline, { color: colors.onSurface, fontFamily: headlineFontFamily, fontWeight: headlineFontFamily ? undefined : '500' }]}>{headline}</Text>
+        {supportingText ? <Text numberOfLines={1} style={[styles.supporting, { color: colors.onSurfaceVariant, fontFamily }]}>{supportingText}</Text> : null}
       </View>
     </Pressable>
   </View>;
