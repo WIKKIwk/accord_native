@@ -1,14 +1,15 @@
-import { Column, Row, Spacer, Text } from '@expo/ui';
+import { Host, Row, Spacer, Text } from '@expo/ui';
 import { DropdownMenu, DropdownMenuItem, OutlinedButton, Text as ComposeText } from '@expo/ui/jetpack-compose';
 import { useState } from 'react';
 import { QUEUE_LIMITS, type QueueLimit } from '../workerQueueLimit';
+import { WorkerQueueCard } from './WorkerQueueCard.android';
 
 type Props = { value: QueueLimit; enabled: boolean; loading?: boolean; backgroundColor: string; onChange: (limit: QueueLimit) => void };
 const label = (count: QueueLimit) => count === 0 ? 'Barchasi' : `${count} ta`;
 
 export function WorkerQueueFilter({ value, enabled, loading, backgroundColor, onChange }: Props) {
   const [expanded, setExpanded] = useState(false);
-  return <Column style={{ paddingHorizontal: 8 }}><Row alignment="center" spacing={8} style={{ width: '100%', backgroundColor, borderRadius: 16, paddingHorizontal: 8, paddingVertical: 4 }}>
+  return <WorkerQueueCard first backgroundColor={backgroundColor}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Row alignment="center" spacing={8} style={{ width: '100%' }}>
     <Text>{loading ? 'Yangilanmoqda…' : 'Ko‘rsatish'}</Text>
     <Spacer flexible />
     <DropdownMenu expanded={expanded} onDismissRequest={() => setExpanded(false)}>
@@ -17,5 +18,5 @@ export function WorkerQueueFilter({ value, enabled, loading, backgroundColor, on
         <DropdownMenuItem.Text><ComposeText>{label(count)}</ComposeText></DropdownMenuItem.Text>
       </DropdownMenuItem>)}</DropdownMenu.Items>
     </DropdownMenu>
-  </Row></Column>;
+  </Row></Host></WorkerQueueCard>;
 }

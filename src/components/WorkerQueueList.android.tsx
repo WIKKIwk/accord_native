@@ -5,6 +5,7 @@ import { GestureDetector, useNativeGesture, type PanGesture } from 'react-native
 import Animated, { scrollTo, useAnimatedReaction, useAnimatedRef, useAnimatedScrollHandler, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { WorkerOrderListItem } from './WorkerOrderListItem';
 import { WorkerOrderPalette } from './workerOrderPalette';
+import { WorkerQueueFilter } from './WorkerQueueFilter';
 
 type Props = {
   children: ReactNode; onRefresh: () => Promise<void>; active: boolean; pagerGesture?: PanGesture;
@@ -85,5 +86,6 @@ export function WorkerQueueList({ children, onRefresh, active, pagerGesture, hea
     refreshControl={<RefreshControl refreshing={refreshing} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} />}
     renderItem={({ item }) => <View collapsable={false}>{isValidElement<{ imageActive: boolean }>(item) && item.type === WorkerOrderListItem
       ? cloneElement(item, { imageActive: item.props.imageActive && imagesReady })
+      : isValidElement(item) && item.type === WorkerQueueFilter ? item
       : <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>{item}</Column></Host>}</View>} /></GestureDetector></WorkerOrderPalette.Provider>;
 }

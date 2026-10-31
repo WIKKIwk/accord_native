@@ -1,9 +1,10 @@
 import { useContext } from 'react';
-import { Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import type { Session } from '../auth';
 import { orderCardAppearance, type OrderCardTone } from '../workerOrderAppearance';
 import { WorkerOrderPalette } from './workerOrderPalette';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
+import { WorkerQueueCard } from './WorkerQueueCard.android';
 
 type Props = { headline: string; supportingText: string; onPress: () => void; onLongPress?: () => void; session: Session; orderId: string; imageId: string; imageActive: boolean; cardTone?: OrderCardTone; first?: boolean; last?: boolean; fontFamily?: string; headlineFontFamily?: string };
 
@@ -13,25 +14,16 @@ export function WorkerOrderListItem({ headline, supportingText, onPress, onLongP
   if (!colors) throw new Error('WorkerOrderListItem requires WorkerOrderPalette');
   const appearance = orderCardAppearance(cardTone, colors.surfaceContainerLowest, dark);
 
-  return <View style={[styles.inset, { paddingTop: first ? 0 : 1, paddingBottom: last ? 12 : 1 }]}>
-    <Pressable accessibilityRole="button" onPress={onPress} onLongPress={onLongPress} android_ripple={{}} style={[styles.row, {
-      backgroundColor: appearance.color ?? colors.surface,
-      backgroundImage: appearance.gradient,
-      borderTopLeftRadius: first ? 16 : 4, borderTopRightRadius: first ? 16 : 4,
-      borderBottomLeftRadius: last ? 16 : 4, borderBottomRightRadius: last ? 16 : 4,
-    }]}>
+  return <WorkerQueueCard backgroundColor={appearance.color ?? colors.surface} backgroundImage={appearance.gradient} first={first} last={last} onPress={onPress} onLongPress={onLongPress}>
       <WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active={imageActive} backgroundColor={colors.surfaceContainerHighest} iconColor={colors.onSurfaceVariant} />
       <View style={styles.text}>
         <Text numberOfLines={1} style={[styles.headline, { color: appearance.text ?? colors.onSurface, fontFamily: headlineFontFamily, fontWeight: headlineFontFamily ? undefined : '500' }]}>{headline}</Text>
         {supportingText ? <Text numberOfLines={1} style={[styles.supporting, { color: appearance.secondary ?? colors.onSurfaceVariant, fontFamily }]}>{supportingText}</Text> : null}
       </View>
-    </Pressable>
-  </View>;
+  </WorkerQueueCard>;
 }
 
 const styles = StyleSheet.create({
-  inset: { paddingHorizontal: 8 },
-  row: { minHeight: 56, paddingHorizontal: 8, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   text: { flex: 1, marginStart: 16 },
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
