@@ -26,8 +26,8 @@ export function WorkerOrderListItem({ headline, supportingText, onPress, session
 }
 
 const styles = StyleSheet.create({
-  inset: { paddingHorizontal: 16 },
-  row: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+  inset: { paddingHorizontal: 8 },
+  row: { minHeight: 56, paddingHorizontal: 8, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   text: { flex: 1, marginStart: 16 },
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
