@@ -72,7 +72,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
     let message = '';
     try {
       await runWorkerMenuAction(session, apparatusId, order.id, action, menu, getCursor);
-      message = action === 'temporary_pause' ? 'Buyurtma vaqtincha yechildi. Keyin shu rulonni davom ettirishingiz mumkin.' : action === 're_pause' ? 'Ish qayta pauzaga o‘tkazildi.' : action === 'reopen' ? 'Rang chiqarilyapti holatiga qaytarildi.' : 'Ish qayta yopildi. Oldingi hisobotlar saqlandi.';
+      message = action === 'temporary_pause' ? 'Buyurtma vaqtincha yechildi. Keyin shu rulonni davom ettirishingiz mumkin.' : action === 're_pause' ? 'Ish qayta pauzaga o‘tkazildi.' : action === 'reopen' ? '' : 'Ish qayta yopildi. Oldingi hisobotlar saqlandi.';
     } catch { message = 'Amal tasdiqlanmadi. Buyurtmaning joriy holati yangilanmoqda.'; }
     finally { inFlight.current = false; onResult(message, mounted.current); if (mounted.current) { setBusy(false); close?.(); } }
   }

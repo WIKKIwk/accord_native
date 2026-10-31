@@ -174,15 +174,14 @@ export function WorkerScreen({ session, onLogout }: Props) {
         if (preflightReopenBusy.current) return;
         preflightReopenBusy.current = true;
         void (async () => {
-          let message: string;
+          let message = '';
           try {
             await runWorkerMenuAction(session, apparatusId, orderId, 'reopen', menu, getCursor);
-            message = 'Rang chiqarilyapti holatiga qaytarildi.';
           } catch { message = 'Amal tasdiqlanmadi. Buyurtmaning joriy holati yangilanmoqda.'; }
           finally { preflightReopenBusy.current = false; }
           if (screenMounted.current) {
             void latestReload.current();
-            setAlert(current => current ?? { title: 'Buyurtma', message });
+            if (message) setAlert(current => current ?? { title: 'Buyurtma', message });
           }
         })();
       } });
