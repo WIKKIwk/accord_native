@@ -15,7 +15,7 @@ import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartRea
 import type { QueueOrder } from './workerApi';
 
 type Obj = Record<string, any>;
-type Props = { session: Session; apparatusId: string; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; onClose: () => void; onChanged: () => void };
+type Props = { session: Session; apparatusId: string; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka'; onClose: () => void; onChanged: () => void };
 type ScanKind = 'material' | 'qolip' | 'input' | 'paintPhoto';
 const numberValue = (v: string) => Number(v.trim().replace(',', '.'));
 function barcodeFromQr(raw: string) {
@@ -83,7 +83,7 @@ function Expansion({ title, count, expanded, onPress }: { title: string; count: 
   </Pressable>;
 }
 
-export function OrderScreen({ session, apparatusId, orderId, preview, queueCursor, onClose, onChanged }: Props) {
+export function OrderScreen({ session, apparatusId, orderId, preview, queueCursor, initialAction, onClose, onChanged }: Props) {
   const colors = useWorkerColors();
   const closeSheet = useContext(WorkerSheetCloseContext) ?? onClose;
   const [detail, setDetail] = useState<Obj | null>(null);
@@ -111,6 +111,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const [bobina, setBobina] = useState('');
   const [waste, setWaste] = useState('');
   const [freezeNote, setFreezeNote] = useState('');
+  const [astatkaNote, setAstatkaNote] = useState('');
   const [paintColor, setPaintColor] = useState('');
   const [paintEditor, setPaintEditor] = useState(false);
   const [paintUsage, setPaintUsage] = useState<'rasxot' | 'astatka'>('rasxot');
@@ -139,9 +140,10 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const scanInFlight = useRef(false);
   const recentQuickScan = useRef<{ value: string; at: number } | null>(null);
   const screenMounted = useRef(true);
+  const initialActionHandled = useRef(false);
   const workerRole = String(session.profile?.role ?? '').trim();
   const workerRef = String(session.profile?.ref ?? '').trim();
-  const draftScope = JSON.stringify([session.baseUrl, workerRole, workerRef, workerRole && workerRef ? '' : session.imageCacheScope, orderId, apparatusId]);
+  const draftScope = JSON.stringify([session.baseUrl, workerRole, workerRef, workerRole && workerRef ? '' : session.imageCacheScope, orderId, apparatusId]) + (selected === 'astatka' ? ':astatka' : '');
   const queueEpoch = queueCursor?.epoch;
   const queueRevision = queueCursor?.rev;
   const latestCursor = useRef(queueCursor);
@@ -266,6 +268,17 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   useEffect(() => {
     if (showQuickScanner && permission?.status === 'undetermined') void askPermission();
   }, [showQuickScanner, permission?.status, askPermission]);
+  const canOpenInitialComplete = allowed.includes('complete');
+  const canOpenInitialAstatka = isActiveOrder && (control.stage_work?.astatka_available === true || ['in_progress', 'paused', 'completed'].includes(control.state));
+  useEffect(() => {
+    if (!initialAction || initialActionHandled.current || !synchronized) return;
+    const timer = setTimeout(() => {
+      initialActionHandled.current = true;
+      if ((initialAction === 'complete' && canOpenInitialComplete) || (initialAction === 'astatka' && canOpenInitialAstatka)) setSelected(initialAction);
+      else setError('Buyurtma holati o‘zgardi. Qayta urining.');
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [initialAction, synchronized, canOpenInitialComplete, canOpenInitialAstatka]);
   const controlEpoch = bootstrap?.control_state?.epoch;
   const controlRevision = bootstrap?.control_state?.rev;
   useEffect(() => {
@@ -513,7 +526,9 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     await onScan(value, kind);
   }
   async function submit(action: string) {
-    if (!synchronized || !allowed.includes(action) || actionInFlight.current) return;
+    const isAstatka = action === 'astatka';
+    if (!synchronized || (isAstatka ? !canOpenInitialAstatka : !allowed.includes(action)) || actionInFlight.current ||
+        (isAstatka && loadedDraftScope !== draftScope)) return;
     const isStarting = action === 'start' || action === 'resume';
     if (isStarting && !materialState.ready) { setError(materialState.reason); return; }
     if (isStarting && automaticQolip && qolipRequired && !automaticConfirmation) { setError('Boshlash uchun tayyor qolip to‘plamini tanlang.'); return; }
@@ -527,14 +542,14 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     if (isStarting && qolipRequired && !automaticQolip && (sections.qolips?.status !== 'ready' || !moldsSatisfied)) { setError('Boshlash uchun bitta to‘liq qolip to‘plamini skanerlang.'); return; }
     if (action === 'start' && preflight && (!validPreflight || preflight.status !== 'passed')) { setError('Avval rang chiqarish natijasini tasdiqlang.'); return; }
     const closingOutputId = action === 'complete' && typeof control.closing_output_batch_id === 'string' ? control.closing_output_batch_id.trim() : '';
-    const fullReport = action === 'complete' && (control.complete_requires_full_report !== false || !!closingOutputId);
+    const fullReport = isAstatka || (action === 'complete' && (control.complete_requires_full_report !== false || !!closingOutputId));
     const safeStopIssue = action === 'pause' && !!safeStopRequest && !!freezeNote.trim() && ![kg, meter, bobina].some(value => value.trim());
     const needsOutput = !safeStopIssue && (action === 'pause' || action === 'roll_complete' || (action === 'complete' && !closingOutputId));
     const fields = [kg, meter, bobina];
     if (needsOutput && fields.some(x => !x.trim() || !Number.isFinite(numberValue(x)) || numberValue(x) <= 0)) { setError('Metr, vazn va bobina uchun noldan katta qiymatlarni kiriting.'); return; }
     const returnedPaintItems = returnedPaintItemsFromDraft(paint, paintDynamic);
     const imageOnly = !!paintImageId && returnedPaintItems.length === 0;
-    if (fullReport && (!waste.trim() || !Number.isFinite(numberValue(waste)) || numberValue(waste) < 0 || (!closingOutputId && numberValue(waste) === 0) || (!imageOnly && ['rasxot','astatka'].some(usage => {
+    if (fullReport && (!waste.trim() || !Number.isFinite(numberValue(waste)) || numberValue(waste) < 0 || (!closingOutputId && !isAstatka && numberValue(waste) === 0) || (!imageOnly && ['rasxot','astatka'].some(usage => {
       const values = returnedPaintItems.filter(item => item.usage === usage).flatMap(item => Object.values(item.values));
       return values.length < 3 || values.some(value => !Number.isFinite(numberValue(value)) || numberValue(value) < 0);
     })))) { setError('Chiqindi va bo‘yoq rasmini yoki har bir bo‘lim uchun kamida uchta to‘g‘ri qiymatni kiriting.'); return; }
@@ -562,18 +577,22 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
         if (returnedPaintItems.length && (returnInk > 0 || closingOutputId)) body.return_ink_kg = returnInk;
       }
       if (preview?.customer || order.customer_name) body.customer_name = preview?.customer || order.customer_name;
-      const result = await request(session, '/v1/mobile/admin/production-maps/queue-action', { method: 'POST', body: JSON.stringify(body) });
+      const result = isAstatka
+        ? await request(session, '/v1/mobile/admin/production-maps/bosma-astatka', { method: 'POST', body: JSON.stringify({ apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote.trim() }) })
+        : await request(session, '/v1/mobile/admin/production-maps/queue-action', { method: 'POST', body: JSON.stringify(body) });
       if (!screenMounted.current) return;
+      if (isAstatka && (typeof result.report?.report_id !== 'string' || !result.report.report_id.trim())) throw new Error('Astatka qaydi javobi noto‘g‘ri.');
       setSelected(''); setMaterials([]); setQolips([]); setQolipsReset(false); setInputBatch(null); setFreezeNote(''); setKg(''); setMeter(''); setBobina('');
-      if (action === 'complete') {
+      if (action === 'complete' || isAstatka) {
         void saveReturnedPaintDraft(draftScope, { values: {}, fields: {}, usage: 'rasxot', imageId: '' }).catch(() => {});
-        setWaste(''); setPaintImageId(''); setPaint({}); setPaintColor(''); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintEditor(false);
+        setWaste(''); setAstatkaNote(''); setPaintImageId(''); setPaint({}); setPaintColor(''); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintEditor(false);
       }
       const qr = result.progress_batch?.qr_payload;
       const printFailed = needsOutput && ((Array.isArray(result.prints) && result.prints.some((job: Obj) => job?.ok === false)) || result.print?.ok === false);
       if (printFailed) setError('Amal bajarildi, lekin rulon yorlig‘i chop etilmadi.');
-      else setSuccess(qr ? `Amal bajarildi. Rulon QR: ${qr}` : 'Amal bajarildi.');
+      else setSuccess(isAstatka ? 'Order astatkasi qayd qilindi.' : qr ? `Amal bajarildi. Rulon QR: ${qr}` : 'Amal bajarildi.');
       setSelectedQolipSet('');
+      if (initialAction === action) closeSheet();
     } catch (e) { if (screenMounted.current) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
     finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
   }
@@ -626,7 +645,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   }
   const code = String(preview?.code || order.order_number || order.code || orderId);
   const closingOutput = selected === 'complete' && typeof control.closing_output_batch_id === 'string' && !!control.closing_output_batch_id.trim();
-  const showFullReport = selected === 'complete' && (control.complete_requires_full_report !== false || closingOutput);
+  const showFullReport = selected === 'astatka' || (selected === 'complete' && (control.complete_requires_full_report !== false || closingOutput));
   const rows: Obj[] | null = scanningRequired
     ? (Array.isArray(materialRequirements.assignments) ? materialRequirements.assignments.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)) : null)
     : attachedMaterials;
@@ -634,6 +653,13 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const matchedMaterialCount = Number(materialRequirements.matched_scan_count ?? materials.length);
   const showMaterials = preparationVisible || interaction.assigned_materials_display_only === true;
   const showMolds = (preparationVisible || ['fresh_start_blocked', 'requeued_waiting', 'waiting_previous_stage'].includes(interaction.mode)) && qolipRequired;
+  function cancelProgressDialog() {
+    if (busy || photoBusy) return;
+    if (paintEditor) { setPaintEditor(false); return; }
+    const closeInitial = !!initialAction && selected === initialAction;
+    setSelected('');
+    if (closeInitial) closeSheet();
+  }
   function addPaintField(target: string) {
     const label = newPaintField.trim();
     if (!label) return;
@@ -710,9 +736,9 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     {!loading && !bootstrap && <NativeButton label="Qayta urinish" onPress={() => { setError(''); void load(); }} disabled={busy} />}
     </View>
   </ScrollView>
-    <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => { if (!busy && !photoBusy) { if (paintEditor) setPaintEditor(false); else setSelected(''); } }}>
+    <Modal visible={!!selected} transparent animationType="fade" onRequestClose={cancelProgressDialog}>
       <View style={styles.dialogBackdrop}><View style={[styles.dialog, { backgroundColor: colors.surface }]}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialogContent}>
-        <Text style={[styles.section, { color: colors.text }]}>{paintEditor ? 'Qaytarilgan bo‘yoq' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori'}</Text>
+        <Text style={[styles.section, { color: colors.text }]}>{paintEditor ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori'}</Text>
         {!!error && <Text style={styles.error}>{error}</Text>}
         {paintEditor ? <>
           <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Rasxot" variant={paintUsage === 'rasxot' ? 'filled' : 'outlined'} onPress={() => setPaintUsage('rasxot')} /></View><View style={styles.flex}><NativeButton label="Astatka" variant={paintUsage === 'astatka' ? 'filled' : 'outlined'} onPress={() => setPaintUsage('astatka')} /></View></View>
@@ -731,12 +757,13 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
           </View>}
           <NativeButton label="Tayyor" variant="filled" disabled={photoBusy} onPress={() => { setError(''); setPaintEditor(false); }} />
         </> : <>
-        <Text style={[styles.muted, { color: colors.muted }]}>{safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting'}</Text>
+        <Text style={[styles.muted, { color: colors.muted }]}>{selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting'}</Text>
         {selected === 'pause' && safeStopRequest && <Field label="Natija bo‘lmasa, sababini kiriting" initialValue={freezeNote} onChangeText={setFreezeNote} />}
         {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Standart miqdor</Text><Field label="Babina, kg" initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Tayyor mahsulot</Text><Field label="Metraj, m" initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label="Og‘irlik, kg" initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
         {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <Field label="Wi-Fi printer server manzili" initialValue={printerUrl} onChangeText={setPrinterUrl} />}
         {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Qaytim va chiqindi</Text><Field label="Jami chiqindi, kg" initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} /><NativeButton label="Qaytarilgan bo‘yoq" variant="filled" disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} /></>}
-        <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Bekor qilish" disabled={busy} onPress={() => setSelected('')} /></View><View style={styles.flex}><NativeButton label={busy ? 'Yuborilmoqda…' : 'Tasdiqlash'} disabled={!synchronized || !allowed.includes(selected)} variant="filled" onPress={() => { void submit(selected); }} /></View></View>
+        {selected === 'astatka' && <Field label="Izoh" initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
+        <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Bekor qilish" disabled={busy} onPress={cancelProgressDialog} /></View><View style={styles.flex}><NativeButton label={busy ? 'Yuborilmoqda…' : 'Tasdiqlash'} disabled={!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && loadedDraftScope !== draftScope)} variant="filled" onPress={() => { void submit(selected); }} /></View></View>
         </>}
       </ScrollView></View></View>
     </Modal>

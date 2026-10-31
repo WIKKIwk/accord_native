@@ -21,6 +21,7 @@ import { WorkerQueueList } from './components/WorkerQueueList';
 import { WorkerQueueFilter } from './components/WorkerQueueFilter';
 import { WorkerOrderSheet } from './components/WorkerOrderSheet';
 import { WorkerWipHistory } from './components/WorkerWipHistory';
+import { WorkerLongPressActions } from './components/WorkerLongPressActions';
 import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 
 type Props = { session: Session; onLogout: () => void };
@@ -44,8 +45,9 @@ export function WorkerScreen({ session, onLogout }: Props) {
   const orderHeadlineFontFamily = orderFontLoaded ? 'GoogleSans-Medium' : undefined;
   const [queue, setQueue] = useState<WorkerQueue | null>(null);
   const [machineId, setMachineId] = useState('');
-  const [activeOrder, setActiveOrder] = useState<{ apparatusId: string; orderId: string; preview?: QueueOrder } | null>(null);
+  const [activeOrder, setActiveOrder] = useState<{ apparatusId: string; orderId: string; preview?: QueueOrder; initialAction?: 'complete' | 'astatka' } | null>(null);
   const [historyOrder, setHistoryOrder] = useState<CompletedOrder | null>(null);
+  const [actionOrder, setActionOrder] = useState<{ apparatusId: string; order: QueueOrder; completed: boolean } | null>(null);
   const [section, setSection] = useState<'home' | 'profile'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -57,11 +59,17 @@ export function WorkerScreen({ session, onLogout }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const requestGeneration = useRef(0);
+  const screenMounted = useRef(true);
   const queueRef = useRef<WorkerQueue | null>(null);
+  const pendingAction = useRef<'complete' | 'astatka' | null>(null);
+  const actionNotice = useRef('');
+  const actionScope = useRef<{ window: string; scope: string } | null>(null);
   const queueScopeRef = useRef<string | null>(null);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const searchScope = search.trim().slice(0, 120);
   const windowScope = JSON.stringify([searchScope, queueLimit]);
+  const currentWindow = useRef(windowScope);
+  useEffect(() => { currentWindow.current = windowScope; }, [windowScope]);
   useEffect(() => {
     let mounted = true;
     void loadQueueLimit(session).then(limit => { if (mounted) { setQueueLimit(limit); setLimitReady(true); } });
@@ -92,6 +100,20 @@ export function WorkerScreen({ session, onLogout }: Props) {
       setError(e instanceof Error ? e.message : 'Navbatni yuklab bo‘lmadi.');
     } finally { if (generation === requestGeneration.current) setLoading(false); }
   }, [session, search, queueLimit, windowScope, limitReady]);
+  const latestReload = useRef(reload);
+  useEffect(() => { latestReload.current = reload; }, [reload]);
+  useEffect(() => { screenMounted.current = true; return () => { screenMounted.current = false; }; }, []);
+  const getActionCursor = useCallback(() => {
+    const expected = actionScope.current;
+    const snapshot = queueRef.current?.snapshot;
+    return expected && currentWindow.current === expected.window && queueScopeRef.current === expected.window && snapshot?.scope === expected.scope ? snapshot : null;
+  }, []);
+  const chooseOrderAction = useCallback((action: 'complete' | 'astatka') => { pendingAction.current = action; }, []);
+  const finishOrderAction = useCallback((message: string, showNotice: boolean) => {
+    if (!screenMounted.current) return;
+    if (showNotice) actionNotice.current = message;
+    void latestReload.current();
+  }, []);
   useEffect(() => {
     if (!limitReady) return;
     const timer = setTimeout(() => { void reload(true); }, search ? 350 : 0);
@@ -128,6 +150,23 @@ export function WorkerScreen({ session, onLogout }: Props) {
     if (!scannerMachineId) { Alert.alert('QR skanerlash', 'Avval aparatni tanlang.'); return; }
     setScannerOpen(true);
   }
+  function openOrderActions(apparatusId: string, order: QueueOrder, isCompleted: boolean) {
+    const scope = queueRef.current?.snapshot.scope;
+    if (loadedScope !== windowScope || typeof scope !== 'string' || !scope) { Alert.alert('Navbat yangilanmoqda', 'Buyurtmani ochishdan avval yangilanishini kuting.'); return; }
+    actionScope.current = { window: windowScope, scope };
+    pendingAction.current = null; actionNotice.current = '';
+    setActionOrder({ apparatusId, order, completed: isCompleted });
+  }
+  function closeOrderActions() {
+    const target = actionOrder;
+    const action = pendingAction.current;
+    const notice = actionNotice.current;
+    actionScope.current = null;
+    pendingAction.current = null; actionNotice.current = '';
+    setActionOrder(null);
+    if (target && action) setActiveOrder({ apparatusId: target.apparatusId, orderId: target.order.id, preview: target.order, initialAction: action });
+    if (notice) Alert.alert('Buyurtma', notice);
+  }
   const header = <View onLayout={event => {
     const height = event.nativeEvent.layout.height;
     if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
@@ -163,7 +202,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
-              onPress={() => setHistoryOrder(order)} />
+              onPress={() => setHistoryOrder(order)} onLongPress={!order.issueNote.trim() ? () => openOrderActions(order.apparatusId, order, true) : undefined} />
           )) : null}
           {pageMachine && !pageOrders.length && !loading ? <ListItem>Buyurtmalar topilmadi</ListItem> : null}
           {tabId !== 'completed' ? pageOrders.map((order, index) => (
@@ -171,6 +210,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
+              onLongPress={() => openOrderActions(tabId, order, false)}
               onPress={() => { if (loadedScope !== windowScope) { Alert.alert('Navbat yangilanmoqda', 'Buyurtmani ochishdan avval yangilanishini kuting.'); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order }); }} />
           )) : null}
           <Spacer size={88} />
@@ -183,10 +223,13 @@ export function WorkerScreen({ session, onLogout }: Props) {
       </View>
       <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={navBarHeight + insets.bottom + 16} />
       {activeOrder ? <WorkerOrderSheet onClose={() => setActiveOrder(null)}>
-        <OrderScreen session={session} apparatusId={activeOrder.apparatusId} orderId={activeOrder.orderId} preview={activeOrder.preview} queueCursor={queue?.snapshot ?? null} onClose={() => setActiveOrder(null)} onChanged={() => { void reload(); }} />
+        <OrderScreen session={session} apparatusId={activeOrder.apparatusId} orderId={activeOrder.orderId} preview={activeOrder.preview} queueCursor={queue?.snapshot ?? null} initialAction={activeOrder.initialAction} onClose={() => setActiveOrder(null)} onChanged={() => { void reload(); }} />
       </WorkerOrderSheet> : null}
       {historyOrder ? <WorkerOrderSheet dismissible onClose={() => setHistoryOrder(null)}>
         <WorkerWipHistory session={session} order={historyOrder} onClose={() => setHistoryOrder(null)} />
+      </WorkerOrderSheet> : null}
+      {actionOrder ? <WorkerOrderSheet dismissible compact onClose={closeOrderActions}>
+        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} onResult={finishOrderAction} />
       </WorkerOrderSheet> : null}
     </SafeAreaView>
     </WorkerDrawer>

@@ -5,16 +5,16 @@ import { orderCardAppearance, type OrderCardTone } from '../workerOrderAppearanc
 import { WorkerOrderPalette } from './workerOrderPalette';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
 
-type Props = { headline: string; supportingText: string; onPress: () => void; session: Session; orderId: string; imageId: string; imageActive: boolean; cardTone?: OrderCardTone; first?: boolean; last?: boolean; fontFamily?: string; headlineFontFamily?: string };
+type Props = { headline: string; supportingText: string; onPress: () => void; onLongPress?: () => void; session: Session; orderId: string; imageId: string; imageActive: boolean; cardTone?: OrderCardTone; first?: boolean; last?: boolean; fontFamily?: string; headlineFontFamily?: string };
 
-export function WorkerOrderListItem({ headline, supportingText, onPress, session, orderId, imageId, imageActive, cardTone = 'neutral', first = false, last = false, fontFamily, headlineFontFamily }: Props) {
+export function WorkerOrderListItem({ headline, supportingText, onPress, onLongPress, session, orderId, imageId, imageActive, cardTone = 'neutral', first = false, last = false, fontFamily, headlineFontFamily }: Props) {
   const colors = useContext(WorkerOrderPalette);
   const dark = useColorScheme() === 'dark';
   if (!colors) throw new Error('WorkerOrderListItem requires WorkerOrderPalette');
   const appearance = orderCardAppearance(cardTone, colors.surfaceContainerLowest, dark);
 
   return <View style={[styles.inset, { paddingTop: first ? 0 : 1, paddingBottom: last ? 12 : 1 }]}>
-    <Pressable accessibilityRole="button" onPress={onPress} android_ripple={{}} style={[styles.row, {
+    <Pressable accessibilityRole="button" onPress={onPress} onLongPress={onLongPress} android_ripple={{}} style={[styles.row, {
       backgroundColor: appearance.color ?? colors.surface,
       backgroundImage: appearance.gradient,
       borderTopLeftRadius: first ? 16 : 4, borderTopRightRadius: first ? 16 : 4,

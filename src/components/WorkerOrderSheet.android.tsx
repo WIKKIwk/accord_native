@@ -5,9 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 
-type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean };
+type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean };
 
-export function WorkerOrderSheet({ children, onClose, dismissible = false }: Props) {
+export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const colors = useWorkerColors();
@@ -26,7 +26,7 @@ export function WorkerOrderSheet({ children, onClose, dismissible = false }: Pro
       sheetGesturesEnabled={dismissible} showDragHandle={dismissible} containerColor={colors.field}
       properties={{ shouldDismissOnBackPress: true, shouldDismissOnClickOutside: dismissible }}>
       <RNHostView matchContents>
-        <View style={{ width, height: Math.round((height - insets.top) * 0.86) }}>
+        <View style={{ width, ...(compact ? {} : { height: Math.round((height - insets.top) * 0.86) }) }}>
           <WorkerSheetCloseContext.Provider value={close}>{children}</WorkerSheetCloseContext.Provider>
         </View>
       </RNHostView>
