@@ -1,7 +1,7 @@
 import { ListItem, Spacer } from '@expo/ui';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Modal, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import type { Session } from './auth';
@@ -27,7 +27,7 @@ import { WorkerAlert } from './components/WorkerAlert';
 import type { WorkerAlertData } from './components/workerDialogTypes';
 import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 
-type Props = { session: Session; onLogout: () => void };
+type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat') => void; onOpenDrawer?: () => void };
 const statusLabel: Record<string, string> = {
   pending: 'Kutilmoqda', waiting: 'Kutilmoqda', in_progress: 'Ish jarayonida',
   paused: 'To‘xtatilgan', completed: 'Yakunlangan', frozen: 'Muzlatilgan',
@@ -35,7 +35,7 @@ const statusLabel: Record<string, string> = {
   waiting_next_stage: 'Keyingi bosqich kutilmoqda', issue: 'Muammoli',
 };
 
-export function WorkerScreen({ session, onLogout }: Props) {
+export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer }: Props) {
   const colors = useWorkerColors();
   const headerOffset = useSharedValue(0);
   const headerHeight = useSharedValue(70);
@@ -44,8 +44,8 @@ export function WorkerScreen({ session, onLogout }: Props) {
     'GoogleSans-Regular': require('../assets/fonts/GoogleSans-Regular.ttf'),
     'GoogleSans-Medium': require('../assets/fonts/GoogleSans-Medium.ttf'),
   });
-  const orderFontFamily = orderFontLoaded ? 'GoogleSans-Regular' : undefined;
-  const orderHeadlineFontFamily = orderFontLoaded ? 'GoogleSans-Medium' : undefined;
+  const orderFontFamily = Platform.OS !== 'ios' && orderFontLoaded ? 'GoogleSans-Regular' : undefined;
+  const orderHeadlineFontFamily = Platform.OS !== 'ios' && orderFontLoaded ? 'GoogleSans-Medium' : undefined;
   const [queue, setQueue] = useState<WorkerQueue | null>(null);
   const [machineId, setMachineId] = useState('');
   const [activeOrder, setActiveOrder] = useState<{ apparatusId: string; orderId: string; preview?: QueueOrder; initialAction?: 'complete' | 'astatka' } | null>(null);
@@ -145,10 +145,12 @@ export function WorkerScreen({ session, onLogout }: Props) {
   const completedMatches = (queue?.completed ?? []).filter(order => !searchScope || [order.code, order.title, order.customer].some(value => value.toLocaleLowerCase().includes(searchScope.toLocaleLowerCase())));
   const completed = queueLimit === 0 ? completedMatches : completedMatches.slice(0, queueLimit);
   const scannerMachineId = selectedMachine?.id ?? queue?.machines[0]?.id ?? '';
-  if (scannerOpen) return <WorkerQrScanner session={session} apparatusId={scannerMachineId} onClose={() => setScannerOpen(false)} onOrder={(apparatusId, orderId) => { setScannerOpen(false); setMachineId(apparatusId); setActiveOrder({ apparatusId, orderId }); }} />;
+  const scanner = scannerOpen ? <WorkerQrScanner session={session} apparatusId={scannerMachineId} onClose={() => setScannerOpen(false)} onOrder={(apparatusId, orderId) => { setScannerOpen(false); setMachineId(apparatusId); setActiveOrder({ apparatusId, orderId }); }} /> : null;
+  if (scannerOpen && !nativeNavigation) return scanner;
   function selectDestination(id: string) {
     if (id === 'home' || id === 'queue') { setSection('home'); return; }
-    if (id === 'profile') { setSection('profile'); return; }
+    if (id === 'profile') { if (nativeNavigation) onNavigate?.('profile'); else setSection('profile'); return; }
+    if (id === 'chat' && nativeNavigation) { onNavigate?.('chat'); return; }
     if (id === 'logout') { onLogout(); return; }
     const labels: Record<string, string> = { chat: 'Chat', daily: 'Kunlik ishlar', paddons: 'Paddonlar', instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
     setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
@@ -211,18 +213,18 @@ export function WorkerScreen({ session, onLogout }: Props) {
     if (target && action) setActiveOrder({ apparatusId: target.apparatusId, orderId: target.order.id, preview: target.order, initialAction: action });
     if (notice) setAlert({ title: 'Buyurtma', message: notice });
   }
+  const openDrawer = onOpenDrawer ?? (() => setDrawerOpen(true));
   const header = <View onLayout={event => {
     const height = event.nativeEvent.layout.height;
     if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
   }}>
-    <WorkerHeader search={search} onSearchChange={setSearch} onMenu={() => setDrawerOpen(true)} onProfile={() => setSection('profile')} />
+    <WorkerHeader search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')} />
   </View>;
-  return (
-    <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination} displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')} active={section === 'profile' ? 'profile' : 'queue'}>
-    <SafeAreaView edges={Platform.OS === 'android' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
-      {Platform.OS !== 'android' || section === 'profile' ? header : null}
+  const content = (
+    <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
+      {!nativeNavigation && (Platform.OS !== 'android' || section === 'profile') ? header : null}
       {section === 'profile' ? <WorkerProfile session={session} onLogout={onLogout} /> : <>
-      <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily}>
+      <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
         {(tabId, pagerGesture) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const pageOrders = queue?.orders[tabId] ?? [];
@@ -258,15 +260,15 @@ export function WorkerScreen({ session, onLogout }: Props) {
               onLongPress={() => openOrderActions(tabId, order, false)}
               onPress={() => { if (loadedScope !== windowScope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order }); }} />
           )) : null}
-          <Spacer size={88} />
+          {Platform.OS !== 'ios' && <Spacer size={88} />}
           </WorkerQueueList>;
         }}
       </WorkerTabs>
       </>}
-      <View onLayout={event => setNavBarHeight(event.nativeEvent.layout.height)}>
+      {!nativeNavigation && <View onLayout={event => setNavBarHeight(event.nativeEvent.layout.height)}>
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
-      </View>
-      <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={navBarHeight + insets.bottom + 16} />
+      </View>}
+      <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} />
       {activeOrder ? <WorkerOrderSheet onClose={() => setActiveOrder(null)}>
         <OrderScreen session={session} apparatusId={activeOrder.apparatusId} orderId={activeOrder.orderId} preview={activeOrder.preview} queueCursor={queue?.snapshot ?? null} initialAction={activeOrder.initialAction} onClose={() => setActiveOrder(null)} onChanged={() => { void reload(); }} />
       </WorkerOrderSheet> : null}
@@ -277,9 +279,11 @@ export function WorkerScreen({ session, onLogout }: Props) {
         <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} onResult={finishOrderAction} />
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
+      {nativeNavigation && scannerOpen && <Modal visible presentationStyle="fullScreen" animationType="slide" onRequestClose={() => setScannerOpen(false)}>{scanner}</Modal>}
     </SafeAreaView>
-    </WorkerDrawer>
   );
+  if (nativeNavigation) return content;
+  return <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination} displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')} active={section === 'profile' ? 'profile' : 'queue'}>{content}</WorkerDrawer>;
 }
 const styles = StyleSheet.create({
   safe: { flex: 1 },

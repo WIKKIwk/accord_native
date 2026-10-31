@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { LoginScreen } from '../LoginScreen';
 import { WorkerScreen } from '../WorkerScreen';
 import { loadSession, logout, type Session } from '../auth';
@@ -14,6 +15,7 @@ export default function Index() {
   }, []);
   if (loading) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   if (!session) return <LoginScreen onLogin={setSession} />;
+  if (Platform.OS === 'ios') return <Redirect href="/ios-worker" />;
   return <WorkerScreen session={session} onLogout={() => {
     setLoading(true);
     void logout(session).catch(() => {}).finally(() => {

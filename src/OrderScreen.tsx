@@ -4,7 +4,6 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerOrderThumbnail } from './components/WorkerOrderThumbnail';
@@ -13,6 +12,8 @@ import { WorkerSheetCloseContext } from './components/workerSheetContext';
 import { WorkerFormDialog } from './components/WorkerFormDialog';
 import { WorkerDeliveryDialog } from './components/WorkerDeliveryDialog';
 import { WorkerIconButton } from './components/WorkerIconButton';
+import { WorkerFormField as Field } from './components/WorkerFormField';
+import { WorkerExpansion as Expansion } from './components/WorkerExpansion';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
 import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, returnedPaintItemsFromDraft, runningFreezeRequest, validOrderControl, type QueueCursor } from './workerOrderLogic';
 import type { QueueOrder } from './workerApi';
@@ -69,21 +70,8 @@ async function connectedPrinter(address: string): Promise<Obj> {
   } finally { clearTimeout(timer); }
 }
 
-function Field({ label, onChangeText, keyboardType, initialValue = '' }: { label: string; onChangeText: (s: string) => void; keyboardType?: 'decimal-pad' | 'default'; initialValue?: string }) {
-  const value = useNativeState(initialValue);
-  const colors = useWorkerColors();
-  return <View style={styles.field}><Text style={[styles.label, { color: colors.muted }]}>{label}</Text><Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={value} placeholder={label} onChangeText={onChangeText} keyboardType={keyboardType ?? 'default'} autoCapitalize="none" /></Host></View>;
-}
 function NativeButton({ label, onPress, disabled, variant, height }: { label: string; onPress: () => void; disabled?: boolean; variant?: 'text' | 'filled' | 'outlined'; height?: number }) {
   return <Host matchContents={{ vertical: true }} style={styles.host}><Button label={label} onPress={onPress} disabled={disabled} variant={variant ?? 'outlined'} style={height ? { height } : undefined} /></Host>;
-}
-function Expansion({ title, count, expanded, onPress }: { title: string; count: string; expanded: boolean; onPress: () => void }) {
-  const colors = useWorkerColors();
-  return <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress} style={styles.expansion}>
-    <Text style={[styles.expansionTitle, { color: colors.text }]}>{title}</Text>
-    {!!count && <Text style={[styles.muted, { color: colors.muted }]}>{count}</Text>}
-    <SymbolView name={{ android: expanded ? 'expand_less' : 'expand_more', ios: expanded ? 'chevron.up' : 'chevron.down', web: expanded ? 'expand_less' : 'expand_more' }} size={20} tintColor={colors.icon} />
-  </Pressable>;
 }
 
 export function OrderScreen({ session, apparatusId, orderId, preview, queueCursor, initialAction, onClose, onChanged }: Props) {

@@ -12,6 +12,10 @@ export type WorkerTabsProps = {
   header?: ReactNode;
   headerOffset?: SharedValue<number>;
   fontFamily?: string;
+  search?: string;
+  onSearchChange?: (value: string) => void;
+  onMenu?: () => void;
+  onProfile?: () => void;
   children: (id: string, pagerGesture?: PanGesture) => ReactNode;
 };
 

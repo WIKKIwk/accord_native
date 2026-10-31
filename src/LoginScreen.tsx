@@ -1,6 +1,7 @@
-import { Button, Column, Host, TextInput } from '@expo/ui';
+import { Button, Column, FieldGroup, Host, Text as ExpoText, TextInput } from '@expo/ui';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, PlatformColor, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { DEFAULT_SERVER_URL, login, type Session } from './auth';
 
 type Props = { onLogin: (session: Session) => void };
@@ -20,8 +21,32 @@ export function LoginScreen({ onLogin }: Props) {
     finally { setBusy(false); }
   }
 
+  if (Platform.OS === 'ios') {
+    return <SafeAreaView style={[styles.iosPage, { backgroundColor: PlatformColor('systemGroupedBackground') }]} edges={['top', 'bottom']}>
+      <Host style={styles.iosPage}>
+        <FieldGroup>
+          <FieldGroup.Section>
+            <ExpoText textStyle={{ fontSize: 28, fontWeight: '700' }}>Accord</ExpoText>
+            <ExpoText>Ish joyingizga xush kelibsiz</ExpoText>
+          </FieldGroup.Section>
+          <FieldGroup.Section title="Server">
+            <TextInput defaultValue={DEFAULT_SERVER_URL} accessibilityLabel="Server manzili" placeholder="Server manzili" keyboardType="url" autoCapitalize="none" autoCorrect={false} onChangeText={setServer} editable={!busy} />
+          </FieldGroup.Section>
+          <FieldGroup.Section title="Hisobga kirish">
+            <TextInput accessibilityLabel="Telefon raqam" placeholder="Telefon raqam" keyboardType="phone-pad" autoComplete="tel" onChangeText={setPhone} editable={!busy} />
+            <TextInput accessibilityLabel="Kirish kodi" placeholder="Kirish kodi" keyboardType="number-pad" secureTextEntry onChangeText={setCode} editable={!busy} />
+          </FieldGroup.Section>
+          <FieldGroup.Section>
+            <Button label={busy ? 'Kirilmoqda…' : 'Kirish'} disabled={busy || !phone.trim() || !code.trim()} onPress={submit} />
+            {!!error && <ExpoText textStyle={{ color: '#b3261e' }}>{error}</ExpoText>}
+          </FieldGroup.Section>
+        </FieldGroup>
+      </Host>
+    </SafeAreaView>;
+  }
+
   return (
-    <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.brand}><Text style={styles.brandText}>A</Text></View>
         <Text style={styles.title}>Accord</Text>
@@ -47,6 +72,7 @@ export function LoginScreen({ onLogin }: Props) {
 }
 
 const styles = StyleSheet.create({
+  iosPage: { flex: 1 },
   page: { flex: 1, backgroundColor: '#f4f6f3' },
   content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 42 },
   brand: { width: 58, height: 58, borderRadius: 19, backgroundColor: '#294e3e', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },

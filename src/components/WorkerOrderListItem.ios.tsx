@@ -1,7 +1,7 @@
 import { ListItem, Text } from '@expo/ui';
 import { VStack } from '@expo/ui/swift-ui';
-import { background, font, foregroundStyle, listRowBackground, onLongPressGesture } from '@expo/ui/swift-ui/modifiers';
-import { useColorScheme } from 'react-native';
+import { alignmentGuide, background, font, foregroundStyle, listRowBackground, listRowInsets, onLongPressGesture } from '@expo/ui/swift-ui/modifiers';
+import { useColorScheme, View } from 'react-native';
 import type { Session } from '../auth';
 import { orderCardAppearance, type OrderCardTone } from '../workerOrderAppearance';
 import { useWorkerColors } from './useWorkerColors';
@@ -22,14 +22,15 @@ export function WorkerOrderListItem({ headline, supportingText, statusText, stat
     : dark && cardTone === 'history_partial' ? { label: 'Qisman', color: '#FFD60A' }
     : queueStatus && statusText ? { label: statusText, color: statusColors[cardTone] ?? '#8E8E93' } : null;
   const appearance = orderCardAppearance(status || queueStatus ? 'neutral' : cardTone, dark ? '#101410' : '#FFFFFF', dark);
-  const modifiers = [...(appearance.gradientColors ? [background({ type: 'linearGradient', colors: appearance.gradientColors, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } })] : appearance.color ? [listRowBackground(appearance.color)] : []), ...(onLongPress ? [onLongPressGesture(onLongPress)] : [])];
-  const textStyle = fontFamily ? { fontFamily } : undefined;
+  const modifiers = [alignmentGuide('listRowSeparatorLeading', 56), listRowInsets({ top: 8, bottom: 8, leading: 16, trailing: 16 }), ...(appearance.gradientColors ? [background({ type: 'linearGradient', colors: appearance.gradientColors, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } })] : appearance.color ? [listRowBackground(appearance.color)] : []), ...(onLongPress ? [onLongPressGesture(onLongPress)] : [])];
   const detailsText = queueStatus ? statusDetail ?? '' : supportingText;
-  const details = detailsText ? <Text textStyle={textStyle} modifiers={[foregroundStyle({ type: 'color', color: appearance.secondary ?? 'secondaryLabel' })]}>{detailsText}</Text> : null;
-  return <ListItem onPress={onPress} modifiers={modifiers} leading={<WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active={imageActive} backgroundColor={colors.field} iconColor={colors.muted} />} supportingText={status ? <VStack alignment="leading" spacing={2}>
+  const details = detailsText ? <Text modifiers={[font({ textStyle: 'subheadline', ...(fontFamily ? { family: fontFamily } : {}) }), foregroundStyle({ type: 'color', color: appearance.secondary ?? 'secondaryLabel' })]}>{detailsText}</Text> : null;
+  return <ListItem onPress={onPress} modifiers={modifiers} leading={<View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}>
+    <WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active={imageActive} size={44} backgroundColor={colors.field} iconColor={colors.muted} />
+  </View>} supportingText={status ? <VStack alignment="leading" spacing={2}>
     {details}
     <Text modifiers={[font({ textStyle: 'caption', weight: 'medium' }), foregroundStyle(status.color)]}>{`● ${status.label}`}</Text>
   </VStack> : details ?? undefined}>
-    <Text textStyle={headlineFontFamily ? { fontFamily: headlineFontFamily } : { fontWeight: '500' }} modifiers={appearance.text ? [foregroundStyle(appearance.text)] : undefined}>{headline}</Text>
+    <Text modifiers={[font({ textStyle: 'body', weight: 'medium', ...(headlineFontFamily ? { family: headlineFontFamily } : {}) }), ...(appearance.text ? [foregroundStyle(appearance.text)] : [])]}>{headline}</Text>
   </ListItem>;
 }
