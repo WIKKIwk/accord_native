@@ -1,8 +1,8 @@
 import { Column, Host, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { Children, cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { RefreshControl, View } from 'react-native';
+import { RefreshControl, View, type FlatList } from 'react-native';
 import { GestureDetector, useNativeGesture, type PanGesture } from 'react-native-gesture-handler';
-import Animated, { useAnimatedScrollHandler, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import Animated, { scrollTo, useAnimatedReaction, useAnimatedRef, useAnimatedScrollHandler, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { WorkerOrderListItem } from './WorkerOrderListItem';
 import { WorkerOrderPalette } from './workerOrderPalette';
 
@@ -15,8 +15,13 @@ type Props = {
 export function WorkerQueueList({ children, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(0);
   const colors = useMaterialColors();
-  const ownHeaderOffset = useSharedValue(0);
+  const listRef = useAnimatedRef<FlatList<ReactNode>>();
+  const scrollOffset = useSharedValue(0);
+  const contentHeight = useSharedValue(0);
+  const viewHeight = useSharedValue(0);
+  const pageActive = useSharedValue(active);
   const imageFrame = useRef<number | null>(null);
   const imagesScheduled = useRef(false);
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { item: unknown }[] }) => {
@@ -33,9 +38,19 @@ export function WorkerQueueList({ children, onRefresh, active, pagerGesture, hea
   const scrollGestureConfig = useMemo(() => ({ requireToFail: pagerGesture }), [pagerGesture]);
   const scrollGesture = useNativeGesture(scrollGestureConfig);
   useEffect(() => () => { if (imageFrame.current !== null) cancelAnimationFrame(imageFrame.current); }, []);
-  useEffect(() => {
-    if (active) headerOffset.set(withTiming(ownHeaderOffset.get(), { duration: 160 }));
-  }, [active, headerOffset, ownHeaderOffset]);
+  useEffect(() => { pageActive.set(active); }, [active, pageActive]);
+  // Align inactive pages near the top without changing deeper scroll positions.
+  useAnimatedReaction(
+    () => ({ active: pageActive.get(), header: headerOffset.get(), height: headerHeight.get(), max: Math.max(0, contentHeight.get() - viewHeight.get()) }),
+    state => {
+      if (state.active || viewHeight.get() <= 0 || scrollOffset.get() > state.height) return;
+      const target = Math.min(state.header, state.max);
+      if (Math.abs(scrollOffset.get() - target) > 0.5) {
+        scrollOffset.set(target);
+        scrollTo(listRef, 0, target, false);
+      }
+    }
+  );
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try { await onRefresh(); } finally { setRefreshing(false); }
@@ -54,17 +69,17 @@ export function WorkerQueueList({ children, onRefresh, active, pagerGesture, hea
       const current = Math.max(0, Math.min(maxScroll, event.contentOffset.y));
       const previous = context.previous ?? current;
       context.previous = current;
-      const previousHeader = ownHeaderOffset.get();
-      let next = Math.min(current, headerHeight.get(), previousHeader);
+      scrollOffset.set(current);
       if (active && (context.dragging || context.momentum)) {
-        next = Math.max(0, Math.min(current, headerHeight.get(), previousHeader + current - previous));
+        const next = Math.max(0, Math.min(current, headerHeight.get(), headerOffset.get() + current - previous));
+        headerOffset.set(next);
       }
-      ownHeaderOffset.set(next);
-      if (active && (context.dragging || context.momentum || next !== previousHeader)) headerOffset.set(next);
     },
   });
 
-  return <WorkerOrderPalette.Provider value={colors}><GestureDetector gesture={scrollGesture}><Animated.FlatList style={{ flex: 1 }} contentContainerStyle={{ paddingTop: topInset }} data={Children.toArray(children)}
+  return <WorkerOrderPalette.Provider value={colors}><GestureDetector gesture={scrollGesture}><Animated.FlatList ref={listRef} style={{ flex: 1 }} contentContainerStyle={{ paddingTop: topInset, minHeight: viewportHeight + Math.max(0, topInset - 48) }} data={Children.toArray(children)}
+    onLayout={event => { const height = event.nativeEvent.layout.height; setViewportHeight(height); viewHeight.set(height); }}
+    onContentSizeChange={(_width, height) => { contentHeight.set(height); }}
     onScroll={onScroll} scrollEventThrottle={16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
     onViewableItemsChanged={onViewableItemsChanged} extraData={imagesReady}
     refreshControl={<RefreshControl refreshing={refreshing} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} />}
