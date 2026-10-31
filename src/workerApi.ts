@@ -6,7 +6,7 @@ const object = (value: unknown): RecordValue => value && typeof value === 'objec
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
 export type Apparatus = { id: string; name: string };
-export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string };
+export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
 export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown> };
 
@@ -76,7 +76,7 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
       const id = string(rawId);
       const row = object(rows[id]);
       if (!id || !Object.keys(row).length) return [];
-      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state: string(machineStates[id]) || string(fallback[id]) }];
+      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state: string(machineStates[id]) || string(fallback[id]), imageId: string(row.image_id) }];
     });
   }
   const assigned = new Set(machines.map(machine => machine.id));
@@ -95,7 +95,7 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
     seen.add(key);
     completed.push({
       id, apparatusId, code: string(row.code), title: string(row.title) || 'Buyurtma',
-      customer: string(row.customer_name), state,
+      customer: string(row.customer_name), state, imageId: string(row.image_id),
       completedAt: typeof item.completed_at_unix === 'number' ? item.completed_at_unix : 0,
       issueNote: string(item.issue_note),
     });
