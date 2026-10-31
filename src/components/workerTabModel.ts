@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { PanGesture } from 'react-native-gesture-handler';
 import type { Apparatus } from '../workerApi';
 import type { SharedValue } from 'react-native-reanimated';
 
@@ -10,7 +11,7 @@ export type WorkerTabsProps = {
   loading?: boolean;
   header?: ReactNode;
   headerOffset?: SharedValue<number>;
-  children: (id: string) => ReactNode;
+  children: (id: string, pagerGesture?: PanGesture) => ReactNode;
 };
 
 /** V2 order: first assigned apparatus, completed, then the remaining apparatuses. */

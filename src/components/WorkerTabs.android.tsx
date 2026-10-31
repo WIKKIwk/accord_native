@@ -1,14 +1,16 @@
 import { Box, Host, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, onGloballyPositioned, padding, selectable, testID } from '@expo/ui/jetpack-compose/modifiers';
-import { type ComponentRef, useCallback, useEffect, useRef, useState } from 'react';
+import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { GestureDetector, usePanGesture, type PanGestureConfig } from 'react-native-gesture-handler';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { getWorkerTabs, type WorkerTab, type WorkerTabsProps } from './workerTabModel';
 
 type TabLayout = { x: number; width: number };
 
 export function WorkerTabs(props: WorkerTabsProps) {
-  const tabs = getWorkerTabs(props.machines);
+  const tabs = useMemo(() => getWorkerTabs(props.machines), [props.machines]);
   return <NativeWorkerTabs key={JSON.stringify(tabs.map(tab => tab.id))} {...props} tabs={tabs} />;
 }
 
@@ -16,11 +18,8 @@ function NativeWorkerTabs({ tabs, selected, onSelect, loading, children, header,
   const colors = useMaterialColors();
   const defaultHeaderOffset = useSharedValue(0);
   const offset = headerOffset ?? defaultHeaderOffset;
-  const lastSelection = useRef(selected);
   const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.id === selected));
-  const pager = useRef<ComponentRef<typeof ScrollView>>(null);
   const currentPage = useRef(selectedIndex);
-  const previousPageWidth = useRef(0);
   const tabScroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const [barWidth, setBarWidth] = useState(0);
   const [pageWidth, setPageWidth] = useState(0);
@@ -28,21 +27,49 @@ function NativeWorkerTabs({ tabs, selected, onSelect, loading, children, header,
   const layouts = useSharedValue<TabLayout[]>([]);
   const labelWidths = useSharedValue<number[]>([]);
   const pagePosition = useSharedValue(selectedIndex);
+  const gestureStartPage = useSharedValue(selectedIndex);
   const fixedWidth = tabs.length <= 2 && barWidth > 0 ? barWidth / tabs.length : undefined;
 
   useEffect(() => {
-    if (lastSelection.current !== selected) {
-      offset.set(withTiming(0, { duration: 160 }));
-      lastSelection.current = selected;
-    }
-    if (pageWidth && (currentPage.current !== selectedIndex || previousPageWidth.current !== pageWidth)) {
-      pager.current?.scrollTo({ x: selectedIndex * pageWidth, animated: previousPageWidth.current === pageWidth });
+    if (currentPage.current !== selectedIndex) {
+      pagePosition.set(withTiming(selectedIndex, { duration: 200 }));
       currentPage.current = selectedIndex;
-      previousPageWidth.current = pageWidth;
     }
     const tab = layouts.get()[selectedIndex];
     if (tab) tabScroll.current?.scrollTo({ x: Math.max(0, tab.x + tab.width / 2 - barWidth / 2), animated: true });
-  }, [selected, selectedIndex, barWidth, layouts, pageWidth, offset]);
+  }, [selectedIndex, barWidth, layouts, pagePosition]);
+
+  const selectSwipedPage = useCallback((index: number) => {
+    currentPage.current = index;
+    if (tabs[index]) onSelect(tabs[index].id);
+  }, [onSelect, tabs]);
+  const pagerGestureConfig = useMemo<PanGestureConfig>(() => ({
+    enabled: tabs.length > 1 && pageWidth > 0,
+    activeOffsetX: [-24, 24],
+    failOffsetY: [-10, 10],
+    onActivate: () => {
+      'worklet';
+      cancelAnimation(pagePosition);
+      gestureStartPage.set(Math.round(pagePosition.get()));
+    },
+    onUpdate: event => {
+      'worklet';
+      const start = gestureStartPage.get();
+      pagePosition.set(Math.max(Math.max(0, start - 1), Math.min(Math.min(tabs.length - 1, start + 1), start - event.translationX / pageWidth)));
+    },
+    onDeactivate: event => {
+      'worklet';
+      const start = gestureStartPage.get();
+      const enoughDistance = Math.abs(event.translationX) >= pageWidth * 0.25;
+      const quickSwipe = Math.abs(event.translationX) >= 32 && Math.abs(event.velocityX) >= 600;
+      const direction = event.translationX < 0 ? 1 : -1;
+      const target = event.canceled || (!enoughDistance && !quickSwipe)
+        ? start : Math.max(0, Math.min(tabs.length - 1, start + direction));
+      pagePosition.set(withTiming(target, { duration: 200 }));
+      scheduleOnRN(selectSwipedPage, target);
+    },
+  }), [tabs.length, pageWidth, pagePosition, gestureStartPage, selectSwipedPage]);
+  const pagerGesture = usePanGesture(pagerGestureConfig);
 
   // Apply measurements atomically on the UI thread. Reading then replacing
   // the array on JS can lose another tab's still-pending measurement.
@@ -69,11 +96,6 @@ function NativeWorkerTabs({ tabs, selected, onSelect, loading, children, header,
     }, false);
   }, [labelWidths]);
 
-  const onPageScroll = useAnimatedScrollHandler(event => {
-    const width = event.layoutMeasurement.width;
-    if (width > 0) pagePosition.set(event.contentOffset.x / width);
-  });
-
   const indicatorMotion = useAnimatedStyle(() => {
     const position = Math.max(0, Math.min(tabs.length - 1, pagePosition.value));
     const from = Math.floor(position);
@@ -94,24 +116,21 @@ function NativeWorkerTabs({ tabs, selected, onSelect, loading, children, header,
     };
   });
   const headerMotion = useAnimatedStyle(() => ({ transform: [{ translateY: -offset.value }] }));
+  const pageMotion = useAnimatedStyle(() => ({ transform: [{ translateX: -pagePosition.value * pageWidth }] }));
 
   return <View style={styles.container}>
     {loading ? <ActivityIndicator style={styles.loading} /> : null}
-    <Animated.ScrollView ref={pager} style={styles.pager} horizontal pagingEnabled nestedScrollEnabled removeClippedSubviews={false}
-      showsHorizontalScrollIndicator={false} onScroll={onPageScroll} scrollEventThrottle={16}
+    <View style={styles.pager}
       onLayout={event => {
         setPageWidth(event.nativeEvent.layout.width);
         setPageHeight(event.nativeEvent.layout.height);
-      }}
-      onMomentumScrollEnd={event => {
-          const width = event.nativeEvent.layoutMeasurement.width;
-          if (!width) return;
-          const page = Math.round(event.nativeEvent.contentOffset.x / width);
-          currentPage.current = page;
-          if (tabs[page]) onSelect(tabs[page].id);
-        }} testID="worker-tab-pager">
-      {pageWidth > 0 && pageHeight > 0 ? tabs.map(tab => <View key={tab.id} style={{ width: pageWidth, height: pageHeight }}>{children(tab.id)}</View>) : null}
-    </Animated.ScrollView>
+      }} testID="worker-tab-pager">
+      <GestureDetector gesture={pagerGesture}>
+        <Animated.View style={[styles.pages, { width: pageWidth * tabs.length }, pageMotion]}>
+          {pageWidth > 0 && pageHeight > 0 ? tabs.map(tab => <View key={tab.id} collapsable={false} style={{ width: pageWidth, height: pageHeight }}>{children(tab.id, pagerGesture)}</View>) : null}
+        </Animated.View>
+      </GestureDetector>
+    </View>
     <Animated.View style={[styles.headerOverlay, headerMotion]}>
     <View style={{ backgroundColor: colors.surfaceContainerLow }}>{header}</View>
     <View style={[styles.tabBar, { backgroundColor: colors.surfaceContainerLow }]} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
@@ -148,6 +167,7 @@ const styles = StyleSheet.create({
   tabRow: { flexDirection: 'row', height: 48 },
   tabHost: { height: 48 },
   indicator: { position: 'absolute', left: 0, bottom: 0, height: 3, borderRadius: 3 },
-  pager: { flex: 1 },
+  pager: { flex: 1, overflow: 'hidden' },
+  pages: { flexDirection: 'row' },
   loading: { padding: 20 },
 });

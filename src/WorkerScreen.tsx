@@ -120,10 +120,10 @@ export function WorkerScreen({ session, onLogout }: Props) {
       {Platform.OS !== 'android' || section === 'profile' ? header : null}
       {section === 'profile' ? <WorkerProfile session={session} onLogout={onLogout} /> : <>
       <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset}>
-        {tabId => {
+        {(tabId, pagerGesture) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const pageOrders = queue?.orders[tabId] ?? [];
-          return <WorkerQueueList active={tabId === (machineId || 'completed')} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={async () => { await reload(); }}>
+          return <WorkerQueueList active={tabId === (machineId || 'completed')} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={async () => { await reload(); }}>
           {error ? <ListItem supportingText={error} onPress={() => { void reload(true); }}>Qayta urinish</ListItem> : null}
           {queue && !queue.machines.length ? <ListItem supportingText="Administrator aparatni hisobingizga biriktirishi kerak.">Bosma aparati topilmadi</ListItem> : null}
           {tabId === 'completed' && !completed.length && !loading ? <ListItem>Tugallangan buyurtmalar yo‘q</ListItem> : null}
