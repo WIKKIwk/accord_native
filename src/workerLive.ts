@@ -1,6 +1,7 @@
 import { AppState, type AppStateStatus } from 'react-native';
 import type { Session } from './auth';
 import { applyWorkerDelta, workerSnapshotCursor } from './workerDelta';
+import { DEFAULT_QUEUE_LIMIT, type QueueLimit } from './workerQueueLimit';
 
 /** Invalidate the worker's HTTP snapshot when the server's scoped stream changes. */
 export function subscribeWorkerLive(
@@ -10,6 +11,7 @@ export function subscribeWorkerLive(
   onConnectionChange?: (connected: boolean) => void,
   getSnapshot?: () => Record<string, unknown> | null,
   onSnapshot?: (snapshot: Record<string, unknown>) => void,
+  queueLimit: QueueLimit = DEFAULT_QUEUE_LIMIT,
 ): () => void {
   let stopped = false;
   let foreground = AppState.currentState !== 'background';
@@ -42,7 +44,7 @@ export function subscribeWorkerLive(
     base.searchParams.set('token', session.token);
     base.searchParams.set('protocol', protocol);
     base.searchParams.set('worker_scope', 'true');
-    base.searchParams.set('queue_limit', '20');
+    base.searchParams.set('queue_limit', String(queueLimit));
     base.searchParams.set('queue_positions', 'true');
     if (protocol === 'state_delta_v2') base.searchParams.set('projection', 'worker_list_v1');
     const cursor = protocol === 'state_delta_v2' ? workerSnapshotCursor(getSnapshot?.()) : null;

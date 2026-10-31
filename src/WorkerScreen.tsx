@@ -18,6 +18,8 @@ import { WorkerProfile } from './components/WorkerProfile';
 import { WorkerOrderListItem } from './components/WorkerOrderListItem';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerQueueList } from './components/WorkerQueueList';
+import { WorkerQueueFilter } from './components/WorkerQueueFilter';
+import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 
 type Props = { session: Session; onLogout: () => void };
 const statusLabel: Record<string, string> = {
@@ -46,41 +48,53 @@ export function WorkerScreen({ session, onLogout }: Props) {
   const [navBarHeight, setNavBarHeight] = useState(80);
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
+  const [queueLimit, setQueueLimit] = useState<QueueLimit>(DEFAULT_QUEUE_LIMIT);
+  const [limitReady, setLimitReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const requestGeneration = useRef(0);
   const queueRef = useRef<WorkerQueue | null>(null);
+  const queueScopeRef = useRef<string | null>(null);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const searchScope = search.trim().slice(0, 120);
+  const windowScope = JSON.stringify([searchScope, queueLimit]);
+  useEffect(() => {
+    let mounted = true;
+    void loadQueueLimit(session).then(limit => { if (mounted) { setQueueLimit(limit); setLimitReady(true); } });
+    return () => { mounted = false; };
+  }, [session]);
   useEffect(() => {
     if (section === 'profile') headerOffset.set(0);
   }, [section, headerOffset]);
   const reload = useCallback(async (showLoading = false) => {
+    if (!limitReady) return;
     const generation = ++requestGeneration.current;
     if (showLoading) setLoading(true);
     try {
-      const result = await loadWorkerQueue(session, search);
+      const result = await loadWorkerQueue(session, search, queueLimit);
       if (generation !== requestGeneration.current) return;
       const current = queueRef.current;
       const old = current?.snapshot;
       const next = result.snapshot;
-      if (old && loadedScope === searchScope && old.epoch === next.epoch && old.scope === next.scope && typeof old.rev === 'number' && typeof next.rev === 'number' && old.rev > next.rev) return;
+      if (old && queueScopeRef.current === windowScope && old.epoch === next.epoch && old.scope === next.scope && typeof old.rev === 'number' && typeof next.rev === 'number' && old.rev > next.rev) return;
       queueRef.current = result;
+      queueScopeRef.current = windowScope;
       setQueue(result);
-      setLoadedScope(searchScope);
+      setLoadedScope(windowScope);
       setMachineId(current => current === 'completed' || result.machines.some(machine => machine.id === current) ? current : (result.machines[0]?.id ?? ''));
       setError('');
     } catch (e) {
       if (generation !== requestGeneration.current) return;
       setError(e instanceof Error ? e.message : 'Navbatni yuklab bo‘lmadi.');
     } finally { if (generation === requestGeneration.current) setLoading(false); }
-  }, [session, search, searchScope, loadedScope]);
+  }, [session, search, queueLimit, windowScope, limitReady]);
   useEffect(() => {
+    if (!limitReady) return;
     const timer = setTimeout(() => { void reload(true); }, search ? 350 : 0);
     return () => clearTimeout(timer);
-  }, [reload, search]);
+  }, [reload, search, limitReady]);
   useEffect(() => {
-    if (activeOrder || loadedScope !== searchScope || !queueRef.current) return;
+    if (activeOrder || loadedScope !== windowScope || !queueRef.current) return;
     return subscribeWorkerLive(session, searchScope, () => { void reload(); }, undefined,
       () => queueRef.current?.snapshot ?? null,
       snapshot => {
@@ -91,12 +105,13 @@ export function WorkerScreen({ session, onLogout }: Props) {
         queueRef.current = updated;
         setQueue(updated);
         setLoading(false);
-      });
-  }, [session, searchScope, reload, activeOrder, loadedScope]);
+      }, queueLimit);
+  }, [session, searchScope, windowScope, queueLimit, reload, activeOrder, loadedScope]);
 
   if (activeOrder) return <OrderScreen session={session} apparatusId={activeOrder.apparatusId} orderId={activeOrder.orderId} onClose={() => setActiveOrder(null)} onChanged={() => { void reload(); }} />;
   const selectedMachine = queue?.machines.find(machine => machine.id === machineId);
-  const completed = (queue?.completed ?? []).filter(order => !searchScope || [order.code, order.title, order.customer].some(value => value.toLocaleLowerCase().includes(searchScope.toLocaleLowerCase())));
+  const completedMatches = (queue?.completed ?? []).filter(order => !searchScope || [order.code, order.title, order.customer].some(value => value.toLocaleLowerCase().includes(searchScope.toLocaleLowerCase())));
+  const completed = queueLimit === 0 ? completedMatches : completedMatches.slice(0, queueLimit);
   const scannerMachineId = selectedMachine?.id ?? queue?.machines[0]?.id ?? '';
   if (scannerOpen) return <WorkerQrScanner session={session} apparatusId={scannerMachineId} onClose={() => setScannerOpen(false)} onOrder={(apparatusId, orderId) => { setScannerOpen(false); setMachineId(apparatusId); setActiveOrder({ apparatusId, orderId }); }} />;
   function selectDestination(id: string) {
@@ -127,11 +142,21 @@ export function WorkerScreen({ session, onLogout }: Props) {
           const pageOrders = queue?.orders[tabId] ?? [];
           const pageActive = tabId === (machineId || 'completed');
           return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={async () => { await reload(); }}>
+          <WorkerQueueFilter key="queue-filter" value={queueLimit} enabled={limitReady} loading={!!queue && loading && loadedScope !== windowScope} backgroundColor={colors.surface} onChange={limit => {
+            if (limit === queueLimit) return;
+            requestGeneration.current++;
+            queueRef.current = null;
+            queueScopeRef.current = null;
+            setLoadedScope(null);
+            setLoading(true);
+            setQueueLimit(limit);
+            void saveQueueLimit(session, limit).catch(() => {});
+          }} />
           {error ? <ListItem supportingText={error} onPress={() => { void reload(true); }}>Qayta urinish</ListItem> : null}
           {queue && !queue.machines.length ? <ListItem supportingText="Administrator aparatni hisobingizga biriktirishi kerak.">Bosma aparati topilmadi</ListItem> : null}
           {tabId === 'completed' && !completed.length && !loading ? <ListItem>Tugallangan buyurtmalar yo‘q</ListItem> : null}
           {tabId === 'completed' ? completed.map((order, index) => (
-            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} first={index === 0} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
@@ -139,11 +164,11 @@ export function WorkerScreen({ session, onLogout }: Props) {
           )) : null}
           {pageMachine && !pageOrders.length && !loading ? <ListItem>Buyurtmalar topilmadi</ListItem> : null}
           {tabId !== 'completed' ? pageOrders.map((order, index) => (
-            <WorkerOrderListItem key={order.id} first={index === 0} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+            <WorkerOrderListItem key={order.id} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
-              onPress={() => setActiveOrder({ apparatusId: tabId, orderId: order.id })} />
+              onPress={() => { if (loadedScope !== windowScope) { Alert.alert('Navbat yangilanmoqda', 'Buyurtmani ochishdan avval yangilanishini kuting.'); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id }); }} />
           )) : null}
           <Spacer size={88} />
           </WorkerQueueList>;

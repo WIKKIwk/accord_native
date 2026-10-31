@@ -1,5 +1,6 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
+import { DEFAULT_QUEUE_LIMIT, type QueueLimit } from './workerQueueLimit';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -34,8 +35,8 @@ async function getJson(session: Session, path: string, resource: 'apparatus' | '
   } finally { clearTimeout(timeout); }
 }
 
-export async function loadWorkerQueue(session: Session, search = ''): Promise<WorkerQueue> {
-  const query = new URLSearchParams({ worker_scope: 'true', projection: 'worker_list_v1', queue_limit: '20', queue_positions: 'true' });
+export async function loadWorkerQueue(session: Session, search = '', queueLimit: QueueLimit = DEFAULT_QUEUE_LIMIT): Promise<WorkerQueue> {
+  const query = new URLSearchParams({ worker_scope: 'true', projection: 'worker_list_v1', queue_limit: String(queueLimit), queue_positions: 'true' });
   if (search.trim()) query.set('queue_search', search.trim().slice(0, 120));
   const [catalogResult, queueResult] = await Promise.allSettled([
     getJson(session, '/v1/mobile/admin/apparatus?limit=200', 'apparatus'),
