@@ -14,7 +14,7 @@ export function WorkerTabs(props: WorkerTabsProps) {
   return <NativeWorkerTabs key={JSON.stringify(tabs.map(tab => tab.id))} {...props} tabs={tabs} />;
 }
 
-function NativeWorkerTabs({ tabs, selected, onSelect, loading, children, header, headerOffset }: WorkerTabsProps & { tabs: WorkerTab[] }) {
+function NativeWorkerTabs({ tabs, selected, onSelect, loading, children, header, headerOffset, fontFamily }: WorkerTabsProps & { tabs: WorkerTab[] }) {
   const colors = useMaterialColors();
   const defaultHeaderOffset = useSharedValue(0);
   const offset = headerOffset ?? defaultHeaderOffset;
@@ -147,7 +147,7 @@ function NativeWorkerTabs({ tabs, selected, onSelect, loading, children, header,
                 testID(`worker-tab-${tab.id}`), padding(16, 0, 16, 0),
               ]}>
                 <Text color={selectedIndex === index ? colors.primary : colors.onSurfaceVariant}
-                  style={{ typography: 'titleSmall' }} maxLines={1} overflow="ellipsis"
+                  style={{ typography: 'titleSmall', fontFamily }} maxLines={1} overflow="ellipsis"
                   modifiers={[onGloballyPositioned(({ width }) => recordLabelWidth(index, width))]}>{tab.name}</Text>
               </Box>
             </Host>

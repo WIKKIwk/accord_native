@@ -121,7 +121,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
     <SafeAreaView edges={Platform.OS === 'android' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
       {Platform.OS !== 'android' || section === 'profile' ? header : null}
       {section === 'profile' ? <WorkerProfile session={session} onLogout={onLogout} /> : <>
-      <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset}>
+      <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily}>
         {(tabId, pagerGesture) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const pageOrders = queue?.orders[tabId] ?? [];

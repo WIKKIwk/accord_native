@@ -11,6 +11,7 @@ export type WorkerTabsProps = {
   loading?: boolean;
   header?: ReactNode;
   headerOffset?: SharedValue<number>;
+  fontFamily?: string;
   children: (id: string, pagerGesture?: PanGesture) => ReactNode;
 };
 

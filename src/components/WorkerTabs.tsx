@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { getWorkerTabs, type WorkerTabsProps } from './workerTabModel';
 
 /** Non-Android pager; Android uses Expo UI's native Compose HorizontalPager. */
-export function WorkerTabs({ machines, selected, onSelect, loading, children }: WorkerTabsProps) {
+export function WorkerTabs({ machines, selected, onSelect, loading, children, fontFamily }: WorkerTabsProps) {
   const tabs = getWorkerTabs(machines);
   const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.id === selected));
   const pager = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -26,7 +26,7 @@ export function WorkerTabs({ machines, selected, onSelect, loading, children }: 
         {tabs.map(tab => <View key={tab.id} style={[styles.tab, selected === tab.id && styles.selected]}>
           <Host matchContents colorScheme="light" seedColor="#294e3e">
             <Button variant="text" onPress={() => onSelect(tab.id)} testID={`worker-tab-${tab.id}`}>
-              <Text textStyle={{ fontSize: 14, fontWeight: selected === tab.id ? '700' : '500', color: selected === tab.id ? '#294e3e' : '#525f58' }}>{tab.name}</Text>
+              <Text textStyle={{ fontFamily, fontSize: 14, fontWeight: fontFamily ? undefined : selected === tab.id ? '700' : '500', color: selected === tab.id ? '#294e3e' : '#525f58' }}>{tab.name}</Text>
             </Button>
           </Host>
         </View>)}
