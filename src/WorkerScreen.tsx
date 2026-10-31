@@ -27,7 +27,8 @@ type Props = { session: Session; onLogout: () => void };
 const statusLabel: Record<string, string> = {
   pending: 'Kutilmoqda', waiting: 'Kutilmoqda', in_progress: 'Ish jarayonida',
   paused: 'To‘xtatilgan', completed: 'Yakunlangan', frozen: 'Muzlatilgan',
-  print_preflight: 'Rang moslash',
+  print_preflight: 'Rang moslash', print_preflight_passed: 'Rang chiqarildi',
+  waiting_next_stage: 'Keyingi bosqich kutilmoqda', issue: 'Muammoli',
 };
 
 export function WorkerScreen({ session, onLogout }: Props) {
@@ -159,7 +160,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
           {tabId === 'completed' && !completed.length && !loading ? <ListItem>Tugallangan buyurtmalar yo‘q</ListItem> : null}
           {tabId === 'completed' ? completed.map((order, index) => (
             <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
-              session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive}
+              session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
               onPress={() => setHistoryOrder(order)} />
@@ -167,7 +168,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
           {pageMachine && !pageOrders.length && !loading ? <ListItem>Buyurtmalar topilmadi</ListItem> : null}
           {tabId !== 'completed' ? pageOrders.map((order, index) => (
             <WorkerOrderListItem key={order.id} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
-              session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive}
+              session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
               onPress={() => { if (loadedScope !== windowScope) { Alert.alert('Navbat yangilanmoqda', 'Buyurtmani ochishdan avval yangilanishini kuting.'); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order }); }} />

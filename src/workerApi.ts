@@ -1,13 +1,14 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { DEFAULT_QUEUE_LIMIT, type QueueLimit } from './workerQueueLimit';
+import { completedOrderTone, workerOrderTone, type OrderCardTone } from './workerOrderAppearance';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
 export type Apparatus = { id: string; name: string };
-export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string };
+export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
 export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown> };
 
@@ -68,6 +69,7 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
   const sequences = object(snapshot.sequences);
   const states = object(snapshot.worker_display_states);
   const fallbackStates = object(snapshot.queue_states);
+  const orderControls = object(snapshot.order_controls);
   const orders: Record<string, QueueOrder[]> = {};
   for (const machine of machines) {
     const ids = Array.isArray(visible[machine.id]) ? visible[machine.id] : sequences[machine.id];
@@ -77,11 +79,13 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
       const id = string(rawId);
       const row = object(rows[id]);
       if (!id || !Object.keys(row).length) return [];
-      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state: string(machineStates[id]) || string(fallback[id]), imageId: string(row.image_id) }];
+      const displayState = string(machineStates[id]);
+      const queueState = string(fallback[id]);
+      const state = displayState === 'in_progress' && queueState === 'paused' ? queueState : displayState || queueState;
+      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state, imageId: string(row.image_id), cardTone: workerOrderTone(displayState, queueState, string(object(orderControls[id]).state)) }];
     });
   }
   const assigned = new Set(machines.map(machine => machine.id));
-  const orderControls = object(snapshot.order_controls);
   const seen = new Set<string>();
   const completed: CompletedOrder[] = [];
   for (const raw of Array.isArray(snapshot.completed_orders) ? snapshot.completed_orders : []) {
@@ -97,6 +101,7 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
     completed.push({
       id, apparatusId, code: string(row.code), title: string(row.title) || 'Buyurtma',
       customer: string(row.customer_name), state, imageId: string(row.image_id),
+      cardTone: completedOrderTone(state),
       completedAt: typeof item.completed_at_unix === 'number' ? item.completed_at_unix : 0,
       issueNote: string(item.issue_note),
     });
