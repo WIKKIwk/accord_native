@@ -12,6 +12,7 @@ import { WorkerSheetCloseContext } from './components/workerSheetContext';
 import { WorkerFormDialog } from './components/WorkerFormDialog';
 import { WorkerDeliveryDialog } from './components/WorkerDeliveryDialog';
 import { WorkerIconButton } from './components/WorkerIconButton';
+import { WorkerPreflightButton } from './components/WorkerPreflightButton';
 import { WorkerFormField as Field } from './components/WorkerFormField';
 import { WorkerExpansion as Expansion } from './components/WorkerExpansion';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
@@ -713,7 +714,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
         {interaction.material_intake_allowed === true && intakeCandidates.length > 0 && <NativeButton label={intakeMode ? 'Scannerni yopish' : 'Homashyo ulash'} height={52} disabled={!synchronized || deliveryBusy} onPress={() => setIntakeMode(value => !value)} />}
         {showPreflightFreeze && <NativeButton label="Rang chiqarishni to‘xtatib muzlatish" height={58} variant="filled" onPress={() => { void freezePreflight(); }} />}
         {showPreflightOutcome && <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Rang chiqdi" height={58} variant="filled" onPress={() => { void runPreflight('passed'); }} /></View><View style={styles.flex}><NativeButton label="Chiqmadi" height={58} onPress={() => { void runPreflight('failed'); }} /></View></View>}
-        {showPreflightHold && <NativeButton label="Rang chiqarish" height={58} variant="filled" onPress={() => { void runPreflight('hold'); }} />}
+        {showPreflightHold && <WorkerPreflightButton onPress={() => { void runPreflight('hold'); }} />}
         {!showPreflightHold && !showPreflightOutcome && allowed.includes('start') && <NativeButton label="Boshlash" height={58} variant="filled" disabled={!startReady || busy} onPress={() => { void submit('start'); }} />}
         {(allowed.includes('pause') || allowed.includes('complete')) && <View style={styles.actionRow}>
           {allowed.includes('pause') && <View style={styles.flex}><NativeButton label={safeStopRequest ? 'Rulonni yechib muzlatish' : 'Rulonni yechish'} height={58} disabled={busy} onPress={() => { setError(''); setSelected('pause'); }} /></View>}
