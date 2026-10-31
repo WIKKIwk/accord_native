@@ -713,7 +713,10 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       <View style={styles.sectionGroup}>
         {interaction.material_intake_allowed === true && intakeCandidates.length > 0 && <NativeButton label={intakeMode ? 'Scannerni yopish' : 'Homashyo ulash'} height={52} disabled={!synchronized || deliveryBusy} onPress={() => setIntakeMode(value => !value)} />}
         {showPreflightFreeze && <NativeButton label="Rang chiqarishni to‘xtatib muzlatish" height={58} variant="filled" onPress={() => { void freezePreflight(); }} />}
-        {showPreflightOutcome && <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Rang chiqdi" height={58} variant="filled" onPress={() => { void runPreflight('passed'); }} /></View><View style={styles.flex}><NativeButton label="Chiqmadi" height={58} onPress={() => { void runPreflight('failed'); }} /></View></View>}
+        {showPreflightOutcome && <View style={styles.actionRow}>
+          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label="Rang chiqdi" onPress={() => { void runPreflight('passed'); }} /> : <NativeButton label="Rang chiqdi" height={58} variant="filled" onPress={() => { void runPreflight('passed'); }} />}</View>
+          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label="Chiqmadi" outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label="Chiqmadi" height={58} onPress={() => { void runPreflight('failed'); }} />}</View>
+        </View>}
         {showPreflightHold && <WorkerPreflightButton onPress={() => { void runPreflight('hold'); }} />}
         {!showPreflightHold && !showPreflightOutcome && allowed.includes('start') && <NativeButton label="Boshlash" height={58} variant="filled" disabled={!startReady || busy} onPress={() => { void submit('start'); }} />}
         {(allowed.includes('pause') || allowed.includes('complete')) && <View style={styles.actionRow}>
