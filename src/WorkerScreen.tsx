@@ -8,6 +8,7 @@ import type { Session } from './auth';
 import { loadWorkerQueue, queueFromSnapshot, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
 import { OrderScreen } from './OrderScreen';
 import { subscribeWorkerLive } from './workerLive';
+import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu } from './workerLongPress';
 import { WorkerHeader } from './components/WorkerHeader';
 import { WorkerDrawer } from './components/WorkerDrawer';
 import { WorkerTabs } from './components/WorkerTabs';
@@ -67,12 +68,15 @@ export function WorkerScreen({ session, onLogout }: Props) {
   const pendingAction = useRef<'complete' | 'astatka' | null>(null);
   const actionNotice = useRef('');
   const actionScope = useRef<{ window: string; scope: string } | null>(null);
+  const preflightCheck = useRef(0);
+  const preflightReopenBusy = useRef(false);
   const queueScopeRef = useRef<string | null>(null);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const searchScope = search.trim().slice(0, 120);
   const windowScope = JSON.stringify([searchScope, queueLimit]);
   const currentWindow = useRef(windowScope);
   useEffect(() => { currentWindow.current = windowScope; }, [windowScope]);
+  useEffect(() => { preflightCheck.current++; }, [session, windowScope, machineId, activeOrder, historyOrder, actionOrder, section, scannerOpen, alert]);
   useEffect(() => {
     let mounted = true;
     void loadQueueLimit(session).then(limit => { if (mounted) { setQueueLimit(limit); setLimitReady(true); } });
@@ -153,9 +157,47 @@ export function WorkerScreen({ session, onLogout }: Props) {
     if (!scannerMachineId) { setAlert({ title: 'QR skanerlash', message: 'Avval aparatni tanlang.' }); return; }
     setScannerOpen(true);
   }
+  async function openPreflightConfirmation(apparatusId: string, orderId: string, scope: string) {
+    if (preflightReopenBusy.current) return;
+    const generation = ++preflightCheck.current;
+    const expectedWindow = windowScope;
+    const getCursor = () => {
+      const snapshot = queueRef.current?.snapshot;
+      return currentWindow.current === expectedWindow && queueScopeRef.current === expectedWindow && snapshot?.scope === scope ? snapshot : null;
+    };
+    try {
+      const data = await readWorkerActionControl(session, apparatusId, orderId, getCursor);
+      if (!screenMounted.current || generation !== preflightCheck.current) return;
+      const menu = workerLongPressMenu(data, session, apparatusId, orderId, getCursor());
+      if (menu.kind !== 'reopen') { void latestReload.current(); return; }
+      setAlert({ title: 'Rang chiqarilyapti holatiga qaytarish', message: 'Rostdan ham rang chiqarilyapti holatiga qaytarmoqchimisiz?', confirmLabel: 'Ruxsat', onConfirm: () => {
+        if (preflightReopenBusy.current) return;
+        preflightReopenBusy.current = true;
+        void (async () => {
+          let message: string;
+          try {
+            await runWorkerMenuAction(session, apparatusId, orderId, 'reopen', menu, getCursor);
+            message = 'Rang chiqarilyapti holatiga qaytarildi.';
+          } catch { message = 'Amal tasdiqlanmadi. Buyurtmaning joriy holati yangilanmoqda.'; }
+          finally { preflightReopenBusy.current = false; }
+          if (screenMounted.current) {
+            void latestReload.current();
+            setAlert(current => current ?? { title: 'Buyurtma', message });
+          }
+        })();
+      } });
+    } catch (e) {
+      if (screenMounted.current && generation === preflightCheck.current) {
+        void latestReload.current();
+        setAlert({ title: 'Buyurtma', message: e instanceof Error ? e.message : 'Buyurtmani yuklab bo‘lmadi.' });
+      }
+    }
+  }
   function openOrderActions(apparatusId: string, order: QueueOrder, isCompleted: boolean) {
+    preflightCheck.current++;
     const scope = queueRef.current?.snapshot.scope;
     if (loadedScope !== windowScope || typeof scope !== 'string' || !scope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; }
+    if (!isCompleted && order.state === 'print_preflight_passed') { void openPreflightConfirmation(apparatusId, order.id, scope); return; }
     actionScope.current = { window: windowScope, scope };
     pendingAction.current = null; actionNotice.current = '';
     setActionOrder({ apparatusId, order, completed: isCompleted });
