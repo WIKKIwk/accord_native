@@ -1,7 +1,7 @@
 import { ListItem, Spacer } from '@expo/ui';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import type { Session } from './auth';
@@ -22,6 +22,8 @@ import { WorkerQueueFilter } from './components/WorkerQueueFilter';
 import { WorkerOrderSheet } from './components/WorkerOrderSheet';
 import { WorkerWipHistory } from './components/WorkerWipHistory';
 import { WorkerLongPressActions } from './components/WorkerLongPressActions';
+import { WorkerAlert } from './components/WorkerAlert';
+import type { WorkerAlertData } from './components/workerDialogTypes';
 import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 
 type Props = { session: Session; onLogout: () => void };
@@ -58,6 +60,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
   const [limitReady, setLimitReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [alert, setAlert] = useState<WorkerAlertData | null>(null);
   const requestGeneration = useRef(0);
   const screenMounted = useRef(true);
   const queueRef = useRef<WorkerQueue | null>(null);
@@ -144,15 +147,15 @@ export function WorkerScreen({ session, onLogout }: Props) {
     if (id === 'profile') { setSection('profile'); return; }
     if (id === 'logout') { onLogout(); return; }
     const labels: Record<string, string> = { chat: 'Chat', daily: 'Kunlik ishlar', paddons: 'Paddonlar', instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
-    Alert.alert(labels[id] ?? 'Bo‘lim', 'Bu bo‘lim hozircha tayyor emas.');
+    setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
   }
   function openScanner() {
-    if (!scannerMachineId) { Alert.alert('QR skanerlash', 'Avval aparatni tanlang.'); return; }
+    if (!scannerMachineId) { setAlert({ title: 'QR skanerlash', message: 'Avval aparatni tanlang.' }); return; }
     setScannerOpen(true);
   }
   function openOrderActions(apparatusId: string, order: QueueOrder, isCompleted: boolean) {
     const scope = queueRef.current?.snapshot.scope;
-    if (loadedScope !== windowScope || typeof scope !== 'string' || !scope) { Alert.alert('Navbat yangilanmoqda', 'Buyurtmani ochishdan avval yangilanishini kuting.'); return; }
+    if (loadedScope !== windowScope || typeof scope !== 'string' || !scope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; }
     actionScope.current = { window: windowScope, scope };
     pendingAction.current = null; actionNotice.current = '';
     setActionOrder({ apparatusId, order, completed: isCompleted });
@@ -165,7 +168,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
     pendingAction.current = null; actionNotice.current = '';
     setActionOrder(null);
     if (target && action) setActiveOrder({ apparatusId: target.apparatusId, orderId: target.order.id, preview: target.order, initialAction: action });
-    if (notice) Alert.alert('Buyurtma', notice);
+    if (notice) setAlert({ title: 'Buyurtma', message: notice });
   }
   const header = <View onLayout={event => {
     const height = event.nativeEvent.layout.height;
@@ -211,7 +214,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
               onLongPress={() => openOrderActions(tabId, order, false)}
-              onPress={() => { if (loadedScope !== windowScope) { Alert.alert('Navbat yangilanmoqda', 'Buyurtmani ochishdan avval yangilanishini kuting.'); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order }); }} />
+              onPress={() => { if (loadedScope !== windowScope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order }); }} />
           )) : null}
           <Spacer size={88} />
           </WorkerQueueList>;
@@ -231,6 +234,7 @@ export function WorkerScreen({ session, onLogout }: Props) {
       {actionOrder ? <WorkerOrderSheet dismissible compact onClose={closeOrderActions}>
         <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} onResult={finishOrderAction} />
       </WorkerOrderSheet> : null}
+      <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
     </SafeAreaView>
     </WorkerDrawer>
   );

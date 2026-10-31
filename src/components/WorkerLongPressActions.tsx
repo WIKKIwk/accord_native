@@ -1,12 +1,14 @@
 import { Button, Host } from '@expo/ui';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
 import { readWorkerActionControl, reactivationTarget, runWorkerMenuAction, workerActionRequest, workerLongPressMenu, type ReactivationTarget, type WorkerMenu, type WorkerMenuAction } from '../workerLongPress';
 import type { QueueCursor } from '../workerOrderLogic';
 import type { QueueOrder } from '../workerApi';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
+import { WorkerAlert } from './WorkerAlert';
+import type { WorkerAlertData } from './workerDialogTypes';
 
 type Props = { session: Session; apparatusId: string; apparatusName: string; order: QueueOrder; completed: boolean; getCursor: () => QueueCursor | null; onChoose: (action: 'astatka' | 'complete') => void; onResult: (message: string, showNotice: boolean) => void };
 type Reactivation = { target: ReactivationTarget | null; reason: string; stage: string };
@@ -30,6 +32,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
   const [menu, setMenu] = useState<WorkerMenu | null>(null);
   const [reactivation, setReactivation] = useState<Reactivation | null>(null);
   const [error, setError] = useState('');
+  const [alert, setAlert] = useState<WorkerAlertData | null>(null);
   const inFlight = useRef(false);
   const mounted = useRef(true);
 
@@ -92,17 +95,13 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
       onChoose(action === 'astatka' ? 'astatka' : 'complete'); close?.(); return;
     }
     if (action === 'reopen') {
-      Alert.alert(labels.reopen, 'Rostdan ham rang chiqarilyapti holatiga qaytarmoqchimisiz?', [
-        { text: 'Bekor qilish', style: 'cancel' }, { text: 'Ruxsat', onPress: () => { void run(action); } },
-      ]);
+      setAlert({ title: labels.reopen, message: 'Rostdan ham rang chiqarilyapti holatiga qaytarmoqchimisiz?', confirmLabel: 'Ruxsat', onConfirm: () => { void run(action); } });
     } else void run(action);
   }
   function confirmReactivation() {
     if (!reactivation?.target || busy) return;
     const identity = [order.code || order.title, apparatusName, reactivation.stage ? `Bosqich: ${reactivation.stage}` : ''].filter(Boolean).join('\n');
-    Alert.alert('Bu bosqich uchun buyurtmani qayta faollashtirish', `${identity}\n\nIsh pauzada qaytadi. Oldingi metraj, kilogramm va chiqindi saqlanadi. Davom ettirgach faqat qo‘shimcha ishlab chiqarilgan miqdorni kiriting.`, [
-      { text: 'Bekor qilish', style: 'cancel' }, { text: 'Qayta faollashtirish', onPress: () => { void reactivate(); } },
-    ]);
+    setAlert({ title: 'Bu bosqich uchun buyurtmani qayta faollashtirish', message: `${identity}\n\nIsh pauzada qaytadi. Oldingi metraj, kilogramm va chiqindi saqlanadi. Davom ettirgach faqat qo‘shimcha ishlab chiqarilgan miqdorni kiriting.`, confirmLabel: 'Qayta faollashtirish', onConfirm: () => { void reactivate(); } });
   }
   const actionButton = (action: WorkerMenuAction, variant: 'filled' | 'outlined' | 'text' = 'outlined') => <Host key={action} matchContents={{ vertical: true }} style={styles.host}><Button label={labels[action]} variant={variant} disabled={busy} onPress={() => choose(action)} /></Host>;
 
@@ -113,9 +112,9 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
       <Text style={[styles.title, { color: colors.text }]}>{[order.code || order.title, apparatusName, reactivation.stage ? `Bosqich: ${reactivation.stage}` : ''].filter(Boolean).join('\n')}</Text>
       {!reactivation.target && <Text style={[styles.body, { color: colors.muted }]}>{denial[reactivation.reason] ?? denial.unavailable}</Text>}
       <Host matchContents={{ vertical: true }} style={styles.host}><Button label="Bu bosqich uchun buyurtmani qayta faollashtirish" disabled={!reactivation.target || busy} onPress={confirmReactivation} /></Host>
-      {!reactivation.target && ['final_stage_closed', 'order_closed'].includes(reactivation.reason) && <Host matchContents={{ vertical: true }} style={styles.host}><Button label="Sababini ko‘rish" variant="text" onPress={() => Alert.alert('Bu bosqich uchun buyurtmani qayta faollashtirish', denial[reactivation.reason] ?? denial.unavailable)} /></Host>}
+      {!reactivation.target && ['final_stage_closed', 'order_closed'].includes(reactivation.reason) && <Host matchContents={{ vertical: true }} style={styles.host}><Button label="Sababini ko‘rish" variant="text" onPress={() => setAlert({ title: 'Bu bosqich uchun buyurtmani qayta faollashtirish', message: denial[reactivation.reason] ?? denial.unavailable })} /></Host>}
     </>}
-    {menu?.kind === 'reopen' && actionButton('reopen', 'text')}
+    {menu?.kind === 'reopen' && actionButton('reopen')}
     {menu?.kind === 'bosma' && <>
       <Text style={[styles.title, { color: colors.text }]}>Astatka hisobotini topshirish</Text>
       <Text style={[styles.body, { color: colors.muted }]}>Bu amal faqat buyurtma bo‘yicha qoldiqni qayd etadi. Ish jarayoni to‘xtatilmaydi yoki yakunlanmaydi, navbat va WIP holati o‘zgarishsiz qoladi.</Text>
@@ -123,6 +122,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
       {actionButton('astatka')}
       {menu.actions.includes('finish') && <><Text style={[styles.body, { color: colors.muted }]}>Bu amal buyurtmaning bosma uskunasidagi ish jarayonini yakunlaydi.</Text>{actionButton('finish', 'filled')}</>}
     </>}
+    <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
   </View>;
 }
 

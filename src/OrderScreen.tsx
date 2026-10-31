@@ -3,13 +3,16 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerOrderThumbnail } from './components/WorkerOrderThumbnail';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerSheetCloseContext } from './components/workerSheetContext';
+import { WorkerFormDialog } from './components/WorkerFormDialog';
+import { WorkerDeliveryDialog } from './components/WorkerDeliveryDialog';
+import { WorkerIconButton } from './components/WorkerIconButton';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
 import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, returnedPaintItemsFromDraft, runningFreezeRequest, validOrderControl, type QueueCursor } from './workerOrderLogic';
 import type { QueueOrder } from './workerApi';
@@ -639,7 +642,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     if (imageId) query.set('image_id', imageId);
     const url = new URL(`/v1/mobile/admin/production-maps/order-image/view?${query}`, session.baseUrl);
     return <View style={[styles.imageViewer, { backgroundColor: colors.field }]}>
-      <View style={styles.imageHeader}><Text style={[styles.section, { color: colors.text }]}>Buyurtma rasmi</Text><Pressable accessibilityRole="button" accessibilityLabel="Rasmni yopish" onPress={() => setImageOpen(false)} style={[styles.close, { backgroundColor: colors.surface }]}><SymbolView name={{ android: 'close', ios: 'xmark', web: 'close' }} size={21} tintColor={colors.icon} /></Pressable></View>
+      <View style={styles.imageHeader}><Text style={[styles.section, { color: colors.text }]}>Buyurtma rasmi</Text><WorkerIconButton icon="close" label="Rasmni yopish" onPress={() => setImageOpen(false)} tonal /></View>
       {token && url.protocol === 'https:' && url.origin === session.baseUrl && !imageError ? <Image source={{ uri: url.toString(), headers: { Authorization: `Bearer ${token}` }, cacheKey: JSON.stringify(['order-image', session.imageCacheScope, session.baseUrl, orderId, imageId]) }} style={styles.image} contentFit="contain" cachePolicy="memory-disk" onError={() => setImageError(true)} /> : <Text style={{ color: colors.muted }}>Rasm mavjud emas.</Text>}
     </View>;
   }
@@ -674,19 +677,17 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     <View style={styles.header}>
       <Pressable accessibilityRole="button" accessibilityLabel="Buyurtma rasmini ochish" onPress={() => { setImageError(false); setImageOpen(true); }}><WorkerOrderThumbnail session={session} orderId={orderId} imageId={preview?.imageId ?? ''} active size={44} backgroundColor={colors.surface} iconColor={colors.muted} /></Pressable>
       <View style={styles.heading}><Text style={[styles.small, { color: colors.muted }]}>Buyurtma raqami:</Text><Text numberOfLines={1} style={[styles.code, { color: colors.text }]}>{code}</Text></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={closeSheet} style={[styles.close, { backgroundColor: colors.surface }]}><SymbolView name={{ android: 'close', ios: 'xmark', web: 'close' }} size={21} tintColor={colors.icon} /></Pressable>
+      <WorkerIconButton icon="close" label="Yopish" onPress={closeSheet} tonal />
     </View>
     {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: colors.surface }]}>
       {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
         <NativeButton label="Kameraga ruxsat berish" onPress={() => { void askPermission(); }} />}
       <Text style={[styles.scannerText, { color: colors.muted }]}>Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling</Text>
       {interaction.opening_wip_mode !== 'scan_required' && <>
-        <Pressable accessibilityRole="button" accessibilityLabel="Kodni qo‘lda kiritish" onPress={() => setManualScanVisible(value => !value)} style={styles.manualToggle}>
-          <SymbolView name={{ android: 'edit', ios: 'pencil', web: 'edit' }} size={20} tintColor={colors.icon} />
-        </Pressable>
+        <View style={styles.manualToggle}><WorkerIconButton icon="edit" label="Kodni qo‘lda kiritish" onPress={() => setManualScanVisible(value => !value)} /></View>
         {manualScanVisible && <View style={styles.manualRow}>
           <View style={styles.flex}><Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={manualScanValue} placeholder="QR / barcode" onChangeText={setManualScan} autoCapitalize="none" /></Host></View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Kodni tekshirish" onPress={() => { void quickScan(manualScan); manualScanValue.set(''); setManualScan(''); }} style={styles.manualSubmit}><SymbolView name={{ android: 'check', ios: 'checkmark', web: 'check' }} size={22} tintColor={colors.icon} /></Pressable>
+          <WorkerIconButton icon="check" label="Kodni tekshirish" onPress={() => { void quickScan(manualScan); manualScanValue.set(''); setManualScan(''); }} />
         </View>}
       </>}
     </View>}
@@ -736,9 +737,11 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     {!loading && !bootstrap && <NativeButton label="Qayta urinish" onPress={() => { setError(''); void load(); }} disabled={busy} />}
     </View>
   </ScrollView>
-    <Modal visible={!!selected} transparent animationType="fade" onRequestClose={cancelProgressDialog}>
-      <View style={styles.dialogBackdrop}><View style={[styles.dialog, { backgroundColor: colors.surface }]}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialogContent}>
-        <Text style={[styles.section, { color: colors.text }]}>{paintEditor ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori'}</Text>
+    <WorkerFormDialog visible={!!selected} title={paintEditor ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori'}
+      cancelLabel={paintEditor ? 'Orqaga' : 'Bekor qilish'} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
+      confirmLabel={paintEditor ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash'}
+      confirmDisabled={busy || photoBusy || (!paintEditor && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && loadedDraftScope !== draftScope)))}
+      onConfirm={() => { if (paintEditor) { setError(''); setPaintEditor(false); } else void submit(selected); }}>
         {!!error && <Text style={styles.error}>{error}</Text>}
         {paintEditor ? <>
           <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Rasxot" variant={paintUsage === 'rasxot' ? 'filled' : 'outlined'} onPress={() => setPaintUsage('rasxot')} /></View><View style={styles.flex}><NativeButton label="Astatka" variant={paintUsage === 'astatka' ? 'filled' : 'outlined'} onPress={() => setPaintUsage('astatka')} /></View></View>
@@ -755,7 +758,6 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
               {paintColor === 'Pantone' && <NativeButton label="Mix+" onPress={() => addPaintField('Pantone Mix')} />}
             </>}
           </View>}
-          <NativeButton label="Tayyor" variant="filled" disabled={photoBusy} onPress={() => { setError(''); setPaintEditor(false); }} />
         </> : <>
         <Text style={[styles.muted, { color: colors.muted }]}>{selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting'}</Text>
         {selected === 'pause' && safeStopRequest && <Field label="Natija bo‘lmasa, sababini kiriting" initialValue={freezeNote} onChangeText={setFreezeNote} />}
@@ -763,28 +765,12 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
         {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <Field label="Wi-Fi printer server manzili" initialValue={printerUrl} onChangeText={setPrinterUrl} />}
         {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Qaytim va chiqindi</Text><Field label="Jami chiqindi, kg" initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} /><NativeButton label="Qaytarilgan bo‘yoq" variant="filled" disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} /></>}
         {selected === 'astatka' && <Field label="Izoh" initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
-        <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Bekor qilish" disabled={busy} onPress={cancelProgressDialog} /></View><View style={styles.flex}><NativeButton label={busy ? 'Yuborilmoqda…' : 'Tasdiqlash'} disabled={!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && loadedDraftScope !== draftScope)} variant="filled" onPress={() => { void submit(selected); }} /></View></View>
         </>}
-      </ScrollView></View></View>
-    </Modal>
-    <Modal visible={!!delivery} transparent animationType="fade" onRequestClose={() => { if (!deliveryBusy) setDelivery(null); }}>
-      <View style={styles.dialogBackdrop}><View style={[styles.dialog, { backgroundColor: colors.surface }]}><ScrollView contentContainerStyle={styles.dialogContent}>
-        <Text style={[styles.section, { color: colors.text }]}>Bu homashyoni kim olib keldi?</Text>
-        <Text style={[styles.detailText, { color: colors.text }]}>{String(delivery?.material.item_name || delivery?.material.item_code || '')}</Text>
-        <Text style={[styles.muted, { color: colors.muted }]}>{String(delivery?.material.barcode || '')}</Text>
-        <Text style={[styles.muted, { color: colors.muted }]}>Homashyo apparat oldiga kelganini tasdiqlang va olib kelgan xodimni tanlang.</Text>
-        {delivery?.deliverers.map(person => {
-          const key = `${person.role}:${person.ref}`;
-          return <Pressable key={key} accessibilityRole="radio" accessibilityState={{ checked: deliveryChoice === key }} onPress={() => setDeliveryChoice(key)} style={styles.deliveryRow}>
-            <SymbolView name={{ android: deliveryChoice === key ? 'radio_button_checked' : 'radio_button_unchecked', ios: deliveryChoice === key ? 'checkmark.circle.fill' : 'circle', web: deliveryChoice === key ? 'radio_button_checked' : 'radio_button_unchecked' }} size={22} tintColor={colors.icon} />
-            <Text style={[styles.detailText, { color: colors.text }]}>{String(person.name || person.ref)}</Text>
-          </Pressable>;
-        })}
-        {!!error && <Text style={styles.error}>{error}</Text>}
-        <NativeButton label={deliveryBusy ? 'Yuborilmoqda…' : 'Tasdiqlash'} variant="filled" disabled={!deliveryChoice || deliveryBusy || !synchronized} onPress={() => { void confirmMaterialDelivery(); }} />
-        <NativeButton label="Bekor qilish" variant="text" disabled={deliveryBusy} onPress={() => setDelivery(null)} />
-      </ScrollView></View></View>
-    </Modal>
+    </WorkerFormDialog>
+    <WorkerDeliveryDialog visible={!!delivery} name={String(delivery?.material.item_name || delivery?.material.item_code || '')} barcode={String(delivery?.material.barcode || '')}
+      choices={(delivery?.deliverers ?? []).map(person => ({ key: `${person.role}:${person.ref}`, label: String(person.name || person.ref) }))}
+      selected={deliveryChoice} error={error} busy={deliveryBusy} canConfirm={!!deliveryChoice && !deliveryBusy && synchronized}
+      onChoose={setDeliveryChoice} onCancel={() => setDelivery(null)} onConfirm={() => { void confirmMaterialDelivery(); }} />
   </View>;
 }
-const styles = StyleSheet.create({ screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},header:{flexDirection:'row',alignItems:'center',paddingHorizontal:14,paddingVertical:8,gap:10},heading:{flex:1},code:{fontSize:22,fontWeight:'600'},close:{width:40,height:40,borderRadius:20,alignItems:'center',justifyContent:'center'},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},section:{fontSize:20,fontWeight:'600',color:'#192b4d',marginBottom:4},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},field:{gap:3},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},imageViewer:{flex:1,padding:16},imageHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},image:{flex:1,width:'100%'},scannerPanel:{borderRadius:18,padding:12,alignItems:'center',gap:10},quickCamera:{width:218,height:218,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},manualSubmit:{padding:10},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},flex:{flex:1},dialogBackdrop:{flex:1,justifyContent:'center',paddingHorizontal:24,backgroundColor:'rgba(0,0,0,0.32)'},dialog:{borderRadius:28,maxHeight:'85%'},dialogContent:{padding:24,gap:12},deliveryRow:{flexDirection:'row',alignItems:'center',gap:12,paddingVertical:10}});
+const styles = StyleSheet.create({ screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},header:{flexDirection:'row',alignItems:'center',paddingHorizontal:14,paddingVertical:8,gap:10},heading:{flex:1},code:{fontSize:22,fontWeight:'600'},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},section:{fontSize:20,fontWeight:'600',color:'#192b4d',marginBottom:4},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},field:{gap:3},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},imageViewer:{flex:1,padding:16},imageHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},image:{flex:1,width:'100%'},scannerPanel:{borderRadius:18,padding:12,alignItems:'center',gap:10},quickCamera:{width:218,height:218,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},flex:{flex:1}});
