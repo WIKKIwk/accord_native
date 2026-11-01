@@ -1,5 +1,5 @@
 import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
-import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { Platform, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
@@ -78,7 +78,8 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
     : [defaultScrollAnchor('bottom')];
   return <ScrollView modifiers={[
     frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor, scrollPosition(position, { anchor: 'bottom' }),
-    scrollDismissesKeyboard('interactively'), scrollClipDisabled(), onTapGesture(onDismissKeyboard), onGeometryChange(measureScroll),
+    scrollDismissesKeyboard('interactively'), scrollClipDisabled(), scrollEdgeEffectStyle('soft', 'top'),
+    onTapGesture(onDismissKeyboard), onGeometryChange(measureScroll),
   ]}>
     <VStack alignment="leading" spacing={12} modifiers={[
       scrollTargetLayout(), frame({ maxWidth: Infinity }),
