@@ -1,23 +1,15 @@
-import { Host, Picker, ScrollView, Text } from '@expo/ui/swift-ui';
-import { accessibilityLabel, fixedSize, frame, padding, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
+import { Host, RNHostView } from '@expo/ui/swift-ui';
 import { Stack } from 'expo-router';
-import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { WorkerTabStrip } from './WorkerTabStrip.ios';
 import { getWorkerTabs, type WorkerTabsProps } from './workerTabModel';
 
 export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChange, onMenu, onProfile, children }: WorkerTabsProps) {
   const tabs = getWorkerTabs(machines);
   const selectedTab = tabs.find(tab => tab.id === selected) ?? tabs[0];
-  const { width } = useWindowDimensions();
-  const tabsHeader = <ScrollView axes="horizontal" showsIndicators={false} modifiers={[padding({ vertical: 8 })]}>
-    <Picker label="" selection={selectedTab.id} onSelectionChange={id => {
-      if (typeof id === 'string' && tabs.some(tab => tab.id === id)) onSelect(id);
-    }} modifiers={[
-      pickerStyle('segmented'), accessibilityLabel('Aparat navbatlari'),
-      fixedSize({ horizontal: true, vertical: false }), frame({ minWidth: Math.max(0, width - 32) }),
-    ]}>
-      {tabs.map(tab => <Text key={tab.id} modifiers={[tag(tab.id)]}>{tab.name}</Text>)}
-    </Picker>
-  </ScrollView>;
+  const tabsHeader = <RNHostView matchContents={{ vertical: true }}>
+    <WorkerTabStrip tabs={tabs} selected={selectedTab.id} onSelect={onSelect} />
+  </RNHostView>;
 
   return <>
     <Stack.Screen options={{
