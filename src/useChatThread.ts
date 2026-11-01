@@ -18,6 +18,7 @@ export function useChatThread(session: Session, conversationId: string) {
   const [queueing, setQueueing] = useState(false);
   const [sending, setSending] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
+  const [lastQueuedId, setLastQueuedId] = useState<string | null>(null);
   const focused = useRef(false);
   const storageReadyRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -135,6 +136,7 @@ export function useChatThread(session: Session, conversationId: string) {
       const item = await queueChatText(session, conversationId, body);
       if (focused.current && activeSessionToken(session)) {
         setPending(current => [...current, item]);
+        setLastQueuedId(item.clientMessageId);
         retryBlocked.current = false;
         if (visible()) void drain();
       }
@@ -212,5 +214,5 @@ export function useChatThread(session: Session, conversationId: string) {
     void drain(true);
   }, [drain]);
 
-  return { messages, pending, hasMore, loadingMore, error, sendError, queueing, sending, storageReady, refresh, loadOlder, send, retry };
+  return { messages, pending, hasMore, loadingMore, error, sendError, queueing, sending, storageReady, lastQueuedId, refresh, loadOlder, send, retry };
 }

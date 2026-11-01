@@ -1,10 +1,13 @@
-import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, useNativeState, VStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, font, foregroundStyle, frame, glassEffect, lineLimit, padding, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
+import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, font, foregroundStyle, frame, glassEffect, id, lineLimit, offset, onAppear, opacity, padding, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, useColorScheme, useWindowDimensions } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import type { Session } from '../auth';
-import { isMyChatMessage, type ChatMessage } from '../chatModel';
+import { draftAfterSending } from '../chatComposer';
+import { chatTimeline, outgoingMessageKey, type ChatMessage } from '../chatModel';
 import type { PendingChatText } from '../chatOutbox';
 import { useChatThread } from '../useChatThread';
 
@@ -16,10 +19,24 @@ function timeLabel(timestamp: number): string {
   return timestamp > 0 && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
 }
 
-function MessageBubble({ body, timestamp, mine, status }: { body: string; timestamp: number; mine: boolean; status?: string }) {
+function MessageBubble({ body, timestamp, mine, status, messageKey, animate, reduceMotion }: {
+  body: string; timestamp: number; mine: boolean; status?: string; messageKey: string; animate: boolean;
+  reduceMotion: boolean;
+}) {
   const dark = useColorScheme() === 'dark';
   const { width } = useWindowDimensions();
-  return <HStack spacing={0} modifiers={[frame({ maxWidth: Infinity, alignment: mine ? 'trailing' : 'leading' })]}>
+  const [shown, setShown] = useState(!animate || reduceMotion);
+  const [appeared, setAppeared] = useState(false);
+  return <HStack spacing={0} modifiers={[
+    id(messageKey), frame({ maxWidth: Infinity, alignment: mine ? 'trailing' : 'leading' }),
+    ...(animate && !reduceMotion ? [offset({ y: shown ? 0 : 16 }), opacity(shown ? 1 : 0),
+      animation(Animation.spring({ response: 0.35, dampingFraction: 0.86 }), shown)] : []),
+    onAppear(() => {
+      if (!animate || appeared) return;
+      setAppeared(true);
+      setShown(true);
+    }),
+  ]}>
     {mine ? <Spacer /> : null}
     <VStack alignment={mine ? 'trailing' : 'leading'} spacing={4} modifiers={[frame({ maxWidth: width * 0.76, alignment: mine ? 'trailing' : 'leading' })]}>
       <Text modifiers={[
@@ -32,26 +49,39 @@ function MessageBubble({ body, timestamp, mine, status }: { body: string; timest
   </HStack>;
 }
 
-function ConversationBody({ session, messages, pending, hasMore, loadingMore, error, sendError, sending, onRefresh, onLoadOlder, onRetry }: {
+function ConversationBody({ session, messages, pending, hasMore, loadingMore, error, sendError, sending, lastQueuedId, reduceMotion, onRefresh, onLoadOlder, onRetry }: {
   session: Session; messages: ChatMessage[] | null; pending: PendingChatText[]; hasMore: boolean; loadingMore: boolean;
-  error: string; sendError: string; sending: boolean; onRefresh: () => Promise<void>; onLoadOlder: () => Promise<void>; onRetry: () => void;
+  error: string; sendError: string; sending: boolean; lastQueuedId: string | null; reduceMotion: boolean;
+  onRefresh: () => Promise<void>; onLoadOlder: () => Promise<void>; onRetry: () => void;
 }) {
-  const confirmed = new Set((messages ?? []).filter(message => isMyChatMessage(session, message)).map(message => message.clientMessageId));
-  const waiting = pending.filter(item => !confirmed.has(item.clientMessageId));
+  const rows = chatTimeline(session, messages ?? [], pending);
+  const position = useNativeState<string | null>(null);
+  const newKey = lastQueuedId ? outgoingMessageKey(lastQueuedId) : null;
+  useEffect(() => {
+    if (!newKey) return;
+    const frameId = requestAnimationFrame(() => {
+      withAnimation(reduceMotion ? null : Animation.easeOut({ duration: 0.25 }), () => {
+        'worklet';
+        position.value = newKey;
+      });
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [newKey, position, reduceMotion]);
   const scrollAnchor = Number(Platform.Version) >= 18
     ? [defaultScrollAnchorForRole('bottom', 'initialOffset'), defaultScrollAnchorForRole('bottom', 'alignment')]
     : [defaultScrollAnchor('bottom')];
-  return <ScrollView modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor]}>
-    <VStack alignment="leading" spacing={12} modifiers={[frame({ maxWidth: Infinity }), padding({ horizontal: 16, vertical: 14 })]}>
+  return <ScrollView modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor, scrollPosition(position, { anchor: 'bottom' })]}>
+    <VStack alignment="leading" spacing={12} modifiers={[scrollTargetLayout(), frame({ maxWidth: Infinity }), padding({ horizontal: 16, vertical: 14 })]}>
       {hasMore ? <HStack><Spacer /><Button label={loadingMore ? 'Yuklanmoqda…' : 'Avvalgi xabarlar'} onPress={() => { void onLoadOlder(); }}
         modifiers={[buttonStyle('bordered'), disabled(loadingMore)]} /><Spacer /></HStack> : null}
       {messages === null && !error ? <HStack spacing={10}><ProgressView /><Text modifiers={[secondary]}>Xabarlar yuklanmoqda…</Text></HStack> : null}
       {error ? <VStack alignment="leading" spacing={8}>
         <Text modifiers={[secondary]}>{error}</Text><Button label="Qayta urinish" onPress={() => { void onRefresh(); }} modifiers={[buttonStyle('bordered')]} />
       </VStack> : null}
-      {messages !== null && !messages.length && !waiting.length ? <HStack><Spacer /><Text modifiers={[secondary, padding({ vertical: 20 })]}>Hali xabarlar yo‘q.</Text><Spacer /></HStack> : null}
-      {(messages ?? []).map(message => <MessageBubble key={message.id} body={message.body} timestamp={message.timestamp} mine={isMyChatMessage(session, message)} />)}
-      {waiting.map(item => <MessageBubble key={item.clientMessageId} body={item.body} timestamp={item.createdAt} mine status={sendError ? 'Yuborilmadi' : sending ? 'Yuborilmoqda…' : 'Kutilmoqda'} />)}
+      {messages !== null && !rows.length ? <HStack><Spacer /><Text modifiers={[secondary, padding({ vertical: 20 })]}>Hali xabarlar yo‘q.</Text><Spacer /></HStack> : null}
+      {rows.map(row => <MessageBubble key={row.key} messageKey={row.key} body={row.body} timestamp={row.timestamp} mine={row.mine}
+        status={row.pending ? sendError ? 'Yuborilmadi' : sending ? 'Yuborilmoqda…' : 'Kutilmoqda' : undefined}
+        animate={row.key === newKey} reduceMotion={reduceMotion} />)}
       {sendError ? <HStack><Spacer /><VStack alignment="trailing" spacing={6}>
         <Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>{sendError}</Text>
         <Button label="Qayta urinish" onPress={onRetry} modifiers={[buttonStyle('bordered')]} />
@@ -64,6 +94,8 @@ function Composer({ ready, queueing, onSend }: { ready: boolean; queueing: boole
   const dark = useColorScheme() === 'dark';
   const [draft, setDraft] = useState('');
   const value = useNativeState('');
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const canSend = ready && !queueing && !!draft.trim();
   const surface = Number(Platform.Version) >= 26
     ? [glassEffect({ glass: { variant: 'regular' }, shape: 'capsule' })]
@@ -73,7 +105,19 @@ function Composer({ ready, queueing, onSend }: { ready: boolean; queueing: boole
       ];
   const send = async () => {
     if (!canSend) return;
-    if (await onSend(draft)) { value.set(''); setDraft(''); }
+    const sent = value.get();
+    if (!sent.trim()) return;
+    if (await onSend(sent) && mounted.current) {
+      scheduleOnUI(() => {
+        'worklet';
+        const current = value.value;
+        const next = draftAfterSending(sent, current);
+        if (next !== current) {
+          value.value = next;
+          scheduleOnRN(setDraft, next);
+        }
+      });
+    }
   };
   return <HStack alignment="bottom" spacing={4} modifiers={[
     padding({ leading: 16, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
@@ -81,7 +125,7 @@ function Composer({ ready, queueing, onSend }: { ready: boolean; queueing: boole
   ]}>
     <TextField text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
       font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),
-      accessibilityLabel('Xabar matni'), disabled(!ready || queueing),
+      accessibilityLabel('Xabar matni'), disabled(!ready),
     ]} />
     <Button onPress={() => { void send(); }} modifiers={[buttonStyle('plain'), accessibilityLabel('Xabarni yuborish'), disabled(!canSend)]}>
       <Image systemName="arrow.up.circle.fill" size={30} color={canSend ? '#007AFF' : dark ? '#8e8e93' : '#6c6c70'}
@@ -92,12 +136,14 @@ function Composer({ ready, queueing, onSend }: { ready: boolean; queueing: boole
 
 export function ChatThreadScreen({ session, conversationId, title }: Props) {
   const thread = useChatThread(session, conversationId);
+  const reduceMotion = useReducedMotion();
   return <>
     <Stack.Screen options={{ title: title || 'Suhbat', headerBackButtonDisplayMode: 'minimal' }} />
     <Host style={styles.root}>
       <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         <ConversationBody session={session} messages={thread.messages} pending={thread.pending} hasMore={thread.hasMore}
           loadingMore={thread.loadingMore} error={thread.error} sendError={thread.sendError} sending={thread.sending}
+          lastQueuedId={thread.lastQueuedId} reduceMotion={reduceMotion}
           onRefresh={thread.refresh} onLoadOlder={thread.loadOlder} onRetry={thread.retry} />
         <Composer ready={thread.storageReady} queueing={thread.queueing} onSend={thread.send} />
       </VStack>

@@ -12,7 +12,7 @@ loaded.paths = module.paths;
 loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText, filename);
-const { parseChatConversations, filterChatConversations, chatAvatarSource, chatTime, parseChatMessages, mergeChatMessages, reconcileChatRefresh, isMyChatMessage } = loaded.exports;
+const { parseChatConversations, filterChatConversations, chatAvatarSource, chatTime, parseChatMessages, mergeChatMessages, reconcileChatRefresh, isMyChatMessage, chatTimeline } = loaded.exports;
 
 function row(id, overrides = {}) {
   return {
@@ -103,4 +103,20 @@ test('a refresh keeps history continuous after more than a page of missed messag
   assert.equal(afterLongDisconnection.droppedOlder, true);
   const withOlderPage = mergeChatMessages(afterLongDisconnection.items, [message(102), message(103), message(104)]);
   assert.deepEqual(withOlderPage.map(item => item.sequence), [102, 103, 104, 105, 106, 107]);
+});
+
+test('an outgoing bubble keeps its identity when confirmed and is never duplicated', () => {
+  const session = { profile: { role: 'aparatchi', ref: 'worker-1' } };
+  const pending = { clientMessageId: 'client-1', conversationId: 'c1', body: 'Salom', createdAt: 100 };
+  const confirmed = { id: 'server-1', conversationId: 'c1', clientMessageId: 'client-1', sequence: 1,
+    senderRole: 'aparatchi', senderRef: 'worker-1', body: 'Salom', timestamp: 101 };
+  const waiting = chatTimeline(session, [], [pending]);
+  const afterConfirmation = chatTimeline(session, [confirmed], [pending]);
+  assert.equal(waiting.length, 1);
+  assert.equal(afterConfirmation.length, 1);
+  assert.equal(waiting[0].key, afterConfirmation[0].key);
+  assert.equal(waiting[0].pending, true);
+  assert.equal(afterConfirmation[0].pending, false);
+  const anotherUser = { ...confirmed, id: 'server-2', senderRef: 'worker-2' };
+  assert.equal(chatTimeline(session, [anotherUser], [pending]).length, 2);
 });

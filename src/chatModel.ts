@@ -1,4 +1,5 @@
 import type { Session } from './auth';
+import type { PendingChatText } from './chatOutbox';
 
 export type ChatPeer = { role: string; ref: string; displayName: string; avatarUrl: string };
 export type ChatConversation = {
@@ -92,6 +93,26 @@ export function reconcileChatRefresh(current: ChatMessage[], incoming: ChatMessa
 
 export function isMyChatMessage(session: Session, message: ChatMessage): boolean {
   return message.senderRole === text(session.profile.role) && message.senderRef === text(session.profile.ref);
+}
+
+export function outgoingMessageKey(clientMessageId: string): string {
+  return `outgoing:${clientMessageId}`;
+}
+
+/** Keep the same row identity when an outgoing message is confirmed by the server. */
+export function chatTimeline(session: Session, messages: ChatMessage[], pending: PendingChatText[]) {
+  const mine = messages.filter(message => isMyChatMessage(session, message));
+  const confirmedIds = new Set(mine.map(message => message.clientMessageId));
+  return [
+    ...messages.map(message => {
+      const isMine = isMyChatMessage(session, message);
+      return { key: isMine && message.clientMessageId ? outgoingMessageKey(message.clientMessageId) : `message:${message.id}`,
+        body: message.body, timestamp: message.timestamp, mine: isMine, pending: false };
+    }),
+    ...pending.filter(item => !confirmedIds.has(item.clientMessageId)).map(item => ({
+      key: outgoingMessageKey(item.clientMessageId), body: item.body, timestamp: item.createdAt, mine: true, pending: true,
+    })),
+  ];
 }
 
 /** Match V2: only conversations containing a message appear in the list. */
