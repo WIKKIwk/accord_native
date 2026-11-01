@@ -1,9 +1,9 @@
 import { Column, Host, ListItem, Text } from '@expo/ui';
-import { Button, Spacer } from '@expo/ui/swift-ui';
+import { Button, ScrollView, Spacer } from '@expo/ui/swift-ui';
 import { background as swiftBackground, buttonBorderShape, buttonStyle, controlSize, font, frame, padding, tint } from '@expo/ui/swift-ui/modifiers';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
-import { Platform, ScrollView, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { Drawer, useDrawerProgress } from 'react-native-drawer-layout';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -56,9 +56,9 @@ export function WorkerDrawer({ visible, onOpen, onClose, onSelect, displayName, 
     overlayStyle={{ backgroundColor: 'transparent' }} overlayAccessibilityLabel="Menyuni yopish"
     renderDrawerContent={() => <View style={[styles.drawer, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 12) }]}>
       <View style={styles.menuBody}>
-        <ScrollView style={styles.items} contentContainerStyle={{ paddingTop: headingHeight }} automaticallyAdjustContentInsets={false}>
-          <Host matchContents={{ vertical: true }} style={styles.itemsHost}>
-            <Column spacing={2} style={{ width: '100%' }}>
+        <Host style={styles.items} ignoreSafeArea="all">
+          <ScrollView>
+            <Column spacing={2} style={{ width: '100%', paddingTop: headingHeight }}>
               {destinations.filter(item => item.id !== 'transfer' || canTransfer).map(item =>
                 <ListItem key={item.id} onPress={() => select(item.id)}
                   modifiers={[frame({ minHeight: 54 }), padding({ horizontal: 20 })]}
@@ -67,8 +67,8 @@ export function WorkerDrawer({ visible, onOpen, onClose, onSelect, displayName, 
                   <Text modifiers={item.id === active ? [font({ textStyle: 'body', weight: 'semibold' })] : undefined}>{item.label}</Text>
                 </ListItem>)}
             </Column>
-          </Host>
-        </ScrollView>
+          </ScrollView>
+        </Host>
         <View pointerEvents="none" style={styles.headingOverlay} onLayout={event => setHeadingHeight(event.nativeEvent.layout.height)}>
           <Host pointerEvents="none" style={StyleSheet.absoluteFill} ignoreSafeArea="all">
             <Spacer modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), swiftBackground({
@@ -103,6 +103,5 @@ const styles = StyleSheet.create({
   heading: { width: '100%', paddingHorizontal: 20, paddingBottom: 20 },
   headingHost: { width: '100%' },
   items: { flex: 1, overflow: 'hidden' },
-  itemsHost: { width: '100%' },
   logout: { alignItems: 'flex-start', paddingHorizontal: 20 },
 });
