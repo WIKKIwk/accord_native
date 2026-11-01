@@ -34,6 +34,47 @@ function integer(value: unknown): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : 0;
 }
 
+function parseChatPeer(value: unknown): ChatPeer | null {
+  const peer = object(value);
+  const role = text(peer.role);
+  const ref = text(peer.ref);
+  if (!role || !ref) return null;
+  return { role, ref, displayName: text(peer.display_name), avatarUrl: text(peer.avatar_url) };
+}
+
+export function parseChatDirectory(value: unknown) {
+  const page = object(value);
+  if (!Array.isArray(page.items)) throw new Error('Foydalanuvchilarni o‘qib bo‘lmadi.');
+  const items: ChatPeer[] = [];
+  const seen = new Set<string>();
+  for (const value of page.items) {
+    const peer = parseChatPeer(value);
+    if (!peer) continue;
+    const key = JSON.stringify([peer.role, peer.ref]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    items.push(peer);
+  }
+  return { items, hasMore: page.has_more === true && page.items.length > 0, count: page.items.length };
+}
+
+/** A newly opened conversation can have no messages yet. */
+export function parseOpenedChatConversation(value: unknown, target: ChatPeer): ChatConversation {
+  const row = object(value);
+  const id = text(row.conversation_id);
+  const peer = parseChatPeer(row.peer);
+  if (!id || id === '.' || id === '..' || !peer || peer.role !== target.role || peer.ref !== target.ref) {
+    throw new Error('Suhbatni ochib bo‘lmadi.');
+  }
+  const message = object(row.last_message);
+  return {
+    id, peer, title: peer.displayName || target.displayName || text(row.title) || 'Suhbat',
+    preview: Object.keys(message).length ? messagePreview(message) : '',
+    lastMessageSequence: integer(row.last_message_sequence), unreadCount: integer(row.unread_count),
+    timestamp: integer(message.created_at_unix) || integer(row.updated_at_unix),
+  };
+}
+
 function messagePreview(value: Record<string, unknown>): string {
   switch (text(value.type)) {
     case 'material_link_request': return 'Homashyo ulash so‘rovi';

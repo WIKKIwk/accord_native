@@ -63,6 +63,85 @@ test('responses received after logout or cancellation are never accepted', async
   await assert.rejects(aborted.loadChatConversations(aborted.session, controller.signal), /Sessiya tugagan/);
 });
 
+test('directory searches the authenticated server and keeps roles with matching references distinct', async () => {
+  const peer = { role: 'aparatchi', ref: 'shared-1', display_name: 'Ali', avatar_url: '/v1/mobile/profile/avatar/view?v=1' };
+  const f = fixture(() => ({ ok: true, json: async () => ({
+    items: [peer, peer, { ...peer, role: 'qolipchi' }, { role: 'admin', ref: '' }], has_more: true,
+  }) }));
+  const page = await f.loadChatDirectory(f.session, ' Ali & Vali ', 100);
+  const url = new URL(f.calls[0][1], f.session.baseUrl);
+  assert.equal(url.pathname, '/v1/mobile/chat/directory');
+  assert.equal(url.searchParams.get('q'), 'Ali & Vali');
+  assert.equal(url.searchParams.get('limit'), '100');
+  assert.equal(url.searchParams.get('offset'), '100');
+  assert.deepEqual(page.items.map(item => [item.role, item.ref]), [['aparatchi', 'shared-1'], ['qolipchi', 'shared-1']]);
+  assert.equal(page.count, 4);
+  assert.equal(page.hasMore, true);
+  const broken = fixture(() => ({ ok: true, json: async () => ({ items: null }) }));
+  await assert.rejects(broken.loadChatDirectory(broken.session, ''), /o‘qib bo‘lmadi/);
+});
+
+test('opening a DM uses the selected person and accepts a new empty conversation', async () => {
+  const target = { role: 'qolipchi', ref: 'worker-2', displayName: 'Vali', avatarUrl: '' };
+  const response = { conversation_id: 'conversation-2', last_message_sequence: 0, last_message: null,
+    peer: { role: 'qolipchi', ref: 'worker-2', display_name: 'Vali', avatar_url: '' } };
+  const f = fixture(() => ({ ok: true, json: async () => response }));
+  const result = await f.openChatConversation(f.session, target);
+  assert.equal(f.calls[0][1], '/v1/mobile/chat/conversations/dm');
+  assert.equal(f.calls[0][2].method, 'POST');
+  assert.deepEqual(JSON.parse(f.calls[0][2].body), { role: 'qolipchi', ref: 'worker-2' });
+  assert.equal(result.id, 'conversation-2');
+  assert.equal(result.title, 'Vali');
+  assert.equal(result.lastMessageSequence, 0);
+  const wrong = fixture(() => ({ ok: true, json: async () => ({ ...response, peer: { ...response.peer, ref: 'someone-else' } }) }));
+  await assert.rejects(wrong.openChatConversation(wrong.session, target), /Suhbatni ochib bo‘lmadi/);
+  const invalid = fixture(() => ({ ok: true, json: async () => ({ ...response, conversation_id: '..' }) }));
+  await assert.rejects(invalid.openChatConversation(invalid.session, target), /Suhbatni ochib bo‘lmadi/);
+});
+
+test('a DM response after cancellation or logout never opens a conversation', async () => {
+  const target = { role: 'qolipchi', ref: 'worker-2', displayName: 'Vali', avatarUrl: '' };
+  const response = { conversation_id: 'conversation-2', peer: { role: target.role, ref: target.ref } };
+  let complete;
+  const body = new Promise(resolve => { complete = resolve; });
+  const f = fixture(() => ({ ok: true, json: () => body }));
+  const pending = f.openChatConversation(f.session, target);
+  await Promise.resolve();
+  f.logout();
+  complete(response);
+  await assert.rejects(pending, /Sessiya tugagan/);
+  const aborted = fixture(() => ({ ok: true, json: async () => response }));
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(aborted.openChatConversation(aborted.session, target, controller.signal), /Sessiya tugagan/);
+});
+
+test('a newly opened conversation appears in the list after its first sent message', async () => {
+  const target = { role: 'qolipchi', ref: 'worker-2', displayName: 'Vali', avatarUrl: '' };
+  const peer = { role: target.role, ref: target.ref, display_name: target.displayName, avatar_url: '' };
+  let lastMessage = null;
+  const f = fixture((_session, path, init) => {
+    if (path.endsWith('/conversations/dm')) return { ok: true, json: async () => ({ conversation_id: 'new-1', peer, last_message: null }) };
+    if (path.endsWith('/new-1/messages')) {
+      const { client_message_id, body } = JSON.parse(init.body);
+      lastMessage = { message_id: 'm1', conversation_id: 'new-1', sequence: 1, client_message_id,
+        sender_role: 'aparatchi', sender_ref: 'worker-1', type: 'text', body, created_at_unix: 1 };
+      return { ok: true, json: async () => ({ message: lastMessage }) };
+    }
+    if (path.startsWith('/v1/mobile/chat/conversations?')) return { ok: true, json: async () => ({
+      items: [{ conversation_id: 'new-1', peer, last_message_sequence: lastMessage ? 1 : 0, last_message: lastMessage }], has_more: false,
+    }) };
+    throw new Error(`Unexpected request: ${path}`);
+  });
+  const conversation = await f.openChatConversation(f.session, target);
+  assert.equal((await f.loadChatConversations(f.session)).items.length, 0);
+  await f.sendChatText(f.session, conversation.id, 'client-1', 'Salom');
+  const page = await f.loadChatConversations(f.session);
+  assert.equal(page.items[0].id, conversation.id);
+  assert.equal(page.items[0].title, 'Vali');
+  assert.equal(page.items[0].preview, 'Salom');
+});
+
 test('thread reads newest or earlier messages through the V2 conversation endpoint', async () => {
   const f = fixture(() => ({ ok: true, json: async () => ({ items: [], has_more: false }) }));
   await f.loadChatMessages(f.session, 'conversation 1');

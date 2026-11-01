@@ -25,6 +25,10 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+export function profileRoleLabel(role: string): string {
+  return roleLabels[text(role).toLowerCase()] ?? 'Foydalanuvchi';
+}
+
 function labels(value: unknown): string[] {
   return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
 }
@@ -55,7 +59,7 @@ export function profileDisplay(snapshot: ProfileSnapshot) {
   const legalName = text(profile.legal_name);
   return {
     name,
-    role: roleLabels[role] ?? 'Foydalanuvchi',
+    role: profileRoleLabel(role),
     phone: text(profile.phone),
     legalName: legalName && legalName !== name ? legalName : '',
     apparatusLabels: snapshot.apparatusLabels,

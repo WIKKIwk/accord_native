@@ -119,6 +119,7 @@ export function ChatConversationsScreen({ session, onOpenDrawer }: Props) {
       },
     }} />
     {onOpenDrawer ? <Stack.Toolbar placement="left"><Stack.Toolbar.Button icon="line.3.horizontal" accessibilityLabel="Bo‘limlar" onPress={onOpenDrawer} /></Stack.Toolbar> : null}
+    <Stack.Toolbar placement="right"><Stack.Toolbar.Button icon="square.and.pencil" accessibilityLabel="Yangi suhbat" onPress={() => router.push('/ios-worker/chat/new')} /></Stack.Toolbar>
     <ChatList items={items} error={error} query={query} session={session} avatarToken={avatarToken} onRefresh={refresh}
       onOpen={conversation => router.push({ pathname: '/ios-worker/chat/[conversationId]', params: { conversationId: conversation.id, title: conversation.title } })} />
   </>;

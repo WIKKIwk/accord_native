@@ -1,6 +1,6 @@
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
-import { isMyChatMessage, parseChatConversations, parseChatMessage, parseChatMessages } from './chatModel';
+import { isMyChatMessage, parseChatConversations, parseChatDirectory, parseChatMessage, parseChatMessages, parseOpenedChatConversation, type ChatPeer } from './chatModel';
 
 export class ChatRequestError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
@@ -18,6 +18,29 @@ export async function loadChatConversations(session: Session, signal?: AbortSign
   const page = parseChatConversations(await response.json());
   if (signal?.aborted || !activeSessionToken(session)) throw new Error('Sessiya tugagan.');
   return page;
+}
+
+export async function loadChatDirectory(session: Session, query: string, offset = 0, signal?: AbortSignal) {
+  const params = new URLSearchParams({ limit: '100' });
+  if (query.trim()) params.set('q', query.trim());
+  if (Number.isSafeInteger(offset) && offset > 0) params.set('offset', String(offset));
+  const response = await authorizedFetch(session, `/v1/mobile/chat/directory?${params}`, { signal });
+  if (!response.ok) throw new ChatRequestError(response.status === 403 ? 'Bu hisob uchun chat ochilmagan.' : 'Foydalanuvchilarni yuklab bo‘lmadi.', response.status);
+  const page = parseChatDirectory(await response.json());
+  if (signal?.aborted || !activeSessionToken(session)) throw new Error('Sessiya tugagan.');
+  return page;
+}
+
+export async function openChatConversation(session: Session, target: ChatPeer, signal?: AbortSignal) {
+  if (!target.role.trim() || !target.ref.trim()) throw new Error('Foydalanuvchi topilmadi.');
+  const response = await authorizedFetch(session, '/v1/mobile/chat/conversations/dm', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: target.role, ref: target.ref }), signal,
+  });
+  if (!response.ok) throw new ChatRequestError(response.status === 403 ? 'Bu hisob uchun chat ochilmagan.' : 'Suhbatni ochib bo‘lmadi.', response.status);
+  const conversation = parseOpenedChatConversation(await response.json(), target);
+  if (signal?.aborted || !activeSessionToken(session)) throw new Error('Sessiya tugagan.');
+  return conversation;
 }
 
 export async function loadChatMessages(session: Session, conversationId: string, signal?: AbortSignal, beforeSequence?: number) {
