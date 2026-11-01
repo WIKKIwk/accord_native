@@ -1,4 +1,5 @@
 import { BottomSheet, Button, Column, FieldGroup, Host, RNHostView, Row, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
+import { useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -24,6 +25,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
 export function ProfileView(props: ProfileViewProps) {
   const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onLogout } = props;
   const muted = useColorScheme() === 'dark' ? '#aeaeb2' : '#6d6d72';
+  const [apparatusExpanded, setApparatusExpanded] = useState(false);
   const details = profileDisplay(snapshot);
   return <>
     <Host style={{ flex: 1 }}>
@@ -43,9 +45,18 @@ export function ProfileView(props: ProfileViewProps) {
           {details.phone ? <Row spacing={12} style={{ width: '100%' }}>
             <Text>Telefon</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.phone}</Text>
           </Row> : null}
-          {details.apparatusLabels.map((label, index) => <Row key={`${label}-${index}`} spacing={12} style={{ width: '100%' }}>
-            <Text>Apparat</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{label}</Text>
-          </Row>)}
+          {details.apparatusLabels.length === 1 ? <Row spacing={12} style={{ width: '100%' }}>
+            <Text>Apparat</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.apparatusLabels[0]}</Text>
+          </Row> : null}
+          {details.apparatusLabels.length > 1 ? <Column spacing={10} style={{ width: '100%' }}>
+            <Row spacing={12} style={{ width: '100%' }} onPress={() => setApparatusExpanded(value => !value)}>
+              <Text>Apparatlar</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{`${details.apparatusLabels.length} ta`}</Text>
+              <Text textStyle={{ color: muted }}>{apparatusExpanded ? '⌃' : '⌄'}</Text>
+            </Row>
+            {apparatusExpanded ? <Column spacing={8} style={{ width: '100%', paddingVertical: 4 }}>
+              {details.apparatusLabels.map((label, index) => <Text key={`${label}-${index}`} textStyle={{ color: muted }}>{label}</Text>)}
+            </Column> : null}
+          </Column> : null}
         </FieldGroup.Section>
         <FieldGroup.Section>
           <Button label="Hisobdan chiqish" variant="outlined" onPress={onLogout} />

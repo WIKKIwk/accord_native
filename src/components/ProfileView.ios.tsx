@@ -1,6 +1,6 @@
-import { BottomSheet, Button, Group, Host, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
+import { BottomSheet, Button, DisclosureGroup, Group, Host, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
 import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -17,6 +17,26 @@ function ProfileRow({ icon, title, value }: RowProps) {
     <Spacer />
     <Text modifiers={[secondary, multilineTextAlignment('trailing')]}>{value}</Text>
   </HStack>;
+}
+
+function ApparatusRow({ labels }: { labels: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!labels.length) return null;
+  if (labels.length === 1) return <ProfileRow icon="gearshape" title="Apparat" value={labels[0]} />;
+
+  return <DisclosureGroup isExpanded={expanded} onIsExpandedChange={setExpanded}>
+    <DisclosureGroup.Label>
+      <HStack spacing={12} modifiers={[padding({ vertical: 4 }), frame({ maxWidth: Infinity }), contentShape(shapes.rectangle())]}>
+        <Image systemName="gearshape" size={18} modifiers={[frame({ width: 22 }), secondary]} />
+        <Text>Apparatlar</Text>
+        <Spacer />
+        <Text modifiers={[secondary]}>{`${labels.length} ta`}</Text>
+      </HStack>
+    </DisclosureGroup.Label>
+    {expanded ? <VStack alignment="leading" spacing={10} modifiers={[padding({ vertical: 8 }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+      {labels.map((label, index) => <Text key={`${label}-${index}`} modifiers={[secondary, frame({ maxWidth: Infinity, alignment: 'leading' })]}>{label}</Text>)}
+    </VStack> : null}
+  </DisclosureGroup>;
 }
 
 function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftName, draftPhoto, busy, saving,
@@ -96,8 +116,7 @@ export function ProfileView(props: ProfileViewProps) {
       <Section title="Hisob">
         {details.legalName ? <ProfileRow icon="person.text.rectangle" title="To‘liq ism" value={details.legalName} /> : null}
         {details.phone ? <ProfileRow icon="phone" title="Telefon" value={details.phone} /> : null}
-        {details.apparatusLabels.map((label, index) =>
-          <ProfileRow key={`${label}-${index}`} icon="gearshape" title="Apparat" value={label} />)}
+        <ApparatusRow labels={details.apparatusLabels} />
       </Section>
       <Section>
         <Button role="destructive" label="Hisobdan chiqish" systemImage="rectangle.portrait.and.arrow.right"
