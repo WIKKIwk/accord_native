@@ -1,8 +1,8 @@
 import { Column, Host, ListItem, Text } from '@expo/ui';
-import { Button } from '@expo/ui/swift-ui';
-import { buttonBorderShape, buttonStyle, controlSize, font, frame, padding, tint } from '@expo/ui/swift-ui/modifiers';
+import { Button, Spacer } from '@expo/ui/swift-ui';
+import { background as swiftBackground, buttonBorderShape, buttonStyle, controlSize, font, frame, padding, tint } from '@expo/ui/swift-ui/modifiers';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Platform, ScrollView, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { Drawer, useDrawerProgress } from 'react-native-drawer-layout';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
@@ -48,30 +48,42 @@ export function WorkerDrawer({ visible, onOpen, onClose, onSelect, displayName, 
   const background = dark ? '#000000' : '#ffffff';
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const [headingHeight, setHeadingHeight] = useState(48);
   const select = (id: string) => { onClose(); onSelect(id); };
 
   return <Drawer open={visible} onOpen={onOpen} onClose={onClose} drawerType="back" style={{ backgroundColor: background }}
     drawerStyle={{ width: Math.min(360, width * 0.82), backgroundColor: background }}
     overlayStyle={{ backgroundColor: 'transparent' }} overlayAccessibilityLabel="Menyuni yopish"
     renderDrawerContent={() => <View style={[styles.drawer, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 12) }]}>
-      <View style={styles.heading}>
-        <Host matchContents={{ vertical: true }} style={styles.headingHost}>
-          <Text modifiers={[font({ textStyle: 'title2', weight: 'semibold' })]}>Bo‘limlar</Text>
-        </Host>
+      <View style={styles.menuBody}>
+        <ScrollView style={styles.items} contentContainerStyle={{ paddingTop: headingHeight }} automaticallyAdjustContentInsets={false}>
+          <Host matchContents={{ vertical: true }} style={styles.itemsHost}>
+            <Column spacing={2} style={{ width: '100%' }}>
+              {destinations.filter(item => item.id !== 'transfer' || canTransfer).map(item =>
+                <ListItem key={item.id} onPress={() => select(item.id)}
+                  modifiers={[frame({ minHeight: 54 }), padding({ horizontal: 20 })]}
+                  leading={<SymbolView name={item.symbol} size={23} tintColor={colors.text} />}
+                  supportingText={item.id === 'profile' && displayName ? displayName : undefined}>
+                  <Text modifiers={item.id === active ? [font({ textStyle: 'body', weight: 'semibold' })] : undefined}>{item.label}</Text>
+                </ListItem>)}
+            </Column>
+          </Host>
+        </ScrollView>
+        <View pointerEvents="none" style={styles.headingOverlay} onLayout={event => setHeadingHeight(event.nativeEvent.layout.height)}>
+          <Host pointerEvents="none" style={StyleSheet.absoluteFill} ignoreSafeArea="all">
+            <Spacer modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), swiftBackground({
+              type: 'linearGradient',
+              colors: dark ? ['#000000F2', '#00000099', '#00000000'] : ['#FFFFFFF2', '#FFFFFF99', '#FFFFFF00'],
+              startPoint: { x: 0.5, y: 0 }, endPoint: { x: 0.5, y: 1 },
+            })]} />
+          </Host>
+          <View style={styles.heading}>
+            <Host matchContents={{ vertical: true }} style={styles.headingHost}>
+              <Text modifiers={[font({ textStyle: 'title2', weight: 'semibold' })]}>Bo‘limlar</Text>
+            </Host>
+          </View>
+        </View>
       </View>
-      <ScrollView style={styles.items}>
-        <Host matchContents={{ vertical: true }} style={styles.itemsHost}>
-          <Column spacing={2} style={{ width: '100%' }}>
-            {destinations.filter(item => item.id !== 'transfer' || canTransfer).map(item =>
-              <ListItem key={item.id} onPress={() => select(item.id)}
-                modifiers={[frame({ minHeight: 54 }), padding({ horizontal: 20 })]}
-                leading={<SymbolView name={item.symbol} size={23} tintColor={colors.text} />}
-                supportingText={item.id === 'profile' && displayName ? displayName : undefined}>
-                <Text modifiers={item.id === active ? [font({ textStyle: 'body', weight: 'semibold' })] : undefined}>{item.label}</Text>
-              </ListItem>)}
-          </Column>
-        </Host>
-      </ScrollView>
       <View style={styles.logout}>
         <Host matchContents>
           <Button label="Chiqish" systemImage="rectangle.portrait.and.arrow.right" onPress={() => select('logout')}
@@ -86,6 +98,8 @@ export function WorkerDrawer({ visible, onOpen, onClose, onSelect, displayName, 
 const styles = StyleSheet.create({
   screen: { flex: 1, overflow: 'hidden' },
   drawer: { flex: 1 },
+  menuBody: { flex: 1 },
+  headingOverlay: { position: 'absolute', top: 0, left: 0, right: 0 },
   heading: { width: '100%', paddingHorizontal: 20, paddingBottom: 20 },
   headingHost: { width: '100%' },
   items: { flex: 1, overflow: 'hidden' },
