@@ -63,6 +63,22 @@ test('avatar proxy drops tokens and uses only the active server and peer identit
   assert.equal(chatAvatarSource(session, { ...peer, avatarUrl: 'https://cdn.example/image.jpg' }).authenticated, false);
 });
 
+test('conversation header uses the server peer name and a sanitized avatar request', () => {
+  const session = { baseUrl: 'https://erp.example', imageCacheScope: 'session-1' };
+  const page = parseChatConversations({ items: [row('conversation-1', {
+    title: 'Old title',
+    peer: { role: 'aparatchi', ref: 'worker-1', display_name: 'Ali',
+      avatar_url: 'https://erp.example/v1/mobile/profile/avatar/view?token=secret&v=photo-2' },
+  })] });
+  const conversation = page.items[0];
+  assert.equal(conversation.title, 'Ali');
+  const source = chatAvatarSource(session, conversation.peer);
+  assert.equal(source.authenticated, true);
+  assert.equal(new URL(source.uri).searchParams.get('v'), 'photo-2');
+  assert.ok(!source.uri.includes('secret'));
+  assert.ok(!source.cacheKey.includes('secret'));
+});
+
 test('timestamps display a time today and a separate yesterday label', () => {
   const now = new Date(2026, 10, 1, 12, 0);
   const today = new Date(2026, 10, 1, 8, 0).getTime() / 1000;

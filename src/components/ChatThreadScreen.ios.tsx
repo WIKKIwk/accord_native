@@ -1,17 +1,19 @@
 import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
-import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Platform, StyleSheet, useColorScheme, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { Platform, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import type { Session } from '../auth';
 import { draftAfterSending } from '../chatComposer';
-import { chatTimeline, outgoingMessageKey, type ChatMessage } from '../chatModel';
+import { chatTimeline, outgoingMessageKey, type ChatMessage, type ChatPeer } from '../chatModel';
 import type { PendingChatText } from '../chatOutbox';
 import { useChatThread } from '../useChatThread';
+import { CHAT_HEADER_CONTENT_HEIGHT, ChatThreadHeader } from './ChatThreadHeader.ios';
 
-type Props = { session: Session; conversationId: string; title: string };
+type Props = { session: Session; conversationId: string; title: string; peer: ChatPeer | null };
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 
 function timeLabel(timestamp: number): string {
@@ -49,12 +51,16 @@ function MessageBubble({ body, timestamp, mine, status, messageKey, animate, red
   </HStack>;
 }
 
-function ConversationBody({ session, messages, pending, hasMore, loadingMore, error, sendError, sending, lastQueuedId, reduceMotion, onRefresh, onLoadOlder, onRetry, onDismissKeyboard }: {
+function ConversationBody({ session, messages, pending, hasMore, loadingMore, error, sendError, sending, lastQueuedId, reduceMotion, headerBottom, onRefresh, onLoadOlder, onRetry, onDismissKeyboard }: {
   session: Session; messages: ChatMessage[] | null; pending: PendingChatText[]; hasMore: boolean; loadingMore: boolean;
-  error: string; sendError: string; sending: boolean; lastQueuedId: string | null; reduceMotion: boolean;
+  error: string; sendError: string; sending: boolean; lastQueuedId: string | null; reduceMotion: boolean; headerBottom: number;
   onRefresh: () => Promise<void>; onLoadOlder: () => Promise<void>; onRetry: () => void; onDismissKeyboard: () => void;
 }) {
   const rows = chatTimeline(session, messages ?? [], pending);
+  const [scrollTop, setScrollTop] = useState<number | null>(null);
+  const measureScroll = useCallback(({ y }: { y: number }) => {
+    setScrollTop(current => current !== null && Math.abs(current - y) < 0.5 ? current : y);
+  }, []);
   const position = useNativeState<string | null>(null);
   const newKey = lastQueuedId ? outgoingMessageKey(lastQueuedId) : null;
   useEffect(() => {
@@ -72,9 +78,12 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
     : [defaultScrollAnchor('bottom')];
   return <ScrollView modifiers={[
     frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor, scrollPosition(position, { anchor: 'bottom' }),
-    scrollDismissesKeyboard('interactively'), scrollClipDisabled(), onTapGesture(onDismissKeyboard),
+    scrollDismissesKeyboard('interactively'), scrollClipDisabled(), onTapGesture(onDismissKeyboard), onGeometryChange(measureScroll),
   ]}>
-    <VStack alignment="leading" spacing={12} modifiers={[scrollTargetLayout(), frame({ maxWidth: Infinity }), padding({ horizontal: 16, vertical: 14 })]}>
+    <VStack alignment="leading" spacing={12} modifiers={[
+      scrollTargetLayout(), frame({ maxWidth: Infinity }),
+      padding({ horizontal: 16, top: Math.max(14, headerBottom - (scrollTop ?? 0) + 8), bottom: 14 }),
+    ]}>
       {hasMore ? <HStack><Spacer /><Button label={loadingMore ? 'Yuklanmoqda…' : 'Avvalgi xabarlar'} onPress={() => { void onLoadOlder(); }}
         modifiers={[buttonStyle('bordered'), disabled(loadingMore)]} /><Spacer /></HStack> : null}
       {messages === null && !error ? <HStack spacing={10}><ProgressView /><Text modifiers={[secondary]}>Xabarlar yuklanmoqda…</Text></HStack> : null}
@@ -143,21 +152,26 @@ function Composer({ ready, queueing, onSend, inputRef }: {
   </HStack>;
 }
 
-export function ChatThreadScreen({ session, conversationId, title }: Props) {
+export function ChatThreadScreen({ session, conversationId, title, peer }: Props) {
   const thread = useChatThread(session, conversationId);
   const reduceMotion = useReducedMotion();
   const inputRef = useRef<TextFieldRef>(null);
+  const insets = useSafeAreaInsets();
   return <>
-    <Stack.Screen options={{ title: title || 'Suhbat', headerBackButtonDisplayMode: 'minimal' }} />
+    <Stack.Screen options={{ title: title || 'Suhbat', headerTitle: '', headerBackButtonDisplayMode: 'minimal',
+      headerTransparent: true, headerShadowVisible: false, scrollEdgeEffects: { top: 'soft' } }} />
+    <View style={styles.root}>
     <Host style={styles.root}>
       <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         <ConversationBody session={session} messages={thread.messages} pending={thread.pending} hasMore={thread.hasMore}
           loadingMore={thread.loadingMore} error={thread.error} sendError={thread.sendError} sending={thread.sending}
-          lastQueuedId={thread.lastQueuedId} reduceMotion={reduceMotion}
+          lastQueuedId={thread.lastQueuedId} reduceMotion={reduceMotion} headerBottom={insets.top + CHAT_HEADER_CONTENT_HEIGHT}
           onRefresh={thread.refresh} onLoadOlder={thread.loadOlder} onRetry={thread.retry} onDismissKeyboard={() => { void inputRef.current?.blur(); }} />
         <Composer ready={thread.storageReady} queueing={thread.queueing} onSend={thread.send} inputRef={inputRef} />
       </VStack>
     </Host>
+    <ChatThreadHeader session={session} peer={peer} title={title} topInset={insets.top} />
+    </View>
   </>;
 }
 

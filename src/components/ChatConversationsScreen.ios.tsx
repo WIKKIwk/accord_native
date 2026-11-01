@@ -8,6 +8,7 @@ import { loadChatConversations } from '../chatApi';
 import { subscribeChatLive } from '../chatLive';
 import { chatTime, filterChatConversations, type ChatConversation } from '../chatModel';
 import { ChatAvatar } from './ChatAvatar';
+import { useChatMetadata } from './ChatMetadata';
 
 type Props = { session: Session; onOpenDrawer?: () => void };
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
@@ -58,6 +59,7 @@ function ChatList({ items, error, query, session, avatarToken, onRefresh, onOpen
 
 export function ChatConversationsScreen({ session, onOpenDrawer }: Props) {
   const router = useRouter();
+  const { remember } = useChatMetadata();
   const [items, setItems] = useState<ChatConversation[] | null>(null);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -76,6 +78,7 @@ export function ChatConversationsScreen({ session, onOpenDrawer }: Props) {
       const page = await loadChatConversations(session, controller.signal);
       if (!focused.current || controller.signal.aborted || current !== generation.current || !activeSessionToken(session)) return;
       setItems(page.items);
+      remember(page.items);
       setAvatarToken(activeSessionToken(session));
       setError('');
     } catch (reason) {
@@ -84,7 +87,7 @@ export function ChatConversationsScreen({ session, onOpenDrawer }: Props) {
     } finally {
       if (request.current === controller) request.current = null;
     }
-  }, [session]);
+  }, [remember, session]);
 
   useFocusEffect(useCallback(() => {
     focused.current = true;
