@@ -15,7 +15,7 @@ import { WorkerTabs } from './components/WorkerTabs';
 import { WorkerBottomBar } from './components/WorkerBottomBar';
 import { WorkerFab } from './components/WorkerFab';
 import { WorkerQrScanner } from './components/WorkerQrScanner';
-import { WorkerProfile } from './components/WorkerProfile';
+import { ProfileScreen } from './components/ProfileScreen';
 import { WorkerOrderListItem } from './components/WorkerOrderListItem';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerQueueList } from './components/WorkerQueueList';
@@ -223,7 +223,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const content = (
     <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
       {!nativeNavigation && (Platform.OS !== 'android' || section === 'profile') ? header : null}
-      {section === 'profile' ? <WorkerProfile session={session} onLogout={onLogout} /> : <>
+      {section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} /> : <>
       <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
         {(tabId, pagerGesture) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);

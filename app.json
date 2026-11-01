@@ -38,14 +38,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Bo‘yoq hisoboti uchun rasm tanlashga ruxsat bering.",
+          "photosPermission": "Profil rasmi va bo‘yoq hisoboti uchun rasm tanlashga ruxsat bering.",
           "microphonePermission": false
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Material va qolip QR kodlarini skanerlash uchun kamera ruxsati kerak."
+          "cameraPermission": "Profil uchun suratga olish va material hamda qolip QR kodlarini skanerlash uchun kameraga ruxsat bering."
         }
       ]
     ],
