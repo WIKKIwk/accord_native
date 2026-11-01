@@ -1,10 +1,11 @@
-import { Host, Picker, Text } from '@expo/ui/swift-ui';
-import { accessibilityLabel, frame, layoutPriority, lineLimit, pickerStyle, tag, truncationMode } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, NavigationStack, Picker, Text, Toolbar, ToolbarItem, useNativeState } from '@expo/ui/swift-ui';
+import { accessibilityLabel, frame, labelStyle, layoutPriority, lineLimit, navigationBarTitleDisplayMode, navigationTitle, pickerStyle, searchable, tag, textInputAutocapitalization, truncationMode } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { getWorkerTabs, type WorkerTabsProps } from './workerTabModel';
 
-export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChange, onMenu, onProfile, children }: WorkerTabsProps) {
+export function WorkerTabs({ machines, selected, onSelect, loading, search, onSearchChange, onMenu, onProfile, children }: WorkerTabsProps) {
+  const query = useNativeState(search ?? '');
   const tabs = getWorkerTabs(machines);
   const selectedTab = tabs.find(tab => tab.id === selected) ?? tabs[0];
   const machinePicker = <Picker label="" selection={selectedTab.id} onSelectionChange={id => {
@@ -17,33 +18,28 @@ export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChan
   </Picker>;
 
   return <>
-    <Stack.Screen options={{
-      title: 'Buyurtmalar',
-      headerShown: true,
-      headerLargeTitle: true,
-      headerLargeTitleShadowVisible: false,
-      headerShadowVisible: false,
-      headerTransparent: true,
-      scrollEdgeEffects: { top: 'soft' },
-      headerSearchBarOptions: {
-        placeholder: 'Buyurtmani izlash',
-        autoCapitalize: 'none',
-        hideNavigationBar: true,
-        hideWhenScrolling: true,
-        placement: 'stacked',
-        obscureBackground: false,
-        onChangeText: event => onSearchChange?.(event.nativeEvent.text),
-        onCancelButtonPress: () => onSearchChange?.(''),
-      },
-    }} />
-    <Stack.Toolbar placement="left">
-      <Stack.Toolbar.Button icon="line.3.horizontal" accessibilityLabel="Bo‘limlar" onPress={onMenu} />
-    </Stack.Toolbar>
-    <Stack.Toolbar placement="right">
-      <Stack.Toolbar.Button icon="person.crop.circle" accessibilityLabel="Profil" onPress={onProfile} />
-    </Stack.Toolbar>
+    <Stack.Screen options={{ headerShown: false }} />
     <View style={styles.container} collapsable={false}>
-      <Host style={styles.container} ignoreSafeArea="keyboard">{children(selectedTab.id, undefined, machinePicker)}</Host>
+      <Host style={styles.container}>
+        {/* Keep search and List in one native container so their content insets animate together. */}
+        <NavigationStack>
+          <Toolbar modifiers={[
+            navigationTitle('Buyurtmalar'), navigationBarTitleDisplayMode('large'),
+            searchable(query, { placement: 'navigationBarDrawer', prompt: 'Buyurtmani izlash', onChange: onSearchChange }),
+            textInputAutocapitalization('never'),
+          ]}>
+            {children(selectedTab.id, undefined, machinePicker)}
+            <Toolbar.Content>
+              <ToolbarItem placement="topBarLeading">
+                <Button systemImage="line.3.horizontal" label="Bo‘limlar" modifiers={[labelStyle('iconOnly')]} onPress={onMenu} />
+              </ToolbarItem>
+              <ToolbarItem placement="topBarTrailing">
+                <Button systemImage="person.crop.circle" label="Profil" modifiers={[labelStyle('iconOnly')]} onPress={onProfile} />
+              </ToolbarItem>
+            </Toolbar.Content>
+          </Toolbar>
+        </NavigationStack>
+      </Host>
       {loading ? <ActivityIndicator pointerEvents="none" style={styles.loading} /> : null}
     </View>
   </>;
