@@ -21,12 +21,13 @@ function fixture(handler) {
   const session = { token: 'token', baseUrl: 'https://erp.example' };
   let active = true;
   const calls = [];
-  const { loadChatConversations } = loadTs('chatApi.ts', {
+  const api = loadTs('chatApi.ts', {
     './auth': { activeSessionToken: () => active ? session.token : null },
-    './authorizedFetch': { authorizedFetch: async (...args) => { calls.push(args); return handler(); } },
+    './authorizedFetch': { authorizedFetch: async (...args) => { calls.push(args); return handler(...args); } },
     './chatModel': loadTs('chatModel.ts'),
   });
-  return { session, calls, loadChatConversations, logout: () => { active = false; } };
+  session.profile = { role: 'aparatchi', ref: 'worker-1' };
+  return { session, calls, ...api, logout: () => { active = false; } };
 }
 
 test('conversation list uses the existing authenticated V2 endpoint', async () => {
@@ -60,4 +61,38 @@ test('responses received after logout or cancellation are never accepted', async
   const controller = new AbortController();
   controller.abort();
   await assert.rejects(aborted.loadChatConversations(aborted.session, controller.signal), /Sessiya tugagan/);
+});
+
+test('thread reads newest or earlier messages through the V2 conversation endpoint', async () => {
+  const f = fixture(() => ({ ok: true, json: async () => ({ items: [], has_more: false }) }));
+  await f.loadChatMessages(f.session, 'conversation 1');
+  await f.loadChatMessages(f.session, 'conversation 1', undefined, 42);
+  assert.equal(f.calls[0][1], '/v1/mobile/chat/conversations/conversation%201/messages?limit=100');
+  assert.equal(f.calls[1][1], '/v1/mobile/chat/conversations/conversation%201/messages?limit=100&before_sequence=42');
+  await assert.rejects(f.loadChatMessages(f.session, '..'), /Suhbat topilmadi/);
+});
+
+test('text send retains the client id on retry and accepts only a matching confirmation', async () => {
+  const confirmed = { message_id: 'm1', conversation_id: 'c1', sequence: 1, client_message_id: 'client-1',
+    sender_role: 'aparatchi', sender_ref: 'worker-1', type: 'text', body: 'Salom', created_at_unix: 1 };
+  const f = fixture(() => ({ ok: true, json: async () => ({ message: confirmed }) }));
+  const first = await f.sendChatText(f.session, 'c1', 'client-1', ' Salom ');
+  await f.sendChatText(f.session, 'c1', 'client-1', ' Salom ');
+  assert.equal(first.id, 'm1');
+  assert.deepEqual(JSON.parse(f.calls[0][2].body), { client_message_id: 'client-1', body: 'Salom' });
+  assert.equal(f.calls[1][2].body, f.calls[0][2].body);
+  const wrong = fixture(() => ({ ok: true, json: async () => ({ message: { ...confirmed, sender_ref: 'someone-else' } }) }));
+  await assert.rejects(wrong.sendChatText(wrong.session, 'c1', 'client-1', 'Salom'), /tasdiqlanmadi/);
+  const altered = fixture(() => ({ ok: true, json: async () => ({ message: { ...confirmed, body: 'Boshqa xabar' } }) }));
+  await assert.rejects(altered.sendChatText(altered.session, 'c1', 'client-1', 'Salom'), /tasdiqlanmadi/);
+  await assert.rejects(f.sendChatText(f.session, 'c1', 'client-1', ' '), /noto‘g‘ri/);
+});
+
+test('read receipt carries the sequence and stable device identity', async () => {
+  const f = fixture(() => ({ ok: true }));
+  await f.markChatRead(f.session, 'c1', 17, 'device-1');
+  assert.equal(f.calls[0][1], '/v1/mobile/chat/conversations/c1/read');
+  assert.deepEqual(JSON.parse(f.calls[0][2].body), { sequence: 17, device_id: 'device-1' });
+  await f.markChatRead(f.session, 'c1', 0, 'device-1');
+  assert.equal(f.calls.length, 1);
 });

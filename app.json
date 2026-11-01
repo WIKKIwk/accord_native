@@ -47,7 +47,8 @@
         {
           "cameraPermission": "Profil uchun suratga olish va material hamda qolip QR kodlarini skanerlash uchun kameraga ruxsat bering."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

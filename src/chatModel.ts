@@ -10,6 +10,16 @@ export type ChatConversation = {
   unreadCount: number;
   timestamp: number;
 };
+export type ChatMessage = {
+  id: string;
+  conversationId: string;
+  clientMessageId: string;
+  sequence: number;
+  senderRole: string;
+  senderRef: string;
+  body: string;
+  timestamp: number;
+};
 
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -37,6 +47,51 @@ function messagePreview(value: Record<string, unknown>): string {
     case 'audio': return 'Ovozli xabar';
     default: return 'Xabar';
   }
+}
+
+export function parseChatMessage(value: unknown, conversationId: string): ChatMessage | null {
+  const row = object(value);
+  const id = text(row.message_id);
+  const sequence = integer(row.sequence);
+  if (!id || !sequence || text(row.conversation_id) !== conversationId) return null;
+  const type = text(row.type);
+  const deleted = integer(row.deleted_at_unix) > 0;
+  const attachment = text(object(row.attachment).kind);
+  const attachmentLabel = attachment === 'image' ? 'Rasm' : attachment === 'video' ? 'Video' : attachment === 'audio' ? 'Ovozli xabar' : '';
+  const caption = text(row.body);
+  return {
+    id, conversationId, sequence,
+    clientMessageId: text(row.client_message_id), senderRole: text(row.sender_role), senderRef: text(row.sender_ref),
+    body: deleted ? 'Xabar o‘chirilgan' : attachmentLabel ? [attachmentLabel, caption].filter(Boolean).join('\n') : type === 'text' ? caption : messagePreview(row),
+    timestamp: integer(row.created_at_unix),
+  };
+}
+
+export function parseChatMessages(value: unknown, conversationId: string): { items: ChatMessage[]; hasMore: boolean } {
+  const page = object(value);
+  if (!Array.isArray(page.items)) throw new Error('Xabarlarni o‘qib bo‘lmadi.');
+  const messages = page.items.map(item => parseChatMessage(item, conversationId)).filter((item): item is ChatMessage => item !== null);
+  return { items: mergeChatMessages([], messages), hasMore: page.has_more === true };
+}
+
+export function mergeChatMessages(current: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  const byId = new Map(current.map(message => [message.id, message]));
+  for (const message of incoming) byId.set(message.id, message);
+  return [...byId.values()].sort((a, b) => a.sequence - b.sequence);
+}
+
+/** Keep the latest continuous history when a long disconnection leaves a gap. */
+export function reconcileChatRefresh(current: ChatMessage[], incoming: ChatMessage[]) {
+  const merged = mergeChatMessages(current, incoming);
+  let start = 0;
+  for (let index = 1; index < merged.length; index++) {
+    if (merged[index].sequence > merged[index - 1].sequence + 1) start = index;
+  }
+  return { items: merged.slice(start), droppedOlder: start > 0 };
+}
+
+export function isMyChatMessage(session: Session, message: ChatMessage): boolean {
+  return message.senderRole === text(session.profile.role) && message.senderRef === text(session.profile.ref);
 }
 
 /** Match V2: only conversations containing a message appear in the list. */

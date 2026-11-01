@@ -12,7 +12,7 @@ loaded.paths = module.paths;
 loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText, filename);
-const { parseChatConversations, filterChatConversations, chatAvatarSource, chatTime } = loaded.exports;
+const { parseChatConversations, filterChatConversations, chatAvatarSource, chatTime, parseChatMessages, mergeChatMessages, reconcileChatRefresh, isMyChatMessage } = loaded.exports;
 
 function row(id, overrides = {}) {
   return {
@@ -70,4 +70,37 @@ test('timestamps display a time today and a separate yesterday label', () => {
   assert.ok(chatTime(today, now));
   assert.equal(chatTime(yesterday, now), 'Kecha');
   assert.equal(chatTime(0, now), '');
+});
+
+test('thread history rejects other conversations and merges confirmed messages in sequence order', () => {
+  const message = (id, sequence, overrides = {}) => ({
+    message_id: id, conversation_id: 'conversation-1', sequence, client_message_id: `client-${id}`,
+    sender_role: 'aparatchi', sender_ref: 'worker-1', type: 'text', body: `Message ${id}`,
+    created_at_unix: 1700000000, ...overrides,
+  });
+  const page = parseChatMessages({ items: [message('2', 2), message('1', 1), message('other', 3, { conversation_id: 'conversation-2' })], has_more: true }, 'conversation-1');
+  assert.deepEqual(page.items.map(item => item.id), ['1', '2']);
+  assert.equal(page.hasMore, true);
+  assert.equal(isMyChatMessage({ profile: { role: 'aparatchi', ref: 'worker-1' } }, page.items[0]), true);
+  assert.equal(isMyChatMessage({ profile: { role: 'aparatchi', ref: 'other' } }, page.items[0]), false);
+  const updated = parseChatMessages({ items: [message('2', 2, { body: 'Updated' }), message('3', 3)] }, 'conversation-1');
+  const merged = mergeChatMessages(page.items, updated.items);
+  assert.deepEqual(merged.map(item => item.id), ['1', '2', '3']);
+  assert.equal(merged[1].body, 'Updated');
+  const media = parseChatMessages({ items: [message('4', 4, { type: 'image', body: 'Izoh', attachment: { kind: 'image' } })] }, 'conversation-1');
+  assert.equal(media.items[0].body, 'Rasm\nIzoh');
+  assert.throws(() => parseChatMessages({ items: null }, 'conversation-1'), /o‘qib bo‘lmadi/);
+});
+
+test('a refresh keeps history continuous after more than a page of missed messages', () => {
+  const message = sequence => ({ id: String(sequence), sequence });
+  const previous = [message(1), message(2), message(3)];
+  const continuous = reconcileChatRefresh(previous, [message(3), message(4)]);
+  assert.deepEqual(continuous.items.map(item => item.sequence), [1, 2, 3, 4]);
+  assert.equal(continuous.droppedOlder, false);
+  const afterLongDisconnection = reconcileChatRefresh(previous, [message(105), message(106), message(107)]);
+  assert.deepEqual(afterLongDisconnection.items.map(item => item.sequence), [105, 106, 107]);
+  assert.equal(afterLongDisconnection.droppedOlder, true);
+  const withOlderPage = mergeChatMessages(afterLongDisconnection.items, [message(102), message(103), message(104)]);
+  assert.deepEqual(withOlderPage.map(item => item.sequence), [102, 103, 104, 105, 106, 107]);
 });

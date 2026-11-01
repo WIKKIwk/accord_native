@@ -43,7 +43,7 @@ export default function IosWorkerLayout() {
         <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination}
           displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')}
           active={pathname === '/ios-worker/profile' ? 'profile' : pathname === '/ios-worker' ? 'queue' : ''}>
-          <NativeTabs>
+          <NativeTabs hidden={pathname.startsWith('/ios-worker/chat/')}>
             <NativeTabs.Trigger name="(home)">
               <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
               <NativeTabs.Trigger.Label>Asosiy</NativeTabs.Trigger.Label>
