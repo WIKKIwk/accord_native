@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
-import type { Session } from './auth';
+import { updateSessionAssignments, type Session } from './auth';
 import { canWorkOnApparatus, loadWorkerQueue, queueFromSnapshot, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
 import { OrderScreen } from './OrderScreen';
 import { subscribeWorkerLive } from './workerLive';
@@ -96,6 +96,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       const old = current?.snapshot;
       const next = result.snapshot;
       if (old && queueScopeRef.current === windowScope && old.epoch === next.epoch && old.scope === next.scope && typeof old.rev === 'number' && typeof next.rev === 'number' && old.rev > next.rev) return;
+      if (!updateSessionAssignments(session, result.assignedIds, result.assignedLabels)) return;
       queueRef.current = result;
       queueScopeRef.current = windowScope;
       setQueue(result);
@@ -133,7 +134,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       snapshot => {
         const current = queueRef.current;
         if (!current) return;
-        const updated = queueFromSnapshot(current.machines, snapshot, session.assigned_apparatus);
+        const updated = queueFromSnapshot(current.machines, snapshot, current.assignedIds, current.assignedLabels);
         requestGeneration.current++;
         queueRef.current = updated;
         setQueue(updated);

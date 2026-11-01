@@ -29,6 +29,27 @@ test('machine visibility follows the server flag and starts with an assigned mac
   assert.deepEqual(workerMachinesFromSnapshot(catalog, { worker_show_all_apparatus_tabs: false }, assigned).map(item => item.id), ['press']);
   assert.deepEqual(workerMachinesFromSnapshot(catalog, { worker_show_all_apparatus_tabs: true }, assigned).map(item => item.id), ['press', 'cut', 'press2']);
   assert.deepEqual(workerMachinesFromSnapshot(catalog, { worker_show_all_apparatus_tabs: 'true' }, assigned).map(item => item.id), ['press']);
+  assert.equal(workerMachinesFromSnapshot(catalog, {}, ['press2', 'cut'])[0].id, 'press2');
+});
+
+test('the current account profile refreshes stale login assignments for the queue', async () => {
+  const profile = { role: 'aparatchi', ref: 'worker', assigned_apparatus: ['press', 'press2', 'cut'], assigned_apparatus_labels: ['Bosma', 'Bosma 2', 'Kesish'] };
+  const api = load('workerApi', {
+    './workerOrderAppearance': appearance,
+    './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 },
+    './authorizedFetch': { authorizedFetch: async (_session, url) => ({ ok: true, json: async () =>
+      url === '/v1/mobile/profile' ? profile : url.includes('/apparatus?') ? catalog : { projection: 'worker_list_v1', worker_show_all_apparatus_tabs: false, visible_order_ids: {} },
+    }) },
+  });
+  const session = { profile: { role: 'aparatchi', ref: 'worker' }, assigned_apparatus: ['press'], assigned_apparatus_labels: ['Bosma'] };
+  const fresh = await api.loadWorkerQueue(session);
+  assert.deepEqual(fresh.machines.map(item => item.id), ['press', 'cut', 'press2']);
+  assert.deepEqual(fresh.assignedIds, ['press', 'press2', 'cut']);
+  assert.deepEqual(fresh.assignedLabels, ['Bosma', 'Bosma 2', 'Kesish']);
+  profile.ref = 'different-worker';
+  const rejected = await api.loadWorkerQueue(session);
+  assert.deepEqual(rejected.machines.map(item => item.id), ['press']);
+  assert.deepEqual(rejected.assignedIds, ['press']);
 });
 
 test('watching another machine never enables print work actions or scanning', () => {

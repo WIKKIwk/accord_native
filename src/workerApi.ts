@@ -10,15 +10,15 @@ const string = (value: unknown) => typeof value === 'string' ? value.trim() : ''
 export type Apparatus = { id: string; name: string; operation: string };
 export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
-export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown> };
+export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown>; assignedIds: string[]; assignedLabels: string[] };
 
 export function canWorkOnApparatus(machine: Apparatus | undefined, assignedIds: readonly string[]): boolean {
   return !!machine && machine.operation === 'print' && assignedIds.includes(machine.id);
 }
 
-async function getJson(session: Session, path: string, resource: 'apparatus' | 'queue'): Promise<unknown> {
+async function getJson(session: Session, path: string, resource: 'apparatus' | 'queue' | 'profile'): Promise<unknown> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), resource === 'profile' ? 5000 : 15000);
   try {
     const response = await authorizedFetch(session, path, {
       headers: { Accept: 'application/json' },
@@ -32,6 +32,7 @@ async function getJson(session: Session, path: string, resource: 'apparatus' | '
         }
         throw new Error(resource === 'apparatus'
           ? 'Server bu hisobga aparatlar ro‘yxatini ko‘rishga ruxsat bermadi.'
+          : resource === 'profile' ? 'Profilni yangilab bo‘lmadi.'
           : 'Server bu hisobga aparat navbatini ko‘rishga ruxsat bermadi. Hisob ruxsatlari va aparat biriktirilishini tekshiring.');
       }
       throw new Error(`Server xatosi (${response.status})`);
@@ -43,9 +44,10 @@ async function getJson(session: Session, path: string, resource: 'apparatus' | '
 export async function loadWorkerQueue(session: Session, search = '', queueLimit: QueueLimit = DEFAULT_QUEUE_LIMIT): Promise<WorkerQueue> {
   const query = new URLSearchParams({ worker_scope: 'true', projection: 'worker_list_v1', queue_limit: String(queueLimit), queue_positions: 'true' });
   if (search.trim()) query.set('queue_search', search.trim().slice(0, 120));
-  const [catalogResult, queueResult] = await Promise.allSettled([
+  const [catalogResult, queueResult, profileResult] = await Promise.allSettled([
     getJson(session, '/v1/mobile/admin/apparatus?limit=200', 'apparatus'),
     getJson(session, `/v1/mobile/admin/production-maps/sequence?${query.toString()}`, 'queue'),
+    getJson(session, '/v1/mobile/profile', 'profile'),
   ]);
   if (queueResult.status === 'rejected') throw queueResult.reason;
   if (catalogResult.status === 'rejected') throw catalogResult.reason;
@@ -54,8 +56,23 @@ export async function loadWorkerQueue(session: Session, search = '', queueLimit:
   if (!Array.isArray(catalog)) throw new Error('Aparatlar ro‘yxati formati noto‘g‘ri.');
   const snapshot = object(raw);
   if (snapshot.projection !== 'worker_list_v1') throw new Error('Server navbat formati qo‘llab-quvvatlanmaydi.');
-  const machines = workerMachinesFromSnapshot(catalog, snapshot, session.assigned_apparatus);
-  return queueFromSnapshot(machines, snapshot, session.assigned_apparatus);
+  const assignments = workerAssignmentsFromProfile(session, profileResult.status === 'fulfilled' ? profileResult.value : null);
+  const assignedIds = assignments?.ids ?? session.assigned_apparatus;
+  const assignedLabels = assignments?.labels ?? session.assigned_apparatus_labels;
+  const machines = workerMachinesFromSnapshot(catalog, snapshot, assignedIds);
+  return queueFromSnapshot(machines, snapshot, assignedIds, assignedLabels);
+}
+
+/** Accept assignment changes only from the active account's current profile. */
+export function workerAssignmentsFromProfile(session: Session, value: unknown): { ids: string[]; labels: string[] } | null {
+  const profile = object(value);
+  if (!string(profile.ref) || string(profile.ref) !== string(session.profile.ref) ||
+      !string(profile.role) || string(profile.role) !== string(session.profile.role) ||
+      !Array.isArray(profile.assigned_apparatus) || profile.assigned_apparatus.some(id => typeof id !== 'string' || !id.trim())) return null;
+  const ids = [...new Set(profile.assigned_apparatus.map(id => id.trim()))];
+  const labels = Array.isArray(profile.assigned_apparatus_labels) && profile.assigned_apparatus_labels.every(label => typeof label === 'string')
+    ? profile.assigned_apparatus_labels.map(label => label.trim()).filter(Boolean) : session.assigned_apparatus_labels;
+  return { ids, labels };
 }
 
 /** The server's worker scope decides whether unassigned machines may be watched. */
@@ -71,12 +88,12 @@ export function workerMachinesFromSnapshot(catalog: unknown[], snapshot: RecordV
     if (!id || !name || (!showAll && !assigned.has(id))) return [];
     return [{ id, name, operation }];
   });
-  const firstAssigned = machines.findIndex(machine => assigned.has(machine.id));
+  const firstAssigned = assignedIds.map(id => machines.findIndex(machine => machine.id === id)).find(index => index >= 0) ?? -1;
   if (firstAssigned > 0) machines.unshift(...machines.splice(firstAssigned, 1));
   return machines;
 }
 
-export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string, unknown>, assignedIds: readonly string[]): WorkerQueue {
+export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string, unknown>, assignedIds: readonly string[], assignedLabels: readonly string[] = []): WorkerQueue {
   const rows = object(snapshot.worker_list_rows);
   const visible = object(snapshot.visible_order_ids);
   const sequences = object(snapshot.sequences);
@@ -119,5 +136,5 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
       issueNote: string(item.issue_note),
     });
   }
-  return { machines, orders, completed, snapshot };
+  return { machines, orders, completed, snapshot, assignedIds: [...assignedIds], assignedLabels: [...assignedLabels] };
 }

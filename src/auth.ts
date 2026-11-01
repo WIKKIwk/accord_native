@@ -204,6 +204,22 @@ export function activeSessionToken(session: Session): string | null {
   return activeSession === session ? session.token : null;
 }
 
+/** Keep a logged-in account's machine assignments in sync with its current profile. */
+export function updateSessionAssignments(session: Session, assigned: readonly string[], labels: readonly string[]): boolean {
+  if (activeSession !== session) return false;
+  if (JSON.stringify(session.assigned_apparatus) === JSON.stringify(assigned) && JSON.stringify(session.assigned_apparatus_labels) === JSON.stringify(labels)) return true;
+  session.assigned_apparatus = [...assigned];
+  session.assigned_apparatus_labels = [...labels];
+  const epoch = sessionEpoch;
+  void inStorageOrder(async () => {
+    if (activeSession !== session || epoch !== sessionEpoch) return;
+    if (Platform.OS === 'web') { webSession = session; return; }
+    const { token: _token, ...metadata } = session;
+    await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(metadata));
+  }).catch(() => {});
+  return true;
+}
+
 /** Refreshes an active session once for concurrent 401s; network errors retain local state. */
 export async function refreshSession(session: Session, failedToken: string): Promise<boolean> {
   if (activeSession !== session) return false;
