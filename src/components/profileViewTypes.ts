@@ -18,5 +18,6 @@ export type ProfileViewProps = {
   onChangeName: (name: string) => void;
   onChoosePhoto: (source: AvatarSource) => void;
   onSave: () => void;
+  onDailyWork: () => void;
   onLogout: () => void;
 };

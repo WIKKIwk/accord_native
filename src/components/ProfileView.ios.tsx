@@ -4,6 +4,7 @@ import { useState, type ComponentProps } from 'react';
 import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { ProfileAvatar } from './ProfileAvatar';
+import { ProfileSettings } from './ProfileSettings';
 import type { ProfileViewProps } from './profileViewTypes';
 
 type RowProps = { icon: ComponentProps<typeof Image>['systemName']; title: string; value: string };
@@ -17,6 +18,16 @@ function ProfileRow({ icon, title, value }: RowProps) {
     <Spacer />
     <Text modifiers={[secondary, multilineTextAlignment('trailing')]}>{value}</Text>
   </HStack>;
+}
+
+function NavigationRow({ icon, title, onPress }: { icon: RowProps['icon']; title: string; onPress: () => void }) {
+  return <Button onPress={onPress} modifiers={[buttonStyle('plain')]}>
+    <HStack spacing={12} modifiers={[padding({ vertical: 4 }), frame({ maxWidth: Infinity }), contentShape(shapes.rectangle())]}>
+      <Image systemName={icon} size={18} modifiers={[frame({ width: 22 }), secondary]} />
+      <Text>{title}</Text><Spacer />
+      <Image systemName="chevron.right" size={13} modifiers={[secondary]} />
+    </HStack>
+  </Button>;
 }
 
 function ApparatusRow({ labels }: { labels: string[] }) {
@@ -85,9 +96,10 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
 }
 
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onLogout } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
   const details = profileDisplay(snapshot);
   const dark = useColorScheme() === 'dark';
+  const [settingsOpen, setSettingsOpen] = useState(false);
   return <Host style={{ flex: 1 }}>
     <List modifiers={[listStyle('insetGrouped')]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), padding({ vertical: 14 })]}>
@@ -117,6 +129,13 @@ export function ProfileView(props: ProfileViewProps) {
         {details.legalName ? <ProfileRow icon="person.text.rectangle" title="To‘liq ism" value={details.legalName} /> : null}
         {details.phone ? <ProfileRow icon="phone" title="Telefon" value={details.phone} /> : null}
         <ApparatusRow labels={details.apparatusLabels} />
+      </Section>
+      <Section>
+        <NavigationRow icon="calendar" title="Kunlik ish" onPress={onDailyWork} />
+        <BottomSheet isPresented={settingsOpen} onIsPresentedChange={setSettingsOpen}
+          anchor={<NavigationRow icon="gearshape" title="Sozlamalar" onPress={() => setSettingsOpen(true)} />}>
+          <ProfileSettings onClose={() => setSettingsOpen(false)} onLogout={onLogout} />
+        </BottomSheet>
       </Section>
       <Section>
         <Button role="destructive" label="Hisobdan chiqish" systemImage="rectangle.portrait.and.arrow.right"

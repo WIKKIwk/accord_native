@@ -4,8 +4,13 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { useWorkerColors } from '../components/useWorkerColors';
+import { AppSettingsProvider } from '../components/AppSettings';
 
 export default function RootLayout() {
+  return <AppSettingsProvider><AppNavigation /></AppSettingsProvider>;
+}
+
+function AppNavigation() {
   const colors = useWorkerColors();
   useEffect(() => {
     if (Platform.OS === 'android') void SystemUI.setBackgroundColorAsync(colors.background);

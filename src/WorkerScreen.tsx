@@ -228,7 +228,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const content = (
     <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
       {!nativeNavigation && section !== 'daily' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
-      {section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} /> : section === 'daily'
+      {section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => setSection('daily')} /> : section === 'daily'
         ? <DailyWorkScreen session={session} onOpenDrawer={openDrawer} onBack={() => setSection('home')} /> : <>
       <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
         {(tabId, pagerGesture, machinePicker) => {

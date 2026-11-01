@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { ProfileAvatar } from './ProfileAvatar';
+import { ProfileSettings } from './ProfileSettings';
 import type { ProfileViewProps } from './profileViewTypes';
 
 function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftName, draftPhoto, busy, saving,
@@ -23,9 +24,10 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
 }
 
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onLogout } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
   const muted = useColorScheme() === 'dark' ? '#aeaeb2' : '#6d6d72';
   const [apparatusExpanded, setApparatusExpanded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const details = profileDisplay(snapshot);
   return <>
     <Host style={{ flex: 1 }}>
@@ -59,12 +61,19 @@ export function ProfileView(props: ProfileViewProps) {
           </Column> : null}
         </FieldGroup.Section>
         <FieldGroup.Section>
+          <Button label="Kunlik ish" variant="text" onPress={onDailyWork} />
+          <Button label="Sozlamalar" variant="text" onPress={() => setSettingsOpen(true)} />
+        </FieldGroup.Section>
+        <FieldGroup.Section>
           <Button label="Hisobdan chiqish" variant="outlined" onPress={onLogout} />
         </FieldGroup.Section>
       </FieldGroup>
     </Host>
     <BottomSheet isPresented={editing} onDismiss={onCloseEditor} shouldDismissOnBackPress={!busy} shouldDismissOnClickOutside={!busy}>
       {editing ? <ProfileEditor {...props} /> : null}
+    </BottomSheet>
+    <BottomSheet isPresented={settingsOpen} onDismiss={() => setSettingsOpen(false)}>
+      {settingsOpen ? <ProfileSettings onClose={() => setSettingsOpen(false)} onLogout={onLogout} /> : null}
     </BottomSheet>
   </>;
 }

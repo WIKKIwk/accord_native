@@ -11,7 +11,7 @@ import { ProfileNameError, updateProfileName } from '../profileNameUpdate';
 import { ProfileView } from './ProfileView';
 import type { AvatarSource } from './profileViewTypes';
 
-type Props = { session: Session; onLogout: () => void };
+type Props = { session: Session; onLogout: () => void; onDailyWork: () => void };
 
 function showError(title: string, message: string) {
   if (Platform.OS === 'web') globalThis.alert(`${title}. ${message}`);
@@ -22,7 +22,7 @@ export function ProfileScreen(props: Props) {
   return <ProfileContent key={props.session.imageCacheScope} {...props} />;
 }
 
-function ProfileContent({ session, onLogout }: Props) {
+function ProfileContent({ session, onLogout, onDailyWork }: Props) {
   const [snapshot, setSnapshot] = useState(() => initialProfileSnapshot(session));
   const [avatarToken, setAvatarToken] = useState(() => activeSessionToken(session));
   const [avatarRevision, setAvatarRevision] = useState(0);
@@ -163,5 +163,5 @@ function ProfileContent({ session, onLogout }: Props) {
   return <ProfileView session={session} snapshot={snapshot} avatarToken={avatarToken} avatarRevision={avatarRevision}
     editing={editing} busy={isBusy} saving={saving} draftName={draftName} draftPhoto={draftPhoto}
     onOpenEditor={openEditor} onCloseEditor={closeEditor} onChangeName={setDraftName}
-    onChoosePhoto={choosePhoto} onSave={save} onLogout={onLogout} />;
+    onChoosePhoto={choosePhoto} onSave={save} onDailyWork={onDailyWork} onLogout={onLogout} />;
 }
