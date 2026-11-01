@@ -1,5 +1,5 @@
 import { Button, Host, HStack, Image, List, ProgressView, RNHostView, Text, VStack } from '@expo/ui/swift-ui';
-import { background, buttonStyle, font, foregroundStyle, frame, lineLimit, listRowInsets, listRowSeparator, listStyle, padding, refreshable, scrollContentBackground, shapes } from '@expo/ui/swift-ui/modifiers';
+import { background, buttonStyle, contentShape, font, foregroundStyle, frame, lineLimit, listRowInsets, listRowSeparator, listStyle, padding, refreshable, scrollContentBackground, shapes } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { AppState, StyleSheet } from 'react-native';
@@ -14,8 +14,8 @@ type Props = { session: Session; onOpenDrawer?: () => void };
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 
 function ConversationRow({ conversation, session, token, onOpen }: { conversation: ChatConversation; session: Session; token: string | null; onOpen: (item: ChatConversation) => void }) {
-  return <Button onPress={() => onOpen(conversation)} modifiers={[buttonStyle('plain'), listRowInsets({ top: 10, bottom: 10, leading: 16, trailing: 16 })]}>
-  <HStack spacing={12}>
+  return <Button onPress={() => onOpen(conversation)} modifiers={[buttonStyle('plain'), listRowInsets({ top: 0, bottom: 0, leading: 0, trailing: 0 })]}>
+  <HStack spacing={12} modifiers={[padding({ horizontal: 16, vertical: 10 }), frame({ maxWidth: Infinity }), contentShape(shapes.rectangle())]}>
     <RNHostView matchContents><ChatAvatar session={session} peer={conversation.peer} token={token} /></RNHostView>
     <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
       <Text modifiers={[font({ textStyle: 'body', weight: conversation.unreadCount ? 'semibold' : 'medium' }), lineLimit(1)]}>{conversation.title}</Text>

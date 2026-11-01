@@ -12,6 +12,7 @@ export default function IosWorkerLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [signingOut, setSigningOut] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [chatClosing, setChatClosing] = useState(false);
   const [alert, setAlert] = useState<WorkerAlertData | null>(null);
   const colorScheme = useColorScheme();
   const pathname = usePathname();
@@ -37,13 +38,13 @@ export default function IosWorkerLayout() {
     setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
   };
 
-  return <WorkerSessionContext.Provider value={{ session, onLogout, onOpenDrawer: () => setDrawerOpen(true) }}>
+  return <WorkerSessionContext.Provider value={{ session, onLogout, onOpenDrawer: () => setDrawerOpen(true), setChatClosing }}>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={{ flex: 1 }}>
         <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination}
           displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')}
           active={pathname === '/ios-worker/profile' ? 'profile' : pathname === '/ios-worker' ? 'queue' : ''}>
-          <NativeTabs hidden={pathname.startsWith('/ios-worker/chat/')}>
+          <NativeTabs hidden={pathname.startsWith('/ios-worker/chat/') && !chatClosing} disableHiddenAnimation>
             <NativeTabs.Trigger name="(home)">
               <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
               <NativeTabs.Trigger.Label>Asosiy</NativeTabs.Trigger.Label>

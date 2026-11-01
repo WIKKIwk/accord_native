@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Session } from '../auth';
 
-type WorkerSession = { session: Session; onLogout: () => void; onOpenDrawer?: () => void };
+type WorkerSession = { session: Session; onLogout: () => void; onOpenDrawer?: () => void; setChatClosing: (closing: boolean) => void };
 
 export const WorkerSessionContext = createContext<WorkerSession | null>(null);
 
