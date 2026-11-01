@@ -28,6 +28,7 @@ export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChan
       headerSearchBarOptions: {
         placeholder: 'Buyurtmani izlash',
         autoCapitalize: 'none',
+        hideNavigationBar: false,
         hideWhenScrolling: true,
         placement: 'stacked',
         obscureBackground: false,
