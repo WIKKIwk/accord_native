@@ -133,8 +133,11 @@ function Composer({ ready, queueing, onSend, inputRef }: {
       accessibilityLabel('Xabar matni'), disabled(!ready),
     ]} />
     <Button onPress={() => { void send(); }} modifiers={[buttonStyle('plain'), accessibilityLabel('Xabarni yuborish'), disabled(!canSend)]}>
-      <Image systemName="arrow.up.circle.fill" size={30} color={canSend ? '#007AFF' : dark ? '#8e8e93' : '#6c6c70'}
-        modifiers={[frame({ width: 40, height: 40 })]} />
+      <Image systemName="arrow.up" color="#ffffff" modifiers={[
+        font({ size: 18, weight: 'semibold' }), frame({ width: 30, height: 30 }),
+        background(canSend ? '#007AFF' : dark ? '#8e8e93' : '#6c6c70', shapes.circle()),
+        frame({ width: 40, height: 40 }),
+      ]} />
     </Button>
   </HStack>;
 }
