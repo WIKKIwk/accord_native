@@ -1,15 +1,23 @@
-import { SegmentedControl } from '@expo/ui/community/segmented-control';
-import { Host } from '@expo/ui/swift-ui';
+import { Host, Picker, ScrollView, Text } from '@expo/ui/swift-ui';
+import { accessibilityLabel, fixedSize, frame, padding, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { getWorkerTabs, type WorkerTabsProps } from './workerTabModel';
 
 export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChange, onMenu, onProfile, children }: WorkerTabsProps) {
   const tabs = getWorkerTabs(machines);
-  const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.id === selected));
-  const selectedTab = tabs[selectedIndex];
+  const selectedTab = tabs.find(tab => tab.id === selected) ?? tabs[0];
   const { width } = useWindowDimensions();
-  const controlWidth = Math.max(150, width - 144);
+  const tabsHeader = <ScrollView axes="horizontal" showsIndicators={false} modifiers={[padding({ vertical: 8 })]}>
+    <Picker label="" selection={selectedTab.id} onSelectionChange={id => {
+      if (typeof id === 'string' && tabs.some(tab => tab.id === id)) onSelect(id);
+    }} modifiers={[
+      pickerStyle('segmented'), accessibilityLabel('Aparat navbatlari'),
+      fixedSize({ horizontal: true, vertical: false }), frame({ minWidth: Math.max(0, width - 32) }),
+    ]}>
+      {tabs.map(tab => <Text key={tab.id} modifiers={[tag(tab.id)]}>{tab.name}</Text>)}
+    </Picker>
+  </ScrollView>;
 
   return <>
     <Stack.Screen options={{
@@ -29,14 +37,6 @@ export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChan
         onChangeText: event => onSearchChange?.(event.nativeEvent.text),
         onCancelButtonPress: () => onSearchChange?.(''),
       },
-      headerTitle: () => <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: controlWidth, flexGrow: 0 }}>
-        <SegmentedControl values={tabs.map(tab => tab.name)} selectedIndex={selectedIndex}
-          style={{ width: Math.max(controlWidth, tabs.length * 110) }} accessibilityLabel="Aparat navbatlari"
-          onChange={event => {
-            const tab = tabs[event.nativeEvent.selectedSegmentIndex];
-            if (tab) onSelect(tab.id);
-          }} />
-      </ScrollView>,
     }} />
     <Stack.Toolbar placement="left">
       <Stack.Toolbar.Button icon="line.3.horizontal" accessibilityLabel="Bo‘limlar" onPress={onMenu} />
@@ -45,7 +45,7 @@ export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChan
       <Stack.Toolbar.Button icon="person.crop.circle" accessibilityLabel="Profil" onPress={onProfile} />
     </Stack.Toolbar>
     <View style={styles.container} collapsable={false}>
-      <Host style={styles.container}>{children(selectedTab.id)}</Host>
+      <Host style={styles.container}>{children(selectedTab.id, undefined, tabsHeader)}</Host>
       {loading ? <ActivityIndicator pointerEvents="none" style={styles.loading} /> : null}
     </View>
   </>;

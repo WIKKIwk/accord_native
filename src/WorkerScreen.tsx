@@ -225,11 +225,11 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       {!nativeNavigation && (Platform.OS !== 'android' || section === 'profile') ? header : null}
       {section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} /> : <>
       <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
-        {(tabId, pagerGesture) => {
+        {(tabId, pagerGesture, tabsHeader) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const pageOrders = queue?.orders[tabId] ?? [];
           const pageActive = tabId === (machineId || 'completed');
-          return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={async () => { await reload(); }}>
+          return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} tabsHeader={tabsHeader} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={async () => { await reload(); }}>
           <WorkerQueueFilter key="queue-filter" value={queueLimit} enabled={limitReady} loading={!!queue && loading && loadedScope !== windowScope} backgroundColor={colors.surface} onChange={limit => {
             if (limit === queueLimit) return;
             requestGeneration.current++;
