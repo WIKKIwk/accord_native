@@ -6,6 +6,8 @@ import { loadSession, logout, type Session } from '../../auth';
 import { WorkerAlert } from '../../components/WorkerAlert';
 import { WorkerDrawer } from '../../components/WorkerDrawer';
 import { WorkerSessionContext } from '../../components/WorkerSession';
+import { WorkerSecurityProvider } from '../../components/WorkerSecurity';
+import { clearAppLock } from '../../appLock';
 import type { WorkerAlertData } from '../../components/workerDialogTypes';
 
 export default function IosWorkerLayout() {
@@ -28,7 +30,7 @@ export default function IosWorkerLayout() {
 
   const onLogout = () => {
     setSigningOut(true);
-    void logout(session).catch(() => {}).finally(() => setSession(null));
+    void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {})]).finally(() => setSession(null));
   };
   const selectDestination = (id: string) => {
     if (id === 'queue') { router.navigate('/ios-worker'); return; }
@@ -41,6 +43,7 @@ export default function IosWorkerLayout() {
 
   return <WorkerSessionContext.Provider value={{ session, onLogout, onOpenDrawer: () => setDrawerOpen(true), setChatClosing }}>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
       <View style={{ flex: 1 }}>
         <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination}
           displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')}
@@ -62,6 +65,7 @@ export default function IosWorkerLayout() {
         </WorkerDrawer>
         <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
       </View>
+      </WorkerSecurityProvider>
     </ThemeProvider>
   </WorkerSessionContext.Provider>;
 }

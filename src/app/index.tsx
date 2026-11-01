@@ -4,6 +4,8 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 import { LoginScreen } from '../LoginScreen';
 import { WorkerScreen } from '../WorkerScreen';
 import { loadSession, logout, type Session } from '../auth';
+import { clearAppLock } from '../appLock';
+import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
@@ -16,11 +18,14 @@ export default function Index() {
   if (loading) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   if (!session) return <LoginScreen onLogin={setSession} />;
   if (Platform.OS === 'ios') return <Redirect href="/ios-worker" />;
-  return <WorkerScreen session={session} onLogout={() => {
+  const onLogout = () => {
     setLoading(true);
-    void logout(session).catch(() => {}).finally(() => {
+    void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {})]).finally(() => {
       setSession(null);
       setLoading(false);
     });
-  }} />;
+  };
+  return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
+    <WorkerScreen session={session} onLogout={onLogout} />
+  </WorkerSecurityProvider>;
 }

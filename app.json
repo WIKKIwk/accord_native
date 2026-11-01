@@ -34,7 +34,12 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Ilovani ochish uchun Face ID’dan foydalanishga ruxsat bering."
+        }
+      ],
       [
         "expo-image-picker",
         {
