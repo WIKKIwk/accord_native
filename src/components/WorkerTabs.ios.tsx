@@ -2,9 +2,10 @@ import { Button, Host, NavigationStack, Picker, Text, Toolbar, ToolbarItem, useN
 import { accessibilityLabel, frame, labelStyle, layoutPriority, lineLimit, navigationBarTitleDisplayMode, navigationTitle, pickerStyle, searchable, tag, textInputAutocapitalization, truncationMode } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { WorkerProfileButton } from './WorkerProfileButton.ios';
 import { getWorkerTabs, type WorkerTabsProps } from './workerTabModel';
 
-export function WorkerTabs({ machines, selected, onSelect, loading, search, onSearchChange, onMenu, onProfile, children }: WorkerTabsProps) {
+export function WorkerTabs({ session, machines, selected, onSelect, loading, search, onSearchChange, onMenu, onProfile, children }: WorkerTabsProps) {
   const query = useNativeState(search ?? '');
   const tabs = getWorkerTabs(machines);
   const selectedTab = tabs.find(tab => tab.id === selected) ?? tabs[0];
@@ -34,7 +35,7 @@ export function WorkerTabs({ machines, selected, onSelect, loading, search, onSe
                 <Button systemImage="line.3.horizontal" label="Bo‘limlar" modifiers={[labelStyle('iconOnly')]} onPress={onMenu} />
               </ToolbarItem>
               <ToolbarItem placement="topBarTrailing">
-                <Button systemImage="person.crop.circle" label="Profil" modifiers={[labelStyle('iconOnly')]} onPress={onProfile} />
+                <WorkerProfileButton key={session.imageCacheScope} session={session} onPress={onProfile} />
               </ToolbarItem>
             </Toolbar.Content>
           </Toolbar>

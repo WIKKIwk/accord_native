@@ -227,7 +227,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
       {!nativeNavigation && (Platform.OS !== 'android' || section === 'profile') ? header : null}
       {section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} /> : <>
-      <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
+      <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
         {(tabId, pagerGesture, machinePicker) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const canWork = canWorkMachine(tabId);

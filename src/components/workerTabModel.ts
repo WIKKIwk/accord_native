@@ -2,9 +2,11 @@ import type { ReactNode } from 'react';
 import type { PanGesture } from 'react-native-gesture-handler';
 import type { Apparatus } from '../workerApi';
 import type { SharedValue } from 'react-native-reanimated';
+import type { Session } from '../auth';
 
 export type WorkerTab = { id: string; name: string };
 export type WorkerTabsProps = {
+  session: Session;
   machines: Apparatus[];
   selected: string;
   onSelect: (id: string) => void;
