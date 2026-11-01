@@ -28,7 +28,7 @@ export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChan
       headerSearchBarOptions: {
         placeholder: 'Buyurtmani izlash',
         autoCapitalize: 'none',
-        hideNavigationBar: false,
+        hideNavigationBar: true,
         hideWhenScrolling: true,
         placement: 'stacked',
         obscureBackground: false,
@@ -43,7 +43,7 @@ export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChan
       <Stack.Toolbar.Button icon="person.crop.circle" accessibilityLabel="Profil" onPress={onProfile} />
     </Stack.Toolbar>
     <View style={styles.container} collapsable={false}>
-      <Host style={styles.container}>{children(selectedTab.id, undefined, machinePicker)}</Host>
+      <Host style={styles.container} ignoreSafeArea="keyboard">{children(selectedTab.id, undefined, machinePicker)}</Host>
       {loading ? <ActivityIndicator pointerEvents="none" style={styles.loading} /> : null}
     </View>
   </>;
