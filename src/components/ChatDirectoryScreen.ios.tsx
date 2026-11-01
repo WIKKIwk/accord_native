@@ -1,8 +1,8 @@
 import { Button, Host, HStack, Image, List, ProgressView, RNHostView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
-import { buttonStyle, contentShape, disabled, font, foregroundStyle, frame, lineLimit, listRowInsets, listRowSeparator, listStyle, padding, scrollContentBackground, shapes } from '@expo/ui/swift-ui/modifiers';
+import { buttonStyle, contentShape, disabled, font, foregroundStyle, frame, lineLimit, listRowInsets, listRowSeparator, listStyle, onAppear, padding, scrollContentBackground, shapes } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
 import { loadChatDirectory, openChatConversation } from '../chatApi';
 import type { ChatPeer } from '../chatModel';
@@ -28,12 +28,18 @@ function DirectoryRow({ peer, session, token, opening, busy, onOpen }: {
   </Button>;
 }
 
+function DirectoryPageFooter({ onVisible }: { onVisible: () => void }) {
+  return <HStack modifiers={[padding({ vertical: 10 }), listRowSeparator('hidden'), onAppear(onVisible)]}>
+    <Spacer /><ProgressView /><Spacer />
+  </HStack>;
+}
+
 export function ChatDirectoryScreen({ session }: { session: Session }) {
   const router = useRouter();
   const { remember } = useChatMetadata();
   const [items, setItems] = useState<ChatPeer[] | null>(null);
   const [query, setQuery] = useState('');
-  const [error, setError] = useState<{ message: string; retryOffset?: number } | null>(null);
+  const [error, setError] = useState<{ message: string; retryOffset: number } | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextOffset, setNextOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -45,6 +51,7 @@ export function ChatDirectoryScreen({ session }: { session: Session }) {
   const directoryRequest = useRef<AbortController | null>(null);
   const openingRequest = useRef<AbortController | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAutoPage = useRef('');
 
   const load = useCallback(async (search: string, offset: number) => {
     if (!focused.current) return;
@@ -76,8 +83,17 @@ export function ChatDirectoryScreen({ session }: { session: Session }) {
     }
   }, [session]);
 
+  const loadNextPage = useCallback(() => {
+    if (!focused.current || directoryRequest.current || query !== queryRef.current) return;
+    const pageKey = JSON.stringify([query, nextOffset]);
+    if (lastAutoPage.current === pageKey) return;
+    lastAutoPage.current = pageKey;
+    void load(query, nextOffset);
+  }, [load, nextOffset, query]);
+
   useFocusEffect(useCallback(() => {
     focused.current = true;
+    lastAutoPage.current = '';
     void load(queryRef.current, 0);
     return () => {
       focused.current = false;
@@ -92,6 +108,7 @@ export function ChatDirectoryScreen({ session }: { session: Session }) {
 
   const search = (value: string) => {
     queryRef.current = value;
+    lastAutoPage.current = '';
     setQuery(value);
     generation.current++;
     directoryRequest.current?.abort();
@@ -109,7 +126,6 @@ export function ChatDirectoryScreen({ session }: { session: Session }) {
     const controller = new AbortController();
     openingRequest.current = controller;
     setOpeningKey(peerKey(peer));
-    setError(null);
     try {
       const conversation = await openChatConversation(session, peer, controller.signal);
       if (!focused.current || controller.signal.aborted || !activeSessionToken(session)) return;
@@ -117,7 +133,7 @@ export function ChatDirectoryScreen({ session }: { session: Session }) {
       router.replace({ pathname: '/ios-worker/chat/[conversationId]', params: { conversationId: conversation.id, title: conversation.title } });
     } catch (reason) {
       if (focused.current && !controller.signal.aborted && activeSessionToken(session)) {
-        setError({ message: reason instanceof Error && reason.name !== 'TypeError' ? reason.message : 'Internetni tekshirib, qayta urinib ko‘ring.' });
+        Alert.alert('Suhbatni ochib bo‘lmadi', reason instanceof Error && reason.name !== 'TypeError' ? reason.message : 'Internetni tekshirib, qayta urinib ko‘ring.');
       }
     } finally {
       if (openingRequest.current === controller) {
@@ -141,9 +157,9 @@ export function ChatDirectoryScreen({ session }: { session: Session }) {
         {items === null && !error ? <HStack spacing={10} modifiers={[padding({ vertical: 14 }), listRowSeparator('hidden')]}>
           <ProgressView /><Text modifiers={[secondary]}>Foydalanuvchilar yuklanmoqda…</Text>
         </HStack> : null}
-        {error ? <VStack alignment="leading" spacing={8} modifiers={[padding({ vertical: 10 }), listRowSeparator('hidden')]}>
+        {error && error.retryOffset === 0 ? <VStack alignment="leading" spacing={8} modifiers={[padding({ vertical: 10 }), listRowSeparator('hidden')]}>
           <Text modifiers={[secondary]}>{error.message}</Text>
-          {error.retryOffset !== undefined ? <Button label="Qayta urinish" onPress={() => { void load(queryRef.current, error.retryOffset ?? 0); }} modifiers={[buttonStyle('bordered')]} /> : null}
+          <Button label="Qayta urinish" onPress={() => { void load(queryRef.current, error.retryOffset); }} modifiers={[buttonStyle('bordered')]} />
         </VStack> : null}
         {items !== null && !items.length && !error ? <VStack alignment="center" spacing={10} modifiers={[
           frame({ maxWidth: Infinity }), padding({ top: 44, bottom: 24 }), listRowSeparator('hidden'),
@@ -154,10 +170,12 @@ export function ChatDirectoryScreen({ session }: { session: Session }) {
         </VStack> : null}
         {(items ?? []).map(peer => <DirectoryRow key={peerKey(peer)} peer={peer} session={session} token={avatarToken}
           opening={openingKey === peerKey(peer)} busy={!!openingKey} onOpen={target => { void open(target); }} />)}
-        {hasMore && error?.retryOffset === undefined ? <HStack modifiers={[padding({ vertical: 10 }), listRowSeparator('hidden')]}>
-          <Spacer /><Button label={loadingMore ? 'Yuklanmoqda…' : 'Yana ko‘rsatish'} onPress={() => { void load(queryRef.current, nextOffset); }}
-            modifiers={[buttonStyle('bordered'), disabled(loadingMore || !!openingKey)]} /><Spacer />
-        </HStack> : null}
+        {error && error.retryOffset > 0 ? <VStack alignment="center" spacing={8} modifiers={[padding({ vertical: 10 }), listRowSeparator('hidden')]}>
+          <Text modifiers={[secondary]}>{error.message}</Text>
+          <Button label="Qayta urinish" onPress={() => { void load(queryRef.current, error.retryOffset); }} modifiers={[buttonStyle('bordered'), disabled(loadingMore)]} />
+        </VStack> : null}
+        {hasMore && nextOffset > 0 && !error
+          ? <DirectoryPageFooter key={`${query}:${nextOffset}`} onVisible={loadNextPage} /> : null}
       </List>
     </Host>
   </>;
