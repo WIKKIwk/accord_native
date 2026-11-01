@@ -9,6 +9,7 @@ import { subscribeChatLive } from '../chatLive';
 import { chatTime, filterChatConversations, type ChatConversation } from '../chatModel';
 import { ChatAvatar } from './ChatAvatar';
 import { useChatMetadata } from './ChatMetadata';
+import { useWorkerColors } from './useWorkerColors';
 
 type Props = { session: Session; onOpenDrawer?: () => void };
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
@@ -37,7 +38,8 @@ function ChatList({ items, error, query, session, avatarToken, onRefresh, onOpen
   items: ChatConversation[] | null; error: string; query: string; session: Session; avatarToken: string | null; onRefresh: () => Promise<void>; onOpen: (item: ChatConversation) => void;
 }) {
   const visible = filterChatConversations(items ?? [], query);
-  return <Host style={styles.root}>
+  const colors = useWorkerColors();
+  return <Host style={[styles.root, { backgroundColor: colors.background }]}>
     <List modifiers={[listStyle('plain'), scrollContentBackground('hidden'), refreshable(onRefresh)]}>
       {items === null && !error ? <HStack spacing={10} modifiers={[transparentRow, padding({ vertical: 14 }), listRowSeparator('hidden')]}>
         <ProgressView /><Text modifiers={[secondary]}>Chatlar yuklanmoqda…</Text>

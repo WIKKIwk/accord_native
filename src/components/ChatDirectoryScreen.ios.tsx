@@ -9,6 +9,7 @@ import type { ChatPeer } from '../chatModel';
 import { profileRoleLabel } from '../profileModel';
 import { ChatAvatar } from './ChatAvatar';
 import { useChatMetadata } from './ChatMetadata';
+import { useWorkerColors } from './useWorkerColors';
 
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 const transparentRow = listRowBackground('transparent');
@@ -37,6 +38,7 @@ function DirectoryPageFooter({ onVisible }: { onVisible: () => void }) {
 
 export function ChatDirectoryScreen({ session }: { session: Session }) {
   const router = useRouter();
+  const colors = useWorkerColors();
   const { remember } = useChatMetadata();
   const [items, setItems] = useState<ChatPeer[] | null>(null);
   const [query, setQuery] = useState('');
@@ -153,7 +155,7 @@ export function ChatDirectoryScreen({ session }: { session: Session }) {
         onChangeText: event => search(event.nativeEvent.text), onCancelButtonPress: () => search(''),
       },
     }} />
-    <Host style={styles.root}>
+    <Host style={[styles.root, { backgroundColor: colors.background }]}>
       <List modifiers={[listStyle('plain'), scrollContentBackground('hidden')]}>
         {items === null && !error ? <HStack spacing={10} modifiers={[transparentRow, padding({ vertical: 14 }), listRowSeparator('hidden')]}>
           <ProgressView /><Text modifiers={[secondary]}>Foydalanuvchilar yuklanmoqda…</Text>
