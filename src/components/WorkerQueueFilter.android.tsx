@@ -3,11 +3,11 @@ import { DropdownMenu, DropdownMenuItem, OutlinedButton, Text as ComposeText } f
 import { useState } from 'react';
 import { QUEUE_LIMITS, type QueueLimit } from '../workerQueueLimit';
 import { WorkerQueueCard } from './WorkerQueueCard.android';
+import type { WorkerQueueFilterProps } from './workerQueueFilterProps';
 
-type Props = { value: QueueLimit; enabled: boolean; loading?: boolean; backgroundColor: string; onChange: (limit: QueueLimit) => void };
 const label = (count: QueueLimit) => count === 0 ? 'Barchasi' : `${count} ta`;
 
-export function WorkerQueueFilter({ value, enabled, loading, backgroundColor, onChange }: Props) {
+export function WorkerQueueFilter({ value, enabled, loading, backgroundColor, onChange }: WorkerQueueFilterProps) {
   const [expanded, setExpanded] = useState(false);
   return <WorkerQueueCard first backgroundColor={backgroundColor}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Row alignment="center" spacing={8} style={{ width: '100%' }}>
     <Text>{loading ? 'Yangilanmoqda…' : 'Ko‘rsatish'}</Text>

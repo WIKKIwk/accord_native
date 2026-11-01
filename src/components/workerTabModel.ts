@@ -16,7 +16,7 @@ export type WorkerTabsProps = {
   onSearchChange?: (value: string) => void;
   onMenu?: () => void;
   onProfile?: () => void;
-  children: (id: string, pagerGesture?: PanGesture, tabsHeader?: ReactNode) => ReactNode;
+  children: (id: string, pagerGesture?: PanGesture, machinePicker?: ReactNode) => ReactNode;
 };
 
 /** V2 order: first assigned apparatus, completed, then the remaining apparatuses. */

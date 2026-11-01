@@ -1,15 +1,20 @@
-import { Host, RNHostView } from '@expo/ui/swift-ui';
+import { Host, Picker, Text } from '@expo/ui/swift-ui';
+import { accessibilityLabel, frame, layoutPriority, lineLimit, pickerStyle, tag, truncationMode } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { WorkerTabStrip } from './WorkerTabStrip.ios';
 import { getWorkerTabs, type WorkerTabsProps } from './workerTabModel';
 
 export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChange, onMenu, onProfile, children }: WorkerTabsProps) {
   const tabs = getWorkerTabs(machines);
   const selectedTab = tabs.find(tab => tab.id === selected) ?? tabs[0];
-  const tabsHeader = <RNHostView matchContents={{ vertical: true }}>
-    <WorkerTabStrip tabs={tabs} selected={selectedTab.id} onSelect={onSelect} />
-  </RNHostView>;
+  const machinePicker = <Picker label="" selection={selectedTab.id} onSelectionChange={id => {
+    if (typeof id === 'string' && tabs.some(tab => tab.id === id)) onSelect(id);
+  }} modifiers={[
+    pickerStyle('menu'), accessibilityLabel(`Apparat: ${selectedTab.name}`),
+    lineLimit(1), truncationMode('tail'), frame({ minWidth: 60 }), layoutPriority(-1),
+  ]}>
+    {tabs.map(tab => <Text key={tab.id} modifiers={[tag(tab.id)]}>{tab.name}</Text>)}
+  </Picker>;
 
   return <>
     <Stack.Screen options={{
@@ -37,7 +42,7 @@ export function WorkerTabs({ machines, selected, onSelect, loading, onSearchChan
       <Stack.Toolbar.Button icon="person.crop.circle" accessibilityLabel="Profil" onPress={onProfile} />
     </Stack.Toolbar>
     <View style={styles.container} collapsable={false}>
-      <Host style={styles.container}>{children(selectedTab.id, undefined, tabsHeader)}</Host>
+      <Host style={styles.container}>{children(selectedTab.id, undefined, machinePicker)}</Host>
       {loading ? <ActivityIndicator pointerEvents="none" style={styles.loading} /> : null}
     </View>
   </>;
