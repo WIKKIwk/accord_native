@@ -1,5 +1,5 @@
 import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
-import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, font, foregroundStyle, frame, glassEffect, id, lineLimit, offset, onAppear, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Platform, StyleSheet, useColorScheme, useWindowDimensions } from 'react-native';
@@ -103,10 +103,10 @@ function Composer({ ready, queueing, onSend, inputRef }: {
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const canSend = ready && !queueing && !!draft.trim();
   const surface = Number(Platform.Version) >= 26
-    ? [glassEffect({ glass: { variant: 'regular' }, shape: 'capsule' })]
+    ? [glassEffect({ glass: { variant: 'regular' }, shape: 'roundedRectangle', cornerRadius: 23 })]
     : [
-        background({ type: 'material', material: 'regular' }, shapes.capsule()),
-        strokeBorder({ shape: 'capsule', content: dark ? '#545456' : '#c7c7cc', style: { lineWidth: 1 } }),
+        background({ type: 'material', material: 'regular' }, shapes.roundedRectangle({ cornerRadius: 23 })),
+        strokeBorder({ shape: 'roundedRectangle', cornerRadius: 23, content: dark ? '#545456' : '#c7c7cc', style: { lineWidth: 1 } }),
       ];
   const send = async () => {
     if (!canSend) return;
@@ -126,10 +126,11 @@ function Composer({ ready, queueing, onSend, inputRef }: {
   };
   return <HStack alignment="bottom" spacing={4} modifiers={[
     padding({ leading: 16, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
-    ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }),
+    ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
     <TextField ref={inputRef} text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
-      font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),
+      font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), fixedSize({ horizontal: false, vertical: true }),
+      padding({ vertical: 8 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),
       accessibilityLabel('Xabar matni'), disabled(!ready),
     ]} />
     <Button onPress={() => { void send(); }} modifiers={[buttonStyle('plain'), accessibilityLabel('Xabarni yuborish'), disabled(!canSend)]}>
