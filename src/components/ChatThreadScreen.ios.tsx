@@ -1,5 +1,5 @@
 import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, useNativeState, VStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, font, foregroundStyle, frame, lineLimit, padding, shapes } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, font, foregroundStyle, frame, glassEffect, lineLimit, padding, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { Platform, StyleSheet, useColorScheme, useWindowDimensions } from 'react-native';
@@ -64,18 +64,28 @@ function Composer({ ready, queueing, onSend }: { ready: boolean; queueing: boole
   const dark = useColorScheme() === 'dark';
   const [draft, setDraft] = useState('');
   const value = useNativeState('');
+  const canSend = ready && !queueing && !!draft.trim();
+  const surface = Number(Platform.Version) >= 26
+    ? [glassEffect({ glass: { variant: 'regular' }, shape: 'capsule' })]
+    : [
+        background({ type: 'material', material: 'regular' }, shapes.capsule()),
+        strokeBorder({ shape: 'capsule', content: dark ? '#545456' : '#c7c7cc', style: { lineWidth: 1 } }),
+      ];
   const send = async () => {
-    if (!draft.trim() || queueing || !ready) return;
+    if (!canSend) return;
     if (await onSend(draft)) { value.set(''); setDraft(''); }
   };
-  return <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity }), padding({ horizontal: 12, top: 8, bottom: 10 })]}>
+  return <HStack alignment="bottom" spacing={4} modifiers={[
+    padding({ leading: 16, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
+    ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }),
+  ]}>
     <TextField text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
-      font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), frame({ maxWidth: Infinity, alignment: 'leading' }),
-      padding({ horizontal: 14, vertical: 10 }), background(dark ? '#2c2c2e' : '#e9e9eb', shapes.capsule()),
+      font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),
       accessibilityLabel('Xabar matni'), disabled(!ready || queueing),
     ]} />
-    <Button onPress={() => { void send(); }} modifiers={[buttonStyle('plain'), accessibilityLabel('Xabarni yuborish'), disabled(!ready || queueing || !draft.trim())]}>
-      <Image systemName="arrow.up.circle.fill" size={34} color="#007AFF" />
+    <Button onPress={() => { void send(); }} modifiers={[buttonStyle('plain'), accessibilityLabel('Xabarni yuborish'), disabled(!canSend)]}>
+      <Image systemName="arrow.up.circle.fill" size={30} color={canSend ? '#007AFF' : dark ? '#8e8e93' : '#6c6c70'}
+        modifiers={[frame({ width: 40, height: 40 })]} />
     </Button>
   </HStack>;
 }
