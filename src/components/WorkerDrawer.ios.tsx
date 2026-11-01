@@ -54,9 +54,11 @@ export function WorkerDrawer({ visible, onOpen, onClose, onSelect, displayName, 
     drawerStyle={{ width: Math.min(360, width * 0.82), backgroundColor: background }}
     overlayStyle={{ backgroundColor: 'transparent' }} overlayAccessibilityLabel="Menyuni yopish"
     renderDrawerContent={() => <View style={[styles.drawer, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 12) }]}>
-      <Host matchContents={{ vertical: true }} style={styles.heading}>
-        <Text modifiers={[font({ textStyle: 'title2', weight: 'bold' })]}>Bo‘limlar</Text>
-      </Host>
+      <View style={styles.heading}>
+        <Host matchContents={{ vertical: true }} style={styles.headingHost}>
+          <Text modifiers={[font({ textStyle: 'title2', weight: 'semibold' })]}>Bo‘limlar</Text>
+        </Host>
+      </View>
       <ScrollView style={styles.items}>
         <Host matchContents={{ vertical: true }} style={styles.itemsHost}>
           <Column spacing={2} style={{ width: '100%' }}>
@@ -85,7 +87,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, overflow: 'hidden' },
   drawer: { flex: 1 },
   heading: { width: '100%', paddingHorizontal: 20, paddingBottom: 20 },
-  items: { flex: 1 },
+  headingHost: { width: '100%' },
+  items: { flex: 1, overflow: 'hidden' },
   itemsHost: { width: '100%' },
   logout: { alignItems: 'flex-start', paddingHorizontal: 20 },
 });
