@@ -32,9 +32,10 @@ export default function IosWorkerLayout() {
   };
   const selectDestination = (id: string) => {
     if (id === 'queue') { router.navigate('/ios-worker'); return; }
+    if (id === 'daily') { router.navigate('/ios-worker/daily'); return; }
     if (id === 'profile') { router.navigate('/ios-worker/profile'); return; }
     if (id === 'logout') { onLogout(); return; }
-    const labels: Record<string, string> = { daily: 'Kunlik ishlar', instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
+    const labels: Record<string, string> = { instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
     setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
   };
 
@@ -43,7 +44,7 @@ export default function IosWorkerLayout() {
       <View style={{ flex: 1 }}>
         <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination}
           displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')}
-          active={pathname === '/ios-worker/profile' ? 'profile' : pathname === '/ios-worker' ? 'queue' : ''}>
+          active={pathname === '/ios-worker/profile' ? 'profile' : pathname === '/ios-worker' ? 'queue' : pathname === '/ios-worker/daily' ? 'daily' : ''}>
           <NativeTabs hidden={pathname.startsWith('/ios-worker/chat/') && !chatClosing} disableHiddenAnimation>
             <NativeTabs.Trigger name="(home)">
               <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />

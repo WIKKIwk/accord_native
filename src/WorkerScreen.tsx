@@ -16,6 +16,7 @@ import { WorkerBottomBar } from './components/WorkerBottomBar';
 import { WorkerFab } from './components/WorkerFab';
 import { WorkerQrScanner } from './components/WorkerQrScanner';
 import { ProfileScreen } from './components/ProfileScreen';
+import { DailyWorkScreen } from './components/DailyWorkScreen';
 import { WorkerOrderListItem } from './components/WorkerOrderListItem';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerQueueList } from './components/WorkerQueueList';
@@ -27,7 +28,7 @@ import { WorkerAlert } from './components/WorkerAlert';
 import type { WorkerAlertData } from './components/workerDialogTypes';
 import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 
-type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat') => void; onOpenDrawer?: () => void };
+type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
 const statusLabel: Record<string, string> = {
   pending: 'Kutilmoqda', waiting: 'Kutilmoqda', in_progress: 'Ish jarayonida',
   paused: 'To‘xtatilgan', completed: 'Yakunlangan', frozen: 'Muzlatilgan',
@@ -51,7 +52,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const [activeOrder, setActiveOrder] = useState<{ apparatusId: string; orderId: string; preview?: QueueOrder; initialAction?: 'complete' | 'astatka' } | null>(null);
   const [historyOrder, setHistoryOrder] = useState<CompletedOrder | null>(null);
   const [actionOrder, setActionOrder] = useState<{ apparatusId: string; order: QueueOrder; completed: boolean } | null>(null);
-  const [section, setSection] = useState<'home' | 'profile'>('home');
+  const [section, setSection] = useState<'home' | 'profile' | 'daily'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [navBarHeight, setNavBarHeight] = useState(80);
@@ -83,7 +84,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     return () => { mounted = false; };
   }, [session]);
   useEffect(() => {
-    if (section === 'profile') headerOffset.set(0);
+    if (section !== 'home') headerOffset.set(0);
   }, [section, headerOffset]);
   const reload = useCallback(async (showLoading = false) => {
     if (!limitReady) return;
@@ -152,9 +153,10 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   function selectDestination(id: string) {
     if (id === 'home' || id === 'queue') { setSection('home'); return; }
     if (id === 'profile') { if (nativeNavigation) onNavigate?.('profile'); else setSection('profile'); return; }
+    if (id === 'daily') { if (nativeNavigation) onNavigate?.('daily'); else setSection('daily'); return; }
     if (id === 'chat' && nativeNavigation) { onNavigate?.('chat'); return; }
     if (id === 'logout') { onLogout(); return; }
-    const labels: Record<string, string> = { chat: 'Chat', daily: 'Kunlik ishlar', paddons: 'Paddonlar', instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
+    const labels: Record<string, string> = { chat: 'Chat', paddons: 'Paddonlar', instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
     setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
   }
   function openScanner() {
@@ -225,8 +227,9 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   </View>;
   const content = (
     <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
-      {!nativeNavigation && (Platform.OS !== 'android' || section === 'profile') ? header : null}
-      {section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} /> : <>
+      {!nativeNavigation && section !== 'daily' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
+      {section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} /> : section === 'daily'
+        ? <DailyWorkScreen session={session} onOpenDrawer={openDrawer} onBack={() => setSection('home')} /> : <>
       <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
         {(tabId, pagerGesture, machinePicker) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
@@ -279,7 +282,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       {!nativeNavigation && <View onLayout={event => setNavBarHeight(event.nativeEvent.layout.height)}>
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
       </View>}
-      <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} />
+      {section !== 'daily' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
       {activeOrder ? <WorkerOrderSheet onClose={() => setActiveOrder(null)}>
         <OrderScreen session={session} apparatusId={activeOrder.apparatusId} orderId={activeOrder.orderId} preview={activeOrder.preview} queueCursor={queue?.snapshot ?? null} initialAction={activeOrder.initialAction} onClose={() => setActiveOrder(null)} onChanged={() => { void reload(); }} />
       </WorkerOrderSheet> : null}
@@ -294,7 +297,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     </SafeAreaView>
   );
   if (nativeNavigation) return content;
-  return <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination} displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')} active={section === 'profile' ? 'profile' : 'queue'}>{content}</WorkerDrawer>;
+  return <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination} displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')} active={section === 'home' ? 'queue' : section}>{content}</WorkerDrawer>;
 }
 const styles = StyleSheet.create({
   safe: { flex: 1 },
