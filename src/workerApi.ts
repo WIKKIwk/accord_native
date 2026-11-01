@@ -7,10 +7,14 @@ type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
-export type Apparatus = { id: string; name: string };
+export type Apparatus = { id: string; name: string; operation: string };
 export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
 export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown> };
+
+export function canWorkOnApparatus(machine: Apparatus | undefined, assignedIds: readonly string[]): boolean {
+  return !!machine && machine.operation === 'print' && assignedIds.includes(machine.id);
+}
 
 async function getJson(session: Session, path: string, resource: 'apparatus' | 'queue'): Promise<unknown> {
   const controller = new AbortController();
@@ -48,22 +52,31 @@ export async function loadWorkerQueue(session: Session, search = '', queueLimit:
   const catalog = catalogResult.value;
   const raw = queueResult.value;
   if (!Array.isArray(catalog)) throw new Error('Aparatlar ro‘yxati formati noto‘g‘ri.');
-  const assigned = new Set(session.assigned_apparatus);
+  const snapshot = object(raw);
+  if (snapshot.projection !== 'worker_list_v1') throw new Error('Server navbat formati qo‘llab-quvvatlanmaydi.');
+  const machines = workerMachinesFromSnapshot(catalog, snapshot, session.assigned_apparatus);
+  return queueFromSnapshot(machines, snapshot, session.assigned_apparatus);
+}
+
+/** The server's worker scope decides whether unassigned machines may be watched. */
+export function workerMachinesFromSnapshot(catalog: unknown[], snapshot: RecordValue, assignedIds: readonly string[]): Apparatus[] {
+  const assigned = new Set(assignedIds);
+  const showAll = snapshot.worker_show_all_apparatus_tabs === true;
   const machines = catalog.flatMap((item): Apparatus[] => {
     const outer = object(item);
     const projection = Object.keys(object(outer.runtime_projection)).length ? object(outer.runtime_projection) : outer;
     const id = string(projection.apparatus_id);
     const name = string(object(projection.display).display_name);
     const operation = string(object(projection.execution_profile).operation);
-    if (!id || !name || operation !== 'print' || !assigned.has(id)) return [];
-    return [{ id, name }];
+    if (!id || !name || (!showAll && !assigned.has(id))) return [];
+    return [{ id, name, operation }];
   });
-  const snapshot = object(raw);
-  if (snapshot.projection !== 'worker_list_v1') throw new Error('Server navbat formati qo‘llab-quvvatlanmaydi.');
-  return queueFromSnapshot(machines, snapshot);
+  const firstAssigned = machines.findIndex(machine => assigned.has(machine.id));
+  if (firstAssigned > 0) machines.unshift(...machines.splice(firstAssigned, 1));
+  return machines;
 }
 
-export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string, unknown>): WorkerQueue {
+export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string, unknown>, assignedIds: readonly string[]): WorkerQueue {
   const rows = object(snapshot.worker_list_rows);
   const visible = object(snapshot.visible_order_ids);
   const sequences = object(snapshot.sequences);
@@ -85,7 +98,7 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
       return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state, imageId: string(row.image_id), cardTone: workerOrderTone(displayState, queueState, string(object(orderControls[id]).state)) }];
     });
   }
-  const assigned = new Set(machines.map(machine => machine.id));
+  const assigned = new Set(assignedIds);
   const seen = new Set<string>();
   const completed: CompletedOrder[] = [];
   for (const raw of Array.isArray(snapshot.completed_orders) ? snapshot.completed_orders : []) {

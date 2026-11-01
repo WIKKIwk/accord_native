@@ -28,18 +28,19 @@ test('queue cards use the selected apparatus and update from live display states
     worker_display_states: { press1: { a: 'in_progress' }, press2: { a: 'paused' } },
     order_controls: {}, completed_orders: [],
   };
-  const machines = [{ id: 'press1', name: 'Press 1' }, { id: 'press2', name: 'Press 2' }];
-  const before = queueFromSnapshot(machines, snapshot);
+  const machines = [{ id: 'press1', name: 'Press 1', operation: 'print' }, { id: 'press2', name: 'Press 2', operation: 'print' }];
+  const assigned = ['press1', 'press2'];
+  const before = queueFromSnapshot(machines, snapshot, assigned);
   assert.equal(before.orders.press1[0].cardTone, 'in_progress');
   assert.equal(before.orders.press2[0].cardTone, 'paused');
   const updated = applyWorkerDelta(snapshot, { ok: true, type: 'state_delta', protocol: 'state_delta_v2', epoch: 'e', scope: 's', base_rev: 1, rev: 2,
     patch: { worker_display_states: { scopes: { press1: { upsert: { a: 'print_preflight_passed' }, remove: [] } }, remove: [] } } });
   assert.ok(updated);
-  const after = queueFromSnapshot(machines, updated);
+  const after = queueFromSnapshot(machines, updated, assigned);
   assert.equal(after.orders.press1[0].cardTone, 'print_preflight_passed');
   assert.equal(after.orders.press2[0].cardTone, 'paused');
   updated.worker_display_states.press2.a = 'in_progress';
-  assert.equal(queueFromSnapshot(machines, updated).orders.press2[0].state, 'paused');
+  assert.equal(queueFromSnapshot(machines, updated, assigned).orders.press2[0].state, 'paused');
 });
 
 test('V2 colors, completed rows and paused-state precedence are preserved', () => {

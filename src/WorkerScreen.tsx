@@ -5,7 +5,7 @@ import { Modal, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import type { Session } from './auth';
-import { loadWorkerQueue, queueFromSnapshot, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
+import { canWorkOnApparatus, loadWorkerQueue, queueFromSnapshot, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
 import { OrderScreen } from './OrderScreen';
 import { subscribeWorkerLive } from './workerLive';
 import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu } from './workerLongPress';
@@ -133,7 +133,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       snapshot => {
         const current = queueRef.current;
         if (!current) return;
-        const updated = queueFromSnapshot(current.machines, snapshot);
+        const updated = queueFromSnapshot(current.machines, snapshot, session.assigned_apparatus);
         requestGeneration.current++;
         queueRef.current = updated;
         setQueue(updated);
@@ -144,7 +144,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const selectedMachine = queue?.machines.find(machine => machine.id === machineId);
   const completedMatches = (queue?.completed ?? []).filter(order => !searchScope || [order.code, order.title, order.customer].some(value => value.toLocaleLowerCase().includes(searchScope.toLocaleLowerCase())));
   const completed = queueLimit === 0 ? completedMatches : completedMatches.slice(0, queueLimit);
-  const scannerMachineId = selectedMachine?.id ?? queue?.machines[0]?.id ?? '';
+  const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
+  const scannerMachineId = selectedMachine ? (canWorkMachine(selectedMachine.id) ? selectedMachine.id : '') : queue?.machines.find(machine => canWorkMachine(machine.id))?.id ?? '';
   const scanner = scannerOpen ? <WorkerQrScanner session={session} apparatusId={scannerMachineId} onClose={() => setScannerOpen(false)} onOrder={(apparatusId, orderId) => { setScannerOpen(false); setMachineId(apparatusId); setActiveOrder({ apparatusId, orderId }); }} /> : null;
   if (scannerOpen && !nativeNavigation) return scanner;
   function selectDestination(id: string) {
@@ -156,7 +157,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
   }
   function openScanner() {
-    if (!scannerMachineId) { setAlert({ title: 'QR skanerlash', message: 'Avval aparatni tanlang.' }); return; }
+    if (!scannerMachineId) { setAlert({ title: 'QR skanerlash', message: 'Avval o‘zingizga biriktirilgan bosma aparatni tanlang.' }); return; }
     setScannerOpen(true);
   }
   async function openPreflightConfirmation(apparatusId: string, orderId: string, scope: string) {
@@ -195,6 +196,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     }
   }
   function openOrderActions(apparatusId: string, order: QueueOrder, isCompleted: boolean) {
+    if (!canWorkMachine(apparatusId)) return;
     preflightCheck.current++;
     const scope = queueRef.current?.snapshot.scope;
     if (loadedScope !== windowScope || typeof scope !== 'string' || !scope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; }
@@ -227,6 +229,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       <WorkerTabs machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
         {(tabId, pagerGesture, machinePicker) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
+          const canWork = canWorkMachine(tabId);
           const pageOrders = queue?.orders[tabId] ?? [];
           const pageActive = tabId === (machineId || 'completed');
           return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={async () => { await reload(); }}>
@@ -248,7 +251,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
-              onPress={() => setHistoryOrder(order)} onLongPress={!order.issueNote.trim() ? () => openOrderActions(order.apparatusId, order, true) : undefined} />
+              onPress={() => setHistoryOrder(order)} onLongPress={!order.issueNote.trim() && canWorkMachine(order.apparatusId) ? () => openOrderActions(order.apparatusId, order, true) : undefined} />
           )) : null}
           {pageMachine && !pageOrders.length && !loading ? <ListItem>Buyurtmalar topilmadi</ListItem> : null}
           {tabId !== 'completed' ? pageOrders.map((order, index) => (
@@ -257,8 +260,15 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
               statusText={statusLabel[order.state] ?? order.state} statusDetail={order.customer}
-              onLongPress={() => openOrderActions(tabId, order, false)}
-              onPress={() => { if (loadedScope !== windowScope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; } setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order }); }} />
+              onLongPress={canWork ? () => openOrderActions(tabId, order, false) : undefined}
+              onPress={() => {
+                if (loadedScope !== windowScope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; }
+                if (!canWork) {
+                  setAlert({ title: [order.code, order.title].filter(Boolean).join(' · '), message: [pageMachine?.name, order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join('\n') });
+                  return;
+                }
+                setActiveOrder({ apparatusId: tabId, orderId: order.id, preview: order });
+              }} />
           )) : null}
           {Platform.OS !== 'ios' && <Spacer size={88} />}
           </WorkerQueueList>;
