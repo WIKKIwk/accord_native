@@ -1,7 +1,7 @@
-import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
-import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, font, foregroundStyle, frame, glassEffect, id, lineLimit, offset, onAppear, opacity, padding, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
+import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, font, foregroundStyle, frame, glassEffect, id, lineLimit, offset, onAppear, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Platform, StyleSheet, useColorScheme, useWindowDimensions } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
@@ -49,10 +49,10 @@ function MessageBubble({ body, timestamp, mine, status, messageKey, animate, red
   </HStack>;
 }
 
-function ConversationBody({ session, messages, pending, hasMore, loadingMore, error, sendError, sending, lastQueuedId, reduceMotion, onRefresh, onLoadOlder, onRetry }: {
+function ConversationBody({ session, messages, pending, hasMore, loadingMore, error, sendError, sending, lastQueuedId, reduceMotion, onRefresh, onLoadOlder, onRetry, onDismissKeyboard }: {
   session: Session; messages: ChatMessage[] | null; pending: PendingChatText[]; hasMore: boolean; loadingMore: boolean;
   error: string; sendError: string; sending: boolean; lastQueuedId: string | null; reduceMotion: boolean;
-  onRefresh: () => Promise<void>; onLoadOlder: () => Promise<void>; onRetry: () => void;
+  onRefresh: () => Promise<void>; onLoadOlder: () => Promise<void>; onRetry: () => void; onDismissKeyboard: () => void;
 }) {
   const rows = chatTimeline(session, messages ?? [], pending);
   const position = useNativeState<string | null>(null);
@@ -70,7 +70,10 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
   const scrollAnchor = Number(Platform.Version) >= 18
     ? [defaultScrollAnchorForRole('bottom', 'initialOffset'), defaultScrollAnchorForRole('bottom', 'alignment')]
     : [defaultScrollAnchor('bottom')];
-  return <ScrollView modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor, scrollPosition(position, { anchor: 'bottom' })]}>
+  return <ScrollView modifiers={[
+    frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor, scrollPosition(position, { anchor: 'bottom' }),
+    scrollDismissesKeyboard('interactively'), scrollClipDisabled(), onTapGesture(onDismissKeyboard),
+  ]}>
     <VStack alignment="leading" spacing={12} modifiers={[scrollTargetLayout(), frame({ maxWidth: Infinity }), padding({ horizontal: 16, vertical: 14 })]}>
       {hasMore ? <HStack><Spacer /><Button label={loadingMore ? 'Yuklanmoqda…' : 'Avvalgi xabarlar'} onPress={() => { void onLoadOlder(); }}
         modifiers={[buttonStyle('bordered'), disabled(loadingMore)]} /><Spacer /></HStack> : null}
@@ -90,7 +93,9 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
   </ScrollView>;
 }
 
-function Composer({ ready, queueing, onSend }: { ready: boolean; queueing: boolean; onSend: (body: string) => Promise<boolean> }) {
+function Composer({ ready, queueing, onSend, inputRef }: {
+  ready: boolean; queueing: boolean; onSend: (body: string) => Promise<boolean>; inputRef: RefObject<TextFieldRef | null>;
+}) {
   const dark = useColorScheme() === 'dark';
   const [draft, setDraft] = useState('');
   const value = useNativeState('');
@@ -123,7 +128,7 @@ function Composer({ ready, queueing, onSend }: { ready: boolean; queueing: boole
     padding({ leading: 16, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }),
   ]}>
-    <TextField text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
+    <TextField ref={inputRef} text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
       font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),
       accessibilityLabel('Xabar matni'), disabled(!ready),
     ]} />
@@ -137,6 +142,7 @@ function Composer({ ready, queueing, onSend }: { ready: boolean; queueing: boole
 export function ChatThreadScreen({ session, conversationId, title }: Props) {
   const thread = useChatThread(session, conversationId);
   const reduceMotion = useReducedMotion();
+  const inputRef = useRef<TextFieldRef>(null);
   return <>
     <Stack.Screen options={{ title: title || 'Suhbat', headerBackButtonDisplayMode: 'minimal' }} />
     <Host style={styles.root}>
@@ -144,8 +150,8 @@ export function ChatThreadScreen({ session, conversationId, title }: Props) {
         <ConversationBody session={session} messages={thread.messages} pending={thread.pending} hasMore={thread.hasMore}
           loadingMore={thread.loadingMore} error={thread.error} sendError={thread.sendError} sending={thread.sending}
           lastQueuedId={thread.lastQueuedId} reduceMotion={reduceMotion}
-          onRefresh={thread.refresh} onLoadOlder={thread.loadOlder} onRetry={thread.retry} />
-        <Composer ready={thread.storageReady} queueing={thread.queueing} onSend={thread.send} />
+          onRefresh={thread.refresh} onLoadOlder={thread.loadOlder} onRetry={thread.retry} onDismissKeyboard={() => { void inputRef.current?.blur(); }} />
+        <Composer ready={thread.storageReady} queueing={thread.queueing} onSend={thread.send} inputRef={inputRef} />
       </VStack>
     </Host>
   </>;
