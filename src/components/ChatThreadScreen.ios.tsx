@@ -155,12 +155,12 @@ function Composer({ ready, queueing, uploading, onSend, onAttach, inputRef }: {
       });
     }
   };
-  return <HStack alignment="bottom" spacing={4} modifiers={[
+  return <HStack alignment="center" spacing={4} modifiers={[
     padding({ leading: 16, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
-    <Menu label={<Image systemName="plus.circle.fill" size={24} color={uploading ? dark ? '#8e8e93' : '#c7c7cc' : dark ? '#ffffff' : '#007AFF'}
-      modifiers={[frame({ width: 34, height: 34 }), accessibilityLabel('Rasm biriktirish')]} />}
+    <Menu label={<Image systemName="plus" size={22} color={uploading ? '#8e8e93' : dark ? '#ffffff' : '#3c3c43'}
+      modifiers={[frame({ width: 32, height: 40 }), accessibilityLabel('Rasm biriktirish')]} />}
       modifiers={[buttonStyle('plain'), menuIndicator('hidden'), disabled(uploading)]}>
       <Button label="Galereyadan rasm" systemImage="photo.on.rectangle" onPress={() => onAttach('library')} />
       <Button label="Kameradan rasm" systemImage="camera" onPress={() => onAttach('camera')} />
