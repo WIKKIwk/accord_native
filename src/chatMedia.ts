@@ -48,6 +48,8 @@ export async function pickChatImage(source: ChatImageSource): Promise<PickedChat
   }
   const options: ImagePicker.ImagePickerOptions = {
     mediaTypes: ['images'], allowsEditing: false, quality: 0.8, exif: false, selectionLimit: 1,
+    // The backend decodes JPEG/PNG/WebP only; let iOS transcode HEIC originals.
+    preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
   };
   const result = source === 'camera'
     ? await ImagePicker.launchCameraAsync(options)
