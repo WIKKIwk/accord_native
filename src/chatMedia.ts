@@ -112,16 +112,26 @@ export async function uploadChatImage(
   });
   if (!initialized.ok) throw new Error(initialized.status === 413 ? 'Rasm hajmi server uchun katta.' : 'Rasm yuklashni boshlab bo‘lmadi.');
   const upload = parseInitialization(await initialized.json());
-  if (upload.instruction.strategy !== 'local_proxy') throw new Error('Server yuklash usuli qo‘llab-quvvatlanmaydi.');
 
-  const headers: Record<string, string> = { ...upload.instruction.headers };
-  for (const key of Object.keys(headers)) {
-    if (key.toLowerCase() === 'authorization') delete headers[key];
+  const headers: Record<string, string> = {};
+  for (const [key, value] of Object.entries(upload.instruction.headers)) {
+    if (key.toLowerCase() !== 'authorization') headers[key] = value;
   }
-  headers.Authorization = `Bearer ${activeSessionToken(session) ?? token}`;
   headers['content-type'] = image.contentType;
+  let target = upload.instruction.url;
+  if (upload.instruction.strategy === 'local_proxy') {
+    // The app proxy requires the bearer token; a signed direct upload must never receive it.
+    headers.Authorization = `Bearer ${activeSessionToken(session) ?? token}`;
+    target = mediaUrl(session, target);
+  } else if (upload.instruction.strategy === 'direct_put') {
+    const direct = new URL(target);
+    if (direct.protocol !== 'https:') throw new Error('Media manzili noto‘g‘ri.');
+    target = direct.toString();
+  } else {
+    throw new Error('Server yuklash usuli qo‘llab-quvvatlanmaydi.');
+  }
 
-  const task = new File(image.uri).createUploadTask(mediaUrl(session, upload.instruction.url), {
+  const task = new File(image.uri).createUploadTask(target, {
     httpMethod: 'PUT', uploadType: UploadType.BINARY_CONTENT, headers, mimeType: image.contentType,
     onProgress: ({ bytesSent, totalBytes }) => onProgress?.(totalBytes > 0 ? Math.min(1, bytesSent / totalBytes) : 0),
   });
