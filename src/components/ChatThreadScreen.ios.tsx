@@ -184,17 +184,18 @@ export function ChatThreadScreen({ session, conversationId, title, peer }: Props
   const inputRef = useRef<TextFieldRef>(null);
   const insets = useSafeAreaInsets();
   const [attachError, setAttachError] = useState('');
+  const sendImage = thread.sendImage;
   const attach = useCallback((source: ChatImageSource) => {
     setAttachError('');
     void (async () => {
       try {
         const image = await pickChatImage(source);
-        if (image) await thread.sendImage(image);
+        if (image) await sendImage(image);
       } catch (reason) {
         setAttachError(reason instanceof Error ? reason.message : 'Rasm tanlanmadi.');
       }
     })();
-  }, [thread.sendImage]);
+  }, [sendImage]);
   return <>
     <Stack.Screen options={{ title: title || 'Suhbat', headerTitle: '', headerBackButtonDisplayMode: 'minimal',
       headerTransparent: true, headerShadowVisible: false, scrollEdgeEffects: { top: 'soft' } }} />
