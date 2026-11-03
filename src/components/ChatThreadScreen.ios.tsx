@@ -1,6 +1,7 @@
-import { Button, Host, HStack, Image, ProgressView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
+import { Button, Host, HStack, Image, Menu, ProgressView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
 import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
+import { Image as ExpoImage } from 'expo-image';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { Platform, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -8,7 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import type { Session } from '../auth';
 import { draftAfterSending } from '../chatComposer';
-import { chatTimeline, outgoingMessageKey, type ChatMessage, type ChatPeer } from '../chatModel';
+import { chatMediaImageSource, pickChatImage, type ChatImageSource } from '../chatMedia';
+import { chatTimeline, outgoingMessageKey, type ChatAttachment, type ChatMessage, type ChatPeer } from '../chatModel';
 import type { PendingChatText } from '../chatOutbox';
 import { useChatThread } from '../useChatThread';
 import { CHAT_HEADER_CONTENT_HEIGHT, ChatThreadHeader } from './ChatThreadHeader.ios';
@@ -21,14 +23,22 @@ function timeLabel(timestamp: number): string {
   return timestamp > 0 && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
 }
 
-function MessageBubble({ body, timestamp, mine, status, messageKey, animate, reduceMotion }: {
+function MessageBubble({ body, timestamp, mine, status, messageKey, animate, reduceMotion, attachment, imageSource }: {
   body: string; timestamp: number; mine: boolean; status?: string; messageKey: string; animate: boolean;
-  reduceMotion: boolean;
+  reduceMotion: boolean; attachment: ChatAttachment | null;
+  imageSource: { uri: string; headers: Record<string, string> } | null;
 }) {
   const dark = useColorScheme() === 'dark';
   const { width } = useWindowDimensions();
   const [shown, setShown] = useState(!animate || reduceMotion);
   const [appeared, setAppeared] = useState(false);
+  const photo = attachment?.kind === 'image' ? imageSource : null;
+  const photoWidth = Math.min(width * 0.72, 260);
+  const ratio = attachment && attachment.width > 0 && attachment.height > 0 ? attachment.height / attachment.width : 1;
+  const photoHeight = Math.max(120, Math.min(photoWidth * ratio, 340));
+  const label = attachment && attachment.kind !== 'image'
+    ? attachment.kind === 'video' ? 'Video' : attachment.kind === 'audio' ? 'Ovozli xabar' : 'Fayl'
+    : '';
   return <HStack spacing={0} modifiers={[
     id(messageKey), frame({ maxWidth: Infinity, alignment: mine ? 'trailing' : 'leading' }),
     ...(animate && !reduceMotion ? [offset({ y: shown ? 0 : 16 }), opacity(shown ? 1 : 0),
@@ -41,10 +51,16 @@ function MessageBubble({ body, timestamp, mine, status, messageKey, animate, red
   ]}>
     {mine ? <Spacer /> : null}
     <VStack alignment={mine ? 'trailing' : 'leading'} spacing={4} modifiers={[frame({ maxWidth: width * 0.76, alignment: mine ? 'trailing' : 'leading' })]}>
-      <Text modifiers={[
+      {photo ? <ExpoImage source={photo} contentFit="cover" cachePolicy="memory" transition={120}
+        accessibilityLabel="Suhbatdagi rasm" style={{ width: photoWidth, height: photoHeight, borderRadius: 18, backgroundColor: dark ? '#2c2c2e' : '#e9e9eb' }} /> : null}
+      {label ? <Text modifiers={[
         font({ textStyle: 'body' }), foregroundStyle(mine ? '#ffffff' : dark ? '#ffffff' : '#000000'),
         padding({ horizontal: 14, vertical: 10 }), background(mine ? '#007AFF' : dark ? '#2c2c2e' : '#e9e9eb', shapes.roundedRectangle({ cornerRadius: 18 })),
-      ]}>{body}</Text>
+      ]}>{label}</Text> : null}
+      {body ? <Text modifiers={[
+        font({ textStyle: 'body' }), foregroundStyle(mine ? '#ffffff' : dark ? '#ffffff' : '#000000'),
+        padding({ horizontal: 14, vertical: 10 }), background(mine ? '#007AFF' : dark ? '#2c2c2e' : '#e9e9eb', shapes.roundedRectangle({ cornerRadius: 18 })),
+      ]}>{body}</Text> : null}
       <Text modifiers={[font({ textStyle: 'caption2' }), secondary]}>{[timeLabel(timestamp), status].filter(Boolean).join(' · ')}</Text>
     </VStack>
     {!mine ? <Spacer /> : null}
@@ -94,7 +110,8 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
       {messages !== null && !rows.length ? <HStack><Spacer /><Text modifiers={[secondary, padding({ vertical: 20 })]}>Hali xabarlar yo‘q.</Text><Spacer /></HStack> : null}
       {rows.map(row => <MessageBubble key={row.key} messageKey={row.key} body={row.body} timestamp={row.timestamp} mine={row.mine}
         status={row.pending ? sendError ? 'Yuborilmadi' : sending ? 'Yuborilmoqda…' : 'Kutilmoqda' : undefined}
-        animate={row.key === newKey} reduceMotion={reduceMotion} />)}
+        animate={row.key === newKey} reduceMotion={reduceMotion} attachment={row.attachment}
+        imageSource={row.attachment ? chatMediaImageSource(session, row.attachment) : null} />)}
       {sendError ? <HStack><Spacer /><VStack alignment="trailing" spacing={6}>
         <Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>{sendError}</Text>
         <Button label="Qayta urinish" onPress={onRetry} modifiers={[buttonStyle('bordered')]} />
@@ -103,15 +120,17 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
   </ScrollView>;
 }
 
-function Composer({ ready, queueing, onSend, inputRef }: {
-  ready: boolean; queueing: boolean; onSend: (body: string) => Promise<boolean>; inputRef: RefObject<TextFieldRef | null>;
+function Composer({ ready, queueing, uploading, onSend, onAttach, inputRef }: {
+  ready: boolean; queueing: boolean; uploading: boolean;
+  onSend: (body: string) => Promise<boolean>; onAttach: (source: ChatImageSource) => void;
+  inputRef: RefObject<TextFieldRef | null>;
 }) {
   const dark = useColorScheme() === 'dark';
   const [draft, setDraft] = useState('');
   const value = useNativeState('');
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  const canSend = ready && !queueing && !!draft.trim();
+  const canSend = ready && !queueing && !uploading && !!draft.trim();
   const surface = Number(Platform.Version) >= 26
     ? [glassEffect({ glass: { variant: 'regular' }, shape: 'roundedRectangle', cornerRadius: 23 })]
     : [
@@ -138,6 +157,12 @@ function Composer({ ready, queueing, onSend, inputRef }: {
     padding({ leading: 16, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
+    <Menu label={<Image systemName="plus.circle.fill" color={uploading ? dark ? '#8e8e93' : '#c7c7cc' : dark ? '#ffffff' : '#007AFF'} modifiers={[
+      font({ size: 24 }), frame({ width: 34, height: 34 }), accessibilityLabel('Rasm biriktirish'),
+    ]} />}>
+      <Button label="Galereyadan rasm" systemImage="photo.on.rectangle" onPress={() => onAttach('library')} />
+      <Button label="Kameradan rasm" systemImage="camera" onPress={() => onAttach('camera')} />
+    </Menu>
     <TextField ref={inputRef} text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
       font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), fixedSize({ horizontal: false, vertical: true }),
       padding({ vertical: 8 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),
@@ -158,6 +183,18 @@ export function ChatThreadScreen({ session, conversationId, title, peer }: Props
   const reduceMotion = useReducedMotion();
   const inputRef = useRef<TextFieldRef>(null);
   const insets = useSafeAreaInsets();
+  const [attachError, setAttachError] = useState('');
+  const attach = useCallback((source: ChatImageSource) => {
+    setAttachError('');
+    void (async () => {
+      try {
+        const image = await pickChatImage(source);
+        if (image) await thread.sendImage(image);
+      } catch (reason) {
+        setAttachError(reason instanceof Error ? reason.message : 'Rasm tanlanmadi.');
+      }
+    })();
+  }, [thread.sendImage]);
   return <>
     <Stack.Screen options={{ title: title || 'Suhbat', headerTitle: '', headerBackButtonDisplayMode: 'minimal',
       headerTransparent: true, headerShadowVisible: false, scrollEdgeEffects: { top: 'soft' } }} />
@@ -168,7 +205,13 @@ export function ChatThreadScreen({ session, conversationId, title, peer }: Props
           loadingMore={thread.loadingMore} error={thread.error} sendError={thread.sendError} sending={thread.sending}
           lastQueuedId={thread.lastQueuedId} reduceMotion={reduceMotion} headerBottom={insets.top + CHAT_HEADER_CONTENT_HEIGHT}
           onRefresh={thread.refresh} onLoadOlder={thread.loadOlder} onRetry={thread.retry} onDismissKeyboard={() => { void inputRef.current?.blur(); }} />
-        <Composer ready={thread.storageReady} queueing={thread.queueing} onSend={thread.send} inputRef={inputRef} />
+        {thread.uploading ? <HStack spacing={8} modifiers={[padding({ horizontal: 18, vertical: 6 })]}>
+          <ProgressView value={thread.uploadProgress} modifiers={[frame({ width: 60 })]} />
+          <Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{`Rasm yuklanmoqda… ${Math.round(thread.uploadProgress * 100)}%`}</Text>
+        </HStack> : null}
+        {attachError ? <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('#b3261e'), padding({ horizontal: 18, vertical: 4 })]}>{attachError}</Text> : null}
+        <Composer ready={thread.storageReady} queueing={thread.queueing} uploading={thread.uploading}
+          onSend={thread.send} onAttach={attach} inputRef={inputRef} />
       </VStack>
     </Host>
     <ChatThreadHeader session={session} peer={peer} title={title} topInset={insets.top} />
