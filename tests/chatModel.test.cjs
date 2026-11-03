@@ -103,8 +103,15 @@ test('thread history rejects other conversations and merges confirmed messages i
   const merged = mergeChatMessages(page.items, updated.items);
   assert.deepEqual(merged.map(item => item.id), ['1', '2', '3']);
   assert.equal(merged[1].body, 'Updated');
-  const media = parseChatMessages({ items: [message('4', 4, { type: 'image', body: 'Izoh', attachment: { kind: 'image' } })] }, 'conversation-1');
-  assert.equal(media.items[0].body, 'Rasm\nIzoh');
+  const media = parseChatMessages({ items: [message('4', 4, { type: 'image', body: 'Izoh', attachment: {
+    attachment_id: 'a1', media_id: 'm1', kind: 'image', content_type: 'image/jpeg', size_bytes: 2048,
+    width_pixels: 1200, height_pixels: 800,
+    content_url: '/v1/mobile/chat/media/m1/content', thumbnail_url: '/v1/mobile/chat/media/m1/thumbnail',
+  } })] }, 'conversation-1');
+  assert.equal(media.items[0].body, 'Izoh');
+  assert.equal(media.items[0].attachment.mediaId, 'm1');
+  assert.equal(media.items[0].attachment.width, 1200);
+  assert.equal(chatTimeline({ profile: { role: 'aparatchi', ref: 'worker-1' } }, media.items, [])[0].attachment.mediaId, 'm1');
   assert.throws(() => parseChatMessages({ items: null }, 'conversation-1'), /o‘qib bo‘lmadi/);
 });
 
