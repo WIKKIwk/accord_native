@@ -1,5 +1,5 @@
-import { Button, Host, HStack, Image, Menu, ProgressView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
-import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, HStack, Image, Menu, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
+import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, menuIndicator, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
@@ -51,8 +51,10 @@ function MessageBubble({ body, timestamp, mine, status, messageKey, animate, red
   ]}>
     {mine ? <Spacer /> : null}
     <VStack alignment={mine ? 'trailing' : 'leading'} spacing={4} modifiers={[frame({ maxWidth: width * 0.76, alignment: mine ? 'trailing' : 'leading' })]}>
-      {photo ? <ExpoImage source={photo} contentFit="cover" cachePolicy="memory" transition={120}
-        accessibilityLabel="Suhbatdagi rasm" style={{ width: photoWidth, height: photoHeight, borderRadius: 18, backgroundColor: dark ? '#2c2c2e' : '#e9e9eb' }} /> : null}
+      {photo ? <RNHostView matchContents>
+        <ExpoImage source={photo} contentFit="cover" cachePolicy="memory" transition={120} accessibilityLabel="Suhbatdagi rasm"
+          style={{ width: photoWidth, height: photoHeight, borderRadius: 18, backgroundColor: dark ? '#2c2c2e' : '#e9e9eb' }} />
+      </RNHostView> : null}
       {label ? <Text modifiers={[
         font({ textStyle: 'body' }), foregroundStyle(mine ? '#ffffff' : dark ? '#ffffff' : '#000000'),
         padding({ horizontal: 14, vertical: 10 }), background(mine ? '#007AFF' : dark ? '#2c2c2e' : '#e9e9eb', shapes.roundedRectangle({ cornerRadius: 18 })),
@@ -157,9 +159,9 @@ function Composer({ ready, queueing, uploading, onSend, onAttach, inputRef }: {
     padding({ leading: 16, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
-    <Menu label={<Image systemName="plus.circle.fill" color={uploading ? dark ? '#8e8e93' : '#c7c7cc' : dark ? '#ffffff' : '#007AFF'} modifiers={[
-      font({ size: 24 }), frame({ width: 34, height: 34 }), accessibilityLabel('Rasm biriktirish'),
-    ]} />}>
+    <Menu label={<Image systemName="plus.circle.fill" size={24} color={uploading ? dark ? '#8e8e93' : '#c7c7cc' : dark ? '#ffffff' : '#007AFF'}
+      modifiers={[frame({ width: 34, height: 34 }), accessibilityLabel('Rasm biriktirish')]} />}
+      modifiers={[buttonStyle('plain'), menuIndicator('hidden'), disabled(uploading)]}>
       <Button label="Galereyadan rasm" systemImage="photo.on.rectangle" onPress={() => onAttach('library')} />
       <Button label="Kameradan rasm" systemImage="camera" onPress={() => onAttach('camera')} />
     </Menu>
