@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { ChatRequestError, loadChatMessages, markChatRead } from './chatApi';
+import { sendChatImage, uploadChatImage, type PickedChatImage } from './chatMedia';
 import { subscribeChatLive } from './chatLive';
 import { mergeChatMessages, reconcileChatRefresh, type ChatMessage } from './chatModel';
 import { chatDeviceId, pendingChatTexts, queueChatText, type PendingChatText } from './chatOutbox';
@@ -17,10 +18,13 @@ export function useChatThread(session: Session, conversationId: string) {
   const [sendError, setSendError] = useState('');
   const [queueing, setQueueing] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [storageReady, setStorageReady] = useState(false);
   const [lastQueuedId, setLastQueuedId] = useState<string | null>(null);
   const focused = useRef(false);
   const storageReadyRef = useRef(false);
+  const uploadingRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
   const initialized = useRef(false);
   const generation = useRef(0);
@@ -150,6 +154,32 @@ export function useChatThread(session: Session, conversationId: string) {
     }
   }, [conversationId, drain, session, visible]);
 
+  /** Photos upload online only; a finished upload never depends on the screen staying open. */
+  const sendImage = useCallback(async (image: PickedChatImage): Promise<boolean> => {
+    if (!visible() || uploadingRef.current) return false;
+    uploadingRef.current = true;
+    setUploading(true);
+    setUploadProgress(0);
+    setSendError('');
+    try {
+      const media = await uploadChatImage(session, conversationId, image, progress => {
+        if (focused.current) setUploadProgress(progress);
+      });
+      const message = await sendChatImage(session, conversationId, media.mediaId);
+      if (focused.current && activeSessionToken(session)) merge([message]);
+      return true;
+    } catch (reason) {
+      if (focused.current) setSendError(reason instanceof Error ? reason.message : 'Rasm yuborilmadi.');
+      return false;
+    } finally {
+      uploadingRef.current = false;
+      if (focused.current) {
+        setUploading(false);
+        setUploadProgress(0);
+      }
+    }
+  }, [conversationId, merge, session, visible]);
+
   useFocusEffect(useCallback(() => {
     focused.current = true;
     resumeDrain.current = () => { void drain(); };
@@ -214,5 +244,5 @@ export function useChatThread(session: Session, conversationId: string) {
     void drain(true);
   }, [drain]);
 
-  return { messages, pending, hasMore, loadingMore, error, sendError, queueing, sending, storageReady, lastQueuedId, refresh, loadOlder, send, retry };
+  return { messages, pending, hasMore, loadingMore, error, sendError, queueing, sending, uploading, uploadProgress, storageReady, lastQueuedId, refresh, loadOlder, send, sendImage, retry };
 }
