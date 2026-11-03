@@ -11,6 +11,18 @@ export type ChatConversation = {
   unreadCount: number;
   timestamp: number;
 };
+export type ChatAttachment = {
+  id: string;
+  mediaId: string;
+  kind: string;
+  contentType: string;
+  sizeBytes: number;
+  width: number;
+  height: number;
+  durationMs: number;
+  contentUrl: string;
+  thumbnailUrl: string;
+};
 export type ChatMessage = {
   id: string;
   conversationId: string;
@@ -20,6 +32,7 @@ export type ChatMessage = {
   senderRef: string;
   body: string;
   timestamp: number;
+  attachment: ChatAttachment | null;
 };
 
 function object(value: unknown): Record<string, unknown> {
@@ -32,6 +45,22 @@ function text(value: unknown): string {
 
 function integer(value: unknown): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : 0;
+}
+
+function parseChatAttachment(value: unknown): ChatAttachment | null {
+  const row = object(value);
+  const mediaId = text(row.media_id);
+  const kind = text(row.kind);
+  const contentUrl = text(row.content_url);
+  const thumbnailUrl = text(row.thumbnail_url);
+  if (!mediaId || !kind || !contentUrl.startsWith('/v1/mobile/chat/media/')) return null;
+  return {
+    id: text(row.attachment_id), mediaId, kind,
+    contentType: text(row.content_type), sizeBytes: integer(row.size_bytes),
+    width: integer(row.width_pixels), height: integer(row.height_pixels),
+    durationMs: integer(row.duration_ms),
+    contentUrl, thumbnailUrl: thumbnailUrl.startsWith('/v1/mobile/chat/media/') ? thumbnailUrl : contentUrl,
+  };
 }
 
 function parseChatPeer(value: unknown): ChatPeer | null {
@@ -98,14 +127,14 @@ export function parseChatMessage(value: unknown, conversationId: string): ChatMe
   if (!id || !sequence || text(row.conversation_id) !== conversationId) return null;
   const type = text(row.type);
   const deleted = integer(row.deleted_at_unix) > 0;
-  const attachment = text(object(row.attachment).kind);
-  const attachmentLabel = attachment === 'image' ? 'Rasm' : attachment === 'video' ? 'Video' : attachment === 'audio' ? 'Ovozli xabar' : '';
+  const attachment = deleted ? null : parseChatAttachment(row.attachment);
   const caption = text(row.body);
   return {
     id, conversationId, sequence,
     clientMessageId: text(row.client_message_id), senderRole: text(row.sender_role), senderRef: text(row.sender_ref),
-    body: deleted ? 'Xabar o‘chirilgan' : attachmentLabel ? [attachmentLabel, caption].filter(Boolean).join('\n') : type === 'text' ? caption : messagePreview(row),
+    body: deleted ? 'Xabar o‘chirilgan' : attachment || type === 'text' ? caption : messagePreview(row),
     timestamp: integer(row.created_at_unix),
+    attachment,
   };
 }
 
@@ -148,10 +177,10 @@ export function chatTimeline(session: Session, messages: ChatMessage[], pending:
     ...messages.map(message => {
       const isMine = isMyChatMessage(session, message);
       return { key: isMine && message.clientMessageId ? outgoingMessageKey(message.clientMessageId) : `message:${message.id}`,
-        body: message.body, timestamp: message.timestamp, mine: isMine, pending: false };
+        body: message.body, timestamp: message.timestamp, mine: isMine, pending: false, attachment: message.attachment };
     }),
     ...pending.filter(item => !confirmedIds.has(item.clientMessageId)).map(item => ({
-      key: outgoingMessageKey(item.clientMessageId), body: item.body, timestamp: item.createdAt, mine: true, pending: true,
+      key: outgoingMessageKey(item.clientMessageId), body: item.body, timestamp: item.createdAt, mine: true, pending: true, attachment: null,
     })),
   ];
 }
