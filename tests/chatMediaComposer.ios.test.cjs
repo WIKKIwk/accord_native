@@ -8,6 +8,13 @@ const ts = require('typescript');
 
 function find(node, predicate) {
   if (!node || typeof node !== 'object') return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = find(child, predicate);
+      if (found) return found;
+    }
+    return null;
+  }
   if (predicate(node)) return node;
   const children = node.props?.children;
   for (const child of Array.isArray(children) ? children : [children]) {
@@ -17,6 +24,11 @@ function find(node, predicate) {
   return null;
 }
 
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+const waitForMediaToLeave = () => pause(180);
+const FLIGHT_MS = 50;
+const waitForLanding = () => pause(FLIGHT_MS + 30);
+
 function findAll(node, predicate, matches = []) {
   if (!node || typeof node !== 'object') return matches;
   if (Array.isArray(node)) { node.forEach(child => findAll(child, predicate, matches)); return matches; }
@@ -24,6 +36,10 @@ function findAll(node, predicate, matches = []) {
   findAll(node.props?.children, predicate, matches);
   return matches;
 }
+
+const pendingSlot = (tree, app) => find(tree, node => node.type === app.ui.Rectangle && node.props.modifiers.some(modifier => modifier.type === 'id'));
+const flight = node => node.props.modifiers.find(modifier => modifier.type === 'matched');
+const sentRow = { key: 'outgoing:a', body: 'Salom', timestamp: 0, mine: true, pending: true };
 
 function fixture(pickerResult, cameraAllowed = true) {
   const hooks = [];
@@ -34,16 +50,19 @@ function fixture(pickerResult, cameraAllowed = true) {
     return index;
   };
   const react = {
-    useState(initial) { const index = slot(initial); return [hooks[index], value => { hooks[index] = value; }]; },
+    useState(initial) { const index = slot(initial); return [hooks[index], value => { hooks[index] = typeof value === 'function' ? value(hooks[index]) : value; }]; },
     useRef(initial) { const index = slot({ current: initial }); return hooks[index]; },
     useEffect() {},
     useCallback(fn) { return fn; },
+    useId() { return 'chat-namespace'; },
   };
   const ui = {};
-  for (const name of ['Button', 'Host', 'HStack', 'Image', 'Popover', 'ProgressView', 'RNHostView', 'ScrollView', 'Spacer', 'Text', 'TextField', 'VStack', 'ZStack']) {
+  for (const name of ['Button', 'Host', 'HStack', 'Image', 'Namespace', 'Popover', 'ProgressView', 'Rectangle', 'RNHostView', 'ScrollView', 'Spacer', 'Text', 'TextField', 'VStack', 'ZStack']) {
     ui[name] = function () {};
     ui[name].displayName = name;
   }
+  const animations = [];
+  ui.withAnimation = (animation, body) => { animations.push(animation); body(); };
   ui.Popover.Trigger = function () {};
   ui.Popover.Content = function () {};
   ui.useNativeState = initial => {
@@ -51,24 +70,37 @@ function fixture(pickerResult, cameraAllowed = true) {
     return hooks[index];
   };
   const modifiers = new Proxy({
-    Animation: { easeOut: options => options },
+    Animation: { easeOut: options => ({ ...options, delay: delay => ({ ...options, delay }) }), spring: options => options },
+    matchedGeometryEffect: (id, namespaceId, options) => ({ type: 'matched', id, namespaceId, ...options }),
+    offset: value => ({ type: 'offset', ...value }),
+    onAppear: run => ({ type: 'appear', run }),
+    zIndex: value => ({ type: 'zIndex', value }),
     shapes: { circle: () => ({}), rectangle: () => ({}), roundedRectangle: () => ({}) },
     accessibilityLabel: value => ({ type: 'label', value }),
     blur: radius => ({ type: 'blur', radius }),
     disabled: value => ({ type: 'disabled', value }),
+    frame: value => ({ type: 'frame', ...value }),
     glassEffect: () => ({ type: 'glass-surface' }),
+    id: value => ({ type: 'id', value }),
+    opacity: value => ({ type: 'opacity', value }),
+    scrollPosition: (state, options) => ({ type: 'scrollPosition', state, options }),
   }, { get: (target, name) => target[name] ?? (() => ({})) });
   const selected = { uri: 'file:///selected', kind: 'image', filename: 'photo.jpg', clientMessageId: 'media-1' };
+  let rows = [];
   const pickerCalls = [], sent = [], discarded = [], prepared = [], alerts = [], sendResults = [];
   let preparationCount = 0;
+  let preparationFails = false;
+  let preparationDelay = 0;
   const prepare = async asset => {
+    if (preparationDelay) await pause(preparationDelay);
+    if (preparationFails) throw new Error('Rasmni o‘qib bo‘lmadi.');
     prepared.push(asset);
     preparationCount++;
     return preparationCount === 1 ? selected : { ...selected, uri: `file:///selected-${preparationCount}`, clientMessageId: `media-${preparationCount}` };
   };
   function RecentChatPhotosButton() {}
   const thread = {
-    storageReady: true, queueing: false, mediaSending: false, mediaProgress: '', mediaError: '',
+    messages: [], pending: [], storageReady: true, queueing: false, mediaSending: false, mediaProgress: '', mediaError: '',
     clearMediaError() {}, send: async () => true,
     sendMedia: async (draft, caption) => { sent.push({ draft, caption }); return sendResults.length ? sendResults.shift() : true; },
   };
@@ -83,14 +115,15 @@ function fixture(pickerResult, cameraAllowed = true) {
       launchImageLibraryAsync: async options => { pickerCalls.push({ source: 'library', options }); return pickerResult; } },
     'expo-document-picker': { getDocumentAsync: async options => { pickerCalls.push({ source: 'file', options }); return pickerResult; } },
     'expo-router': { Stack: { Screen() {} } },
-    'react-native': { Alert: { alert: (...args) => alerts.push(args) }, Platform: { Version: 26 }, StyleSheet: { create: styles => styles }, useColorScheme: () => 'dark', View() {} },
+    'react-native': { Alert: { alert: (...args) => alerts.push(args) }, Platform: { Version: 26 }, StyleSheet: { create: styles => styles }, useColorScheme: () => 'dark', useWindowDimensions: () => ({ width: 375, height: 800 }), View() {} },
     'react-native-reanimated': { useReducedMotion: () => false },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     'react-native-worklets': { scheduleOnUI: fn => fn(), scheduleOnRN: (fn, ...args) => fn(...args) },
     '../chatComposer': { draftAfterSending: (sentValue, current) => sentValue === current ? '' : current },
     '../chatMedia': { prepareChatMedia: prepare, prepareChatDocument: prepare, discardChatMedia: draft => discarded.push(draft) },
+    '../chatRecentPhotoMotion': { RECENT_FLIGHT_MS: FLIGHT_MS, recentBackGesture: blocked => ({ backBlocked: blocked }) },
     '../chatRecentPhotos': { prepareRecentChatPhoto: prepare },
-    '../chatModel': { chatTimeline: () => [] },
+    '../chatModel': { chatTimeline: () => rows, outgoingMessageKey: id => `outgoing:${id}` },
     '../useChatThread': { useChatThread: () => thread },
     './ChatThreadHeader.ios': { CHAT_HEADER_CONTENT_HEIGHT: 0, ChatThreadHeader() {} },
     './ChatMediaPreview.ios': { SelectedChatMediaPreview() {}, ChatMediaThumbnail() {}, openChatMedia() {} },
@@ -108,8 +141,18 @@ function fixture(pickerResult, cameraAllowed = true) {
   const composer = find(screen, node => node.type?.name === 'Composer');
   const body = find(screen, node => node.type?.name === 'ConversationBody');
   assert.ok(composer);
+  const mediaCounts = [];
+  composer.props.onMediaCountChange = count => mediaCounts.push(count);
   hooks.length = 0;
   const render = () => { cursor = 0; return composer.type(composer.props); };
+  const renderBubble = (nextRows, bodyProps) => {
+    rows = nextRows;
+    hooks.length = 0; cursor = 0;
+    const list = body.type({ ...body.props, ...bodyProps });
+    const element = find(list, node => node.type?.name === 'MessageBubble');
+    hooks.length = 0;
+    return { list, element, render: () => { cursor = 0; return element.type(element.props); } };
+  };
   const renderBody = blurFallback => { hooks.length = 0; cursor = 0; return body.type({ ...body.props, blurFallback }); };
   const button = (tree, label) => {
     const result = find(tree, node => node.type === ui.Button && node.props.modifiers?.some(modifier => modifier.type === 'label' && modifier.value === label));
@@ -132,7 +175,7 @@ function fixture(pickerResult, cameraAllowed = true) {
     assert.equal(menu(tree).props.isPresented, true);
     button(menu(tree), label).props.onPress();
   };
-  return { render, renderBody, button, menu, choose, tapPlus, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer, RecentChatPhotosButton, sendResults };
+  return { screen, render, renderBody, renderBubble, animations, button, menu, choose, tapPlus, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer, RecentChatPhotosButton, sendResults, mediaCounts, failPreparation: () => { preparationFails = true; }, delayPreparation: ms => { preparationDelay = ms; } };
 }
 
 test('the chat itself blurs when a backdrop capture is unavailable', () => {
@@ -201,6 +244,7 @@ test('the attachment can be removed inside the composer and upload status remain
   tree = app.render();
   assert.ok(find(tree, node => node.type === app.ui.Text && node.props.children === 'Qayta urinib ko‘ring'));
   app.button(tree, 'Media faylni olib tashlash').props.onPress();
+  await waitForMediaToLeave();
   tree = app.render();
   assert.equal(find(tree, node => node.type?.name === 'SelectedChatMediaPreview'), null);
   assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, 'Izoh');
@@ -272,17 +316,232 @@ test('a recent photo is attached as a draft without sending a message', async ()
   assert.ok(find(tree, node => node.type?.name === 'SelectedChatMediaPreview'));
 });
 
+test('a landing recent photo is released only when its real preview has loaded or been removed', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const trigger = () => find(app.render(), node => node.type === app.RecentChatPhotosButton);
+  const preview = () => find(app.render(), node => node.type?.name === 'SelectedChatMediaPreview');
+  let loaded = false;
+  trigger().props.onSelect({ id: 'ph://one' }).then(() => { loaded = true; });
+  await new Promise(setImmediate);
+  assert.ok(preview());
+  assert.equal(trigger().props.enabled, true);
+  assert.equal(loaded, false);
+  preview().props.onImageSettled();
+  await new Promise(setImmediate);
+  assert.equal(loaded, true);
+
+  let removed = false;
+  trigger().props.onSelect({ id: 'ph://two' }).then(() => { removed = true; });
+  await waitForLanding();
+  assert.equal(removed, false);
+  const removeButtons = findAll(app.render(), node => node.type === app.ui.Button && node.props.modifiers?.some(modifier => modifier.type === 'label' && modifier.value === 'Media faylni olib tashlash'));
+  removeButtons.at(-1).props.onPress();
+  await waitForMediaToLeave();
+  assert.equal(removed, true);
+});
+
+test('a removed photo fades out first, cannot be sent meanwhile and only then shrinks the composer', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const previews = () => findAll(app.render(), node => node.type?.name === 'SelectedChatMediaPreview');
+  find(app.render(), node => node.type === app.RecentChatPhotosButton).props.onSelect({ id: 'ph://one' });
+  await waitForLanding();
+  const before = app.mediaCounts.length;
+  assert.equal(app.mediaCounts.at(-1), 1);
+  assert.equal(app.button(app.render(), 'Xabarni yuborish').props.modifiers.find(modifier => modifier.type === 'disabled').value, false);
+
+  app.button(app.render(), 'Media faylni olib tashlash').props.onPress();
+  assert.equal(previews().length, 1);
+  assert.equal(app.mediaCounts.length, before);
+  assert.deepEqual(app.discarded, []);
+  const tree = app.render();
+  assert.equal(find(tree, node => node.type === app.ui.Button && node.props.modifiers?.some(modifier => modifier.value === 'Media faylni olib tashlash')), null);
+  assert.equal(app.button(tree, 'Xabarni yuborish').props.modifiers.find(modifier => modifier.type === 'disabled').value, true);
+
+  await waitForMediaToLeave();
+  assert.equal(previews().length, 0);
+  assert.equal(app.mediaCounts.at(-1), 0);
+  assert.deepEqual(app.discarded, [app.selected]);
+  assert.equal(app.sent.length, 0);
+});
+
+test('a chosen photo opens its slot at once and the real preview takes that slot over', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const slot = () => pendingSlot(app.render(), app);
+  const trigger = () => find(app.render(), node => node.type === app.RecentChatPhotosButton);
+  trigger().props.onSelect({ id: 'ph://one' });
+  assert.ok(slot());
+  assert.equal(app.mediaCounts.at(-1), 1);
+  assert.equal(find(app.render(), node => node.type?.name === 'SelectedChatMediaPreview'), null);
+  assert.ok(slot().props.modifiers.some(modifier => modifier.type === 'id'));
+  await new Promise(setImmediate);
+  assert.equal(slot(), null);
+  assert.equal(app.mediaCounts.at(-1), 1);
+  assert.ok(find(app.render(), node => node.type?.name === 'SelectedChatMediaPreview'));
+  const tray = find(app.render(), node => node.type === app.ui.ScrollView && node.props.axes === 'horizontal');
+  assert.equal(tray.props.modifiers.find(modifier => modifier.type === 'scrollPosition').options.anchor, 'trailing');
+  const item = find(tray, node => node.type === app.ui.ZStack);
+  assert.equal(item.props.modifiers.find(modifier => modifier.type === 'id').value, app.selected.clientMessageId);
+});
+
+test('a chosen photo stays hidden until the flying photo has arrived', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const item = () => find(app.render(), node => node.type === app.ui.ZStack);
+  const shown = () => item().props.modifiers.find(modifier => modifier.type === 'opacity').value;
+  const mark = () => find(item(), node => node.type === app.ui.Button);
+  find(app.render(), node => node.type === app.RecentChatPhotosButton).props.onSelect({ id: 'ph://one' });
+  await new Promise(setImmediate);
+  assert.ok(find(item(), node => node.type?.name === 'SelectedChatMediaPreview'));
+  assert.equal(shown(), 0);
+  assert.equal(mark(), null);
+  await waitForLanding();
+  assert.equal(shown(), 1);
+  assert.ok(mark());
+});
+
+test('a photo that takes longer than the flight is shown as soon as it is ready', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  app.delayPreparation(FLIGHT_MS + 30);
+  find(app.render(), node => node.type === app.RecentChatPhotosButton).props.onSelect({ id: 'ph://one' });
+  await pause(FLIGHT_MS + 60);
+  const item = find(app.render(), node => node.type === app.ui.ZStack);
+  assert.equal(item.props.modifiers.find(modifier => modifier.type === 'opacity').value, 1);
+  assert.ok(find(item, node => node.type === app.ui.Button));
+});
+
+test('with reduced motion nothing flies, so the photo is never hidden', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  app.composer.props.reduceMotion = true;
+  find(app.render(), node => node.type === app.RecentChatPhotosButton).props.onSelect({ id: 'ph://one' });
+  await new Promise(setImmediate);
+  const item = find(app.render(), node => node.type === app.ui.ZStack);
+  assert.equal(item.props.modifiers.find(modifier => modifier.type === 'opacity'), undefined);
+  assert.ok(find(item, node => node.type === app.ui.Button));
+});
+
+test('a photo that cannot be prepared closes its slot again', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  app.failPreparation();
+  find(app.render(), node => node.type === app.RecentChatPhotosButton).props.onSelect({ id: 'ph://one' });
+  assert.ok(pendingSlot(app.render(), app));
+  await new Promise(setImmediate);
+  assert.equal(pendingSlot(app.render(), app), null);
+  assert.equal(app.mediaCounts.at(-1), 0);
+  assert.match(app.alerts[0][1], /o‘qib bo‘lmadi/);
+  assert.equal(find(app.render(), node => node.type === app.ui.ScrollView && node.props.axes === 'horizontal'), null);
+});
+
+test('the remove mark stays small but its tap target meets the iOS minimum', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  find(app.render(), node => node.type === app.RecentChatPhotosButton).props.onSelect({ id: 'ph://one' });
+  await waitForLanding();
+  const mark = find(app.button(app.render(), 'Media faylni olib tashlash'), node => node.type === app.ui.Image);
+  const frames = mark.props.modifiers.filter(modifier => modifier.type === 'frame');
+  assert.deepEqual([frames[0].width, frames[0].height], [24, 24]);
+  assert.ok(frames.at(-1).width >= 44 && frames.at(-1).height >= 44);
+  assert.equal(frames.at(-1).alignment, 'topTrailing');
+});
+
+test('a sent text starts on the words in the field, then lands in its own place', () => {
+  const app = fixture({ canceled: true, assets: null });
+  const landed = [];
+  const bubble = app.renderBubble([sentRow], { newKey: 'outgoing:a', onSendLanded: key => landed.push(key) });
+  const text = tree => find(tree, node => node.type === app.ui.Text && node.props.children === 'Salom');
+  const time = tree => findAll(tree, node => node.type === app.ui.Text).at(-1);
+  const opacityOf = node => node.props.modifiers.find(modifier => modifier.type === 'opacity').value;
+  let tree = bubble.render();
+  const start = flight(text(tree));
+  assert.equal(start.isSource, false);
+  assert.equal(start.properties, 'position');
+  assert.equal(start.anchor, 'leading');
+  assert.equal(text(tree).props.modifiers.find(modifier => modifier.type === 'offset').x, -14);
+  assert.equal(opacityOf(time(tree)), 0);
+  assert.ok(opacityOf(tree) > 0, 'the bubble is visible from the first frame');
+
+  const composerApp = fixture({ canceled: true, assets: null });
+  const marker = find(composerApp.render(), node => node.type === composerApp.ui.Rectangle);
+  assert.equal(flight(marker).id, start.id);
+  assert.equal(flight(marker).namespaceId, start.namespaceId);
+  assert.equal(flight(marker).anchor, start.anchor);
+  assert.ok(find(app.screen, node => node.type === app.ui.Namespace && node.props.id === start.namespaceId));
+
+  tree.props.modifiers.find(modifier => modifier.type === 'appear').run();
+  assert.deepEqual(landed, ['outgoing:a']);
+  tree = bubble.render();
+  assert.equal(flight(text(tree)).isSource, true);
+  assert.equal(text(tree).props.modifiers.find(modifier => modifier.type === 'offset').x, 0);
+  assert.equal(opacityOf(time(tree)), 1);
+  assert.equal(opacityOf(tree), 1);
+});
+
+test('the field marker is the flight origin only while a bubble is leaving it', () => {
+  const app = fixture({ canceled: true, assets: null });
+  const marker = () => flight(find(app.render(), node => node.type === app.ui.Rectangle));
+  assert.equal(marker().isSource, false);
+  app.composer.props.sendFlying = true;
+  assert.equal(marker().isSource, true);
+});
+
+test('only the newest sent text flies; older, incoming, media and reduced-motion bubbles do not', () => {
+  const text = (app, tree, body) => find(tree, node => node.type === app.ui.Text && node.props.children === body);
+  const older = fixture({ canceled: true, assets: null });
+  assert.equal(flight(text(older, older.renderBubble([sentRow], { newKey: 'outgoing:b' }).render(), 'Salom')), undefined);
+  const incoming = fixture({ canceled: true, assets: null });
+  assert.equal(flight(text(incoming, incoming.renderBubble([{ ...sentRow, mine: false }], { newKey: 'outgoing:a' }).render(), 'Salom')), undefined);
+  const reduced = fixture({ canceled: true, assets: null });
+  assert.equal(flight(text(reduced, reduced.renderBubble([sentRow], { newKey: 'outgoing:a', reduceMotion: true }).render(), 'Salom')), undefined);
+  const media = fixture({ canceled: true, assets: null });
+  const photo = media.renderBubble([{ ...sentRow, attachment: { kind: 'image', mediaId: 'm' } }], { newKey: 'outgoing:a' }).render();
+  assert.equal(find(photo, node => node.props?.modifiers?.some(modifier => modifier.type === 'matched')), null);
+  assert.equal(photo.props.modifiers.find(modifier => modifier.type === 'offset').y, 16);
+});
+
+test('the list rises above the composer only while a new bubble crosses it', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const layer = bodyProps => app.renderBubble([sentRow], bodyProps).list.props.modifiers.find(modifier => modifier.type === 'zIndex').value;
+  assert.equal(layer({ newKey: null }), 0);
+  assert.equal(layer({ newKey: 'outgoing:a' }), 1);
+  assert.equal(layer({ newKey: 'outgoing:a', reduceMotion: true }), 0);
+});
+
+test('sending clears the field inside an animation, keeping text typed since', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const field = () => find(app.render(), node => node.type === app.ui.TextField);
+  field().props.text.value = 'Salom';
+  field().props.onTextChange('Salom');
+  app.button(app.render(), 'Xabarni yuborish').props.onPress();
+  await new Promise(setImmediate);
+  assert.equal(field().props.text.value, '');
+  assert.equal(app.animations.length, 1);
+  assert.equal(app.animations[0].response, 0.42);
+
+  const reduced = fixture({ canceled: true, assets: null });
+  reduced.composer.props.reduceMotion = true;
+  const reducedField = () => find(reduced.render(), node => node.type === reduced.ui.TextField);
+  reducedField().props.text.value = 'Salom';
+  reducedField().props.onTextChange('Salom');
+  reduced.button(reduced.render(), 'Xabarni yuborish').props.onPress();
+  await new Promise(setImmediate);
+  assert.deepEqual(reduced.animations, [null]);
+});
+
+test('the chat allows the back swipe until the plus is held', () => {
+  const app = fixture({ canceled: true, assets: null });
+  assert.equal(find(app.screen, node => node.props?.options).props.options.backBlocked, false);
+  assert.equal(typeof app.composer.props.onRecentHoldChange, 'function');
+});
+
 test('repeated selections add attachments and removal affects only the chosen one', async () => {
   const app = fixture({ canceled: true, assets: null });
   const trigger = () => find(app.render(), node => node.type === app.RecentChatPhotosButton);
   trigger().props.onSelect({ id: 'ph://one' });
   await new Promise(setImmediate);
   trigger().props.onSelect({ id: 'ph://two' });
-  await new Promise(setImmediate);
+  await waitForLanding();
   let tree = app.render();
   assert.equal(findAll(tree, node => node.type?.name === 'SelectedChatMediaPreview').length, 2);
   const removeButtons = findAll(tree, node => node.type === app.ui.Button && node.props.modifiers?.some(modifier => modifier.type === 'label' && modifier.value === 'Media faylni olib tashlash'));
   removeButtons[0].props.onPress();
+  await waitForMediaToLeave();
   tree = app.render();
   const remaining = findAll(tree, node => node.type?.name === 'SelectedChatMediaPreview');
   assert.equal(remaining.length, 1);

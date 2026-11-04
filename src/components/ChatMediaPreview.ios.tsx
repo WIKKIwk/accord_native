@@ -7,9 +7,10 @@ import type { Session } from '../auth';
 import { chatMediaTicket, type ChatMediaDraft } from '../chatMedia';
 import type { ChatAttachment } from '../chatModel';
 
-export function SelectedChatMediaPreview({ draft }: { draft: ChatMediaDraft }) {
-  return <View pointerEvents="none" style={styles.selected}>
-    {draft.kind === 'image' ? <Image source={{ uri: draft.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+export function SelectedChatMediaPreview({ draft, onImageSettled }: { draft: ChatMediaDraft; onImageSettled?: () => void }) {
+  return <View pointerEvents="none" style={[styles.selected, draft.kind === 'image' ? null : styles.selectedVideo]}>
+    {draft.kind === 'image' ? <Image source={{ uri: draft.uri }} style={StyleSheet.absoluteFill} contentFit="cover"
+      onLoad={() => onImageSettled?.()} onError={() => onImageSettled?.()} />
       : <SymbolView name="video.fill" size={22} tintColor="#8e8e93" />}
   </View>;
 }
@@ -47,7 +48,8 @@ export async function openChatMedia(session: Session, attachment: ChatAttachment
 }
 
 const styles = StyleSheet.create({
-  selected: { width: 96, height: 96, borderRadius: 12, overflow: 'hidden', backgroundColor: '#e5e5ea', alignItems: 'center', justifyContent: 'center' },
+  selected: { width: 96, height: 96, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  selectedVideo: { backgroundColor: '#e5e5ea' },
   thumbnail: { width: 200, height: 150, borderRadius: 14, overflow: 'hidden', backgroundColor: '#e5e5ea', alignItems: 'center', justifyContent: 'center' },
   play: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#00000099', alignItems: 'center', justifyContent: 'center' },
 });
