@@ -83,7 +83,11 @@ function gestureFixture(readPhotos) {
   function View() {}
   function Image() {}
   function Pressable() {}
-  function BlurView() {}
+  function Host() {}
+  function Mask() {}
+  Mask.Content = function MaskContent() {};
+  function Rectangle() {}
+  function VStack() {}
   const updates = [], selected = [], alerts = [];
   let taps = 0;
   const props = {
@@ -94,7 +98,8 @@ function gestureFixture(readPhotos) {
   const module = load('components/RecentChatPhotos.ios.tsx', {
     react,
     'react/jsx-runtime': { jsx: (type, nodeProps) => ({ type, props: nodeProps }), jsxs: (type, nodeProps) => ({ type, props: nodeProps }) },
-    'expo-blur': { BlurView },
+    '@expo/ui/swift-ui': { Host, Mask, Rectangle, VStack },
+    '@expo/ui/swift-ui/modifiers': { foregroundStyle: style => ({ style }), frame: dimensions => ({ dimensions }) },
     'expo-image': { Image },
     'expo-symbols': { SymbolView() {} },
     'react-native': { View, Pressable, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
@@ -104,7 +109,7 @@ function gestureFixture(readPhotos) {
   const tree = module.RecentChatPhotosButton(props);
   tree.props.ref.current = { measure: callback => callback(0, 0, 40, 40, 30, 400) };
   const event = (x, y) => ({ nativeEvent: { pageX: x, pageY: y } });
-  return { tree, event, updates, selected, alerts, module, Image, Pressable, BlurView, taps: () => taps };
+  return { tree, event, updates, selected, alerts, module, Image, Pressable, Mask, View, taps: () => taps };
 }
 
 const waitForLongPress = () => new Promise(resolve => setTimeout(resolve, 500));
@@ -145,7 +150,9 @@ test('recent thumbnails use the Expo photo loader with the full encoded asset id
   assert.equal(image.type, f.Image);
   assert.equal(image.props.source.uri, 'ph://ABC%2FL0%2F001');
   assert.equal(image.props.cachePolicy, 'memory');
-  assert.ok(find(strip, node => node.type === f.BlurView));
+  assert.ok(find(strip, node => node.type === f.Mask));
+  const photoRow = find(strip, node => node.type === f.View && node.props.style?.[0]?.flexDirection === 'row');
+  assert.equal(photoRow.props.style[0].backgroundColor, 'transparent');
 });
 
 test('releasing outside keeps the photos open for a later tap', async () => {

@@ -1,4 +1,5 @@
-import { BlurView } from 'expo-blur';
+import { Host, Mask, Rectangle, VStack } from '@expo/ui/swift-ui';
+import { foregroundStyle, frame } from '@expo/ui/swift-ui/modifiers';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, type ComponentRef, type RefObject } from 'react';
@@ -138,21 +139,27 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
 
 export function RecentChatPhotoStrip({ strip, onClose }: { strip: RecentPhotoStrip; onClose: () => void }) {
   const dark = useColorScheme() === 'dark';
-  const steps = 12;
   const fadeStart = Math.max(0, strip.top - 120);
-  const fadeStep = (strip.top - fadeStart) / steps;
+  const fadeHeight = strip.top - fadeStart;
   const solidHeight = strip.size + 80;
-  const solidEnd = strip.top + solidHeight;
-  const tint = dark ? 'dark' : 'light';
+  const fade = (from: string, to: string) => foregroundStyle({
+    type: 'linearGradient', colors: [from, to], startPoint: { x: 0.5, y: 0 }, endPoint: { x: 0.5, y: 1 },
+  });
+  const maskBand = (height: number) => frame({ maxWidth: Infinity, minHeight: height, maxHeight: height });
   const selectPhoto = (photo: RecentChatPhoto) => { onClose(); strip.onSelect(photo); };
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {Array.from({ length: steps }, (_, index) => <BlurView key={`top-${index}`} tint={tint}
-        intensity={Math.round(40 * (index + 1) / steps)} style={[styles.blurBand, { top: fadeStart + index * fadeStep, height: fadeStep }]} />)}
-      <BlurView tint={tint} intensity={40} style={[styles.blurBand, { top: strip.top, height: solidHeight }]} />
-      {Array.from({ length: steps }, (_, index) => <BlurView key={`bottom-${index}`} tint={tint}
-        intensity={Math.round(40 * (steps - index - 1) / steps)} style={[styles.blurBand, { top: solidEnd + index * 10, height: 10 }]} />)}
-    </View>
+    <Host pointerEvents="none" ignoreSafeArea="all" style={[styles.blur, { top: fadeStart, height: fadeHeight + solidHeight + 120 }]}>
+      <Mask>
+        <Rectangle modifiers={[foregroundStyle({ type: 'material', material: 'regular' }), frame({ maxWidth: Infinity, maxHeight: Infinity })]} />
+        <Mask.Content>
+          <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
+            <Rectangle modifiers={[fade('#00000000', '#000000'), maskBand(fadeHeight)]} />
+            <Rectangle modifiers={[foregroundStyle('#000000'), maskBand(solidHeight)]} />
+            <Rectangle modifiers={[fade('#000000', '#00000000'), maskBand(120)]} />
+          </VStack>
+        </Mask.Content>
+      </Mask>
+    </Host>
     <View style={[styles.strip, { left: strip.left, top: strip.top, gap: strip.gap }]}>
       {strip.photos.map((photo, index) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`So‘nggi rasm ${index + 1}`}
         onPress={() => selectPhoto(photo)} style={{ width: strip.size, height: strip.size, borderRadius: 12, overflow: 'hidden',
@@ -169,7 +176,7 @@ export function RecentChatPhotoStrip({ strip, onClose }: { strip: RecentPhotoStr
 
 const styles = StyleSheet.create({
   trigger: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  strip: { position: 'absolute', flexDirection: 'row', padding: 8 },
-  blurBand: { position: 'absolute', left: 0, right: 0 },
+  strip: { position: 'absolute', flexDirection: 'row', padding: 8, backgroundColor: 'transparent' },
+  blur: { position: 'absolute', left: 0, right: 0 },
   close: { position: 'absolute', width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 });
