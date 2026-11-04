@@ -1,5 +1,5 @@
 import { Button, Host, HStack, Image, Popover, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation, ZStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, animation, Animation, background, buttonStyle, contentShape, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, animation, Animation, background, blur, buttonStyle, contentShape, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
@@ -67,9 +67,9 @@ function MessageBubble({ session, body, attachment, caption, timestamp, mine, st
   </HStack>;
 }
 
-function ConversationBody({ session, messages, pending, hasMore, loadingMore, error, sendError, sending, lastQueuedId, reduceMotion, headerBottom, onRefresh, onLoadOlder, onRetry, onDismissKeyboard }: {
+function ConversationBody({ session, messages, pending, hasMore, loadingMore, error, sendError, sending, lastQueuedId, reduceMotion, headerBottom, blurFallback, onRefresh, onLoadOlder, onRetry, onDismissKeyboard }: {
   session: Session; messages: ChatMessage[] | null; pending: PendingChatText[]; hasMore: boolean; loadingMore: boolean;
-  error: string; sendError: string; sending: boolean; lastQueuedId: string | null; reduceMotion: boolean; headerBottom: number;
+  error: string; sendError: string; sending: boolean; lastQueuedId: string | null; reduceMotion: boolean; headerBottom: number; blurFallback: boolean;
   onRefresh: () => Promise<void>; onLoadOlder: () => Promise<void>; onRetry: () => void; onDismissKeyboard: () => void;
 }) {
   const rows = chatTimeline(session, messages ?? [], pending);
@@ -95,7 +95,7 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
   return <ScrollView modifiers={[
     frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor, scrollPosition(position, { anchor: 'bottom' }),
     scrollDismissesKeyboard('interactively'), scrollClipDisabled(), scrollEdgeEffectStyle('soft', 'top'),
-    onTapGesture(onDismissKeyboard), onGeometryChange(measureScroll),
+    onTapGesture(onDismissKeyboard), onGeometryChange(measureScroll), ...(blurFallback ? [blur(8)] : []),
   ]}>
     <VStack alignment="leading" spacing={12} modifiers={[
       scrollTargetLayout(), frame({ maxWidth: Infinity }),
@@ -302,28 +302,36 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
 
 export function ChatThreadScreen({ session, conversationId, title, peer }: Props) {
   const thread = useChatThread(session, conversationId);
+  const dark = useColorScheme() === 'dark';
   const reduceMotion = useReducedMotion();
   const inputRef = useRef<TextFieldRef>(null);
   const rootRef = useRef<ComponentRef<typeof View>>(null);
   const [recentStrip, setRecentStrip] = useState<RecentPhotoStrip | null>(null);
+  const [backdropFailed, setBackdropFailed] = useState(false);
+  const changeRecentStrip = useCallback((strip: RecentPhotoStrip | null) => {
+    if (!strip) setBackdropFailed(false);
+    setRecentStrip(strip);
+  }, []);
   const insets = useSafeAreaInsets();
   return <>
     <Stack.Screen options={{ title: title || 'Suhbat', headerTitle: '', headerBackButtonDisplayMode: 'minimal',
       headerTransparent: true, headerShadowVisible: false, scrollEdgeEffects: { top: 'soft' } }} />
-    <View ref={rootRef} style={styles.root}>
+    <View ref={rootRef} collapsable={false} style={[styles.root, { backgroundColor: dark ? '#000000' : '#ffffff' }]}>
     <Host style={styles.root}>
       <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         <ConversationBody session={session} messages={thread.messages} pending={thread.pending} hasMore={thread.hasMore}
           loadingMore={thread.loadingMore} error={thread.error} sendError={thread.sendError} sending={thread.sending}
           lastQueuedId={thread.lastQueuedId} reduceMotion={reduceMotion} headerBottom={insets.top + CHAT_HEADER_CONTENT_HEIGHT}
+          blurFallback={!!recentStrip && (!recentStrip.backdrop || backdropFailed)}
           onRefresh={thread.refresh} onLoadOlder={thread.loadOlder} onRetry={thread.retry} onDismissKeyboard={() => { void inputRef.current?.blur(); }} />
         <Composer ready={thread.storageReady} queueing={thread.queueing} onSend={thread.send} inputRef={inputRef}
           mediaSending={thread.mediaSending} mediaProgress={thread.mediaProgress} mediaError={thread.mediaError}
-          clearMediaError={thread.clearMediaError} onSendMedia={thread.sendMedia} rootRef={rootRef} onStripChange={setRecentStrip} />
+          clearMediaError={thread.clearMediaError} onSendMedia={thread.sendMedia} rootRef={rootRef} onStripChange={changeRecentStrip} />
       </VStack>
     </Host>
     <ChatThreadHeader session={session} peer={peer} title={title} topInset={insets.top} />
-    {recentStrip ? <RecentChatPhotoStrip strip={recentStrip} onClose={() => setRecentStrip(null)} /> : null}
+    {recentStrip ? <RecentChatPhotoStrip strip={recentStrip} onClose={() => changeRecentStrip(null)}
+      backdropVisible={!backdropFailed} onBackdropError={() => setBackdropFailed(true)} /> : null}
     </View>
   </>;
 }

@@ -76,7 +76,7 @@ test('permission is requested only for an explicit long press and limited access
   assert.deepEqual(denied.calls, [['getPermission']]);
 });
 
-function gestureFixture(readPhotos) {
+function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64,c25hcHNob3Q=') {
   const hooks = [];
   let cursor = 0;
   const react = { useRef(value) { const index = cursor++; if (!(index in hooks)) hooks[index] = { current: value }; return hooks[index]; }, useEffect() {} };
@@ -87,8 +87,9 @@ function gestureFixture(readPhotos) {
   function Mask() {}
   Mask.Content = function MaskContent() {};
   function Rectangle() {}
+  function RNHostView() {}
   function VStack() {}
-  const updates = [], selected = [], alerts = [];
+  const updates = [], selected = [], alerts = [], captures = [];
   let taps = 0;
   const props = {
     enabled: true,
@@ -98,18 +99,19 @@ function gestureFixture(readPhotos) {
   const module = load('components/RecentChatPhotos.ios.tsx', {
     react,
     'react/jsx-runtime': { jsx: (type, nodeProps) => ({ type, props: nodeProps }), jsxs: (type, nodeProps) => ({ type, props: nodeProps }) },
-    '@expo/ui/swift-ui': { Host, Mask, Rectangle, VStack },
+    '@expo/ui/swift-ui': { Host, Mask, Rectangle, RNHostView, VStack },
     '@expo/ui/swift-ui/modifiers': { foregroundStyle: style => ({ style }), frame: dimensions => ({ dimensions }) },
     'expo-image': { Image },
     'expo-symbols': { SymbolView() {} },
     'react-native': { View, Pressable, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
-      StyleSheet: { create: styles => styles, absoluteFill: {} }, useColorScheme: () => 'dark', useWindowDimensions: () => ({ width: 375 }) },
+      StyleSheet: { create: styles => styles, absoluteFill: {} }, useColorScheme: () => 'dark', useWindowDimensions: () => ({ width: 375, height: 800 }) },
+    'react-native-view-shot': { captureRef: (view, options) => { captures.push({ view, options }); return capture(); } },
     '../chatRecentPhotos': { recentChatPhotos: readPhotos },
   });
   const tree = module.RecentChatPhotosButton(props);
   tree.props.ref.current = { measure: callback => callback(0, 0, 40, 40, 30, 400) };
   const event = (x, y) => ({ nativeEvent: { pageX: x, pageY: y } });
-  return { tree, event, updates, selected, alerts, module, Image, Pressable, Mask, View, taps: () => taps };
+  return { tree, event, updates, selected, alerts, captures, module, Image, Pressable, Mask, View, taps: () => taps };
 }
 
 const waitForLongPress = () => new Promise(resolve => setTimeout(resolve, 500));
@@ -123,6 +125,7 @@ test('a tap opens the menu without reading the photo library', () => {
   f.tree.props.onResponderRelease(f.event(50, 420));
   assert.equal(f.taps(), 1);
   assert.equal(reads, 0);
+  assert.equal(f.captures.length, 0);
   assert.deepEqual(f.selected, []);
 });
 
@@ -132,6 +135,8 @@ test('holding, sliding to a recent photo and releasing attaches exactly that pho
   await waitForLongPress();
   const strip = f.updates.at(-1);
   assert.equal(strip.photos.length, 4);
+  assert.equal(f.captures.length, 1);
+  assert.equal(f.captures[0].options.result, 'data-uri');
   const x = strip.left + 8 + 2 * (strip.size + strip.gap) + strip.size / 2;
   const y = strip.top + 8 + strip.size / 2;
   f.tree.props.onResponderMove(f.event(x, y));
@@ -144,15 +149,47 @@ test('holding, sliding to a recent photo and releasing attaches exactly that pho
 
 test('recent thumbnails use the Expo photo loader with the full encoded asset identifier', () => {
   const f = gestureFixture(async () => readyPhotos);
+  let backdropErrors = 0;
   const strip = f.module.RecentChatPhotoStrip({ strip: { photos: [{ id: 'ph://ABC/L0/001' }], left: 0, top: 0, size: 70, gap: 8,
-    selected: null, triggerLeft: 0, triggerTop: 100, onSelect() {} }, onClose() {} });
-  const image = find(strip, node => node.type === f.Image);
+    selected: null, triggerLeft: 0, triggerTop: 100, onSelect() {},
+    backdrop: { uri: 'data:image/png;base64,c25hcHNob3Q=', width: 375, height: 800 } }, onClose() {}, onBackdropError: () => { backdropErrors++; } });
+  const image = find(strip, node => node.type === f.Image && node.props.source.uri.startsWith('ph://'));
   assert.equal(image.type, f.Image);
   assert.equal(image.props.source.uri, 'ph://ABC%2FL0%2F001');
   assert.equal(image.props.cachePolicy, 'memory');
   assert.ok(find(strip, node => node.type === f.Mask));
+  const blurred = find(strip, node => node.type === f.Image && node.props.source.uri.startsWith('data:image/'));
+  assert.ok(blurred.props.blurRadius > 0);
+  assert.equal(blurred.props.cachePolicy, 'none');
+  blurred.props.onError();
+  assert.equal(backdropErrors, 1);
   const photoRow = find(strip, node => node.type === f.View && node.props.style?.[0]?.flexDirection === 'row');
   assert.equal(photoRow.props.style[0].backgroundColor, 'transparent');
+});
+
+test('a slow or failed background capture does not prevent photo selection', async () => {
+  let resolveCapture;
+  const pending = new Promise(resolve => { resolveCapture = resolve; });
+  const f = gestureFixture(async () => readyPhotos, () => pending);
+  f.tree.props.onResponderGrant(f.event(50, 420));
+  await waitForLongPress();
+  f.tree.props.onResponderRelease(f.event(50, 420));
+  resolveCapture('data:image/png;base64,c25hcHNob3Q=');
+  await new Promise(setImmediate);
+  assert.equal(f.updates.at(-1).backdrop.uri, 'data:image/png;base64,c25hcHNob3Q=');
+  const failed = gestureFixture(async () => readyPhotos, async () => { throw new Error('capture failed'); });
+  failed.tree.props.onResponderGrant(failed.event(50, 420));
+  await waitForLongPress();
+  assert.equal(failed.updates.at(-1).backdrop, null);
+  assert.equal(failed.updates.at(-1).photos.length, 4);
+  failed.tree.props.onResponderTerminate(failed.event(50, 420));
+  const stalled = gestureFixture(async () => readyPhotos, () => new Promise(() => {}));
+  stalled.tree.props.onResponderGrant(stalled.event(50, 420));
+  await waitForLongPress();
+  await new Promise(resolve => setTimeout(resolve, 750));
+  assert.equal(stalled.updates.at(-1).backdrop, null);
+  assert.equal(stalled.updates.at(-1).photos.length, 4);
+  stalled.tree.props.onResponderTerminate(stalled.event(50, 420));
 });
 
 test('releasing outside keeps the photos open for a later tap', async () => {

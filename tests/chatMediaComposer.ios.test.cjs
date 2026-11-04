@@ -53,6 +53,7 @@ function fixture(pickerResult, cameraAllowed = true) {
   const modifiers = new Proxy({
     shapes: { circle: () => ({}), rectangle: () => ({}), roundedRectangle: () => ({}) },
     accessibilityLabel: value => ({ type: 'label', value }),
+    blur: radius => ({ type: 'blur', radius }),
     disabled: value => ({ type: 'disabled', value }),
     glassEffect: () => ({ type: 'glass-surface' }),
   }, { get: (target, name) => target[name] ?? (() => ({})) });
@@ -88,7 +89,7 @@ function fixture(pickerResult, cameraAllowed = true) {
     '../chatComposer': { draftAfterSending: (sentValue, current) => sentValue === current ? '' : current },
     '../chatMedia': { prepareChatMedia: prepare, prepareChatDocument: prepare, discardChatMedia: draft => discarded.push(draft) },
     '../chatRecentPhotos': { prepareRecentChatPhoto: prepare },
-    '../chatModel': {},
+    '../chatModel': { chatTimeline: () => [] },
     '../useChatThread': { useChatThread: () => thread },
     './ChatThreadHeader.ios': { CHAT_HEADER_CONTENT_HEIGHT: 0, ChatThreadHeader() {} },
     './ChatMediaPreview.ios': { SelectedChatMediaPreview() {}, ChatMediaThumbnail() {}, openChatMedia() {} },
@@ -104,9 +105,11 @@ function fixture(pickerResult, cameraAllowed = true) {
   }).outputText, filename);
   const screen = loaded.exports.ChatThreadScreen({ session: {}, conversationId: 'c1', title: '', peer: null });
   const composer = find(screen, node => node.type?.name === 'Composer');
+  const body = find(screen, node => node.type?.name === 'ConversationBody');
   assert.ok(composer);
   hooks.length = 0;
   const render = () => { cursor = 0; return composer.type(composer.props); };
+  const renderBody = blurFallback => { hooks.length = 0; cursor = 0; return body.type({ ...body.props, blurFallback }); };
   const button = (tree, label) => {
     const result = find(tree, node => node.type === ui.Button && node.props.modifiers?.some(modifier => modifier.type === 'label' && modifier.value === label));
     assert.ok(result, `${label} button was not found`);
@@ -128,8 +131,14 @@ function fixture(pickerResult, cameraAllowed = true) {
     assert.equal(menu(tree).props.isPresented, true);
     button(menu(tree), label).props.onPress();
   };
-  return { render, button, menu, choose, tapPlus, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer, RecentChatPhotosButton, sendResults };
+  return { render, renderBody, button, menu, choose, tapPlus, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer, RecentChatPhotosButton, sendResults };
 }
+
+test('the chat itself blurs when a backdrop capture is unavailable', () => {
+  const app = fixture({ canceled: true, assets: [] });
+  assert.ok(app.renderBody(true).props.modifiers.some(modifier => modifier.type === 'blur' && modifier.radius > 0));
+  assert.ok(!app.renderBody(false).props.modifiers.some(modifier => modifier.type === 'blur'));
+});
 
 test('the plus offers sources and library selection waits for the user to press send', async () => {
   const app = fixture({ canceled: false, assets: [{ uri: 'file:///selected', type: 'image' }] });

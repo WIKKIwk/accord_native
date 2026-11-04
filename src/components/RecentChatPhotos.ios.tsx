@@ -1,15 +1,17 @@
-import { Host, Mask, Rectangle, VStack } from '@expo/ui/swift-ui';
+import { Host, Mask, Rectangle, RNHostView, VStack } from '@expo/ui/swift-ui';
 import { foregroundStyle, frame } from '@expo/ui/swift-ui/modifiers';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, type ComponentRef, type RefObject } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, useColorScheme, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 import { recentChatPhotos, type RecentChatPhoto } from '../chatRecentPhotos';
 
-type Bounds = { x: number; y: number; width: number };
+type Bounds = { x: number; y: number; width: number; height: number };
 export type RecentPhotoStrip = {
   photos: RecentChatPhoto[]; left: number; top: number; size: number; gap: number; selected: number | null;
   triggerLeft: number; triggerTop: number; onSelect: (photo: RecentChatPhoto) => void;
+  backdrop: { uri: string; width: number; height: number } | null;
 };
 type Touch = {
   startX: number; startY: number; x: number; y: number; anchorX: number; anchorY: number; root: Bounds;
@@ -31,7 +33,7 @@ export function recentPhotoIndex(strip: RecentPhotoStrip, root: Bounds, x: numbe
 
 export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onStripChange }: Props) {
   const dark = useColorScheme() === 'dark';
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const button = useRef<ComponentRef<typeof View>>(null);
   const touch = useRef<Touch | null>(null);
   const mounted = useRef(true);
@@ -66,11 +68,26 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
       return;
     }
     if (!result.photos.length) { Alert.alert('Rasmlar topilmadi', 'Fotoalbomda tanlash uchun rasm yo‘q.'); return; }
+    // Keep the snapshot in memory only; it is discarded with the photo strip.
+    let backdrop: RecentPhotoStrip['backdrop'] = null;
+    if (rootRef.current) {
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const uri = await Promise.race([
+          captureRef(rootRef.current, { format: 'png', result: 'data-uri',
+            width: Math.max(1, Math.round(current.root.width / 2)), height: Math.max(1, Math.round(current.root.height / 2)) }),
+          new Promise<null>(resolve => { timeout = setTimeout(() => resolve(null), 700); }),
+        ]);
+        if (uri) backdrop = { uri, width: current.root.width, height: current.root.height };
+      } catch { /* The picker remains usable if the view cannot be captured. */ }
+      finally { if (timeout) clearTimeout(timeout); }
+      if (touch.current !== current) return;
+    }
     const gap = 8;
     const size = Math.max(40, Math.min(84, Math.floor((current.root.width - 40 - 3 * gap) / 4)));
     const top = Math.max(8, current.anchorY - current.root.y - size - 30);
     const strip: RecentPhotoStrip = { photos: result.photos, left: 12, top, size, gap, selected: null,
-      triggerLeft: current.anchorX - current.root.x, triggerTop: current.anchorY - current.root.y,
+      triggerLeft: current.anchorX - current.root.x, triggerTop: current.anchorY - current.root.y, backdrop,
       onSelect: photo => callbacks.current.onSelect(photo) };
     strip.selected = current.released ? null : recentPhotoIndex(strip, current.root, current.x, current.y);
     current.strip = strip;
@@ -82,15 +99,17 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
     const { pageX, pageY } = event.nativeEvent;
     const current: Touch = {
       startX: pageX, startY: pageY, x: pageX, y: pageY, anchorX: pageX - 20, anchorY: pageY - 20,
-      root: { x: 0, y: 0, width }, moved: false, long: false, released: false, strip: null,
+      root: { x: 0, y: 0, width, height }, moved: false, long: false, released: false, strip: null,
       timer: setTimeout(() => { void longPress(current); }, 450),
     };
     touch.current = current;
     button.current?.measure((_x, _y, _width, _height, pageLeft, pageTop) => {
       if (touch.current === current) { current.anchorX = pageLeft; current.anchorY = pageTop; }
     });
-    rootRef.current?.measure((_x, _y, rootWidth, _height, rootX, rootY) => {
-      if (touch.current === current && rootWidth > 0) current.root = { x: rootX, y: rootY, width: rootWidth };
+    rootRef.current?.measure((_x, _y, rootWidth, rootHeight, rootX, rootY) => {
+      if (touch.current === current && rootWidth > 0 && rootHeight > 0) {
+        current.root = { x: rootX, y: rootY, width: rootWidth, height: rootHeight };
+      }
     });
   };
   const move = (event: GestureResponderEvent) => {
@@ -137,7 +156,9 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
   </View>;
 }
 
-export function RecentChatPhotoStrip({ strip, onClose }: { strip: RecentPhotoStrip; onClose: () => void }) {
+export function RecentChatPhotoStrip({ strip, onClose, backdropVisible = true, onBackdropError }: {
+  strip: RecentPhotoStrip; onClose: () => void; backdropVisible?: boolean; onBackdropError?: () => void;
+}) {
   const dark = useColorScheme() === 'dark';
   const fadeStart = Math.max(0, strip.top - 120);
   const fadeHeight = strip.top - fadeStart;
@@ -148,9 +169,13 @@ export function RecentChatPhotoStrip({ strip, onClose }: { strip: RecentPhotoStr
   const maskBand = (height: number) => frame({ maxWidth: Infinity, minHeight: height, maxHeight: height });
   const selectPhoto = (photo: RecentChatPhoto) => { onClose(); strip.onSelect(photo); };
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-    <Host pointerEvents="none" ignoreSafeArea="all" style={[styles.blur, { top: fadeStart, height: fadeHeight + solidHeight + 120 }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel="So‘nggi rasmlarni yopish" onPress={onClose} style={StyleSheet.absoluteFill} />
+    {strip.backdrop && backdropVisible ? <Host pointerEvents="none" ignoreSafeArea="all" style={[styles.blur, { top: fadeStart, height: fadeHeight + solidHeight + 120 }]}>
       <Mask>
-        <Rectangle modifiers={[foregroundStyle({ type: 'material', material: 'ultraThin' }), frame({ maxWidth: Infinity, maxHeight: Infinity })]} />
+        <RNHostView><View style={StyleSheet.absoluteFill}>
+          <Image source={{ uri: strip.backdrop.uri }} blurRadius={24} contentFit="fill" cachePolicy="none" onError={onBackdropError}
+            style={{ position: 'absolute', left: 0, top: -fadeStart, width: strip.backdrop.width, height: strip.backdrop.height }} />
+        </View></RNHostView>
         <Mask.Content>
           <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
             <Rectangle modifiers={[fade('#00000000', '#000000'), maskBand(fadeHeight)]} />
@@ -159,7 +184,7 @@ export function RecentChatPhotoStrip({ strip, onClose }: { strip: RecentPhotoStr
           </VStack>
         </Mask.Content>
       </Mask>
-    </Host>
+    </Host> : null}
     <View style={[styles.strip, { left: strip.left, top: strip.top, gap: strip.gap }]}>
       {strip.photos.map((photo, index) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`So‘nggi rasm ${index + 1}`}
         onPress={() => selectPhoto(photo)} style={{ width: strip.size, height: strip.size, borderRadius: 12, overflow: 'hidden',
