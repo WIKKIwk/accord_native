@@ -1,5 +1,6 @@
-import { Button, Host, HStack, Image, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
-import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, HStack, Image, Menu, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
+import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, menuIndicator, menuOrder, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
@@ -9,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import type { Session } from '../auth';
 import { draftAfterSending } from '../chatComposer';
-import { discardChatMedia, prepareChatMedia, type ChatMediaDraft } from '../chatMedia';
+import { discardChatMedia, prepareChatDocument, prepareChatMedia, type ChatMediaDraft } from '../chatMedia';
 import { chatTimeline, outgoingMessageKey, type ChatAttachment, type ChatMessage, type ChatPeer } from '../chatModel';
 import type { PendingChatText } from '../chatOutbox';
 import { useChatThread } from '../useChatThread';
@@ -153,14 +154,27 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
       });
     }
   };
-  const chooseMedia = async () => {
+  const chooseMedia = async (source: 'camera' | 'library' | 'file') => {
     if (!ready || selecting || mediaSending) return;
     setSelecting(true); clearMediaError();
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: false,
-        quality: 1, preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible });
-      if (result.canceled || !result.assets[0]) return;
-      const next = await prepareChatMedia(result.assets[0]);
+      let next: ChatMediaDraft;
+      if (source === 'file') {
+        const result = await DocumentPicker.getDocumentAsync({ type: ['image/*', 'video/*'], copyToCacheDirectory: true, multiple: false });
+        if (result.canceled || !result.assets[0]) return;
+        next = await prepareChatDocument(result.assets[0]);
+      } else {
+        if (source === 'camera') {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) throw new Error('Kameradan foydalanishga ruxsat bering.');
+        }
+        const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images', 'videos'], allowsMultipleSelection: false,
+          quality: 1, preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+          ...(source === 'camera' ? { videoMaxDuration: 600 } : {}) };
+        const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+        if (result.canceled || !result.assets[0]) return;
+        next = await prepareChatMedia(result.assets[0]);
+      }
       if (!mounted.current) { discardChatMedia(next); return; }
       if (selected.current) discardChatMedia(selected.current);
       selected.current = next;
@@ -185,9 +199,12 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
     padding({ leading: 3, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
-    <Button onPress={() => { void chooseMedia(); }} modifiers={[buttonStyle('plain'), accessibilityLabel('Rasm yoki video tanlash'), disabled(!ready || selecting || mediaSending)]}>
-      <Image systemName="plus" modifiers={[font({ size: 20, weight: 'medium' }), foregroundStyle(dark ? '#ffffff' : '#1c1c1e'), frame({ width: 40, height: 40 })]} />
-    </Button>
+    <Menu label={<Image systemName="plus" modifiers={[font({ size: 20, weight: 'medium' }), foregroundStyle(dark ? '#ffffff' : '#1c1c1e'), frame({ width: 40, height: 40 })]} />}
+      modifiers={[buttonStyle('plain'), menuIndicator('hidden'), menuOrder('fixed'), accessibilityLabel('Rasm yoki video tanlash'), disabled(!ready || selecting || mediaSending)]}>
+      <Button label="Kamera" systemImage="camera" onPress={() => { void chooseMedia('camera'); }} />
+      <Button label="Rasmlar" systemImage="photo.on.rectangle" onPress={() => { void chooseMedia('library'); }} />
+      <Button label="Fayllar" systemImage="folder" onPress={() => { void chooseMedia('file'); }} />
+    </Menu>
     <TextField ref={inputRef} text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
       font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), fixedSize({ horizontal: false, vertical: true }),
       padding({ vertical: 8 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),

@@ -187,6 +187,28 @@ test('picker validates duration and converts unsupported iOS photos to JPEG', as
   assert.equal(f.files.has('file:///converted'), false);
 });
 
+test('files are classified as media and their temporary copies are removed', async () => {
+  const f = fixture(() => { throw new Error('unexpected network'); });
+  const video = await f.prepareChatDocument({ uri: 'file:///picked', name: 'clip.MOV', mimeType: 'application/octet-stream' });
+  assert.equal(video.kind, 'video');
+  assert.equal(video.contentType, 'video/quicktime');
+  assert.equal(video.temporary, true);
+  f.discardChatMedia(video);
+  assert.equal(f.files.has('file:///picked'), false);
+
+  f.files.set('file:///picked', Buffer.from([1, 2]));
+  const photo = await f.prepareChatDocument({ uri: 'file:///picked', name: 'photo.heic', mimeType: 'image/heic' });
+  assert.equal(photo.kind, 'image');
+  assert.equal(photo.contentType, 'image/jpeg');
+  assert.equal(f.files.has('file:///picked'), false);
+  f.discardChatMedia(photo);
+  assert.equal(f.files.has('file:///converted'), false);
+
+  f.files.set('file:///picked', Buffer.from([1, 2]));
+  await assert.rejects(f.prepareChatDocument({ uri: 'file:///picked', name: 'file.pdf', mimeType: 'application/pdf' }), /Rasm yoki video tanlang/);
+  assert.equal(f.files.has('file:///picked'), false);
+});
+
 test('media tickets are confined to the active server and selected media', async () => {
   const f = fixture(async () => response({ url: '/v1/mobile/chat/media/media-1/content?ticket=short-lived' }));
   const url = await f.chatMediaTicket(f.session, 'media-1');

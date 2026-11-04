@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { File, FileMode } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import type { DocumentPickerAsset } from 'expo-document-picker';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
@@ -33,28 +34,30 @@ function mediaType(kind: MediaKind, mime: string, name: string): string {
 }
 
 /** Prepare a picker result without sending it; the user confirms from the composer. */
-export async function prepareChatMedia(asset: ImagePickerAsset): Promise<ChatMediaDraft> {
+export async function prepareChatMedia(asset: ImagePickerAsset, copiedFile = false): Promise<ChatMediaDraft> {
   const kind = asset.type === 'video' ? 'video' : asset.type === 'image' ? 'image' : null;
-  if (!kind || !asset.uri) throw new Error('Rasm yoki video tanlang.');
   let uri = asset.uri;
   let filename = (asset.fileName ?? '').trim().replace(/[\x00-\x1f\x7f]/g, '_').slice(-240);
-  let contentType = mediaType(kind, asset.mimeType ?? '', filename);
-  let temporary = false;
-  if (kind === 'image' && !contentType) {
-    const context = ImageManipulator.manipulate(uri);
-    let image: Awaited<ReturnType<typeof context.renderAsync>> | undefined;
-    try {
-      image = await context.renderAsync();
-      uri = (await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 })).uri;
-      contentType = 'image/jpeg';
-      filename = 'rasm.jpg';
-      temporary = true;
-    } finally {
-      try { image?.release(); } catch { /* Released by the native runtime. */ }
-      try { context.release(); } catch { /* Released by the native runtime. */ }
-    }
-  }
+  let temporary = copiedFile;
   try {
+    if (!kind || !uri) throw new Error('Rasm yoki video tanlang.');
+    let contentType = mediaType(kind, asset.mimeType ?? '', filename);
+    if (kind === 'image' && !contentType) {
+      const context = ImageManipulator.manipulate(uri);
+      let image: Awaited<ReturnType<typeof context.renderAsync>> | undefined;
+      try {
+        image = await context.renderAsync();
+        const converted = (await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 })).uri;
+        if (temporary && converted !== uri) { try { new File(uri).delete(); } catch { /* Cache cleanup is best effort. */ } }
+        uri = converted;
+        contentType = 'image/jpeg';
+        filename = 'rasm.jpg';
+        temporary = true;
+      } finally {
+        try { image?.release(); } catch { /* Released by the native runtime. */ }
+        try { context.release(); } catch { /* Released by the native runtime. */ }
+      }
+    }
     if (!contentType) throw new Error('Faqat MP4, MOV yoki WebM video yuborish mumkin.');
     const file = new File(uri);
     const sizeBytes = file.size;
@@ -71,6 +74,15 @@ export async function prepareChatMedia(asset: ImagePickerAsset): Promise<ChatMed
     if (temporary) { try { new File(uri).delete(); } catch { /* Cache cleanup is best effort. */ } }
     throw error;
   }
+}
+
+/** DocumentPicker returns a cache copy but no image-picker media type. */
+export async function prepareChatDocument(asset: DocumentPickerAsset): Promise<ChatMediaDraft> {
+  const mime = (asset.mimeType ?? '').toLowerCase();
+  const name = asset.name.toLowerCase();
+  const type = mime.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(name) ? 'image'
+    : mime.startsWith('video/') || /\.(mp4|m4v|mov|webm)$/i.test(name) ? 'video' : undefined;
+  return prepareChatMedia({ uri: asset.uri, fileName: asset.name, mimeType: asset.mimeType, type, width: 0, height: 0 }, true);
 }
 
 export function discardChatMedia(draft: ChatMediaDraft): void {

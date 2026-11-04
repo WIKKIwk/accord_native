@@ -12,6 +12,7 @@
     },
     "android": {
       "softwareKeyboardLayoutMode": "pan",
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -44,13 +45,13 @@
         "expo-image-picker",
         {
           "photosPermission": "Profil rasmi va bo‘yoq hisoboti uchun rasm tanlashga ruxsat bering.",
-          "microphonePermission": false
+          "microphonePermission": "Chatda video yozish uchun mikrofondan foydalanishga ruxsat bering."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Profil uchun suratga olish va material hamda qolip QR kodlarini skanerlash uchun kameraga ruxsat bering."
+          "cameraPermission": "Chat va profil uchun suratga olish hamda QR kodlarni skanerlash uchun kameraga ruxsat bering."
         }
       ],
       "expo-sqlite"
