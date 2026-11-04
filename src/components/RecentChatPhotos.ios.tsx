@@ -150,7 +150,7 @@ export function RecentChatPhotoStrip({ strip, onClose }: { strip: RecentPhotoStr
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
     <Host pointerEvents="none" ignoreSafeArea="all" style={[styles.blur, { top: fadeStart, height: fadeHeight + solidHeight + 120 }]}>
       <Mask>
-        <Rectangle modifiers={[foregroundStyle({ type: 'material', material: 'regular' }), frame({ maxWidth: Infinity, maxHeight: Infinity })]} />
+        <Rectangle modifiers={[foregroundStyle({ type: 'material', material: 'ultraThin' }), frame({ maxWidth: Infinity, maxHeight: Infinity })]} />
         <Mask.Content>
           <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
             <Rectangle modifiers={[fade('#00000000', '#000000'), maskBand(fadeHeight)]} />
