@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { ChatRequestError, loadChatMessages, markChatRead } from './chatApi';
 import { subscribeChatLive } from './chatLive';
+import { sendChatMedia, type ChatMediaDraft } from './chatMedia';
 import { mergeChatMessages, reconcileChatRefresh, type ChatMessage } from './chatModel';
 import { chatDeviceId, pendingChatTexts, queueChatText, type PendingChatText } from './chatOutbox';
 import { flushChatOutbox } from './chatOutboxDelivery';
@@ -19,6 +20,9 @@ export function useChatThread(session: Session, conversationId: string) {
   const [sending, setSending] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
   const [lastQueuedId, setLastQueuedId] = useState<string | null>(null);
+  const [mediaSending, setMediaSending] = useState(false);
+  const [mediaProgress, setMediaProgress] = useState('');
+  const [mediaError, setMediaError] = useState('');
   const focused = useRef(false);
   const storageReadyRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -27,6 +31,7 @@ export function useChatThread(session: Session, conversationId: string) {
   const request = useRef<AbortController | null>(null);
   const olderRequest = useRef<AbortController | null>(null);
   const sendRequest = useRef<AbortController | null>(null);
+  const mediaRequest = useRef<AbortController | null>(null);
   const draining = useRef(false);
   const drainAgain = useRef(false);
   const resumeDrain = useRef<(() => void) | null>(null);
@@ -150,12 +155,40 @@ export function useChatThread(session: Session, conversationId: string) {
     }
   }, [conversationId, drain, session, visible]);
 
+  const sendMedia = useCallback(async (draft: ChatMediaDraft, caption: string): Promise<boolean> => {
+    if (!visible() || mediaRequest.current) return false;
+    const controller = new AbortController();
+    mediaRequest.current = controller;
+    setMediaSending(true);
+    setMediaError('');
+    setMediaProgress('Yuklanmoqda…');
+    try {
+      const message = await sendChatMedia(session, conversationId, draft, caption, controller.signal, label => {
+        if (focused.current && !controller.signal.aborted) setMediaProgress(label);
+      });
+      if (focused.current && activeSessionToken(session)) {
+        merge([message]);
+        setLastQueuedId(message.clientMessageId);
+      }
+      return true;
+    } catch (reason) {
+      if (focused.current) setMediaError(reason instanceof Error ? reason.message : 'Media yuborilmadi. Qayta urinib ko‘ring.');
+      return false;
+    } finally {
+      if (mediaRequest.current === controller) mediaRequest.current = null;
+      if (focused.current) { setMediaSending(false); setMediaProgress(''); }
+    }
+  }, [conversationId, merge, session, visible]);
+
+  const clearMediaError = useCallback(() => setMediaError(''), []);
+
   useFocusEffect(useCallback(() => {
     focused.current = true;
     resumeDrain.current = () => { void drain(); };
     setStorageReady(false);
     setQueueing(queueingRef.current);
     setSending(draining.current);
+    setMediaSending(!!mediaRequest.current && !mediaRequest.current.signal.aborted);
     setLoadingMore(!!olderRequest.current && !olderRequest.current.signal.aborted);
     let active = true;
     let restoring = false;
@@ -183,6 +216,7 @@ export function useChatThread(session: Session, conversationId: string) {
       if (state === 'active') {
         setQueueing(queueingRef.current);
         setSending(draining.current);
+        setMediaSending(!!mediaRequest.current && !mediaRequest.current.signal.aborted);
         setLoadingMore(!!olderRequest.current && !olderRequest.current.signal.aborted);
         void restore(); void refresh(); void drain();
       }
@@ -191,6 +225,7 @@ export function useChatThread(session: Session, conversationId: string) {
         request.current?.abort();
         olderRequest.current?.abort();
         sendRequest.current?.abort();
+        mediaRequest.current?.abort();
       }
     });
     return () => {
@@ -203,6 +238,7 @@ export function useChatThread(session: Session, conversationId: string) {
       request.current?.abort();
       olderRequest.current?.abort();
       sendRequest.current?.abort();
+      mediaRequest.current?.abort();
       clearInterval(timer);
       appState.remove();
       stopLive();
@@ -214,5 +250,6 @@ export function useChatThread(session: Session, conversationId: string) {
     void drain(true);
   }, [drain]);
 
-  return { messages, pending, hasMore, loadingMore, error, sendError, queueing, sending, storageReady, lastQueuedId, refresh, loadOlder, send, retry };
+  return { messages, pending, hasMore, loadingMore, error, sendError, queueing, sending, storageReady, lastQueuedId,
+    mediaSending, mediaProgress, mediaError, sendMedia, clearMediaError, refresh, loadOlder, send, retry };
 }

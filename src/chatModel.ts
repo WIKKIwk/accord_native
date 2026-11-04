@@ -11,6 +11,7 @@ export type ChatConversation = {
   unreadCount: number;
   timestamp: number;
 };
+export type ChatAttachment = { mediaId: string; kind: 'image' | 'video'; width: number; height: number };
 export type ChatMessage = {
   id: string;
   conversationId: string;
@@ -20,6 +21,8 @@ export type ChatMessage = {
   senderRef: string;
   body: string;
   timestamp: number;
+  attachment?: ChatAttachment;
+  caption?: string;
 };
 
 function object(value: unknown): Record<string, unknown> {
@@ -98,14 +101,19 @@ export function parseChatMessage(value: unknown, conversationId: string): ChatMe
   if (!id || !sequence || text(row.conversation_id) !== conversationId) return null;
   const type = text(row.type);
   const deleted = integer(row.deleted_at_unix) > 0;
-  const attachment = text(object(row.attachment).kind);
+  const media = object(row.attachment);
+  const attachment = text(media.kind);
   const attachmentLabel = attachment === 'image' ? 'Rasm' : attachment === 'video' ? 'Video' : attachment === 'audio' ? 'Ovozli xabar' : '';
   const caption = text(row.body);
+  const mediaId = text(media.media_id);
+  const visualMedia: ChatAttachment | undefined = !deleted && (attachment === 'image' || attachment === 'video') && /^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}$/.test(mediaId)
+    ? { mediaId, kind: attachment, width: integer(media.width_pixels), height: integer(media.height_pixels) } : undefined;
   return {
     id, conversationId, sequence,
     clientMessageId: text(row.client_message_id), senderRole: text(row.sender_role), senderRef: text(row.sender_ref),
     body: deleted ? 'Xabar o‘chirilgan' : attachmentLabel ? [attachmentLabel, caption].filter(Boolean).join('\n') : type === 'text' ? caption : messagePreview(row),
     timestamp: integer(row.created_at_unix),
+    ...(visualMedia ? { attachment: visualMedia, caption } : {}),
   };
 }
 
@@ -148,10 +156,10 @@ export function chatTimeline(session: Session, messages: ChatMessage[], pending:
     ...messages.map(message => {
       const isMine = isMyChatMessage(session, message);
       return { key: isMine && message.clientMessageId ? outgoingMessageKey(message.clientMessageId) : `message:${message.id}`,
-        body: message.body, timestamp: message.timestamp, mine: isMine, pending: false };
+        body: message.body, timestamp: message.timestamp, mine: isMine, pending: false, attachment: message.attachment, caption: message.caption };
     }),
     ...pending.filter(item => !confirmedIds.has(item.clientMessageId)).map(item => ({
-      key: outgoingMessageKey(item.clientMessageId), body: item.body, timestamp: item.createdAt, mine: true, pending: true,
+      key: outgoingMessageKey(item.clientMessageId), body: item.body, timestamp: item.createdAt, mine: true, pending: true, attachment: undefined, caption: undefined,
     })),
   ];
 }
