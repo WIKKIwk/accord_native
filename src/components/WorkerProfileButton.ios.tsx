@@ -1,5 +1,5 @@
-import { Button, Image, RNHostView } from '@expo/ui/swift-ui';
-import { accessibilityLabel } from '@expo/ui/swift-ui/modifiers';
+import { Button, HStack, Image, RNHostView } from '@expo/ui/swift-ui';
+import { accessibilityLabel, frame } from '@expo/ui/swift-ui/modifiers';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { activeSessionToken, type Session } from '../auth';
@@ -30,9 +30,12 @@ export function WorkerProfileButton({ session, onPress }: Props) {
   }, [session]));
 
   const hasAvatar = !!avatar.token && !!profileAvatarSource(session, avatar.profile);
+  // A 24-point label keeps the toolbar glass circular around the 32-point avatar.
   return <Button onPress={onPress} modifiers={[accessibilityLabel('Profil')]}>
     {hasAvatar
-      ? <RNHostView matchContents><ProfileAvatar session={session} profile={avatar.profile} token={avatar.token} size={32} /></RNHostView>
+      ? <HStack modifiers={[frame({ width: 24, height: 24 })]}>
+        <RNHostView matchContents><ProfileAvatar session={session} profile={avatar.profile} token={avatar.token} size={32} /></RNHostView>
+      </HStack>
       : <Image systemName="person.crop.circle" size={24} />}
   </Button>;
 }
