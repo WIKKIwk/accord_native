@@ -32,17 +32,20 @@ function fixture(pickerResult, cameraAllowed = true) {
     useCallback(fn) { return fn; },
   };
   const ui = {};
-  for (const name of ['Button', 'Host', 'HStack', 'Image', 'Menu', 'ProgressView', 'RNHostView', 'ScrollView', 'Spacer', 'Text', 'TextField', 'VStack']) {
+  for (const name of ['Button', 'Host', 'HStack', 'Image', 'Popover', 'ProgressView', 'RNHostView', 'ScrollView', 'Spacer', 'Text', 'TextField', 'VStack']) {
     ui[name] = function () {};
     ui[name].displayName = name;
   }
+  ui.Popover.Trigger = function () {};
+  ui.Popover.Content = function () {};
   ui.useNativeState = initial => {
     const index = slot({ value: initial, get() { return this.value; } });
     return hooks[index];
   };
   const modifiers = new Proxy({
-    shapes: { circle: () => ({}), roundedRectangle: () => ({}) },
+    shapes: { circle: () => ({}), rectangle: () => ({}), roundedRectangle: () => ({}) },
     accessibilityLabel: value => ({ type: 'label', value }),
+    disabled: value => ({ type: 'disabled', value }),
   }, { get: (target, name) => target[name] ?? (() => ({})) });
   const selected = { uri: 'file:///selected', kind: 'image', filename: 'photo.jpg' };
   const pickerCalls = [], sent = [], discarded = [], prepared = [], alerts = [];
@@ -93,35 +96,44 @@ function fixture(pickerResult, cameraAllowed = true) {
     return result;
   };
   const menu = tree => {
-    const result = find(tree, node => node.type === ui.Menu && node.props.modifiers?.some(modifier => modifier.type === 'label' && modifier.value === 'Rasm yoki video tanlash'));
+    const result = find(tree, node => node.type === ui.Popover);
     assert.ok(result, 'media menu was not found');
     return result;
   };
-  const choose = (tree, label) => {
-    const result = find(menu(tree), node => node.type === ui.Button && node.props.label === label);
-    assert.ok(result, `${label} menu item was not found`);
-    result.props.onPress();
+  const choose = label => {
+    button(render(), 'Rasm yoki video tanlash').props.onPress();
+    const tree = render();
+    assert.equal(menu(tree).props.isPresented, true);
+    button(menu(tree), label).props.onPress();
   };
   return { render, button, menu, choose, ui, selected, pickerCalls, sent, discarded, prepared, alerts };
 }
 
 test('the plus offers sources and library selection waits for the user to press send', async () => {
   const app = fixture({ canceled: false, assets: [{ uri: 'file:///selected', type: 'image' }] });
-  const menu = app.menu(app.render());
-  assert.deepEqual(menu.props.children.map(item => item.props.label), ['Kamera', 'Rasmlar', 'Fayllar']);
+  let tree = app.render();
+  const field = find(tree, node => node.type === app.ui.TextField);
+  field.props.text.value = 'Izoh';
+  field.props.onTextChange('Izoh');
+  app.button(app.render(), 'Rasm yoki video tanlash').props.onPress();
+  tree = app.render();
+  const menu = app.menu(tree);
+  assert.equal(menu.props.isPresented, true);
+  assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, 'Izoh');
+  for (const label of ['Kamera', 'Rasmlar', 'Fayllar']) app.button(menu, label);
   assert.equal(app.pickerCalls.length, 0);
-  app.choose(app.render(), 'Rasmlar');
-  await new Promise(setImmediate);
+  app.button(menu, 'Rasmlar').props.onPress();
+  tree = app.render();
+  assert.equal(app.menu(tree).props.isPresented, false);
+  assert.equal(app.pickerCalls.length, 0);
+  assert.equal(app.button(tree, 'Xabarni yuborish').props.modifiers.find(modifier => modifier.type === 'disabled').value, true);
+  await new Promise(resolve => setTimeout(resolve, 450));
   assert.equal(app.pickerCalls[0].source, 'library');
   assert.deepEqual(app.pickerCalls[0].options.mediaTypes, ['images', 'videos']);
   assert.equal(app.sent.length, 0);
 
-  let tree = app.render();
-  assert.ok(find(tree, node => node.type?.name === 'SelectedChatMediaPreview'));
-  const field = find(tree, node => node.type === app.ui.TextField);
-  field.props.text.value = 'Izoh';
-  field.props.onTextChange('Izoh');
   tree = app.render();
+  assert.ok(find(tree, node => node.type?.name === 'SelectedChatMediaPreview'));
   app.button(tree, 'Xabarni yuborish').props.onPress();
   await new Promise(setImmediate);
   assert.deepEqual(app.sent, [{ draft: app.selected, caption: 'Izoh' }]);
@@ -131,16 +143,16 @@ test('the plus offers sources and library selection waits for the user to press 
 
 test('closing the picker without selecting does not create or send an attachment', async () => {
   const app = fixture({ canceled: true, assets: null });
-  app.choose(app.render(), 'Rasmlar');
-  await new Promise(setImmediate);
+  app.choose('Rasmlar');
+  await new Promise(resolve => setTimeout(resolve, 450));
   assert.equal(app.sent.length, 0);
   assert.equal(find(app.render(), node => node.type?.name === 'SelectedChatMediaPreview'), null);
 });
 
 test('camera and files open their native pickers for images and videos', async () => {
   const camera = fixture({ canceled: false, assets: [{ uri: 'file:///camera', type: 'video' }] });
-  camera.choose(camera.render(), 'Kamera');
-  await new Promise(setImmediate);
+  camera.choose('Kamera');
+  await new Promise(resolve => setTimeout(resolve, 450));
   assert.equal(camera.pickerCalls[0].source, 'camera');
   assert.deepEqual(camera.pickerCalls[0].options.mediaTypes, ['images', 'videos']);
   assert.equal(camera.pickerCalls[0].options.videoMaxDuration, 600);
@@ -149,8 +161,8 @@ test('camera and files open their native pickers for images and videos', async (
 
   const fileAsset = { uri: 'file:///document', name: 'video.mov', mimeType: 'video/quicktime' };
   const files = fixture({ canceled: false, assets: [fileAsset] });
-  files.choose(files.render(), 'Fayllar');
-  await new Promise(setImmediate);
+  files.choose('Fayllar');
+  await new Promise(resolve => setTimeout(resolve, 450));
   assert.equal(files.pickerCalls[0].source, 'file');
   assert.deepEqual(files.pickerCalls[0].options.type, ['image/*', 'video/*']);
   assert.equal(files.pickerCalls[0].options.copyToCacheDirectory, true);
@@ -160,8 +172,24 @@ test('camera and files open their native pickers for images and videos', async (
 
 test('denied camera permission does not launch the camera', async () => {
   const app = fixture({ canceled: true, assets: null }, false);
-  app.choose(app.render(), 'Kamera');
-  await new Promise(setImmediate);
+  app.choose('Kamera');
+  await new Promise(resolve => setTimeout(resolve, 450));
   assert.equal(app.pickerCalls.length, 0);
   assert.match(app.alerts[0][1], /Kameradan foydalanishga ruxsat/);
+});
+
+test('dismissing the menu leaves the composer and its draft in place', () => {
+  const app = fixture({ canceled: true, assets: null });
+  const field = find(app.render(), node => node.type === app.ui.TextField);
+  field.props.text.value = 'Saqlangan matn';
+  field.props.onTextChange('Saqlangan matn');
+  app.button(app.render(), 'Rasm yoki video tanlash').props.onPress();
+  let tree = app.render();
+  assert.equal(app.menu(tree).props.isPresented, true);
+  assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, 'Saqlangan matn');
+  app.menu(tree).props.onIsPresentedChange(false);
+  tree = app.render();
+  assert.equal(app.menu(tree).props.isPresented, false);
+  assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, 'Saqlangan matn');
+  assert.equal(app.pickerCalls.length, 0);
 });

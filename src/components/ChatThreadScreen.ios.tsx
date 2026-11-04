@@ -1,5 +1,5 @@
-import { Button, Host, HStack, Image, Menu, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
-import { accessibilityLabel, animation, Animation, background, buttonStyle, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, menuIndicator, menuOrder, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, HStack, Image, Popover, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
+import { accessibilityLabel, animation, Animation, background, buttonStyle, contentShape, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
@@ -125,10 +125,16 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
   const [draft, setDraft] = useState('');
   const [media, setMedia] = useState<ChatMediaDraft | null>(null);
   const [selecting, setSelecting] = useState(false);
+  const [mediaMenuOpen, setMediaMenuOpen] = useState(false);
   const selected = useRef<ChatMediaDraft | null>(null);
+  const menuDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const value = useNativeState('');
   const mounted = useRef(true);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (selected.current) discardChatMedia(selected.current); }; }, []);
+  useEffect(() => { mounted.current = true; return () => {
+    mounted.current = false;
+    if (menuDismissTimer.current !== null) clearTimeout(menuDismissTimer.current);
+    if (selected.current) discardChatMedia(selected.current);
+  }; }, []);
   const canSend = ready && !queueing && !mediaSending && !selecting && (!!draft.trim() || !!media);
   const surface = Number(Platform.Version) >= 26
     ? [glassEffect({ glass: { variant: 'regular' }, shape: 'roundedRectangle', cornerRadius: 23 })]
@@ -155,8 +161,6 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
     }
   };
   const chooseMedia = async (source: 'camera' | 'library' | 'file') => {
-    if (!ready || selecting || mediaSending) return;
-    setSelecting(true); clearMediaError();
     try {
       let next: ChatMediaDraft;
       if (source === 'file') {
@@ -183,6 +187,17 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
       if (mounted.current) Alert.alert('Media tanlanmadi', reason instanceof Error ? reason.message : 'Qayta urinib ko‘ring.');
     } finally { if (mounted.current) setSelecting(false); }
   };
+  const selectSource = (source: 'camera' | 'library' | 'file') => {
+    if (!ready || selecting || mediaSending || menuDismissTimer.current !== null) return;
+    setSelecting(true);
+    clearMediaError();
+    setMediaMenuOpen(false);
+    // Let the native popover finish dismissing before presenting another picker.
+    menuDismissTimer.current = setTimeout(() => {
+      menuDismissTimer.current = null;
+      if (mounted.current) void chooseMedia(source);
+    }, 400);
+  };
   return <VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity })]}>
     {media ? <HStack spacing={10} modifiers={[padding({ horizontal: 16, top: 8 }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>
       <RNHostView matchContents><SelectedChatMediaPreview draft={media} /></RNHostView>
@@ -199,12 +214,25 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
     padding({ leading: 3, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
-    <Menu label={<Image systemName="plus" modifiers={[font({ size: 20, weight: 'medium' }), foregroundStyle(dark ? '#ffffff' : '#1c1c1e'), frame({ width: 40, height: 40 })]} />}
-      modifiers={[buttonStyle('plain'), menuIndicator('hidden'), menuOrder('fixed'), accessibilityLabel('Rasm yoki video tanlash'), disabled(!ready || selecting || mediaSending)]}>
-      <Button label="Kamera" systemImage="camera" onPress={() => { void chooseMedia('camera'); }} />
-      <Button label="Rasmlar" systemImage="photo.on.rectangle" onPress={() => { void chooseMedia('library'); }} />
-      <Button label="Fayllar" systemImage="folder" onPress={() => { void chooseMedia('file'); }} />
-    </Menu>
+    <Popover isPresented={mediaMenuOpen} onIsPresentedChange={setMediaMenuOpen} attachmentAnchor="top" arrowEdge="bottom">
+      <Popover.Trigger>
+        <Button onPress={() => setMediaMenuOpen(true)} modifiers={[buttonStyle('plain'), accessibilityLabel('Rasm yoki video tanlash'), disabled(!ready || selecting || mediaSending)]}>
+          <Image systemName="plus" modifiers={[font({ size: 20, weight: 'medium' }), foregroundStyle(dark ? '#ffffff' : '#1c1c1e'), frame({ width: 40, height: 40 })]} />
+        </Button>
+      </Popover.Trigger>
+      <Popover.Content>
+        <VStack alignment="leading" spacing={0} modifiers={[padding({ all: 8 })]}>
+          {([{ source: 'camera', label: 'Kamera', icon: 'camera' }, { source: 'library', label: 'Rasmlar', icon: 'photo.on.rectangle' },
+            { source: 'file', label: 'Fayllar', icon: 'folder' }] as const).map(item =>
+            <Button key={item.source} onPress={() => selectSource(item.source)} modifiers={[buttonStyle('plain'), accessibilityLabel(item.label)]}>
+              <HStack spacing={12} modifiers={[frame({ width: 220, height: 48, alignment: 'leading' }), contentShape(shapes.rectangle())]}>
+                <Image systemName={item.icon} modifiers={[font({ size: 20 }), frame({ width: 32 })]} />
+                <Text modifiers={[font({ textStyle: 'body' })]}>{item.label}</Text><Spacer />
+              </HStack>
+            </Button>)}
+        </VStack>
+      </Popover.Content>
+    </Popover>
     <TextField ref={inputRef} text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
       font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), fixedSize({ horizontal: false, vertical: true }),
       padding({ vertical: 8 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),
