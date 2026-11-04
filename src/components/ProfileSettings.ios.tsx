@@ -14,6 +14,10 @@ export function ProfileSettings({ onClose, onLogout }: Props) {
   const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
   const [biometricBusy, setBiometricBusy] = useState(false);
+  const closeSettings = async () => {
+    if (pin.mode === 'remove' && !(await pin.submit())) return;
+    onClose();
+  };
   return <Group modifiers={[presentationDetents(['large']), presentationDragIndicator('visible'), interactiveDismissDisabled(pin.busy || biometricBusy)]}>
     <NavigationStack>
       <Toolbar modifiers={[navigationTitle('Sozlamalar'), navigationBarTitleDisplayMode('inline')]}>
@@ -42,6 +46,7 @@ export function ProfileSettings({ onClose, onLogout }: Props) {
                 }} />
               {!pin.security.canUseBiometric ? <Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>Biometrik ochish qurilma yoki ilovaning ushbu versiyasida mavjud emas.</Text> : null}
             </> : <>
+              {pin.mode === 'remove' ? <Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>PIN’ni olib tashlash uchun joriy PIN’ni kiriting.</Text> : null}
               {pin.security.hasPin ? <SecureField text={pin.current} maxLength={4} placeholder="Joriy PIN" onTextChange={value => pin.change('current', value)} modifiers={[keyboardType('ascii-capable-number-pad'), disabled(pin.busy)]} /> : null}
               {pin.mode === 'set' ? <>
                 <SecureField text={pin.pin} maxLength={4} placeholder="Yangi 4 xonali PIN" onTextChange={value => pin.change('pin', value)} modifiers={[keyboardType('ascii-capable-number-pad'), disabled(pin.busy)]} />
@@ -68,7 +73,7 @@ export function ProfileSettings({ onClose, onLogout }: Props) {
           </Section>
           <Section><Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>Ko‘rinish tanlovi ushbu qurilmada saqlanadi.</Text></Section>
         </List>
-        <Toolbar.Content><ToolbarItem placement="topBarTrailing"><Button label="Tayyor" onPress={onClose} modifiers={[disabled(pin.busy || biometricBusy)]} /></ToolbarItem></Toolbar.Content>
+        <Toolbar.Content><ToolbarItem placement="topBarTrailing"><Button label="Tayyor" onPress={() => { void closeSettings(); }} modifiers={[disabled(pin.busy || biometricBusy)]} /></ToolbarItem></Toolbar.Content>
       </Toolbar>
     </NavigationStack>
   </Group>;
