@@ -244,7 +244,7 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
     {media.length ? <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-      <ScrollView axes="horizontal" showsIndicators={false} modifiers={[frame({ maxWidth: Infinity, height: 108 })]}>
+      <ScrollView axes="horizontal" showsIndicators={false} modifiers={[frame({ maxWidth: Infinity, minHeight: 108, maxHeight: 108 })]}>
         <HStack spacing={8} modifiers={[padding({ horizontal: 8, top: 8, bottom: 4 })]}>
           {media.map(item => <ZStack key={item.clientMessageId} alignment="topTrailing">
             <RNHostView matchContents><SelectedChatMediaPreview draft={item} /></RNHostView>

@@ -12,7 +12,7 @@ export type RecentPhotoStrip = {
 };
 type Touch = {
   startX: number; startY: number; x: number; y: number; anchorX: number; anchorY: number; root: Bounds;
-  moved: boolean; long: boolean; timer: ReturnType<typeof setTimeout>;
+  moved: boolean; long: boolean; released: boolean; timer: ReturnType<typeof setTimeout>;
   strip: RecentPhotoStrip | null;
 };
 type Props = {
@@ -56,6 +56,7 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
         return;
       }
     }
+    if (!result || !result.granted || !result.photos.length) touch.current = null;
     if (!result) { Alert.alert('Rasmlar ochilmadi', 'Qayta urinib ko‘ring.'); return; }
     if (!result.granted) {
       Alert.alert('Rasmlarga ruxsat kerak', 'So‘nggi rasmlarni ko‘rish uchun fotoalbomga ruxsat bering.', [
@@ -70,8 +71,9 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
     const strip: RecentPhotoStrip = { photos: result.photos, left: 12, top, size, gap, selected: null,
       triggerLeft: current.anchorX - current.root.x, triggerTop: current.anchorY - current.root.y,
       onSelect: photo => callbacks.current.onSelect(photo) };
-    strip.selected = recentPhotoIndex(strip, current.root, current.x, current.y);
+    strip.selected = current.released ? null : recentPhotoIndex(strip, current.root, current.x, current.y);
     current.strip = strip;
+    if (current.released) touch.current = null;
     callbacks.current.onStripChange(strip);
   };
 
@@ -79,7 +81,7 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
     const { pageX, pageY } = event.nativeEvent;
     const current: Touch = {
       startX: pageX, startY: pageY, x: pageX, y: pageY, anchorX: pageX - 20, anchorY: pageY - 20,
-      root: { x: 0, y: 0, width }, moved: false, long: false, strip: null,
+      root: { x: 0, y: 0, width }, moved: false, long: false, released: false, strip: null,
       timer: setTimeout(() => { void longPress(current); }, 450),
     };
     touch.current = current;
@@ -108,9 +110,10 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
   const end = (event: GestureResponderEvent, cancelled: boolean) => {
     const current = touch.current;
     if (!current) return;
-    touch.current = null;
     clearTimeout(current.timer);
-    if (cancelled) { callbacks.current.onStripChange(null); return; }
+    if (cancelled) { touch.current = null; callbacks.current.onStripChange(null); return; }
+    if (current.long && !current.strip) { current.released = true; return; }
+    touch.current = null;
     if (current.long && current.strip) {
       const index = recentPhotoIndex(current.strip, current.root, event.nativeEvent.pageX, event.nativeEvent.pageY);
       if (index !== null) {
@@ -166,7 +169,7 @@ export function RecentChatPhotoStrip({ strip, onClose }: { strip: RecentPhotoStr
 
 const styles = StyleSheet.create({
   trigger: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  strip: { position: 'absolute', flexDirection: 'row', padding: 8, borderRadius: 18, backgroundColor: '#242426ee' },
+  strip: { position: 'absolute', flexDirection: 'row', padding: 8 },
   blurBand: { position: 'absolute', left: 0, right: 0 },
   close: { position: 'absolute', width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 });

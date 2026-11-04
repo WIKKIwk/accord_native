@@ -17,6 +17,14 @@ function find(node, predicate) {
   return null;
 }
 
+function findAll(node, predicate, matches = []) {
+  if (!node || typeof node !== 'object') return matches;
+  if (Array.isArray(node)) { node.forEach(child => findAll(child, predicate, matches)); return matches; }
+  if (predicate(node)) matches.push(node);
+  findAll(node.props?.children, predicate, matches);
+  return matches;
+}
+
 function fixture(pickerResult, cameraAllowed = true) {
   const hooks = [];
   let cursor = 0;
@@ -48,13 +56,19 @@ function fixture(pickerResult, cameraAllowed = true) {
     disabled: value => ({ type: 'disabled', value }),
     glassEffect: () => ({ type: 'glass-surface' }),
   }, { get: (target, name) => target[name] ?? (() => ({})) });
-  const selected = { uri: 'file:///selected', kind: 'image', filename: 'photo.jpg' };
-  const pickerCalls = [], sent = [], discarded = [], prepared = [], alerts = [];
+  const selected = { uri: 'file:///selected', kind: 'image', filename: 'photo.jpg', clientMessageId: 'media-1' };
+  const pickerCalls = [], sent = [], discarded = [], prepared = [], alerts = [], sendResults = [];
+  let preparationCount = 0;
+  const prepare = async asset => {
+    prepared.push(asset);
+    preparationCount++;
+    return preparationCount === 1 ? selected : { ...selected, uri: `file:///selected-${preparationCount}`, clientMessageId: `media-${preparationCount}` };
+  };
   function RecentChatPhotosButton() {}
   const thread = {
     storageReady: true, queueing: false, mediaSending: false, mediaProgress: '', mediaError: '',
     clearMediaError() {}, send: async () => true,
-    sendMedia: async (draft, caption) => { sent.push({ draft, caption }); return true; },
+    sendMedia: async (draft, caption) => { sent.push({ draft, caption }); return sendResults.length ? sendResults.shift() : true; },
   };
   const mocks = {
     react,
@@ -72,9 +86,8 @@ function fixture(pickerResult, cameraAllowed = true) {
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     'react-native-worklets': { scheduleOnUI: fn => fn(), scheduleOnRN: (fn, ...args) => fn(...args) },
     '../chatComposer': { draftAfterSending: (sentValue, current) => sentValue === current ? '' : current },
-    '../chatMedia': { prepareChatMedia: async asset => { prepared.push(asset); return selected; },
-      prepareChatDocument: async asset => { prepared.push(asset); return selected; }, discardChatMedia: draft => discarded.push(draft) },
-    '../chatRecentPhotos': { prepareRecentChatPhoto: async asset => { prepared.push(asset); return selected; } },
+    '../chatMedia': { prepareChatMedia: prepare, prepareChatDocument: prepare, discardChatMedia: draft => discarded.push(draft) },
+    '../chatRecentPhotos': { prepareRecentChatPhoto: prepare },
     '../chatModel': {},
     '../useChatThread': { useChatThread: () => thread },
     './ChatThreadHeader.ios': { CHAT_HEADER_CONTENT_HEIGHT: 0, ChatThreadHeader() {} },
@@ -115,7 +128,7 @@ function fixture(pickerResult, cameraAllowed = true) {
     assert.equal(menu(tree).props.isPresented, true);
     button(menu(tree), label).props.onPress();
   };
-  return { render, button, menu, choose, tapPlus, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer, RecentChatPhotosButton };
+  return { render, button, menu, choose, tapPlus, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer, RecentChatPhotosButton, sendResults };
 }
 
 test('the plus offers sources and library selection waits for the user to press send', async () => {
@@ -247,4 +260,70 @@ test('a recent photo is attached as a draft without sending a message', async ()
   assert.deepEqual(app.prepared, [photo]);
   assert.equal(app.sent.length, 0);
   assert.ok(find(tree, node => node.type?.name === 'SelectedChatMediaPreview'));
+});
+
+test('repeated selections add attachments and removal affects only the chosen one', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const trigger = () => find(app.render(), node => node.type === app.RecentChatPhotosButton);
+  trigger().props.onSelect({ id: 'ph://one' });
+  await new Promise(setImmediate);
+  trigger().props.onSelect({ id: 'ph://two' });
+  await new Promise(setImmediate);
+  let tree = app.render();
+  assert.equal(findAll(tree, node => node.type?.name === 'SelectedChatMediaPreview').length, 2);
+  const removeButtons = findAll(tree, node => node.type === app.ui.Button && node.props.modifiers?.some(modifier => modifier.type === 'label' && modifier.value === 'Media faylni olib tashlash'));
+  removeButtons[0].props.onPress();
+  tree = app.render();
+  const remaining = findAll(tree, node => node.type?.name === 'SelectedChatMediaPreview');
+  assert.equal(remaining.length, 1);
+  assert.equal(remaining[0].props.draft.clientMessageId, 'media-2');
+  assert.deepEqual(app.discarded, [app.selected]);
+});
+
+test('partial multi-photo delivery retains only unsent items and does not repeat the caption', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const trigger = () => find(app.render(), node => node.type === app.RecentChatPhotosButton);
+  trigger().props.onSelect({ id: 'ph://one' });
+  await new Promise(setImmediate);
+  trigger().props.onSelect({ id: 'ph://two' });
+  await new Promise(setImmediate);
+  let tree = app.render();
+  const field = find(tree, node => node.type === app.ui.TextField);
+  field.props.text.value = 'Izoh';
+  field.props.onTextChange('Izoh');
+  app.sendResults.push(true, false, true);
+  app.button(app.render(), 'Xabarni yuborish').props.onPress();
+  await new Promise(setImmediate);
+  assert.deepEqual(app.sent.map(item => [item.draft.clientMessageId, item.caption]), [['media-1', 'Izoh'], ['media-2', '']]);
+  tree = app.render();
+  assert.deepEqual(findAll(tree, node => node.type?.name === 'SelectedChatMediaPreview').map(node => node.props.draft.clientMessageId), ['media-2']);
+  assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, '');
+  app.button(tree, 'Xabarni yuborish').props.onPress();
+  await new Promise(setImmediate);
+  assert.deepEqual(app.sent.map(item => [item.draft.clientMessageId, item.caption]), [['media-1', 'Izoh'], ['media-2', ''], ['media-2', '']]);
+  assert.equal(findAll(app.render(), node => node.type?.name === 'SelectedChatMediaPreview').length, 0);
+});
+
+test('text typed during a multi-photo upload remains in the composer', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const trigger = () => find(app.render(), node => node.type === app.RecentChatPhotosButton);
+  trigger().props.onSelect({ id: 'ph://one' });
+  await new Promise(setImmediate);
+  trigger().props.onSelect({ id: 'ph://two' });
+  await new Promise(setImmediate);
+  let tree = app.render();
+  let field = find(tree, node => node.type === app.ui.TextField);
+  field.props.text.value = 'Birinchi izoh';
+  field.props.onTextChange('Birinchi izoh');
+  let completeFirst;
+  app.sendResults.push(new Promise(resolve => { completeFirst = resolve; }), true);
+  app.button(app.render(), 'Xabarni yuborish').props.onPress();
+  tree = app.render();
+  field = find(tree, node => node.type === app.ui.TextField);
+  field.props.text.value = 'Keyingi xabar';
+  field.props.onTextChange('Keyingi xabar');
+  completeFirst(true);
+  await new Promise(setImmediate);
+  assert.deepEqual(app.sent.map(item => item.caption), ['Birinchi izoh', '']);
+  assert.equal(find(app.render(), node => node.type === app.ui.TextField).props.text.value, 'Keyingi xabar');
 });

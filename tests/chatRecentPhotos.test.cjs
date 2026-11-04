@@ -18,6 +18,17 @@ function load(file, mocks) {
   return loaded.exports;
 }
 
+function find(node, predicate) {
+  if (!node || typeof node !== 'object') return null;
+  if (predicate(node)) return node;
+  const children = node.props?.children;
+  for (const child of Array.isArray(children) ? children : [children]) {
+    const match = find(child, predicate);
+    if (match) return match;
+  }
+  return null;
+}
+
 function libraryFixture(permission, requestedPermission = permission) {
   const calls = [];
   const assets = [1, 2, 3, 4].map(index => ({ id: `ph://photo-${index}`, filename: `photo-${index}.heic`, width: 100, height: 80 }));
@@ -71,6 +82,8 @@ function gestureFixture(readPhotos) {
   const react = { useRef(value) { const index = cursor++; if (!(index in hooks)) hooks[index] = { current: value }; return hooks[index]; }, useEffect() {} };
   function View() {}
   function Image() {}
+  function Pressable() {}
+  function BlurView() {}
   const updates = [], selected = [], alerts = [];
   let taps = 0;
   const props = {
@@ -81,16 +94,17 @@ function gestureFixture(readPhotos) {
   const module = load('components/RecentChatPhotos.ios.tsx', {
     react,
     'react/jsx-runtime': { jsx: (type, nodeProps) => ({ type, props: nodeProps }), jsxs: (type, nodeProps) => ({ type, props: nodeProps }) },
+    'expo-blur': { BlurView },
     'expo-image': { Image },
     'expo-symbols': { SymbolView() {} },
-    'react-native': { View, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
+    'react-native': { View, Pressable, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
       StyleSheet: { create: styles => styles, absoluteFill: {} }, useColorScheme: () => 'dark', useWindowDimensions: () => ({ width: 375 }) },
     '../chatRecentPhotos': { recentChatPhotos: readPhotos },
   });
   const tree = module.RecentChatPhotosButton(props);
   tree.props.ref.current = { measure: callback => callback(0, 0, 40, 40, 30, 400) };
   const event = (x, y) => ({ nativeEvent: { pageX: x, pageY: y } });
-  return { tree, event, updates, selected, alerts, module, Image, taps: () => taps };
+  return { tree, event, updates, selected, alerts, module, Image, Pressable, BlurView, taps: () => taps };
 }
 
 const waitForLongPress = () => new Promise(resolve => setTimeout(resolve, 500));
@@ -125,21 +139,47 @@ test('holding, sliding to a recent photo and releasing attaches exactly that pho
 
 test('recent thumbnails use the Expo photo loader with the full encoded asset identifier', () => {
   const f = gestureFixture(async () => readyPhotos);
-  const strip = f.module.RecentChatPhotoStrip({ strip: { photos: [{ id: 'ph://ABC/L0/001' }], left: 0, top: 0, size: 70, gap: 8, selected: null } });
-  const image = strip.props.children[0].props.children;
+  const strip = f.module.RecentChatPhotoStrip({ strip: { photos: [{ id: 'ph://ABC/L0/001' }], left: 0, top: 0, size: 70, gap: 8,
+    selected: null, triggerLeft: 0, triggerTop: 100, onSelect() {} }, onClose() {} });
+  const image = find(strip, node => node.type === f.Image);
   assert.equal(image.type, f.Image);
   assert.equal(image.props.source.uri, 'ph://ABC%2FL0%2F001');
   assert.equal(image.props.cachePolicy, 'memory');
+  assert.ok(find(strip, node => node.type === f.BlurView));
 });
 
-test('releasing outside or cancelling does not attach a photo', async () => {
+test('releasing outside keeps the photos open for a later tap', async () => {
   const f = gestureFixture(async () => readyPhotos);
   f.tree.props.onResponderGrant(f.event(50, 420));
   await waitForLongPress();
   f.tree.props.onResponderRelease(f.event(5, 420));
   assert.deepEqual(f.selected, []);
   assert.equal(f.taps(), 0);
-  assert.equal(f.updates.at(-1), null);
+  const strip = f.updates.at(-1);
+  assert.equal(strip.photos.length, 4);
+  let closed = 0;
+  const overlay = f.module.RecentChatPhotoStrip({ strip, onClose: () => { closed++; } });
+  find(overlay, node => node.type === f.Pressable && node.props.accessibilityLabel === 'So‘nggi rasm 2').props.onPress();
+  assert.equal(closed, 1);
+  assert.deepEqual(f.selected, [readyPhotos.photos[1]]);
+});
+
+test('photos stay available when the finger lifts before the library query finishes', async () => {
+  let resolvePhotos;
+  const pending = new Promise(resolve => { resolvePhotos = resolve; });
+  const f = gestureFixture(async () => pending);
+  f.tree.props.onResponderGrant(f.event(50, 420));
+  await waitForLongPress();
+  f.tree.props.onResponderRelease(f.event(50, 420));
+  resolvePhotos(readyPhotos);
+  await new Promise(setImmediate);
+  assert.equal(f.updates.at(-1).photos.length, 4);
+  assert.equal(f.updates.at(-1).selected, null);
+  assert.deepEqual(f.selected, []);
+  assert.equal(f.taps(), 0);
+});
+
+test('cancelling a long press closes the photos without attaching one', async () => {
   const cancelled = gestureFixture(async () => readyPhotos);
   cancelled.tree.props.onResponderGrant(cancelled.event(50, 420));
   await waitForLongPress();
