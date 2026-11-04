@@ -79,7 +79,8 @@ test('permission is requested only for an explicit long press and limited access
 function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64,c25hcHNob3Q=') {
   const hooks = [];
   let cursor = 0;
-  const react = { useRef(value) { const index = cursor++; if (!(index in hooks)) hooks[index] = { current: value }; return hooks[index]; }, useEffect() {} };
+  const react = { useRef(value) { const index = cursor++; if (!(index in hooks)) hooks[index] = { current: value }; return hooks[index]; },
+    useState(value) { return [typeof value === 'function' ? value() : value, () => {}]; }, useEffect() {} };
   function View() {}
   function Image() {}
   function Pressable() {}
@@ -89,6 +90,15 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64
   function Rectangle() {}
   function RNHostView() {}
   function VStack() {}
+  class AnimatedValue {
+    constructor(value) { this.value = value; }
+    setValue(value) { this.value = value; }
+    stopAnimation() {}
+    interpolate(config) { return config; }
+  }
+  const animated = { Value: AnimatedValue, View: function AnimatedView() {},
+    timing: () => ({ start() {}, stop() {} }), parallel: () => ({ start() {}, stop() {} }) };
+  const easing = { out: value => value, cubic() {}, quad() {} };
   const updates = [], selected = [], alerts = [], captures = [];
   let taps = 0;
   const props = {
@@ -103,7 +113,7 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64
     '@expo/ui/swift-ui/modifiers': { foregroundStyle: style => ({ style }), frame: dimensions => ({ dimensions }) },
     'expo-image': { Image },
     'expo-symbols': { SymbolView() {} },
-    'react-native': { View, Pressable, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
+    'react-native': { View, Pressable, Animated: animated, Easing: easing, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
       StyleSheet: { create: styles => styles, absoluteFill: {} }, useColorScheme: () => 'dark', useWindowDimensions: () => ({ width: 375, height: 800 }) },
     'react-native-view-shot': { captureRef: (view, options) => { captures.push({ view, options }); return capture(); } },
     '../chatRecentPhotos': { recentChatPhotos: readPhotos },

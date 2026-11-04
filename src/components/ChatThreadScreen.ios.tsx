@@ -95,7 +95,8 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
   return <ScrollView modifiers={[
     frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor, scrollPosition(position, { anchor: 'bottom' }),
     scrollDismissesKeyboard('interactively'), scrollClipDisabled(), scrollEdgeEffectStyle('soft', 'top'),
-    onTapGesture(onDismissKeyboard), onGeometryChange(measureScroll), ...(blurFallback ? [blur(8)] : []),
+    onTapGesture(onDismissKeyboard), onGeometryChange(measureScroll), blur(blurFallback ? 8 : 0),
+    ...(reduceMotion ? [] : [animation(Animation.easeOut({ duration: 0.3 }), blurFallback)]),
   ]}>
     <VStack alignment="leading" spacing={12} modifiers={[
       scrollTargetLayout(), frame({ maxWidth: Infinity }),
@@ -330,7 +331,7 @@ export function ChatThreadScreen({ session, conversationId, title, peer }: Props
       </VStack>
     </Host>
     <ChatThreadHeader session={session} peer={peer} title={title} topInset={insets.top} />
-    {recentStrip ? <RecentChatPhotoStrip strip={recentStrip} onClose={() => changeRecentStrip(null)}
+    {recentStrip ? <RecentChatPhotoStrip strip={recentStrip} onClose={() => changeRecentStrip(null)} reduceMotion={reduceMotion}
       backdropVisible={!backdropFailed} onBackdropError={() => setBackdropFailed(true)} /> : null}
     </View>
   </>;

@@ -51,6 +51,7 @@ function fixture(pickerResult, cameraAllowed = true) {
     return hooks[index];
   };
   const modifiers = new Proxy({
+    Animation: { easeOut: options => options },
     shapes: { circle: () => ({}), rectangle: () => ({}), roundedRectangle: () => ({}) },
     accessibilityLabel: value => ({ type: 'label', value }),
     blur: radius => ({ type: 'blur', radius }),
@@ -137,7 +138,7 @@ function fixture(pickerResult, cameraAllowed = true) {
 test('the chat itself blurs when a backdrop capture is unavailable', () => {
   const app = fixture({ canceled: true, assets: [] });
   assert.ok(app.renderBody(true).props.modifiers.some(modifier => modifier.type === 'blur' && modifier.radius > 0));
-  assert.ok(!app.renderBody(false).props.modifiers.some(modifier => modifier.type === 'blur'));
+  assert.ok(app.renderBody(false).props.modifiers.some(modifier => modifier.type === 'blur' && modifier.radius === 0));
 });
 
 test('the plus offers sources and library selection waits for the user to press send', async () => {

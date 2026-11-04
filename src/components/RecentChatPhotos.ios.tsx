@@ -2,8 +2,8 @@ import { Host, Mask, Rectangle, RNHostView, VStack } from '@expo/ui/swift-ui';
 import { foregroundStyle, frame } from '@expo/ui/swift-ui/modifiers';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef, type ComponentRef, type RefObject } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, useColorScheme, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
+import { useEffect, useRef, useState, type ComponentRef, type RefObject } from 'react';
+import { Alert, Animated, Easing, Linking, Pressable, StyleSheet, useColorScheme, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { recentChatPhotos, type RecentChatPhoto } from '../chatRecentPhotos';
 
@@ -156,10 +156,27 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
   </View>;
 }
 
-export function RecentChatPhotoStrip({ strip, onClose, backdropVisible = true, onBackdropError }: {
-  strip: RecentPhotoStrip; onClose: () => void; backdropVisible?: boolean; onBackdropError?: () => void;
+export function RecentChatPhotoStrip({ strip, onClose, reduceMotion = false, backdropVisible = true, onBackdropError }: {
+  strip: RecentPhotoStrip; onClose: () => void; reduceMotion?: boolean; backdropVisible?: boolean; onBackdropError?: () => void;
 }) {
   const dark = useColorScheme() === 'dark';
+  const [backdropOpacity] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
+  const backdropStarted = useRef(false);
+  const [photoMotion] = useState(() => strip.photos.map(() => new Animated.Value(reduceMotion ? 1 : 0)));
+  useEffect(() => {
+    if (reduceMotion) { photoMotion.forEach(value => value.setValue(1)); backdropOpacity.setValue(1); return; }
+    const entrance = Animated.parallel(photoMotion.map((value, index) => Animated.timing(value, {
+      toValue: 1, duration: 340, delay: index * 45, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+    })));
+    entrance.start();
+    return () => { entrance.stop(); backdropOpacity.stopAnimation(); };
+  }, [backdropOpacity, photoMotion, reduceMotion]);
+  const showBackdrop = () => {
+    if (backdropStarted.current) return;
+    backdropStarted.current = true;
+    if (reduceMotion) { backdropOpacity.setValue(1); return; }
+    Animated.timing(backdropOpacity, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  };
   const fadeStart = Math.max(0, strip.top - 120);
   const fadeHeight = strip.top - fadeStart;
   const solidHeight = strip.size + 80;
@@ -170,10 +187,13 @@ export function RecentChatPhotoStrip({ strip, onClose, backdropVisible = true, o
   const selectPhoto = (photo: RecentChatPhoto) => { onClose(); strip.onSelect(photo); };
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
     <Pressable accessibilityRole="button" accessibilityLabel="So‘nggi rasmlarni yopish" onPress={onClose} style={StyleSheet.absoluteFill} />
-    {strip.backdrop && backdropVisible ? <Host pointerEvents="none" ignoreSafeArea="all" style={[styles.blur, { top: fadeStart, height: fadeHeight + solidHeight + 120 }]}>
+    {strip.backdrop && backdropVisible ? <Animated.View pointerEvents="none" style={[styles.blur, {
+      top: fadeStart, height: fadeHeight + solidHeight + 120, opacity: backdropOpacity,
+    }]}>
+      <Host pointerEvents="none" ignoreSafeArea="all" style={StyleSheet.absoluteFill}>
       <Mask>
         <RNHostView><View style={StyleSheet.absoluteFill}>
-          <Image source={{ uri: strip.backdrop.uri }} blurRadius={24} contentFit="fill" cachePolicy="none" onError={onBackdropError}
+          <Image source={{ uri: strip.backdrop.uri }} blurRadius={24} contentFit="fill" cachePolicy="none" onLoad={showBackdrop} onError={onBackdropError}
             style={{ position: 'absolute', left: 0, top: -fadeStart, width: strip.backdrop.width, height: strip.backdrop.height }} />
         </View></RNHostView>
         <Mask.Content>
@@ -184,13 +204,26 @@ export function RecentChatPhotoStrip({ strip, onClose, backdropVisible = true, o
           </VStack>
         </Mask.Content>
       </Mask>
-    </Host> : null}
+      </Host>
+    </Animated.View> : null}
     <View style={[styles.strip, { left: strip.left, top: strip.top, gap: strip.gap }]}>
-      {strip.photos.map((photo, index) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={`So‘nggi rasm ${index + 1}`}
-        onPress={() => selectPhoto(photo)} style={{ width: strip.size, height: strip.size, borderRadius: 12, overflow: 'hidden',
-          borderWidth: strip.selected === index ? 3 : 0, borderColor: '#0a84ff' }}>
-        <Image source={{ uri: `ph://${encodeURIComponent(photo.id.slice(5))}` }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" />
-      </Pressable>)}
+      {strip.photos.map((photo, index) => {
+        const progress = photoMotion[index];
+        const fromX = strip.triggerLeft + 20 - (strip.left + 8 + index * (strip.size + strip.gap) + strip.size / 2);
+        const fromY = strip.triggerTop + 20 - (strip.top + 8 + strip.size / 2);
+        return <Animated.View key={photo.id} style={{ width: strip.size, height: strip.size, opacity: progress,
+          transform: [
+            { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [fromX, 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [fromY, 0] }) },
+            { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }) },
+          ] }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`So‘nggi rasm ${index + 1}`}
+            onPress={() => selectPhoto(photo)} style={{ width: strip.size, height: strip.size, borderRadius: 12, overflow: 'hidden',
+              borderWidth: strip.selected === index ? 3 : 0, borderColor: '#0a84ff' }}>
+            <Image source={{ uri: `ph://${encodeURIComponent(photo.id.slice(5))}` }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" />
+          </Pressable>
+        </Animated.View>;
+      })}
     </View>
     <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="So‘nggi rasmlarni yopish"
       style={[styles.close, { left: strip.triggerLeft, top: strip.triggerTop }]}>
