@@ -6,8 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
 
-function fixture({ expoGo = false, platform = 'ios' } = {}) {
-  const values = new Map();
+function fixture({ expoGo = false, platform = 'ios', values = new Map() } = {}) {
   let active = true;
   let biometricAccepted = true;
   const store = {
@@ -95,4 +94,29 @@ test('logout cleanup waits for a pending PIN save', async () => {
   release();
   await Promise.all([save, clear]);
   assert.deepEqual(await api.loadAppLock(session), { hasPin: false, biometric: false });
+});
+
+test('a removed PIN stays disabled after restart if native deletion is ineffective', async () => {
+  const values = new Map();
+  const first = fixture({ values });
+  await first.api.saveAppPin(session, '1234');
+  await first.api.setAppBiometric(session, true);
+  first.store.deleteItemAsync = async () => {};
+
+  await first.api.clearAppLock(session);
+  const restarted = fixture({ values });
+  assert.deepEqual(await restarted.api.loadAppLock(session), { hasPin: false, biometric: false });
+  assert.equal(await restarted.api.verifyAppPin(session, '1234'), false);
+  assert.equal(await restarted.api.unlockAppWithBiometric(session), false);
+  await restarted.api.saveAppPin(session, '5678');
+  assert.equal(await restarted.api.verifyAppPin(session, '5678'), true);
+});
+
+test('a failed disable write leaves the existing PIN active', async () => {
+  const { api, store } = fixture();
+  await api.saveAppPin(session, '1234');
+  store.setItemAsync = async () => { throw new Error('write failed'); };
+  await assert.rejects(api.clearAppLock(session), /write failed/);
+  assert.deepEqual(await api.loadAppLock(session), { hasPin: true, biometric: false });
+  assert.equal(await api.verifyAppPin(session, '1234'), true);
 });

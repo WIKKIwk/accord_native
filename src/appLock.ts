@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 
 type LockRecord = { version: 1; salt: string; digest: string; biometric: boolean };
+const disabledLockRecord = '{"version":1,"disabled":true}';
 const biometricOptions = { requireAuthentication: true, authenticationPrompt: 'Ilovani ochish uchun biometrik tasdiqdan o‘ting' };
 const validPin = (pin: string) => /^\d{4}$/.test(pin);
 let pending: Promise<void> = Promise.resolve();
@@ -25,7 +26,7 @@ async function keyFor(session: Session): Promise<string> {
 
 async function readRecord(session: Session): Promise<LockRecord | null> {
   const value = await SecureStore.getItemAsync(await keyFor(session));
-  if (!value) return null;
+  if (!value || value === disabledLockRecord) return null;
   const record: unknown = JSON.parse(value);
   if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('Qulf ma’lumotini o‘qib bo‘lmadi.');
   const entry = record as Record<string, unknown>;
@@ -78,7 +79,10 @@ export async function clearAppLock(session: Session): Promise<void> {
   if (Platform.OS === 'web') return;
   return inStorageOrder(async () => {
     const key = await keyFor(session);
-    await Promise.all([SecureStore.deleteItemAsync(key), SecureStore.deleteItemAsync(`${key}_biometric`)]);
+    // Overwrite the PIN before cleanup so a failed native delete cannot restore it.
+    await SecureStore.setItemAsync(key, disabledLockRecord);
+    if (await SecureStore.getItemAsync(key) !== disabledLockRecord) throw new Error('PIN’ni o‘chirib bo‘lmadi.');
+    await SecureStore.deleteItemAsync(`${key}_biometric`).catch(() => {});
   });
 }
 
