@@ -126,48 +126,75 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
 }) {
   const dark = useColorScheme() === 'dark';
   const [draft, setDraft] = useState('');
-  const [media, setMedia] = useState<ChatMediaDraft | null>(null);
+  const [media, setMedia] = useState<ChatMediaDraft[]>([]);
   const [selecting, setSelecting] = useState(false);
+  const [batchSending, setBatchSending] = useState(false);
   const [mediaMenuOpen, setMediaMenuOpen] = useState(false);
-  const selected = useRef<ChatMediaDraft | null>(null);
+  const selected = useRef<ChatMediaDraft[]>([]);
+  const batchInProgress = useRef(false);
+  const consumedCaption = useRef<string | null>(null);
   const menuDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const value = useNativeState('');
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => {
     mounted.current = false;
     if (menuDismissTimer.current !== null) clearTimeout(menuDismissTimer.current);
-    if (selected.current) discardChatMedia(selected.current);
+    selected.current.forEach(discardChatMedia);
   }; }, []);
-  const canSend = ready && !queueing && !mediaSending && !selecting && (!!draft.trim() || !!media);
+  const busyMedia = mediaSending || batchSending;
+  const canSend = ready && !queueing && !busyMedia && !selecting && (!!draft.trim() || media.length > 0);
   const surface = Number(Platform.Version) >= 26
     ? [glassEffect({ glass: { variant: 'regular' }, shape: 'roundedRectangle', cornerRadius: 23 })]
     : [
         background({ type: 'material', material: 'regular' }, shapes.roundedRectangle({ cornerRadius: 23 })),
         strokeBorder({ shape: 'roundedRectangle', cornerRadius: 23, content: dark ? '#545456' : '#c7c7cc', style: { lineWidth: 1 } }),
       ];
+  const clearSentText = (sent: string) => {
+    scheduleOnUI(() => {
+      'worklet';
+      const current = value.value;
+      const next = draftAfterSending(sent, current);
+      if (next !== current) {
+        value.value = next;
+        scheduleOnRN(setDraft, next);
+      }
+    });
+  };
+  const removeMedia = (item: ChatMediaDraft) => {
+    selected.current = selected.current.filter(value => value.clientMessageId !== item.clientMessageId);
+    setMedia(selected.current);
+    discardChatMedia(item);
+  };
   const send = async () => {
-    if (!canSend) return;
+    if (!canSend || batchInProgress.current) return;
     const sent = value.get();
-    if (!sent.trim() && !media) return;
-    const accepted = media ? await onSendMedia(media, sent) : await onSend(sent);
-    if (accepted && mounted.current) {
-      if (media && selected.current === media) { discardChatMedia(media); selected.current = null; setMedia(null); }
-      scheduleOnUI(() => {
-        'worklet';
-        const current = value.value;
-        const next = draftAfterSending(sent, current);
-        if (next !== current) {
-          value.value = next;
-          scheduleOnRN(setDraft, next);
+    const caption = consumedCaption.current === sent ? '' : sent;
+    if (!caption.trim() && !media.length) return;
+    if (!media.length) {
+      if (await onSend(caption) && mounted.current) clearSentText(sent);
+      return;
+    }
+    batchInProgress.current = true;
+    setBatchSending(true);
+    try {
+      for (let index = 0; index < media.length; index++) {
+        const item = media[index];
+        if (!(await onSendMedia(item, index === 0 ? caption : '')) || !mounted.current) break;
+        removeMedia(item);
+        if (index === 0) {
+          if (caption) consumedCaption.current = sent;
+          clearSentText(sent);
         }
-      });
+      }
+    } finally {
+      batchInProgress.current = false;
+      if (mounted.current) setBatchSending(false);
     }
   };
   const acceptMedia = (next: ChatMediaDraft) => {
     if (!mounted.current) { discardChatMedia(next); return; }
-    if (selected.current) discardChatMedia(selected.current);
-    selected.current = next;
-    setMedia(next);
+    selected.current = [...selected.current, next];
+    setMedia(selected.current);
   };
   const chooseMedia = async (source: 'camera' | 'library' | 'file') => {
     try {
@@ -194,7 +221,7 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
     } finally { if (mounted.current) setSelecting(false); }
   };
   const selectRecentPhoto = async (photo: RecentChatPhoto) => {
-    if (!ready || selecting || mediaSending) return;
+    if (!ready || selecting || busyMedia) return;
     setSelecting(true);
     clearMediaError();
     try { acceptMedia(await prepareRecentChatPhoto(photo)); }
@@ -202,7 +229,7 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
     finally { if (mounted.current) setSelecting(false); }
   };
   const selectSource = (source: 'camera' | 'library' | 'file') => {
-    if (!ready || selecting || mediaSending || menuDismissTimer.current !== null) return;
+    if (!ready || selecting || busyMedia || menuDismissTimer.current !== null) return;
     setSelecting(true);
     clearMediaError();
     setMediaMenuOpen(false);
@@ -216,24 +243,28 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
     padding({ leading: 3, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
-    {media ? <HStack alignment="top" spacing={10} modifiers={[padding({ horizontal: 8, top: 8, bottom: 4 }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-      <ZStack alignment="topTrailing">
-        <RNHostView matchContents><SelectedChatMediaPreview draft={media} /></RNHostView>
-        {!mediaSending ? <Button onPress={() => {
-          discardChatMedia(media); selected.current = null; setMedia(null); clearMediaError();
-        }} modifiers={[buttonStyle('plain'), accessibilityLabel('Media faylni olib tashlash'), disabled(selecting), padding({ top: 4, trailing: 4 })]}>
-          <Image systemName="xmark" size={11} color="#ffffff" modifiers={[frame({ width: 24, height: 24 }), background('#000000aa', shapes.circle())]} />
-        </Button> : null}
-      </ZStack>
-      {mediaSending || mediaError ? <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-        {mediaSending ? <HStack spacing={6}><ProgressView /><Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{mediaProgress}</Text></HStack> : null}
+    {media.length ? <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+      <ScrollView axes="horizontal" showsIndicators={false} modifiers={[frame({ maxWidth: Infinity, height: 108 })]}>
+        <HStack spacing={8} modifiers={[padding({ horizontal: 8, top: 8, bottom: 4 })]}>
+          {media.map(item => <ZStack key={item.clientMessageId} alignment="topTrailing">
+            <RNHostView matchContents><SelectedChatMediaPreview draft={item} /></RNHostView>
+            {!busyMedia ? <Button onPress={() => { removeMedia(item); clearMediaError(); }} modifiers={[
+              buttonStyle('plain'), accessibilityLabel('Media faylni olib tashlash'), disabled(selecting), padding({ top: 4, trailing: 4 }),
+            ]}>
+              <Image systemName="xmark" size={11} color="#ffffff" modifiers={[frame({ width: 24, height: 24 }), background('#000000aa', shapes.circle())]} />
+            </Button> : null}
+          </ZStack>)}
+        </HStack>
+      </ScrollView>
+      {busyMedia || mediaError ? <VStack alignment="leading" spacing={6} modifiers={[padding({ horizontal: 8, bottom: 4 })]}>
+        {busyMedia ? <HStack spacing={6}><ProgressView /><Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{mediaProgress || 'Yuborilmoqda…'}</Text></HStack> : null}
         {mediaError ? <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('#ff453a'), lineLimit(2)]}>{mediaError}</Text> : null}
-      </VStack> : <Spacer />}
-    </HStack> : null}
+      </VStack> : null}
+    </VStack> : null}
   <HStack alignment="bottom" spacing={4} modifiers={[frame({ minHeight: 40, maxWidth: Infinity })]}>
     <Popover isPresented={mediaMenuOpen} onIsPresentedChange={setMediaMenuOpen} attachmentAnchor="top" arrowEdge="bottom">
       <Popover.Trigger>
-        <RNHostView matchContents><RecentChatPhotosButton enabled={ready && !selecting && !mediaSending} rootRef={rootRef}
+        <RNHostView matchContents><RecentChatPhotosButton enabled={ready && !selecting && !busyMedia} rootRef={rootRef}
           onTap={() => setMediaMenuOpen(true)} onSelect={photo => { void selectRecentPhoto(photo); }} onStripChange={onStripChange} /></RNHostView>
       </Popover.Trigger>
       <Popover.Content>
@@ -251,7 +282,10 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
         </VStack>
       </Popover.Content>
     </Popover>
-    <TextField ref={inputRef} text={value} onTextChange={setDraft} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
+    <TextField ref={inputRef} text={value} onTextChange={text => {
+      if (consumedCaption.current !== null && text !== consumedCaption.current) consumedCaption.current = null;
+      setDraft(text);
+    }} placeholder="Xabar yozing" axis="vertical" maxLength={4000} modifiers={[
       font({ textStyle: 'body' }), lineLimit({ min: 1, max: 4 }), fixedSize({ horizontal: false, vertical: true }),
       padding({ vertical: 8 }), frame({ maxWidth: Infinity, minHeight: 40, alignment: 'leading' }),
       accessibilityLabel('Xabar matni'), disabled(!ready),
@@ -289,7 +323,7 @@ export function ChatThreadScreen({ session, conversationId, title, peer }: Props
       </VStack>
     </Host>
     <ChatThreadHeader session={session} peer={peer} title={title} topInset={insets.top} />
-    {recentStrip ? <RecentChatPhotoStrip strip={recentStrip} /> : null}
+    {recentStrip ? <RecentChatPhotoStrip strip={recentStrip} onClose={() => setRecentStrip(null)} /> : null}
     </View>
   </>;
 }
