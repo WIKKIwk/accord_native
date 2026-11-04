@@ -99,7 +99,7 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64
   const animated = { Value: AnimatedValue, View: function AnimatedView() {},
     timing: () => ({ start() {}, stop() {} }), parallel: () => ({ start() {}, stop() {} }) };
   const easing = { out: value => value, cubic() {}, quad() {} };
-  const updates = [], selected = [], alerts = [], captures = [];
+  const updates = [], selected = [], alerts = [], captures = [], haptics = [];
   let taps = 0;
   const props = {
     enabled: true,
@@ -111,6 +111,7 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64
     'react/jsx-runtime': { jsx: (type, nodeProps) => ({ type, props: nodeProps }), jsxs: (type, nodeProps) => ({ type, props: nodeProps }) },
     '@expo/ui/swift-ui': { Host, Mask, Rectangle, RNHostView, VStack },
     '@expo/ui/swift-ui/modifiers': { foregroundStyle: style => ({ style }), frame: dimensions => ({ dimensions }) },
+    'expo-haptics': { ImpactFeedbackStyle: { Light: 'light' }, impactAsync: async style => { haptics.push(style); } },
     'expo-image': { Image },
     'expo-symbols': { SymbolView() {} },
     'react-native': { View, Pressable, Animated: animated, Easing: easing, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
@@ -121,7 +122,7 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64
   const tree = module.RecentChatPhotosButton(props);
   tree.props.ref.current = { measure: callback => callback(0, 0, 40, 40, 30, 400) };
   const event = (x, y) => ({ nativeEvent: { pageX: x, pageY: y } });
-  return { tree, event, updates, selected, alerts, captures, module, Image, Pressable, Mask, View, taps: () => taps };
+  return { tree, event, updates, selected, alerts, captures, haptics, module, Image, Pressable, Mask, View, taps: () => taps };
 }
 
 const waitForLongPress = () => new Promise(resolve => setTimeout(resolve, 500));
@@ -136,6 +137,7 @@ test('a tap opens the menu without reading the photo library', () => {
   assert.equal(f.taps(), 1);
   assert.equal(reads, 0);
   assert.equal(f.captures.length, 0);
+  assert.deepEqual(f.haptics, []);
   assert.deepEqual(f.selected, []);
 });
 
@@ -145,6 +147,7 @@ test('holding, sliding to a recent photo and releasing attaches exactly that pho
   await waitForLongPress();
   const strip = f.updates.at(-1);
   assert.equal(strip.photos.length, 4);
+  assert.deepEqual(f.haptics, ['light']);
   assert.equal(f.captures.length, 1);
   assert.equal(f.captures[0].options.result, 'data-uri');
   const x = strip.left + 8 + 2 * (strip.size + strip.gap) + strip.size / 2;
@@ -155,6 +158,7 @@ test('holding, sliding to a recent photo and releasing attaches exactly that pho
   assert.deepEqual(f.selected, [readyPhotos.photos[2]]);
   assert.equal(f.updates.at(-1), null);
   assert.equal(f.taps(), 0);
+  assert.deepEqual(f.haptics, ['light']);
 });
 
 test('recent thumbnails use the Expo photo loader with the full encoded asset identifier', () => {
@@ -252,5 +256,6 @@ test('a permission prompt that interrupts the hold asks the user to hold again',
   resolvePermission({ ...readyPhotos, requested: true });
   await new Promise(setImmediate);
   assert.match(f.alerts[0][1], /yana bosib turing/);
+  assert.deepEqual(f.haptics, []);
   assert.deepEqual(f.selected, []);
 });

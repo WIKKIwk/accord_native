@@ -1,5 +1,6 @@
 import { Host, Mask, Rectangle, RNHostView, VStack } from '@expo/ui/swift-ui';
 import { foregroundStyle, frame } from '@expo/ui/swift-ui/modifiers';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState, type ComponentRef, type RefObject } from 'react';
@@ -93,6 +94,7 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
     current.strip = strip;
     if (current.released) touch.current = null;
     callbacks.current.onStripChange(strip);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
 
   const begin = (event: GestureResponderEvent) => {
@@ -166,7 +168,7 @@ export function RecentChatPhotoStrip({ strip, onClose, reduceMotion = false, bac
   useEffect(() => {
     if (reduceMotion) { photoMotion.forEach(value => value.setValue(1)); backdropOpacity.setValue(1); return; }
     const entrance = Animated.parallel(photoMotion.map((value, index) => Animated.timing(value, {
-      toValue: 1, duration: 340, delay: index * 45, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+      toValue: 1, duration: 220, delay: index * 30, easing: Easing.out(Easing.cubic), useNativeDriver: true,
     })));
     entrance.start();
     return () => { entrance.stop(); backdropOpacity.stopAnimation(); };
@@ -175,7 +177,7 @@ export function RecentChatPhotoStrip({ strip, onClose, reduceMotion = false, bac
     if (backdropStarted.current) return;
     backdropStarted.current = true;
     if (reduceMotion) { backdropOpacity.setValue(1); return; }
-    Animated.timing(backdropOpacity, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    Animated.timing(backdropOpacity, { toValue: 1, duration: 210, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
   };
   const fadeStart = Math.max(0, strip.top - 120);
   const fadeHeight = strip.top - fadeStart;

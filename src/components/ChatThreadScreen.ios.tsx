@@ -96,7 +96,7 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
     frame({ maxWidth: Infinity, maxHeight: Infinity }), ...scrollAnchor, scrollPosition(position, { anchor: 'bottom' }),
     scrollDismissesKeyboard('interactively'), scrollClipDisabled(), scrollEdgeEffectStyle('soft', 'top'),
     onTapGesture(onDismissKeyboard), onGeometryChange(measureScroll), blur(blurFallback ? 8 : 0),
-    ...(reduceMotion ? [] : [animation(Animation.easeOut({ duration: 0.3 }), blurFallback)]),
+    ...(reduceMotion ? [] : [animation(Animation.easeOut({ duration: 0.21 }), blurFallback)]),
   ]}>
     <VStack alignment="leading" spacing={12} modifiers={[
       scrollTargetLayout(), frame({ maxWidth: Infinity }),
