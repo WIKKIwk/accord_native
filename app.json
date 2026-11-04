@@ -44,8 +44,16 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Profil rasmi va bo‘yoq hisoboti uchun rasm tanlashga ruxsat bering.",
+          "photosPermission": "Chatda so‘nggi rasmlarni ko‘rsatish va profil uchun rasm tanlashga ruxsat bering.",
           "microphonePermission": "Chatda video yozish uchun mikrofondan foydalanishga ruxsat bering."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Chatda so‘nggi rasmlarni ko‘rsatish va profil uchun rasm tanlashga ruxsat bering.",
+          "savePhotosPermission": false,
+          "granularPermissions": ["photo"]
         }
       ],
       [

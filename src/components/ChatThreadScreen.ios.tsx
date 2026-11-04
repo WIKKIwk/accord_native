@@ -3,7 +3,7 @@ import { accessibilityLabel, animation, Animation, background, buttonStyle, cont
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef, type RefObject } from 'react';
 import { Alert, Platform, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,9 +13,11 @@ import { draftAfterSending } from '../chatComposer';
 import { discardChatMedia, prepareChatDocument, prepareChatMedia, type ChatMediaDraft } from '../chatMedia';
 import { chatTimeline, outgoingMessageKey, type ChatAttachment, type ChatMessage, type ChatPeer } from '../chatModel';
 import type { PendingChatText } from '../chatOutbox';
+import { prepareRecentChatPhoto, type RecentChatPhoto } from '../chatRecentPhotos';
 import { useChatThread } from '../useChatThread';
 import { CHAT_HEADER_CONTENT_HEIGHT, ChatThreadHeader } from './ChatThreadHeader.ios';
 import { ChatMediaThumbnail, openChatMedia, SelectedChatMediaPreview } from './ChatMediaPreview.ios';
+import { RecentChatPhotoStrip, RecentChatPhotosButton, type RecentPhotoStrip } from './RecentChatPhotos.ios';
 
 type Props = { session: Session; conversationId: string; title: string; peer: ChatPeer | null };
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
@@ -117,9 +119,10 @@ function ConversationBody({ session, messages, pending, hasMore, loadingMore, er
   </ScrollView>;
 }
 
-function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, clearMediaError, onSend, onSendMedia, inputRef }: {
+function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, clearMediaError, onSend, onSendMedia, inputRef, rootRef, onStripChange }: {
   ready: boolean; queueing: boolean; mediaSending: boolean; mediaProgress: string; mediaError: string; clearMediaError: () => void;
   onSend: (body: string) => Promise<boolean>; onSendMedia: (media: ChatMediaDraft, caption: string) => Promise<boolean>; inputRef: RefObject<TextFieldRef | null>;
+  rootRef: RefObject<ComponentRef<typeof View> | null>; onStripChange: (strip: RecentPhotoStrip | null) => void;
 }) {
   const dark = useColorScheme() === 'dark';
   const [draft, setDraft] = useState('');
@@ -160,6 +163,12 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
       });
     }
   };
+  const acceptMedia = (next: ChatMediaDraft) => {
+    if (!mounted.current) { discardChatMedia(next); return; }
+    if (selected.current) discardChatMedia(selected.current);
+    selected.current = next;
+    setMedia(next);
+  };
   const chooseMedia = async (source: 'camera' | 'library' | 'file') => {
     try {
       let next: ChatMediaDraft;
@@ -179,13 +188,18 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
         if (result.canceled || !result.assets[0]) return;
         next = await prepareChatMedia(result.assets[0]);
       }
-      if (!mounted.current) { discardChatMedia(next); return; }
-      if (selected.current) discardChatMedia(selected.current);
-      selected.current = next;
-      setMedia(next);
+      acceptMedia(next);
     } catch (reason) {
       if (mounted.current) Alert.alert('Media tanlanmadi', reason instanceof Error ? reason.message : 'Qayta urinib ko‘ring.');
     } finally { if (mounted.current) setSelecting(false); }
+  };
+  const selectRecentPhoto = async (photo: RecentChatPhoto) => {
+    if (!ready || selecting || mediaSending) return;
+    setSelecting(true);
+    clearMediaError();
+    try { acceptMedia(await prepareRecentChatPhoto(photo)); }
+    catch (reason) { if (mounted.current) Alert.alert('Rasm tanlanmadi', reason instanceof Error ? reason.message : 'Qayta urinib ko‘ring.'); }
+    finally { if (mounted.current) setSelecting(false); }
   };
   const selectSource = (source: 'camera' | 'library' | 'file') => {
     if (!ready || selecting || mediaSending || menuDismissTimer.current !== null) return;
@@ -219,9 +233,8 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
   <HStack alignment="bottom" spacing={4} modifiers={[frame({ minHeight: 40, maxWidth: Infinity })]}>
     <Popover isPresented={mediaMenuOpen} onIsPresentedChange={setMediaMenuOpen} attachmentAnchor="top" arrowEdge="bottom">
       <Popover.Trigger>
-        <Button onPress={() => setMediaMenuOpen(true)} modifiers={[buttonStyle('plain'), accessibilityLabel('Rasm yoki video tanlash'), disabled(!ready || selecting || mediaSending)]}>
-          <Image systemName="plus" modifiers={[font({ size: 20, weight: 'medium' }), foregroundStyle(dark ? '#ffffff' : '#1c1c1e'), frame({ width: 40, height: 40 })]} />
-        </Button>
+        <RNHostView matchContents><RecentChatPhotosButton enabled={ready && !selecting && !mediaSending} rootRef={rootRef}
+          onTap={() => setMediaMenuOpen(true)} onSelect={photo => { void selectRecentPhoto(photo); }} onStripChange={onStripChange} /></RNHostView>
       </Popover.Trigger>
       <Popover.Content>
         <VStack alignment="leading" spacing={0} modifiers={[padding({ all: 8 })]}>
@@ -257,11 +270,13 @@ export function ChatThreadScreen({ session, conversationId, title, peer }: Props
   const thread = useChatThread(session, conversationId);
   const reduceMotion = useReducedMotion();
   const inputRef = useRef<TextFieldRef>(null);
+  const rootRef = useRef<ComponentRef<typeof View>>(null);
+  const [recentStrip, setRecentStrip] = useState<RecentPhotoStrip | null>(null);
   const insets = useSafeAreaInsets();
   return <>
     <Stack.Screen options={{ title: title || 'Suhbat', headerTitle: '', headerBackButtonDisplayMode: 'minimal',
       headerTransparent: true, headerShadowVisible: false, scrollEdgeEffects: { top: 'soft' } }} />
-    <View style={styles.root}>
+    <View ref={rootRef} style={styles.root}>
     <Host style={styles.root}>
       <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         <ConversationBody session={session} messages={thread.messages} pending={thread.pending} hasMore={thread.hasMore}
@@ -270,10 +285,11 @@ export function ChatThreadScreen({ session, conversationId, title, peer }: Props
           onRefresh={thread.refresh} onLoadOlder={thread.loadOlder} onRetry={thread.retry} onDismissKeyboard={() => { void inputRef.current?.blur(); }} />
         <Composer ready={thread.storageReady} queueing={thread.queueing} onSend={thread.send} inputRef={inputRef}
           mediaSending={thread.mediaSending} mediaProgress={thread.mediaProgress} mediaError={thread.mediaError}
-          clearMediaError={thread.clearMediaError} onSendMedia={thread.sendMedia} />
+          clearMediaError={thread.clearMediaError} onSendMedia={thread.sendMedia} rootRef={rootRef} onStripChange={setRecentStrip} />
       </VStack>
     </Host>
     <ChatThreadHeader session={session} peer={peer} title={title} topInset={insets.top} />
+    {recentStrip ? <RecentChatPhotoStrip strip={recentStrip} /> : null}
     </View>
   </>;
 }

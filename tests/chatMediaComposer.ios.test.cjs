@@ -50,6 +50,7 @@ function fixture(pickerResult, cameraAllowed = true) {
   }, { get: (target, name) => target[name] ?? (() => ({})) });
   const selected = { uri: 'file:///selected', kind: 'image', filename: 'photo.jpg' };
   const pickerCalls = [], sent = [], discarded = [], prepared = [], alerts = [];
+  function RecentChatPhotosButton() {}
   const thread = {
     storageReady: true, queueing: false, mediaSending: false, mediaProgress: '', mediaError: '',
     clearMediaError() {}, send: async () => true,
@@ -73,10 +74,12 @@ function fixture(pickerResult, cameraAllowed = true) {
     '../chatComposer': { draftAfterSending: (sentValue, current) => sentValue === current ? '' : current },
     '../chatMedia': { prepareChatMedia: async asset => { prepared.push(asset); return selected; },
       prepareChatDocument: async asset => { prepared.push(asset); return selected; }, discardChatMedia: draft => discarded.push(draft) },
+    '../chatRecentPhotos': { prepareRecentChatPhoto: async asset => { prepared.push(asset); return selected; } },
     '../chatModel': {},
     '../useChatThread': { useChatThread: () => thread },
     './ChatThreadHeader.ios': { CHAT_HEADER_CONTENT_HEIGHT: 0, ChatThreadHeader() {} },
     './ChatMediaPreview.ios': { SelectedChatMediaPreview() {}, ChatMediaThumbnail() {}, openChatMedia() {} },
+    './RecentChatPhotos.ios': { RecentChatPhotosButton, RecentChatPhotoStrip() {} },
   };
   const filename = path.resolve(__dirname, '../src/components/ChatThreadScreen.ios.tsx');
   const loaded = new Module(filename, module);
@@ -101,13 +104,18 @@ function fixture(pickerResult, cameraAllowed = true) {
     assert.ok(result, 'media menu was not found');
     return result;
   };
+  const tapPlus = tree => {
+    const result = find(tree, node => node.type === RecentChatPhotosButton);
+    assert.ok(result, 'media button was not found');
+    result.props.onTap();
+  };
   const choose = label => {
-    button(render(), 'Rasm yoki video tanlash').props.onPress();
+    tapPlus(render());
     const tree = render();
     assert.equal(menu(tree).props.isPresented, true);
     button(menu(tree), label).props.onPress();
   };
-  return { render, button, menu, choose, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer };
+  return { render, button, menu, choose, tapPlus, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer, RecentChatPhotosButton };
 }
 
 test('the plus offers sources and library selection waits for the user to press send', async () => {
@@ -116,7 +124,7 @@ test('the plus offers sources and library selection waits for the user to press 
   const field = find(tree, node => node.type === app.ui.TextField);
   field.props.text.value = 'Izoh';
   field.props.onTextChange('Izoh');
-  app.button(app.render(), 'Rasm yoki video tanlash').props.onPress();
+  app.tapPlus(app.render());
   tree = app.render();
   const menu = app.menu(tree);
   assert.equal(menu.props.isPresented, true);
@@ -218,7 +226,7 @@ test('dismissing the menu leaves the composer and its draft in place', () => {
   const field = find(app.render(), node => node.type === app.ui.TextField);
   field.props.text.value = 'Saqlangan matn';
   field.props.onTextChange('Saqlangan matn');
-  app.button(app.render(), 'Rasm yoki video tanlash').props.onPress();
+  app.tapPlus(app.render());
   let tree = app.render();
   assert.equal(app.menu(tree).props.isPresented, true);
   assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, 'Saqlangan matn');
@@ -227,4 +235,16 @@ test('dismissing the menu leaves the composer and its draft in place', () => {
   assert.equal(app.menu(tree).props.isPresented, false);
   assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, 'Saqlangan matn');
   assert.equal(app.pickerCalls.length, 0);
+});
+
+test('a recent photo is attached as a draft without sending a message', async () => {
+  const app = fixture({ canceled: true, assets: null });
+  const photo = { id: 'ph://newest', filename: 'recent.jpg', width: 100, height: 100 };
+  const trigger = find(app.render(), node => node.type === app.RecentChatPhotosButton);
+  trigger.props.onSelect(photo);
+  await new Promise(setImmediate);
+  const tree = app.render();
+  assert.deepEqual(app.prepared, [photo]);
+  assert.equal(app.sent.length, 0);
+  assert.ok(find(tree, node => node.type?.name === 'SelectedChatMediaPreview'));
 });
