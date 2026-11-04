@@ -15,5 +15,11 @@ function AppNavigation() {
   useEffect(() => {
     if (Platform.OS === 'android') void SystemUI.setBackgroundColorAsync(colors.background);
   }, [colors.background]);
-  return <><StatusBar style="auto" /><Stack screenOptions={{ headerShown: false, contentStyle: Platform.OS === 'android' ? { backgroundColor: colors.background } : undefined }} /></>;
+  return <><StatusBar style="auto" /><Stack screenOptions={{ headerShown: false, contentStyle: Platform.OS === 'android' ? { backgroundColor: colors.background } : undefined }}>
+    <Stack.Screen name="sheet/[id]" options={{
+      presentation: 'transparentModal',
+      animation: 'none',
+      contentStyle: { backgroundColor: 'transparent' },
+    }} />
+  </Stack></>;
 }

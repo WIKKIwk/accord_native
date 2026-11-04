@@ -12,7 +12,7 @@ type Security = {
   setBiometric: (enabled: boolean) => Promise<void>;
 };
 
-const SecurityContext = createContext<Security | null>(null);
+export const SecurityContext = createContext<Security | null>(null);
 
 export function useWorkerSecurity(): Security {
   const value = useContext(SecurityContext);

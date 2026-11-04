@@ -1,12 +1,18 @@
-import { Button, Host, TextInput as NativeInput, useNativeState } from '@expo/ui';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Host, TextInput as NativeInput, useNativeState } from '@expo/ui';
 import { Image } from 'expo-image';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
+import { useNativeSheet } from './nativeSheet';
 import { authorizedFetch } from './authorizedFetch';
-import { WorkerOrderThumbnail } from './components/WorkerOrderThumbnail';
+import { WorkerOrderHeader, WorkerOrderImage } from './components/WorkerOrderHeader';
+import { WorkerOrderOverview } from './components/WorkerOrderOverview';
+import { WorkerPaintPalette } from './components/WorkerPaintPalette';
+import { WorkerOutputProgress } from './components/WorkerOutputProgress';
+import { WorkerSheetButton as NativeButton } from './components/WorkerSheetButton';
+import { connectedPrinter } from './workerPrinter';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerSheetCloseContext } from './components/workerSheetContext';
 import { WorkerFormDialog } from './components/WorkerFormDialog';
@@ -17,7 +23,7 @@ import { WorkerFormField as Field } from './components/WorkerFormField';
 import { WorkerExpansion as Expansion } from './components/WorkerExpansion';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
 import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, returnedPaintItemsFromDraft, runningFreezeRequest, validOrderControl, type QueueCursor } from './workerOrderLogic';
-import type { QueueOrder } from './workerApi';
+import { workerOrderDetailFromSnapshot, type QueueOrder } from './workerApi';
 
 type Obj = Record<string, any>;
 type Props = { session: Session; apparatusId: string; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka'; onClose: () => void; onChanged: () => void };
@@ -49,32 +55,6 @@ async function request(session: Session, path: string, init?: RequestInit): Prom
   return data;
 }
 
-async function connectedPrinter(address: string): Promise<Obj> {
-  let url: URL;
-  try { url = new URL(address.trim()); } catch { throw new Error('Printer serverining to‘liq manzilini kiriting.'); }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error('Printer serverining to‘g‘ri HTTP manzilini kiriting.');
-  const driverUrl = url.toString().replace(/\/+$/, '');
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000);
-  try {
-    const response = await fetch(`${driverUrl}/v1/mobile/monitor/state`, { signal: controller.signal });
-    if (!response.ok) throw new Error('Printer serveriga ulanib bo‘lmadi.');
-    const state = await response.json();
-    const printer = state.printer ?? state.state?.printer;
-    const connected = (value: unknown) => value === true || value === 1 || ['true', '1', 'yes'].includes(String(value).toLowerCase());
-    if (!printer || (!connected(printer.connected) && !connected(printer.ok))) throw new Error('Printer ulanmagan.');
-    const kind = String(printer.kind || 'printer');
-    return { driver_url: driverUrl, printer: kind, print_mode: kind.trim().toLowerCase() === 'godex' ? 'label' : 'rfid' };
-  } catch (error) {
-    if (error instanceof Error && error.name !== 'AbortError' && error.message !== 'Network request failed') throw error;
-    throw new Error('Printer serveriga ulanib bo‘lmadi.');
-  } finally { clearTimeout(timer); }
-}
-
-function NativeButton({ label, onPress, disabled, variant, height }: { label: string; onPress: () => void; disabled?: boolean; variant?: 'text' | 'filled' | 'outlined'; height?: number }) {
-  return <Host matchContents={{ vertical: true }} style={styles.host}><Button label={label} onPress={onPress} disabled={disabled} variant={variant ?? 'outlined'} style={height ? { height } : undefined} /></Host>;
-}
-
 export function OrderScreen({ session, apparatusId, orderId, preview, queueCursor, initialAction, onClose, onChanged }: Props) {
   const colors = useWorkerColors();
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
@@ -93,8 +73,8 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const [inputBatch, setInputBatch] = useState<{ id: string; qr: string; stage: string } | null>(null);
   const [scanner, setScanner] = useState<ScanKind | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
-  const [imageError, setImageError] = useState(false);
   const [paintImageId, setPaintImageId] = useState('');
+  const [paintImageExpanded, setPaintImageExpanded] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const camera = useRef<CameraView>(null);
@@ -108,6 +88,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const [astatkaNote, setAstatkaNote] = useState('');
   const [paintColor, setPaintColor] = useState('');
   const [paintEditor, setPaintEditor] = useState(false);
+  const paintSheet = useNativeSheet();
   const [paintUsage, setPaintUsage] = useState<'rasxot' | 'astatka'>('rasxot');
   const [paintDynamic, setPaintDynamic] = useState<Record<string, string[]>>({});
   const [newPaintField, setNewPaintField] = useState('');
@@ -624,19 +605,6 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     } catch (e) { if (screenMounted.current) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
     finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
   }
-  if (scanner === 'paintPhoto') return <View style={styles.cameraScreen}><CameraView ref={camera} style={styles.camera} mode="picture" onCameraReady={() => setCameraReady(true)} /><Text style={styles.cameraText}>Bo‘yoq hisobotini suratga oling</Text><NativeButton label={photoBusy ? 'Yuklanmoqda…' : 'Suratga olish'} disabled={photoBusy || !cameraReady} variant="filled" onPress={() => { void takePaintPhoto(); }} /><NativeButton label="Bekor qilish" disabled={photoBusy} onPress={() => setScanner(null)} /></View>;
-  if (scanner) return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang'}</Text><NativeButton label="Bekor qilish" onPress={() => setScanner(null)} /></View>;
-  if (imageOpen) {
-    const token = activeSessionToken(session);
-    const query = new URLSearchParams({ order_id: orderId });
-    const imageId = preview?.imageId || String(order.image_id ?? '');
-    if (imageId) query.set('image_id', imageId);
-    const url = new URL(`/v1/mobile/admin/production-maps/order-image/view?${query}`, session.baseUrl);
-    return <View style={[styles.imageViewer, { backgroundColor: sheetBackground }]}>
-      <View style={styles.imageHeader}><Text style={[styles.section, { color: colors.text }]}>Buyurtma rasmi</Text><WorkerIconButton icon="close" label="Rasmni yopish" onPress={() => setImageOpen(false)} tonal /></View>
-      {token && url.protocol === 'https:' && url.origin === session.baseUrl && !imageError ? <Image source={{ uri: url.toString(), headers: { Authorization: `Bearer ${token}` }, cacheKey: JSON.stringify(['order-image', session.imageCacheScope, session.baseUrl, orderId, imageId]) }} style={styles.image} contentFit="contain" cachePolicy="memory-disk" onError={() => setImageError(true)} /> : <Text style={{ color: colors.muted }}>Rasm mavjud emas.</Text>}
-    </View>;
-  }
   const code = String(preview?.code || order.order_number || order.code || orderId);
   const closingOutput = selected === 'complete' && typeof control.closing_output_batch_id === 'string' && !!control.closing_output_batch_id.trim();
   const showFullReport = selected === 'astatka' || (selected === 'complete' && (control.complete_requires_full_report !== false || closingOutput));
@@ -647,9 +615,15 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const matchedMaterialCount = Number(materialRequirements.matched_scan_count ?? materials.length);
   const showMaterials = preparationVisible || interaction.assigned_materials_display_only === true;
   const showMolds = (preparationVisible || ['fresh_start_blocked', 'requeued_waiting', 'waiting_previous_stage'].includes(interaction.mode)) && qolipRequired;
+  const showOutputProgress = !!detail && ['pause', 'complete', 'resume'].some(action => allowed.includes(action));
   function cancelProgressDialog() {
     if (busy || photoBusy) return;
-    if (paintEditor) { setPaintEditor(false); return; }
+    if (paintEditor) {
+      if (Platform.OS === 'android') paintSheet.close();
+      else if (paintColor) setPaintColor('');
+      else setPaintEditor(false);
+      return;
+    }
     const closeInitial = !!initialAction && selected === initialAction;
     setSelected('');
     if (closeInitial) closeSheet();
@@ -664,12 +638,81 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     setNewPaintField(''); newPaintFieldValue.set(''); setError('');
   }
 
-  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps="handled">
-    <View style={[styles.header, Platform.OS === 'ios' && iosStyles.header]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Buyurtma rasmini ochish" onPress={() => { setImageError(false); setImageOpen(true); }}><WorkerOrderThumbnail session={session} orderId={orderId} imageId={preview?.imageId ?? ''} active size={44} backgroundColor={colors.surface} iconColor={colors.muted} /></Pressable>
-      <View style={styles.heading}><Text style={[styles.small, { color: colors.muted }]}>Buyurtma raqami:</Text><Text numberOfLines={1} style={[styles.code, { color: colors.text }]}>{code}</Text></View>
-      <WorkerIconButton icon="close" label="Yopish" onPress={closeSheet} tonal />
+  const inlinePaint = Platform.OS !== 'android' && paintEditor;
+  const paintCamera = <View style={styles.cameraScreen}><CameraView ref={camera} style={styles.camera} mode="picture" onCameraReady={() => setCameraReady(true)} /><Text style={styles.cameraText}>Bo‘yoq hisobotini suratga oling</Text><NativeButton label={photoBusy ? 'Yuklanmoqda…' : 'Suratga olish'} disabled={photoBusy || !cameraReady} variant="filled" onPress={() => { void takePaintPhoto(); }} /><NativeButton label="Bekor qilish" disabled={photoBusy} onPress={() => setScanner(null)} /></View>;
+  const paintToken = paintEditor ? activeSessionToken(session) : null;
+  const paintPhoto = paintImageId && paintToken ? {
+    uri: new URL(`/v1/mobile/returned-paint/images/view?id=${encodeURIComponent(paintImageId)}`, session.baseUrl).toString(),
+    headers: { Authorization: `Bearer ${paintToken}` },
+    cacheKey: JSON.stringify(['returned-paint', session.imageCacheScope, paintImageId]),
+  } : null;
+  const pickPaintImage = () => Alert.alert(paintImageId ? 'Rasmni almashtirish' : 'Rasm qo‘shish', '', [
+    { text: 'Kamera', onPress: () => { void openScanner('paintPhoto'); } },
+    { text: 'Galereya', onPress: () => { void pickPaintPhoto(); } },
+    { text: 'Bekor qilish', style: 'cancel' },
+  ]);
+  const paintBody = paintEditor ? <>
+          {paintPhoto && <>
+            <Pressable disabled={inlinePaint} accessibilityRole="button" accessibilityLabel="Rasmni to‘liq ko‘rish" onPress={() => setPaintImageExpanded(true)}>
+              <Image source={paintPhoto} style={styles.paintPreview} contentFit="contain" />
+            </Pressable>
+            <View style={styles.actionRow}>
+              <View style={styles.flex}><NativeButton label="Almashtirish" disabled={photoBusy} onPress={pickPaintImage} /></View>
+              <View style={styles.flex}><NativeButton label="Olib tashlash" disabled={photoBusy} onPress={() => { void removePaintPhoto(); }} /></View>
+            </View>
+          </>}
+          {inlinePaint && !paintPhoto && <NativeButton label="Rasm qo‘shish" disabled={photoBusy} onPress={pickPaintImage} />}
+          {!paintColor && <WorkerPaintPalette usage={paintUsage} onUsage={setPaintUsage} onSelect={setPaintColor} />}
+          {!!paintColor && <View style={styles.sectionGroup}>
+            {[...(paintOptions.find(option => option.name === paintColor)?.fields ?? []), ...(paintDynamic[`${paintUsage}:${paintColor}`] ?? [])].map(label => <Field key={`${paintUsage}:${paintColor}:${label}`} label={label} initialValue={paint[`${paintUsage}:${paintColor}:${label}`] ?? ''} keyboardType="decimal-pad" onChangeText={value => setPaint(old => ({ ...old, [`${paintUsage}:${paintColor}:${label}`]: value }))} />)}
+            {paintColor === 'Pantone' && (paintDynamic[`${paintUsage}:Pantone Mix`] ?? []).map(label => <Field key={`${paintUsage}:Pantone Mix:${label}`} label={label} initialValue={paint[`${paintUsage}:Pantone Mix:${label}`] ?? ''} keyboardType="decimal-pad" onChangeText={value => setPaint(old => ({ ...old, [`${paintUsage}:Pantone Mix:${label}`]: value }))} />)}
+            {!['Lak', 'Spirtlar'].includes(paintColor) && <>
+              <Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={newPaintFieldValue} placeholder="Maydon nomi" onChangeText={setNewPaintField} /></Host>
+              <NativeButton label={paintColor === 'Mix' ? 'Mix+' : 'Pantone+'} onPress={() => addPaintField(paintColor)} />
+              {paintColor === 'Pantone' && <NativeButton label="Mix+" onPress={() => addPaintField('Pantone Mix')} />}
+            </>}
+          </View>}
+        </> : null;
+  const paintContent = paintEditor && !inlinePaint ? (
+    scanner === 'paintPhoto' ? paintCamera : <View style={styles.screen}>
+      <View style={styles.paintHeader}>
+        <WorkerIconButton icon="back" label="Orqaga" onPress={() => {
+          if (photoBusy) return;
+          if (paintImageExpanded) setPaintImageExpanded(false);
+          else if (paintColor) setPaintColor('');
+          else paintSheet.close();
+        }} />
+        <Text style={[styles.expansionTitle, { color: colors.text }]}>Qaytarilgan bo‘yoq</Text>
+        <WorkerIconButton icon="photo" label={paintPhoto ? 'Rasmni almashtirish' : 'Rasm qo‘shish'}
+          onPress={() => { if (!photoBusy) pickPaintImage(); }} />
+      </View>
+      {paintImageExpanded && paintPhoto ? <Image source={paintPhoto} style={styles.flex} contentFit="contain" /> :
+      <ScrollView nestedScrollEnabled contentContainerStyle={styles.paintContent} keyboardShouldPersistTaps="handled">
+        {!!error && <Text style={styles.error}>{error}</Text>}
+        {paintBody}
+      </ScrollView>}
     </View>
+  ) : null;
+  useLayoutEffect(() => {
+    if (!paintContent) return;
+    if (paintSheet.isOpen()) paintSheet.update(paintContent);
+    else paintSheet.open(paintContent, { dismissible: true, onDismiss: () => {
+      setPaintEditor(false);
+      setPaintColor('');
+      setPaintImageExpanded(false);
+      setScanner(null);
+      setError('');
+    } });
+  });
+
+  if (inlinePaint && scanner === 'paintPhoto') return paintCamera;
+  if (scanner && scanner !== 'paintPhoto') return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang'}</Text><NativeButton label="Bekor qilish" onPress={() => setScanner(null)} /></View>;
+  const imageId = String(order.image_id || preview?.imageId || '');
+  if (imageOpen) return <WorkerOrderImage session={session} orderId={orderId} imageId={imageId} onClose={() => setImageOpen(false)} />;
+
+  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps="handled">
+    <WorkerOrderHeader session={session} orderId={orderId} imageId={imageId} code={code}
+      onOpenImage={() => setImageOpen(true)} onClose={closeSheet} />
     {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }]}>
       {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
         <NativeButton label="Kameraga ruxsat berish" onPress={() => { void askPermission(); }} />}
@@ -684,6 +727,10 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     </View>}
     <View style={[styles.card, { backgroundColor: sheetCard }]}>
     {loading && <ActivityIndicator color={colors.icon} />}
+    {synchronized && control.temporarily_paused === true && <Text style={[styles.detailText, { color: colors.muted }]}>Vaqtincha yechilgan</Text>}
+    {bootstrap?.control_state?.order_control === 'frozen' && <Text style={styles.error}>
+      Buyurtma muzlatilgan. Ishni davom ettirish uchun, iltimos, adminga xabar bering va buyurtmani muzdan ochishini so‘rang.
+    </Text>}
     {!!error && !selected && !delivery && <Text style={styles.error}>{error}</Text>}
     {!!success && <Text style={styles.success}>{success}</Text>}
     {!!bootstrap && <>
@@ -714,46 +761,36 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
         {interaction.material_intake_allowed === true && intakeCandidates.length > 0 && <NativeButton label={intakeMode ? 'Scannerni yopish' : 'Homashyo ulash'} height={52} disabled={!synchronized || deliveryBusy} onPress={() => setIntakeMode(value => !value)} />}
         {showPreflightFreeze && <NativeButton label="Rang chiqarishni to‘xtatib muzlatish" height={58} variant="filled" onPress={() => { void freezePreflight(); }} />}
         {showPreflightOutcome && <View style={[styles.actionRow, Platform.OS === 'ios' && iosStyles.outcomeActions]}>
-          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label="Rang chiqdi" onPress={() => { void runPreflight('passed'); }} /> : <NativeButton label="Rang chiqdi" height={58} variant="filled" onPress={() => { void runPreflight('passed'); }} />}</View>
-          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label="Chiqmadi" outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label="Chiqmadi" height={58} onPress={() => { void runPreflight('failed'); }} />}</View>
+          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label="Rang chiqdi" onPress={() => { void runPreflight('passed'); }} /> : <NativeButton label="Rang chiqdi" height={58} variant="filled" icon={{ android: 'check_circle', ios: 'checkmark.circle' }} onPress={() => { void runPreflight('passed'); }} />}</View>
+          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label="Chiqmadi" outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label="Chiqmadi" height={58} icon={{ android: 'cancel', ios: 'xmark.circle' }} onPress={() => { void runPreflight('failed'); }} />}</View>
         </View>}
         {showPreflightHold && <WorkerPreflightButton onPress={() => { void runPreflight('hold'); }} />}
-        {!showPreflightHold && !showPreflightOutcome && allowed.includes('start') && <NativeButton label="Boshlash" height={58} variant="filled" disabled={!startReady || busy} onPress={() => { void submit('start'); }} />}
+        {!showPreflightHold && !showPreflightOutcome && allowed.includes('start') && <NativeButton label="Boshlash" height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || busy} onPress={() => { void submit('start'); }} />}
+        {showOutputProgress && <WorkerOutputProgress session={session} orderId={orderId} apparatusId={apparatusId}
+          stageId={String(control.stage_node_id ?? '')} map={order} />}
         {(allowed.includes('pause') || allowed.includes('complete')) && <View style={styles.actionRow}>
           {allowed.includes('pause') && <View style={styles.flex}><NativeButton label={safeStopRequest ? 'Rulonni yechib muzlatish' : 'Rulonni yechish'} height={58} disabled={busy} onPress={() => { setError(''); setSelected('pause'); }} /></View>}
           {allowed.includes('complete') && <View style={styles.flex}><NativeButton label="Tugatish" height={58} variant="filled" disabled={busy} onPress={() => { setError(''); setSelected('complete'); }} /></View>}
         </View>}
-        {allowed.includes('resume') && <NativeButton label="Davom ettirish" height={52} variant="filled" disabled={!resumeReady || busy} onPress={() => { void submit('resume'); }} />}
+        {allowed.includes('resume') && <NativeButton label="Davom ettirish" height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || busy} onPress={() => { void submit('resume'); }} />}
         {synchronized && !showPreflightHold && !showPreflightOutcome && !showPreflightFreeze && !allowed.length && <Text style={[styles.muted, { color: colors.muted }]}>{interaction.mode === 'waiting_previous_stage' ? 'Oldingi bosqich tugallanguncha kutilmoqda' : interaction.mode === 'requeued_waiting' ? 'Buyurtma apparat navbatidagi o‘z vaqtini kutmoqda' : 'Hozir bajarish mumkin bo‘lgan amal yo‘q.'}</Text>}
         {!synchronized && <Text style={[styles.muted, { color: colors.muted }]}>Buyurtma holati tekshirilmoqda…</Text>}
       </View>
     </>}
     {!loading && !bootstrap && <NativeButton label="Qayta urinish" onPress={() => { setError(''); void load(); }} disabled={busy} />}
     </View>
+    <WorkerOrderOverview session={session} orderId={orderId} code={code} imageId={imageId}
+      title={String(order.title || preview?.title || '')}
+      detail={detail ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </ScrollView>
-    <WorkerFormDialog visible={!!selected} title={paintEditor ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori'}
-      cancelLabel={paintEditor ? 'Orqaga' : 'Bekor qilish'} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
-      preventDismiss={paintEditor}
-      confirmLabel={paintEditor ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash'}
-      confirmDisabled={busy || photoBusy || (!paintEditor && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && loadedDraftScope !== draftScope)))}
-      onConfirm={() => { if (paintEditor) { setError(''); setPaintEditor(false); } else void submit(selected); }}>
+    <WorkerFormDialog visible={!!selected} title={inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori'}
+      cancelLabel={inlinePaint ? 'Orqaga' : 'Bekor qilish'} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
+      preventDismiss={inlinePaint}
+      confirmLabel={inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash'}
+      confirmDisabled={busy || photoBusy || (!inlinePaint && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && loadedDraftScope !== draftScope)))}
+      onConfirm={() => { if (inlinePaint) { setError(''); setPaintEditor(false); } else void submit(selected); }}>
         {!!error && <Text style={styles.error}>{error}</Text>}
-        {paintEditor ? <>
-          <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Rasxot" variant={paintUsage === 'rasxot' ? 'filled' : 'outlined'} onPress={() => setPaintUsage('rasxot')} /></View><View style={styles.flex}><NativeButton label="Astatka" variant={paintUsage === 'astatka' ? 'filled' : 'outlined'} onPress={() => setPaintUsage('astatka')} /></View></View>
-          <View style={styles.actionRow}><View style={styles.flex}><NativeButton label="Kamera" disabled={photoBusy} onPress={() => { void openScanner('paintPhoto'); }} /></View><View style={styles.flex}><NativeButton label="Gallery" disabled={photoBusy} onPress={() => { void pickPaintPhoto(); }} /></View></View>
-          {!!paintImageId && <NativeButton label="Rasmni olib tashlash" disabled={photoBusy} variant="text" onPress={() => { void removePaintPhoto(); }} />}
-          <Text style={[styles.muted, { color: colors.muted }]}>Bo‘yoq rasmini yuklang yoki har bir bo‘limga kamida uchta qiymat kiriting.</Text>
-          {paintOptions.map(option => <NativeButton key={option.name} label={option.name} variant={paintColor === option.name ? 'filled' : 'outlined'} onPress={() => setPaintColor(option.name)} />)}
-          {!!paintColor && <View style={styles.sectionGroup}>
-            {[...(paintOptions.find(option => option.name === paintColor)?.fields ?? []), ...(paintDynamic[`${paintUsage}:${paintColor}`] ?? [])].map(label => <Field key={`${paintUsage}:${paintColor}:${label}`} label={label} initialValue={paint[`${paintUsage}:${paintColor}:${label}`] ?? ''} keyboardType="decimal-pad" onChangeText={value => setPaint(old => ({ ...old, [`${paintUsage}:${paintColor}:${label}`]: value }))} />)}
-            {paintColor === 'Pantone' && (paintDynamic[`${paintUsage}:Pantone Mix`] ?? []).map(label => <Field key={`${paintUsage}:Pantone Mix:${label}`} label={label} initialValue={paint[`${paintUsage}:Pantone Mix:${label}`] ?? ''} keyboardType="decimal-pad" onChangeText={value => setPaint(old => ({ ...old, [`${paintUsage}:Pantone Mix:${label}`]: value }))} />)}
-            {!['Lak', 'Spirtlar'].includes(paintColor) && <>
-              <Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={newPaintFieldValue} placeholder="Maydon nomi" onChangeText={setNewPaintField} /></Host>
-              <NativeButton label={paintColor === 'Mix' ? 'Mix+' : 'Pantone+'} onPress={() => addPaintField(paintColor)} />
-              {paintColor === 'Pantone' && <NativeButton label="Mix+" onPress={() => addPaintField('Pantone Mix')} />}
-            </>}
-          </View>}
-        </> : <>
+        {inlinePaint ? paintBody : <>
         <Text style={[styles.muted, { color: colors.muted }]}>{selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting'}</Text>
         {selected === 'pause' && safeStopRequest && <Field label="Natija bo‘lmasa, sababini kiriting" initialValue={freezeNote} onChangeText={setFreezeNote} />}
         {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Standart miqdor</Text><Field label="Babina, kg" initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Tayyor mahsulot</Text><Field label="Metraj, m" initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label="Og‘irlik, kg" initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
@@ -768,5 +805,5 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       onChoose={setDeliveryChoice} onCancel={() => setDelivery(null)} onConfirm={() => { void confirmMaterialDelivery(); }} />
   </View>;
 }
-const iosStyles = StyleSheet.create({ content: { paddingHorizontal: 16, paddingTop: 8 }, header: { paddingHorizontal: 0 }, outcomeActions: { gap: 24 } });
-const styles = StyleSheet.create({ screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},header:{flexDirection:'row',alignItems:'center',paddingHorizontal:14,paddingVertical:8,gap:10},heading:{flex:1},code:{fontSize:22,fontWeight:'600'},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},section:{fontSize:20,fontWeight:'600',color:'#192b4d',marginBottom:4},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},field:{gap:3},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},imageViewer:{flex:1,padding:16},imageHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},image:{flex:1,width:'100%'},scannerPanel:{borderRadius:18,padding:12,alignItems:'center',gap:10},quickCamera:{width:218,height:218,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},flex:{flex:1}});
+const iosStyles = StyleSheet.create({ content: { paddingHorizontal: 16, paddingTop: 8 }, outcomeActions: { gap: 24 } });
+const styles = StyleSheet.create({ screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},scannerPanel:{borderRadius:18,padding:12,alignItems:'center',gap:10},quickCamera:{width:218,height:218,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},paintHeader:{flexDirection:'row',alignItems:'center',padding:8,gap:6},paintPreview:{height:170,borderRadius:12},paintContent:{padding:14,gap:12,paddingBottom:24},flex:{flex:1}});

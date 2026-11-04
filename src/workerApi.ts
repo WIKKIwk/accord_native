@@ -2,6 +2,7 @@ import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { DEFAULT_QUEUE_LIMIT, type QueueLimit } from './workerQueueLimit';
 import { completedOrderTone, workerOrderTone, type OrderCardTone } from './workerOrderAppearance';
+import type { QueueCursor } from './workerOrderLogic';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -11,9 +12,94 @@ export type Apparatus = { id: string; name: string; operation: string };
 export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
 export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown>; assignedIds: string[]; assignedLabels: string[] };
+export type WorkerOrderDetail = {
+  map: RecordValue;
+  customer: string;
+  stages: { id: string; apparatusId: string; title: string; state: string }[];
+};
+
+function orderDisplayPath(map: RecordValue) {
+  const nodes = Array.isArray(map.nodes) ? map.nodes.map(object) : [];
+  const start = nodes.find(node => node.kind === 'start' && string(node.id));
+  if (!start) return nodes;
+  const byId = new Map(nodes.map(node => [string(node.id), node]));
+  const successors = new Map<string, RecordValue[]>();
+  for (const value of Array.isArray(map.edges) ? map.edges : []) {
+    const edge = object(value);
+    const from = string(edge.from);
+    const to = byId.get(string(edge.to));
+    if (!byId.has(from) || !to) continue;
+    const next = successors.get(from) ?? [];
+    next.push(to);
+    successors.set(from, next);
+  }
+  const assigned = new Map<string, Set<string>>();
+  for (const node of nodes) {
+    const group = string(node.alternative_group_id);
+    const apparatus = string(node.alternative_assigned_apparatus_id);
+    if (node.kind !== 'apparatus' || !group || !apparatus) continue;
+    const groupAssignments = assigned.get(group) ?? new Set<string>();
+    groupAssignments.add(apparatus);
+    assigned.set(group, groupAssignments);
+  }
+  const path: RecordValue[] = [];
+  const seen = new Set<RecordValue>();
+  let current: RecordValue | undefined = start;
+  while (current && !seen.has(current)) {
+    path.push(current);
+    seen.add(current);
+    const candidates: RecordValue[] = successors.get(string(current.id)) ?? [];
+    current = candidates.find(node => node.kind === 'apparatus' &&
+      assigned.get(string(node.alternative_group_id))?.has(string(node.apparatus_id))) ?? candidates[0];
+  }
+  return path;
+}
+
+export function workerOrderDetailFromSnapshot(snapshot: RecordValue, orderId: string): WorkerOrderDetail {
+  const map = object(object(Array.isArray(snapshot.maps) ? snapshot.maps[0] : null).map);
+  const states = object(object(snapshot.stage_states)[orderId]);
+  const queueStates = object(snapshot.queue_states);
+  const stages = orderDisplayPath(map).flatMap(node => {
+    const id = string(node.id);
+    if (!id) return [];
+    const apparatusId = node.kind === 'apparatus' ? string(node.alternative_assigned_apparatus_id) || string(node.apparatus_id) : '';
+    return [{
+      id, apparatusId,
+      title: string(node.alternative_assigned_title) || string(node.title),
+      state: string(states[id]) || string(object(queueStates[apparatusId])[orderId]),
+    }];
+  });
+  return { map, customer: string(object(snapshot.order_customers)[orderId]) || string(map.customer_name), stages };
+}
+
+export async function readWorkerOrderDetail(session: Session, apparatusId: string, orderId: string,
+  cursor: QueueCursor | null, signal: AbortSignal): Promise<WorkerOrderDetail> {
+  const query = new URLSearchParams({ worker_scope: 'true', detail: 'true', apparatus: apparatusId, order_id: orderId });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/sequence?${query}`, { signal });
+    if (!response.ok) throw new Error(`Buyurtmani yuklab bo‘lmadi (${response.status}).`);
+    const snapshot = object(await response.json());
+    const maps = snapshot.maps;
+    const map = object(object(Array.isArray(maps) ? maps[0] : null).map);
+    const valid = Array.isArray(maps) && maps.length === 1 && map.id === orderId &&
+      (!snapshot.projection || snapshot.projection === 'worker_detail_v1') &&
+      !!string(snapshot.scope) && !!string(snapshot.epoch) &&
+      typeof snapshot.rev === 'number' && Number.isInteger(snapshot.rev) && snapshot.rev >= 0 &&
+      (!cursor?.epoch || snapshot.epoch === cursor.epoch) &&
+      (typeof cursor?.rev !== 'number' || snapshot.rev >= cursor.rev);
+    if (!valid) continue;
+    return workerOrderDetailFromSnapshot(snapshot, orderId);
+  }
+  throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+}
 
 export function canWorkOnApparatus(machine: Apparatus | undefined, assignedIds: readonly string[]): boolean {
   return !!machine && machine.operation === 'print' && assignedIds.includes(machine.id);
+}
+
+export function workerOrderIsFrozen(snapshot: RecordValue | undefined, orderId: string): boolean {
+  const orderControl = object(object(snapshot?.order_controls)[orderId]);
+  return string(orderControl.state).toLowerCase() === 'frozen';
 }
 
 async function getJson(session: Session, path: string, resource: 'apparatus' | 'queue' | 'profile'): Promise<unknown> {

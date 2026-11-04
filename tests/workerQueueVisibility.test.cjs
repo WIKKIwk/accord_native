@@ -16,7 +16,7 @@ function load(name, mocks = {}) {
 }
 
 const appearance = load('workerOrderAppearance');
-const { workerMachinesFromSnapshot, queueFromSnapshot, canWorkOnApparatus } = load('workerApi', {
+const { workerMachinesFromSnapshot, queueFromSnapshot, canWorkOnApparatus, workerOrderDetailFromSnapshot } = load('workerApi', {
   './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {},
 });
 
@@ -73,4 +73,24 @@ test('watchable machine queues do not add other workers completed history', () =
   const queue = queueFromSnapshot(machines, snapshot, assigned);
   assert.deepEqual(queue.orders.cut.map(order => order.id), ['two']);
   assert.deepEqual(queue.completed.map(order => order.id), ['one']);
+});
+
+test('order detail follows the assigned V2 display path and prefers occurrence status', () => {
+  const map = {
+    id: 'order', customer_name: 'Fallback',
+    nodes: [
+      { id: 'end', kind: 'end', title: 'Yakun' },
+      { id: 'press-a', kind: 'apparatus', apparatus_id: 'a', alternative_group_id: 'print', alternative_assigned_apparatus_id: 'b' },
+      { id: 'start', kind: 'start', title: 'Boshlanish' },
+      { id: 'press-b', kind: 'apparatus', apparatus_id: 'b', title: 'Bosma B', alternative_group_id: 'print' },
+    ],
+    edges: [{ from: 'start', to: 'press-a' }, { from: 'start', to: 'press-b' }, { from: 'press-b', to: 'end' }],
+  };
+  const detail = workerOrderDetailFromSnapshot({
+    maps: [{ map }], order_customers: { order: 'Customer' }, stage_states: { order: { 'press-b': 'paused' } },
+    queue_states: { b: { order: 'in_progress' } },
+  }, 'order');
+  assert.equal(detail.customer, 'Customer');
+  assert.deepEqual(detail.stages.map(stage => stage.id), ['start', 'press-b', 'end']);
+  assert.deepEqual(detail.stages[1], { id: 'press-b', apparatusId: 'b', title: 'Bosma B', state: 'paused' });
 });

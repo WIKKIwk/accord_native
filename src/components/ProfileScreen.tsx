@@ -73,7 +73,7 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
   }, [session, snapshot]);
 
   const closeEditor = useCallback(() => {
-    if (savingRef.current) return;
+    if (savingRef.current && Platform.OS !== 'android') return;
     editorGeneration.current++;
     setEditing(false);
     setDraftPhoto(null);

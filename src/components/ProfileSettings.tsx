@@ -1,6 +1,6 @@
 import { Button, Column, ScrollView, Switch, Text, TextInput } from '@expo/ui';
 import Constants from 'expo-constants';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, useColorScheme } from 'react-native';
 import type { AppearancePreference } from '../appAppearance';
 import { useAppSettings } from './AppSettings';
 import { usePinSetup } from './usePinSetup';
@@ -12,6 +12,7 @@ const choices: { id: AppearancePreference; label: string }[] = [
 
 export function ProfileSettings({ onClose, onLogout }: Props) {
   const { appearance, setAppearance } = useAppSettings();
+  const dark = useColorScheme() === 'dark';
   const pin = usePinSetup();
   const disconnect = () => {
     if (Platform.OS === 'web') {
@@ -22,15 +23,17 @@ export function ProfileSettings({ onClose, onLogout }: Props) {
       { text: 'Bekor qilish', style: 'cancel' }, { text: 'Uzish', style: 'destructive', onPress: onLogout },
     ]);
   };
-  return <ScrollView><Column spacing={12} style={{ padding: 20 }}>
-    <Text textStyle={{ fontSize: 20, fontWeight: '600' }}>Sozlamalar</Text>
-    {Platform.OS !== 'web' ? <Text>Yorug‘lik rejimi</Text> : null}
-    {Platform.OS !== 'web' ? choices.map(choice => <Button key={choice.id} variant={appearance === choice.id ? 'filled' : 'text'} label={choice.label}
+  return <ScrollView><Column spacing={14} style={{ padding: 12 }}>
+    <Text textStyle={{ fontSize: 22, fontWeight: '600' }}>Profil sozlamalari</Text>
+    <Text>Tema va xavfsizlik sozlamalari</Text>
+    {Platform.OS === 'android' && <Switch label="Qorong‘i rejim" value={dark}
+      onValueChange={enabled => { void setAppearance(enabled ? 'dark' : 'light').catch(() => Alert.alert('Saqlab bo‘lmadi')); }} />}
+    {Platform.OS !== 'web' && Platform.OS !== 'android' ? choices.map(choice => <Button key={choice.id} variant={appearance === choice.id ? 'filled' : 'text'} label={choice.label}
       onPress={() => { void setAppearance(choice.id).catch(() => Alert.alert('Saqlab bo‘lmadi')); }} />) : null}
-    {Platform.OS !== 'web' ? <Text>Xavfsizlik</Text> : null}
+    {Platform.OS !== 'web' && <><Text textStyle={{ fontSize: 20, fontWeight: '600' }}>Xavfsizlik</Text><Text>Ilova qulfi PIN kodi</Text></>}
     {Platform.OS !== 'web' && !pin.mode ? <>
-      <Button variant="text" label={pin.security.hasPin ? 'PIN kodni o‘zgartirish' : 'PIN kodni o‘rnatish'} onPress={() => pin.open('set')} />
-      {pin.security.hasPin ? <Button variant="text" label="PIN kodni olib tashlash" onPress={() => pin.open('remove')} /> : null}
+      <Button label={pin.security.hasPin ? 'PIN kodni o‘zgartirish' : 'PIN kodni o‘rnatish'} onPress={() => pin.open('set')} />
+      {pin.security.hasPin ? <Button variant="outlined" label="PIN kodni olib tashlash" onPress={() => pin.open('remove')} /> : null}
       <Switch label="Biometrik ochish" value={pin.security.biometric} disabled={!pin.security.hasPin || !pin.security.canUseBiometric}
         onValueChange={enabled => { void pin.security.setBiometric(enabled).catch(() => Alert.alert('Biometrik tasdiq bajarilmadi')); }} />
     </> : null}
