@@ -1,4 +1,4 @@
-import { Button, Host, HStack, Image, Popover, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation } from '@expo/ui/swift-ui';
+import { Button, Host, HStack, Image, Popover, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, type TextFieldRef, useNativeState, VStack, withAnimation, ZStack } from '@expo/ui/swift-ui';
 import { accessibilityLabel, animation, Animation, background, buttonStyle, contentShape, defaultScrollAnchor, defaultScrollAnchorForRole, disabled, fixedSize, font, foregroundStyle, frame, glassEffect, id, layoutPriority, lineLimit, offset, onAppear, onGeometryChange, onTapGesture, opacity, padding, scrollClipDisabled, scrollDismissesKeyboard, scrollEdgeEffectStyle, scrollPosition, scrollTargetLayout, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -198,22 +198,25 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
       if (mounted.current) void chooseMedia(source);
     }, 400);
   };
-  return <VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity })]}>
-    {media ? <HStack spacing={10} modifiers={[padding({ horizontal: 16, top: 8 }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-      <RNHostView matchContents><SelectedChatMediaPreview draft={media} /></RNHostView>
-      <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-        <Text modifiers={[font({ textStyle: 'subheadline', weight: 'medium' })]}>{media.kind === 'image' ? 'Rasm' : 'Video'}</Text>
-        <Text modifiers={[font({ textStyle: 'caption' }), secondary, lineLimit(1)]}>{mediaSending ? mediaProgress : media.filename}</Text>
-        {mediaError ? <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('#ff453a'), lineLimit(2)]}>{mediaError}</Text> : null}
-      </VStack>
-      {mediaSending ? <ProgressView /> : <Button systemImage="xmark.circle.fill" label="Media faylni olib tashlash" onPress={() => {
-        discardChatMedia(media); selected.current = null; setMedia(null); clearMediaError();
-      }} modifiers={[buttonStyle('plain'), disabled(selecting)]} />}
-    </HStack> : null}
-  <HStack alignment="bottom" spacing={4} modifiers={[
+  return <VStack alignment="leading" spacing={0} modifiers={[
     padding({ leading: 3, trailing: 3, vertical: 3 }), frame({ minHeight: 46, maxWidth: Infinity }),
     ...surface, padding({ horizontal: 12, top: 8, bottom: 8 }), layoutPriority(1),
   ]}>
+    {media ? <HStack alignment="top" spacing={10} modifiers={[padding({ horizontal: 8, top: 8, bottom: 4 }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+      <ZStack alignment="topTrailing">
+        <RNHostView matchContents><SelectedChatMediaPreview draft={media} /></RNHostView>
+        {!mediaSending ? <Button onPress={() => {
+          discardChatMedia(media); selected.current = null; setMedia(null); clearMediaError();
+        }} modifiers={[buttonStyle('plain'), accessibilityLabel('Media faylni olib tashlash'), disabled(selecting), padding({ top: 4, trailing: 4 })]}>
+          <Image systemName="xmark" size={11} color="#ffffff" modifiers={[frame({ width: 24, height: 24 }), background('#000000aa', shapes.circle())]} />
+        </Button> : null}
+      </ZStack>
+      {mediaSending || mediaError ? <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+        {mediaSending ? <HStack spacing={6}><ProgressView /><Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{mediaProgress}</Text></HStack> : null}
+        {mediaError ? <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('#ff453a'), lineLimit(2)]}>{mediaError}</Text> : null}
+      </VStack> : <Spacer />}
+    </HStack> : null}
+  <HStack alignment="bottom" spacing={4} modifiers={[frame({ minHeight: 40, maxWidth: Infinity })]}>
     <Popover isPresented={mediaMenuOpen} onIsPresentedChange={setMediaMenuOpen} attachmentAnchor="top" arrowEdge="bottom">
       <Popover.Trigger>
         <Button onPress={() => setMediaMenuOpen(true)} modifiers={[buttonStyle('plain'), accessibilityLabel('Rasm yoki video tanlash'), disabled(!ready || selecting || mediaSending)]}>
@@ -222,11 +225,13 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
       </Popover.Trigger>
       <Popover.Content>
         <VStack alignment="leading" spacing={0} modifiers={[padding({ all: 8 })]}>
-          {([{ source: 'camera', label: 'Kamera', icon: 'camera' }, { source: 'library', label: 'Rasmlar', icon: 'photo.on.rectangle' },
-            { source: 'file', label: 'Fayllar', icon: 'folder' }] as const).map(item =>
+          {([{ source: 'camera', label: 'Kamera', icon: 'camera' }, { source: 'library', label: 'Rasmlar', icon: 'photo' },
+            { source: 'file', label: 'Fayllar', icon: 'paperclip' }] as const).map(item =>
             <Button key={item.source} onPress={() => selectSource(item.source)} modifiers={[buttonStyle('plain'), accessibilityLabel(item.label)]}>
-              <HStack spacing={12} modifiers={[frame({ width: 220, height: 48, alignment: 'leading' }), contentShape(shapes.rectangle())]}>
-                <Image systemName={item.icon} modifiers={[font({ size: 20 }), frame({ width: 32 })]} />
+              <HStack spacing={12} modifiers={[padding({ horizontal: 8 }), frame({ width: 220, height: 52, alignment: 'leading' }), contentShape(shapes.rectangle())]}>
+                <Image systemName={item.icon} size={18} color={dark ? '#ffffff' : '#1c1c1e'} modifiers={[
+                  frame({ width: 36, height: 36 }), background(dark ? '#38383b' : '#e5e5ea', shapes.circle()),
+                ]} />
                 <Text modifiers={[font({ textStyle: 'body' })]}>{item.label}</Text><Spacer />
               </HStack>
             </Button>)}

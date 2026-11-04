@@ -47,7 +47,7 @@ export async function openChatMedia(session: Session, attachment: ChatAttachment
 }
 
 const styles = StyleSheet.create({
-  selected: { width: 48, height: 48, borderRadius: 8, overflow: 'hidden', backgroundColor: '#e5e5ea', alignItems: 'center', justifyContent: 'center' },
+  selected: { width: 96, height: 96, borderRadius: 12, overflow: 'hidden', backgroundColor: '#e5e5ea', alignItems: 'center', justifyContent: 'center' },
   thumbnail: { width: 200, height: 150, borderRadius: 14, overflow: 'hidden', backgroundColor: '#e5e5ea', alignItems: 'center', justifyContent: 'center' },
   play: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#00000099', alignItems: 'center', justifyContent: 'center' },
 });

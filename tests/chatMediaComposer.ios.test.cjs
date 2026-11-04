@@ -32,7 +32,7 @@ function fixture(pickerResult, cameraAllowed = true) {
     useCallback(fn) { return fn; },
   };
   const ui = {};
-  for (const name of ['Button', 'Host', 'HStack', 'Image', 'Popover', 'ProgressView', 'RNHostView', 'ScrollView', 'Spacer', 'Text', 'TextField', 'VStack']) {
+  for (const name of ['Button', 'Host', 'HStack', 'Image', 'Popover', 'ProgressView', 'RNHostView', 'ScrollView', 'Spacer', 'Text', 'TextField', 'VStack', 'ZStack']) {
     ui[name] = function () {};
     ui[name].displayName = name;
   }
@@ -46,6 +46,7 @@ function fixture(pickerResult, cameraAllowed = true) {
     shapes: { circle: () => ({}), rectangle: () => ({}), roundedRectangle: () => ({}) },
     accessibilityLabel: value => ({ type: 'label', value }),
     disabled: value => ({ type: 'disabled', value }),
+    glassEffect: () => ({ type: 'glass-surface' }),
   }, { get: (target, name) => target[name] ?? (() => ({})) });
   const selected = { uri: 'file:///selected', kind: 'image', filename: 'photo.jpg' };
   const pickerCalls = [], sent = [], discarded = [], prepared = [], alerts = [];
@@ -106,7 +107,7 @@ function fixture(pickerResult, cameraAllowed = true) {
     assert.equal(menu(tree).props.isPresented, true);
     button(menu(tree), label).props.onPress();
   };
-  return { render, button, menu, choose, ui, selected, pickerCalls, sent, discarded, prepared, alerts };
+  return { render, button, menu, choose, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer };
 }
 
 test('the plus offers sources and library selection waits for the user to press send', async () => {
@@ -120,7 +121,10 @@ test('the plus offers sources and library selection waits for the user to press 
   const menu = app.menu(tree);
   assert.equal(menu.props.isPresented, true);
   assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, 'Izoh');
-  for (const label of ['Kamera', 'Rasmlar', 'Fayllar']) app.button(menu, label);
+  for (const label of ['Kamera', 'Rasmlar', 'Fayllar']) {
+    const icon = find(app.button(menu, label), node => node.type === app.ui.Image);
+    assert.equal(icon.props.size, 18);
+  }
   assert.equal(app.pickerCalls.length, 0);
   app.button(menu, 'Rasmlar').props.onPress();
   tree = app.render();
@@ -133,12 +137,43 @@ test('the plus offers sources and library selection waits for the user to press 
   assert.equal(app.sent.length, 0);
 
   tree = app.render();
-  assert.ok(find(tree, node => node.type?.name === 'SelectedChatMediaPreview'));
+  const surface = find(tree, node => node.type === app.ui.VStack && node.props.modifiers?.some(modifier => modifier.type === 'glass-surface'));
+  assert.ok(surface);
+  assert.ok(find(surface, node => node.type?.name === 'SelectedChatMediaPreview'));
+  assert.ok(find(surface, node => node.type === app.ui.TextField));
+  const remove = app.button(surface, 'Media faylni olib tashlash');
+  assert.equal(remove.props.label, undefined);
+  assert.equal(find(remove, node => node.type === app.ui.Image).props.systemName, 'xmark');
   app.button(tree, 'Xabarni yuborish').props.onPress();
   await new Promise(setImmediate);
   assert.deepEqual(app.sent, [{ draft: app.selected, caption: 'Izoh' }]);
   assert.deepEqual(app.discarded, [app.selected]);
   assert.equal(find(app.render(), node => node.type?.name === 'SelectedChatMediaPreview'), null);
+});
+
+test('the attachment can be removed inside the composer and upload status remains visible', async () => {
+  const app = fixture({ canceled: false, assets: [{ uri: 'file:///selected', type: 'image' }] });
+  app.choose('Rasmlar');
+  await new Promise(resolve => setTimeout(resolve, 450));
+  let tree = app.render();
+  const field = find(tree, node => node.type === app.ui.TextField);
+  field.props.text.value = 'Izoh';
+  field.props.onTextChange('Izoh');
+
+  app.composer.props.mediaSending = true;
+  app.composer.props.mediaProgress = 'Yuklanmoqda…';
+  tree = app.render();
+  assert.ok(find(tree, node => node.type === app.ui.ProgressView));
+  assert.ok(find(tree, node => node.type === app.ui.Text && node.props.children === 'Yuklanmoqda…'));
+  app.composer.props.mediaSending = false;
+  app.composer.props.mediaError = 'Qayta urinib ko‘ring';
+  tree = app.render();
+  assert.ok(find(tree, node => node.type === app.ui.Text && node.props.children === 'Qayta urinib ko‘ring'));
+  app.button(tree, 'Media faylni olib tashlash').props.onPress();
+  tree = app.render();
+  assert.equal(find(tree, node => node.type?.name === 'SelectedChatMediaPreview'), null);
+  assert.equal(find(tree, node => node.type === app.ui.TextField).props.text.value, 'Izoh');
+  assert.deepEqual(app.discarded, [app.selected]);
 });
 
 test('closing the picker without selecting does not create or send an attachment', async () => {
