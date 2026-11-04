@@ -94,7 +94,7 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
     current.strip = strip;
     if (current.released) touch.current = null;
     callbacks.current.onStripChange(strip);
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    void (strip.selected === null ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) : Haptics.selectionAsync()).catch(() => {});
   };
 
   const begin = (event: GestureResponderEvent) => {
@@ -126,6 +126,7 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
       if (index !== current.strip.selected) {
         current.strip = { ...current.strip, selected: index };
         callbacks.current.onStripChange(current.strip);
+        if (index !== null) void Haptics.selectionAsync().catch(() => {});
       }
     }
   };
@@ -139,6 +140,7 @@ export function RecentChatPhotosButton({ enabled, rootRef, onTap, onSelect, onSt
     if (current.long && current.strip) {
       const index = recentPhotoIndex(current.strip, current.root, event.nativeEvent.pageX, event.nativeEvent.pageY);
       if (index !== null) {
+        if (index !== current.strip.selected) void Haptics.selectionAsync().catch(() => {});
         callbacks.current.onStripChange(null);
         callbacks.current.onSelect(current.strip.photos[index]);
       } else callbacks.current.onStripChange({ ...current.strip, selected: null });
@@ -164,20 +166,38 @@ export function RecentChatPhotoStrip({ strip, onClose, reduceMotion = false, bac
   const dark = useColorScheme() === 'dark';
   const [backdropOpacity] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
   const backdropStarted = useRef(false);
+  const closing = useRef(false);
+  const entranceAnimation = useRef<ReturnType<typeof Animated.parallel> | null>(null);
+  const exitAnimation = useRef<ReturnType<typeof Animated.parallel> | null>(null);
   const [photoMotion] = useState(() => strip.photos.map(() => new Animated.Value(reduceMotion ? 1 : 0)));
   useEffect(() => {
     if (reduceMotion) { photoMotion.forEach(value => value.setValue(1)); backdropOpacity.setValue(1); return; }
     const entrance = Animated.parallel(photoMotion.map((value, index) => Animated.timing(value, {
       toValue: 1, duration: 220, delay: index * 30, easing: Easing.out(Easing.cubic), useNativeDriver: true,
     })));
+    entranceAnimation.current = entrance;
     entrance.start();
-    return () => { entrance.stop(); backdropOpacity.stopAnimation(); };
+    return () => { closing.current = false; entrance.stop(); exitAnimation.current?.stop(); backdropOpacity.stopAnimation(); };
   }, [backdropOpacity, photoMotion, reduceMotion]);
   const showBackdrop = () => {
-    if (backdropStarted.current) return;
+    if (backdropStarted.current || closing.current) return;
     backdropStarted.current = true;
     if (reduceMotion) { backdropOpacity.setValue(1); return; }
     Animated.timing(backdropOpacity, { toValue: 1, duration: 210, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  };
+  const close = () => {
+    if (closing.current) return;
+    closing.current = true;
+    if (reduceMotion) { onClose(); return; }
+    entranceAnimation.current?.stop();
+    backdropOpacity.stopAnimation();
+    const exit = Animated.parallel([
+      ...photoMotion.map((value, index) => Animated.timing(value, { toValue: 0, duration: 200,
+        delay: (photoMotion.length - 1 - index) * 25, easing: Easing.inOut(Easing.quad), useNativeDriver: true })),
+      Animated.timing(backdropOpacity, { toValue: 0, duration: 180, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]);
+    exitAnimation.current = exit;
+    exit.start(() => { if (closing.current) onClose(); });
   };
   const fadeStart = Math.max(0, strip.top - 120);
   const fadeHeight = strip.top - fadeStart;
@@ -186,16 +206,17 @@ export function RecentChatPhotoStrip({ strip, onClose, reduceMotion = false, bac
     type: 'linearGradient', colors: [from, to], startPoint: { x: 0.5, y: 0 }, endPoint: { x: 0.5, y: 1 },
   });
   const maskBand = (height: number) => frame({ maxWidth: Infinity, minHeight: height, maxHeight: height });
-  const selectPhoto = (photo: RecentChatPhoto) => { onClose(); strip.onSelect(photo); };
+  const selectPhoto = (photo: RecentChatPhoto) => { if (!closing.current) { onClose(); strip.onSelect(photo); } };
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-    <Pressable accessibilityRole="button" accessibilityLabel="So‘nggi rasmlarni yopish" onPress={onClose} style={StyleSheet.absoluteFill} />
+    <Pressable accessibilityRole="button" accessibilityLabel="So‘nggi rasmlarni yopish" onPress={close} style={StyleSheet.absoluteFill} />
     {strip.backdrop && backdropVisible ? <Animated.View pointerEvents="none" style={[styles.blur, {
       top: fadeStart, height: fadeHeight + solidHeight + 120, opacity: backdropOpacity,
     }]}>
       <Host pointerEvents="none" ignoreSafeArea="all" style={StyleSheet.absoluteFill}>
       <Mask>
         <RNHostView><View style={StyleSheet.absoluteFill}>
-          <Image source={{ uri: strip.backdrop.uri }} blurRadius={24} contentFit="fill" cachePolicy="none" onLoad={showBackdrop} onError={onBackdropError}
+          <Image source={{ uri: strip.backdrop.uri }} blurRadius={24} contentFit="fill" cachePolicy="none" onLoad={showBackdrop}
+            onError={() => { if (!closing.current) onBackdropError?.(); }}
             style={{ position: 'absolute', left: 0, top: -fadeStart, width: strip.backdrop.width, height: strip.backdrop.height }} />
         </View></RNHostView>
         <Mask.Content>
@@ -227,7 +248,7 @@ export function RecentChatPhotoStrip({ strip, onClose, reduceMotion = false, bac
         </Animated.View>;
       })}
     </View>
-    <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="So‘nggi rasmlarni yopish"
+    <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="So‘nggi rasmlarni yopish"
       style={[styles.close, { left: strip.triggerLeft, top: strip.triggerTop }]}>
       <SymbolView name="xmark" size={20} tintColor={dark ? '#ffffff' : '#1c1c1e'} />
     </Pressable>

@@ -96,9 +96,11 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64
     stopAnimation() {}
     interpolate(config) { return config; }
   }
+  const animationCompletions = [];
   const animated = { Value: AnimatedValue, View: function AnimatedView() {},
-    timing: () => ({ start() {}, stop() {} }), parallel: () => ({ start() {}, stop() {} }) };
-  const easing = { out: value => value, cubic() {}, quad() {} };
+    timing: () => ({ start() {}, stop() {} }),
+    parallel: () => ({ start(callback) { if (callback) animationCompletions.push(callback); }, stop() {} }) };
+  const easing = { out: value => value, inOut: value => value, cubic() {}, quad() {} };
   const updates = [], selected = [], alerts = [], captures = [], haptics = [];
   let taps = 0;
   const props = {
@@ -111,7 +113,8 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64
     'react/jsx-runtime': { jsx: (type, nodeProps) => ({ type, props: nodeProps }), jsxs: (type, nodeProps) => ({ type, props: nodeProps }) },
     '@expo/ui/swift-ui': { Host, Mask, Rectangle, RNHostView, VStack },
     '@expo/ui/swift-ui/modifiers': { foregroundStyle: style => ({ style }), frame: dimensions => ({ dimensions }) },
-    'expo-haptics': { ImpactFeedbackStyle: { Light: 'light' }, impactAsync: async style => { haptics.push(style); } },
+    'expo-haptics': { ImpactFeedbackStyle: { Light: 'light' }, impactAsync: async style => { haptics.push(style); },
+      selectionAsync: async () => { haptics.push('selection'); } },
     'expo-image': { Image },
     'expo-symbols': { SymbolView() {} },
     'react-native': { View, Pressable, Animated: animated, Easing: easing, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
@@ -122,7 +125,7 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/png;base64
   const tree = module.RecentChatPhotosButton(props);
   tree.props.ref.current = { measure: callback => callback(0, 0, 40, 40, 30, 400) };
   const event = (x, y) => ({ nativeEvent: { pageX: x, pageY: y } });
-  return { tree, event, updates, selected, alerts, captures, haptics, module, Image, Pressable, Mask, View, taps: () => taps };
+  return { tree, event, updates, selected, alerts, captures, haptics, animationCompletions, module, Image, Pressable, Mask, View, taps: () => taps };
 }
 
 const waitForLongPress = () => new Promise(resolve => setTimeout(resolve, 500));
@@ -152,13 +155,63 @@ test('holding, sliding to a recent photo and releasing attaches exactly that pho
   assert.equal(f.captures[0].options.result, 'data-uri');
   const x = strip.left + 8 + 2 * (strip.size + strip.gap) + strip.size / 2;
   const y = strip.top + 8 + strip.size / 2;
+  const firstX = strip.left + 8 + strip.size / 2;
+  f.tree.props.onResponderMove(f.event(firstX, y));
+  f.tree.props.onResponderMove(f.event(firstX + 2, y));
+  assert.deepEqual(f.haptics, ['light', 'selection']);
+  f.tree.props.onResponderMove(f.event(strip.left + 8 + strip.size + strip.gap / 2, y));
+  f.tree.props.onResponderMove(f.event(firstX, y));
+  f.tree.props.onResponderMove(f.event(firstX + strip.size + strip.gap, y));
   f.tree.props.onResponderMove(f.event(x, y));
   assert.equal(f.updates.at(-1).selected, 2);
   f.tree.props.onResponderRelease(f.event(x, y));
   assert.deepEqual(f.selected, [readyPhotos.photos[2]]);
   assert.equal(f.updates.at(-1), null);
   assert.equal(f.taps(), 0);
-  assert.deepEqual(f.haptics, ['light']);
+  assert.deepEqual(f.haptics, ['light', 'selection', 'selection', 'selection', 'selection']);
+});
+
+test('a photo already under the finger when the strip opens gives selection feedback once', async () => {
+  let resolveCapture;
+  const f = gestureFixture(async () => readyPhotos, () => new Promise(resolve => { resolveCapture = resolve; }));
+  f.tree.props.onResponderGrant(f.event(50, 420));
+  await waitForLongPress();
+  const size = Math.floor((375 - 40 - 3 * 8) / 4);
+  const x = 12 + 8 + size / 2;
+  const y = 400 - size - 30 + 8 + size / 2;
+  f.tree.props.onResponderMove(f.event(x, y));
+  resolveCapture('data:image/png;base64,c25hcHNob3Q=');
+  await new Promise(setImmediate);
+  assert.equal(f.updates.at(-1).selected, 0);
+  assert.deepEqual(f.haptics, ['selection']);
+  f.tree.props.onResponderRelease(f.event(x, y));
+  assert.deepEqual(f.selected, [readyPhotos.photos[0]]);
+  assert.deepEqual(f.haptics, ['selection']);
+});
+
+test('the close button waits for the exit animation and ignores additional taps', () => {
+  const f = gestureFixture(async () => readyPhotos);
+  let closed = 0;
+  let selected = 0;
+  const strip = { photos: readyPhotos.photos, left: 12, top: 280, size: 77, gap: 8, selected: null,
+    triggerLeft: 30, triggerTop: 400, backdrop: null, onSelect: () => { selected++; } };
+  const overlay = f.module.RecentChatPhotoStrip({ strip, onClose: () => { closed++; } });
+  const close = find(overlay, node => node.type === f.Pressable && node.props.accessibilityLabel === 'So‘nggi rasmlarni yopish'
+    && Array.isArray(node.props.style) && node.props.style[0].width === 40);
+  close.props.onPress();
+  close.props.onPress();
+  find(overlay, node => node.type === f.Pressable && node.props.accessibilityLabel === 'So‘nggi rasm 1').props.onPress();
+  assert.equal(closed, 0);
+  assert.equal(selected, 0);
+  assert.equal(f.animationCompletions.length, 1);
+  f.animationCompletions[0]({ finished: true });
+  assert.equal(closed, 1);
+  const reduced = gestureFixture(async () => readyPhotos);
+  const reducedOverlay = reduced.module.RecentChatPhotoStrip({ strip, reduceMotion: true, onClose: () => { closed++; } });
+  find(reducedOverlay, node => node.type === reduced.Pressable && node.props.accessibilityLabel === 'So‘nggi rasmlarni yopish'
+    && Array.isArray(node.props.style) && node.props.style[0].width === 40).props.onPress();
+  assert.equal(closed, 2);
+  assert.equal(reduced.animationCompletions.length, 0);
 });
 
 test('recent thumbnails use the Expo photo loader with the full encoded asset identifier', () => {
