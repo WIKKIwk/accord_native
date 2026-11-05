@@ -48,3 +48,14 @@ test('removing one paddon WIP sends trimmed identifiers', async () => {
   assert.deepEqual(request, { url: '/v1/mobile/admin/production-maps/paddons/items/remove', body: { code: 'P', progress_batch_id: 'b1' } });
   assert.equal(result.paddon.code, 'P');
 });
+
+// V2 has no recorded batch removal request; the request follows the baseline source.
+test('removing several paddon WIPs trims identifiers and preserves duplicates', async () => {
+  let request;
+  const client = api(async (_session, url, init) => { request = { url, body: JSON.parse(init.body) };
+    return new Response('{"paddon":{"code":"P"},"items":[]}', { status: 200 }); });
+  const result = await client.adminPaddonRemoveWips({}, { paddon_code: ' P ', progress_batch_ids: [' b1 ', ' ', 'b1', 'b2'] });
+  assert.deepEqual(request, { url: '/v1/mobile/admin/production-maps/paddons/items/remove-batch',
+    body: { code: 'P', progress_batch_ids: ['b1', 'b1', 'b2'] } });
+  assert.equal(result.paddon.code, 'P');
+});
