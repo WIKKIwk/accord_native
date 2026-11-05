@@ -14,9 +14,12 @@ function authWithMemoryStore() {
   };
   const filename = path.resolve(__dirname, '../src/auth.ts');
   const loaded = new Module(filename, module);
+  const chunksFile = path.resolve(__dirname, '../src/chunkedStorage.ts'), chunks = new Module(chunksFile, module);
+  chunks.filename = chunksFile; chunks.paths = module.paths;
+  chunks._compile(ts.transpileModule(fs.readFileSync(chunksFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, chunksFile);
   loaded.filename = filename;
   loaded.paths = module.paths;
-  loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: 'ios' } }
+  loaded.require = id => id === 'expo-secure-store' ? store : id === './chunkedStorage' ? chunks.exports : id === 'react-native' ? { Platform: { OS: 'ios' } }
     : id === './authenticateAccount' ? {} : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => ({ activeAccountId: null }) }
     : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => ({ baseUrl: 'https://example.com' }) } : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
