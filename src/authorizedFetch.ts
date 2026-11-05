@@ -20,14 +20,34 @@ async function authenticatedRequest(session: Session, path: string, init: Reques
   if (mutation) invalidateQueueSnapshotReads();
   try {
     const url = new URL(path, session.baseUrl);
-    if (url.origin !== session.baseUrl || url.protocol !== 'https:' || (!image && !url.pathname.startsWith('/v1/mobile/'))) {
+    if (url.origin !== session.baseUrl || url.protocol !== 'https:' || url.username || url.password ||
+        (!image && !url.pathname.startsWith('/v1/mobile/'))) {
       throw new Error('API manzili noto‘g‘ri.');
     }
     const send = async (token: string) => {
       beforeSend?.();
       const headers = new Headers(init.headers);
       headers.set('Authorization', `Bearer ${token}`);
-      const request = fetch(url.toString(), { ...init, headers });
+      const request = (async () => {
+        const method = (init.method ?? 'GET').toUpperCase();
+        let currentUrl = url, remaining = 5;
+        while (true) {
+          const response = await fetch(currentUrl.toString(), { ...init, headers, redirect: 'manual', credentials: 'omit' });
+          if (!['GET', 'HEAD'].includes(method) || ![301, 302, 303, 307, 308].includes(response.status)) return response;
+          const location = response.headers.get('location');
+          if (!location) return response;
+          if (response.body) await response.arrayBuffer();
+          const destination = new URL(location, currentUrl);
+          if (destination.protocol !== 'https:' || !destination.hostname || destination.username || destination.password) {
+            throw new TypeError('API redirect requires HTTPS');
+          }
+          if (remaining-- <= 0) throw new TypeError('Too many API redirects');
+          if (destination.origin !== currentUrl.origin) {
+            headers.delete('authorization'); headers.delete('cookie'); headers.delete('proxy-authorization');
+          }
+          currentUrl = destination;
+        }
+      })();
       if (timeoutMs == null) return request;
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
