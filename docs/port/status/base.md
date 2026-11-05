@@ -25,6 +25,8 @@ Stopped at: shared API and base logic comparison
 
 | Reauthentication identity | `MobileApi._performStoredAccountReauthentication` | V4 rejects a refreshed account whose identity changes; V2 accepts the returned account. Reconcile this existing guard for exact parity. |
 
+| Inventory live transport | `warehouse_live_client_io.dart`, `InventoryViewStore` | JS WebSocket does not expose V2’s 25-second protocol ping; verify native keepalive behavior on both platforms. The shared store must be configured for foreground/background lifecycle by platform entry points. |
+
 ## Deviations candidates
 
 ## Test mode pending
