@@ -29,6 +29,7 @@ test('nested shares round once at micro-kilogram precision', () => {
     assert.throws(() => m.preparationScrewLineKg('1000', '30', v));
   }
 });
+// @v2-test test/preparation_formula_estimates_test.dart
 test('formula shares, line sorting and displayed estimates follow V2', () => {
   const rows = m.preparationFormulaListFromJson({ product_code: ' P ', formulas: [
     { name: 'b', share_percent: '70', lines: [{ item_code: '2', name: 'A', percent: '1' }, { item_code: '1', name: 'a', percent: '99' }] },
@@ -41,4 +42,6 @@ test('formula shares, line sorting and displayed estimates follow V2', () => {
   assert.equal(m.preparationFormulaSharesComplete(rows), false);
   assert.equal(m.preparationEstimatedKgDisplay('0.000001'), '< 0.01');
   assert.equal(m.preparationEstimatedKgDisplay('824.964'), '824.96');
+  assert.equal(m.preparationEstimatedKgDisplay('82.496400'), '82.50');
+  assert.equal(m.preparationEstimatedKgDisplay('0.005000'), '0.01');
 });
