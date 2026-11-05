@@ -38,6 +38,19 @@ test('admin detail rejects a valid compact worker snapshot as an invalid page', 
     error => error.code === 'order_page_invalid');
 });
 
+test('admin detail adds the opt-in identity compression query', async () => {
+  let requested;
+  const client = load('productionOrderDetailApi', {
+    './productionReadSettings': { adminProductionReadIdentityCompression: true },
+    './authorizedFetch': { authorizedFetch: async (_session, url) => {
+      requested = new URL(url, 'https://example.test');
+      return { status: 403, json: async () => ({}) };
+    } },
+  });
+  await assert.rejects(client.adminProductionOrderDetail({}, { apparatus: '', order_id: 'work-1' }));
+  assert.equal(requested.searchParams.get('compression'), 'identity');
+});
+
 for (const [stem, name, apparatus, attempts] of [
   ['admin_orders_list_api_test', 'full detail rejects templates for another order or invalid shape', '', 4],
   ['admin_sequence_list_api_test', 'detail rejects omitted, wrong or multiple maps and missing authority', 'apparatus:default:bosma_7', 5],

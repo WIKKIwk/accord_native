@@ -60,3 +60,33 @@ test('sequence summary validates row identities, ranks and authority like V2', (
     x => x.queue_policies.push(x.queue_policies[0]), x => { x.maps = []; }, x => { x.projection = 'future_projection'; },
   ]) { const wire = make(); mutate(wire); assert.throws(() => parse(wire)); }
 });
+
+test('identity compression is limited to sequence and order pages when enabled', async () => {
+  const urls = [];
+  const client = load('productionOrderPageApi', {
+    './productionReadSettings': { adminProductionReadIdentityCompression: true },
+    './authorizedFetch': { authorizedFetch: async (_session, requested) => {
+      urls.push(new URL(requested, 'https://example.test'));
+      return { status: 304 };
+    } },
+  });
+  for (const view of ['sequence', 'orders', 'closed']) {
+    assert.equal(await client.adminProductionOrderPage({}, { view, ifVersion: 'v' }), null);
+  }
+  assert.deepEqual(urls.map(url => url.searchParams.get('compression')), ['identity', 'identity', null]);
+});
+
+test('identity compression is disabled by default and uses an Expo public build flag', () => {
+  const previous = process.env.EXPO_PUBLIC_ACCORD_ADMIN_IDENTITY_COMPRESSION;
+  try {
+    delete process.env.EXPO_PUBLIC_ACCORD_ADMIN_IDENTITY_COMPRESSION;
+    assert.equal(load('productionReadSettings').adminProductionReadIdentityCompression, false);
+    process.env.EXPO_PUBLIC_ACCORD_ADMIN_IDENTITY_COMPRESSION = 'true';
+    assert.equal(load('productionReadSettings').adminProductionReadIdentityCompression, true);
+    process.env.EXPO_PUBLIC_ACCORD_ADMIN_IDENTITY_COMPRESSION = 'false';
+    assert.equal(load('productionReadSettings').adminProductionReadIdentityCompression, false);
+  } finally {
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_ACCORD_ADMIN_IDENTITY_COMPRESSION;
+    else process.env.EXPO_PUBLIC_ACCORD_ADMIN_IDENTITY_COMPRESSION = previous;
+  }
+});

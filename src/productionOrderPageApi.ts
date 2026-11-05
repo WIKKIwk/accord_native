@@ -7,6 +7,7 @@ import { closedProductionOrderFromJson } from './workerClosedOrders';
 import { productionWorkflowAuditReportFromJson } from './productionMapAuditApi';
 import { calculateOrderTemplateFromJson } from './workerOpenedOrderEditApi';
 import { pendingOrderFromJson } from './pendingOrderApi';
+import { adminProductionReadIdentityCompression } from './productionReadSettings';
 
 type Obj = Record<string, any>;
 const object = (v: unknown): Obj | null => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Obj : null;
@@ -117,6 +118,7 @@ export async function adminProductionOrderPage(session: Session, request: Produc
   const query = new URLSearchParams({ view: request.view, limit: '20' });
   if (request.view === 'sequence') query.set('projection', sequenceProjection);
   if (request.view === 'orders') query.set('projection', ordersProjection);
+  if ((request.view === 'sequence' || request.view === 'orders') && adminProductionReadIdentityCompression) query.set('compression', 'identity');
   for (const key of ['apparatus', 'target', 'search'] as const) if (request[key]) query.set(key, request[key]);
   if (request.cursor != null) query.set('cursor', request.cursor);
   if (request.ifVersion != null) query.set('if_version', request.ifVersion);
