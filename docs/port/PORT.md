@@ -29,7 +29,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
-| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 28/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
+| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 29/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
 | homashyo | | | | | Needs printing |
 | chat | | | | | iOS exists without tags; Android ships a stub |
 | rezka | | | | | |
@@ -56,6 +56,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/workerRawMaterials.ts`, `src/workerQolips.ts` | `mobile_api_admin_raw_materials_*`, `mobile_api_admin_qolip_orders.dart` | The independent readers use V2 requests and model defaults, with recorded assignments and start-requirements replays. Direct V2 recordings for intake candidates, intake writes and independent qolip validation beyond the bootstrap fixture were not found; compare their remaining model edge cases and record them when available |
 | `src/workerScanBootstrap.ts`, `src/workerScanSections.ts`, `src/workerLegacyScan.ts`, `src/OrderScreen.tsx`, `src/workerLongPress.ts` | `mobile_api_admin_order_scan_bootstrap.dart`, `admin_production_map_orders_scan_bootstrap.dart`, `admin_production_map_orders_worker_qr_context.dart` | Scan control, QR proof, candidate-page and partial section checks are in place. An empty 404/405 falls back to a scoped sequence read; compare its full snapshot validation and legacy null-revision behavior. Independent scoped QR lookup is in place, but legacy lookups without route metadata still require the V2 production-map consumer calculation. Complete typed queue-context parsing and remaining automatic-qolip and optional control branches. Incomplete sections use the independent material/qolip readers |
 | `src/workerQueueAction.ts` | `mobile_api_admin_queue_action_result.dart`, `mobile_api_admin_queue_action_result_backend.dart`, `mobile_api_admin_queue_action_models.dart` | Request fields, control/ACK validation, progress batches, print-job data, activity, status, completion requests and Rezka reports have focused V2 replays. Local training print fallback lacks V2's `_testModeOrderById` map lookup for `order_code` because the shared test-mode store has not been ported. Complete that lookup, the deferred test-mode branch and native printing before tagging this method or its result model |
+| `src/workerClosedOrders.ts` | `adminClosedProductionMapOrders` | V2 has no recorded HTTP test for this method; source-derived V4 tests cover its request, closed-order models and server errors |
 | `src/workerSnapshot.ts`, `src/workerDelta.ts` | `mobile_api_worker_order_list.dart`, `mobile_api_admin_production_map_state_delta.dart`, `worker_queue_warm_store.dart` | Finish the remaining snapshot/delta, cache and warm-store parity cases and replays; current tests cover compact envelope, membership, selected patches and a recorded HTTP response |
 | `src/workerDetailApi.ts`, `src/workerApi.ts` | `workerProductionOrderDetail`, `decodeProductionMapQueueSnapshotPayload` | Order sheets and the overview use the scoped detail reader, with V2 valid and invalid response replays. Finish full typed snapshot/map decoding and match the single outer deadline across a stale-response retry before tagging this API |
 | `src/workerLive.ts` | `mobile_api_admin_production_map_MobileApiAdminProductionMap_methods_02.dart`, `worker_queue_warm_store.dart` | Session/account changes now stop old stream events, and already applied revisions are ignored. Complete warm-store handoff and compact-to-legacy stream recovery parity. The worker store uses a 10-second first-message timeout; V2's 7-second silence helper is used by the system monitor, not the worker store |
@@ -90,6 +91,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminWipBatches` | V2 reads and filters its in-memory progress batches |
 | `adminProgressQrHistory`, `adminProgressQrLookup`, `adminLookupOpeningWip` | V2 uses in-memory progress and opening-WIP records |
 | `adminApparatus` | V2 filters its in-memory canonical apparatus catalog |
+| `adminClosedProductionMapOrders` | V2 returns an empty list in test mode |
 
 ## Drift log
 
