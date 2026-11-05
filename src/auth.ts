@@ -198,18 +198,36 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   const trimmedCode = code.trim();
   if (!normalizedPhone || !trimmedCode) throw new Error('Telefon raqam va kodni kiriting.');
   const epoch = ++sessionEpoch;
-  activeSession = null;
-  refreshing = null;
+  const previousSession = activeSession;
   const session = await authenticate(server, normalizedPhone, trimmedCode);
   const account = identity(session);
   if (!account.ref || !account.role) throw new Error('Server noto‘g‘ri hisob ma’lumotlarini qaytardi.');
   return inStorageOrder(async () => {
     if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
-    await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
-    await writeSession(session);
-    if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
-    activeSession = session;
-    return session;
+    const previousCredentials = await readCredentials();
+    try {
+      await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
+      await writeSession(session);
+      if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+      activeSession = session;
+      refreshing = null;
+      return session;
+    } catch (error) {
+      if (epoch === sessionEpoch) {
+        try {
+          if (previousCredentials) await writeCredentials(previousCredentials);
+          else if (Platform.OS === 'web') webCredentials = null;
+          else await SecureStore.deleteItemAsync(CREDENTIALS_KEY);
+          if (previousSession) await writeSession(previousSession);
+          else if (Platform.OS === 'web') webSession = null;
+          else await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SESSION_KEY)]);
+          activeSession = previousSession;
+        } catch (rollbackError) {
+          throw new Error(`Login failed and session rollback was incomplete: ${String(error)}; ${String(rollbackError)}`);
+        }
+      }
+      throw error;
+    }
   });
 }
 
