@@ -13,16 +13,21 @@ function load(file, overrides = {}) {
 }
 const search = load('shared/searchActivityStore');
 const stores = load('shared/notificationStores', { './searchActivityStore': search });
+const dispatchStores = load('shared/dispatchRuntimeStores');
 
 test('session reset clears the shared hidden and unread notification stores', async () => {
   const data = new Map(); let reset;
   const storage = { getItem: async key => data.get(key) ?? null, setItem: async (key, value) => data.set(key, value), removeItem: async key => data.delete(key) };
   const user = { profile: { role: 'supplier', ref: 'one' }, capabilities: ['supplier.access'] };
   const runtime = load('shared/notificationStoresRuntime', { '../auth': { currentSession: () => user,
-    registerSessionResetHook: hook => { reset = hook; return () => {}; } }, '../appPreferences': { appPreferences: storage }, './notificationStores': stores });
+    registerSessionResetHook: hook => { reset = hook; return () => {}; } }, '../appPreferences': { appPreferences: storage },
+    './notificationStores': stores, './dispatchRuntimeStores': dispatchStores });
   await runtime.notificationUnreadStore.markUnread(null, ['a']);
   await runtime.notificationHiddenStore.hideAll(null, ['b']);
+  runtime.supplierRuntimeStore.recordCreatedPending();
+  assert.equal(runtime.supplierRuntimeStore.applySummary({ pendingCount: 0, submittedCount: 0, returnedCount: 0 }).pendingCount, 1);
   await reset();
   assert.equal(data.has('notification_unread_v1'), false); assert.equal(data.has('notification_hidden_v1'), false);
   assert.equal(runtime.notificationUnreadStore.hasUnreadForProfile(user), false);
+  assert.equal(runtime.supplierRuntimeStore.applySummary({ pendingCount: 0, submittedCount: 0, returnedCount: 0 }).pendingCount, 0);
 });
