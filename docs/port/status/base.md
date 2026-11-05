@@ -15,6 +15,8 @@ Stopped at: shared API and base logic comparison
 
 | `gscaleItemsPage`, `adminWarehouseAssignments` | `mobile_api_gscale_declarations_part_01.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_03.dart` | V2 has no recorded HTTP test for these calls; source-derived request, parsing and account-scoped sorting tests are in `tests/baseCatalogApi.test.cjs`. |
 
+| `updateNickname`, `uploadAvatar` | `mobile_api_auth_profile.dart` | No V2 HTTP recording exists; source-derived tests cover nickname, multipart bytes, response status and session update. Device upload still needs a native runtime check. |
+
 ## Deviations candidates
 
 ## Test mode pending
@@ -29,4 +31,5 @@ Stopped at: shared API and base logic comparison
 
 | Where | V2 reference | What is needed |
 |---|---|---|
+| `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing profile UI helpers impose additional validation and do not call the shared V2 API functions; reconcile those helpers and their platform screens when profile UI is ported. |
 | `src/app/android-worker/` | `AppSession.homeRoute` | Add the Android worker Expo Router route. Until then the existing Android worker screen renders at the root; base cannot create route files outside its scope. |
