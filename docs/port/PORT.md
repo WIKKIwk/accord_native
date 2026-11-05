@@ -79,6 +79,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/productionMapAuditApi.ts` | `adminProductionMapAudit` | No V2 HTTP recording was found; focused V4 tests cover the source-derived request and report parsing |
 | `src/productionProgressCorrectionApi.ts` | `adminProgressBatchCorrect` | No V2 HTTP recording was found; focused V4 tests cover source-derived validation, request fields and response checks |
 | `src/scannedWipApi.ts` | `adminReturnScannedWip`, `adminScannedWips` | No V2 HTTP recordings were found; focused V4 tests cover their source-derived scopes, requests and response validation |
+| `src/authenticateAccount.ts` | `authenticateAccount` | No V2 login HTTP recording was found; focused V4 tests cover account parsing, HTTPS and the source-derived request |
 | `src/productionMapReplayApi.ts` | `adminProductionMapReplay` | No V2 HTTP recording was found; focused V4 tests cover the source-derived query and delta decoding |
 | `src/productionMapReadApi.ts` | `adminProductionMaps` | No V2 HTTP recording was found for the list route; a focused V4 test covers its source-derived request and parsing |
 | `src/productionCompletionApi.ts` | `adminProductionMapCompletionRequestDecisions`, `adminProductionMapCompletionRequests` | No V2 HTTP recordings were found; focused V4 tests cover the source-derived requests and notification parsing |
