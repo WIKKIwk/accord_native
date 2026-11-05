@@ -56,11 +56,13 @@ function generatedPaths(value, keys, path = '$') {
  *   ignoreHeaders: header names to leave out for this test. A reason should sit next to the call.
  *   rawBody: true for multipart, whose random boundary cannot match.
  *   onlyPaths: replay selected paths when the V2 test also exercises unrelated readers.
+ *   onlyMethods: replay selected methods when the V2 test also exercises other operations.
  */
 function contractFetch(stem, testName, options = {}) {
-  const { generated = [], ignoreHeaders = [], rawBody = false, onlyPaths } = options;
+  const { generated = [], ignoreHeaders = [], rawBody = false, onlyPaths, onlyMethods } = options;
   const records = loadContract(stem).filter(record => record.test === testName &&
-    (!onlyPaths || onlyPaths.includes(new URL(record.url).pathname)));
+    (!onlyPaths || onlyPaths.includes(new URL(record.url).pathname)) &&
+    (!onlyMethods || onlyMethods.includes(record.method)));
   if (!records.length) {
     throw new Error(`No recording for "${testName}" in ${stem}. Available:\n${testNames(stem).join('\n')}`);
   }
