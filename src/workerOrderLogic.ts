@@ -1,3 +1,5 @@
+import { cancelStartControl, temporaryPauseControl } from './workerControlsApi';
+
 type Obj = Record<string, any>;
 export type QueueCursor = { epoch?: unknown; rev?: unknown };
 
@@ -117,6 +119,8 @@ export function validOrderControl(bootstrap: Obj | null, apparatus: string, orde
   if (control.closing_output_batch_id &&
       (control.state !== 'paused' || mode !== 'paused' || !control.allowed_actions.includes('complete'))) return false;
   if (control.temporarily_paused !== undefined && typeof control.temporarily_paused !== 'boolean') return false;
+  if ((control.temporary_pause != null && !temporaryPauseControl(control.temporary_pause)) ||
+      (control.cancel_start != null && !cancelStartControl(control.cancel_start))) return false;
   if (control.temporarily_paused === true && (control.state !== 'paused' || mode !== 'paused')) return false;
   if ((control.temporary_pause != null || control.cancel_start != null) &&
       (control.state !== 'in_progress' || mode !== 'in_progress' || control.temporarily_paused === true)) return false;

@@ -1,0 +1,716 @@
+#!/usr/bin/env node
+// Measures how much of Accord V2 (Flutter) exists in V4 (Expo).
+// V2 is opened read-only: this script only reads files and runs read-only git
+// commands there, with --no-optional-locks so even `git status` writes nothing.
+// Everything it generates goes to V4's .port/ folder, which is git-ignored.
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildGraph, featureOf, reachForRole } from './v2_graph.mjs';
+
+const USAGE = `Usage: node .agents/skills/accord-port/scripts/port_ledger.mjs <command>
+
+  plan                Every role in port order, with what it adds and how many sessions it needs.
+  role <id> [part]    A role's reading list, API, surfaces and tests, from V2's real references.
+                      Writes .port/role-<id>.md, or .port/role-<id>-<part>.md for one part.
+  status              Coverage totals and per-domain table. Writes .port/STATUS.md
+  worklist <regex>    Search by name instead of by role, matched on V2 paths, endpoints and names.
+                      Writes .port/worklist-<slug>.md
+  drift               What changed in V2 since the baseline, and which @v2 tags it affects.
+  check               Gate: fails on @v2 or @v2-test tags that resolve to nothing in V2.
+                      Also warns about V4 endpoints that V2 never mentions literally.
+  baseline [commit]   Print the baseline, or set it. Only set it after drift has been handled.
+
+Options: --v2 <path>   V2 checkout. Default: $ACCORD_V2, then ../accord_mobile_v2, then the path on this Mac.
+Items listed in docs/port/EXCLUDED.txt are left out of every total.`;
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const V4 = path.resolve(here, '../../../..');
+const args = process.argv.slice(2);
+const v2Flag = args.indexOf('--v2');
+const v2Candidates = [v2Flag >= 0 ? args[v2Flag + 1] : '', process.env.ACCORD_V2 ?? '', '../accord_mobile_v2', '/Users/wikki/Desktop/Accord_project/accord_mobile_v2'];
+const V2 = path.resolve(V4, v2Candidates.find(item => item && fs.existsSync(path.resolve(V4, item, 'pubspec.yaml'))) ?? '../accord_mobile_v2');
+if (v2Flag >= 0) args.splice(v2Flag, 2);
+const [command, param] = args;
+
+const OUT = path.join(V4, '.port');
+const BASELINE_FILE = path.join(V4, 'docs/port/V2_BASELINE');
+const EXCLUDED_FILE = path.join(V4, 'docs/port/EXCLUDED.txt');
+
+function git(...gitArgs) {
+  return execFileSync('git', ['--no-optional-locks', '-C', V2, ...gitArgs], { encoding: 'utf8', maxBuffer: 1 << 28 }).trim();
+}
+function walk(dir, keep, found = []) {
+  if (!fs.existsSync(dir)) return found;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(full, keep, found);
+    else if (keep(entry.name)) found.push(full);
+  }
+  return found;
+}
+const rel = (root, file) => path.relative(root, file).split(path.sep).join('/');
+const read = file => fs.readFileSync(file, 'utf8');
+
+/** Reads a URL path out of source text, keeping `${...}` balanced so interpolation stays one token. */
+function readPathToken(text, start) {
+  let i = start;
+  let out = '';
+  while (i < text.length) {
+    const c = text[i];
+    if (c === '$' && text[i + 1] === '{') {
+      let depth = 1;
+      i += 2;
+      while (i < text.length && depth > 0) {
+        if (text[i] === '{') depth++;
+        else if (text[i] === '}') depth--;
+        i++;
+      }
+      out += '{}';
+      continue;
+    }
+    if (c === '$') {
+      const name = /^\$[A-Za-z_][\w.]*/.exec(text.slice(i, i + 80));
+      if (!name) break;
+      out += '{}';
+      i += name[0].length;
+      continue;
+    }
+    if (/['"`\s?\\,)]/.test(c)) break;
+    out += c;
+    i++;
+  }
+  return out.replace(/\/+$/, '');
+}
+function findEndpoints(text) {
+  const found = [];
+  let index = text.indexOf('/v1/mobile/');
+  while (index >= 0) {
+    const value = readPathToken(text, index);
+    if (value.length > '/v1/mobile'.length) found.push({ value, index });
+    index = text.indexOf('/v1/mobile/', index + 1);
+  }
+  return found;
+}
+const lineOf = (text, index) => text.slice(0, index).split('\n').length;
+const VERB = /\b(_get|_post|_put|_patch|_delete|_directGet|_directPost)\(|(?:MultipartRequest|Request)\(\s*'(GET|POST|PUT|PATCH|DELETE)'/;
+function verbHint(text, index) {
+  const after = VERB.exec(text.slice(index, index + 260));
+  const windowBefore = text.slice(Math.max(0, index - 200), index);
+  const before = [...windowBefore.matchAll(new RegExp(VERB, 'g'))].pop();
+  const hit = before ?? after;
+  if (!hit) return '';
+  return (hit[2] ?? hit[1].replace(/^_(direct)?/, '')).toUpperCase();
+}
+const domainOf = endpoint => {
+  const parts = endpoint.replace('/v1/mobile/', '').split('/');
+  return parts[0] === 'admin' ? `admin/${parts[1] ?? ''}` : parts[0];
+};
+
+function readExcluded() {
+  if (!fs.existsSync(EXCLUDED_FILE)) return new Set();
+  return new Set(read(EXCLUDED_FILE).split('\n').map(line => line.split('#')[0].trim()).filter(Boolean));
+}
+
+function scanV2() {
+  const lib = path.join(V2, 'lib');
+  const files = walk(lib, name => name.endsWith('.dart'));
+  const endpoints = new Map();
+  const methods = new Map();
+  const surfaces = new Map();
+  const channels = new Map();
+  const storageKeys = new Map();
+  const routes = new Map();
+  const identifiers = new Set();
+  let lines = 0;
+  let splitFiles = 0;
+  for (const file of files) {
+    const text = read(file);
+    const relative = rel(V2, file);
+    lines += text.split('\n').length;
+    if (text.includes('large_library_splitter')) splitFiles++;
+    for (const m of text.matchAll(/\b[A-Za-z_]\w*\b/g)) identifiers.add(m[0]);
+    for (const { value, index } of findEndpoints(text)) {
+      const entry = endpoints.get(value) ?? { endpoint: value, domain: domainOf(value), verbs: new Set(), refs: [], live: /\/live$/.test(value) };
+      const verb = verbHint(text, index);
+      if (verb) entry.verbs.add(verb);
+      entry.refs.push(`${relative}:${lineOf(text, index)}`);
+      endpoints.set(value, entry);
+    }
+    if (relative.includes('/core/api/')) {
+      let owner = '';
+      const body = text.split('\n');
+      body.forEach((line, i) => {
+        const head = /^(?:extension\s+\w+\s+on\s+(\w+)|class\s+(\w+))/.exec(line);
+        if (head) owner = head[1] ?? head[2];
+        const method = /^ {2}(?:static\s+)?(?:Future|Stream)(?:<.*>)?\??\s+([a-zA-Z]\w*)\s*[<(]/.exec(line);
+        if (method && !method[1].startsWith('_')) {
+          methods.set(`${owner}.${method[1]}`, { symbol: method[1], owner, ref: `${relative}:${i + 1}` });
+        }
+      });
+    }
+    for (const m of text.matchAll(/^class\s+(\w+)\s+extends\s+(?:StatefulWidget|StatelessWidget)\b/gm)) {
+      const name = m[1];
+      const kind = /(Screen|Page)$/.test(name) ? 'screen' : /(Sheet|Dialog)$/.test(name) ? 'sheet' : '';
+      if (kind) surfaces.set(name, { name, kind, ref: `${relative}:${lineOf(text, m.index)}` });
+    }
+    for (const m of text.matchAll(/(Method|Event)Channel\(\s*'([^']+)'/g)) {
+      channels.set(m[2], { channel: m[2], type: m[1], ref: `${relative}:${lineOf(text, m.index)}` });
+    }
+    for (const m of text.matchAll(/\b\w*[kK]ey\w*\s*=\s*'([a-z][a-z0-9_:.-]{2,})'/g)) {
+      storageKeys.set(m[1], { key: m[1], ref: `${relative}:${lineOf(text, m.index)}` });
+    }
+    if (relative.endsWith('app_router_declarations_part_01.dart')) {
+      for (const m of text.matchAll(/static const String (\w+)\s*=\s*'([^']+)'/g)) {
+        routes.set(`AppRoutes.${m[1]}`, { symbol: `AppRoutes.${m[1]}`, name: m[1], path: m[2], ref: `${relative}:${lineOf(text, m.index)}` });
+      }
+    }
+  }
+  const tests = new Map();
+  for (const file of walk(path.join(V2, 'test'), name => name.endsWith('.dart'))) {
+    const text = read(file);
+    const relative = rel(V2, file);
+    tests.set(relative, {
+      file: relative,
+      cases: (text.match(/^\s*(?:test|testWidgets)\(/gm) ?? []).length,
+      httpMock: /MockClient|runWithClient/.test(text),
+      endpoints: [...new Set(findEndpoints(text).map(item => item.value))],
+    });
+  }
+  const excluded = readExcluded();
+  for (const collection of [endpoints, methods, surfaces, channels, storageKeys, routes, tests]) {
+    for (const key of [...collection.keys()]) if (excluded.has(key)) collection.delete(key);
+  }
+  return { fileCount: files.length, lines, splitFiles, endpoints, methods, surfaces, channels, storageKeys, routes, tests, identifiers, excluded: excluded.size };
+}
+
+function scanV4() {
+  const sources = walk(path.join(V4, 'src'), name => /\.(ts|tsx)$/.test(name));
+  const testFiles = walk(path.join(V4, 'tests'), name => /\.(cjs|mjs|js|ts)$/.test(name));
+  const inSrc = new Set();
+  const inTests = new Set();
+  const tags = [];
+  const testTags = new Map();
+  const collect = (file, target) => {
+    const text = read(file);
+    const relative = rel(V4, file);
+    for (const { value } of findEndpoints(text)) target.add(value);
+    const platform = /\.ios\.tsx?$/.test(file) ? 'ios' : /\.android\.tsx?$/.test(file) ? 'android' : 'shared';
+    for (const m of text.matchAll(/@v2\s+([A-Za-z_][\w.]*)/g)) tags.push({ symbol: m[1], file: relative, platform, line: lineOf(text, m.index) });
+    for (const m of text.matchAll(/@v2-test\s+(test\/[\w./-]+\.dart)/g)) testTags.set(m[1], relative);
+  };
+  sources.forEach(file => collect(file, inSrc));
+  testFiles.forEach(file => collect(file, inTests));
+  // Endpoints a V4 test exercises through a recorded V2 contract.
+  const contractPaths = new Set();
+  for (const file of testFiles) {
+    for (const m of read(file).matchAll(/(?:contractFetch|loadContract)\(\s*'([^']+)'/g)) {
+      const contract = path.join(V4, 'tests/contracts', `${m[1]}.json`);
+      if (!fs.existsSync(contract)) continue;
+      for (const record of JSON.parse(read(contract)).records) contractPaths.add(new URL(record.url).pathname);
+    }
+  }
+  return { contractPaths, files: sources.length, lines: sources.reduce((sum, file) => sum + read(file).split('\n').length, 0), inSrc, inTests, tags, testTags };
+}
+
+const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '-');
+const templateCache = new Map();
+function matchesTemplate(template, concrete) {
+  if (!templateCache.has(template)) {
+    templateCache.set(template, new RegExp(`^${template.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{\}/g, '[^/]+')}$`));
+  }
+  return templateCache.get(template).test(concrete);
+}
+function endpointState(endpoint, v4) {
+  const test = v4.inTests.has(endpoint) || [...v4.contractPaths].some(value => matchesTemplate(endpoint, value));
+  return { impl: v4.inSrc.has(endpoint), test };
+}
+function symbolState(symbol, tagIndex) {
+  const hits = tagIndex.get(symbol) ?? [];
+  return {
+    ios: hits.some(hit => hit.platform === 'ios' || hit.platform === 'shared'),
+    android: hits.some(hit => hit.platform === 'android' || hit.platform === 'shared'),
+    any: hits.length > 0,
+  };
+}
+function indexTags(v4) {
+  const index = new Map();
+  for (const tag of v4.tags) {
+    const short = tag.symbol.split('.').pop();
+    for (const key of new Set([tag.symbol, short])) {
+      index.set(key, [...(index.get(key) ?? []), tag]);
+    }
+  }
+  return index;
+}
+function writeOut(name, content) {
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, '.gitignore'), '*\n');
+  const target = path.join(OUT, name);
+  fs.writeFileSync(target, content);
+  return rel(V4, target);
+}
+function readBaseline() {
+  return fs.existsSync(BASELINE_FILE) ? read(BASELINE_FILE).trim() : '';
+}
+
+function status() {
+  const v2 = scanV2();
+  const v4 = scanV4();
+  const tagIndex = indexTags(v4);
+  const endpointList = [...v2.endpoints.values()];
+  const liveCount = endpointList.filter(item => item.live).length;
+  const impl = endpointList.filter(item => endpointState(item.endpoint, v4).impl);
+  const tested = endpointList.filter(item => endpointState(item.endpoint, v4).test);
+  const methodList = [...v2.methods.values()];
+  const methodsDone = methodList.filter(item => (tagIndex.get(`${item.owner}.${item.symbol}`) ?? tagIndex.get(item.symbol))?.length);
+  const surfaceList = [...v2.surfaces.values()];
+  const screens = surfaceList.filter(item => item.kind === 'screen');
+  const sheets = surfaceList.filter(item => item.kind === 'sheet');
+  const doneOn = (list, platform) => list.filter(item => symbolState(item.name, tagIndex)[platform]).length;
+  const routeList = [...v2.routes.values()];
+  const routesDone = routeList.filter(item => tagIndex.get(item.symbol)?.length).length;
+  const channelList = [...v2.channels.values()];
+  const channelsDone = channelList.filter(item => tagIndex.get(item.channel.replace(/\W+/g, '_'))?.length).length;
+  const testList = [...v2.tests.values()].filter(item => item.cases > 0);
+  const casesTotal = testList.reduce((sum, item) => sum + item.cases, 0);
+  const testsPorted = testList.filter(item => v4.testTags.has(item.file));
+  const head = git('rev-parse', '--short', 'HEAD');
+  const baseline = readBaseline();
+
+  const domains = new Map();
+  for (const item of endpointList) {
+    const row = domains.get(item.domain) ?? { total: 0, impl: 0, test: 0 };
+    const state = endpointState(item.endpoint, v4);
+    row.total++;
+    if (state.impl) row.impl++;
+    if (state.test) row.test++;
+    domains.set(item.domain, row);
+  }
+  const domainRows = [...domains.entries()].sort((a, b) => b[1].total - a[1].total)
+    .map(([domain, row]) => `| ${domain} | ${row.total} | ${row.impl} | ${row.test} |`).join('\n');
+
+  const report = `# V2 -> V4 port status
+
+Generated by port_ledger.mjs. V2 HEAD ${head}, baseline ${baseline || '(not set)'}.
+V2: ${v2.fileCount} Dart files, ${v2.lines} lines (${v2.splitFiles} generated by large_library_splitter). V4: ${v4.files} source files, ${v4.lines} lines.
+${v2.excluded} items are excluded by docs/port/EXCLUDED.txt.
+
+| What | V2 total | In V4 | Coverage |
+|---|---:|---:|---:|
+| Endpoints used by code (${liveCount} are WebSocket) | ${endpointList.length} | ${impl.length} | ${pct(impl.length, endpointList.length)} |
+| Endpoints exercised by a V4 test | ${endpointList.length} | ${tested.length} | ${pct(tested.length, endpointList.length)} |
+| Public API methods (@v2 tag) | ${methodList.length} | ${methodsDone.length} | ${pct(methodsDone.length, methodList.length)} |
+| Routes (@v2 tag) | ${routeList.length} | ${routesDone} | ${pct(routesDone, routeList.length)} |
+| Screens on iOS (@v2 tag) | ${screens.length} | ${doneOn(screens, 'ios')} | ${pct(doneOn(screens, 'ios'), screens.length)} |
+| Screens on Android (@v2 tag) | ${screens.length} | ${doneOn(screens, 'android')} | ${pct(doneOn(screens, 'android'), screens.length)} |
+| Sheets and dialogs on iOS (@v2 tag) | ${sheets.length} | ${doneOn(sheets, 'ios')} | ${pct(doneOn(sheets, 'ios'), sheets.length)} |
+| Sheets and dialogs on Android (@v2 tag) | ${sheets.length} | ${doneOn(sheets, 'android')} | ${pct(doneOn(sheets, 'android'), sheets.length)} |
+| Native channels (@v2 tag) | ${channelList.length} | ${channelsDone} | ${pct(channelsDone, channelList.length)} |
+| V2 test files ported (@v2-test tag), of ${casesTotal} cases | ${testList.length} | ${testsPorted.length} | ${pct(testsPorted.length, testList.length)} |
+
+## Endpoints by domain
+
+| Domain | Total | Implemented | Tested |
+|---|---:|---:|---:|
+${domainRows}
+`;
+  console.log(report);
+  console.log(`Saved: ${writeOut('STATUS.md', report)}`);
+}
+
+const ROLES_FILE = path.join(here, '../references/roles.json');
+const readRoles = () => JSON.parse(read(ROLES_FILE));
+const tokens = bytes => Math.round(bytes / 4);
+const kTokens = bytes => `${Math.round(bytes / 4000)}k`;
+
+/** Walks roles in order and gives each one only the code no earlier role has already covered. */
+function layRoles(graph, config) {
+  const covered = new Map();
+  return config.roles.map(role => {
+    const reach = reachForRole(graph, role);
+    const fresh = reach.nodes.filter(node => !covered.has(node));
+    const earlier = new Map();
+    for (const node of reach.nodes) {
+      const owner = covered.get(node);
+      if (owner) earlier.set(owner, (earlier.get(owner) ?? 0) + node.bytes);
+    }
+    for (const node of fresh) covered.set(node, role.id);
+    return { role, reach, fresh, earlier };
+  });
+}
+
+/** Reading order: API first, then shared code, then the role's own code, keeping each file whole. */
+function partsOf(fresh, budgetTokens) {
+  const rank = node => (node.kind === 'api' ? 0 : node.file.includes('/core/api/') ? 1 : !featureOf(node.file) ? 2 : 3);
+  const byFile = new Map();
+  for (const node of fresh) {
+    const key = `${rank(node)}|${node.file}`;
+    byFile.set(key, [...(byFile.get(key) ?? []), node]);
+  }
+  const ordered = [...byFile.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const parts = [];
+  let current = [];
+  let size = 0;
+  for (const [, nodes] of ordered) {
+    const bytes = nodes.reduce((sum, node) => sum + node.bytes, 0);
+    if (current.length && tokens(size + bytes) > budgetTokens) {
+      parts.push(current);
+      current = [];
+      size = 0;
+    }
+    current.push(...nodes);
+    size += bytes;
+  }
+  if (current.length) parts.push(current);
+  return parts;
+}
+
+function plan() {
+  const graph = buildGraph(V2);
+  const config = readRoles();
+  const laid = layRoles(graph, config);
+  const rows = laid.map(({ role, reach, fresh }) => {
+    const bytes = fresh.reduce((sum, node) => sum + node.bytes, 0);
+    const alone = reach.nodes.reduce((sum, node) => sum + node.bytes, 0);
+    const parts = partsOf(fresh, config.partBudgetTokens).length;
+    return { id: role.id, title: role.title, alone, bytes, parts, api: fresh.filter(node => node.kind === 'api').length };
+  });
+  const total = rows.reduce((sum, row) => sum + row.bytes, 0);
+  const reached = new Set(laid.flatMap(item => item.reach.nodes));
+  const missedApi = graph.nodes.filter(node => node.kind === 'api' && !node.name.startsWith('_') && !reached.has(node)).map(node => node.name);
+  const missedScreens = graph.nodes.filter(node => node.kind === 'class' && /(Screen|Page)$/.test(node.name) && !reached.has(node)).map(node => node.name);
+  const report = `# Port plan
+
+Reading cost only, as characters / 4. "New" assumes the roles are ported in this order. Pick any role first and
+its own reading list (the role command) then includes the shared code it needs, so it costs more than shown here.
+A static walk over-counts shared screens with runtime branches, so treat these as upper bounds.
+One part is at most ${kTokens(config.partBudgetTokens * 4)} tokens of V2 code to read, so it fits one logic session.
+
+| Role | What | Alone | New | Parts | New API methods |
+|---|---|---:|---:|---:|---:|
+${rows.map(row => `| ${row.id} | ${row.title} | ${kTokens(row.alone)} | ${kTokens(row.bytes)} | ${row.parts} | ${row.api} |`).join('\n')}
+| **Total** | | | **${kTokens(total)}** | **${rows.reduce((sum, row) => sum + row.parts, 0)}** | **${rows.reduce((sum, row) => sum + row.api, 0)}** |
+
+## Not reached from any role's routes
+
+Each is dead code, or is reached in a way this walk cannot see, such as a dynamic route. Decide which in the final sweep.
+
+- Public API methods (${missedApi.length}): ${missedApi.join(', ') || 'none'}
+- Screens (${missedScreens.length}): ${missedScreens.join(', ') || 'none'}
+`;
+  console.log(report);
+  console.log(`Saved: ${writeOut('PLAN.md', report)}`);
+}
+
+const DONE_FILE = path.join(V4, 'docs/port/DONE_ROLES.txt');
+const readDone = () => new Set(fs.existsSync(DONE_FILE) ? read(DONE_FILE).split('\n').map(line => line.split('#')[0].trim()).filter(Boolean) : []);
+
+/** One role's reach, minus only the roles whose logic is really ported (docs/port/DONE_ROLES.txt), in any order. */
+function layOne(graph, config, id) {
+  const role = config.roles.find(item => item.id === id);
+  if (!role) return null;
+  const done = readDone();
+  const covered = new Map();
+  for (const other of config.roles) {
+    if (other.id === id || !done.has(other.id)) continue;
+    for (const node of reachForRole(graph, other).nodes) if (!covered.has(node)) covered.set(node, other.id);
+  }
+  const reach = reachForRole(graph, role);
+  const fresh = reach.nodes.filter(node => !covered.has(node));
+  const earlier = new Map();
+  for (const node of reach.nodes) {
+    const owner = covered.get(node);
+    if (owner) earlier.set(owner, (earlier.get(owner) ?? 0) + node.bytes);
+  }
+  return { role, reach, fresh, earlier };
+}
+
+function roleReport(id, partNumber) {
+  if (!id) throw new Error('role needs an id. Run: plan');
+  const graph = buildGraph(V2);
+  const config = readRoles();
+  const entry = layOne(graph, config, id);
+  if (!entry) throw new Error(`Unknown role "${id}". Known: ${config.roles.map(role => role.id).join(', ')}`);
+  const { role, reach, fresh, earlier } = entry;
+  const parts = partsOf(fresh, config.partBudgetTokens);
+  const v2 = scanV2();
+  const v4 = scanV4();
+  const tagIndex = indexTags(v4);
+  const mark = done => (done ? 'x' : ' ');
+  const isTagged = node => Boolean(tagIndex.get(node.name)?.length);
+  const part = partNumber ? parts[Number(partNumber) - 1] : null;
+  if (partNumber && !part) throw new Error(`Role "${id}" has ${parts.length} part(s).`);
+  const scope = part ?? fresh;
+
+  const api = scope.filter(node => node.kind === 'api');
+  const endpointsIn = node => [...new Set(findEndpoints(node.source).map(item => item.value))].filter(value => v2.endpoints.has(value));
+  const endpoints = new Set();
+  const privateCalls = new Map(api.map(node => [node.name, node]));
+  for (const node of reach.nodes.filter(item => item.kind === 'api')) privateCalls.set(node.name, node);
+  const PLUMBING = new Set(['_sendAuthorized', '_sendMultipartAuthorized', '_sendStreamedAuthorized', '_reauthenticateFromStorage', '_performStoredAccountReauthentication', '_loginAt', '_performLogin']);
+  const walkEndpoints = (node, seen = new Set()) => {
+    if (seen.has(node.name) || PLUMBING.has(node.name)) return [];
+    seen.add(node.name);
+    const found = endpointsIn(node);
+    for (const token of node.tokens) {
+      const callee = privateCalls.get(token);
+      if (callee && token.startsWith('_') && callee !== node) found.push(...walkEndpoints(callee, seen));
+    }
+    return found;
+  };
+  const publicApi = api.filter(node => !node.name.startsWith('_'));
+  const apiLines = publicApi.sort((a, b) => a.name.localeCompare(b.name)).map(node => {
+    const list = [...new Set(walkEndpoints(node))];
+    list.forEach(value => endpoints.add(value));
+    const line = `- [${mark(isTagged(node))}] ${node.name} <- ${node.file}:${node.line} (${tokens(node.bytes)} tok)`;
+    return list.length ? `${line}\n  ${list.join(', ')}` : line;
+  });
+
+  const scopeNames = new Set(scope.map(node => node.name));
+  const surfaces = [...v2.surfaces.values()].filter(item => scopeNames.has(item.name));
+  const routeNames = [...reach.routesReached].filter(name => (graph.routeScreens.get(name) ?? []).some(screen => scopeNames.has(screen)));
+  const channels = new Set();
+  for (const node of scope) for (const m of node.source.matchAll(/(?:Method|Event)Channel\(\s*'([^']+)'/g)) channels.add(m[1]);
+  const keys = new Set();
+  for (const node of scope) for (const m of node.source.matchAll(/\b\w*[kK]ey\w*\s*=\s*'([a-z][a-z0-9_:.-]{2,})'/g)) keys.add(m[1]);
+
+  const readingByFile = new Map();
+  for (const node of scope.filter(item => item.kind !== 'api')) readingByFile.set(node.file, [...(readingByFile.get(node.file) ?? []), node]);
+  const reading = [...readingByFile.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([file, nodes]) => {
+    const bytes = nodes.reduce((sum, node) => sum + node.bytes, 0);
+    const list = nodes.sort((a, b) => a.line - b.line).map(node => `${mark(isTagged(node)) === 'x' ? '[x]' : ''}${node.name}:${node.line}`).join(', ');
+    return `- ${file} (${tokens(bytes)} tok): ${list}`;
+  });
+
+  const publicNames = new Set(fresh.filter(node => node.kind === 'api' && !node.name.startsWith('_')).map(node => node.name));
+  const surfaceNames = new Set([...v2.surfaces.values()].filter(item => fresh.some(node => node.name === item.name)).map(item => item.name));
+  const testRows = [];
+  for (const [file, info] of v2.tests) {
+    if (!info.cases) continue;
+    const text = read(path.join(V2, file));
+    const logicCases = (text.match(/^\s*test\(/gm) ?? []).length;
+    const calls = [...publicNames].filter(name => new RegExp(`\\.${name}\\(`).test(text));
+    const uses = [...surfaceNames].filter(name => new RegExp(`\\b${name}\\b`).test(text));
+    if (!calls.length && !uses.length) continue;
+    testRows.push({ file, logicCases, widgetCases: info.cases - logicCases, httpMock: info.httpMock, calls: calls.length, tok: tokens(text.length) });
+  }
+  const contractTests = testRows.filter(row => row.httpMock && row.calls > 0 && row.file.endsWith('_test.dart')).sort((a, b) => b.calls - a.calls);
+  const logicTests = testRows.filter(row => !contractTests.includes(row) && row.logicCases > 0).sort((a, b) => b.logicCases - a.logicCases);
+  const widgetOnly = testRows.filter(row => !contractTests.includes(row) && !logicTests.includes(row));
+  const testLine = row => `- [${mark(v4.testTags.has(row.file))}] ${row.file} (${row.logicCases} logic, ${row.widgetCases} widget, ${row.tok} tok)`;
+
+  const borrowed = [...reach.borrowed.entries()].sort(([a], [b]) => b.bytes - a.bytes).slice(0, 40)
+    .map(([node, from]) => `- ${node.name} (${tokens(node.bytes)} tok) <- ${from?.name ?? 'route'}: ${node.file}:${node.line}`);
+  const bytes = scope.reduce((sum, node) => sum + node.bytes, 0);
+  const already = [...earlier.entries()].map(([owner, size]) => `${owner} ${kTokens(size)}`).join(', ');
+
+  const report = `# Role: ${role.title} (${id})${part ? `, part ${partNumber} of ${parts.length}` : ''}
+
+${role.notes ?? ''}
+
+To read: ${kTokens(bytes)} tokens of V2 code${part ? '' : `, in ${parts.length} part(s). Run \`role ${id} <part>\` for one part`}.
+Already ported roles that cover part of this code${already ? `: ${already}` : ': none, so the shared core is included below'}. Do not re-read the covered code unless something here depends on its details.
+JSON role values: ${(role.jsonRoles ?? []).join(', ') || 'none'}. Scanned from V2's working tree. Line numbers can shift, so search by symbol.
+
+## Public API methods to port (${publicApi.length})
+
+Private helpers they call are in the same files. Endpoints are listed under each method.
+
+${apiLines.join('\n') || '- none'}
+
+## Routes (${routeNames.length})
+
+${routeNames.map(name => `- [${mark(tagIndex.get(`AppRoutes.${name}`)?.length)}] AppRoutes.${name} (guards: ${(graph.routeCapabilities.get(name) ?? ['none']).join(', ')})`).join('\n') || '- none'}
+
+## Screens, sheets and dialogs: [iOS][Android] (${surfaces.length})
+
+${surfaces.map(item => {
+    const state = symbolState(item.name, tagIndex);
+    return `- [${mark(state.ios)}][${mark(state.android)}] ${item.kind} ${item.name} <- ${item.ref}`;
+  }).join('\n') || '- none'}
+
+## Native channels (${channels.size})
+
+${[...channels].map(name => `- ${name}`).join('\n') || '- none'}
+
+## Likely storage keys (${keys.size}; heuristic)
+
+${[...keys].map(name => `- ${name}`).join('\n') || '- none'}
+
+## Reading list: file (size): symbol:line. [x] means already tagged in V4 (${reading.length} files)
+
+Read these declarations by line range. There is no need to open whole files or explore outside this list unless the code sends you there.
+
+${reading.join('\n') || '- none'}
+
+Tests are listed in .port/role-${id}-tests.md. References into other features are in .port/role-${id}-borrowed.md.
+`;
+  writeOut(`role-${id}-tests.md`, `# V2 tests for role ${id}
+
+## Record as wire contracts with v2_contracts.sh --role ${id} (${contractTests.length})
+
+These need no reading to get fixtures. Read a test case only for what it asserts after the response.
+
+${contractTests.map(testLine).join('\n') || '- none'}
+
+## Logic tests: port the rule (${logicTests.length})
+
+${logicTests.map(testLine).join('\n') || '- none'}
+
+## Widget-only: read only when a UI detail is unclear (${widgetOnly.length})
+
+${widgetOnly.map(testLine).join('\n') || '- none'}
+`);
+  writeOut(`role-${id}-borrowed.md`, `# Other features role ${id} references (${reach.borrowed.size}, largest 40 shown)
+
+A static walk cannot tell whether this role reaches these at run time. Check the branch before porting one, and read only that declaration.
+
+${borrowed.join('\n') || '- none'}
+`);
+  const saved = writeOut(part ? `role-${id}-${partNumber}.md` : `role-${id}.md`, report);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, `role-${id}.contract-tests.txt`), contractTests.map(row => row.file).join('\n') + '\n');
+  console.log(`${role.title}: ${kTokens(bytes)} tokens to read${part ? ` in part ${partNumber}/${parts.length}` : ` in ${parts.length} part(s)`}, ${publicApi.length} API methods, ${endpoints.size} endpoints, ${surfaces.length} screens/sheets, ${contractTests.length} contract tests, ${logicTests.length} logic tests, ${widgetOnly.length} widget tests.`);
+  console.log(`Saved: ${saved}`);
+}
+
+function worklist(pattern) {
+  if (!pattern) throw new Error('worklist needs a regex, for example: worklist "rezka"');
+  const match = new RegExp(pattern, 'i');
+  const v2 = scanV2();
+  const v4 = scanV4();
+  const tagIndex = indexTags(v4);
+  const mark = done => (done ? 'x' : ' ');
+  const endpoints = [...v2.endpoints.values()].filter(item => match.test(item.endpoint) || item.refs.some(ref => match.test(ref)));
+  const endpointSet = new Set(endpoints.map(item => item.endpoint));
+  const methods = [...v2.methods.values()].filter(item => match.test(item.symbol) || match.test(item.ref));
+  const surfaces = [...v2.surfaces.values()].filter(item => match.test(item.name) || match.test(item.ref));
+  const routes = [...v2.routes.values()].filter(item => match.test(item.name) || match.test(item.path));
+  const channels = [...v2.channels.values()].filter(item => match.test(item.channel) || match.test(item.ref));
+  const keys = [...v2.storageKeys.values()].filter(item => match.test(item.key) || match.test(item.ref));
+  const tests = [...v2.tests.values()].filter(item => item.cases > 0 && (match.test(item.file) || item.endpoints.some(value => endpointSet.has(value))));
+  const dartFiles = walk(path.join(V2, 'lib'), name => name.endsWith('.dart')).filter(file => match.test(rel(V2, file)));
+  const dartLines = dartFiles.reduce((sum, file) => sum + read(file).split('\n').length, 0);
+
+  const report = `# Worklist: ${pattern}
+
+V2 HEAD ${git('rev-parse', '--short', 'HEAD')}. ${dartFiles.length} Dart files with matching paths, ${dartLines} lines.
+Name-based search. For a role's real scope use the role command.
+Scanned from V2's working tree, which can be ahead of the baseline. Line numbers are approximate; search by symbol.
+
+## Endpoints (${endpoints.length}): [impl][test]. HTTP verbs are a hint; confirm them in the code.
+${endpoints.map(item => {
+    const state = endpointState(item.endpoint, v4);
+    return `- [${mark(state.impl)}][${mark(state.test)}] ${[...item.verbs].join('/') || '?'} ${item.endpoint}${item.live ? ' (WebSocket)' : ''} <- ${item.refs.slice(0, 3).join(', ')}`;
+  }).join('\n') || '- none'}
+
+## Public API methods (${methods.length})
+${methods.map(item => `- [${mark((tagIndex.get(`${item.owner}.${item.symbol}`) ?? tagIndex.get(item.symbol))?.length)}] ${item.symbol} <- ${item.ref}`).join('\n') || '- none'}
+
+## Routes (${routes.length})
+${routes.map(item => `- [${mark(tagIndex.get(item.symbol)?.length)}] ${item.symbol} = ${item.path} <- ${item.ref}`).join('\n') || '- none'}
+
+## Screens, sheets and dialogs (${surfaces.length}): [iOS][Android]
+${surfaces.map(item => {
+    const state = symbolState(item.name, tagIndex);
+    return `- [${mark(state.ios)}][${mark(state.android)}] ${item.kind} ${item.name} <- ${item.ref}`;
+  }).join('\n') || '- none'}
+
+## Native channels (${channels.length})
+${channels.map(item => `- ${item.type}Channel ${item.channel} <- ${item.ref}`).join('\n') || '- none'}
+
+## Likely storage keys (${keys.length}; heuristic, also read the code)
+${keys.map(item => `- ${item.key} <- ${item.ref}`).join('\n') || '- none'}
+
+## V2 tests to port first (${tests.length}, ${tests.reduce((sum, item) => sum + item.cases, 0)} cases)
+${tests.map(item => `- [${mark(v4.testTags.has(item.file))}] ${item.file} (${item.cases} cases${item.httpMock ? ', HTTP mock' : ''})`).join('\n') || '- none'}
+`;
+  const slug = pattern.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'all';
+  const saved = writeOut(`worklist-${slug}.md`, report);
+  console.log(`Worklist "${pattern}": ${endpoints.length} endpoints, ${methods.length} API methods, ${routes.length} routes, ${surfaces.length} screens/sheets, ${channels.length} channels, ${tests.length} test files, ${dartLines} Dart lines.`);
+  console.log(`Saved: ${saved}`);
+}
+
+function drift() {
+  const baseline = readBaseline();
+  if (!baseline) throw new Error('No baseline. Set one with: baseline <commit>');
+  const head = git('rev-parse', '--short', 'HEAD');
+  const changed = git('diff', '--name-only', baseline, 'HEAD', '--', 'lib', 'test').split('\n').filter(Boolean);
+  const dirty = git('status', '--porcelain', '--', 'lib', 'test').split('\n').filter(Boolean);
+  const commits = git('rev-list', '--count', `${baseline}..HEAD`, '--', 'lib', 'test');
+  console.log(`Baseline ${baseline.slice(0, 8)}, V2 HEAD ${head}: ${commits} commits and ${changed.length} files changed under lib/ and test/.`);
+  if (dirty.length) console.log(`V2 also has ${dirty.length} uncommitted files. They are someone else's work in progress: do not port them.`);
+  const v4 = scanV4();
+  const symbols = [...new Set(v4.tags.map(tag => tag.symbol.split('.').pop()))];
+  const affected = [];
+  for (const file of changed) {
+    const full = path.join(V2, file);
+    const text = fs.existsSync(full) ? read(full) : '';
+    const hits = symbols.filter(symbol => new RegExp(`\\b${symbol}\\b`).test(text));
+    const testHit = v4.testTags.has(file);
+    if (hits.length || testHit) affected.push({ file, hits, testHit });
+  }
+  if (!affected.length) {
+    console.log('No changed V2 file touches a symbol or test already tagged in V4.');
+    return;
+  }
+  console.log(`\nAlready-ported code to re-check (${affected.length}):`);
+  for (const item of affected) console.log(`- ${item.file}${item.testHit ? ' [ported test]' : ''}${item.hits.length ? ` -> ${item.hits.join(', ')}` : ''}`);
+  console.log('\nRead each with: git -C ../accord_mobile_v2 diff <baseline> HEAD -- <file>');
+}
+
+function check() {
+  const v2 = scanV2();
+  const v4 = scanV4();
+  const problems = [];
+  const channelTags = new Set([...v2.channels.keys()].map(name => name.replace(/\W+/g, '_')));
+  for (const tag of v4.tags) {
+    const short = tag.symbol.split('.').pop();
+    if (!v2.identifiers.has(short) && !channelTags.has(tag.symbol)) problems.push(`${tag.file}:${tag.line} @v2 ${tag.symbol} names nothing in V2`);
+  }
+  for (const [testFile, file] of v4.testTags) {
+    if (!v2.tests.has(testFile)) problems.push(`${file} @v2-test ${testFile} does not exist in V2`);
+  }
+  const known = new Set([...v2.endpoints.keys(), ...[...v2.tests.values()].flatMap(test => test.endpoints), ...readExcluded()]);
+  // A recorded V2 request also proves a dynamically assembled endpoint exists.
+  const unknown = [...v4.inSrc].filter(value => !known.has(value) &&
+    ![...v4.contractPaths].some(recorded => matchesTemplate(value, recorded))).sort();
+  if (unknown.length) {
+    console.log(`Warning: ${unknown.length} V4 endpoint(s) never appear literally in V2. Each is either built dynamically in V2 or invented in V4, so confirm which:`);
+    unknown.forEach(value => console.log(`- ${value}`));
+  }
+  if (problems.length) {
+    console.error(`${problems.length} problem(s):\n${problems.map(item => `- ${item}`).join('\n')}`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`OK: ${v4.tags.length} @v2 tags and ${v4.testTags.size} @v2-test tags all resolve against V2.`);
+}
+
+function baseline(value) {
+  if (!value) {
+    console.log(readBaseline() || '(not set)');
+    return;
+  }
+  const full = git('rev-parse', '--verify', `${value}^{commit}`);
+  fs.mkdirSync(path.dirname(BASELINE_FILE), { recursive: true });
+  fs.writeFileSync(BASELINE_FILE, `${full}\n`);
+  console.log(`Baseline set to ${full}`);
+}
+
+try {
+  if (!fs.existsSync(path.join(V2, 'pubspec.yaml'))) throw new Error(`V2 not found at ${V2}. Pass --v2 <path>.`);
+  if (command === 'plan') plan();
+  else if (command === 'role') roleReport(param, args[2]);
+  else if (command === 'status') status();
+  else if (command === 'worklist') worklist(param);
+  else if (command === 'drift') drift();
+  else if (command === 'check') check();
+  else if (command === 'baseline') baseline(param);
+  else console.log(USAGE);
+} catch (error) {
+  console.error(error.message);
+  process.exitCode = 1;
+}

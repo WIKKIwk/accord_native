@@ -1,0 +1,3 @@
+# Roles whose logic is fully ported, one id per line. Only these count as "already covered"
+# in a role's reading list, so you can port roles in any order.
+# The logic session adds the id here when the last part of a role passes its gates.

@@ -7,6 +7,8 @@ export type Session = {
   capabilities: string[];
   assigned_apparatus: string[];
   assigned_apparatus_labels: string[];
+  assigned_item_groups?: string[];
+  assigned_warehouses?: string[];
   baseUrl: string;
   imageCacheScope: string;
 };
@@ -50,10 +52,13 @@ function parseSession(value: unknown): Session | null {
   const raw = value as Record<string, unknown>;
   if (typeof raw.token !== 'string' || !raw.token.trim() || typeof raw.baseUrl !== 'string' || !raw.profile || typeof raw.profile !== 'object' || Array.isArray(raw.profile)) return null;
   try {
+    const profile = raw.profile as Record<string, unknown>;
     return {
       token: raw.token.trim(), baseUrl: normalizeServer(raw.baseUrl),
-      profile: raw.profile as Record<string, unknown>, capabilities: strings(raw.capabilities),
+      profile, capabilities: strings(raw.capabilities),
       assigned_apparatus: strings(raw.assigned_apparatus), assigned_apparatus_labels: strings(raw.assigned_apparatus_labels),
+      assigned_item_groups: strings(raw.assigned_item_groups),
+      assigned_warehouses: strings(Array.isArray(raw.assigned_warehouses) ? raw.assigned_warehouses : profile.assigned_warehouses),
       imageCacheScope: typeof raw.imageCacheScope === 'string' && raw.imageCacheScope ? raw.imageCacheScope : newImageCacheScope(),
     };
   } catch { return null; }

@@ -1,0 +1,11 @@
+# V2 items deliberately left out of the port. One per line: <item> # reason, date.
+# Adding a line is a product decision: record it in PORT.md too.
+
+# Iroh: V2 defaults to HTTPS/WSS. Automatic Iroh needs IROH_AUTO_CONNECT=true, and no Makefile,
+# CI or accord_deploy_mac build sets it. Checked 2026-11-05.
+/v1/mobile/iroh-ticket # Iroh is dormant in V2 release builds
+accord/iroh_transport # Iroh is dormant in V2 release builds
+accord/erp_discovery # only used by the Iroh transport
+test/native_iroh_transport_test.dart # covers the dormant Iroh transport
+test/native_iroh_gzip_test_part.dart # covers the dormant Iroh transport
+test/resilient_iroh_route_test.dart # covers the dormant Iroh transport

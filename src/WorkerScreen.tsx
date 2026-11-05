@@ -29,6 +29,7 @@ import { WorkerLongPressActions, type WorkerActionChoice } from './components/Wo
 import { WorkerAlert } from './components/WorkerAlert';
 import type { WorkerAlertData } from './components/workerDialogTypes';
 import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
+import { workerQueueSearch } from './workerQueueWindow';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
 type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' };
@@ -83,7 +84,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const preflightReopenBusy = useRef(false);
   const queueScopeRef = useRef<string | null>(null);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
-  const searchScope = search.trim().slice(0, 120);
+  const searchScope = workerQueueSearch(search);
   const windowScope = JSON.stringify([searchScope, queueLimit]);
   const currentWindow = useRef(windowScope);
   useEffect(() => { currentWindow.current = windowScope; }, [windowScope]);
@@ -101,7 +102,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     const generation = ++requestGeneration.current;
     if (showLoading) setLoading(true);
     try {
-      const result = await loadWorkerQueue(session, search, queueLimit);
+      const result = await loadWorkerQueue(session, searchScope, queueLimit);
       if (generation !== requestGeneration.current) return;
       const current = queueRef.current;
       const old = current?.snapshot;
@@ -118,7 +119,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       if (generation !== requestGeneration.current) return;
       setError(e instanceof Error ? e.message : 'Navbatni yuklab bo‘lmadi.');
     } finally { if (generation === requestGeneration.current) setLoading(false); }
-  }, [session, search, queueLimit, windowScope, limitReady]);
+  }, [session, searchScope, queueLimit, windowScope, limitReady]);
   const latestReload = useRef(reload);
   useEffect(() => { latestReload.current = reload; }, [reload]);
   useEffect(() => { screenMounted.current = true; return () => { screenMounted.current = false; }; }, []);
@@ -168,9 +169,9 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const chooseOrderAction = useCallback((action: WorkerActionChoice) => { pendingAction.current = action; }, []);
   useEffect(() => {
     if (!limitReady) return;
-    const timer = setTimeout(() => { void reload(true); }, search ? 350 : 0);
+    const timer = setTimeout(() => { void reload(true); }, searchScope ? 350 : 0);
     return () => clearTimeout(timer);
-  }, [reload, search, limitReady]);
+  }, [reload, searchScope, limitReady]);
   useEffect(() => {
     if (loadedScope !== windowScope || !queueRef.current) return;
     return subscribeWorkerLive(session, searchScope, () => { void reload(); }, undefined,

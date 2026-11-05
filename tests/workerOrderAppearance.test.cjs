@@ -16,31 +16,36 @@ function load(name, mocks = {}) {
 }
 
 const appearance = load('workerOrderAppearance');
-const { queueFromSnapshot } = load('workerApi', { './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 0 }, './authorizedFetch': {} });
-const { applyWorkerDelta } = load('workerDelta');
+const scope = load('sessionReadScope');
+const controls = load('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': scope });
+const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls });
+const { queueFromSnapshot } = load('workerApi', { './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 0 },
+  './authorizedFetch': {}, './workerSnapshot': snapshotDecoder, './workerDetailApi': {}, './sessionReadScope': scope });
+const { applyWorkerDelta } = load('workerDelta', { './workerSnapshot': snapshotDecoder });
 
 test('queue cards use the selected apparatus and update from live display states', () => {
+  const press1 = 'apparatus:default:press1', press2 = 'apparatus:default:press2';
   const snapshot = {
     projection: 'worker_list_v1', epoch: 'e', scope: 's', rev: 1,
     worker_list_rows: { a: { id: 'a', code: '1', title: 'A', customer_name: '', image_id: '' } },
-    visible_order_ids: { press1: ['a'], press2: ['a'] },
-    queue_states: { press1: { a: 'in_progress' }, press2: { a: 'paused' } },
-    worker_display_states: { press1: { a: 'in_progress' }, press2: { a: 'paused' } },
-    order_controls: {}, completed_orders: [],
+    sequences: { [press1]: ['a'], [press2]: ['a'] }, visible_order_ids: { [press1]: ['a'], [press2]: ['a'] },
+    queue_states: { [press1]: { a: 'in_progress' }, [press2]: { a: 'paused' } },
+    worker_display_states: { [press1]: { a: 'in_progress' }, [press2]: { a: 'paused' } },
+    worker_report_prompts: {}, queue_policies: [], order_controls: {}, completed_orders: [], completion_requests: [], completion_request_decisions: [],
   };
-  const machines = [{ id: 'press1', name: 'Press 1', operation: 'print' }, { id: 'press2', name: 'Press 2', operation: 'print' }];
-  const assigned = ['press1', 'press2'];
+  const machines = [{ id: press1, name: 'Press 1', operation: 'print' }, { id: press2, name: 'Press 2', operation: 'print' }];
+  const assigned = [press1, press2];
   const before = queueFromSnapshot(machines, snapshot, assigned);
-  assert.equal(before.orders.press1[0].cardTone, 'in_progress');
-  assert.equal(before.orders.press2[0].cardTone, 'paused');
+  assert.equal(before.orders[press1][0].cardTone, 'in_progress');
+  assert.equal(before.orders[press2][0].cardTone, 'paused');
   const updated = applyWorkerDelta(snapshot, { ok: true, type: 'state_delta', protocol: 'state_delta_v2', epoch: 'e', scope: 's', base_rev: 1, rev: 2,
-    patch: { worker_display_states: { scopes: { press1: { upsert: { a: 'print_preflight_passed' }, remove: [] } }, remove: [] } } });
+    patch: { worker_display_states: { scopes: { [press1]: { upsert: { a: 'print_preflight_passed' }, remove: [] } }, remove: [] } } });
   assert.ok(updated);
   const after = queueFromSnapshot(machines, updated, assigned);
-  assert.equal(after.orders.press1[0].cardTone, 'print_preflight_passed');
-  assert.equal(after.orders.press2[0].cardTone, 'paused');
-  updated.worker_display_states.press2.a = 'in_progress';
-  assert.equal(queueFromSnapshot(machines, updated, assigned).orders.press2[0].state, 'paused');
+  assert.equal(after.orders[press1][0].cardTone, 'print_preflight_passed');
+  assert.equal(after.orders[press2][0].cardTone, 'paused');
+  updated.worker_display_states[press2].a = 'in_progress';
+  assert.equal(queueFromSnapshot(machines, updated, assigned).orders[press2][0].state, 'paused');
 });
 
 test('V2 colors, completed rows and paused-state precedence are preserved', () => {

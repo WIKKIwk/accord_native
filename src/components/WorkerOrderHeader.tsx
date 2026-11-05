@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
+import { adminProductionMapOrderImageUrl } from '../orderImageUri';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
@@ -29,9 +30,7 @@ export function WorkerOrderImage({ session, orderId, imageId, onClose }: Identit
   const [failed, setFailed] = useState(false);
   const colors = useWorkerColors();
   const token = activeSessionToken(session);
-  const query = new URLSearchParams({ order_id: orderId });
-  if (imageId) query.set('image_id', imageId);
-  const url = new URL(`/v1/mobile/admin/production-maps/order-image/view?${query}`, session.baseUrl);
+  const url = new URL(adminProductionMapOrderImageUrl(session.baseUrl, orderId, imageId));
   return <View style={[styles.viewer, { backgroundColor: colors.field }]}>
     <View style={styles.imageHeader}>
       <Text style={[styles.code, { color: colors.text }]}>Buyurtma rasmi</Text>

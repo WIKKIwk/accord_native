@@ -1,5 +1,6 @@
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
+import { adminProductionMapOrderImageUrl, orderImageRequestUri } from './orderImageUri';
 
 const missing = new WeakMap<Session, Map<string, number>>();
 const checks = new WeakMap<Session, Map<string, Promise<boolean>>>();
@@ -10,14 +11,13 @@ function imageKey(orderId: string, imageId: string): string {
   return JSON.stringify([orderId, imageId]);
 }
 
-function thumbnailPath(orderId: string, imageId: string): string {
-  const query = new URLSearchParams({ order_id: orderId, variant: 'thumb-v1' });
-  if (imageId) query.set('image_id', imageId);
-  return `/v1/mobile/admin/production-maps/order-image/view?${query}`;
+function thumbnailPath(session: Session, orderId: string, imageId: string): string {
+  const url = orderImageRequestUri(session.baseUrl, adminProductionMapOrderImageUrl(session.baseUrl, orderId, imageId), true);
+  return `${url.pathname}${url.search}`;
 }
 
 export function thumbnailSource(session: Session, orderId: string, imageId: string) {
-  const url = new URL(thumbnailPath(orderId, imageId), session.baseUrl);
+  const url = new URL(thumbnailPath(session, orderId, imageId), session.baseUrl);
   if (!orderId || url.protocol !== 'https:' || url.origin !== session.baseUrl) return null;
   const freshness = Math.floor(Date.now() / (imageId ? 86400000 : 30000));
   return {
@@ -76,7 +76,7 @@ export function retryThumbnail(session: Session, orderId: string, imageId: strin
     scheduleThumbnail(finish => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
-      void authorizedFetch(session, thumbnailPath(orderId, imageId), { signal: controller.signal })
+      void authorizedFetch(session, thumbnailPath(session, orderId, imageId), { signal: controller.signal })
         .then(response => {
           if (!activeSessionToken(session)) return false;
           if (response.status === 404) {

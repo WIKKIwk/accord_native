@@ -3,6 +3,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
 import { readWorkerActionControl, reactivationTarget, runWorkerMenuAction, workerActionRequest, workerLongPressMenu, type ReactivationTarget, type WorkerMenu, type WorkerMenuAction } from '../workerLongPress';
+import { adminReactivateCompletedWork, adminWorkReactivationPreview } from '../workerControlsApi';
 import type { QueueCursor } from '../workerOrderLogic';
 import type { QueueOrder } from '../workerApi';
 import { useWorkerColors } from './useWorkerColors';
@@ -49,7 +50,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
     const params = new URLSearchParams({ worker_scope: 'true', detail: 'true', apparatus: apparatusId, order_id: order.id });
     const detail = await workerActionRequest(session, `/v1/mobile/admin/production-maps/sequence?${params}`);
     let preview: Record<string, unknown> = {};
-    try { preview = await workerActionRequest(session, '/v1/mobile/admin/production-maps/reactivation/preview', { apparatus: apparatusId, order_id: order.id }); } catch { /* Unavailable previews never authorize a write. */ }
+    try { preview = await adminWorkReactivationPreview(session, apparatusId, order.id); } catch { /* Unavailable previews never authorize a write. */ }
     return reactivationTarget(preview, detail, apparatusId, order.id, readCursor());
   }, [session, apparatusId, order.id, getCursor]);
 
@@ -111,8 +112,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
       run: async readCursor => {
         const fresh = await loadReactivation(readCursor);
         if (!fresh.target || JSON.stringify(fresh.target) !== JSON.stringify(target)) throw new Error('Buyurtma holati o‘zgardi.');
-        const result = await workerActionRequest(session, '/v1/mobile/admin/production-maps/reactivation', fresh.target);
-        if (result.ok !== true) throw new Error('Qayta faollashtirish tasdiqlanmadi.');
+        await adminReactivateCompletedWork(session, fresh.target);
         return 'Ish pauzada qayta ochildi. Ishlash uchun Davom ettirishni bosing.';
       },
     });

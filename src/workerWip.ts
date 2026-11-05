@@ -1,5 +1,7 @@
 import type { Session } from './auth';
-import { authorizedFetch } from './authorizedFetch';
+import { progressBatchStatusDetail } from './workerProgressModel';
+import { adminWipBatches } from './workerWipApi';
+import { isCanonicalApparatusId, WorkerControlException } from './workerControlsApi';
 
 export type WipBatch = Record<string, any>;
 export type WipOrder = { id: string; code: string; title: string; imageId: string; apparatusId: string };
@@ -13,14 +15,14 @@ const flowLabels: Record<string, string> = {
 };
 
 export function wipBatchKind(batch: WipBatch) {
-  const flow = wipText(batch.status_detail?.flow_status);
+  const flow = wipText(progressBatchStatusDetail(batch).flow_status);
   if (flow === 'in_progress' || batch.wip_status === 'in_use') return 'inUse';
   if (['consumed_by_next_stage', 'accepted_to_stock'].includes(flow) || batch.wip_status === 'processed') return 'processed';
   return 'waiting';
 }
 
 export function wipBatchStatus(batch: WipBatch) {
-  return flowLabels[wipText(batch.status_detail?.flow_status)] ??
+  return flowLabels[wipText(progressBatchStatusDetail(batch).flow_status)] ??
     ({ inUse: 'Ish jarayonida', processed: 'Ishlatilgan', waiting: 'Kutilmoqda' })[wipBatchKind(batch)];
 }
 
@@ -47,26 +49,15 @@ export function wipBatchRows(batch: WipBatch, names: WipApparatusNames) {
 }
 
 export async function loadWorkerWipBatches(session: Session, orderId: string, apparatusId: string, signal: AbortSignal) {
+  const order = orderId.trim(), apparatus = apparatusId.trim();
+  if (!isCanonicalApparatusId(apparatus)) throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
   const batches = new Map<string, WipBatch>();
-  const seen = new Set<string>();
-  let cursor = '';
-  do {
-    const query = new URLSearchParams({ status: 'all', order_id: orderId, producer_apparatus: apparatusId, limit: '500' });
-    if (cursor) query.set('before_batch_id', cursor);
-    const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/wip-batches?${query}`, { signal });
-    if (signal.aborted) return [];
-    if (!response.ok) throw new Error(`Rulonlarni yuklab bo‘lmadi (${response.status}).`);
-    const payload = await response.json();
-    if (signal.aborted) return [];
-    if (!Array.isArray(payload.batches)) throw new Error('Server javobi noto‘g‘ri.');
-    for (const batch of payload.batches) {
-      const id = wipText(batch?.batch_id);
-      if (id && wipText(batch?.order_id) === orderId && wipText(batch?.apparatus) === apparatusId) batches.set(id, batch);
-    }
-    cursor = wipText(payload.next_before_batch_id);
-    if (cursor && seen.has(cursor)) throw new Error('Rulonlar ro‘yxatini yuklab bo‘lmadi.');
-    if (cursor) seen.add(cursor);
-  } while (cursor);
+  const loaded = await adminWipBatches(session, { status: 'all', orderId: order, producerApparatus: apparatus, limit: 500, signal });
+  if (signal.aborted) return [];
+  for (const batch of loaded) {
+    const id = wipText(batch.batch_id);
+    if (id && wipText(batch.order_id) === order && wipText(batch.apparatus) === apparatus) batches.set(id, batch);
+  }
   return [...batches.values()];
 }
 

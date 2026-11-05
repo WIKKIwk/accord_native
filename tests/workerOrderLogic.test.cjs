@@ -5,12 +5,18 @@ const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
 
-const filename = path.resolve(__dirname, '../src/workerOrderLogic.ts');
-const loaded = new Module(filename, module);
-loaded.filename = filename;
-loaded.paths = module.paths;
-loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
-const { validOrderControl, matchesMaterialAssignment, materialStartReadiness, returnedPaintItemsFromDraft, automaticQolipConfirmation, preflightFreezeRequest, runningFreezeRequest } = loaded.exports;
+function load(name, mocks = {}) {
+  const filename = path.resolve(__dirname, `../src/${name}.ts`);
+  const loaded = new Module(filename, module);
+  loaded.filename = filename;
+  loaded.paths = module.paths;
+  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+  return loaded.exports;
+}
+const scope = load('sessionReadScope');
+const controls = load('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': scope });
+const { validOrderControl, matchesMaterialAssignment, materialStartReadiness, returnedPaintItemsFromDraft, automaticQolipConfirmation, preflightFreezeRequest, runningFreezeRequest } = load('workerOrderLogic', { './workerControlsApi': controls });
 
 function interaction(mode) {
   return { mode, start_materials_mode: 'hidden', material_scan_required: false, assigned_materials_display_only: false,

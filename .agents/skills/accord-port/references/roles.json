@@ -1,0 +1,258 @@
+{
+  "_comment": "Port order. Each role's cost counts only code that earlier roles have not already covered. Reorder this list and port_ledger.mjs plan recalculates.",
+  "partBudgetTokens": 180000,
+  "roles": [
+    {
+      "id": "base",
+      "title": "Login, session, profile, PIN and the shared core",
+      "jsonRoles": [],
+      "routes": [
+        "login",
+        "profile",
+        "pinSetupEntry",
+        "pinSetupConfirm"
+      ],
+      "features": [
+        "auth"
+      ],
+      "notes": "Includes transport, errors, saved accounts, role routing and shared widgets. Every other role depends on this, so it comes first. V4 already has part of it in auth.ts, authorizedFetch.ts and appLock.ts: tag and audit those instead of rewriting them."
+    },
+    {
+      "id": "preparation",
+      "title": "Tayyorlov masteri",
+      "jsonRoles": [
+        "tayyorlov_masteri"
+      ],
+      "capabilities": [
+        "preparation.access"
+      ],
+      "features": [
+        "preparation"
+      ],
+      "notes": "Suggested first trial of the whole cycle: it is cheap and has recorded V2 tests. Everything except one flow runs in Expo Go. The QR label reprint in preparation_production_screen.dart (RpsQrReprintSheet, adminPrepareRawMaterialStockReprint, adminConfirmRawMaterialStockReprint) needs the Bluetooth and USB printer channels, so port its API and logic, leave the printing step as an open item in PORT.md, and let the printing part of the aparatchi role finish it. If base is not done yet, add only the role routing this role needs: src/app/index.tsx currently sends every session to the worker UI."
+    },
+    {
+      "id": "boyoqchi",
+      "title": "Boyoqchi",
+      "jsonRoles": [
+        "boyoqchi"
+      ],
+      "capabilities": [
+        "boyoqchi.access"
+      ],
+      "features": [
+        "boyoqchi"
+      ]
+    },
+    {
+      "id": "customer",
+      "title": "Customer",
+      "jsonRoles": [
+        "customer"
+      ],
+      "capabilities": [
+        "customer.access"
+      ],
+      "features": [
+        "customer"
+      ]
+    },
+    {
+      "id": "supplier",
+      "title": "Supplier",
+      "jsonRoles": [
+        "supplier"
+      ],
+      "capabilities": [
+        "supplier.access"
+      ],
+      "features": [
+        "supplier"
+      ]
+    },
+    {
+      "id": "aparatchi",
+      "title": "Print apparatus worker",
+      "jsonRoles": [
+        "aparatchi"
+      ],
+      "capabilities": [
+        "apparatus.queue.read",
+        "apparatus.queue.manage"
+      ],
+      "features": [
+        "aparatchi"
+      ],
+      "includeIf": {
+        "path": "admin_production_map_orders_",
+        "contains": "workerMode|_isWorker|isApparatusOperator|_isAparatchiRole"
+      },
+      "notes": "The worker queue IS AdminProductionMapOrdersScreen(workerMode: true). In those shared files only the branches reachable with workerMode true belong here; skip admin-only branches. V4 already has much of this in workerApi.ts, workerOrderLogic.ts, OrderScreen.tsx and WorkerScreen.tsx with no tags, so start by tagging and auditing what exists."
+    },
+    {
+      "id": "homashyo",
+      "title": "Homashyo rezkachi",
+      "jsonRoles": [
+        "homashyo_rezkachi"
+      ],
+      "capabilities": [
+        "raw_material.split"
+      ],
+      "features": [
+        "raw_material_split"
+      ],
+      "notes": "Prints labels through the Bluetooth and USB printer channels, so it needs a development build. It comes after aparatchi, which needs the same printing."
+    },
+    {
+      "id": "chat",
+      "title": "Chat, used by all roles",
+      "jsonRoles": [],
+      "routes": [
+        "chat",
+        "chatDirectory",
+        "chatDetail",
+        "chatParticipantProfile"
+      ],
+      "features": [
+        "chat"
+      ],
+      "notes": "V4 has chat on iOS only. Android ships a stub, so the Android session has the most to do here."
+    },
+    {
+      "id": "rezka",
+      "title": "Rezka master",
+      "jsonRoles": [
+        "rezka_master"
+      ],
+      "routes": [
+        "apparatusQueue",
+        "apparatusDailyWork",
+        "apparatusWorkInstructions",
+        "apparatusPaddons",
+        "apparatusPaddonDetail",
+        "adminWorkerSettings",
+        "adminAdditionalSettings"
+      ],
+      "capabilities": [
+        "rezka.split.manage"
+      ],
+      "features": [
+        "aparatchi",
+        "rezka"
+      ],
+      "includeIf": {
+        "path": "admin_production_map_orders_",
+        "contains": "workerMode|_isWorker|isApparatusOperator|_isAparatchiRole|rezka|Rezka"
+      },
+      "notes": "Same queue as aparatchi, plus Rezka output, split and print-side flows."
+    },
+    {
+      "id": "material",
+      "title": "Material supply and GScale",
+      "jsonRoles": [
+        "material_taminotchi"
+      ],
+      "capabilities": [
+        "gscale.print",
+        "gscale.catalog.read",
+        "rps.batch.manage"
+      ],
+      "features": [
+        "material_taminotchi",
+        "material_link",
+        "gscale"
+      ],
+      "notes": "Needs local network discovery and printing, so it requires a development build."
+    },
+    {
+      "id": "werka",
+      "title": "Werka",
+      "jsonRoles": [
+        "werka",
+        "omborchi"
+      ],
+      "capabilities": [
+        "werka.access"
+      ],
+      "features": [
+        "werka"
+      ]
+    },
+    {
+      "id": "qolipchi",
+      "title": "Qolipchi",
+      "jsonRoles": [
+        "qolipchi"
+      ],
+      "capabilities": [
+        "qolip.manage"
+      ],
+      "features": [
+        "qolip"
+      ]
+    },
+    {
+      "id": "admin",
+      "title": "Admin, everything else",
+      "jsonRoles": [
+        "admin"
+      ],
+      "capabilities": [
+        "admin.access",
+        "production.map.manage",
+        "production.map.read",
+        "production.map.edit",
+        "production.order.create",
+        "production.order.edit",
+        "admin.settings.read",
+        "admin.settings.manage",
+        "admin.activity.read",
+        "party.supplier.read",
+        "party.supplier.manage",
+        "party.supplier.item.assign",
+        "party.supplier.code.manage",
+        "party.customer.read",
+        "party.customer.manage",
+        "party.customer.item.assign",
+        "party.customer.code.manage",
+        "catalog.item.read",
+        "catalog.item.create",
+        "catalog.item.bulk_move",
+        "catalog.item_group.read",
+        "catalog.item_group.manage",
+        "raw_material.assign",
+        "raw_material.rule.manage",
+        "role.capability.read",
+        "role.capability.manage",
+        "werka.code.manage",
+        "factory.location.manage",
+        "inventory.movement.manage"
+      ],
+      "features": [
+        "admin",
+        "inventory"
+      ],
+      "notes": "Largest role. Its parts follow the reading order, which keeps files of one screen together. Formulas in calculate deserve golden values from v2_oracle.sh."
+    },
+    {
+      "id": "brigader",
+      "title": "Brigader and sales manager",
+      "jsonRoles": [
+        "brigader",
+        "sales_manager"
+      ],
+      "routes": [
+        "brigaderHome",
+        "salesHome"
+      ],
+      "capabilities": [
+        "brigader.access",
+        "sales.access"
+      ],
+      "features": [
+        "admin"
+      ],
+      "notes": "These roles reuse admin surfaces, so most of the work is the guards in AppRouter.canOpenRoute and which actions are hidden. Do it after admin."
+    }
+  ]
+}

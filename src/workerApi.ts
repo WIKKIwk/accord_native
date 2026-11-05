@@ -3,6 +3,9 @@ import { authorizedFetch } from './authorizedFetch';
 import { DEFAULT_QUEUE_LIMIT, type QueueLimit } from './workerQueueLimit';
 import { completedOrderTone, workerOrderTone, type OrderCardTone } from './workerOrderAppearance';
 import type { QueueCursor } from './workerOrderLogic';
+import { decodeWorkerListSnapshot } from './workerSnapshot';
+import { workerProductionOrderDetail } from './workerDetailApi';
+import { sessionReadScope } from './sessionReadScope';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -74,18 +77,11 @@ export function workerOrderDetailFromSnapshot(snapshot: RecordValue, orderId: st
 
 export async function readWorkerOrderDetail(session: Session, apparatusId: string, orderId: string,
   cursor: QueueCursor | null, signal: AbortSignal): Promise<WorkerOrderDetail> {
-  const query = new URLSearchParams({ worker_scope: 'true', detail: 'true', apparatus: apparatusId, order_id: orderId });
+  const scope = sessionReadScope(session);
   for (let attempt = 0; attempt < 2; attempt++) {
-    const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/sequence?${query}`, { signal });
-    if (!response.ok) throw new Error(`Buyurtmani yuklab bo‘lmadi (${response.status}).`);
-    const snapshot = object(await response.json());
-    const maps = snapshot.maps;
-    const map = object(object(Array.isArray(maps) ? maps[0] : null).map);
-    const valid = Array.isArray(maps) && maps.length === 1 && map.id === orderId &&
-      (!snapshot.projection || snapshot.projection === 'worker_detail_v1') &&
-      !!string(snapshot.scope) && !!string(snapshot.epoch) &&
-      typeof snapshot.rev === 'number' && Number.isInteger(snapshot.rev) && snapshot.rev >= 0 &&
-      (!cursor?.epoch || snapshot.epoch === cursor.epoch) &&
+    const snapshot = await workerProductionOrderDetail(session, apparatusId, orderId, signal);
+    if (scope !== sessionReadScope(session)) throw new Error('Sessiya o‘zgardi. Qayta urining.');
+    const valid = (!cursor?.epoch || snapshot.epoch === cursor.epoch) &&
       (typeof cursor?.rev !== 'number' || snapshot.rev >= cursor.rev);
     if (!valid) continue;
     return workerOrderDetailFromSnapshot(snapshot, orderId);
@@ -104,10 +100,9 @@ export function workerOrderIsFrozen(snapshot: RecordValue | undefined, orderId: 
 
 async function getJson(session: Session, path: string, resource: 'apparatus' | 'queue' | 'profile'): Promise<unknown> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), resource === 'profile' ? 5000 : 15000);
+  const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const response = await authorizedFetch(session, path, {
-      headers: { Accept: 'application/json' },
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -129,7 +124,7 @@ async function getJson(session: Session, path: string, resource: 'apparatus' | '
 
 export async function loadWorkerQueue(session: Session, search = '', queueLimit: QueueLimit = DEFAULT_QUEUE_LIMIT): Promise<WorkerQueue> {
   const query = new URLSearchParams({ worker_scope: 'true', projection: 'worker_list_v1', queue_limit: String(queueLimit), queue_positions: 'true' });
-  if (search.trim()) query.set('queue_search', search.trim().slice(0, 120));
+  if (search.trim()) query.set('queue_search', search.trim());
   const [catalogResult, queueResult, profileResult] = await Promise.allSettled([
     getJson(session, '/v1/mobile/admin/apparatus?limit=200', 'apparatus'),
     getJson(session, `/v1/mobile/admin/production-maps/sequence?${query.toString()}`, 'queue'),
@@ -140,8 +135,7 @@ export async function loadWorkerQueue(session: Session, search = '', queueLimit:
   const catalog = catalogResult.value;
   const raw = queueResult.value;
   if (!Array.isArray(catalog)) throw new Error('Aparatlar ro‘yxati formati noto‘g‘ri.');
-  const snapshot = object(raw);
-  if (snapshot.projection !== 'worker_list_v1') throw new Error('Server navbat formati qo‘llab-quvvatlanmaydi.');
+  const snapshot = decodeWorkerListSnapshot(raw);
   const assignments = workerAssignmentsFromProfile(session, profileResult.status === 'fulfilled' ? profileResult.value : null);
   const assignedIds = assignments?.ids ?? session.assigned_apparatus;
   const assignedLabels = assignments?.labels ?? session.assigned_apparatus_labels;

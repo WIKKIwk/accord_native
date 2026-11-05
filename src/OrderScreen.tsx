@@ -5,6 +5,18 @@ import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
+import { adminBosmaAstatkaReport } from './workerControlsApi';
+import { adminPrintPreflight } from './workerPrintPreflight';
+import { adminMaterialStartDeliveryCandidates, adminReceiveMaterialForStart, materialDeliveryIdempotencyKey } from './workerMaterialDelivery';
+import { adminRawMaterialAssignments, adminRawMaterialIntakeCandidates, adminReceiveRawMaterialForActiveOrder } from './workerRawMaterials';
+import { adminOrderScanBootstrap } from './workerScanBootstrap';
+import { sessionReadScope } from './sessionReadScope';
+import { adminApparatusQueueActionResult } from './workerQueueAction';
+import { completeWorkerScanSections } from './workerScanSections';
+import { legacyWorkerScanControl } from './workerLegacyScan';
+import { adminProgressQrLookup } from './workerProgressApi';
+import { adminLookupOpeningWip } from './workerOpeningWip';
+import { workerProductionOrderDetail } from './workerDetailApi';
 import { useNativeSheet } from './nativeSheet';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerOrderHeader, WorkerOrderImage } from './components/WorkerOrderHeader';
@@ -43,16 +55,14 @@ function barcodeFromQr(raw: string) {
   } catch { return value; }
 }
 
-async function request(session: Session, path: string, init?: RequestInit): Promise<Obj> {
-  const response = await authorizedFetch(session, path, {
-    ...init,
-    headers: { ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
-  });
-  const text = await response.text();
-  let data: Obj = {};
-  try { data = JSON.parse(text); } catch { if (!response.ok) throw new Error(`Server xatosi (${response.status})`); }
-  if (!response.ok) throw new Error(String(data.detail || data.message || data.error || `Server xatosi (${response.status})`));
-  return data;
+async function scanBootstrap(session: Session, input: Parameters<typeof adminOrderScanBootstrap>[1],
+  unsupported: { current: boolean }): Promise<Obj> {
+  const scope = sessionReadScope(session);
+  const aggregate = unsupported.current ? null : await adminOrderScanBootstrap(session, input);
+  if (!aggregate) unsupported.current = true;
+  const result = aggregate ?? await legacyWorkerScanControl(session, input.apparatus, input.orderId);
+  if (scope !== sessionReadScope(session)) throw new Error('Sessiya o‘zgardi. Qayta urining.');
+  return input.includeSections === false ? result : completeWorkerScanSections(session, result, input.materialBarcodes ?? []);
 }
 
 export function OrderScreen({ session, apparatusId, orderId, preview, queueCursor, initialAction, onClose, onChanged }: Props) {
@@ -113,6 +123,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const loadVersion = useRef(0);
   const actionInFlight = useRef(false);
   const scanInFlight = useRef(false);
+  const scanBootstrapUnsupported = useRef(false);
   const recentQuickScan = useRef<{ value: string; at: number } | null>(null);
   const screenMounted = useRef(true);
   const initialActionHandled = useRef(false);
@@ -122,6 +133,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const queueEpoch = queueCursor?.epoch;
   const queueRevision = queueCursor?.rev;
   const latestCursor = useRef(queueCursor);
+  useEffect(() => { scanBootstrapUnsupported.current = false; }, [session, apparatusId, orderId]);
   useEffect(() => { latestCursor.current = queueCursor; }, [queueCursor]);
   useEffect(() => {
     const mounted = screenMounted;
@@ -146,19 +158,17 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
 
   const load = useCallback(async () => {
     const version = ++loadVersion.current;
+    const scope = sessionReadScope(session);
     setLoading(true);
     try {
-      const params = `apparatus=${encodeURIComponent(apparatusId)}&order_id=${encodeURIComponent(orderId)}`;
-      const scanPath = `/v1/mobile/admin/production-maps/order-scan-bootstrap?${params}${materials.length ? `&material_barcodes=${encodeURIComponent(materials.join(','))}` : ''}`;
       let accepted = false;
       for (let attempt = 0; attempt < 2 && !accepted; attempt++) {
-        const [snapshot, initialScan] = await Promise.all([
-          request(session, `/v1/mobile/admin/production-maps/sequence?worker_scope=true&detail=true&${params}`),
-          request(session, scanPath),
+        const [snapshot, scan] = await Promise.all([
+          workerProductionOrderDetail(session, apparatusId, orderId),
+          scanBootstrap(session, { apparatus: apparatusId, orderId, materialBarcodes: materials, automaticQolipConfirmation: true }, scanBootstrapUnsupported),
         ]);
-        const scan = initialScan.control_state?.control?.interaction?.qolip_automatic_confirmation === true
-          ? await request(session, `${scanPath}&automatic_qolip_confirmation=true`) : initialScan;
         if (version !== loadVersion.current) return;
+        if (scope !== sessionReadScope(session)) { setBootstrap(null); setControlRetired(true); return; }
         const maps = snapshot.maps;
         accepted = Array.isArray(maps) && maps.length === 1 && maps[0]?.map?.id === orderId &&
           (!snapshot.projection || snapshot.projection === 'worker_detail_v1') && typeof snapshot.scope === 'string' && !!snapshot.scope && typeof snapshot.epoch === 'string' && !!snapshot.epoch &&
@@ -167,7 +177,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
         if (accepted) { setDetail(snapshot); setBootstrap(scan); setControlRetired(false); }
       }
       if (!accepted) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
-    } catch (e) { if (version === loadVersion.current) setError(e instanceof Error ? e.message : 'Buyurtmani yuklab bo‘lmadi'); }
+    } catch (e) { if (version === loadVersion.current) { setBootstrap(null); setControlRetired(true); setError(e instanceof Error ? e.message : 'Buyurtmani yuklab bo‘lmadi'); } }
     finally { if (version === loadVersion.current) setLoading(false); }
   }, [session, apparatusId, orderId, materials, queueEpoch, queueRevision]);
   useEffect(() => {
@@ -259,8 +269,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   useEffect(() => {
     if (!controlEpoch || scanningRequired) return;
     let current = true;
-    const params = new URLSearchParams({ order_id: orderId, apparatus: apparatusId });
-    request(session, `/v1/mobile/admin/raw-material-assignments?${params}`).then(data => {
+    adminRawMaterialAssignments(session, orderId, apparatusId).then(data => {
       if (!current) return;
       if (!Array.isArray(data)) throw new Error('Homashyolar yuklanmadi.');
       setAttachedMaterials(data.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)));
@@ -271,8 +280,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   useEffect(() => {
     if (!controlEpoch || scanningRequired || interaction.material_intake_allowed !== true) return;
     let current = true;
-    const params = new URLSearchParams({ order_id: orderId, apparatus: apparatusId });
-    request(session, `/v1/mobile/admin/raw-material-intake-candidates?${params}`).then(data => {
+    adminRawMaterialIntakeCandidates(session, orderId, apparatusId).then(data => {
       if (!current || !Array.isArray(data)) return;
       setIntakeCandidates(data.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)));
     }).catch(() => { if (current) setIntakeCandidates([]); });
@@ -338,13 +346,13 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       if (!qr || !synchronized || scanInFlight.current) return;
       scanInFlight.current = true;
       const version = loadVersion.current;
+      const scanScope = sessionReadScope(session);
       setLoading(true); setError(''); setInputBatch(null);
       try {
         if (interaction.opening_wip_mode === 'scan_required') {
           try {
-            const result = await request(session, '/v1/mobile/admin/production-maps/opening-wip/lookup', { method: 'POST', body: JSON.stringify({ apparatus: apparatusId, order_id: orderId, qr_payload: qr }) });
-            const batch = result.batch;
-            if (version !== loadVersion.current || !validOrderControl(bootstrap, apparatusId, orderId, latestCursor.current) || result.ok !== true ||
+            const batch = await adminLookupOpeningWip(session, { apparatus: apparatusId, orderId, qrPayload: qr });
+            if (scanScope !== sessionReadScope(session) || version !== loadVersion.current || !validOrderControl(bootstrap, apparatusId, orderId, latestCursor.current) ||
                 !batch || batch.order_id !== orderId || typeof batch.batch_id !== 'string' || !batch.batch_id.trim() ||
                 String(batch.qr_payload ?? '').trim().toUpperCase() !== qr.toUpperCase() || batch.wip_status !== 'waiting') throw new Error('Rulon ushbu buyurtma uchun tasdiqlanmadi.');
             setInputBatch({ id: batch.batch_id.trim(), qr, stage: String(control.stage_node_id ?? '') });
@@ -354,14 +362,17 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
             if (interaction.previous_wip_mode !== 'scan_required' && interaction.resume_input_required !== true) throw e;
           }
         }
-        const params = new URLSearchParams({ apparatus: apparatusId, order_id: orderId, qr_payload: qr });
-        if (materials.length) params.set('material_barcodes', materials.join(','));
-        if (automaticQolip) params.set('automatic_qolip_confirmation', 'true');
-        const scan = await request(session, `/v1/mobile/admin/production-maps/order-scan-bootstrap?${params}`);
-        const proof = scan.validated_progress;
+        const scan = await scanBootstrap(session, { apparatus: apparatusId, orderId, qrPayload: qr,
+          materialBarcodes: materials, automaticQolipConfirmation: true }, scanBootstrapUnsupported);
+        let proof = scan.validated_progress;
+        if (!proof) {
+          const validated = await adminProgressQrLookup(session, qr, { apparatus: apparatusId, orderId, requireActiveOrder: true });
+          proof = { ok: true, active_order_validated: true, validated_apparatus: apparatusId, validated_order_id: orderId,
+            batch: validated, input_route: validated.input_route, input_route_error: validated.input_route_error };
+        }
         const batch = proof?.batch;
         const route = proof?.input_route;
-        if (version !== loadVersion.current || !validOrderControl(scan, apparatusId, orderId, queueCursor) || proof?.ok !== true || proof.active_order_validated !== true ||
+        if (scanScope !== sessionReadScope(session) || version !== loadVersion.current || !validOrderControl(scan, apparatusId, orderId, queueCursor) || proof?.ok !== true || proof.active_order_validated !== true ||
             proof.validated_apparatus !== apparatusId || proof.validated_order_id !== orderId ||
             !batch || batch.order_id !== orderId || typeof batch.batch_id !== 'string' || !batch.batch_id.trim() ||
             String(batch.qr_payload ?? '').trim().toUpperCase() !== qr.toUpperCase() || batch.wip_status !== 'waiting' ||
@@ -396,10 +407,8 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   }
   async function finishMaterialReceipt(material: Obj, purpose: 'start' | 'intake', version: number) {
     const barcode = String(material.barcode ?? '').trim();
-    const params = new URLSearchParams({ apparatus: apparatusId, order_id: orderId });
-    if (materials.length) params.set('material_barcodes', materials.join(','));
-    if (automaticQolip) params.set('automatic_qolip_confirmation', 'true');
-    const current = await request(session, `/v1/mobile/admin/production-maps/order-scan-bootstrap?${params}`);
+    const current = await scanBootstrap(session, { apparatus: apparatusId, orderId, materialBarcodes: materials,
+      automaticQolipConfirmation: true }, scanBootstrapUnsupported);
     if (!screenMounted.current || version !== loadVersion.current || !validOrderControl(current, apparatusId, orderId, latestCursor.current)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
     if (purpose === 'start') {
       const requirements = current.sections?.materials?.data;
@@ -413,7 +422,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       setSuccess('Homashyo tasdiqlandi.');
     } else {
       if (current.control_state.control.interaction.material_intake_allowed !== true) throw new Error('Hozir homashyo ulash mumkin emas.');
-      const received = await request(session, '/v1/mobile/admin/raw-material-intake', { method: 'POST', body: JSON.stringify({ order_id: orderId, apparatus: apparatusId, barcode }) });
+      const received = await adminReceiveRawMaterialForActiveOrder(session, orderId, apparatusId, barcode);
       if (!screenMounted.current) return;
       if (!matchesMaterialAssignment(received, orderId, apparatusId) || normalizeCode(received.barcode) !== normalizeCode(barcode)) throw new Error('Homashyo qabuli tasdiqlanmadi.');
       const remainingBeforeRefresh = intakeCandidates.filter(row => normalizeCode(row.barcode) !== normalizeCode(barcode));
@@ -422,10 +431,9 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       setSuccess('Homashyo qabul qilindi.');
       onChanged();
       setRefresh(value => value + 1);
-      const listParams = new URLSearchParams({ order_id: orderId, apparatus: apparatusId });
       const [assignments, candidates] = await Promise.allSettled([
-        request(session, `/v1/mobile/admin/raw-material-assignments?${listParams}`),
-        request(session, `/v1/mobile/admin/raw-material-intake-candidates?${listParams}`),
+        adminRawMaterialAssignments(session, orderId, apparatusId),
+        adminRawMaterialIntakeCandidates(session, orderId, apparatusId),
       ]);
       if (!screenMounted.current) return;
       if (assignments.status === 'fulfilled' && Array.isArray(assignments.value)) setAttachedMaterials(assignments.value.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)));
@@ -446,12 +454,11 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       if (purpose === 'intake' && material.execution_status !== 'awaiting_delivery') {
         await finishMaterialReceipt(material, purpose, version);
       } else {
-        const params = new URLSearchParams({ order_id: orderId, apparatus: apparatusId, barcode: String(material.barcode ?? '').trim() });
-        const result = await request(session, `/v1/mobile/admin/raw-material-start-receipt?${params}`);
+        const result = await adminMaterialStartDeliveryCandidates(session, orderId, apparatusId, String(material.barcode ?? ''));
         if (!screenMounted.current || version !== loadVersion.current || !validOrderControl(bootstrap, apparatusId, orderId, latestCursor.current)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
         if (result.already_at_apparatus === true) await finishMaterialReceipt(material, purpose, version);
         else {
-          const deliverers = Array.isArray(result.deliverers) ? result.deliverers.filter((person: Obj) => typeof person.role === 'string' && person.role && typeof person.ref === 'string' && person.ref) : [];
+          const deliverers = result.deliverers;
           if (!deliverers.length) throw new Error('Bu homashyoni ko‘chirishga ruxsati bor xodim topilmadi. Iltimos, adminga xabar bering.');
           setDeliveryChoice('');
           setDelivery({ material, deliverers, purpose });
@@ -469,11 +476,9 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     setDeliveryBusy(true); setError('');
     try {
       const barcode = String(delivery.material.barcode ?? '').trim();
-      const result = await request(session, '/v1/mobile/admin/raw-material-start-receipt', { method: 'POST', body: JSON.stringify({
-        order_id: orderId, apparatus: apparatusId, barcode, delivered_by_role: person.role, delivered_by_ref: person.ref,
-        idempotency_key: `material-delivery:${orderId}:${apparatusId}:${barcode}:${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      }) });
-      if (result.ok !== true || result.apparatus !== apparatusId || normalizeCode(result.barcode) !== normalizeCode(barcode)) throw new Error('Homashyo apparat oldiga qabul qilingani tasdiqlanmadi.');
+      await adminReceiveMaterialForStart(session, { order_id: orderId, apparatus: apparatusId, barcode,
+        delivered_by: { role: person.role, ref: person.ref, name: person.name },
+        idempotency_key: materialDeliveryIdempotencyKey(orderId, apparatusId, barcode) });
       if (screenMounted.current) setDelivery(null);
       await finishMaterialReceipt(delivery.material, delivery.purpose, version);
     } catch (e) { if (screenMounted.current) setError(e instanceof Error ? e.message : 'Homashyoni qabul qilib bo‘lmadi.'); }
@@ -553,10 +558,9 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       }
       if (preview?.customer || order.customer_name) body.customer_name = preview?.customer || order.customer_name;
       const result = isAstatka
-        ? await request(session, '/v1/mobile/admin/production-maps/bosma-astatka', { method: 'POST', body: JSON.stringify({ apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote.trim() }) })
-        : await request(session, '/v1/mobile/admin/production-maps/queue-action', { method: 'POST', body: JSON.stringify(body) });
+        ? { report: await adminBosmaAstatkaReport(session, { apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote }) }
+        : await adminApparatusQueueActionResult(session, body);
       if (!screenMounted.current) return;
-      if (isAstatka && (typeof result.report?.report_id !== 'string' || !result.report.report_id.trim())) throw new Error('Astatka qaydi javobi noto‘g‘ri.');
       setSelected(''); setMaterials([]); setQolips([]); setQolipsReset(false); setInputBatch(null); setFreezeNote(''); setKg(''); setMeter(''); setBobina('');
       if (action === 'complete' || isAstatka) {
         void saveReturnedPaintDraft(draftScope, { values: {}, fields: {}, usage: 'rasxot', imageId: '' }).catch(() => {});
@@ -574,14 +578,12 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   async function runPreflight(action: 'hold' | 'passed' | 'failed') {
     if (!synchronized || actionInFlight.current || (action === 'hold' ? !showPreflightHold : !showPreflightOutcome)) return;
     const holdId = action === 'hold' ? `print-preflight:${orderId}:${apparatusId}:${Date.now()}-${Math.random().toString(36).slice(2)}` : preflight.hold_id;
-    const body: Obj = { apparatus: apparatusId, order_id: orderId, action, hold_id: holdId, include_control: true };
-    if (action === 'hold') body.idempotency_key = holdId;
-    else body.expected_revision = preflight.revision;
     actionInFlight.current = true;
     loadVersion.current++;
     setControlRetired(true); setBusy(true); setError(''); setSuccess('');
     try {
-      await request(session, '/v1/mobile/admin/production-maps/print-preflight', { method: 'POST', body: JSON.stringify(body) });
+      await adminPrintPreflight(session, { apparatus: apparatusId, order_id: orderId, action, hold_id: holdId,
+        ...(action === 'hold' ? { idempotency_key: holdId } : { expected_revision: preflight.revision }) });
       if (!screenMounted.current) return;
       setSuccess(action === 'hold' ? 'Rang chiqarish boshlandi.' : action === 'passed' ? 'Rang chiqdi.' : 'Rang chiqmagani qayd etildi.');
     } catch (e) { if (screenMounted.current) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
@@ -594,12 +596,12 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     loadVersion.current++;
     setControlRetired(true); setBusy(true); setError(''); setSuccess('');
     try {
-      const params = new URLSearchParams({ apparatus: apparatusId, order_id: orderId, include_sections: 'false' });
-      const current = await request(session, `/v1/mobile/admin/production-maps/order-scan-bootstrap?${params}`);
+      const current = await scanBootstrap(session, { apparatus: apparatusId, orderId, includeSections: false,
+        automaticQolipConfirmation: true }, scanBootstrapUnsupported);
       if (!screenMounted.current) return;
       const requestId = preflightFreezeRequest(current.control_state, apparatusId, orderId);
       if (!validOrderControl(current, apparatusId, orderId, latestCursor.current) || !requestId || requestId !== initialRequest) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
-      await request(session, '/v1/mobile/admin/production-maps/queue-action', { method: 'POST', body: JSON.stringify({ apparatus: apparatusId, order_id: orderId, action: 'freeze', freeze_request_id: requestId, include_control: true }) });
+      await adminApparatusQueueActionResult(session, { apparatus: apparatusId, order_id: orderId, action: 'freeze', freeze_request_id: requestId, include_control: true });
       if (!screenMounted.current) return;
       setSuccess('Buyurtma to‘xtatildi.');
     } catch (e) { if (screenMounted.current) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }

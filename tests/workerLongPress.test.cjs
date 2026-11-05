@@ -18,21 +18,30 @@ let responseControl, requests = [];
 const authorizedFetch = async (_session, url, init = {}) => {
   requests.push({ url, body: init.body ? JSON.parse(init.body) : null });
   const result = init.method === 'POST' ? (url.endsWith('/print-preflight')
-    ? { hold: { hold_id: 'hold', order_id: 'o', apparatus: 'p', status: 'running' } } : { ok: true }) : responseControl;
-  return { ok: true, json: async () => result };
+    ? { hold: { hold_id: 'hold', idempotency_key: 'key', order_id: 'o', apparatus: 'apparatus:default:p', status: 'running', revision: 2 } } : { ok: true }) : responseControl;
+  return { ok: true, status: 200, json: async () => result, text: async () => JSON.stringify(result) };
 };
-const logic = load('workerOrderLogic');
-const { workerLongPressMenu, runWorkerMenuAction, readWorkerActionControl, reactivationTarget } = load('workerLongPress', { './authorizedFetch': { authorizedFetch }, './workerOrderLogic': logic });
+const scope = load('sessionReadScope');
+const controls = load('workerControlsApi', { './authorizedFetch': { authorizedFetch }, './sessionReadScope': scope });
+const logic = load('workerOrderLogic', { './workerControlsApi': controls });
+const preflight = load('workerPrintPreflight', { './workerControlsApi': controls, './workerOrderLogic': logic });
+const materials = load('workerRawMaterials', { './authorizedFetch': { authorizedFetch }, './workerControlsApi': controls });
+const batch = load('workerProgressBatch', { './workerControlsApi': controls, './workerProgressModel': load('workerProgressModel') });
+const bootstrapApi = load('workerScanBootstrap', { './authorizedFetch': { authorizedFetch }, './workerControlsApi': controls, './workerRawMaterials': materials, './workerOrderLogic': logic, './workerProgressBatch': batch });
+const queueModels = load('workerQueueModels', { './workerControlsApi': controls });
+const legacyApi = load('workerLegacyScan', { './authorizedFetch': { authorizedFetch }, './workerOrderLogic': logic, './sessionReadScope': scope,
+  './workerControlsApi': controls, './workerQueueModels': queueModels });
+const { workerLongPressMenu, runWorkerMenuAction, readWorkerActionControl, reactivationTarget } = load('workerLongPress', { './authorizedFetch': { authorizedFetch }, './workerOrderLogic': logic, './sessionReadScope': scope, './workerControlsApi': controls, './workerPrintPreflight': preflight, './workerScanBootstrap': bootstrapApi, './workerLegacyScan': legacyApi });
 const cursor = { epoch: 'e', rev: 3 };
-const session = { assigned_apparatus: ['p'], capabilities: ['apparatus.queue.manage'], profile: { role: 'aparatchi', ref: 'worker' } };
+const session = { assigned_apparatus: ['apparatus:default:p'], capabilities: ['apparatus.queue.manage'], profile: { role: 'aparatchi', ref: 'worker' } };
 const token = 'a'.repeat(64);
 function bootstrap(state = 'in_progress', mode = 'in_progress', actions = ['pause', 'complete']) {
-  return { ok: true, control_state: { apparatus: 'p', order_id: 'o', epoch: 'e', scope: 's', rev: 3, order_control: 'active', queue_state: state,
+  return { ok: true, control_state: { apparatus: 'apparatus:default:p', order_id: 'o', epoch: 'e', scope: 's', rev: 3, order_control: 'active', queue_state: state, stage_states: {},
     control: { state, stage_node_id: 'stage', allowed_actions: actions, previous_stage_ready: true, complete_requires_full_report: true,
       interaction: { mode, start_materials_mode: 'hidden', material_scan_required: false, assigned_materials_display_only: true,
         material_intake_allowed: true, previous_wip_mode: 'not_required', qolip_mode: 'not_required', resume_input_required: false } } } };
 }
-function menu(data, account = session) { return workerLongPressMenu(data, account, 'p', 'o', cursor); }
+function menu(data, account = session) { return workerLongPressMenu(data, account, 'apparatus:default:p', 'o', cursor); }
 
 test('V2 menu exposes only actions authorized for the current worker and control', () => {
   const data = bootstrap();
@@ -45,6 +54,8 @@ test('V2 menu exposes only actions authorized for the current worker and control
   assert.equal(menu(data, { ...session, assigned_apparatus: [] }).kind, 'none');
   data.control_state.control.temporary_pause.token = 'invalid';
   data.control_state.control.stage_work = { astatka_available: true };
+  assert.equal(menu(data).kind, 'none');
+  delete data.control_state.control.temporary_pause;
   assert.equal(menu(data).kind, 'astatka');
   data.control_state.order_control = 'frozen';
   assert.equal(menu(data).kind, 'none');
@@ -55,15 +66,15 @@ test('temporary pause is revalidated and never sent for an outdated token', asyn
   data.control_state.control.temporary_pause = { session_id: 'session', token };
   const previous = menu(data);
   responseControl = structuredClone(data); requests = [];
-  await runWorkerMenuAction(session, 'p', 'o', 'temporary_pause', previous, () => cursor);
+  await runWorkerMenuAction(session, 'apparatus:default:p', 'o', 'temporary_pause', previous, () => cursor);
   assert.equal(requests.length, 2);
   assert.match(requests[1].url, /temporary-pause$/);
-  assert.deepEqual(requests[1].body, { apparatus: 'p', order_id: 'o', session_id: 'session', token });
+  assert.deepEqual(requests[1].body, { apparatus: 'apparatus:default:p', order_id: 'o', session_id: 'session', token });
   responseControl.control_state.control.temporary_pause.token = 'b'.repeat(64); requests = [];
-  await assert.rejects(runWorkerMenuAction(session, 'p', 'o', 'temporary_pause', previous, () => cursor));
+  await assert.rejects(runWorkerMenuAction(session, 'apparatus:default:p', 'o', 'temporary_pause', previous, () => cursor));
   assert.equal(requests.length, 1);
   requests = [];
-  await assert.rejects(readWorkerActionControl(session, 'p', 'o', () => null));
+  await assert.rejects(readWorkerActionControl(session, 'apparatus:default:p', 'o', () => null));
   assert.equal(requests.length, 1);
 });
 
@@ -80,7 +91,7 @@ test('re-pause and reclose require the owner and the current stage', () => {
 
 test('passed color trial and an available prior remainder use their V2 flows', () => {
   const trial = bootstrap('print_preflight', 'fresh_start', ['start']);
-  trial.control_state.control.print_preflight = { hold_id: 'hold', idempotency_key: 'key', order_id: 'o', apparatus: 'p', status: 'passed', revision: 2 };
+  trial.control_state.control.print_preflight = { hold_id: 'hold', idempotency_key: 'key', order_id: 'o', apparatus: 'apparatus:default:p', status: 'passed', revision: 2 };
   assert.deepEqual(menu(trial).actions, ['reopen']);
   trial.control_state.control.print_preflight.apparatus = 'other';
   assert.equal(menu(trial).kind, 'none');
@@ -93,28 +104,28 @@ test('re-pause, reclose and color-trial reopen send the V2 endpoint payloads', a
   const active = bootstrap();
   active.control_state.control.re_pause = { resume_id: 'resume', worker_role: 'aparatchi', worker_ref: 'worker' };
   responseControl = structuredClone(active); requests = [];
-  await runWorkerMenuAction(session, 'p', 'o', 're_pause', menu(active), () => cursor);
+  await runWorkerMenuAction(session, 'apparatus:default:p', 'o', 're_pause', menu(active), () => cursor);
   assert.match(requests[1].url, /re-pause$/);
-  assert.deepEqual(requests[1].body, { apparatus: 'p', order_id: 'o', resume_id: 'resume' });
+  assert.deepEqual(requests[1].body, { apparatus: 'apparatus:default:p', order_id: 'o', resume_id: 'resume' });
   const paused = bootstrap('paused', 'paused', ['resume']);
   paused.control_state.control.reclose = { session_id: 'session', stage_node_id: 'stage', worker_role: 'aparatchi', worker_ref: 'worker', token };
   responseControl = structuredClone(paused); requests = [];
-  await runWorkerMenuAction(session, 'p', 'o', 'reclose', menu(paused), () => cursor);
+  await runWorkerMenuAction(session, 'apparatus:default:p', 'o', 'reclose', menu(paused), () => cursor);
   assert.match(requests[1].url, /reactivation\/reclose$/);
-  assert.deepEqual(requests[1].body, { apparatus: 'p', order_id: 'o', session_id: 'session', stage_node_id: 'stage', token });
+  assert.deepEqual(requests[1].body, { apparatus: 'apparatus:default:p', order_id: 'o', session_id: 'session', stage_node_id: 'stage', token });
   const trial = bootstrap('print_preflight', 'fresh_start', ['start']);
-  trial.control_state.control.print_preflight = { hold_id: 'hold', idempotency_key: 'key', order_id: 'o', apparatus: 'p', status: 'passed', revision: 2 };
+  trial.control_state.control.print_preflight = { hold_id: 'hold', idempotency_key: 'key', order_id: 'o', apparatus: 'apparatus:default:p', status: 'passed', revision: 2 };
   responseControl = structuredClone(trial); requests = [];
-  await runWorkerMenuAction(session, 'p', 'o', 'reopen', menu(trial), () => cursor);
-  assert.deepEqual(requests[1].body, { apparatus: 'p', order_id: 'o', action: 'reopen', hold_id: 'hold', expected_revision: 2, include_control: true });
+  await runWorkerMenuAction(session, 'apparatus:default:p', 'o', 'reopen', menu(trial), () => cursor);
+  assert.deepEqual(requests[1].body, { apparatus: 'apparatus:default:p', order_id: 'o', action: 'reopen', hold_id: 'hold', expected_revision: 2, include_control: true });
 });
 
 test('completed work can reopen only an exact, current server target', () => {
-  const target = { apparatus: 'p', order_id: 'o', batch_id: '', session_id: 's', stage_node_id: 'stage', token: 'preview-token' };
-  const detail = { projection: 'worker_detail_v1', scope: 's', epoch: 'e', rev: 3, maps: [{ map: { id: 'o', nodes: [{ id: 'stage', kind: 'apparatus', apparatus_id: 'p', title: 'Bosma' }] } }] };
-  assert.deepEqual(reactivationTarget({ available: true, target }, detail, 'p', 'o', cursor).target, target);
-  assert.equal(reactivationTarget({ available: true, target }, detail, 'p', 'o', null).target, null);
-  assert.equal(reactivationTarget({ available: true, target }, detail, 'p', 'o', { epoch: 'e', rev: 4 }).target, null);
+  const target = { apparatus: 'apparatus:default:p', order_id: 'o', batch_id: '', session_id: 's', stage_node_id: 'stage', token: 'preview-token', readScope: scope.sessionReadScope(session) };
+  const detail = { projection: 'worker_detail_v1', scope: 's', epoch: 'e', rev: 3, maps: [{ map: { id: 'o', nodes: [{ id: 'stage', kind: 'apparatus', apparatus_id: 'apparatus:default:p', title: 'Bosma' }] } }] };
+  assert.deepEqual(reactivationTarget({ available: true, target }, detail, 'apparatus:default:p', 'o', cursor).target, target);
+  assert.equal(reactivationTarget({ available: true, target }, detail, 'apparatus:default:p', 'o', null).target, null);
+  assert.equal(reactivationTarget({ available: true, target }, detail, 'apparatus:default:p', 'o', { epoch: 'e', rev: 4 }).target, null);
   detail.maps[0].map.nodes[0].apparatus_id = 'other';
-  assert.equal(reactivationTarget({ available: true, target }, detail, 'p', 'o', cursor).reason, 'stale_target');
+  assert.equal(reactivationTarget({ available: true, target }, detail, 'apparatus:default:p', 'o', cursor).reason, 'stale_target');
 });

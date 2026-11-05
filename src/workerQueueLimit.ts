@@ -31,6 +31,7 @@ export async function loadQueueLimit(session: Session): Promise<QueueLimit> {
 }
 
 export function saveQueueLimit(session: Session, limit: QueueLimit): Promise<void> {
+  if (!isQueueLimit(limit)) return Promise.reject(new RangeError('Invalid worker queue limit'));
   const save = saves.then(async () => {
     const values = await read();
     values[accountKey(session)] = limit;

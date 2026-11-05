@@ -1,5 +1,8 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
+import { progressBatchStatusDetail } from './workerProgressModel';
+import { adminProgressQrHistory } from './workerProgressApi';
+import { WorkerControlException } from './workerControlsApi';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -46,7 +49,7 @@ export function parseDailyWorkHistory(value: unknown): DailyWorkBatch[] {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
     const row = object(item);
     const payload = object(row.payload_json);
-    const status = object(row.status_detail);
+    const status = progressBatchStatusDetail(row);
     const title = [payload.order_title, payload.orderTitle, payload.order_name, payload.orderName,
       row.label_item_name, row.label_item_code, row.description].map(value => cleanTitle(text(value))).find(Boolean) ?? '';
     return [{
@@ -66,17 +69,13 @@ export function parseDailyWorkHistory(value: unknown): DailyWorkBatch[] {
 
 /** V2's history endpoint is scoped by the server to the signed-in worker. */
 export async function loadDailyWork(session: Session, signal: AbortSignal): Promise<DailyWorkBatch[]> {
-  const ref = text(session.profile.ref);
-  if (!ref) throw new Error('Foydalanuvchi ma’lumoti topilmadi.');
-  // Manager roles require an explicit worker_ref; for workers the server uses their own identity.
-  const query = new URLSearchParams({ limit: '200', worker_ref: ref });
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/progress-qr/history?${query}`, { signal });
-  if (!response.ok) {
-    if (response.status === 401) throw new Error('Sessiya tugagan. Qayta kiring.');
-    if (response.status === 403) throw new Error('Kunlik ishlarni ko‘rishga ruxsat yo‘q.');
-    throw new Error('Kunlik ish ma’lumotini yuklab bo‘lmadi.');
+  try {
+    return parseDailyWorkHistory({ batches: await adminProgressQrHistory(session, { limit: 200, signal }) });
+  } catch (error) {
+    if (error instanceof WorkerControlException && error.statusCode === 401) throw new Error('Sessiya tugagan. Qayta kiring.');
+    if (error instanceof WorkerControlException && error.statusCode === 403) throw new Error('Kunlik ishlarni ko‘rishga ruxsat yo‘q.');
+    throw error;
   }
-  return parseDailyWorkHistory(await response.json());
 }
 
 export function dailyWorkStatus(batch: DailyWorkBatch): DailyWorkStatus {
