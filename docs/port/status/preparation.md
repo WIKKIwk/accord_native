@@ -1,7 +1,7 @@
 # preparation
 
 Status: part 1 of 1 in progress
-Stopped at: port persistent commands, production APIs and screen logic from the V2 baseline.
+Stopped at: port production models and APIs, then screen logic from the V2 baseline.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -12,7 +12,7 @@ Stopped at: port persistent commands, production APIs and screen logic from the 
 
 ## Test mode pending
 
-- Material mutations reject test mode; implement in the shared test-mode pass.
+- Material mutations and preparation stock commands reject test mode; implement in the shared test-mode pass.
 
 No V2 HTTP recordings were found for warehouse creation or deletion; source-derived request tests cover both.
 
