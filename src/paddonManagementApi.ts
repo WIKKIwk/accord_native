@@ -23,3 +23,15 @@ export async function adminPaddonCreate(session: Session, input: { location?: st
   if (!object(payload.paddon)) throw new WorkerControlException('paddon_create', 'Paddon yaratilmadi');
   return paddonFromJson(payload.paddon);
 }
+
+/** @v2 adminPaddonDelete */
+export async function adminPaddonDelete(session: Session, code: string): Promise<void> {
+  const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/paddons/delete', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim() }),
+  });
+  if (response.status !== 200) {
+    let payload: unknown;
+    try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'paddon_delete');
+  }
+}

@@ -33,3 +33,16 @@ test('paddon creation rejects a missing returned paddon', async () => {
   const client = api(async () => new Response('{}', { status: 200 }));
   await assert.rejects(client.adminPaddonCreate({}), error => error.code === 'paddon_create' && error.message === 'Paddon yaratilmadi');
 });
+
+// V2 has no recorded HTTP deletion request; the request follows the baseline source.
+test('paddon deletion sends the trimmed code and preserves server errors', async () => {
+  let requested, status = 200;
+  const client = api(async (_session, url, init) => {
+    requested = { url, method: init.method, body: JSON.parse(init.body) };
+    return new Response(status === 200 ? '' : '{"error":"paddon_locked"}', { status });
+  });
+  await client.adminPaddonDelete({}, ' P1 ');
+  assert.deepEqual(requested, { url: '/v1/mobile/admin/production-maps/paddons/delete', method: 'POST', body: { code: 'P1' } });
+  status = 409;
+  await assert.rejects(client.adminPaddonDelete({}, 'P1'), error => error.code === 'paddon_locked');
+});
