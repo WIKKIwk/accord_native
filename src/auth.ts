@@ -192,6 +192,16 @@ export function registerSessionResetHook(hook: () => Promise<void>): () => void 
   return () => { sessionResetHooks.delete(hook); };
 }
 
+async function resetForChangedProfile(previous: Session | null, next: Session): Promise<void> {
+  if (!previous) return;
+  const { sessionAccessRole } = await import('./shared/searchActivityStore');
+  const key = (value: Session) => `${sessionAccessRole(value) ?? 'custom'}:${String(value.profile.ref ?? '')}`;
+  if (key(previous) === key(next)) return;
+  const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+  const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+  if (failure) throw failure.reason;
+}
+
 export async function clearSession(): Promise<void> {
   sessionEpoch++;
   activeSession = null;
@@ -275,12 +285,7 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
     const store = await savedAccountsFor(previousSession?.baseUrl ?? server, previousSession, previousCredentials);
     if (epoch !== sessionEpoch) { if (store) await store.clearActive(); throw new Error('Sessiya o‘zgargan. Qayta kiring.'); }
     const installSession = async () => {
-      const previous = previousSession ? identity(previousSession) : null;
-      if (previous && (previous.ref !== account.ref || previous.role !== account.role)) {
-        const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
-        const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-        if (failure) throw failure.reason;
-      }
+      await resetForChangedProfile(previousSession, session);
       if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
       await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
       await writeSession(session);
@@ -376,6 +381,8 @@ export async function refreshSession(session: Session, failedToken: string): Pro
         if (!stillCurrent()) return false;
         if (!sameIdentity(session, next)) throw new Error('Refreshed account identity does not match');
         next.imageCacheScope = session.imageCacheScope;
+        await resetForChangedProfile(session, next);
+        if (!stillCurrent()) return false;
         return inStorageOrder(async () => {
           if (!stillCurrent()) return false;
           await writeSession(next);

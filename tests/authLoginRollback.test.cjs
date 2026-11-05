@@ -14,6 +14,9 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
   const savedFile = path.resolve(__dirname, '../src/savedAccountStore.ts'), saved = new Module(savedFile, module);
   saved.filename = savedFile; saved.paths = module.paths;
   saved._compile(ts.transpileModule(fs.readFileSync(savedFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, savedFile);
+  const roleFile = path.resolve(__dirname, '../src/shared/searchActivityStore.ts'), role = new Module(roleFile, module);
+  role.filename = roleFile; role.paths = module.paths;
+  role._compile(ts.transpileModule(fs.readFileSync(roleFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, roleFile);
   const chunksFile = path.resolve(__dirname, '../src/chunkedStorage.ts'), chunks = new Module(chunksFile, module);
   chunks.filename = chunksFile; chunks.paths = module.paths;
   chunks._compile(ts.transpileModule(fs.readFileSync(chunksFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, chunksFile);
@@ -39,6 +42,7 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
       if (failAccountInitialization) throw new Error('saved account initialization failed');
       return accountStore;
     } }
+    : id === './shared/searchActivityStore' ? role.exports
     : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => endpoints }
     : id === './logoutSavedSession' ? logoutModule.exports : id === './pushTokenRuntime' ? push.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
@@ -348,5 +352,20 @@ test('failed stored-account reauthentication clears the active account and sessi
     assert.equal(api.testAccountStore.activeAccountId, null);
     assert.equal(await api.loadSession(), null);
     assert.equal(api.testAccountStore.accounts.length, 1);
+  } finally { global.fetch = original; }
+});
+
+
+test('login and refresh reset session-scoped state when effective access role changes', async () => {
+  const original = global.fetch; let attempt = 0;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++attempt}`,
+    profile: { role: 'werka', ref: 'one' }, capabilities: [attempt === 1 ? 'supplier.access' : attempt === 2 ? 'customer.access' : 'werka.access'] }) });
+  try {
+    const api = auth({}); let resets = 0; api.registerSessionResetHook(async () => { resets++; });
+    await api.login('https://example.test', 'one', 'code');
+    const session = await api.login('https://example.test', 'one', 'code');
+    assert.equal(resets, 1);
+    assert.equal(await api.refreshSession(session, session.token), true);
+    assert.equal(resets, 2);
   } finally { global.fetch = original; }
 });

@@ -18,12 +18,13 @@ function fixture() {
   const saved = load('savedAccountStore');
   const accountStore = new saved.SavedAccountStore(memory(), memory(), async value => crypto.createHash('sha256').update(value).digest('hex'));
   const chunks = load('chunkedStorage');
+  const role = load('shared/searchActivityStore');
   const parser = load('authenticateAccount', { './workerControlsApi': { isCanonicalApparatusId: () => true } });
   const controller = load('shared/accountSwitchController', { '../savedAccountStore': saved });
   const endpoints = { baseUrl: 'https://example.test', setBaseUrl: async value => { endpoints.baseUrl = value; } };
   const clearedPins = [];
   const auth = load('auth', { 'expo-secure-store': {}, 'react-native': { Platform: { OS: 'web' } }, './chunkedStorage': chunks,
-    './authenticateAccount': parser, './serverEndpointRuntime': { initializeServerEndpoints: async () => endpoints },
+    './authenticateAccount': parser, './shared/searchActivityStore': role, './serverEndpointRuntime': { initializeServerEndpoints: async () => endpoints },
     './savedAccountRuntime': { initializeSavedAccounts: async () => accountStore }, './shared/accountSwitchController': controller,
     './pushTokenRuntime': { unregisterCurrentPushToken: async () => {} }, './appLock': { clearAppLock: async () => {} },
     './logoutSavedSession': { logoutSavedSession: async () => {} },
