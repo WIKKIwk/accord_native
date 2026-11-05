@@ -390,3 +390,73 @@ export async function refreshSession(session: Session, failedToken: string): Pro
   try { return await promise; }
   finally { if (refreshing?.promise === promise) refreshing = null; }
 }
+
+type AccountRuntimeSnapshot = { session: Session | null; credentials: Promise<Credentials | null> };
+
+/** @v2 createRuntimeAccountSwitchController */
+export async function createRuntimeAccountSwitchController(baseUrl?: string) {
+  const current = activeSession ?? await loadSession();
+  const { initializeServerEndpoints } = await import('./serverEndpointRuntime');
+  const endpoints = await initializeServerEndpoints();
+  const server = normalizeServer(baseUrl ?? current?.baseUrl ?? endpoints.baseUrl);
+  const credentials = await inStorageOrder(readCredentials);
+  const store = await savedAccountsFor(server, current, credentials);
+  if (!store) throw new Error('Saved account store is unavailable');
+  const { AccountSwitchController } = await import('./shared/accountSwitchController');
+
+  async function resetScopedState(): Promise<void> {
+    const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+    const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+    if (failure) throw failure.reason;
+  }
+  async function install(session: Session, nextCredentials: Credentials | null): Promise<void> {
+    const epoch = ++sessionEpoch;
+    await resetScopedState();
+    await inStorageOrder(async () => {
+      if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+      if (nextCredentials) await writeCredentials(nextCredentials);
+      else if (Platform.OS === 'web') webCredentials = null;
+      else await secureStorage.removeItem(CREDENTIALS_KEY);
+      await writeSession(session);
+      if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+      activeSession = session;
+      refreshing = null;
+    });
+  }
+
+  return new AccountSwitchController(store, {
+    current: () => activeSession,
+    snapshot: (): AccountRuntimeSnapshot => ({ session: activeSession, credentials: inStorageOrder(readCredentials) }),
+    restore: async snapshot => {
+      const previous = snapshot as AccountRuntimeSnapshot;
+      if (!previous.session) { await clearSession(); return; }
+      await install(previous.session, await previous.credentials);
+    },
+    activate: async (target, werkaHomeBootstrap) => {
+      const session = parseSession({ ...target.account.profile, profile: target.account.profile, token: target.token,
+        baseUrl: target.account.base_url, werka_home: werkaHomeBootstrap, imageCacheScope: newImageCacheScope() });
+      if (!session) throw new Error('Saved account session is invalid');
+      const account = identity(session);
+      await install(session, { baseUrl: session.baseUrl, phone: target.phone, code: target.code, ...account });
+    },
+    clear: clearSession,
+    reauthenticate: async target => {
+      const next = await authenticate(target.account.base_url, target.phone, target.code);
+      return { token: next.token, profile: savedProfile(next), werkaHomeBootstrap: next.werka_home };
+    },
+    unregisterCurrentPush: async () => {
+      if (!activeSession || activeSession.token === 'test-mode-token') return;
+      const { unregisterCurrentPushToken } = await import('./pushTokenRuntime');
+      await unregisterCurrentPushToken(activeSession);
+    },
+    logoutSavedSession: async target => {
+      const { logoutSavedSession } = await import('./logoutSavedSession');
+      await logoutSavedSession(target.token, target.account.base_url);
+    },
+    clearAfterLogout: async () => {
+      if (!activeSession) return;
+      const { clearAppLock } = await import('./appLock');
+      await clearAppLock(activeSession);
+    },
+  });
+}
