@@ -13,6 +13,8 @@ Stopped at: shared API and base logic comparison
 
 | `adminConfirmRawMaterialStockReprint`, `qolipPrintCodeQr` | `mobile_api_admin_items_MobileApiAdminItems_methods_03.dart`, `mobile_api_qolip_MobileApiQolip_methods_04.dart` | V2 has no recorded HTTP test for these calls; source-derived request and response tests are in `tests/basePrintApi.test.cjs`. |
 
+| `gscaleItemsPage`, `adminWarehouseAssignments` | `mobile_api_gscale_declarations_part_01.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_03.dart` | V2 has no recorded HTTP test for these calls; source-derived request, parsing and account-scoped sorting tests are in `tests/baseCatalogApi.test.cjs`. |
+
 ## Deviations candidates
 
 ## Test mode pending
@@ -21,6 +23,7 @@ Stopped at: shared API and base logic comparison
 |---|---|
 | `adminPrepareRawMaterialStockReprint`, `adminConfirmRawMaterialStockReprint` | Their in-memory stock matching, lock checks and confirmation branches. |
 | `qolipPrintCodeQr` | Its in-memory qolip lookup and print job branch. |
+| `gscaleItemsPage`, `adminWarehouseAssignments` | Their in-memory catalog and warehouse-assignment branches. |
 
 ## Needs from the integrator
 
