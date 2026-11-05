@@ -1,7 +1,7 @@
 # preparation
 
 Status: part 1 of 1 in progress
-Stopped at: port the preparation API families, production models and screen logic from the V2 baseline.
+Stopped at: port warehouse, material, persistent command and production APIs and screen logic from the V2 baseline.
 
 ## Open items
 | Where | V2 reference | What is needed |
