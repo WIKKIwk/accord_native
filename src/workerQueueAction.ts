@@ -1,5 +1,5 @@
 import type { Session } from './auth';
-import { isCanonicalApparatusId, postWorkerApiRequest, WorkerControlException } from './workerControlsApi';
+import { cancelStartControl, isCanonicalApparatusId, postWorkerApiRequest, resumePauseControl, temporaryPauseControl, WorkerControlException } from './workerControlsApi';
 import { validOrderControl } from './workerOrderLogic';
 import { progressBatchFromJson } from './workerProgressBatch';
 import { completionRequestNotification, productionOrderStatusDetail, queueWorkActivity } from './workerQueueModels';
@@ -173,9 +173,14 @@ export function queueActionControlState(raw: unknown, contractOnly = false): Obj
     last_worker_ref: String(stageWork.last_worker_ref ?? ''),
   } : null;
   const lastWorked = control.last_worked_at_unix;
-  return { ...state, control: { ...normalizedControl, state: control.state.trim(), freeze_request: normalizedFreeze,
+  const interactionResult = { ...normalizedInteraction, resume_input_required: interaction.resume_input_required === true,
+    resume_input_requirement_known: typeof interaction.resume_input_required === 'boolean',
+    qolip_automatic_confirmation: interaction.qolip_automatic_confirmation === true,
+    qolip_policy_revision: interaction.qolip_policy_revision ?? 0 };
+  return { ...state, control: { ...normalizedControl, state: control.state.trim(), interaction: interactionResult, freeze_request: normalizedFreeze,
     stage_work: normalizedStageWork, work_activity: queueWorkActivity(control.work_activity),
-    last_worked_at_unix: Number.isInteger(lastWorked) && lastWorked > 0 ? lastWorked : 0,
+    temporary_pause: temporaryPauseControl(control.temporary_pause), cancel_start: cancelStartControl(control.cancel_start),
+    re_pause: resumePauseControl(control.re_pause), last_worked_at_unix: Number.isInteger(lastWorked) && lastWorked > 0 ? lastWorked : 0,
     temporarily_paused: control.temporarily_paused === true, print_preflight_allowed: control.print_preflight_allowed === true,
     complete_requires_rezka_total_waste_only: control.complete_requires_rezka_total_waste_only === true,
     rezka_total_waste_only: control.rezka_total_waste_only === true }, stage_states: stages };

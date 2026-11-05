@@ -97,3 +97,15 @@ test('snapshot control normalizes optional stage work with V2 defaults', () => {
   assert.equal(control.stage_work.upstream_closed, true); assert.equal(control.stage_work.report_session_id, '42');
   assert.equal(control.stage_work.astatka_required, false); assert.equal(control.freeze_request, null); assert.equal(control.last_worked_at_unix, 0);
 });
+
+test('queue control drops malformed optional resume data and supplies interaction defaults', () => {
+  const api = load('productionMapSnapshot', { './authorizedFetch': {} });
+  const station = 'apparatus:default:press', order = 'order';
+  const wire = { maps: [], sequences: {}, visible_order_ids: {}, queue_states: {}, queue_policies: [], stage_states: {}, order_controls: {}, frozen_orders_by_apparatus: {},
+    queue_action_controls: { [station]: { [order]: { state: 'pending', allowed_actions: ['start'], previous_stage_ready: false, complete_requires_full_report: false,
+      interaction: { mode: 'fresh_start', start_materials_mode: 'hidden', material_scan_required: false, assigned_materials_display_only: true,
+        material_intake_allowed: false, previous_wip_mode: 'not_required', qolip_mode: 'not_required' }, re_pause: { resume_id: '' } } } } };
+  const control = api.decodeCanonicalProductionMapSnapshot(wire).queue_action_controls[station][order];
+  assert.equal(control.re_pause, null); assert.equal(control.interaction.resume_input_requirement_known, false);
+  assert.equal(control.interaction.qolip_policy_revision, 0);
+});
