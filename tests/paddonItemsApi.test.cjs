@@ -38,3 +38,13 @@ test('paddon snapshots respect locked and management states', () => {
   assert.equal(paddonSnapshotFromJson({ paddon: {}, can_manage_items: false }).can_manage_items, false);
   assert.throws(() => paddonSnapshotFromJson({ can_manage_items: 'true' }), /Invalid paddon management flag/);
 });
+
+// V2 has no recorded single-item removal request; the request follows the baseline source.
+test('removing one paddon WIP sends trimmed identifiers', async () => {
+  let request;
+  const client = api(async (_session, url, init) => { request = { url, body: JSON.parse(init.body) };
+    return new Response('{"paddon":{"code":"P"},"items":[]}', { status: 200 }); });
+  const result = await client.adminPaddonRemoveWip({}, { paddon_code: ' P ', progress_batch_id: ' b1 ' });
+  assert.deepEqual(request, { url: '/v1/mobile/admin/production-maps/paddons/items/remove', body: { code: 'P', progress_batch_id: 'b1' } });
+  assert.equal(result.paddon.code, 'P');
+});

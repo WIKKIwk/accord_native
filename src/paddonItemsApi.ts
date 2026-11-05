@@ -16,3 +16,17 @@ export async function adminPaddonAddWips(session: Session, input: { paddon_code:
   }
   return paddonSnapshotFromJson(await response.json());
 }
+
+/** @v2 adminPaddonRemoveWip */
+export async function adminPaddonRemoveWip(session: Session, input: { paddon_code: string; progress_batch_id: string }) {
+  const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/paddons/items/remove', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: input.paddon_code.trim(), progress_batch_id: input.progress_batch_id.trim() }),
+  });
+  if (response.status !== 200) {
+    let payload: unknown;
+    try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'paddon_item_remove');
+  }
+  return paddonSnapshotFromJson(await response.json());
+}
