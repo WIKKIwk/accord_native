@@ -44,7 +44,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | Where | V2 reference | What is needed |
 |---|---|---|
 | `tsconfig.android.json` | | 10 existing errors. `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx` import prop types from themselves once the platform suffix applies, so move those types to a shared file. `WorkerScreen.tsx:347` passes `statusText`, which the Android `WorkerOrderListItem` does not declare; confirm whether Android should show it |
-| `src/` | See `port_ledger.mjs check` | 3 V4 endpoints still lack a literal V2 reference: `chat/conversations/{}`, `chat/media/{}`, `profile/avatar/view`. Reactivation is assembled in `mobile_api_reactivation.dart`; returned-paint image URLs are supplied by the server and appear in `test/returned_paint_models_test.dart` |
+| `src/` | See `port_ledger.mjs check` | 4 V4 endpoints lack a literal V2 reference: `chat/conversations/{}`, `chat/media/{}`, `profile/avatar/view`, `push-config`. V2 constructs `push-config` dynamically in `mobile_api_push_config.dart`; returned-paint image URLs are supplied by the server and appear in `test/returned_paint_models_test.dart` |
 | `src/authorizedFetch.ts` | `core/network/mobile_http_client.dart` | Confirm how RN `fetch` handles redirects compared with V2's manual policy |
 | `test/raw_material_split_test.dart` | V2 baseline `7c87a54e` | 3 of its 19 tests fail at the baseline, with or without the recorder. Check whether V2 or the test is out of date before homashyo relies on them |
 | `app.json` | `record` in `pubspec.yaml` | Android blocks `RECORD_AUDIO`, but V2 chat uses recording. Resolve in the chat role |
@@ -66,6 +66,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/productionMapNotifications.ts` | `adminProductionMapNotificationEvents`, `admin_production_map_paged_socket_test.dart` | Shared account-scoped notification sockets, latest-value replay, cancellation, cursor checks and the legacy snapshot path have focused tests. Complete canonical snapshot parity before tagging this API |
 | `src/productionMapSnapshot.ts`, `src/productionMapQueueSnapshotApi.ts` | `adminProductionMapQueueSnapshot`, `mobile_api_admin_production_map_snapshot_decoder.dart` | Canonical map, state, control and scope parsing plus coalescing, fresh-read isolation and 304 cursor handling are in place with recorded V2 window replays. Reconcile all compact projection and optional control branches before tagging this API |
 | `src/auth.ts` | `login`, `logout` | Existing single-account sign-in/sign-out has no V2 saved-account activation, rollback, removal or push-token unregister lifecycle; port that shared store before tagging these methods |
+| `src/mobilePushConfigApi.ts` | `mobilePushConfig` | No V2 HTTP recording was found; a focused V4 test covers the source-derived request and platform identity validation |
 | `src/logoutSavedSession.ts` | `logoutSavedSession` | No V2 HTTP recording was found; a focused V4 test covers direct token handling and the source-derived request |
 | `src/auth.ts` | `baseUrl`, `instance` | V2 has a process-wide active endpoint and API singleton; V4 currently carries the selected server in each session. The unscoped getter and singleton still need an equivalent before tagging |
 | `src/orderImageApi.ts` | `cachedOrderImageBytes` | Internal mobile routes, external reads, thumbnail variants and the shared in-memory peek are ported. Same-origin URLs outside `/v1/mobile/` remain blocked by V4 transport policy; test-mode behavior is deferred |
@@ -146,6 +147,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `inventoryLocations` | V2 sorts its in-memory location catalog |
 | `inventoryRelocate` | V2 updates the in-memory asset placement and owner |
 | `inventoryTransfers` | V2 filters its in-memory transfers by warehouse and status |
+| `mobilePushConfig` | V2 rejects requests in test mode |
 | `adminRezkaAstatkaReport` | V2 validates the apparatus and stores or replays an in-memory report |
 | `adminRezkaAstatkaSnapshot` | V2 derives its session and stage from in-memory queue state and replays stored reports |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
