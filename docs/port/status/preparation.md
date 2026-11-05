@@ -1,12 +1,11 @@
 # preparation
 
 Status: part 1 of 1 in progress
-Stopped at: implement formula set-detail state and complete the UI text inventory; platform screens and integration remain separate sessions.
+Stopped at: complete the UI text inventory and classify remaining V2 tests; platform screens and integration remain separate sessions.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Formula set detail | `preparation_formula_orders_screen.dart` `_PreparationFormulaSetDetailsState` | Port its remaining detail state and transitions; the set list, variant flows, APIs and shared editor are available. |
 | Formula reuse search | `search_normalizer.dart` `searchMatches`, `preparation_formula_variants_screen.dart` `_reuse` | Port/reuse the shared transliteration and fuzzy search matcher for the catalog picker. |
 | UI text inventory | `docs/port/roles/preparation.md`; preparation presentation sources | Complete a per-screen inventory of every literal/dynamic text and its localization key; the current contract lists principal texts and behaviour. |
 | Remaining V2 logic tests | `.port/role-preparation-tests.md` | Classify and port the remaining applicable logic/contract cases. The ledger includes shared admin/worker test files; verify reachability before excluding any. `order_scan_bootstrap_api_test.dart` has not been replayed. |
