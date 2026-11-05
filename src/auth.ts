@@ -143,6 +143,22 @@ export async function loadSession(): Promise<Session | null> {
         }
       } catch { result = null; }
     }
+    const credentials = await readCredentials();
+    const store = await savedAccountsFor(result?.baseUrl ?? DEFAULT_SERVER_URL, result, credentials);
+    const saved = store.activeAccountId ? await store.sessionFor(store.activeAccountId) : null;
+    if (epoch !== sessionEpoch) return null;
+    if (saved) {
+      const profile = saved.account.profile;
+      const restored = parseSession({ ...profile, token: saved.token, profile, baseUrl: saved.account.base_url,
+        imageCacheScope: result && result.baseUrl === saved.account.base_url && identity(result).ref === profile.ref && identity(result).role === profile.role
+          ? result.imageCacheScope : newImageCacheScope() });
+      if (restored && (!result || !sameIdentity(result, restored) || result.token !== restored.token)) {
+        result = restored;
+        const account = identity(restored);
+        await writeCredentials({ baseUrl: restored.baseUrl, phone: saved.phone, code: saved.code, ...account });
+        await writeSession(restored);
+      }
+    }
     if (epoch !== sessionEpoch) return null;
     activeSession = result;
     return result;
@@ -290,6 +306,11 @@ export async function refreshSession(session: Session, failedToken: string): Pro
       if (!sameIdentity(session, next)) return false;
       next.imageCacheScope = session.imageCacheScope;
       return await inStorageOrder(async () => {
+        if (activeSession !== session || epoch !== sessionEpoch) return false;
+        const store = await savedAccountsFor(session.baseUrl, session, credentials);
+        if (activeSession !== session || epoch !== sessionEpoch) return false;
+        await store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
+          phone: credentials.phone, code: credentials.code, makeActive: false });
         if (activeSession !== session || epoch !== sessionEpoch) return false;
         await writeSession(next);
         if (activeSession !== session || epoch !== sessionEpoch) return false;

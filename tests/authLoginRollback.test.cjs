@@ -5,7 +5,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
-function auth(store, platform = 'web') {
+function auth(store, platform = 'web', existingAccountStore) {
   const filename = path.resolve(__dirname, '../src/auth.ts'), loaded = new Module(filename, module);
   const accountFile = path.resolve(__dirname, '../src/authenticateAccount.ts'), account = new Module(accountFile, module);
   account.filename = accountFile; account.paths = module.paths;
@@ -16,7 +16,7 @@ function auth(store, platform = 'web') {
   saved._compile(ts.transpileModule(fs.readFileSync(savedFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, savedFile);
   const memory = () => { const values = new Map(); return { getItem: async key => values.get(key) ?? null,
     setItem: async (key, value) => { values.set(key, value); }, removeItem: async key => { values.delete(key); } }; };
-  const accountStore = new saved.exports.SavedAccountStore(memory(), memory(), async value => crypto.createHash('sha256').update(value).digest('hex'));
+  const accountStore = existingAccountStore ?? new saved.exports.SavedAccountStore(memory(), memory(), async value => crypto.createHash('sha256').update(value).digest('hex'));
   const logoutFile = path.resolve(__dirname, '../src/logoutSavedSession.ts'), logoutModule = new Module(logoutFile, module);
   logoutModule.filename = logoutFile; logoutModule.paths = module.paths;
   logoutModule._compile(ts.transpileModule(fs.readFileSync(logoutFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, logoutFile);
@@ -103,5 +103,36 @@ test('logout removes only the active saved account even if server logout fails',
     assert.equal(await api.loadSession(), null);
     const logoutRequest = requests.find(request => request.url.endsWith('/logout'));
     assert.equal(logoutRequest.init.headers.Authorization, 'Bearer token-two');
+  } finally { global.fetch = original; }
+});
+
+test('startup restores the active saved account if the older single-session copy is absent', async () => {
+  const original = global.fetch, values = new Map();
+  const secure = { getItemAsync: async key => values.get(key) ?? null, setItemAsync: async (key, value) => { values.set(key, value); },
+    deleteItemAsync: async key => { values.delete(key); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'saved-token', profile: { role: 'aparatchi', ref: 'one' },
+    assigned_apparatus: ['apparatus:default:press'] }) });
+  try {
+    const first = auth(secure, 'ios');
+    await first.login('https://example.test', 'one', 'code');
+    values.clear();
+    const restarted = auth(secure, 'ios', first.testAccountStore);
+    const restored = await restarted.loadSession();
+    assert.equal(restored.token, 'saved-token');
+    assert.deepEqual(restored.assigned_apparatus, ['apparatus:default:press']);
+    assert.equal(JSON.parse(values.get('accord_v4_credentials')).code, 'code');
+  } finally { global.fetch = original; }
+});
+
+test('reauthentication updates the active saved account token', async () => {
+  const original = global.fetch; let calls = 0;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: ++calls === 1 ? 'old-token' : 'new-token',
+    profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth({});
+    const session = await api.login('https://example.test', 'one', 'code');
+    assert.equal(await api.refreshSession(session, 'old-token'), true);
+    assert.equal(session.token, 'new-token');
+    assert.equal((await api.testAccountStore.sessionFor(api.testAccountStore.activeAccountId)).token, 'new-token');
   } finally { global.fetch = original; }
 });
