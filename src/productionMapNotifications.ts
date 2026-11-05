@@ -26,7 +26,7 @@ export function decodeProductionMapNotifications(value: unknown, session?: Sessi
   return event.completion_requests.map(completionRequestNotification);
 }
 
-// The canonical decoder remains under parity review, so this method is not tagged complete.
+/** @v2 adminProductionMapNotificationEvents */
 export function adminProductionMapNotificationEvents(session: Session): Feed {
   const token = activeSessionToken(session), baseUrl = session.baseUrl, scope = sessionReadScope(session);
   const key = JSON.stringify([baseUrl, token, scope]);
