@@ -20,7 +20,7 @@ function api(fetch) {
     async write(key, data) { this.values.set(key, data); }
     async remove(key) { this.values.delete(key); }
     async clear() { this.values.clear(); } }
-  const mocks = { './authorizedFetch': { authorizedFetch: fetch }, './auth': { activeSessionToken: s => s.active === false ? null : s.token,
+  const mocks = { './authorizedFetch': { authorizedFetch: fetch, authorizedImageFetch: fetch }, './auth': { activeSessionToken: s => s.active === false ? null : s.token,
     registerSessionResetHook: callback => { reset = callback; return () => {}; } },
     'expo-crypto': { CryptoDigestAlgorithm: { SHA256: 'SHA256' }, digestStringAsync: async (_kind, key) => crypto.createHash('sha256').update(key).digest('hex') },
     './orderImageDiskStore': { FileOrderImageDiskStore: Disk } };
@@ -90,4 +90,10 @@ test('external image requests use no account authorization', async () => {
     assert.deepEqual(await client.cachedOrderImageBytes(session(), 'https://images.example.test/picture.png'), Uint8Array.from([8]));
     assert.deepEqual(headers, {});
   } finally { global.fetch = original; }
+});
+test('same-origin image paths outside mobile API use authenticated image transport', async () => {
+  let path;
+  const { client } = api(async (_session, value) => { path = value; return new Response(Uint8Array.from([1]), { status: 200 }); });
+  assert.deepEqual(await client.cachedOrderImageBytes(session(), '/images/one.png'), Uint8Array.from([1]));
+  assert.equal(path, '/images/one.png');
 });

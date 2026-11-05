@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { activeSessionToken, registerSessionResetHook, type Session } from './auth';
-import { authorizedFetch } from './authorizedFetch';
+import { authorizedFetch, authorizedImageFetch } from './authorizedFetch';
 import { WorkerControlException } from './workerControlsApi';
 import { adminProductionMapOrderImageUrl, orderImageRequestUri } from './orderImageUri';
 import { OrderImageCache } from './orderImageCacheCore';
@@ -65,18 +65,19 @@ export function peekCachedOrderImageBytes(session: Session, imageUrl: string, th
   return imageCache.peek(key, immutable, isCurrent);
 }
 
-// Arbitrary same-origin paths and test-mode requests still need V2 transport parity.
+/** @v2 cachedOrderImageBytes */
 export async function cachedOrderImageBytes(session: Session, imageUrl: string, thumbnail = false): Promise<Uint8Array | null> {
   if (!imageUrl.trim()) return null;
   const { uri, internal, key, immutable, isCurrent } = genericImageContext(session, imageUrl, thumbnail);
   if (internal && !activeSessionToken(session)) throw new Error('No session token');
+  if (uri.protocol !== 'https:') throw new TypeError('API connections require HTTPS');
   return imageCache.load({ key, thumbnail, immutable, isCurrent, fetch: async etag => {
     const headers: Record<string, string> = {};
     if (etag != null) headers['If-None-Match'] = etag;
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 10_000);
     try {
       const response = internal
-        ? await authorizedFetch(session, `${uri.pathname}${uri.search}`, { headers, signal: controller.signal })
+        ? await authorizedImageFetch(session, `${uri.pathname}${uri.search}`, { headers, signal: controller.signal })
         : await fetch(uri.toString(), { headers, signal: controller.signal });
       const bytes = new Uint8Array(await response.arrayBuffer());
       if (internal && response.status === 404 && !bytes.length)

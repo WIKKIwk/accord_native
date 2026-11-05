@@ -6,11 +6,19 @@ export const invalidateQueueSnapshotReads = (): void => { queueSnapshotReadEpoch
 
 /** Authenticated API request with a single retry after a successful 401 refresh. */
 export async function authorizedFetch(session: Session, path: string, init: RequestInit = {}, beforeSend?: () => void): Promise<Response> {
+  return authenticatedRequest(session, path, init, beforeSend, false);
+}
+
+export async function authorizedImageFetch(session: Session, path: string, init: RequestInit = {}): Promise<Response> {
+  return authenticatedRequest(session, path, { ...init, method: 'GET' }, undefined, true);
+}
+
+async function authenticatedRequest(session: Session, path: string, init: RequestInit, beforeSend: (() => void) | undefined, image: boolean): Promise<Response> {
   const mutation = !['GET', 'HEAD', 'OPTIONS'].includes((init.method ?? 'GET').toUpperCase());
   if (mutation) invalidateQueueSnapshotReads();
   try {
     const url = new URL(path, session.baseUrl);
-    if (url.origin !== session.baseUrl || url.protocol !== 'https:' || !url.pathname.startsWith('/v1/mobile/')) {
+    if (url.origin !== session.baseUrl || url.protocol !== 'https:' || (!image && !url.pathname.startsWith('/v1/mobile/'))) {
       throw new Error('API manzili noto‘g‘ri.');
     }
     const send = (token: string) => {
