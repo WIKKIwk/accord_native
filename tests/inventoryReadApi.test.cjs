@@ -31,3 +31,11 @@ test('inventory locations parse canonical apparatus and reject invalid IDs', asy
   const invalid = load('inventoryReadApi', { './authorizedFetch': { authorizedFetch: async () => ({ status: 200, json: async () => [{ apparatus: [{ id: 'wrong' }] }] }) } });
   await assert.rejects(invalid.inventoryLocations({}), /canonical apparatus ID/);
 });
+
+test('inventory transfers serialize filters and parse line and status defaults', async () => {
+  let query;
+  const api = load('inventoryReadApi', { './authorizedFetch': { authorizedFetch: async (_session, path) => { query = new URL(path, 'https://example.test').searchParams; return { status: 200, json: async () => [{ id: 'transfer', status: 'in_transit', lines: [{ asset_ref: 'roll', qty: 2 }] }] }; } } });
+  const rows = await api.inventoryTransfers({}, { direction: 'incoming', status: 'in_transit', limit: 20, offset: 5 });
+  assert.deepEqual(Object.fromEntries(query), { direction: 'incoming', status: 'in_transit', limit: '20', offset: '5' });
+  assert.equal(rows[0].status, 'in_transit'); assert.equal(rows[0].lines[0].asset_kind, 'raw_material');
+});

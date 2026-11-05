@@ -1,7 +1,7 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerControlException } from './workerControlsApi';
-import { inventoryAssetFromJson, inventoryLocationFromJson } from './inventoryModels';
+import { inventoryAssetFromJson, inventoryLocationFromJson, inventoryTransferFromJson } from './inventoryModels';
 const errors: Record<string, string> = { inventory_asset_not_found: 'Mahsulot topilmadi', inventory_asset_unavailable: 'Mahsulot band qilingan yoki hozir mavjud emas',
   inventory_asset_not_in_source_warehouse: 'Mahsulotni transferdan oldin omborga qaytaring', inventory_location_not_found: 'Joylashuv topilmadi',
   inventory_location_inactive: 'Bu state faol emas', inventory_cross_warehouse_requires_transfer: 'Boshqa omborga faqat transfer orqali yuboriladi',
@@ -38,4 +38,17 @@ export async function inventoryLocations(session: Session) {
   const payload: unknown = await response.json();
   if (!Array.isArray(payload)) throw new TypeError('Invalid inventory locations');
   return payload.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map(inventoryLocationFromJson);
+}
+
+/** @v2 inventoryTransfers */
+export async function inventoryTransfers(session: Session, input: { direction?: string; status?: string | null; limit?: number; offset?: number } = {}) {
+  const query = new URLSearchParams({ direction: input.direction ?? 'all' });
+  if (input.status != null) query.set('status', input.status);
+  query.set('limit', String(input.limit ?? 100));
+  if ((input.offset ?? 0) > 0) query.set('offset', String(input.offset));
+  const response = await authorizedFetch(session, `/v1/mobile/admin/inventory/transfers?${query}`);
+  if (response.status !== 200) throw await inventoryResponseError(response, 'inventory_transfers_load_failed', 'Transferlar yuklanmadi');
+  const payload: unknown = await response.json();
+  if (!Array.isArray(payload)) throw new TypeError('Invalid inventory transfers');
+  return payload.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map(inventoryTransferFromJson);
 }

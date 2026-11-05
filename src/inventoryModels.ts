@@ -36,3 +36,21 @@ export function inventoryAssetFromJson(value: unknown) {
     placement_version: Math.trunc(num(row.placement_version, 1)), order_assignment_known: Object.hasOwn(row, 'order_assignment'),
     order_assignment: assignment ? { order_id: assignment.order_id, order_label: assignment.order_label, order_control: assignment.order_control ?? 'active' } : null };
 }
+/** @v2 InventoryTransfer */
+export function inventoryTransferFromJson(value: unknown) {
+  const row = object(value); if (!row) throw new TypeError('Invalid inventory transfer');
+  const status = str(row.status).trim().toLowerCase(), result: Obj = {};
+  for (const key of ['id', 'source_warehouse_id', 'source_warehouse', 'destination_warehouse_id', 'destination_warehouse', 'note',
+    'requested_by_name', 'approved_by_name', 'dispatched_by_name', 'received_by_name', 'rejected_by_name', 'cancelled_by_name']) result[key] = str(row[key]);
+  result.status = ['approved', 'in_transit', 'received', 'rejected', 'cancelled'].includes(status) ? status : 'requested';
+  result.created_at_unix = Math.trunc(num(row.created_at_unix, 0));
+  for (const key of ['approved_at_unix', 'dispatched_at_unix', 'received_at_unix', 'rejected_at_unix', 'cancelled_at_unix'])
+    result[key] = row[key] == null ? null : Math.trunc(num(row[key], 0));
+  result.lines = (Array.isArray(row.lines) ? row.lines : []).filter(object).map((line: Obj) => {
+    const item: Obj = {}, assetKind = str(line.asset_kind).trim().toLowerCase();
+    item.asset_kind = ['finished_goods', 'qolip'].includes(assetKind) ? assetKind : 'raw_material';
+    for (const key of ['asset_ref', 'item_code', 'item_name', 'identifier', 'uom', 'source_physical_location_id']) item[key] = str(line[key]);
+    item.qty = num(line.qty, 0); return item;
+  });
+  return result;
+}
