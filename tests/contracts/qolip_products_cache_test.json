@@ -1,0 +1,421 @@
+{
+ "source": "test/qolip_products_cache_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "concurrent full reads share one request; 304 reuses parsed products",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "concurrent full reads share one request; 304 reuses parsed products",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test",
+    "If-None-Match": "\"v1\""
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 304,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "partial searches cannot overwrite the full catalog snapshot",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "partial searches cannot overwrite the full catalog snapshot",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?q=missing&limit=50&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[]}"
+   }
+  },
+  {
+   "test": "mutations invalidate the snapshot and its conditional validator",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "mutations invalidate the snapshot and its conditional validator",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/product-specs",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qolip_codes\":[\"Q-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"deleted_count\":1}"
+   }
+  },
+  {
+   "test": "mutations invalidate the snapshot and its conditional validator",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[]}"
+   }
+  },
+  {
+   "test": "a read finishing after a mutation cannot publish pre-mutation data",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/product-specs",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qolip_codes\":[\"Q-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"deleted_count\":1}"
+   }
+  },
+  {
+   "test": "a read finishing after a mutation cannot publish pre-mutation data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "a read finishing after a mutation cannot publish pre-mutation data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[]}"
+   }
+  },
+  {
+   "test": "session changes isolate snapshots and validators",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "session changes isolate snapshots and validators",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer another-session"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "late response after logout is rejected and cannot refill cache",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "server switch rejects late responses and clears the old validator",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "server switch rejects late responses and clears the old validator",
+   "method": "GET",
+   "url": "https://qolip-cache.example/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "failed refresh (403) removes reusable cached data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "failed refresh (403) removes reusable cached data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test",
+    "If-None-Match": "\"v1\""
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "failed refresh (500) removes reusable cached data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "failed refresh (500) removes reusable cached data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test",
+    "If-None-Match": "\"v1\""
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "old servers without ETag still return fresh data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "old servers without ETag still return fresh data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"New product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "entry loads a name page without showing the old full catalog cache",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "etag": "\"v1\""
+   },
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"ITEM\",\"name\":\"Product\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"Q-1\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"has_qolip_spec\":true,\"is_in_use\":false,\"customer_names\":[\"Customer\"]}]}"
+   }
+  },
+  {
+   "test": "entry loads a name page without showing the old full catalog cache",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "entry loads a name page without showing the old full catalog cache",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-cache-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"product-id\",\"name\":\"Updated product\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  }
+ ]
+}

@@ -1,0 +1,40 @@
+{
+ "source": "test/worker_wip_completion_print_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "queue labels keep each WIP completion time through saved Bluetooth jobs",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer wip-print-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"action\":\"complete\",\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"zakaz-scan-bootstrap\":\"completed\"},\"progress_batch\":{\"batch_id\":\"batch-400118DF777A61655B58863F\",\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"qr_payload\":\"400118DF777A61655B58863F\",\"label_item_code\":\"ZIZI\",\"label_item_name\":\"ZIZI SPONGE YARIM TAYYOR\",\"produced_qty\":6500,\"uom\":\"m\",\"completed_at_unix\":0},\"progress_batches\":[{\"batch_id\":\"batch-400118DF777A61655B58863F\",\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"qr_payload\":\"400118DF777A61655B58863F\",\"label_item_code\":\"ZIZI\",\"label_item_name\":\"ZIZI SPONGE YARIM TAYYOR\",\"produced_qty\":6500,\"uom\":\"m\",\"completed_at_unix\":1792316220},{\"batch_id\":\"batch-400118DE52D377560B196C52\",\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"qr_payload\":\"400118DE52D377560B196C52\",\"label_item_code\":\"ZIZI\",\"label_item_name\":\"ZIZI SPONGE YARIM TAYYOR\",\"produced_qty\":6500,\"uom\":\"m\",\"completed_at_unix\":1792210320}],\"print\":{\"ok\":true,\"status\":\"prepared\",\"epc\":\"400118DF777A61655B58863F\",\"item_code\":\"ZIZI\",\"order_code\":\"WORK-42\",\"item_name\":\"ZIZI SPONGE YARIM TAYYOR\",\"label_kind\":\"progress\",\"gross_qty\":107,\"progress_qty\":6500,\"progress_unit\":\"m\"},\"prints\":[{\"ok\":true,\"status\":\"prepared\",\"epc\":\"400118DE52D377560B196C52\",\"item_code\":\"ZIZI\",\"order_code\":\"WORK-42\",\"item_name\":\"ZIZI SPONGE YARIM TAYYOR\",\"label_kind\":\"progress\",\"gross_qty\":107,\"progress_qty\":6500,\"progress_unit\":\"m\"},{\"ok\":true,\"status\":\"prepared\",\"epc\":\"400118DF777A61655B58863F\",\"item_code\":\"ZIZI\",\"order_code\":\"WORK-42\",\"item_name\":\"ZIZI SPONGE YARIM TAYYOR\",\"label_kind\":\"progress\",\"gross_qty\":107,\"progress_qty\":6500,\"progress_unit\":\"m\"}]}"
+   }
+  },
+  {
+   "test": "WIP reprint uses the saved production completion date",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/reprint",
+   "requestHeaders": {
+    "Authorization": "Bearer wip-print-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118DE52D377560B196C52\",\"print_transport\":\"offline\",\"print_count\":1}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"batch\":{\"batch_id\":\"batch-400118DE52D377560B196C52\",\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"qr_payload\":\"400118DE52D377560B196C52\",\"label_item_code\":\"ZIZI\",\"label_item_name\":\"ZIZI SPONGE YARIM TAYYOR\",\"produced_qty\":6500,\"uom\":\"m\",\"completed_at_unix\":1792210320},\"print\":{\"ok\":true,\"status\":\"prepared\",\"epc\":\"400118DE52D377560B196C52\",\"item_code\":\"ZIZI\",\"order_code\":\"WORK-42\",\"item_name\":\"ZIZI SPONGE YARIM TAYYOR\",\"label_kind\":\"progress\",\"gross_qty\":107,\"progress_qty\":6500,\"progress_unit\":\"m\"}}"
+   }
+  }
+ ]
+}

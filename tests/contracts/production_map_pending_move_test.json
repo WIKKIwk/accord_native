@@ -1,0 +1,42 @@
+{
+ "source": "test/production_map_pending_move_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "pending move: HTTP sends only the selected order and canonical apparatus",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/move-batch",
+   "requestHeaders": {
+    "Authorization": "Bearer pending-move-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"map_ids\":[\"zakaz-waiting-b\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"saved\":[{\"map\":{\"id\":\"zakaz-waiting-b\",\"product_code\":\"SYNTHETIC-PRINT\",\"title\":\"zakaz-waiting-b\",\"roll_count\":7.0,\"width_mm\":650.0,\"nodes\":[{\"id\":\"start\",\"kind\":\"start\",\"title\":\"Start\",\"x\":0.0,\"y\":0.0},{\"id\":\"print\",\"kind\":\"apparatus\",\"title\":\"8 ta rangli bosma aparat\",\"apparatus_id\":\"apparatus:default:bosma_8\",\"x\":0.0,\"y\":0.0},{\"id\":\"end\",\"kind\":\"end\",\"title\":\"Synthetic print product\",\"item_code\":\"SYNTHETIC-PRINT\",\"x\":0.0,\"y\":0.0}],\"edges\":[{\"from\":\"start\",\"to\":\"print\"},{\"from\":\"print\",\"to\":\"end\"}]},\"program\":{}}]}"
+   }
+  },
+  {
+   "test": "pending move: own active reservation preserves HTTP conflict diagnostics",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/move-batch",
+   "requestHeaders": {
+    "Authorization": "Bearer pending-move-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"map_ids\":[\"zakaz-colour-a\"]}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "x-request-id": "own-colour-reservation"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"print_preflight_active\"}"
+   }
+  }
+ ]
+}

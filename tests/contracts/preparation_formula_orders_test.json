@@ -1,0 +1,998 @@
+{
+ "source": "test/preparation_formula_orders_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"variant_id\":\"v1\",\"variant_name\":\"LG\",\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"variant_id\":\"v1\",\"variant_name\":\"LG\",\"name\":\"B\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"variant_id\":\"v1\",\"variant_name\":\"LG\",\"name\":\"C\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"LG\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"set_name\":\"Test product\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"O-1\"],\"can_create\":true},{\"id\":\"v2\",\"formula_code\":\"950400000002\",\"name\":\"LG\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"set_name\":\"Test product\",\"material_id\":\"mat-b\",\"material_name\":\"PE\",\"order_codes\":[\"O-1\"],\"can_create\":false},{\"id\":\"v3\",\"formula_code\":\"950400000003\",\"name\":\"LG\",\"product_code\":\"OTHER\",\"product_title\":\"Test product\",\"set_name\":\"Test product\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"O-1\"],\"can_create\":true}]}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\"],\"assigned_warehouses\":[\"Own\"],\"material_warehouses\":[\"Own\"],\"orders\":[],\"history\":[],\"materials\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"balances\":[]},{\"item_code\":\"C2\",\"name\":\"Un\",\"balances\":[]}]}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"name\":\"B\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"name\":\"C\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&name=B&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"deleted\":true}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"name\":\"C\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"variant_id\":\"v1\",\"variant_name\":\"LG\",\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"variant_id\":\"v1\",\"variant_name\":\"LG\",\"name\":\"C\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"LG\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"set_name\":\"Test product\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"O-1\"],\"can_create\":true},{\"id\":\"v2\",\"formula_code\":\"950400000002\",\"name\":\"LG\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"set_name\":\"Test product\",\"material_id\":\"mat-b\",\"material_name\":\"PE\",\"order_codes\":[\"O-1\"],\"can_create\":false},{\"id\":\"v3\",\"formula_code\":\"950400000003\",\"name\":\"LG\",\"product_code\":\"OTHER\",\"product_title\":\"Test product\",\"set_name\":\"Test product\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"O-1\"],\"can_create\":true}]}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\"],\"assigned_warehouses\":[\"Own\"],\"material_warehouses\":[\"Own\"],\"orders\":[],\"history\":[],\"materials\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"balances\":[]},{\"item_code\":\"C2\",\"name\":\"Un\",\"balances\":[]}]}"
+   }
+  },
+  {
+   "test": "product lists recipes once and opens their own internal formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&material_id=mat-b&variant_id=v2",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\"],\"assigned_warehouses\":[\"Own\"],\"material_warehouses\":[\"Own\"],\"orders\":[],\"history\":[],\"materials\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"balances\":[]},{\"item_code\":\"C2\",\"name\":\"Un\",\"balances\":[]}]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"Mat A\",\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\"],\"assigned_warehouses\":[\"Own\"],\"material_warehouses\":[\"Own\"],\"orders\":[],\"history\":[],\"materials\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"balances\":[]},{\"item_code\":\"C2\",\"name\":\"Un\",\"balances\":[]}]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&material_id=mat-a",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"mat-a\",\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"percent\":\"70.000000\"},{\"item_code\":\"C2\",\"percent\":\"30.000000\"}]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"percent\":\"70.000000\",\"name\":\"Kley\"},{\"item_code\":\"C2\",\"percent\":\"30.000000\",\"name\":\"Un\"}]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&material_id=mat-a",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"percent\":\"70.000000\",\"name\":\"Kley\"},{\"item_code\":\"C2\",\"percent\":\"30.000000\",\"name\":\"Un\"}]}]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"Mat A\",\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"percent\":\"70.000000\",\"name\":\"Kley\"},{\"item_code\":\"C2\",\"percent\":\"30.000000\",\"name\":\"Un\"}]}]}]}"
+   }
+  },
+  {
+   "test": "compact home cards, formula set list, view and edit scoped formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "saved formula opens details and only its pencil opens the editor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\"],\"assigned_warehouses\":[\"Own\"],\"material_warehouses\":[\"Own\"],\"orders\":[],\"history\":[],\"materials\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"balances\":[]},{\"item_code\":\"C2\",\"name\":\"Un\",\"balances\":[]}]}"
+   }
+  },
+  {
+   "test": "saved formula opens details and only its pencil opens the editor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=mat-a",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "saved formula opens details and only its pencil opens the editor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "delete confirmation, rejected delete retained, last formula removes order from list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"Mat A\",\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "delete confirmation, rejected delete retained, last formula removes order from list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "delete confirmation, rejected delete retained, last formula removes order from list",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&name=A&material_id=mat-a",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Bu formula uchun ruxsat yo‘q\"}"
+   }
+  },
+  {
+   "test": "delete confirmation, rejected delete retained, last formula removes order from list",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&name=A&material_id=mat-a",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"deleted\":false}"
+   }
+  },
+  {
+   "test": "delete confirmation, rejected delete retained, last formula removes order from list",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&name=A&material_id=mat-a",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"deleted\":true}"
+   }
+  },
+  {
+   "test": "delete confirmation, rejected delete retained, last formula removes order from list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[]}"
+   }
+  },
+  {
+   "test": "delete confirmation, rejected delete retained, last formula removes order from list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "same formula name in two material scopes deletes only selected scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"Mat A\",\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"material_id\":\"mat-b\",\"material_name\":\"Mat B\",\"name\":\"A\",\"lines\":[{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"100\"}]}]}]}"
+   }
+  },
+  {
+   "test": "same formula name in two material scopes deletes only selected scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "same formula name in two material scopes deletes only selected scope",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&name=A&material_id=mat-b",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"deleted\":true}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000002\",\"name\":\"Nilo maffin 180 gr\",\"product_code\":\"OLD\",\"product_title\":\"Nilo maffin 180 gr\",\"order_codes\":[],\"formulas\":[{\"material_id\":\"\",\"material_name\":\"\",\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"material_id\":\"\",\"material_name\":\"\",\"name\":\"Asosiy\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\"],\"assigned_warehouses\":[\"Own\"],\"material_warehouses\":[\"Own\"],\"orders\":[],\"history\":[],\"materials\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"balances\":[]},{\"item_code\":\"C2\",\"name\":\"Un\",\"balances\":[]}]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=OLD&material_id",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"OLD\",\"formulas\":[{\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"name\":\"Asosiy\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"OLD\",\"material_id\":\"\",\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"percent\":\"40.000000\"}]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"OLD\",\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=OLD&material_id",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"OLD\",\"formulas\":[{\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"name\":\"Asosiy\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000002\",\"name\":\"Nilo maffin 180 gr\",\"product_code\":\"OLD\",\"product_title\":\"Nilo maffin 180 gr\",\"order_codes\":[],\"formulas\":[{\"material_id\":\"\",\"material_name\":\"\",\"name\":\"A\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]},{\"material_id\":\"\",\"material_name\":\"\",\"name\":\"Asosiy\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=OLD&name=A&material_id",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"deleted\":true}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=OLD&name=Asosiy&material_id",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"deleted\":true}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[]}"
+   }
+  },
+  {
+   "test": "orphan legacy formulas can be viewed, edited and deleted by exact identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "list failure has retry, does not pretend list is empty",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 502,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "Bad gateway"
+   }
+  },
+  {
+   "test": "list failure has retry, does not pretend list is empty",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"Mat A\",\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "list failure has retry, does not pretend list is empty",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "long press renames a set and searches by ID, name, product and order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"Mat A\",\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "long press renames a set and searches by ID, name, product and order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "long press renames a set and searches by ID, name, product and order",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"set_id\":\"950200000001\",\"name\":\"Qurt maxsus\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"set_id\":\"950200000001\",\"name\":\"Qurt maxsus\"}"
+   }
+  },
+  {
+   "test": "long press renames a set and searches by ID, name, product and order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Qurt maxsus\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"Mat A\",\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "long press renames a set and searches by ID, name, product and order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "failed rename retains the set name, ID and formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"set_id\":\"950200000001\",\"name\":\"Test product\",\"product_code\":\"P\",\"product_title\":\"Test product\",\"order_codes\":[\"O-1\"],\"formulas\":[{\"material_id\":\"mat-a\",\"material_name\":\"Mat A\",\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Kley\",\"percent\":\"60.000000\"},{\"item_code\":\"C2\",\"name\":\"Un\",\"percent\":\"40.000000\"}]}]}]}"
+   }
+  },
+  {
+   "test": "failed rename retains the set name, ID and formulas",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "failed rename retains the set name, ID and formulas",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-sets",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"set_id\":\"950200000001\",\"name\":\"Rejected\"}"
+   },
+   "status": 403,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Nomni o‘zgartirishga ruxsat yo‘q\"}"
+   }
+  }
+ ]
+}

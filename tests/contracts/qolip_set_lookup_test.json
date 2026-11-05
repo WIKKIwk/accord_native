@@ -1,0 +1,42 @@
+{
+ "source": "test/qolip_set_lookup_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "lookup caches catalog reads and rejects responses from a previous session",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/sets",
+   "requestHeaders": {
+    "Authorization": "Bearer set-lookup-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"name\":\"Kross qizil\",\"set_id\":\"950100000001\",\"fingerprint\":\"[[\\\"950100000001\\\",\\\"RED-1\\\",420,\\\"BLACK\\\",\\\"Qolip ombori\\\"],[\\\"950100000001\\\",\\\"RED-2\\\",420,\\\"RED\\\",\\\"Qolip ombori\\\"]]\",\"warehouse\":\"Qolip ombori\",\"products\":[],\"members\":[{\"qolip_code\":\"RED-1\",\"size\":420,\"color\":\"BLACK\",\"warehouse\":\"Qolip ombori\"},{\"qolip_code\":\"RED-2\",\"size\":420,\"color\":\"RED\",\"warehouse\":\"Qolip ombori\"}]}]}"
+   }
+  },
+  {
+   "test": "lookup caches catalog reads and rejects responses from a previous session",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/sets",
+   "requestHeaders": {
+    "Authorization": "Bearer set-lookup-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"sets\":[{\"name\":\"Botinka ko‘k\",\"set_id\":\"950100000003\",\"fingerprint\":\"[[\\\"950100000003\\\",\\\"BLUE-1\\\",420,\\\"BLACK\\\",\\\"Qolip ombori\\\"],[\\\"950100000003\\\",\\\"BLUE-2\\\",420,\\\"RED\\\",\\\"Qolip ombori\\\"]]\",\"warehouse\":\"Qolip ombori\",\"products\":[],\"members\":[{\"qolip_code\":\"BLUE-1\",\"size\":420,\"color\":\"BLACK\",\"warehouse\":\"Qolip ombori\"},{\"qolip_code\":\"BLUE-2\",\"size\":420,\"color\":\"RED\",\"warehouse\":\"Qolip ombori\"}]}]}"
+   }
+  }
+ ]
+}

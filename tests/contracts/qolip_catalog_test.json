@@ -1,0 +1,581 @@
+{
+ "source": "test/qolip_catalog_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "catalog requests are bounded, scoped and reject a stuck continuation",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200&q=Product",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\"},{\"id\":\"row-1\",\"name\":\"Product 001\"},{\"id\":\"row-2\",\"name\":\"Product 002\"},{\"id\":\"row-3\",\"name\":\"Product 003\"},{\"id\":\"row-4\",\"name\":\"Product 004\"},{\"id\":\"row-5\",\"name\":\"Product 005\"},{\"id\":\"row-6\",\"name\":\"Product 006\"},{\"id\":\"row-7\",\"name\":\"Product 007\"},{\"id\":\"row-8\",\"name\":\"Product 008\"},{\"id\":\"row-9\",\"name\":\"Product 009\"},{\"id\":\"row-10\",\"name\":\"Product 010\"},{\"id\":\"row-11\",\"name\":\"Product 011\"},{\"id\":\"row-12\",\"name\":\"Product 012\"},{\"id\":\"row-13\",\"name\":\"Product 013\"},{\"id\":\"row-14\",\"name\":\"Product 014\"},{\"id\":\"row-15\",\"name\":\"Product 015\"},{\"id\":\"row-16\",\"name\":\"Product 016\"},{\"id\":\"row-17\",\"name\":\"Product 017\"},{\"id\":\"row-18\",\"name\":\"Product 018\"},{\"id\":\"row-19\",\"name\":\"Product 019\"},{\"id\":\"row-20\",\"name\":\"Product 020\"},{\"id\":\"row-21\",\"name\":\"Product 021\"},{\"id\":\"row-22\",\"name\":\"Product 022\"},{\"id\":\"row-23\",\"name\":\"Product 023\"},{\"id\":\"row-24\",\"name\":\"Product 024\"},{\"id\":\"row-25\",\"name\":\"Product 025\"},{\"id\":\"row-26\",\"name\":\"Product 026\"},{\"id\":\"row-27\",\"name\":\"Product 027\"},{\"id\":\"row-28\",\"name\":\"Product 028\"},{\"id\":\"row-29\",\"name\":\"Product 029\"},{\"id\":\"row-30\",\"name\":\"Product 030\"},{\"id\":\"row-31\",\"name\":\"Product 031\"},{\"id\":\"row-32\",\"name\":\"Product 032\"},{\"id\":\"row-33\",\"name\":\"Product 033\"},{\"id\":\"row-34\",\"name\":\"Product 034\"},{\"id\":\"row-35\",\"name\":\"Product 035\"},{\"id\":\"row-36\",\"name\":\"Product 036\"},{\"id\":\"row-37\",\"name\":\"Product 037\"},{\"id\":\"row-38\",\"name\":\"Product 038\"},{\"id\":\"row-39\",\"name\":\"Product 039\"},{\"id\":\"row-40\",\"name\":\"Product 040\"},{\"id\":\"row-41\",\"name\":\"Product 041\"},{\"id\":\"row-42\",\"name\":\"Product 042\"},{\"id\":\"row-43\",\"name\":\"Product 043\"},{\"id\":\"row-44\",\"name\":\"Product 044\"},{\"id\":\"row-45\",\"name\":\"Product 045\"},{\"id\":\"row-46\",\"name\":\"Product 046\"},{\"id\":\"row-47\",\"name\":\"Product 047\"},{\"id\":\"row-48\",\"name\":\"Product 048\"},{\"id\":\"row-49\",\"name\":\"Product 049\"},{\"id\":\"row-50\",\"name\":\"Product 050\"},{\"id\":\"row-51\",\"name\":\"Product 051\"},{\"id\":\"row-52\",\"name\":\"Product 052\"},{\"id\":\"row-53\",\"name\":\"Product 053\"},{\"id\":\"row-54\",\"name\":\"Product 054\"},{\"id\":\"row-55\",\"name\":\"Product 055\"},{\"id\":\"row-56\",\"name\":\"Product 056\"},{\"id\":\"row-57\",\"name\":\"Product 057\"},{\"id\":\"row-58\",\"name\":\"Product 058\"},{\"id\":\"row-59\",\"name\":\"Product 059\"},{\"id\":\"row-60\",\"name\":\"Product 060\"},{\"id\":\"row-61\",\"name\":\"Product 061\"},{\"id\":\"row-62\",\"name\":\"Product 062\"},{\"id\":\"row-63\",\"name\":\"Product 063\"},{\"id\":\"row-64\",\"name\":\"Product 064\"},{\"id\":\"row-65\",\"name\":\"Product 065\"},{\"id\":\"row-66\",\"name\":\"Product 066\"},{\"id\":\"row-67\",\"name\":\"Product 067\"},{\"id\":\"row-68\",\"name\":\"Product 068\"},{\"id\":\"row-69\",\"name\":\"Product 069\"},{\"id\":\"row-70\",\"name\":\"Product 070\"},{\"id\":\"row-71\",\"name\":\"Product 071\"},{\"id\":\"row-72\",\"name\":\"Product 072\"},{\"id\":\"row-73\",\"name\":\"Product 073\"},{\"id\":\"row-74\",\"name\":\"Product 074\"},{\"id\":\"row-75\",\"name\":\"Product 075\"},{\"id\":\"row-76\",\"name\":\"Product 076\"},{\"id\":\"row-77\",\"name\":\"Product 077\"},{\"id\":\"row-78\",\"name\":\"Product 078\"},{\"id\":\"row-79\",\"name\":\"Product 079\"},{\"id\":\"row-80\",\"name\":\"Product 080\"},{\"id\":\"row-81\",\"name\":\"Product 081\"},{\"id\":\"row-82\",\"name\":\"Product 082\"},{\"id\":\"row-83\",\"name\":\"Product 083\"},{\"id\":\"row-84\",\"name\":\"Product 084\"},{\"id\":\"row-85\",\"name\":\"Product 085\"},{\"id\":\"row-86\",\"name\":\"Product 086\"},{\"id\":\"row-87\",\"name\":\"Product 087\"},{\"id\":\"row-88\",\"name\":\"Product 088\"},{\"id\":\"row-89\",\"name\":\"Product 089\"},{\"id\":\"row-90\",\"name\":\"Product 090\"},{\"id\":\"row-91\",\"name\":\"Product 091\"},{\"id\":\"row-92\",\"name\":\"Product 092\"},{\"id\":\"row-93\",\"name\":\"Product 093\"},{\"id\":\"row-94\",\"name\":\"Product 094\"},{\"id\":\"row-95\",\"name\":\"Product 095\"},{\"id\":\"row-96\",\"name\":\"Product 096\"},{\"id\":\"row-97\",\"name\":\"Product 097\"},{\"id\":\"row-98\",\"name\":\"Product 098\"},{\"id\":\"row-99\",\"name\":\"Product 099\"},{\"id\":\"row-100\",\"name\":\"Product 100\"},{\"id\":\"row-101\",\"name\":\"Product 101\"},{\"id\":\"row-102\",\"name\":\"Product 102\"},{\"id\":\"row-103\",\"name\":\"Product 103\"},{\"id\":\"row-104\",\"name\":\"Product 104\"},{\"id\":\"row-105\",\"name\":\"Product 105\"},{\"id\":\"row-106\",\"name\":\"Product 106\"},{\"id\":\"row-107\",\"name\":\"Product 107\"},{\"id\":\"row-108\",\"name\":\"Product 108\"},{\"id\":\"row-109\",\"name\":\"Product 109\"},{\"id\":\"row-110\",\"name\":\"Product 110\"},{\"id\":\"row-111\",\"name\":\"Product 111\"},{\"id\":\"row-112\",\"name\":\"Product 112\"},{\"id\":\"row-113\",\"name\":\"Product 113\"},{\"id\":\"row-114\",\"name\":\"Product 114\"},{\"id\":\"row-115\",\"name\":\"Product 115\"},{\"id\":\"row-116\",\"name\":\"Product 116\"},{\"id\":\"row-117\",\"name\":\"Product 117\"},{\"id\":\"row-118\",\"name\":\"Product 118\"},{\"id\":\"row-119\",\"name\":\"Product 119\"},{\"id\":\"row-120\",\"name\":\"Product 120\"},{\"id\":\"row-121\",\"name\":\"Product 121\"},{\"id\":\"row-122\",\"name\":\"Product 122\"},{\"id\":\"row-123\",\"name\":\"Product 123\"},{\"id\":\"row-124\",\"name\":\"Product 124\"},{\"id\":\"row-125\",\"name\":\"Product 125\"},{\"id\":\"row-126\",\"name\":\"Product 126\"},{\"id\":\"row-127\",\"name\":\"Product 127\"},{\"id\":\"row-128\",\"name\":\"Product 128\"},{\"id\":\"row-129\",\"name\":\"Product 129\"},{\"id\":\"row-130\",\"name\":\"Product 130\"},{\"id\":\"row-131\",\"name\":\"Product 131\"},{\"id\":\"row-132\",\"name\":\"Product 132\"},{\"id\":\"row-133\",\"name\":\"Product 133\"},{\"id\":\"row-134\",\"name\":\"Product 134\"},{\"id\":\"row-135\",\"name\":\"Product 135\"},{\"id\":\"row-136\",\"name\":\"Product 136\"},{\"id\":\"row-137\",\"name\":\"Product 137\"},{\"id\":\"row-138\",\"name\":\"Product 138\"},{\"id\":\"row-139\",\"name\":\"Product 139\"},{\"id\":\"row-140\",\"name\":\"Product 140\"},{\"id\":\"row-141\",\"name\":\"Product 141\"},{\"id\":\"row-142\",\"name\":\"Product 142\"},{\"id\":\"row-143\",\"name\":\"Product 143\"},{\"id\":\"row-144\",\"name\":\"Product 144\"},{\"id\":\"row-145\",\"name\":\"Product 145\"},{\"id\":\"row-146\",\"name\":\"Product 146\"},{\"id\":\"row-147\",\"name\":\"Product 147\"},{\"id\":\"row-148\",\"name\":\"Product 148\"},{\"id\":\"row-149\",\"name\":\"Product 149\"},{\"id\":\"row-150\",\"name\":\"Product 150\"},{\"id\":\"row-151\",\"name\":\"Product 151\"},{\"id\":\"row-152\",\"name\":\"Product 152\"},{\"id\":\"row-153\",\"name\":\"Product 153\"},{\"id\":\"row-154\",\"name\":\"Product 154\"},{\"id\":\"row-155\",\"name\":\"Product 155\"},{\"id\":\"row-156\",\"name\":\"Product 156\"},{\"id\":\"row-157\",\"name\":\"Product 157\"},{\"id\":\"row-158\",\"name\":\"Product 158\"},{\"id\":\"row-159\",\"name\":\"Product 159\"},{\"id\":\"row-160\",\"name\":\"Product 160\"},{\"id\":\"row-161\",\"name\":\"Product 161\"},{\"id\":\"row-162\",\"name\":\"Product 162\"},{\"id\":\"row-163\",\"name\":\"Product 163\"},{\"id\":\"row-164\",\"name\":\"Product 164\"},{\"id\":\"row-165\",\"name\":\"Product 165\"},{\"id\":\"row-166\",\"name\":\"Product 166\"},{\"id\":\"row-167\",\"name\":\"Product 167\"},{\"id\":\"row-168\",\"name\":\"Product 168\"},{\"id\":\"row-169\",\"name\":\"Product 169\"},{\"id\":\"row-170\",\"name\":\"Product 170\"},{\"id\":\"row-171\",\"name\":\"Product 171\"},{\"id\":\"row-172\",\"name\":\"Product 172\"},{\"id\":\"row-173\",\"name\":\"Product 173\"},{\"id\":\"row-174\",\"name\":\"Product 174\"},{\"id\":\"row-175\",\"name\":\"Product 175\"},{\"id\":\"row-176\",\"name\":\"Product 176\"},{\"id\":\"row-177\",\"name\":\"Product 177\"},{\"id\":\"row-178\",\"name\":\"Product 178\"},{\"id\":\"row-179\",\"name\":\"Product 179\"},{\"id\":\"row-180\",\"name\":\"Product 180\"},{\"id\":\"row-181\",\"name\":\"Product 181\"},{\"id\":\"row-182\",\"name\":\"Product 182\"},{\"id\":\"row-183\",\"name\":\"Product 183\"},{\"id\":\"row-184\",\"name\":\"Product 184\"},{\"id\":\"row-185\",\"name\":\"Product 185\"},{\"id\":\"row-186\",\"name\":\"Product 186\"},{\"id\":\"row-187\",\"name\":\"Product 187\"},{\"id\":\"row-188\",\"name\":\"Product 188\"},{\"id\":\"row-189\",\"name\":\"Product 189\"},{\"id\":\"row-190\",\"name\":\"Product 190\"},{\"id\":\"row-191\",\"name\":\"Product 191\"},{\"id\":\"row-192\",\"name\":\"Product 192\"},{\"id\":\"row-193\",\"name\":\"Product 193\"},{\"id\":\"row-194\",\"name\":\"Product 194\"},{\"id\":\"row-195\",\"name\":\"Product 195\"},{\"id\":\"row-196\",\"name\":\"Product 196\"},{\"id\":\"row-197\",\"name\":\"Product 197\"},{\"id\":\"row-198\",\"name\":\"Product 198\"},{\"id\":\"row-199\",\"name\":\"Product 199\"}],\"has_more\":true,\"next_cursor\":\"next\"}"
+   }
+  },
+  {
+   "test": "catalog requests are bounded, scoped and reject a stuck continuation",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200&q=Product&cursor=next",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\"},{\"id\":\"row-1\",\"name\":\"Product 001\"},{\"id\":\"row-2\",\"name\":\"Product 002\"},{\"id\":\"row-3\",\"name\":\"Product 003\"},{\"id\":\"row-4\",\"name\":\"Product 004\"},{\"id\":\"row-5\",\"name\":\"Product 005\"},{\"id\":\"row-6\",\"name\":\"Product 006\"},{\"id\":\"row-7\",\"name\":\"Product 007\"},{\"id\":\"row-8\",\"name\":\"Product 008\"},{\"id\":\"row-9\",\"name\":\"Product 009\"},{\"id\":\"row-10\",\"name\":\"Product 010\"},{\"id\":\"row-11\",\"name\":\"Product 011\"},{\"id\":\"row-12\",\"name\":\"Product 012\"},{\"id\":\"row-13\",\"name\":\"Product 013\"},{\"id\":\"row-14\",\"name\":\"Product 014\"},{\"id\":\"row-15\",\"name\":\"Product 015\"},{\"id\":\"row-16\",\"name\":\"Product 016\"},{\"id\":\"row-17\",\"name\":\"Product 017\"},{\"id\":\"row-18\",\"name\":\"Product 018\"},{\"id\":\"row-19\",\"name\":\"Product 019\"},{\"id\":\"row-20\",\"name\":\"Product 020\"},{\"id\":\"row-21\",\"name\":\"Product 021\"},{\"id\":\"row-22\",\"name\":\"Product 022\"},{\"id\":\"row-23\",\"name\":\"Product 023\"},{\"id\":\"row-24\",\"name\":\"Product 024\"},{\"id\":\"row-25\",\"name\":\"Product 025\"},{\"id\":\"row-26\",\"name\":\"Product 026\"},{\"id\":\"row-27\",\"name\":\"Product 027\"},{\"id\":\"row-28\",\"name\":\"Product 028\"},{\"id\":\"row-29\",\"name\":\"Product 029\"},{\"id\":\"row-30\",\"name\":\"Product 030\"},{\"id\":\"row-31\",\"name\":\"Product 031\"},{\"id\":\"row-32\",\"name\":\"Product 032\"},{\"id\":\"row-33\",\"name\":\"Product 033\"},{\"id\":\"row-34\",\"name\":\"Product 034\"},{\"id\":\"row-35\",\"name\":\"Product 035\"},{\"id\":\"row-36\",\"name\":\"Product 036\"},{\"id\":\"row-37\",\"name\":\"Product 037\"},{\"id\":\"row-38\",\"name\":\"Product 038\"},{\"id\":\"row-39\",\"name\":\"Product 039\"},{\"id\":\"row-40\",\"name\":\"Product 040\"},{\"id\":\"row-41\",\"name\":\"Product 041\"},{\"id\":\"row-42\",\"name\":\"Product 042\"},{\"id\":\"row-43\",\"name\":\"Product 043\"},{\"id\":\"row-44\",\"name\":\"Product 044\"},{\"id\":\"row-45\",\"name\":\"Product 045\"},{\"id\":\"row-46\",\"name\":\"Product 046\"},{\"id\":\"row-47\",\"name\":\"Product 047\"},{\"id\":\"row-48\",\"name\":\"Product 048\"},{\"id\":\"row-49\",\"name\":\"Product 049\"},{\"id\":\"row-50\",\"name\":\"Product 050\"},{\"id\":\"row-51\",\"name\":\"Product 051\"},{\"id\":\"row-52\",\"name\":\"Product 052\"},{\"id\":\"row-53\",\"name\":\"Product 053\"},{\"id\":\"row-54\",\"name\":\"Product 054\"},{\"id\":\"row-55\",\"name\":\"Product 055\"},{\"id\":\"row-56\",\"name\":\"Product 056\"},{\"id\":\"row-57\",\"name\":\"Product 057\"},{\"id\":\"row-58\",\"name\":\"Product 058\"},{\"id\":\"row-59\",\"name\":\"Product 059\"},{\"id\":\"row-60\",\"name\":\"Product 060\"},{\"id\":\"row-61\",\"name\":\"Product 061\"},{\"id\":\"row-62\",\"name\":\"Product 062\"},{\"id\":\"row-63\",\"name\":\"Product 063\"},{\"id\":\"row-64\",\"name\":\"Product 064\"},{\"id\":\"row-65\",\"name\":\"Product 065\"},{\"id\":\"row-66\",\"name\":\"Product 066\"},{\"id\":\"row-67\",\"name\":\"Product 067\"},{\"id\":\"row-68\",\"name\":\"Product 068\"},{\"id\":\"row-69\",\"name\":\"Product 069\"},{\"id\":\"row-70\",\"name\":\"Product 070\"},{\"id\":\"row-71\",\"name\":\"Product 071\"},{\"id\":\"row-72\",\"name\":\"Product 072\"},{\"id\":\"row-73\",\"name\":\"Product 073\"},{\"id\":\"row-74\",\"name\":\"Product 074\"},{\"id\":\"row-75\",\"name\":\"Product 075\"},{\"id\":\"row-76\",\"name\":\"Product 076\"},{\"id\":\"row-77\",\"name\":\"Product 077\"},{\"id\":\"row-78\",\"name\":\"Product 078\"},{\"id\":\"row-79\",\"name\":\"Product 079\"},{\"id\":\"row-80\",\"name\":\"Product 080\"},{\"id\":\"row-81\",\"name\":\"Product 081\"},{\"id\":\"row-82\",\"name\":\"Product 082\"},{\"id\":\"row-83\",\"name\":\"Product 083\"},{\"id\":\"row-84\",\"name\":\"Product 084\"},{\"id\":\"row-85\",\"name\":\"Product 085\"},{\"id\":\"row-86\",\"name\":\"Product 086\"},{\"id\":\"row-87\",\"name\":\"Product 087\"},{\"id\":\"row-88\",\"name\":\"Product 088\"},{\"id\":\"row-89\",\"name\":\"Product 089\"},{\"id\":\"row-90\",\"name\":\"Product 090\"},{\"id\":\"row-91\",\"name\":\"Product 091\"},{\"id\":\"row-92\",\"name\":\"Product 092\"},{\"id\":\"row-93\",\"name\":\"Product 093\"},{\"id\":\"row-94\",\"name\":\"Product 094\"},{\"id\":\"row-95\",\"name\":\"Product 095\"},{\"id\":\"row-96\",\"name\":\"Product 096\"},{\"id\":\"row-97\",\"name\":\"Product 097\"},{\"id\":\"row-98\",\"name\":\"Product 098\"},{\"id\":\"row-99\",\"name\":\"Product 099\"},{\"id\":\"row-100\",\"name\":\"Product 100\"},{\"id\":\"row-101\",\"name\":\"Product 101\"},{\"id\":\"row-102\",\"name\":\"Product 102\"},{\"id\":\"row-103\",\"name\":\"Product 103\"},{\"id\":\"row-104\",\"name\":\"Product 104\"},{\"id\":\"row-105\",\"name\":\"Product 105\"},{\"id\":\"row-106\",\"name\":\"Product 106\"},{\"id\":\"row-107\",\"name\":\"Product 107\"},{\"id\":\"row-108\",\"name\":\"Product 108\"},{\"id\":\"row-109\",\"name\":\"Product 109\"},{\"id\":\"row-110\",\"name\":\"Product 110\"},{\"id\":\"row-111\",\"name\":\"Product 111\"},{\"id\":\"row-112\",\"name\":\"Product 112\"},{\"id\":\"row-113\",\"name\":\"Product 113\"},{\"id\":\"row-114\",\"name\":\"Product 114\"},{\"id\":\"row-115\",\"name\":\"Product 115\"},{\"id\":\"row-116\",\"name\":\"Product 116\"},{\"id\":\"row-117\",\"name\":\"Product 117\"},{\"id\":\"row-118\",\"name\":\"Product 118\"},{\"id\":\"row-119\",\"name\":\"Product 119\"},{\"id\":\"row-120\",\"name\":\"Product 120\"},{\"id\":\"row-121\",\"name\":\"Product 121\"},{\"id\":\"row-122\",\"name\":\"Product 122\"},{\"id\":\"row-123\",\"name\":\"Product 123\"},{\"id\":\"row-124\",\"name\":\"Product 124\"},{\"id\":\"row-125\",\"name\":\"Product 125\"},{\"id\":\"row-126\",\"name\":\"Product 126\"},{\"id\":\"row-127\",\"name\":\"Product 127\"},{\"id\":\"row-128\",\"name\":\"Product 128\"},{\"id\":\"row-129\",\"name\":\"Product 129\"},{\"id\":\"row-130\",\"name\":\"Product 130\"},{\"id\":\"row-131\",\"name\":\"Product 131\"},{\"id\":\"row-132\",\"name\":\"Product 132\"},{\"id\":\"row-133\",\"name\":\"Product 133\"},{\"id\":\"row-134\",\"name\":\"Product 134\"},{\"id\":\"row-135\",\"name\":\"Product 135\"},{\"id\":\"row-136\",\"name\":\"Product 136\"},{\"id\":\"row-137\",\"name\":\"Product 137\"},{\"id\":\"row-138\",\"name\":\"Product 138\"},{\"id\":\"row-139\",\"name\":\"Product 139\"},{\"id\":\"row-140\",\"name\":\"Product 140\"},{\"id\":\"row-141\",\"name\":\"Product 141\"},{\"id\":\"row-142\",\"name\":\"Product 142\"},{\"id\":\"row-143\",\"name\":\"Product 143\"},{\"id\":\"row-144\",\"name\":\"Product 144\"},{\"id\":\"row-145\",\"name\":\"Product 145\"},{\"id\":\"row-146\",\"name\":\"Product 146\"},{\"id\":\"row-147\",\"name\":\"Product 147\"},{\"id\":\"row-148\",\"name\":\"Product 148\"},{\"id\":\"row-149\",\"name\":\"Product 149\"},{\"id\":\"row-150\",\"name\":\"Product 150\"},{\"id\":\"row-151\",\"name\":\"Product 151\"},{\"id\":\"row-152\",\"name\":\"Product 152\"},{\"id\":\"row-153\",\"name\":\"Product 153\"},{\"id\":\"row-154\",\"name\":\"Product 154\"},{\"id\":\"row-155\",\"name\":\"Product 155\"},{\"id\":\"row-156\",\"name\":\"Product 156\"},{\"id\":\"row-157\",\"name\":\"Product 157\"},{\"id\":\"row-158\",\"name\":\"Product 158\"},{\"id\":\"row-159\",\"name\":\"Product 159\"},{\"id\":\"row-160\",\"name\":\"Product 160\"},{\"id\":\"row-161\",\"name\":\"Product 161\"},{\"id\":\"row-162\",\"name\":\"Product 162\"},{\"id\":\"row-163\",\"name\":\"Product 163\"},{\"id\":\"row-164\",\"name\":\"Product 164\"},{\"id\":\"row-165\",\"name\":\"Product 165\"},{\"id\":\"row-166\",\"name\":\"Product 166\"},{\"id\":\"row-167\",\"name\":\"Product 167\"},{\"id\":\"row-168\",\"name\":\"Product 168\"},{\"id\":\"row-169\",\"name\":\"Product 169\"},{\"id\":\"row-170\",\"name\":\"Product 170\"},{\"id\":\"row-171\",\"name\":\"Product 171\"},{\"id\":\"row-172\",\"name\":\"Product 172\"},{\"id\":\"row-173\",\"name\":\"Product 173\"},{\"id\":\"row-174\",\"name\":\"Product 174\"},{\"id\":\"row-175\",\"name\":\"Product 175\"},{\"id\":\"row-176\",\"name\":\"Product 176\"},{\"id\":\"row-177\",\"name\":\"Product 177\"},{\"id\":\"row-178\",\"name\":\"Product 178\"},{\"id\":\"row-179\",\"name\":\"Product 179\"},{\"id\":\"row-180\",\"name\":\"Product 180\"},{\"id\":\"row-181\",\"name\":\"Product 181\"},{\"id\":\"row-182\",\"name\":\"Product 182\"},{\"id\":\"row-183\",\"name\":\"Product 183\"},{\"id\":\"row-184\",\"name\":\"Product 184\"},{\"id\":\"row-185\",\"name\":\"Product 185\"},{\"id\":\"row-186\",\"name\":\"Product 186\"},{\"id\":\"row-187\",\"name\":\"Product 187\"},{\"id\":\"row-188\",\"name\":\"Product 188\"},{\"id\":\"row-189\",\"name\":\"Product 189\"},{\"id\":\"row-190\",\"name\":\"Product 190\"},{\"id\":\"row-191\",\"name\":\"Product 191\"},{\"id\":\"row-192\",\"name\":\"Product 192\"},{\"id\":\"row-193\",\"name\":\"Product 193\"},{\"id\":\"row-194\",\"name\":\"Product 194\"},{\"id\":\"row-195\",\"name\":\"Product 195\"},{\"id\":\"row-196\",\"name\":\"Product 196\"},{\"id\":\"row-197\",\"name\":\"Product 197\"},{\"id\":\"row-198\",\"name\":\"Product 198\"},{\"id\":\"row-199\",\"name\":\"Product 199\"}],\"has_more\":true,\"next_cursor\":\"next\"}"
+   }
+  },
+  {
+   "test": "login prepares one page and route revisits retain pages and details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\"},{\"id\":\"row-1\",\"name\":\"Product 001\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "login prepares one page and route revisits retain pages and details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "login prepares one page and route revisits retain pages and details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/detail?id=row-0",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"products\":[{\"code\":\"ITEM-0\",\"name\":\"Product 000\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"MOLD-001\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Molds\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true}]}"
+   }
+  },
+  {
+   "test": "login prepares one page and route revisits retain pages and details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "a mutation response updates the visible list with no refresh read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\"},{\"id\":\"row-1\",\"name\":\"Product 001\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "a mutation response updates the visible list with no refresh read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "a mutation response updates the visible list with no refresh read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/detail?id=row-0",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"products\":[{\"code\":\"ITEM-0\",\"name\":\"Product 000\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"MOLD-001\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Molds\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true}]}"
+   }
+  },
+  {
+   "test": "a mutation response updates the visible list with no refresh read",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/product-molds",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"changes\":[{\"item_code\":\"ITEM-0\",\"warehouse\":\"Molds\",\"add\":[{\"qolip_code\":\"MOLD-002\",\"size\":40,\"color\":\"\",\"existing_only\":false}]}]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"catalog_delta\":{\"upserts\":[{\"id\":\"row-0\",\"name\":\"Product 000\",\"order_image_order_id\":\"\",\"products\":[{\"code\":\"ITEM-0\",\"name\":\"Product 000\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"MOLD-001\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Molds\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true},{\"code\":\"ITEM-0\",\"name\":\"Product 000\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"MOLD-002\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Molds\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true}]}],\"removed_ids\":[]}}"
+   }
+  },
+  {
+   "test": "a mutation response updates the visible list with no refresh read",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/product-molds",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"changes\":[{\"item_code\":\"ITEM-0\",\"remove\":[\"MOLD-002\"]}]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"catalog_delta\":{\"upserts\":[{\"id\":\"row-0\",\"name\":\"Product 000\",\"order_image_order_id\":\"\",\"products\":[{\"code\":\"ITEM-0\",\"name\":\"Product 000\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"MOLD-001\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Molds\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true}]}],\"removed_ids\":[]}}"
+   }
+  },
+  {
+   "test": "a mutation response updates the visible list with no refresh read",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/product-molds",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"changes\":[{\"item_code\":\"ITEM-0\",\"remove\":[\"MOLD-001\"]}]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"catalog_delta\":{\"upserts\":[],\"removed_ids\":[\"row-0\"]}}"
+   }
+  },
+  {
+   "test": "only names load initially; tapping loads and reuses one product detail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\"},{\"id\":\"row-1\",\"name\":\"Product 001\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "only names load initially; tapping loads and reuses one product detail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "only names load initially; tapping loads and reuses one product detail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/detail?id=row-0",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"products\":[{\"code\":\"ITEM-0\",\"name\":\"Product 000\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"MOLD-001\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Molds\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true}]}"
+   }
+  },
+  {
+   "test": "catalog covers load like sequence rows before mold details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\",\"order_image_order_id\":\"catalog-cover-order\"},{\"id\":\"row-1\",\"name\":\"Product 001\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "catalog covers load like sequence rows before mold details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "catalog covers load like sequence rows before mold details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=catalog-cover-order&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "image/png"
+   },
+   "responseBody": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAB7SURBVGiB7dkxDYAwEEBRDgkEKWhpKgBZCEADWpCAhrYCukHIT5P/xg6X++nQobFsqU4Dm+kFvjKAZgDNAJoBtCj31b3Eaz5eD3zOvTv7c97wN2AAzQCaATQDaAbQDKAZQDOAZgDNAJoBNANoBtDCX0qYATQDaAbQDKA1tu8OL4VyZV4AAAAASUVORK5CYII="
+   }
+  },
+  {
+   "test": "catalog covers load like sequence rows before mold details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=catalog-cover-order",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "image/png"
+   },
+   "responseBody": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAEZSURBVHic7d0xDQJBEEBRFgkXpJyWCwKQhQA0oAUJaOAQsKGh4Be8V24x2eRniq12LOu2H8gc6wv8OwFiAsQEiAkQEyAmQEyAmACx8Xrcp5fw6Xz9euDzdpnOzPvMBsQEiAkQEyAmQEyAmAAxAWICxASICRATICZATICYADEBYgLEBIgJEBMgJkBMgJgAMQFiAsQEiAkQEyAmQEyAmAAxAWICxASICRATICZATICYADEBYgLEBIgJEBMgJkBMgJgAMQFiAsQEiAkQEyAmQEyAmAAxAWICxASICRATICZATICYADEBYgLEBIgJEBMgJkBMgJgAMQFiAsQEiAkQG8u6TX9J8js2ICZATICYADEBYgLEBIgJEBMg9gZcKBSP4BjngAAAAABJRU5ErkJggg=="
+   }
+  },
+  {
+   "test": "catalog covers load like sequence rows before mold details",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/detail?id=row-0",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"products\":[{\"code\":\"ITEM-0\",\"name\":\"Product 000\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"MOLD-001\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Molds\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true}]}"
+   }
+  },
+  {
+   "test": "scroll appends the next page once and retries without losing the list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\"},{\"id\":\"row-1\",\"name\":\"Product 001\"},{\"id\":\"row-2\",\"name\":\"Product 002\"},{\"id\":\"row-3\",\"name\":\"Product 003\"},{\"id\":\"row-4\",\"name\":\"Product 004\"},{\"id\":\"row-5\",\"name\":\"Product 005\"},{\"id\":\"row-6\",\"name\":\"Product 006\"},{\"id\":\"row-7\",\"name\":\"Product 007\"},{\"id\":\"row-8\",\"name\":\"Product 008\"},{\"id\":\"row-9\",\"name\":\"Product 009\"},{\"id\":\"row-10\",\"name\":\"Product 010\"},{\"id\":\"row-11\",\"name\":\"Product 011\"},{\"id\":\"row-12\",\"name\":\"Product 012\"},{\"id\":\"row-13\",\"name\":\"Product 013\"},{\"id\":\"row-14\",\"name\":\"Product 014\"},{\"id\":\"row-15\",\"name\":\"Product 015\"},{\"id\":\"row-16\",\"name\":\"Product 016\"},{\"id\":\"row-17\",\"name\":\"Product 017\"},{\"id\":\"row-18\",\"name\":\"Product 018\"},{\"id\":\"row-19\",\"name\":\"Product 019\"},{\"id\":\"row-20\",\"name\":\"Product 020\"},{\"id\":\"row-21\",\"name\":\"Product 021\"},{\"id\":\"row-22\",\"name\":\"Product 022\"},{\"id\":\"row-23\",\"name\":\"Product 023\"},{\"id\":\"row-24\",\"name\":\"Product 024\"},{\"id\":\"row-25\",\"name\":\"Product 025\"},{\"id\":\"row-26\",\"name\":\"Product 026\"},{\"id\":\"row-27\",\"name\":\"Product 027\"},{\"id\":\"row-28\",\"name\":\"Product 028\"},{\"id\":\"row-29\",\"name\":\"Product 029\"},{\"id\":\"row-30\",\"name\":\"Product 030\"},{\"id\":\"row-31\",\"name\":\"Product 031\"},{\"id\":\"row-32\",\"name\":\"Product 032\"},{\"id\":\"row-33\",\"name\":\"Product 033\"},{\"id\":\"row-34\",\"name\":\"Product 034\"},{\"id\":\"row-35\",\"name\":\"Product 035\"},{\"id\":\"row-36\",\"name\":\"Product 036\"},{\"id\":\"row-37\",\"name\":\"Product 037\"},{\"id\":\"row-38\",\"name\":\"Product 038\"},{\"id\":\"row-39\",\"name\":\"Product 039\"},{\"id\":\"row-40\",\"name\":\"Product 040\"},{\"id\":\"row-41\",\"name\":\"Product 041\"},{\"id\":\"row-42\",\"name\":\"Product 042\"},{\"id\":\"row-43\",\"name\":\"Product 043\"},{\"id\":\"row-44\",\"name\":\"Product 044\"},{\"id\":\"row-45\",\"name\":\"Product 045\"},{\"id\":\"row-46\",\"name\":\"Product 046\"},{\"id\":\"row-47\",\"name\":\"Product 047\"},{\"id\":\"row-48\",\"name\":\"Product 048\"},{\"id\":\"row-49\",\"name\":\"Product 049\"},{\"id\":\"row-50\",\"name\":\"Product 050\"},{\"id\":\"row-51\",\"name\":\"Product 051\"},{\"id\":\"row-52\",\"name\":\"Product 052\"},{\"id\":\"row-53\",\"name\":\"Product 053\"},{\"id\":\"row-54\",\"name\":\"Product 054\"},{\"id\":\"row-55\",\"name\":\"Product 055\"},{\"id\":\"row-56\",\"name\":\"Product 056\"},{\"id\":\"row-57\",\"name\":\"Product 057\"},{\"id\":\"row-58\",\"name\":\"Product 058\"},{\"id\":\"row-59\",\"name\":\"Product 059\"},{\"id\":\"row-60\",\"name\":\"Product 060\"},{\"id\":\"row-61\",\"name\":\"Product 061\"},{\"id\":\"row-62\",\"name\":\"Product 062\"},{\"id\":\"row-63\",\"name\":\"Product 063\"},{\"id\":\"row-64\",\"name\":\"Product 064\"},{\"id\":\"row-65\",\"name\":\"Product 065\"},{\"id\":\"row-66\",\"name\":\"Product 066\"},{\"id\":\"row-67\",\"name\":\"Product 067\"},{\"id\":\"row-68\",\"name\":\"Product 068\"},{\"id\":\"row-69\",\"name\":\"Product 069\"},{\"id\":\"row-70\",\"name\":\"Product 070\"},{\"id\":\"row-71\",\"name\":\"Product 071\"},{\"id\":\"row-72\",\"name\":\"Product 072\"},{\"id\":\"row-73\",\"name\":\"Product 073\"},{\"id\":\"row-74\",\"name\":\"Product 074\"},{\"id\":\"row-75\",\"name\":\"Product 075\"},{\"id\":\"row-76\",\"name\":\"Product 076\"},{\"id\":\"row-77\",\"name\":\"Product 077\"},{\"id\":\"row-78\",\"name\":\"Product 078\"},{\"id\":\"row-79\",\"name\":\"Product 079\"},{\"id\":\"row-80\",\"name\":\"Product 080\"},{\"id\":\"row-81\",\"name\":\"Product 081\"},{\"id\":\"row-82\",\"name\":\"Product 082\"},{\"id\":\"row-83\",\"name\":\"Product 083\"},{\"id\":\"row-84\",\"name\":\"Product 084\"},{\"id\":\"row-85\",\"name\":\"Product 085\"},{\"id\":\"row-86\",\"name\":\"Product 086\"},{\"id\":\"row-87\",\"name\":\"Product 087\"},{\"id\":\"row-88\",\"name\":\"Product 088\"},{\"id\":\"row-89\",\"name\":\"Product 089\"},{\"id\":\"row-90\",\"name\":\"Product 090\"},{\"id\":\"row-91\",\"name\":\"Product 091\"},{\"id\":\"row-92\",\"name\":\"Product 092\"},{\"id\":\"row-93\",\"name\":\"Product 093\"},{\"id\":\"row-94\",\"name\":\"Product 094\"},{\"id\":\"row-95\",\"name\":\"Product 095\"},{\"id\":\"row-96\",\"name\":\"Product 096\"},{\"id\":\"row-97\",\"name\":\"Product 097\"},{\"id\":\"row-98\",\"name\":\"Product 098\"},{\"id\":\"row-99\",\"name\":\"Product 099\"},{\"id\":\"row-100\",\"name\":\"Product 100\"},{\"id\":\"row-101\",\"name\":\"Product 101\"},{\"id\":\"row-102\",\"name\":\"Product 102\"},{\"id\":\"row-103\",\"name\":\"Product 103\"},{\"id\":\"row-104\",\"name\":\"Product 104\"},{\"id\":\"row-105\",\"name\":\"Product 105\"},{\"id\":\"row-106\",\"name\":\"Product 106\"},{\"id\":\"row-107\",\"name\":\"Product 107\"},{\"id\":\"row-108\",\"name\":\"Product 108\"},{\"id\":\"row-109\",\"name\":\"Product 109\"},{\"id\":\"row-110\",\"name\":\"Product 110\"},{\"id\":\"row-111\",\"name\":\"Product 111\"},{\"id\":\"row-112\",\"name\":\"Product 112\"},{\"id\":\"row-113\",\"name\":\"Product 113\"},{\"id\":\"row-114\",\"name\":\"Product 114\"},{\"id\":\"row-115\",\"name\":\"Product 115\"},{\"id\":\"row-116\",\"name\":\"Product 116\"},{\"id\":\"row-117\",\"name\":\"Product 117\"},{\"id\":\"row-118\",\"name\":\"Product 118\"},{\"id\":\"row-119\",\"name\":\"Product 119\"},{\"id\":\"row-120\",\"name\":\"Product 120\"},{\"id\":\"row-121\",\"name\":\"Product 121\"},{\"id\":\"row-122\",\"name\":\"Product 122\"},{\"id\":\"row-123\",\"name\":\"Product 123\"},{\"id\":\"row-124\",\"name\":\"Product 124\"},{\"id\":\"row-125\",\"name\":\"Product 125\"},{\"id\":\"row-126\",\"name\":\"Product 126\"},{\"id\":\"row-127\",\"name\":\"Product 127\"},{\"id\":\"row-128\",\"name\":\"Product 128\"},{\"id\":\"row-129\",\"name\":\"Product 129\"},{\"id\":\"row-130\",\"name\":\"Product 130\"},{\"id\":\"row-131\",\"name\":\"Product 131\"},{\"id\":\"row-132\",\"name\":\"Product 132\"},{\"id\":\"row-133\",\"name\":\"Product 133\"},{\"id\":\"row-134\",\"name\":\"Product 134\"},{\"id\":\"row-135\",\"name\":\"Product 135\"},{\"id\":\"row-136\",\"name\":\"Product 136\"},{\"id\":\"row-137\",\"name\":\"Product 137\"},{\"id\":\"row-138\",\"name\":\"Product 138\"},{\"id\":\"row-139\",\"name\":\"Product 139\"},{\"id\":\"row-140\",\"name\":\"Product 140\"},{\"id\":\"row-141\",\"name\":\"Product 141\"},{\"id\":\"row-142\",\"name\":\"Product 142\"},{\"id\":\"row-143\",\"name\":\"Product 143\"},{\"id\":\"row-144\",\"name\":\"Product 144\"},{\"id\":\"row-145\",\"name\":\"Product 145\"},{\"id\":\"row-146\",\"name\":\"Product 146\"},{\"id\":\"row-147\",\"name\":\"Product 147\"},{\"id\":\"row-148\",\"name\":\"Product 148\"},{\"id\":\"row-149\",\"name\":\"Product 149\"},{\"id\":\"row-150\",\"name\":\"Product 150\"},{\"id\":\"row-151\",\"name\":\"Product 151\"},{\"id\":\"row-152\",\"name\":\"Product 152\"},{\"id\":\"row-153\",\"name\":\"Product 153\"},{\"id\":\"row-154\",\"name\":\"Product 154\"},{\"id\":\"row-155\",\"name\":\"Product 155\"},{\"id\":\"row-156\",\"name\":\"Product 156\"},{\"id\":\"row-157\",\"name\":\"Product 157\"},{\"id\":\"row-158\",\"name\":\"Product 158\"},{\"id\":\"row-159\",\"name\":\"Product 159\"},{\"id\":\"row-160\",\"name\":\"Product 160\"},{\"id\":\"row-161\",\"name\":\"Product 161\"},{\"id\":\"row-162\",\"name\":\"Product 162\"},{\"id\":\"row-163\",\"name\":\"Product 163\"},{\"id\":\"row-164\",\"name\":\"Product 164\"},{\"id\":\"row-165\",\"name\":\"Product 165\"},{\"id\":\"row-166\",\"name\":\"Product 166\"},{\"id\":\"row-167\",\"name\":\"Product 167\"},{\"id\":\"row-168\",\"name\":\"Product 168\"},{\"id\":\"row-169\",\"name\":\"Product 169\"},{\"id\":\"row-170\",\"name\":\"Product 170\"},{\"id\":\"row-171\",\"name\":\"Product 171\"},{\"id\":\"row-172\",\"name\":\"Product 172\"},{\"id\":\"row-173\",\"name\":\"Product 173\"},{\"id\":\"row-174\",\"name\":\"Product 174\"},{\"id\":\"row-175\",\"name\":\"Product 175\"},{\"id\":\"row-176\",\"name\":\"Product 176\"},{\"id\":\"row-177\",\"name\":\"Product 177\"},{\"id\":\"row-178\",\"name\":\"Product 178\"},{\"id\":\"row-179\",\"name\":\"Product 179\"},{\"id\":\"row-180\",\"name\":\"Product 180\"},{\"id\":\"row-181\",\"name\":\"Product 181\"},{\"id\":\"row-182\",\"name\":\"Product 182\"},{\"id\":\"row-183\",\"name\":\"Product 183\"},{\"id\":\"row-184\",\"name\":\"Product 184\"},{\"id\":\"row-185\",\"name\":\"Product 185\"},{\"id\":\"row-186\",\"name\":\"Product 186\"},{\"id\":\"row-187\",\"name\":\"Product 187\"},{\"id\":\"row-188\",\"name\":\"Product 188\"},{\"id\":\"row-189\",\"name\":\"Product 189\"},{\"id\":\"row-190\",\"name\":\"Product 190\"},{\"id\":\"row-191\",\"name\":\"Product 191\"},{\"id\":\"row-192\",\"name\":\"Product 192\"},{\"id\":\"row-193\",\"name\":\"Product 193\"},{\"id\":\"row-194\",\"name\":\"Product 194\"},{\"id\":\"row-195\",\"name\":\"Product 195\"},{\"id\":\"row-196\",\"name\":\"Product 196\"},{\"id\":\"row-197\",\"name\":\"Product 197\"},{\"id\":\"row-198\",\"name\":\"Product 198\"},{\"id\":\"row-199\",\"name\":\"Product 199\"}],\"has_more\":true,\"next_cursor\":\"page-2\"}"
+   }
+  },
+  {
+   "test": "scroll appends the next page once and retries without losing the list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "scroll appends the next page once and retries without losing the list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200&cursor=page-2",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"qolip_store_failed\"}"
+   }
+  },
+  {
+   "test": "scroll appends the next page once and retries without losing the list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200&cursor=page-2",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-200\",\"name\":\"Product 200\"},{\"id\":\"row-201\",\"name\":\"Product 201\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "server search ignores a late response from the previous query",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "server search ignores a late response from the previous query",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "server search ignores a late response from the previous query",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "server search ignores a late response from the previous query",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200&q=remote",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-401\",\"name\":\"Remote product\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "server search ignores a late response from the previous query",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "server search ignores a late response from the previous query",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200&q=old",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-10\",\"name\":\"Obsolete product\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "a detail error retries only that row",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"row-0\",\"name\":\"Product 000\"},{\"id\":\"row-1\",\"name\":\"Product 001\"}],\"has_more\":false,\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "a detail error retries only that row",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "a detail error retries only that row",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/detail?id=row-0",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"qolip_store_failed\"}"
+   }
+  },
+  {
+   "test": "a detail error retries only that row",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/detail?id=row-0",
+   "requestHeaders": {
+    "Authorization": "Bearer catalog-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"products\":[{\"code\":\"ITEM-0\",\"name\":\"Product 000\",\"item_group\":\"Tayyor mahsulot\",\"qolip_code\":\"MOLD-001\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Molds\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true}]}"
+   }
+  }
+ ]
+}

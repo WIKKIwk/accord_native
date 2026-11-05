@@ -1,0 +1,104 @@
+{
+ "source": "test/work_reactivation_reclose_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "reclose sends only exact execution identity without production metrics",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/reactivation/reclose",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"unstarted-continuation\",\"stage_node_id\":\"exact-stage\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "reclose accepts the Rezka master who owns the continuation",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/reactivation/reclose",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"unstarted-continuation\",\"stage_node_id\":\"exact-stage\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "reclose failure is not replayed: 409",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/reactivation/reclose",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"unstarted-continuation\",\"stage_node_id\":\"exact-stage\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":false}"
+   }
+  },
+  {
+   "test": "reclose failure is not replayed: 500",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/reactivation/reclose",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"unstarted-continuation\",\"stage_node_id\":\"exact-stage\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":false}"
+   }
+  },
+  {
+   "test": "reclose failure is not replayed: 200",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/reactivation/reclose",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"unstarted-continuation\",\"stage_node_id\":\"exact-stage\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":false}"
+   }
+  },
+  {
+   "test": "lost reclose response is not replayed",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/reactivation/reclose",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"unstarted-continuation\",\"stage_node_id\":\"exact-stage\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "error": "ClientException"
+  }
+ ]
+}

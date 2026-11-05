@@ -1,0 +1,368 @@
+{
+ "source": "test/preparation_formula_variant_actions_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "long press opens details with composition editing, empty=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true},{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  },
+  {
+   "test": "long press opens details with composition editing, empty=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "long press opens details with composition editing, empty=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr&variant_id=legacy&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "long press opens details with composition editing, empty=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "long press opens details with composition editing, empty=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true},{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  },
+  {
+   "test": "long press opens details with composition editing, empty=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "long press opens details with composition editing, empty=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr&variant_id=empty&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "long press opens details with composition editing, empty=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "long press renames the same variant for this order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true},{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  },
+  {
+   "test": "long press renames the same variant for this order",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&variant_id=legacy&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"name\":\"Buyurtma LG\"}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Bunday nomli shnek varianti mavjud\"}"
+   }
+  },
+  {
+   "test": "long press renames the same variant for this order",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&variant_id=legacy&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"name\":\"Buyurtma LG\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"legacy\",\"name\":\"Buyurtma LG\",\"formula_code\":\"950400000007\",\"formula_count\":1,\"shares_complete\":true,\"revision_id\":4}"
+   }
+  },
+  {
+   "test": "deletion persists only for the selected order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true},{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  },
+  {
+   "test": "deletion persists only for the selected order",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants/order?order_id=order-1&product_code=P&material_id=pe-pr&variant_id=legacy",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"removed\":true,\"order_id\":\"order-1\",\"variant_id\":\"legacy\"}"
+   }
+  },
+  {
+   "test": "deletion persists only for the selected order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  },
+  {
+   "test": "deletion persists only for the selected order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-2",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true},{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  },
+  {
+   "test": "cancel keeps the order formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true},{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  },
+  {
+   "test": "failed deletion retains the row and can be retried",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true},{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  },
+  {
+   "test": "failed deletion retains the row and can be retried",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants/order?order_id=order-1&product_code=P&material_id=pe-pr&variant_id=legacy",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Olib tashlash bajarilmadi\"}"
+   }
+  },
+  {
+   "test": "failed deletion retains the row and can be retried",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants/order?order_id=order-1&product_code=P&material_id=pe-pr&variant_id=legacy",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"removed\":true,\"order_id\":\"order-1\",\"variant_id\":\"legacy\"}"
+   }
+  },
+  {
+   "test": "account switch cannot remove a formula from the previous order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true},{\"id\":\"empty\",\"name\":\"0209\",\"formula_count\":0}]}"
+   }
+  }
+ ]
+}

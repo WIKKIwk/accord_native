@@ -1,0 +1,159 @@
+{
+ "source": "test/rezka_output_report_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "single roll save carries cycle and slot and restores authoritative fields",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"roll_complete\",\"rezka_frames\":[{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}],\"rezka_record_frame_index\":2,\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"in_progress\"},\"session\":{\"session_id\":\"run-1\",\"payload_json\":{\"rezka_output_cycle\":\"cycle-1\",\"rezka_output_report\":[{\"frame_index\":2,\"batch_id\":\"roll-2\",\"qr_payload\":\"QR-2\",\"input\":{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}}]}},\"prints\":[],\"progress_batches\":[]}"
+   }
+  },
+  {
+   "test": "individual issue sends only note and restores a locked slot without QR",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"roll_complete\",\"rezka_frames\":[{\"issue_note\":\"Kadr yirtilgan\"}],\"rezka_record_frame_index\":2,\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"in_progress\"},\"session\":{\"session_id\":\"run-1\",\"payload_json\":{\"rezka_output_cycle\":\"cycle-1\",\"rezka_output_report\":[{\"frame_index\":2,\"batch_id\":\"\",\"qr_payload\":\"\",\"input\":{\"issue_note\":\"Kadr yirtilgan\"}}]}},\"prints\":[],\"progress_batches\":[]}"
+   }
+  },
+  {
+   "test": "completion sends the same cycle without single-roll marker",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"complete\",\"total_waste\":1.0,\"rezka_frames\":[{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0},{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}],\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"completed\"},\"prints\":[]}"
+   }
+  },
+  {
+   "test": "active pallet accompanies individual and bulk outputs and is omitted when unset",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"roll_complete\",\"rezka_frames\":[{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}],\"rezka_record_frame_index\":1,\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"in_progress\"},\"prints\":[]}"
+   }
+  },
+  {
+   "test": "active pallet accompanies individual and bulk outputs and is omitted when unset",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"roll_complete\",\"output_paddon_code\":\"00001\",\"rezka_frames\":[{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}],\"rezka_record_frame_index\":1,\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"in_progress\"},\"prints\":[]}"
+   }
+  },
+  {
+   "test": "active pallet accompanies individual and bulk outputs and is omitted when unset",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"pause\",\"rezka_frames\":[{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}],\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"in_progress\"},\"prints\":[]}"
+   }
+  },
+  {
+   "test": "active pallet accompanies individual and bulk outputs and is omitted when unset",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"pause\",\"output_paddon_code\":\"00001\",\"rezka_frames\":[{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}],\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"in_progress\"},\"prints\":[]}"
+   }
+  },
+  {
+   "test": "active pallet accompanies individual and bulk outputs and is omitted when unset",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"complete\",\"rezka_frames\":[{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}],\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"in_progress\"},\"prints\":[]}"
+   }
+  },
+  {
+   "test": "active pallet accompanies individual and bulk outputs and is omitted when unset",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-1\",\"action\":\"complete\",\"output_paddon_code\":\"00001\",\"rezka_frames\":[{\"produced_qty\":120.0,\"gross_qty\":12.0,\"bobina_kg\":0.5,\"diameter\":45.0}],\"rezka_output_cycle\":\"cycle-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{\"order-1\":\"in_progress\"},\"prints\":[]}"
+   }
+  }
+ ]
+}

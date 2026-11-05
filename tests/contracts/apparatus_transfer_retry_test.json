@@ -1,0 +1,121 @@
+{
+ "source": "test/apparatus_transfer_retry_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "lost response retains exact command until acknowledged",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/apparatus-transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-transfer-retry\",\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"reason\":\"Reason original-key\",\"idempotency_key\":\"original-key\"}"
+   },
+   "error": "TimeoutException"
+  },
+  {
+   "test": "lost response retains exact command until acknowledged",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/apparatus-transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-transfer-retry\",\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"reason\":\"Reason original-key\",\"idempotency_key\":\"original-key\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"saved\":{\"map\":{\"id\":\"zakaz-transfer-retry\",\"product_code\":\"TEST\",\"title\":\"Test\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-transfer-retry\",\"product_code\":\"TEST\",\"operations\":[]}}}"
+   }
+  },
+  {
+   "test": "lost response retains exact command until acknowledged",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/apparatus-transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-transfer-retry\",\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"reason\":\"Reason next-operation\",\"idempotency_key\":\"next-operation\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"saved\":{\"map\":{\"id\":\"zakaz-transfer-retry\",\"product_code\":\"TEST\",\"title\":\"Test\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-transfer-retry\",\"product_code\":\"TEST\",\"operations\":[]}}}"
+   }
+  },
+  {
+   "test": "definitive rejection clears command; server failure retains it",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/apparatus-transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-transfer-retry\",\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"reason\":\"Reason attempt-409\",\"idempotency_key\":\"attempt-409\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"apparatus_transfer_target_conflict\"}"
+   }
+  },
+  {
+   "test": "definitive rejection clears command; server failure retains it",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/apparatus-transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-transfer-retry\",\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"reason\":\"Reason retry-409\",\"idempotency_key\":\"retry-409\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"saved\":{\"map\":{\"id\":\"zakaz-transfer-retry\",\"product_code\":\"TEST\",\"title\":\"Test\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-transfer-retry\",\"product_code\":\"TEST\",\"operations\":[]}}}"
+   }
+  },
+  {
+   "test": "definitive rejection clears command; server failure retains it",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/apparatus-transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-transfer-retry\",\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"reason\":\"Reason attempt-503\",\"idempotency_key\":\"attempt-503\"}"
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"apparatus_transfer_target_conflict\"}"
+   }
+  },
+  {
+   "test": "definitive rejection clears command; server failure retains it",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/apparatus-transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-transfer-retry\",\"from_apparatus\":\"apparatus:default:bosma_7\",\"to_apparatus\":\"apparatus:default:bosma_8\",\"reason\":\"Reason attempt-503\",\"idempotency_key\":\"attempt-503\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"saved\":{\"map\":{\"id\":\"zakaz-transfer-retry\",\"product_code\":\"TEST\",\"title\":\"Test\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-transfer-retry\",\"product_code\":\"TEST\",\"operations\":[]}}}"
+   }
+  }
+ ]
+}

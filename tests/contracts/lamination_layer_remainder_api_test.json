@@ -1,0 +1,107 @@
+{
+ "source": "test/lamination_layer_remainder_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "two kg fields submit source revisions and the same persisted request",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/laminatsiya-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"order-1\",\"session_id\":\"lamination-session\",\"request_id\":\"stable-two-fields-request\",\"layer_remainder_weights\":{\"wip_net_kg\":20.125,\"film_net_kg\":0,\"expected_sources\":[{\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"expected_revision\":7}]},\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{},\"session\":{\"status\":\"paused\"},\"remainders\":[{\"operation_id\":\"remainder-operation\",\"request_id\":\"stable-request\",\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"qr_payload\":\"remaining-qr\",\"remaining_net_kg\":20,\"remaining_meter\":600,\"producer_name\":\"Original printer\",\"recorded_by\":{\"display_name\":\"Lamination operator\"}}],\"label_settings\":{\"print_wip_remainder_labels\":false,\"print_film_remainder_labels\":true},\"prints\":[]}"
+   }
+  },
+  {
+   "test": "two kg fields submit source revisions and the same persisted request",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/laminatsiya-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"order-1\",\"session_id\":\"lamination-session\",\"request_id\":\"stable-two-fields-request\",\"layer_remainder_weights\":{\"wip_net_kg\":20.125,\"film_net_kg\":0,\"expected_sources\":[{\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"expected_revision\":7}]},\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{},\"session\":{\"status\":\"paused\"},\"remainders\":[{\"operation_id\":\"remainder-operation\",\"request_id\":\"stable-request\",\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"qr_payload\":\"remaining-qr\",\"remaining_net_kg\":20,\"remaining_meter\":600,\"producer_name\":\"Original printer\",\"recorded_by\":{\"display_name\":\"Lamination operator\"}}],\"label_settings\":{\"print_wip_remainder_labels\":false,\"print_film_remainder_labels\":true},\"prints\":[]}"
+   }
+  },
+  {
+   "test": "lists WIP and film rolls plus auditable remainders",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/layer-remainders?apparatus=apparatus%3Adefault%3Aasset-007&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"sources\":[{\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"is_current_roll\":false,\"session_id\":\"lamination-session\",\"revision\":7,\"qr_payload\":\"original-qr\",\"item_code\":\"PET\",\"item_name\":\"Printed PET\",\"source_net_kg\":50.0,\"source_meter\":1500.0,\"tare_kg\":2.0,\"producer_name\":\"Original printer\"},{\"source_kind\":\"raw_material\",\"source_id\":\"original-50kg\",\"is_current_roll\":false,\"session_id\":\"lamination-session\",\"revision\":7,\"qr_payload\":\"original-qr\",\"item_code\":\"PET\",\"item_name\":\"Printed PET\",\"source_net_kg\":50.0,\"source_meter\":1500.0,\"tare_kg\":2.0,\"producer_name\":\"Original printer\"}],\"remainders\":[{\"operation_id\":\"remainder-operation\",\"request_id\":\"stable-request\",\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"qr_payload\":\"remaining-qr\",\"remaining_net_kg\":20,\"remaining_meter\":600,\"producer_name\":\"Original printer\",\"recorded_by\":{\"display_name\":\"Lamination operator\"}}]}"
+   }
+  },
+  {
+   "test": "records only net kg with revision and stable request identity",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/layer-remainders",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"order-1\",\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"session_id\":\"lamination-session\",\"expected_revision\":7,\"remaining_net_kg\":20.0,\"request_id\":\"stable-request\",\"printer\":\"godex\",\"print_transport\":\"offline\",\"print_count\":1}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"remainder\":{\"operation_id\":\"remainder-operation\",\"request_id\":\"stable-request\",\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"qr_payload\":\"remaining-qr\",\"remaining_net_kg\":20,\"remaining_meter\":600,\"producer_name\":\"Original printer\",\"recorded_by\":{\"display_name\":\"Lamination operator\"}},\"print\":{\"ok\":true,\"status\":\"prepared\",\"epc\":\"remaining-qr\",\"gross_qty\":22,\"tare_kg\":2,\"tare_enabled\":true,\"progress_qty\":600,\"label_kind\":\"progress\",\"executor_name\":\"Original printer\"}}"
+   }
+  },
+  {
+   "test": "printing failure retains persisted business operation",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/layer-remainders",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"order-1\",\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"session_id\":\"lamination-session\",\"expected_revision\":7,\"remaining_net_kg\":20.0,\"request_id\":\"stable-request\",\"print_count\":1}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"remainder\":{\"operation_id\":\"remainder-operation\",\"request_id\":\"stable-request\",\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"qr_payload\":\"remaining-qr\",\"remaining_net_kg\":20,\"remaining_meter\":600,\"producer_name\":\"Original printer\",\"recorded_by\":{\"display_name\":\"Lamination operator\"}},\"print\":{\"ok\":false,\"status\":\"print_failed\"}}"
+   }
+  },
+  {
+   "test": "reprinting refers to saved operation without creating stock",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/layer-remainders/reprint",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"order-1\",\"operation_id\":\"remainder-operation\",\"print_count\":1}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"remainder\":{\"operation_id\":\"remainder-operation\",\"request_id\":\"stable-request\",\"source_kind\":\"progress_batch\",\"source_id\":\"original-50kg\",\"qr_payload\":\"remaining-qr\",\"remaining_net_kg\":20,\"remaining_meter\":600,\"producer_name\":\"Original printer\",\"recorded_by\":{\"display_name\":\"Lamination operator\"}},\"print\":{\"ok\":false,\"status\":\"print_failed\"}}"
+   }
+  }
+ ]
+}

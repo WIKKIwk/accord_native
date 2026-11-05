@@ -1,0 +1,123 @@
+{
+ "source": "test/rezka_astatka_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "intermediate rezka astatka sends only waste 0.0 and its stage",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-intermediate\",\"request_id\":\"request-intermediate\",\"session_id\":\"session-intermediate\",\"stage_node_id\":\"cut-before-lamination\",\"total_waste\":0.0}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-intermediate\",\"request_id\":\"request-intermediate\",\"session_id\":\"session-intermediate\",\"stage_node_id\":\"cut-before-lamination\",\"total_waste\":0.0,\"report_id\":\"intermediate-report\",\"rezka_bosma_waste\":0,\"rezka_lamination_waste\":0,\"rezka_edge_waste\":0}}"
+   }
+  },
+  {
+   "test": "rezka astatka sends waste 0.0 without roll output metrics",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-rezka-astatka\",\"request_id\":\"request-final\",\"session_id\":\"session-final\",\"total_waste\":0.0,\"rezka_bosma_waste\":0.0,\"rezka_lamination_waste\":0.0,\"rezka_edge_waste\":0.0}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-rezka-astatka\",\"request_id\":\"request-final\",\"session_id\":\"session-final\",\"total_waste\":0.0,\"rezka_bosma_waste\":0.0,\"rezka_lamination_waste\":0.0,\"rezka_edge_waste\":0.0,\"report_id\":\"astatka-1\"}}"
+   }
+  },
+  {
+   "test": "intermediate rezka astatka sends only waste 2.5 and its stage",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-intermediate\",\"request_id\":\"request-intermediate\",\"session_id\":\"session-intermediate\",\"stage_node_id\":\"cut-before-lamination\",\"total_waste\":2.5}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-intermediate\",\"request_id\":\"request-intermediate\",\"session_id\":\"session-intermediate\",\"stage_node_id\":\"cut-before-lamination\",\"total_waste\":2.5,\"report_id\":\"intermediate-report\",\"rezka_bosma_waste\":0,\"rezka_lamination_waste\":0,\"rezka_edge_waste\":0}}"
+   }
+  },
+  {
+   "test": "rezka astatka sends waste 2.5 without roll output metrics",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-rezka-astatka\",\"request_id\":\"request-final\",\"session_id\":\"session-final\",\"total_waste\":2.5,\"rezka_bosma_waste\":2.5,\"rezka_lamination_waste\":2.5,\"rezka_edge_waste\":2.5}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-rezka-astatka\",\"request_id\":\"request-final\",\"session_id\":\"session-final\",\"total_waste\":2.5,\"rezka_bosma_waste\":2.5,\"rezka_lamination_waste\":2.5,\"rezka_edge_waste\":2.5,\"report_id\":\"astatka-1\"}}"
+   }
+  },
+  {
+   "test": "rezka astatka snapshot binds session and reconciles saved receipt",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-astatka?apparatus=apparatus%3Adefault%3Aasset-010&order_id=order-a&request_id=request-a",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"session_id\":\"session-a\",\"stage_node_id\":\"cut-stage-a\",\"request_result\":null}"
+   }
+  },
+  {
+   "test": "rezka astatka snapshot binds session and reconciles saved receipt",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-astatka?apparatus=apparatus%3Adefault%3Aasset-010&order_id=order-a&request_id=request-a",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"request_result\":{\"ok\":true,\"report\":{\"report_id\":\"saved-a\",\"order_id\":\"order-a\",\"apparatus\":\"apparatus:default:asset-010\",\"total_waste\":2.5}}}"
+   }
+  },
+  {
+   "test": "rezka astatka rejects malformed success without a report identity",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"order-a\",\"request_id\":\"request-a\",\"session_id\":\"session-a\",\"total_waste\":2.5}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"order_id\":\"order-a\",\"apparatus\":\"apparatus:default:asset-010\",\"total_waste\":2.5}}"
+   }
+  }
+ ]
+}

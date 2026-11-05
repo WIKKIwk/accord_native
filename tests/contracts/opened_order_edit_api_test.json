@@ -1,0 +1,331 @@
+{
+ "source": "test/opened_order_edit_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "opened order edit uses dedicated authenticated endpoint and exact snapshot",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"revision\":4,\"map\":{\"id\":\"zakaz-1234\",\"order_number\":\"1234\",\"unknown_field\":\"preserve\"},\"template\":{\"order_number\":\"1234\",\"source_map_id\":\"zakaz-1234\",\"kg\":500,\"product\":\"Mahsulot\",\"frame_product_size_mm\":300,\"frame_count\":2,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"unknown_field\":\"also preserve\"}}"
+   }
+  },
+  {
+   "test": "opened order edit uses dedicated authenticated endpoint and exact snapshot",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"original\":{\"revision\":4,\"map\":{\"id\":\"zakaz-1234\",\"order_number\":\"1234\",\"unknown_field\":\"preserve\"},\"template\":{\"order_number\":\"1234\",\"source_map_id\":\"zakaz-1234\",\"kg\":500,\"product\":\"Mahsulot\",\"frame_product_size_mm\":300,\"frame_count\":2,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"unknown_field\":\"also preserve\"}},\"template\":{\"name\":\"\",\"order_number\":\"1234\",\"customer_ref\":\"\",\"customer\":\"\",\"item_code\":\"\",\"product\":\"Mahsulot\",\"status\":\"\",\"material_display\":\"\",\"color\":\"\",\"image_id\":\"\",\"image_name\":\"\",\"image_mime\":\"\",\"image_size_bytes\":0,\"image_url\":\"\",\"frame_product_size_mm\":300.0,\"frame_count\":2.0,\"edge_allowance_mm\":15.0,\"width_mm\":0.0,\"waste_percent\":5.0,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"first_layer_material\":\"pet\",\"first_layer_micron\":\"12\",\"second_layer_material\":\"\",\"second_layer_micron\":\"\",\"third_layer_material\":\"\",\"third_layer_micron\":\"\",\"note\":\"\",\"kg\":600.0,\"source_map_id\":\"zakaz-1234\"}}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"revision\":4,\"map\":{\"id\":\"zakaz-1234\",\"order_number\":\"1234\",\"unknown_field\":\"preserve\"},\"template\":{\"order_number\":\"1234\",\"source_map_id\":\"zakaz-1234\",\"kg\":500,\"product\":\"Mahsulot\",\"frame_product_size_mm\":300,\"frame_count\":2,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"unknown_field\":\"also preserve\"}}"
+   }
+  },
+  {
+   "test": "GET conflict remains blocked without retries or creating an order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"Buyurtmada opening WIP ochilgan\"}"
+   }
+  },
+  {
+   "test": "PUT conflict remains blocked without retries or creating an order",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"original\":{\"revision\":4,\"map\":{\"id\":\"zakaz-1234\",\"order_number\":\"1234\",\"unknown_field\":\"preserve\"},\"template\":{\"order_number\":\"1234\",\"source_map_id\":\"zakaz-1234\",\"kg\":500,\"product\":\"Mahsulot\",\"frame_product_size_mm\":300,\"frame_count\":2,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"unknown_field\":\"also preserve\"}},\"template\":{\"name\":\"\",\"order_number\":\"1234\",\"customer_ref\":\"\",\"customer\":\"\",\"item_code\":\"\",\"product\":\"Mahsulot\",\"status\":\"\",\"material_display\":\"\",\"color\":\"\",\"image_id\":\"\",\"image_name\":\"\",\"image_mime\":\"\",\"image_size_bytes\":0,\"image_url\":\"\",\"frame_product_size_mm\":300.0,\"frame_count\":2.0,\"edge_allowance_mm\":15.0,\"width_mm\":0.0,\"waste_percent\":5.0,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"first_layer_material\":\"pet\",\"first_layer_micron\":\"12\",\"second_layer_material\":\"\",\"second_layer_micron\":\"\",\"third_layer_material\":\"\",\"third_layer_micron\":\"\",\"note\":\"\",\"kg\":500.0,\"source_map_id\":\"zakaz-1234\"}}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"Buyurtmada opening WIP ochilgan\"}"
+   }
+  },
+  {
+   "test": "edit preserves a business reason for HTTP 400",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 400,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Buyurtmaga xomashyo biriktirilgan. Xomashyo tarixini tekshiring.\"}"
+   }
+  },
+  {
+   "test": "edit preserves a business reason for HTTP 404",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Buyurtmaga xomashyo biriktirilgan. Xomashyo tarixini tekshiring.\"}"
+   }
+  },
+  {
+   "test": "edit preserves a business reason for HTTP 409",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Buyurtmaga xomashyo biriktirilgan. Xomashyo tarixini tekshiring.\"}"
+   }
+  },
+  {
+   "test": "edit preserves a business reason for HTTP 422",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 422,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Buyurtmaga xomashyo biriktirilgan. Xomashyo tarixini tekshiring.\"}"
+   }
+  },
+  {
+   "test": "edit keeps a safe fallback for (403, {\"error\":\"private authorization details\"})",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"private authorization details\"}"
+   }
+  },
+  {
+   "test": "edit keeps a safe fallback for (500, {\"error\":\"private database details\"})",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"private database details\"}"
+   }
+  },
+  {
+   "test": "edit keeps a safe fallback for (500, {\"error\":\"order_edit_database_failed\",\"message\":\"<html>private proxy response</html>\"})",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_edit_database_failed\",\"message\":\"<html>private proxy response</html>\"}"
+   }
+  },
+  {
+   "test": "edit keeps a safe fallback for (409, {\"error\":\"private_unknown_error_code\"})",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"private_unknown_error_code\"}"
+   }
+  },
+  {
+   "test": "edit keeps a safe fallback for (409, <html>private proxy response</html>)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "<html>private proxy response</html>"
+   }
+  },
+  {
+   "test": "edit keeps a safe fallback for (409, {\"error\":\"<html>private proxy response</html>\"})",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"<html>private proxy response</html>\"}"
+   }
+  },
+  {
+   "test": "edit keeps a safe fallback for (409, {})",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "GET preserves the actual explained database failure",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"order_edit_database_permission\",\"message\":\"Serverning baza hisobi saqlash uchun tarix yozuvlarini himoyalay olmadi. Administrator baza sozlamalarini tekshirishi kerak.\"}"
+   }
+  },
+  {
+   "test": "PUT preserves the actual explained database failure",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"original\":{\"revision\":4,\"map\":{\"id\":\"zakaz-1234\",\"order_number\":\"1234\",\"unknown_field\":\"preserve\"},\"template\":{\"order_number\":\"1234\",\"source_map_id\":\"zakaz-1234\",\"kg\":500,\"product\":\"Mahsulot\",\"frame_product_size_mm\":300,\"frame_count\":2,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"unknown_field\":\"also preserve\"}},\"template\":{\"name\":\"\",\"order_number\":\"1234\",\"customer_ref\":\"\",\"customer\":\"\",\"item_code\":\"\",\"product\":\"Mahsulot\",\"status\":\"\",\"material_display\":\"\",\"color\":\"\",\"image_id\":\"\",\"image_name\":\"\",\"image_mime\":\"\",\"image_size_bytes\":0,\"image_url\":\"\",\"frame_product_size_mm\":300.0,\"frame_count\":2.0,\"edge_allowance_mm\":15.0,\"width_mm\":0.0,\"waste_percent\":5.0,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"first_layer_material\":\"pet\",\"first_layer_micron\":\"12\",\"second_layer_material\":\"\",\"second_layer_micron\":\"\",\"third_layer_material\":\"\",\"third_layer_micron\":\"\",\"note\":\"\",\"kg\":600.0,\"source_map_id\":\"zakaz-1234\"}}"
+   },
+   "status": 500,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"order_edit_database_permission\",\"message\":\"Serverning baza hisobi saqlash uchun tarix yozuvlarini himoyalay olmadi. Administrator baza sozlamalarini tekshirishi kerak.\"}"
+   }
+  },
+  {
+   "test": "edit keeps the existing translation for a known server error",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"apparatus and order_id are required\"}"
+   }
+  },
+  {
+   "test": "actual API business reason reaches the edit dialog",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-edit?id=zakaz-1234",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Buyurtmada ish sessiyasi ochilgan. Ish tarixini tekshiring.\"}"
+   }
+  }
+ ]
+}

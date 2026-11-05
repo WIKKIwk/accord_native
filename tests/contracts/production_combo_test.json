@@ -1,0 +1,39 @@
+{
+ "source": "test/production_combo_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "combo API uses explicit name, stable master id and exact revision catalog lookup",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/combos",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"name\":\"Vitaminlar\",\"template\":{\"combo\":{\"id\":\"combo-1\",\"item_code\":\"COMBO-1-R2\",\"name\":\"Vitaminlar\",\"revision\":2,\"layout_fingerprint\":\"signature\"},\"name\":\"Vitaminlar\",\"order_number\":\"\",\"customer_ref\":\"C1\",\"customer\":\"\",\"products\":[{\"id\":\"p1\",\"item_code\":\"SKU-A\",\"product\":\"A\",\"frame_product_size_mm\":100.0,\"frame_count\":2},{\"id\":\"p2\",\"item_code\":\"SKU-B\",\"product\":\"B\",\"frame_product_size_mm\":150.0,\"frame_count\":1}],\"item_code\":\"\",\"product\":\"Vitaminlar\",\"status\":\"\",\"material_display\":\"\",\"color\":\"\",\"image_id\":\"\",\"image_name\":\"\",\"image_mime\":\"\",\"image_size_bytes\":0,\"image_url\":\"\",\"frame_product_size_mm\":0.0,\"frame_count\":0.0,\"edge_allowance_mm\":15.0,\"width_mm\":0.0,\"waste_percent\":5.0,\"layers\":[{\"material_id\":\"pet\",\"material\":\"PET\",\"micron\":\"12\"}],\"first_layer_material\":\"PET\",\"first_layer_micron\":\"12\",\"second_layer_material\":\"\",\"second_layer_micron\":\"\",\"third_layer_material\":\"\",\"third_layer_micron\":\"\",\"note\":\"\"},\"combo_id\":\"combo-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"combo\":{\"id\":\"combo-1\",\"item_code\":\"COMBO-1-R2\",\"name\":\"Vitaminlar\",\"revision\":2,\"layout_fingerprint\":\"signature\"}}"
+   }
+  },
+  {
+   "test": "combo API uses explicit name, stable master id and exact revision catalog lookup",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/combos?item_code=COMBO-1-R2",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"combo\":{\"id\":\"combo-1\",\"item_code\":\"COMBO-1-R2\",\"name\":\"Vitaminlar\",\"revision\":2,\"layout_fingerprint\":\"signature\"},\"template\":{\"combo\":{\"id\":\"combo-1\",\"item_code\":\"COMBO-1-R2\",\"name\":\"Vitaminlar\",\"revision\":2,\"layout_fingerprint\":\"signature\"},\"name\":\"Vitaminlar\",\"order_number\":\"\",\"customer_ref\":\"C1\",\"customer\":\"\",\"products\":[{\"id\":\"p1\",\"item_code\":\"SKU-A\",\"product\":\"A\",\"frame_product_size_mm\":100.0,\"frame_count\":2},{\"id\":\"p2\",\"item_code\":\"SKU-B\",\"product\":\"B\",\"frame_product_size_mm\":150.0,\"frame_count\":1}],\"item_code\":\"\",\"product\":\"Vitaminlar\",\"status\":\"\",\"material_display\":\"\",\"color\":\"\",\"image_id\":\"\",\"image_name\":\"\",\"image_mime\":\"\",\"image_size_bytes\":0,\"image_url\":\"\",\"frame_product_size_mm\":0.0,\"frame_count\":0.0,\"edge_allowance_mm\":15.0,\"width_mm\":0.0,\"waste_percent\":5.0,\"layers\":[{\"material_id\":\"pet\",\"material\":\"PET\",\"micron\":\"12\"}],\"first_layer_material\":\"PET\",\"first_layer_micron\":\"12\",\"second_layer_material\":\"\",\"second_layer_micron\":\"\",\"third_layer_material\":\"\",\"third_layer_micron\":\"\",\"note\":\"\"}}"
+   }
+  }
+ ]
+}

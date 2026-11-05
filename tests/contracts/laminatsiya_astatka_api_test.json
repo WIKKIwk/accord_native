@@ -1,0 +1,74 @@
+{
+ "source": "test/laminatsiya_astatka_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "laminatsiya astatka preserves apparatus apparatus:default:asset-007 and sends remainders and waste 0.0",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/laminatsiya-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-laminatsiya-astatka\",\"lamination_print_leftover_rolls\":0.0,\"lamination_film_leftover_rolls\":0.0,\"total_waste\":0.0}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-laminatsiya-astatka\",\"lamination_print_leftover_rolls\":0.0,\"lamination_film_leftover_rolls\":0.0,\"total_waste\":0.0,\"report_id\":\"astatka-1\"}}"
+   }
+  },
+  {
+   "test": "laminatsiya astatka preserves apparatus apparatus:default:asset-007 and sends remainders and waste 2.5",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/laminatsiya-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-laminatsiya-astatka\",\"lamination_print_leftover_rolls\":2.5,\"lamination_film_leftover_rolls\":2.5,\"total_waste\":2.5}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-laminatsiya-astatka\",\"lamination_print_leftover_rolls\":2.5,\"lamination_film_leftover_rolls\":2.5,\"total_waste\":2.5,\"report_id\":\"astatka-1\"}}"
+   }
+  },
+  {
+   "test": "laminatsiya astatka preserves apparatus apparatus:default:holodniy_kley and sends remainders and waste 0.0",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/laminatsiya-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:holodniy_kley\",\"order_id\":\"zakaz-laminatsiya-astatka\",\"lamination_print_leftover_rolls\":0.0,\"lamination_film_leftover_rolls\":0.0,\"total_waste\":0.0}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"apparatus\":\"apparatus:default:holodniy_kley\",\"order_id\":\"zakaz-laminatsiya-astatka\",\"lamination_print_leftover_rolls\":0.0,\"lamination_film_leftover_rolls\":0.0,\"total_waste\":0.0,\"report_id\":\"astatka-1\"}}"
+   }
+  },
+  {
+   "test": "laminatsiya astatka preserves apparatus apparatus:default:holodniy_kley and sends remainders and waste 2.5",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/laminatsiya-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:holodniy_kley\",\"order_id\":\"zakaz-laminatsiya-astatka\",\"lamination_print_leftover_rolls\":2.5,\"lamination_film_leftover_rolls\":2.5,\"total_waste\":2.5}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"apparatus\":\"apparatus:default:holodniy_kley\",\"order_id\":\"zakaz-laminatsiya-astatka\",\"lamination_print_leftover_rolls\":2.5,\"lamination_film_leftover_rolls\":2.5,\"total_waste\":2.5,\"report_id\":\"astatka-1\"}}"
+   }
+  }
+ ]
+}

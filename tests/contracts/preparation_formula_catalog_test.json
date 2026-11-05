@@ -1,0 +1,314 @@
+{
+ "source": "test/preparation_formula_catalog_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "drawer lists one row per named recipe, including an empty recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "drawer lists one row per named recipe, including an empty recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"LG\",\"product_title\":\"Mahsulot 1\",\"set_name\":\"Mahsulot 1\",\"product_code\":\"P1\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[\"O-1\"],\"formula_count\":3,\"shares_complete\":true},{\"id\":\"v2\",\"formula_code\":\"950400000002\",\"name\":\"Variant 2\",\"product_title\":\"Mahsulot 2\",\"set_name\":\"Mahsulot 2\",\"product_code\":\"P2\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[\"O-2\"],\"formula_count\":0,\"shares_complete\":false},{\"id\":\"v3\",\"formula_code\":\"950400000003\",\"name\":\"Variant 3\",\"product_title\":\"Mahsulot 3\",\"set_name\":\"Mahsulot 3\",\"product_code\":\"P3\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[],\"formula_count\":0,\"shares_complete\":false}]}"
+   }
+  },
+  {
+   "test": "catalog rename saves the same recipe without an order scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"LG\",\"product_title\":\"Mahsulot 1\",\"set_name\":\"Mahsulot 1\",\"product_code\":\"P1\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[\"O-1\"],\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "catalog rename saves the same recipe without an order scope",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P1&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"name\":\"Catalog LG\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"v1\",\"name\":\"Catalog LG\"}"
+   }
+  },
+  {
+   "test": "catalog rename saves the same recipe without an order scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"Catalog LG\",\"product_title\":\"Mahsulot 1\",\"set_name\":\"Mahsulot 1\",\"product_code\":\"P1\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[\"O-1\"],\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "opening LG shows and manages A, B and C inside the same recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"LG\",\"product_title\":\"Mahsulot 1\",\"set_name\":\"Mahsulot 1\",\"product_code\":\"P1\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[\"O-1\"],\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "opening LG shows and manages A, B and C inside the same recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "opening LG shows and manages A, B and C inside the same recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P1&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P1\",\"formulas\":[{\"formula_code\":\"950300000001\",\"name\":\"A\",\"share_percent\":\"20.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]},{\"formula_code\":\"950300000002\",\"name\":\"B\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]},{\"formula_code\":\"950300000003\",\"name\":\"C\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "opening LG shows and manages A, B and C inside the same recipe",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P1&name=B&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"deleted\":true}"
+   }
+  },
+  {
+   "test": "opening LG shows and manages A, B and C inside the same recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P1&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P1\",\"formulas\":[{\"formula_code\":\"950300000001\",\"name\":\"A\",\"share_percent\":\"20.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]},{\"formula_code\":\"950300000003\",\"name\":\"C\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "opening LG shows and manages A, B and C inside the same recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"LG\",\"product_title\":\"Mahsulot 1\",\"set_name\":\"Mahsulot 1\",\"product_code\":\"P1\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[\"O-1\"],\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "catalog can add an internal formula to the selected recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"LG\",\"product_title\":\"Mahsulot 1\",\"set_name\":\"Mahsulot 1\",\"product_code\":\"P1\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[\"O-1\"],\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "catalog can add an internal formula to the selected recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"balances\":[]}],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "catalog can add an internal formula to the selected recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P1&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P1\",\"formulas\":[{\"formula_code\":\"950300000001\",\"name\":\"A\",\"share_percent\":\"20.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]},{\"formula_code\":\"950300000002\",\"name\":\"B\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]},{\"formula_code\":\"950300000003\",\"name\":\"C\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "catalog can add an internal formula to the selected recipe",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"P1\",\"material_id\":\"mat-a\",\"name\":\"D\",\"lines\":[{\"item_code\":\"C1\",\"percent\":\"100.000000\"}]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P1\",\"name\":\"D\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]}"
+   }
+  },
+  {
+   "test": "catalog can add an internal formula to the selected recipe",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P1&material_id=mat-a&variant_id=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P1\",\"formulas\":[{\"formula_code\":\"950300000001\",\"name\":\"A\",\"share_percent\":\"20.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]},{\"formula_code\":\"950300000002\",\"name\":\"B\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]},{\"formula_code\":\"950300000003\",\"name\":\"C\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]},{\"formula_code\":\"950300000004\",\"name\":\"D\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"Seriya\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "an account change clears formulas and discards an in-flight read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"v1\",\"formula_code\":\"950400000001\",\"name\":\"Variant 1\",\"product_title\":\"Mahsulot 1\",\"set_name\":\"Mahsulot 1\",\"product_code\":\"P1\",\"material_id\":\"mat-a\",\"material_name\":\"PE\",\"can_create\":true,\"order_codes\":[\"O-1\"],\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  }
+ ]
+}

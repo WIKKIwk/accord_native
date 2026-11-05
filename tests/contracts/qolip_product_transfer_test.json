@@ -1,0 +1,55 @@
+{
+ "source": "test/qolip_product_transfer_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "shows confirmed molds immediately in a scrolled destination and preserves failed moves",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000&with_qolip=true",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"DEMO-HOTLUNCH\",\"name\":\"Hotlunch\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"MOVED-ONE\",\"size\":42,\"color\":\"Qizil\",\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-0\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-1\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-2\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-3\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-4\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-5\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-6\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-7\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-8\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-9\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-10\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-11\",\"size\":42,\"has_qolip_spec\":true}]}"
+   }
+  },
+  {
+   "test": "shows confirmed molds immediately in a scrolled destination and preserves failed moves",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products?limit=20000",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[{\"code\":\"DEMO-HOTLUNCH\",\"name\":\"Hotlunch\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"MOVED-ONE\",\"size\":42,\"color\":\"Qizil\",\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-0\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-1\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-2\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-3\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-4\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-5\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-6\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-7\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-8\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-9\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-10\",\"size\":42,\"has_qolip_spec\":true},{\"code\":\"DEMO-SALAD\",\"name\":\"Salat set\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"EXISTING-11\",\"size\":42,\"has_qolip_spec\":true}]}"
+   }
+  },
+  {
+   "test": "API sends stable QR identities and rejects an incomplete transfer response",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/product-transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer transfer-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"same-request\",\"from_item_code\":\"SOURCE\",\"to_item_code\":\"TARGET\",\"qolip_codes\":[\"qr-1\",\"qr-2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"specs\":[{\"item_code\":\"TARGET\",\"item_name\":\"Product\",\"qolip_code\":\"QR-1\",\"size\":42}]}"
+   }
+  }
+ ]
+}

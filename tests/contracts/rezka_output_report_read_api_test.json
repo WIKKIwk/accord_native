@@ -1,0 +1,118 @@
+{
+ "source": "test/rezka_output_report_read_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "narrow report uses one scoped GET and preserves saved rolls and issues",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-output-report?apparatus=apparatus%3Adefault%3Aasset-010&order_id=zakaz-rezka-report-read",
+   "requestHeaders": {
+    "Authorization": "Bearer report-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"order_id\":\"zakaz-rezka-report-read\",\"rezka_output_report\":{\"cycle_id\":\"active-cycle\",\"frames\":[{\"frame_index\":2,\"batch_id\":\"saved-roll-2\",\"qr_payload\":\"40011890022F235A0000A1B2\",\"input\":{\"produced_qty\":125.5,\"gross_qty\":12.75,\"bobina_kg\":0.75,\"diameter\":45.5}},{\"frame_index\":1,\"batch_id\":\"\",\"qr_payload\":\"\",\"input\":{\"issue_note\":\"Kadr yirtilgan\"}}]},\"kadr_counts\":[1,2],\"session_status\":\"active\",\"order_control\":\"active\",\"epoch\":\"report-server\",\"rev\":27}"
+   }
+  },
+  {
+   "test": "only bare unsupported 404 permits the old control reader",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-output-report?apparatus=apparatus%3Adefault%3Aasset-010&order_id=zakaz-rezka-report-read",
+   "requestHeaders": {
+    "Authorization": "Bearer report-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "report domain status 400 never falls back",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-output-report?apparatus=apparatus%3Adefault%3Aasset-010&order_id=zakaz-rezka-report-read",
+   "requestHeaders": {
+    "Authorization": "Bearer report-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"rezka_output_cycle_conflict\"}"
+   }
+  },
+  {
+   "test": "report domain status 403 never falls back",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-output-report?apparatus=apparatus%3Adefault%3Aasset-010&order_id=zakaz-rezka-report-read",
+   "requestHeaders": {
+    "Authorization": "Bearer report-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"rezka_output_cycle_conflict\"}"
+   }
+  },
+  {
+   "test": "report domain status 404 never falls back",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-output-report?apparatus=apparatus%3Adefault%3Aasset-010&order_id=zakaz-rezka-report-read",
+   "requestHeaders": {
+    "Authorization": "Bearer report-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"rezka_output_cycle_conflict\"}"
+   }
+  },
+  {
+   "test": "report domain status 409 never falls back",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-output-report?apparatus=apparatus%3Adefault%3Aasset-010&order_id=zakaz-rezka-report-read",
+   "requestHeaders": {
+    "Authorization": "Bearer report-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"rezka_output_cycle_conflict\"}"
+   }
+  },
+  {
+   "test": "report domain status 503 never falls back",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/rezka-output-report?apparatus=apparatus%3Adefault%3Aasset-010&order_id=zakaz-rezka-report-read",
+   "requestHeaders": {
+    "Authorization": "Bearer report-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"rezka_output_cycle_conflict\"}"
+   }
+  }
+ ]
+}

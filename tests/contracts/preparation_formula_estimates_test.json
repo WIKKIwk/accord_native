@@ -1,0 +1,220 @@
+{
+ "source": "test/preparation_formula_estimates_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "order 0278 shows its own kg beside shared recipe percentages",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[{\"id\":\"0278\",\"code\":\"0278\",\"order_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "order 0278 shows its own kg beside shared recipe percentages",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"10.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"20.000000\"},{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"70.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "order 0278 shows its own kg beside shared recipe percentages",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=0278",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"order_id\":\"0278\",\"materials\":[{\"material_id\":\"opp\",\"material_name\":\"OPP\",\"estimated_kg\":\"208.674900\"},{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"824.964000\"}]}"
+   }
+  },
+  {
+   "test": "order 0277 shows its own kg beside shared recipe percentages",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[{\"id\":\"0278\",\"code\":\"0278\",\"order_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "order 0277 shows its own kg beside shared recipe percentages",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"10.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"20.000000\"},{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"70.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "order 0277 shows its own kg beside shared recipe percentages",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=0277",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"order_id\":\"0277\",\"materials\":[{\"material_id\":\"opp\",\"material_name\":\"OPP\",\"estimated_kg\":\"208.674900\"},{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"860.384000\"}]}"
+   }
+  },
+  {
+   "test": "unavailable estimate keeps percentages and does not use overall order kg (false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[{\"id\":\"0278\",\"code\":\"0278\",\"order_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "unavailable estimate keeps percentages and does not use overall order kg (false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"10.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"20.000000\"},{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"70.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "unavailable estimate keeps percentages and does not use overall order kg (false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=0278",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"order_id\":\"0278\",\"materials\":[{\"material_id\":\"opp\",\"material_name\":\"OPP\",\"estimated_kg\":\"208.674900\"},{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\"}]}"
+   }
+  },
+  {
+   "test": "unavailable estimate keeps percentages and does not use overall order kg (true)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[{\"id\":\"0278\",\"code\":\"0278\",\"order_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "unavailable estimate keeps percentages and does not use overall order kg (true)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"10.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"20.000000\"},{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"70.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "unavailable estimate keeps percentages and does not use overall order kg (true)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=0278",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{}"
+   }
+  }
+ ]
+}

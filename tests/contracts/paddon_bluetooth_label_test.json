@@ -1,0 +1,295 @@
+{
+ "source": "test/paddon_bluetooth_label_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "Bluetooth pallet known uses authoritative summary",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":7,\"total_gross_kg\":24.375,\"total_net_kg\":23.125},\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "Bluetooth pallet unknown uses authoritative summary",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":7},\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "Bluetooth pallet empty uses authoritative summary",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":0,\"total_gross_kg\":0,\"total_net_kg\":0},\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "Bluetooth pallet partial uses authoritative summary",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":3,\"total_gross_kg\":12.123456,\"total_net_kg\":-1},\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "Bluetooth pallet legacy uses authoritative summary",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\"},\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "20 WIPs print four distinct bobbin weights and the shared product",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":20,\"total_gross_kg\":568,\"total_net_kg\":500},\"items\":[{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":4.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":4.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":4.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":4.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":4.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":4.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":3.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":3.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":3.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":3.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":3.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":3.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":3.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":3.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":1.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":1.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":1.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":1.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "normalizes weight precision and product identity across orders",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":2},\"items\":[{\"bobina_kg\":0.3,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"},\"order_id\":\"order-1\"},{\"bobina_kg\":0.30000000000000004,\"label_item_name\":\"hot   lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"customer_name\":\"qobil AKA\"},\"order_id\":\"order-2\"}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "different products omits the single-product heading",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":2},\"items\":[{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":2.0,\"label_item_name\":\"Cold Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Cold Lunch\",\"customer_name\":\"Qobil aka\"}}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "different customers omits the single-product heading",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":2},\"items\":[{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Anis\"}}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "missing product omits the single-product heading",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":2},\"items\":[{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":2.0,\"label_item_name\":\" tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"\",\"customer_name\":\"Qobil aka\"}}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "unknown bobbin weights and incomplete snapshots stay unknown",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":2},\"items\":[{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":null,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "unknown bobbin weights and incomplete snapshots stay unknown",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":2},\"items\":[{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":0.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "unknown bobbin weights and incomplete snapshots stay unknown",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":2},\"items\":[{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}},{\"bobina_kg\":-1.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "unknown bobbin weights and incomplete snapshots stay unknown",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":2},\"items\":[{\"bobina_kg\":2.0,\"label_item_name\":\"Hot Lunch tayyor mahsulot, apparat: rezka, ish tugatildi\",\"payload_json\":{\"order_title\":\"Hot Lunch\",\"customer_name\":\"Qobil aka\"}}],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "empty snapshot prints zero bobbin types without product headings",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":0},\"items\":[],\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "PrintTransport.offline retains previous pallet print contract",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_transport\":\"offline\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":7,\"total_gross_kg\":24.375,\"total_net_kg\":23.125},\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  },
+  {
+   "test": "PrintTransport.wifi retains previous pallet print contract",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"print_count\":2}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"00001\",\"item_count\":7,\"total_gross_kg\":24.375,\"total_net_kg\":23.125},\"print\":{\"qr_payload\":\"00001\",\"item_code\":\"00001\",\"item_name\":\"Paddon 00001\",\"label_kind\":\"paddon_code\",\"gross_qty\":1,\"qty\":1,\"unit\":\"dona\",\"print_count\":2}}"
+   }
+  }
+ ]
+}

@@ -1,0 +1,121 @@
+{
+ "source": "test/temporary_pause_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "temporary pause sends session authority without output or print data",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/temporary-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer temporary-pause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"open-roll-session\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "temporary pause uncertain or malformed response is not replayed: 409",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/temporary-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer temporary-pause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"open-roll-session\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"queue_action_not_allowed\"}"
+   }
+  },
+  {
+   "test": "temporary pause uncertain or malformed response is not replayed: 500",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/temporary-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer temporary-pause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"open-roll-session\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"queue_action_not_allowed\"}"
+   }
+  },
+  {
+   "test": "temporary pause uncertain or malformed response is not replayed: 200",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/temporary-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer temporary-pause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"open-roll-session\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"queue_action_not_allowed\"}"
+   }
+  },
+  {
+   "test": "temporary pause lost response never retries the write",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/temporary-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer temporary-pause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"open-roll-session\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "temporary pause ignores completion after scope changes, server=false",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/temporary-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer temporary-pause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"open-roll-session\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "temporary pause ignores completion after scope changes, server=true",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/temporary-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer temporary-pause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"session_id\":\"open-roll-session\",\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  }
+ ]
+}

@@ -1,0 +1,86 @@
+{
+ "source": "test/worker_queue_window_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "REST and websocket carry the same search window with limit 5",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=5&queue_positions=true&queue_search=old+order",
+   "requestHeaders": {
+    "Authorization": "Bearer queue-window-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"server\",\"rev\":1,\"scope\":\"window-5\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "REST and websocket carry the same search window with limit 0",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=0&queue_positions=true&queue_search=old+order",
+   "requestHeaders": {
+    "Authorization": "Bearer queue-window-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"server\",\"rev\":1,\"scope\":\"window-5\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "concurrent reads for different limits never coalesce",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=5&queue_positions=true",
+   "requestHeaders": {
+    "Authorization": "Bearer queue-window-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"server\",\"rev\":1,\"scope\":\"window-5\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "concurrent reads for different limits never coalesce",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=10&queue_positions=true",
+   "requestHeaders": {
+    "Authorization": "Bearer queue-window-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"server\",\"rev\":1,\"scope\":\"window-10\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "concurrent reads for different limits never coalesce",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=0&queue_positions=true",
+   "requestHeaders": {
+    "Authorization": "Bearer queue-window-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"server\",\"rev\":1,\"scope\":\"window-0\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  }
+ ]
+}

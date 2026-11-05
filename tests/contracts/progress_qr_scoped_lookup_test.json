@@ -1,0 +1,363 @@
+{
+ "source": "test/progress_qr_scoped_lookup_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "scoped QR explains progress_batch_already_used with owner \"Rezka 5\"",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"progress_batch_already_used\",\"apparatus_name\":\"Rezka 5\"}"
+   }
+  },
+  {
+   "test": "scoped QR explains progress_batch_already_used with owner \"\"",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"progress_batch_already_used\"}"
+   }
+  },
+  {
+   "test": "scoped QR explains progress_batch_in_use with owner \"Rezka 5\"",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"progress_batch_in_use\",\"apparatus_name\":\"Rezka 5\"}"
+   }
+  },
+  {
+   "test": "scoped QR explains progress_batch_in_use with owner \"\"",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"progress_batch_in_use\"}"
+   }
+  },
+  {
+   "test": "scoped QR lookup requires exact server confirmation: valid",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"validated_apparatus\":\"apparatus:default:asset-007\",\"validated_order_id\":\"zakaz-0073\",\"batch\":{\"batch_id\":\"roll-0073\",\"order_id\":\"zakaz-0073\",\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:bosma_9\",\"next_apparatus\":\"apparatus:default:asset-008\",\"wip_status\":\"waiting\"}}"
+   }
+  },
+  {
+   "test": "scoped QR lookup requires exact server confirmation: missing",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"roll-0073\",\"order_id\":\"zakaz-0073\",\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:bosma_9\",\"next_apparatus\":\"apparatus:default:asset-008\",\"wip_status\":\"waiting\"}}"
+   }
+  },
+  {
+   "test": "scoped QR lookup requires exact server confirmation: wrong_apparatus",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"validated_apparatus\":\"apparatus:default:asset-008\",\"validated_order_id\":\"zakaz-0073\",\"batch\":{\"batch_id\":\"roll-0073\",\"order_id\":\"zakaz-0073\",\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:bosma_9\",\"next_apparatus\":\"apparatus:default:asset-008\",\"wip_status\":\"waiting\"}}"
+   }
+  },
+  {
+   "test": "scoped QR lookup requires exact server confirmation: wrong_order",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"validated_apparatus\":\"apparatus:default:asset-007\",\"validated_order_id\":\"other-order\",\"batch\":{\"batch_id\":\"roll-0073\",\"order_id\":\"zakaz-0073\",\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:bosma_9\",\"next_apparatus\":\"apparatus:default:asset-008\",\"wip_status\":\"waiting\"}}"
+   }
+  },
+  {
+   "test": "lookup route metadata preserves original printed QR and historical nodes",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118DA2F17C3617F59DDC6\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"original-roll\",\"apparatus\":\"apparatus:default:bosma_9\",\"order_id\":\"zakaz-0073\",\"qr_payload\":\"400118DA2F17C3617F59DDC6\",\"produced_qty\":6170,\"uom\":\"m\",\"wip_status\":\"waiting\",\"next_apparatus\":\"apparatus:default:asset-007\",\"payload_json\":{\"production_stage_node_id\":\"laminatsiya_4\",\"next_stage_node_id\":\"rezka_5\",\"gross_qty\":120}},\"input_route\":{\"source_stage_node_id\":\"laminatsiya_4\",\"stage_node_id\":\"apparatus_6\",\"consumer_apparatus_ids\":[\"apparatus:default:asset-007\",\"apparatus:default:asset-008\"],\"map_fingerprint\":\"current-map\",\"remapped\":true}}"
+   }
+  },
+  {
+   "test": "lookup preserves authoritative route presence/error: {}",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"roll\",\"apparatus\":\"apparatus:default:asset-007\"}}"
+   }
+  },
+  {
+   "test": "lookup preserves authoritative route presence/error: {input_route: null}",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"roll\",\"apparatus\":\"apparatus:default:asset-007\"},\"input_route\":null}"
+   }
+  },
+  {
+   "test": "lookup preserves authoritative route presence/error: {input_route_error: wip_route_source_unresolved}",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"roll\",\"apparatus\":\"apparatus:default:asset-007\"},\"input_route_error\":\"wip_route_source_unresolved\"}"
+   }
+  },
+  {
+   "test": "lookup preserves authoritative route presence/error: {input_route_error: wip_route_ambiguous}",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"roll\",\"apparatus\":\"apparatus:default:asset-007\"},\"input_route_error\":\"wip_route_ambiguous\"}"
+   }
+  },
+  {
+   "test": "scoped route failure wip_route_source_unresolved explains map recovery in every locale",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"wip_route_source_unresolved\"}"
+   }
+  },
+  {
+   "test": "scoped route failure wip_route_destination_unresolved explains map recovery in every locale",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"wip_route_destination_unresolved\"}"
+   }
+  },
+  {
+   "test": "scoped route failure wip_route_ambiguous explains map recovery in every locale",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"wip_route_ambiguous\"}"
+   }
+  },
+  {
+   "test": "scoped route failure wip_route_changed explains map recovery in every locale",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"wip_route_changed\"}"
+   }
+  },
+  {
+   "test": "scoped lookup rejects contradictory authoritative metadata: route-error",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"validated_apparatus\":\"apparatus:default:asset-007\",\"validated_order_id\":\"zakaz-0073\",\"batch\":{\"batch_id\":\"roll\",\"apparatus\":\"apparatus:default:asset-007\"},\"input_route_error\":\"wip_route_ambiguous\"}"
+   }
+  },
+  {
+   "test": "scoped lookup rejects contradictory authoritative metadata: null-route",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"validated_apparatus\":\"apparatus:default:asset-007\",\"validated_order_id\":\"zakaz-0073\",\"batch\":{\"batch_id\":\"roll\",\"apparatus\":\"apparatus:default:asset-007\"},\"input_route\":null}"
+   }
+  },
+  {
+   "test": "scoped lookup rejects contradictory authoritative metadata: wrong-consumer",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"validated_apparatus\":\"apparatus:default:asset-007\",\"validated_order_id\":\"zakaz-0073\",\"batch\":{\"batch_id\":\"roll\",\"apparatus\":\"apparatus:default:asset-007\"},\"input_route\":{\"source_stage_node_id\":\"source\",\"stage_node_id\":\"target\",\"map_fingerprint\":\"current-map\",\"remapped\":true,\"consumer_apparatus_ids\":[\"apparatus:default:asset-008\"]}}"
+   }
+  },
+  {
+   "test": "scoped lookup rejects contradictory authoritative metadata: empty-consumers",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/progress-qr/lookup",
+   "requestHeaders": {
+    "Authorization": "Bearer test-session",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"qr_payload\":\"400118D5A225166D31898C1F\",\"apparatus\":\"apparatus:default:asset-007\",\"order_id\":\"zakaz-0073\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"validated_apparatus\":\"apparatus:default:asset-007\",\"validated_order_id\":\"zakaz-0073\",\"batch\":{\"batch_id\":\"roll\",\"apparatus\":\"apparatus:default:asset-007\"},\"input_route\":{\"source_stage_node_id\":\"source\",\"stage_node_id\":\"target\",\"map_fingerprint\":\"current-map\",\"remapped\":true,\"consumer_apparatus_ids\":[]}}"
+   }
+  }
+ ]
+}

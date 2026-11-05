@@ -1,0 +1,40 @@
+{
+ "source": "test/qolip_tasks_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "assigned material reprint sends the order and preserves its barcode",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock/reprint/prepare",
+   "requestHeaders": {
+    "Authorization": "Bearer tasks-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"barcode\":\"30AA\",\"order_id\":\"zakaz-3\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reprint_id\":\"reprint-test\",\"stock\":{\"barcode\":\"30AA\",\"item_code\":\"PET\",\"qty\":12,\"status\":\"reserved\",\"reserved_order_id\":\"zakaz-3\"},\"print\":{\"epc\":\"30AA\",\"item_code\":\"PET\",\"gross_qty\":12,\"label_kind\":\"material_product\",\"printer\":\"godex\"}}"
+   }
+  },
+  {
+   "test": "partial readiness responses fail instead of hiding tasks",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/order-products",
+   "requestHeaders": {
+    "Authorization": "Bearer tasks-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_ids\":[\"zakaz-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"orders\":[]}"
+   }
+  }
+ ]
+}

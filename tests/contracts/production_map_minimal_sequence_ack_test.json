@@ -1,0 +1,387 @@
+{
+ "source": "test/production_map_minimal_sequence_ack_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "negotiates a minimal ACK without uploading IDs and retains the command body",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "preference-applied": "return=minimal"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "negotiates a minimal ACK without uploading IDs and retains the command body",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "preference-applied": "return=minimal"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "applies clamped server neighbors instead of requested anchors",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":true,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"7038b2151800934b\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"b\",\"after_id\":\"hidden\",\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "no-op receipt retains the captured full list and allows an absent revision",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"adjusted\":false,\"revision\":null,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"996eb209cd829e23\",\"ops\":[]}"
+   }
+  },
+  {
+   "test": "older backend complete ACK is accepted when Prefer is ignored",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"c\",\"a\",\"hidden\",\"b\"],\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false}"
+   }
+  },
+  {
+   "test": "without a complete baseline no minimal response is requested or accepted",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "baseline is captured before a delayed response and cannot be mutated by caller",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects wrong base version so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects wrong count so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":3,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects wrong hash so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"0000000000000000\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects null IDs so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}],\"order_ids\":null}"
+   }
+  },
+  {
+   "test": "rejects missing epoch so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects fractional revision so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9.5,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects missing operation so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[]}"
+   }
+  },
+  {
+   "test": "rejects wrong canonical order so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"a\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects wrong operation version so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"0000000000000000000000000000000000000000000000000000000000000000\"}]}"
+   }
+  },
+  {
+   "test": "rejects wrong operation base so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects missing anchor so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"missing\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects inconsistent neighbors so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":\"b\",\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects unknown operation so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"remove\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  },
+  {
+   "test": "rejects multiple operations so caller reconciles the committed server state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer minimal-ack-test",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"c\",\"before_order_id\":\"a\",\"expected_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"idempotency_key\":\"same-command\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"adjusted\":false,\"revision\":9,\"epoch\":\"server\",\"order_count\":4,\"order_hash\":\"293c8d1aca10a913\",\"ops\":[{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"},{\"type\":\"move\",\"id\":\"c\",\"before_id\":\"a\",\"after_id\":null,\"base_version\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"version\":\"1111111111111111111111111111111111111111111111111111111111111111\"}]}"
+   }
+  }
+ ]
+}

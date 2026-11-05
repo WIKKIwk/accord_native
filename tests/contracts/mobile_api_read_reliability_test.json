@@ -1,0 +1,51 @@
+{
+ "source": "test/mobile_api_read_reliability_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "MobileApi retries GET but never repeats an assignment mutation",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-assignments/lookup?barcode=30AA",
+   "requestHeaders": {
+    "Authorization": "Bearer synthetic-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "MobileApi retries GET but never repeats an assignment mutation",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-assignments/lookup?barcode=30AA",
+   "requestHeaders": {
+    "Authorization": "Bearer synthetic-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"barcode\":\"30AA\",\"assignment\":null}"
+   }
+  },
+  {
+   "test": "MobileApi retries GET but never repeats an assignment mutation",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-assignments",
+   "requestHeaders": {
+    "Authorization": "Bearer synthetic-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"order-1\",\"barcode\":\"30AA\"}"
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"upstream_unavailable\"}"
+   }
+  }
+ ]
+}

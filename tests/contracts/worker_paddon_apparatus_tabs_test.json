@@ -1,0 +1,297 @@
+{
+ "source": "test/worker_paddon_apparatus_tabs_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "single cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "single cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "single cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"0011\",\"code\":\"0011\",\"apparatus_id\":\"apparatus:default:asset-010\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"0002\",\"code\":\"0002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"0334\",\"code\":\"0334\",\"apparatus_id\":\"apparatus:default:asset-011\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"4234\",\"code\":\"4234\",\"apparatus_id\":\"apparatus:default:asset-011\",\"created_by_ref\":\"multi-worker\",\"item_count\":0}]}"
+   }
+  },
+  {
+   "test": "single cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "single cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "single cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"0011\",\"code\":\"0011\",\"apparatus_id\":\"apparatus:default:asset-010\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"0002\",\"code\":\"0002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"0334\",\"code\":\"0334\",\"apparatus_id\":\"apparatus:default:asset-011\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"4234\",\"code\":\"4234\",\"apparatus_id\":\"apparatus:default:asset-011\",\"created_by_ref\":\"multi-worker\",\"item_count\":0}]}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-011",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-011\",\"code\":\"4234\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-011",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-011\",\"code\":\"4234\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-011&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"0011\",\"code\":\"0011\",\"apparatus_id\":\"apparatus:default:asset-010\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"0002\",\"code\":\"0002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"0334\",\"code\":\"0334\",\"apparatus_id\":\"apparatus:default:asset-011\",\"created_by_ref\":\"multi-worker\",\"item_count\":0},{\"id\":\"4234\",\"code\":\"4234\",\"apparatus_id\":\"apparatus:default:asset-011\",\"created_by_ref\":\"multi-worker\",\"item_count\":0}]}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:asset-011\",\"code\":\"4234\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-011\",\"code\":\"4234\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-011",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-011\",\"code\":\"4234\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-010\",\"code\":\"0011\"}"
+   }
+  },
+  {
+   "test": "multiple cut apparatus toolbar follows tabs and keeps separate pallet selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/active?apparatus=apparatus%3Adefault%3Aasset-011",
+   "requestHeaders": {
+    "Authorization": "Bearer multi-worker"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"apparatus\":\"apparatus:default:asset-011\",\"code\":\"4234\"}"
+   }
+  }
+ ]
+}

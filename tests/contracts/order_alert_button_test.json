@@ -1,0 +1,108 @@
+{
+ "source": "test/order_alert_button_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "order alert OrderAlertKind.rawMaterial sends directly without resource selection",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-alert",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"order-123\",\"apparatus\":\"apparatus:default:bosma_7\",\"kind\":\"raw_material\",\"request_id\":\"48fdd9af-62516597-3c3f5239-46f36061\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"recipient_count\":2}"
+   }
+  },
+  {
+   "test": "order alert OrderAlertKind.qolip sends directly without resource selection",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-alert",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"order-123\",\"apparatus\":\"apparatus:default:bosma_7\",\"kind\":\"qolip\",\"request_id\":\"23db6323-7e55ab58-6a9ded25-1ff9ad4d\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"recipient_count\":2}"
+   }
+  },
+  {
+   "test": "disabled alert blocks both taps and an earlier callback",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-alert",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"order-123\",\"apparatus\":\"apparatus:default:bosma_7\",\"kind\":\"qolip\",\"request_id\":\"1948417e-56d55e89-3e184e3c-660bb983\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"recipient_count\":1}"
+   }
+  },
+  {
+   "test": "failed delivery retries with the same ID and never claims success early",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-alert",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"order-123\",\"apparatus\":\"apparatus:default:bosma_7\",\"kind\":\"qolip\",\"request_id\":\"15a18122-1dca6fca-181278dd-796e3845\"}"
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_alert_send_failed\"}"
+   }
+  },
+  {
+   "test": "failed delivery retries with the same ID and never claims success early",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-alert",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"order-123\",\"apparatus\":\"apparatus:default:bosma_7\",\"kind\":\"qolip\",\"request_id\":\"15a18122-1dca6fca-181278dd-796e3845\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"recipient_count\":1}"
+   }
+  },
+  {
+   "test": "no recipient is displayed as an error",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-alert",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"order-123\",\"apparatus\":\"apparatus:default:bosma_7\",\"kind\":\"raw_material\",\"request_id\":\"53bf9916-4414e0ed-5b7e439c-48a39f52\"}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_alert_no_recipients\"}"
+   }
+  }
+ ]
+}

@@ -1,0 +1,38 @@
+{
+ "source": "test/admin_order_page_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "admin page forwards only its scope and accepts conditional 304",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-page?view=sequence&limit=20&projection=sequence_list_v1&apparatus=apparatus%3Adefault%3Abosma_8&search=old+order&if_version=page-1",
+   "requestHeaders": {
+    "Authorization": "Bearer page-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 304,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "closed detail fetches one order only",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/closed-order?id=zakaz-42",
+   "requestHeaders": {
+    "Authorization": "Bearer page-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"order_id\":\"zakaz-42\",\"logs\":[]}"
+   }
+  }
+ ]
+}

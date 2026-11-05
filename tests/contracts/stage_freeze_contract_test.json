@@ -1,0 +1,74 @@
+{
+ "source": "test/stage_freeze_contract_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "stage API sends an exact node and never changes scope implicitly",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-control",
+   "requestHeaders": {
+    "Authorization": "Bearer stage-freeze-test",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-scan-bootstrap\",\"action\":\"freeze\",\"scope\":\"stage\",\"apparatus\":\"apparatus:default:bosma_7\",\"stage_node_id\":\"apparatus\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"control\":{\"order_id\":\"zakaz-scan-bootstrap\",\"stage_node_id\":\"apparatus\",\"state\":\"frozen\",\"freeze_request\":{\"target_apparatus\":\"apparatus:default:bosma_7\"}}}"
+   }
+  },
+  {
+   "test": "stage API sends an exact node and never changes scope implicitly",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-control",
+   "requestHeaders": {
+    "Authorization": "Bearer stage-freeze-test",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-scan-bootstrap\",\"action\":\"cancel_freeze\",\"scope\":\"stage\",\"apparatus\":\"apparatus:default:bosma_7\",\"stage_node_id\":\"apparatus\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"control\":{\"order_id\":\"zakaz-scan-bootstrap\",\"stage_node_id\":\"apparatus\",\"state\":\"frozen\",\"freeze_request\":{\"target_apparatus\":\"apparatus:default:bosma_7\"}}}"
+   }
+  },
+  {
+   "test": "stage API sends an exact node and never changes scope implicitly",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-control",
+   "requestHeaders": {
+    "Authorization": "Bearer stage-freeze-test",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-scan-bootstrap\",\"action\":\"unfreeze\",\"scope\":\"stage\",\"apparatus\":\"apparatus:default:bosma_7\",\"stage_node_id\":\"apparatus\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"control\":{\"order_id\":\"zakaz-scan-bootstrap\",\"stage_node_id\":\"apparatus\",\"state\":\"frozen\",\"freeze_request\":{\"target_apparatus\":\"apparatus:default:bosma_7\"}}}"
+   }
+  },
+  {
+   "test": "stage API sends an exact node and never changes scope implicitly",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-control",
+   "requestHeaders": {
+    "Authorization": "Bearer stage-freeze-test",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-scan-bootstrap\",\"action\":\"freeze\",\"scope\":\"order\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"control\":{\"state\":\"frozen\"}}"
+   }
+  }
+ ]
+}

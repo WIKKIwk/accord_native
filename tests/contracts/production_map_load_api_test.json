@@ -1,0 +1,134 @@
+{
+ "source": "test/production_map_load_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "conditional worker GET reuses only a server-confirmed cursor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&if_epoch=server&if_rev=7&if_scope=assigned&wait_ms=6000",
+   "requestHeaders": {
+    "Authorization": "Bearer map-load-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 304,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "fresh recovery never sends an unchanged-state cursor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1",
+   "requestHeaders": {
+    "Authorization": "Bearer map-load-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 304,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "HTTP 403 without domain error does not mean map missing",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps?id=template-existing",
+   "requestHeaders": {
+    "Authorization": "Bearer map-load-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "<html>Proxy error</html>"
+   }
+  },
+  {
+   "test": "HTTP 404 without domain error does not mean map missing",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps?id=template-existing",
+   "requestHeaders": {
+    "Authorization": "Bearer map-load-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "<html>Proxy error</html>"
+   }
+  },
+  {
+   "test": "HTTP 500 without domain error does not mean map missing",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps?id=template-existing",
+   "requestHeaders": {
+    "Authorization": "Bearer map-load-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "<html>Proxy error</html>"
+   }
+  },
+  {
+   "test": "HTTP 502 without domain error does not mean map missing",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps?id=template-existing",
+   "requestHeaders": {
+    "Authorization": "Bearer map-load-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 502,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "<html>Proxy error</html>"
+   }
+  },
+  {
+   "test": "HTTP 503 without domain error does not mean map missing",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps?id=template-existing",
+   "requestHeaders": {
+    "Authorization": "Bearer map-load-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "<html>Proxy error</html>"
+   }
+  },
+  {
+   "test": "explicit map_not_found response preserves the HTTP status",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps?id=template-missing",
+   "requestHeaders": {
+    "Authorization": "Bearer map-load-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"map_not_found\"}"
+   }
+  }
+ ]
+}

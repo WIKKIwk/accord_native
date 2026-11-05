@@ -1,0 +1,264 @@
+{
+ "source": "test/qolip_reworks_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "wire API sends generated IDs and normalizes mold and return selections",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/send",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1793855123115792-98cff679d04a63691aa5b16699a6464e\",\"qolip_codes\":[\"q-1\",\"q-2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"r2\",\"qolip_code\":\"Q-2\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "wire API sends generated IDs and normalizes mold and return selections",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"r2\",\"qolip_code\":\"Q-2\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "wire API sends generated IDs and normalizes mold and return selections",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/return",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1793855123115861-39c3c7071416a0e64dba6374e418e2b4\",\"rework_ids\":[\"r1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":\"2026-10-24T11:00:00Z\"}]}"
+   }
+  },
+  {
+   "test": "send preserves its generated ID and JSON body after transport failure",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/send",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1793855123146678-50049bae4cce9388db5e94ff9d4dc4f4\",\"qolip_codes\":[\"q-1\"]}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "send preserves its generated ID and JSON body after transport failure",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/send",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1793855123146678-50049bae4cce9388db5e94ff9d4dc4f4\",\"qolip_codes\":[\"q-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "return preserves its generated ID and JSON body after transport failure",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/return",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1793855123152452-5717aac4d093b763cb94d4811123524b\",\"rework_ids\":[\"r1\"]}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "return preserves its generated ID and JSON body after transport failure",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/return",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1793855123152452-5717aac4d093b763cb94d4811123524b\",\"rework_ids\":[\"r1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":\"2026-10-24T11:00:00Z\"}]}"
+   }
+  },
+  {
+   "test": "partial success response is rejected",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/send",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"all-or-none\",\"qolip_codes\":[\"q-1\",\"q-2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "server conflict codes and messages are retained",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/send",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"conflict\",\"qolip_codes\":[\"q-1\"]}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"qolip_in_rework\"}"
+   }
+  },
+  {
+   "test": "mileage wire data keeps unknown baseline and old cycles",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/mileage?qolip_code=Q-1",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"mileage\":{\"qolip_code\":\"Q-1\",\"tracking_enabled\":false,\"current_meter\":null,\"cycles\":[]}}"
+   }
+  },
+  {
+   "test": "mileage wire data keeps unknown baseline and old cycles",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/mileage?qolip_code=Q-2",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"mileage\":{\"qolip_code\":\"Q-2\",\"tracking_enabled\":true,\"current_meter\":800,\"cycles\":[{\"id\":\"c1\",\"started_at\":\"2026-10-20T10:00:00Z\",\"ended_at\":\"2026-10-24T10:00:00Z\",\"meter\":1200,\"rework_id\":\"old\"},{\"id\":\"c2\",\"started_at\":\"2026-10-24T10:00:00Z\",\"ended_at\":null,\"meter\":800,\"rework_id\":\"new\"}]}}"
+   }
+  },
+  {
+   "test": "list discards a pending result after account or server changes",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "mileage discards a pending result after account or server changes",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/mileage?qolip_code=Q-1",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"mileage\":{\"qolip_code\":\"Q-1\",\"tracking_enabled\":false,\"current_meter\":null,\"cycles\":[]}}"
+   }
+  },
+  {
+   "test": "send discards a pending result after account or server changes",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/send",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"pending-send\",\"qolip_codes\":[\"q-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "return discards a pending result after account or server changes",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/return",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"pending-return\",\"rework_ids\":[\"r1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[{\"id\":\"r1\",\"qolip_code\":\"Q-1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":\"2026-10-24T11:00:00Z\"}]}"
+   }
+  },
+  {
+   "test": "same-account token refresh does not invalidate pending rework reads",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"reworks\":[]}"
+   }
+  }
+ ]
+}

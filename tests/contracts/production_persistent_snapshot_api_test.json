@@ -1,0 +1,70 @@
+{
+ "source": "test/production_persistent_snapshot_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "disk-decoded empty baseline validates with a zero-body 304",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=10&queue_positions=true&if_epoch=server&if_rev=7&if_scope=worker-window",
+   "requestHeaders": {
+    "Authorization": "Bearer persisted-snapshot-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 304,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "server restart replaces the disk epoch and accepts its lower revision",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=10&queue_positions=true&if_epoch=server&if_rev=7&if_scope=worker-window",
+   "requestHeaders": {
+    "Authorization": "Bearer persisted-snapshot-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"restarted-server\",\"rev\":1,\"scope\":\"worker-window\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"completed_orders\":[],\"completion_requests\":[],\"completion_request_decisions\":[]}"
+   }
+  },
+  {
+   "test": "explicit fresh recovery bypasses a retained cursor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=10&queue_positions=true",
+   "requestHeaders": {
+    "Authorization": "Bearer persisted-snapshot-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"server\",\"rev\":7,\"scope\":\"worker-window\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"completed_orders\":[],\"completion_requests\":[],\"completion_request_decisions\":[]}"
+   }
+  },
+  {
+   "test": "304 without any baseline cannot become an empty success",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=10&queue_positions=true",
+   "requestHeaders": {
+    "Authorization": "Bearer persisted-snapshot-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 304,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  }
+ ]
+}

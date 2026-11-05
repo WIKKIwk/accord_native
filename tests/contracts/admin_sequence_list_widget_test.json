@@ -1,0 +1,278 @@
+{
+ "source": "test/admin_sequence_list_widget_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "admin detail skips hidden worker scan and WIP startup requests",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=order-a&image_id=image-order-a&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "image/png"
+   },
+   "responseBody": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAAcSURBVBiVY/x3Z9d/BjQgEjEHzmZCl0QHw0MBAKlEBKsYX/icAAAAAElFTkSuQmCC"
+   }
+  },
+  {
+   "test": "admin detail skips hidden worker scan and WIP startup requests",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=order-b&image_id=image-order-b&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "image/png"
+   },
+   "responseBody": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAAcSURBVBiVY/x3Z9d/BjQgEjEHzmZCl0QHw0MBAKlEBKsYX/icAAAAAElFTkSuQmCC"
+   }
+  },
+  {
+   "test": "admin detail skips hidden worker scan and WIP startup requests",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-start-requirements?order_id=order-a&apparatus=apparatus%3Adefault%3Abosma_7",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"policy\":\"state_all\",\"requires_material\":true,\"material_scan_required\":true,\"requirement_groups\":[],\"assigned_barcodes\":[\"ROLL1\"],\"staged_barcodes\":[\"ROLL1\"],\"eligible_barcodes\":[\"ROLL1\"],\"required_scan_count\":1,\"matched_scan_count\":0,\"assignments_satisfied\":true,\"scan_satisfied\":false,\"assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}],\"start_assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "admin detail skips hidden worker scan and WIP startup requests",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/shared-sets?item_code=FILM-ALPHA",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[]}"
+   }
+  },
+  {
+   "test": "admin detail first build reuses the authorized cached thumbnail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=order-a&image_id=image-order-a&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "image/png"
+   },
+   "responseBody": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAAcSURBVBiVY/x3Z9d/BjQgEjEHzmZCl0QHw0MBAKlEBKsYX/icAAAAAElFTkSuQmCC"
+   }
+  },
+  {
+   "test": "admin detail first build reuses the authorized cached thumbnail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=order-b&image_id=image-order-b&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "image/png"
+   },
+   "responseBody": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAAcSURBVBiVY/x3Z9d/BjQgEjEHzmZCl0QHw0MBAKlEBKsYX/icAAAAAElFTkSuQmCC"
+   }
+  },
+  {
+   "test": "admin detail first build reuses the authorized cached thumbnail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-start-requirements?order_id=order-a&apparatus=apparatus%3Adefault%3Abosma_7",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"policy\":\"state_all\",\"requires_material\":true,\"material_scan_required\":true,\"requirement_groups\":[],\"assigned_barcodes\":[\"ROLL1\"],\"staged_barcodes\":[\"ROLL1\"],\"eligible_barcodes\":[\"ROLL1\"],\"required_scan_count\":1,\"matched_scan_count\":0,\"assignments_satisfied\":true,\"scan_satisfied\":false,\"assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}],\"start_assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "admin detail first build reuses the authorized cached thumbnail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/shared-sets?item_code=FILM-ALPHA",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"products\":[]}"
+   }
+  },
+  {
+   "test": "sequence summary can move paused order down",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"order-a\",\"after_order_id\":\"order-c\",\"expected_version\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"idempotency_key\":\"f61739018d2040112b29e286874c3a06\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"order-b\",\"order-c\",\"order-a\"],\"version\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"revision\":6,\"epoch\":\"summary-widget-server\",\"adjusted\":false}"
+   }
+  },
+  {
+   "test": "sequence summary can move paused order up",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"order-c\",\"before_order_id\":\"order-a\",\"expected_version\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"idempotency_key\":\"fb38b0548051693e96be7da6f7c6a396\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"order-c\",\"order-a\",\"order-b\"],\"version\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"revision\":6,\"epoch\":\"summary-widget-server\",\"adjusted\":false}"
+   }
+  },
+  {
+   "test": "sequence summary can move pending order across paused order",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"order-c\",\"before_order_id\":\"order-a\",\"expected_version\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"idempotency_key\":\"134b21b90d98d2cebbf2e8eb3e797255\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"order-c\",\"order-a\",\"order-b\"],\"version\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"revision\":6,\"epoch\":\"summary-widget-server\",\"adjusted\":false}"
+   }
+  },
+  {
+   "test": "sequence summary can move paused order immediately below running order",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"order-a\",\"before_order_id\":\"order-c\",\"expected_version\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"idempotency_key\":\"c9c0c8b972f83f7c9f4fbf4e3d121ea7\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"order-b\",\"order-a\",\"order-c\"],\"version\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"revision\":6,\"epoch\":\"summary-widget-server\",\"adjusted\":false}"
+   }
+  },
+  {
+   "test": "sequence summary keeps in_progress order protected",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"order-d\",\"before_order_id\":\"order-c\",\"expected_version\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"idempotency_key\":\"26c1918ee9fb587561485aacd20ef914\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"order-a\",\"order-b\",\"order-d\",\"order-c\"],\"version\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"revision\":6,\"epoch\":\"summary-widget-server\",\"adjusted\":false}"
+   }
+  },
+  {
+   "test": "sequence summary keeps print_preflight order protected",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"order-d\",\"before_order_id\":\"order-c\",\"expected_version\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"idempotency_key\":\"782cd53693fd4d742922ebba6a53688f\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"order-a\",\"order-b\",\"order-d\",\"order-c\"],\"version\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"revision\":6,\"epoch\":\"summary-widget-server\",\"adjusted\":false}"
+   }
+  },
+  {
+   "test": "sequence reorder ACK waits for matching summary sequence version",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"order-b\",\"before_order_id\":\"order-a\",\"expected_version\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"idempotency_key\":\"f9e9a693dfa14d4a9fcd5ee84b41d6c0\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"order-b\",\"order-a\"],\"version\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"revision\":6,\"epoch\":\"summary-widget-server\",\"adjusted\":false}"
+   }
+  },
+  {
+   "test": "issue-colored frozen summary cannot move or become an anchor",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer summary-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"order-d\",\"before_order_id\":\"order-c\",\"expected_version\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"idempotency_key\":\"7fd2f85c92c58c09216ff54b090df711\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"order_ids\":[\"order-a\",\"order-d\",\"order-c\"],\"version\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"revision\":6,\"epoch\":\"summary-widget-server\",\"adjusted\":false}"
+   }
+  }
+ ]
+}

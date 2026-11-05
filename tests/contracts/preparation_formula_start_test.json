@@ -1,0 +1,204 @@
+{
+ "source": "test/preparation_formula_start_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "variant detail FAB opens receipt with original order and target material",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "variant detail FAB opens receipt with original order and target material",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "variant detail FAB opens receipt with original order and target material",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr&variant_id=legacy&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "variant detail FAB opens receipt with original order and target material",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "variant detail FAB opens receipt with original order and target material",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants/order?product_code=P&material_id=pe-pr&variant_id=legacy&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"legacy\",\"name\":\"Asosiy\",\"revision_id\":1}"
+   }
+  },
+  {
+   "test": "formula library management does not offer order receipt start",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[],\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "formula library management does not offer order receipt start",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[],\"formulas\":[]}"
+   }
+  },
+  {
+   "test": "receipt action requires existing kirim route permission",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "receipt action requires existing kirim route permission",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "receipt action requires existing kirim route permission",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr&variant_id=legacy&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "receipt action requires existing kirim route permission",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "source": "test/order_image_memory_peek_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "API peek shares cache key but isolates variant version account and session",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=order-1&image_id=v1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer peek-session"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "\u0007\b\t"
+   }
+  }
+ ]
+}

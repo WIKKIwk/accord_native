@@ -1,0 +1,57 @@
+{
+ "source": "test/bosma_astatka_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "bosma astatka sends only standalone report endpoint and validates response",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/bosma-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"zakaz-bosma-astatka\",\"total_waste\":0.0,\"returned_paint_items\":[],\"returned_paint_image_id\":\"paint-image\",\"description\":\"Hisobot\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"report_id\":\"astatka-1\"}}"
+   }
+  },
+  {
+   "test": "bosma astatka keeps legacy metrics compatible",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/bosma-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"zakaz-bosma-astatka\",\"total_waste\":0.0,\"finished_goods_meter\":80.0,\"finished_goods_kg\":12.0,\"bobina_kg\":1.0,\"returned_paint_items\":[],\"returned_paint_image_id\":\"paint-image\",\"description\":\"Hisobot\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"report\":{\"report_id\":\"legacy-1\"}}"
+   }
+  },
+  {
+   "test": "bosma astatka backend rejection never falls back to complete or pause",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/bosma-astatka",
+   "requestHeaders": {
+    "Authorization": "Bearer worker-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_8\",\"order_id\":\"zakaz-bosma-astatka\",\"total_waste\":0.0,\"returned_paint_items\":[],\"returned_paint_image_id\":\"paint-image\",\"description\":\"Hisobot\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_not_started\"}"
+   }
+  }
+ ]
+}

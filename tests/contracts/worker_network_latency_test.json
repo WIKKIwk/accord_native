@@ -1,0 +1,231 @@
+{
+ "source": "test/worker_network_latency_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "concurrent snapshot consumers share one read; completed results are not cached",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "concurrent snapshot consumers share one read; completed results are not cached",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "scoped controls request carries canonical IDs and auth scopes do not share reads",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?apparatus=apparatus%3Atest%3Aone&order_id=zakaz-one",
+   "requestHeaders": {
+    "Authorization": "Bearer another-test-account"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "scoped controls request carries canonical IDs and auth scopes do not share reads",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?apparatus=apparatus%3Atest%3Aone&order_id=zakaz-one",
+   "requestHeaders": {
+    "Authorization": "Bearer another-test-account"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "failed shared snapshot is evicted and can be retried",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"store_failed\"}"
+   }
+  },
+  {
+   "test": "failed shared snapshot is evicted and can be retried",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "network recovery bypasses a read stuck on the previous connection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "network recovery bypasses a read stuck on the previous connection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "network recovery bypasses a read stuck on the previous connection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "an admin mutation prevents sharing a pre-mutation snapshot",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-control",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"order_id\":\"zakaz-one\",\"action\":\"freeze\",\"scope\":\"order\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"control\":{\"state\":\"frozen\"}}"
+   }
+  },
+  {
+   "test": "an admin mutation prevents sharing a pre-mutation snapshot",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "an admin mutation prevents sharing a pre-mutation snapshot",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":1,\"epoch\":\"network-test\",\"maps\":[],\"sequences\":{},\"visible_order_ids\":{},\"queue_states\":{},\"stage_states\":{},\"queue_policies\":[],\"queue_action_controls\":{},\"order_controls\":{},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "worker cold-load 503 exits loading and exposes retry",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?worker_scope=true&projection=worker_list_v1&queue_limit=10&queue_positions=true",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"store_failed\"}"
+   }
+  },
+  {
+   "test": "worker cold-load 503 exits loading and exposes retry",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer local-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"store_failed\"}"
+   }
+  }
+ ]
+}

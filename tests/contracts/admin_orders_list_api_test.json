@@ -1,0 +1,200 @@
+{
+ "source": "test/admin_orders_list_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "Orders requests opt-in summary and keeps conditional scope parameters",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-page?view=orders&limit=20&projection=orders_list_v1&search=x&cursor=next&if_version=v0",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"projection\":\"orders_list_v1\",\"version\":\"v1\",\"epoch\":\"server\",\"rev\":1,\"scope\":\"orders-scope\",\"offset\":0,\"total\":3,\"next_cursor\":null,\"order_ids\":[\"zakaz-1\",\"zakaz-2\"],\"pending_ids\":[\"pending-3\"],\"pending_rows\":{\"pending-3\":{\"id\":\"pending-3\",\"code\":\"3\",\"title\":\"Pending product\",\"customer_name\":\"Pending customer\",\"image_id\":\"pending-image\",\"kg\":500.5}},\"rows\":{\"zakaz-1\":{\"id\":\"zakaz-1\",\"code\":\"zakaz-1\",\"title\":\"O‘zbek 😀\",\"customer_name\":\"Xaridor\",\"image_id\":\"photo-1\",\"display_state\":\"in_progress\",\"watermarks\":[{\"apparatus_id\":\"apparatus:default:bosma_7\",\"kind\":\"active\"}]},\"zakaz-2\":{\"id\":\"zakaz-2\",\"code\":\"zakaz-2\",\"title\":\"O‘zbek 😀\",\"customer_name\":\"Xaridor\",\"image_id\":\"photo-1\",\"display_state\":\"in_progress\",\"watermarks\":[{\"apparatus_id\":\"apparatus:default:bosma_7\",\"kind\":\"active\"}]}}}"
+   }
+  },
+  {
+   "test": "old server full Orders pages remain a compatible fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-page?view=orders&limit=20&projection=orders_list_v1",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"generic-detail-scope\",\"maps\":[{\"map\":{\"id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"title\":\"Full order\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"operations\":[]}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":\"pending\"}},\"queue_action_controls\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}}}},\"queue_policies\":[],\"stage_states\":{\"zakaz-scan-bootstrap\":{}},\"order_controls\":{\"zakaz-scan-bootstrap\":{\"state\":\"active\"}},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"order_customers\":{},\"calculation_templates\":{\"zakaz-scan-bootstrap\":{\"kg\":500,\"width_mm\":650,\"frame_count\":2}},\"version\":\"legacy\",\"offset\":0,\"total\":1,\"order_ids\":[\"zakaz-scan-bootstrap\"],\"next_cursor\":null}"
+   }
+  },
+  {
+   "test": "Orders accepts conditional 304 without decoding an empty body",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-page?view=orders&limit=20&projection=orders_list_v1&if_version=v1",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 304,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "generic detail omits apparatus and fetches exactly one canonical order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?order_id=zakaz-scan-bootstrap&detail=true",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"generic-detail-scope\",\"maps\":[{\"map\":{\"id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"title\":\"Full order\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"operations\":[]}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":\"pending\"}},\"queue_action_controls\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}}}},\"queue_policies\":[],\"stage_states\":{\"zakaz-scan-bootstrap\":{}},\"order_controls\":{\"zakaz-scan-bootstrap\":{\"state\":\"active\"}},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"order_customers\":{},\"calculation_templates\":{\"zakaz-scan-bootstrap\":{\"kg\":500,\"width_mm\":650,\"frame_count\":2}}}"
+   }
+  },
+  {
+   "test": "full detail rejects templates for another order or invalid shape",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?order_id=zakaz-scan-bootstrap&detail=true",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"generic-detail-scope\",\"maps\":[{\"map\":{\"id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"title\":\"Full order\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"operations\":[]}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":\"pending\"}},\"queue_action_controls\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}}}},\"queue_policies\":[],\"stage_states\":{\"zakaz-scan-bootstrap\":{}},\"order_controls\":{\"zakaz-scan-bootstrap\":{\"state\":\"active\"}},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"order_customers\":{},\"calculation_templates\":{\"wrong-order\":{\"kg\":100}}}"
+   }
+  },
+  {
+   "test": "full detail rejects templates for another order or invalid shape",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?order_id=zakaz-scan-bootstrap&detail=true",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"generic-detail-scope\",\"maps\":[{\"map\":{\"id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"title\":\"Full order\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"operations\":[]}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":\"pending\"}},\"queue_action_controls\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}}}},\"queue_policies\":[],\"stage_states\":{\"zakaz-scan-bootstrap\":{}},\"order_controls\":{\"zakaz-scan-bootstrap\":{\"state\":\"active\"}},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"order_customers\":{},\"calculation_templates\":{\"\":{\"kg\":100}}}"
+   }
+  },
+  {
+   "test": "full detail rejects templates for another order or invalid shape",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?order_id=zakaz-scan-bootstrap&detail=true",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"generic-detail-scope\",\"maps\":[{\"map\":{\"id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"title\":\"Full order\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"operations\":[]}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":\"pending\"}},\"queue_action_controls\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}}}},\"queue_policies\":[],\"stage_states\":{\"zakaz-scan-bootstrap\":{}},\"order_controls\":{\"zakaz-scan-bootstrap\":{\"state\":\"active\"}},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"order_customers\":{},\"calculation_templates\":{\"zakaz-scan-bootstrap\":\"bad\"}}"
+   }
+  },
+  {
+   "test": "full detail rejects templates for another order or invalid shape",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?order_id=zakaz-scan-bootstrap&detail=true",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"generic-detail-scope\",\"maps\":[{\"map\":{\"id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"title\":\"Full order\",\"nodes\":[],\"edges\":[]},\"program\":{\"map_id\":\"zakaz-scan-bootstrap\",\"product_code\":\"P1\",\"operations\":[]}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":\"pending\"}},\"queue_action_controls\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}}}},\"queue_policies\":[],\"stage_states\":{\"zakaz-scan-bootstrap\":{}},\"order_controls\":{\"zakaz-scan-bootstrap\":{\"state\":\"active\"}},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"order_customers\":{},\"calculation_templates\":[]}"
+   }
+  },
+  {
+   "test": "pending detail requests one ID and retains complete calculation data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/pending-orders?id=pending-3",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"id\":\"pending-3\",\"manager_name\":\"Manager\",\"template\":{\"kg\":500,\"frame_count\":2,\"production_options\":{}}}"
+   }
+  },
+  {
+   "test": "pending detail rejects wrong IDs, list responses and HTTP errors",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/pending-orders?id=pending-3",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"id\":\"wrong\",\"template\":{}}"
+   }
+  },
+  {
+   "test": "pending detail rejects wrong IDs, list responses and HTTP errors",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/pending-orders?id=pending-3",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[]"
+   }
+  },
+  {
+   "test": "pending detail rejects wrong IDs, list responses and HTTP errors",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/pending-orders?id=pending-3",
+   "requestHeaders": {
+    "Authorization": "Bearer orders-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"missing\"}"
+   }
+  }
+ ]
+}

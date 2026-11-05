@@ -1,0 +1,297 @@
+{
+ "source": "test/preparation_screw_shares_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"20.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"80.000000\"}]},{\"name\":\"B\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"50.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"50.000000\"}]},{\"name\":\"C\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=false)",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/shares?",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"shares\":[{\"name\":\"A\",\"percent\":\"25.000000\"},{\"name\":\"B\",\"percent\":\"50.000000\"},{\"name\":\"C\",\"percent\":\"25.000000\"}]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"25.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"20.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"80.000000\"}]},{\"name\":\"B\",\"share_percent\":\"50.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"50.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"50.000000\"}]},{\"name\":\"C\",\"share_percent\":\"25.000000\",\"lines\":[{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"25.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"20.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"80.000000\"}]},{\"name\":\"B\",\"share_percent\":\"50.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"50.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"50.000000\"}]},{\"name\":\"C\",\"share_percent\":\"25.000000\",\"lines\":[{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=false)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=true)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=true)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"20.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"80.000000\"}]},{\"name\":\"B\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"50.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"50.000000\"}]},{\"name\":\"C\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=true)",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved/shares?",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"shares\":[{\"name\":\"A\",\"percent\":\"25.000000\"},{\"name\":\"B\",\"percent\":\"50.000000\"},{\"name\":\"C\",\"percent\":\"25.000000\"}]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"25.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"20.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"80.000000\"}]},{\"name\":\"B\",\"share_percent\":\"50.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"50.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"50.000000\"}]},{\"name\":\"C\",\"share_percent\":\"25.000000\",\"lines\":[{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=true)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "three screw shares save as one recipe and survive reload (saved=true)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/saved?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"25.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"20.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"80.000000\"}]},{\"name\":\"B\",\"share_percent\":\"50.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"50.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"50.000000\"}]},{\"name\":\"C\",\"share_percent\":\"25.000000\",\"lines\":[{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "incomplete allocation hides every screw kg and failed save keeps the editor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "incomplete allocation hides every screw kg and failed save keeps the editor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"100.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"20.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"80.000000\"}]},{\"name\":\"B\",\"share_percent\":null,\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"50.000000\"},{\"item_code\":\"C2\",\"name\":\"11503\",\"percent\":\"50.000000\"}]},{\"name\":\"C\",\"share_percent\":null,\"lines\":[{\"item_code\":\"C3\",\"name\":\"2426H\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "incomplete allocation hides every screw kg and failed save keeps the editor",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "incomplete allocation hides every screw kg and failed save keeps the editor",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas/shares?",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"shares\":[{\"name\":\"A\",\"percent\":\"30.000000\"},{\"name\":\"B\",\"percent\":\"40.000000\"},{\"name\":\"C\",\"percent\":\"30.000000\"}]}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Shnek ulushlari saqlanmadi\"}"
+   }
+  }
+ ]
+}

@@ -1,0 +1,333 @@
+{
+ "source": "test/preparation_formula_reuse_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "shared product picker searches complete recipes and reuses one in the target scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "shared product picker searches complete recipes and reuses one in the target scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"source-lg\",\"name\":\"LG\",\"formula_code\":\"950400000001\",\"product_code\":\"OTHER-source-lg\",\"product_title\":\"Silver choy 100 gr\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0317\"],\"can_create\":true},{\"id\":\"source-xl\",\"name\":\"XL\",\"formula_code\":\"950400000002\",\"product_code\":\"OTHER-source-xl\",\"product_title\":\"Mosh 900 gr\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"0318\"],\"can_create\":true},{\"id\":\"empty\",\"name\":\"Sinov\",\"formula_code\":\"950400000003\",\"product_code\":\"OTHER-empty\",\"product_title\":\"Papay\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0319\"],\"can_create\":true}]}"
+   }
+  },
+  {
+   "test": "shared product picker searches complete recipes and reuses one in the target scope",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants/reuse?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"source_variant_id\":\"source-lg\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"copied-lg\",\"name\":\"LG\",\"formula_code\":\"950400000010\",\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formula_count\":3,\"shares_complete\":true}"
+   }
+  },
+  {
+   "test": "shared product picker searches complete recipes and reuses one in the target scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "shared product picker searches complete recipes and reuses one in the target scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr&variant_id=copied-lg&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]},{\"name\":\"B\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]},{\"name\":\"C\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "shared product picker searches complete recipes and reuses one in the target scope",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "closing the search does not add a variant",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "closing the search does not add a variant",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"source-lg\",\"name\":\"LG\",\"formula_code\":\"950400000001\",\"product_code\":\"OTHER-source-lg\",\"product_title\":\"Silver choy 100 gr\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0317\"],\"can_create\":true},{\"id\":\"source-xl\",\"name\":\"XL\",\"formula_code\":\"950400000002\",\"product_code\":\"OTHER-source-xl\",\"product_title\":\"Mosh 900 gr\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"0318\"],\"can_create\":true},{\"id\":\"empty\",\"name\":\"Sinov\",\"formula_code\":\"950400000003\",\"product_code\":\"OTHER-empty\",\"product_title\":\"Papay\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0319\"],\"can_create\":true}]}"
+   }
+  },
+  {
+   "test": "a failed reuse can be retried without adding an empty variant",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "a failed reuse can be retried without adding an empty variant",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"source-lg\",\"name\":\"LG\",\"formula_code\":\"950400000001\",\"product_code\":\"OTHER-source-lg\",\"product_title\":\"Silver choy 100 gr\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0317\"],\"can_create\":true},{\"id\":\"source-xl\",\"name\":\"XL\",\"formula_code\":\"950400000002\",\"product_code\":\"OTHER-source-xl\",\"product_title\":\"Mosh 900 gr\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"0318\"],\"can_create\":true},{\"id\":\"empty\",\"name\":\"Sinov\",\"formula_code\":\"950400000003\",\"product_code\":\"OTHER-empty\",\"product_title\":\"Papay\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0319\"],\"can_create\":true}]}"
+   }
+  },
+  {
+   "test": "a failed reuse can be retried without adding an empty variant",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants/reuse?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"source_variant_id\":\"source-lg\"}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"Qayta urinib ko‘ring\"}"
+   }
+  },
+  {
+   "test": "a failed reuse can be retried without adding an empty variant",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"source-lg\",\"name\":\"LG\",\"formula_code\":\"950400000001\",\"product_code\":\"OTHER-source-lg\",\"product_title\":\"Silver choy 100 gr\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0317\"],\"can_create\":true},{\"id\":\"source-xl\",\"name\":\"XL\",\"formula_code\":\"950400000002\",\"product_code\":\"OTHER-source-xl\",\"product_title\":\"Mosh 900 gr\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"0318\"],\"can_create\":true},{\"id\":\"empty\",\"name\":\"Sinov\",\"formula_code\":\"950400000003\",\"product_code\":\"OTHER-empty\",\"product_title\":\"Papay\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0319\"],\"can_create\":true}]}"
+   }
+  },
+  {
+   "test": "a failed reuse can be retried without adding an empty variant",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants/reuse?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"source_variant_id\":\"source-lg\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"copied-lg\",\"name\":\"LG\",\"formula_code\":\"950400000010\",\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formula_count\":3,\"shares_complete\":true}"
+   }
+  },
+  {
+   "test": "a failed reuse can be retried without adding an empty variant",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"materials\":[],\"history\":[],\"orders\":[]}"
+   }
+  },
+  {
+   "test": "a failed reuse can be retried without adding an empty variant",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formulas?product_code=P&material_id=pe-pr&variant_id=copied-lg&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]},{\"name\":\"B\",\"share_percent\":\"40.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]},{\"name\":\"C\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"C1\",\"name\":\"0209\",\"percent\":\"100.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "a failed reuse can be retried without adding an empty variant",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/order-materials?order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"estimated_kg\":\"1000.000000\"}]}"
+   }
+  },
+  {
+   "test": "selection from an old account cannot be reused in the new account",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-variants?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"product_code\":\"P\",\"material_id\":\"pe-pr\",\"variants\":[{\"id\":\"legacy\",\"name\":\"Asosiy\",\"formula_count\":3,\"shares_complete\":true}]}"
+   }
+  },
+  {
+   "test": "selection from an old account cannot be reused in the new account",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/formula-catalog?product_code=P&material_id=pe-pr&order_id=order-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"formulas\":[{\"id\":\"source-lg\",\"name\":\"LG\",\"formula_code\":\"950400000001\",\"product_code\":\"OTHER-source-lg\",\"product_title\":\"Silver choy 100 gr\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0317\"],\"can_create\":true},{\"id\":\"source-xl\",\"name\":\"XL\",\"formula_code\":\"950400000002\",\"product_code\":\"OTHER-source-xl\",\"product_title\":\"Mosh 900 gr\",\"material_id\":\"mat-a\",\"material_name\":\"PE PR\",\"order_codes\":[\"0318\"],\"can_create\":true},{\"id\":\"empty\",\"name\":\"Sinov\",\"formula_code\":\"950400000003\",\"product_code\":\"OTHER-empty\",\"product_title\":\"Papay\",\"material_id\":\"mat-b\",\"material_name\":\"PE PR\",\"order_codes\":[\"0319\"],\"can_create\":true}]}"
+   }
+  }
+ ]
+}

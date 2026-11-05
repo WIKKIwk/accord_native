@@ -1,0 +1,57 @@
+{
+ "source": "test/resume_re_pause_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "re-pause command sends only identity and the expected resume",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/re-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer repause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"resume_id\":\"resume-1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":2,\"epoch\":\"server\"}"
+   }
+  },
+  {
+   "test": "re-pause failed writes are not replayed or replaced with output: 409",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/re-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer repause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"resume_id\":\"resume-1\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"queue_action_not_allowed\"}"
+   }
+  },
+  {
+   "test": "re-pause failed writes are not replayed or replaced with output: 500",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/re-pause",
+   "requestHeaders": {
+    "Authorization": "Bearer repause-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"resume_id\":\"resume-1\"}"
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"queue_action_not_allowed\"}"
+   }
+  }
+ ]
+}

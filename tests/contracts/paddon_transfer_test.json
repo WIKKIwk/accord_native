@@ -1,0 +1,952 @@
+{
+ "source": "test/paddon_transfer_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "paddon list offers transfer only for a cutting worker: cut",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "paddon list offers transfer only for a cutting worker: cut",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=100&apparatus=apparatus%3Adefault%3Aasset-010",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "paddon list offers transfer only for a cutting worker: cut",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "paddon list offers transfer only for a cutting worker: cut",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "paddon list offers transfer only for a cutting worker: cut",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "paddon list offers transfer only for a cutting worker: cut",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "paddon list offers transfer only for a cutting worker: print",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"print\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "transfer API validates the confirmed source, destination and selected WIPs",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/items/transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_code\":\"00001\",\"target_code\":\"00002\",\"progress_batch_ids\":[\"roll-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"source_code\":\"00001\",\"target_code\":\"00002\",\"progress_batch_ids\":[\"roll-1\"]}"
+   }
+  },
+  {
+   "test": "transfer API validates the confirmed source, destination and selected WIPs",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/items/transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_code\":\"00002\",\"target_code\":\"00001\",\"progress_batch_ids\":[\"roll-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"source_code\":\"00002\",\"target_code\":\"00003\",\"progress_batch_ids\":[\"roll-1\"]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/items/transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_code\":\"00001\",\"target_code\":\"00002\",\"progress_batch_ids\":[\"roll-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"source_code\":\"00001\",\"target_code\":\"00002\",\"progress_batch_ids\":[\"roll-1\"]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":1,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":1,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":1,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":1,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/items/transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_code\":\"00002\",\"target_code\":\"00001\",\"progress_batch_ids\":[\"roll-1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"source_code\":\"00002\",\"target_code\":\"00001\",\"progress_batch_ids\":[\"roll-1\"]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "reuses transfer panes and rows, confirms, then refreshes both paddons",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "a pallet locked after selection is rejected and both sides are reloaded",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "a pallet locked after selection is rejected and both sides are reloaded",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "a pallet locked after selection is rejected and both sides are reloaded",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "a pallet locked after selection is rejected and both sides are reloaded",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "a pallet locked after selection is rejected and both sides are reloaded",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/items/transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_code\":\"00001\",\"target_code\":\"00002\",\"progress_batch_ids\":[\"roll-1\"]}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"paddon_locked\"}"
+   }
+  },
+  {
+   "test": "a pallet locked after selection is rejected and both sides are reloaded",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "a pallet locked after selection is rejected and both sides are reloaded",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "a pallet locked after selection is rejected and both sides are reloaded",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "locked detail cannot be edited even if the server advertises free movement",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "locked detail cannot be edited even if the server advertises free movement",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "locked detail cannot be edited even if the server advertises free movement",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":true,\"items\":[]}"
+   }
+  },
+  {
+   "test": "visible other-worker destination still requires free movement",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "visible other-worker destination still requires free movement",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-2\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "visible other-worker destination still requires free movement",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "visible other-worker destination still requires free movement",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-2\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "cancelling confirmation preserves selection and sends no write",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "cancelling confirmation preserves selection and sends no write",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "cancelling confirmation preserves selection and sends no write",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "cancelling confirmation preserves selection and sends no write",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/items/transfer",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_code\":\"00001\",\"target_code\":\"00002\",\"progress_batch_ids\":[\"roll-1\"]}"
+   },
+   "error": "TimeoutException"
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":1,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":1,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":1,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "a lost response reloads committed membership without replaying the transfer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":1,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "switching accounts while confirming cannot submit the old selection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "switching accounts while confirming cannot submit the old selection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "switching accounts while confirming cannot submit the old selection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "switching accounts while confirming cannot submit the old selection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  },
+  {
+   "test": "switching accounts while confirming cannot submit the old selection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "switching accounts while confirming cannot submit the old selection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons?limit=200&apparatus=apparatus%3Adefault%3Aasset-010&selectable_only=true",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddons\":[{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},{\"id\":\"paddon-00003\",\"code\":\"00003\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\",\"locked_at_unix\":2}]}"
+   }
+  },
+  {
+   "test": "switching accounts while confirming cannot submit the old selection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00001\",\"code\":\"00001\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":2,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[{\"batch_id\":\"roll-1\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-1\",\"wip_status\":\"waiting\",\"produced_qty\":15,\"uom\":\"kg\"},{\"batch_id\":\"roll-busy\",\"apparatus\":\"apparatus:default:asset-010\",\"label_item_code\":\"ITEM\",\"label_item_name\":\"roll-busy\",\"wip_status\":\"in_use\",\"produced_qty\":15,\"uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "switching accounts while confirming cannot submit the old selection",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/qr/report?code=00002",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"id\":\"paddon-00002\",\"code\":\"00002\",\"apparatus_id\":\"apparatus:default:asset-010\",\"item_count\":0,\"created_by_ref\":\"worker-1\"},\"can_manage_items\":true,\"free_movement_enabled\":false,\"items\":[]}"
+   }
+  }
+ ]
+}

@@ -1,0 +1,73 @@
+{
+ "source": "test/pending_orders_api_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "pending list and image are authenticated; completion sends same identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/pending-orders",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"id\":\"zakaz-9011\",\"template\":{\"order_number\":\"9011\",\"kg\":500,\"customer\":\"Mijoz\",\"product\":\"Mahsulot\",\"status\":\"rulon\",\"production_options\":{\"print_method\":\"flexo\",\"cold_glue\":true,\"diameter_mm\":45.5},\"frame_product_size_mm\":300,\"frame_count\":2,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}]},\"manager_name\":\"Manager\"}]"
+   }
+  },
+  {
+   "test": "pending list and image are authenticated; completion sends same identity",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/pending-orders/image?id=zakaz-9011",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "image/webp"
+   },
+   "responseBody": {
+    "text": "\u0001\u0002\u0003"
+   }
+  },
+  {
+   "test": "pending list and image are authenticated; completion sends same identity",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/with-order",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"map\":{\"id\":\"draft-id\",\"product_code\":\"ITEM\",\"title\":\"Mahsulot\",\"nodes\":[],\"edges\":[]},\"template\":{\"production_options\":{\"print_method\":\"flexo\",\"cold_glue\":true,\"diameter_mm\":45.5},\"name\":\"\",\"order_number\":\"9011\",\"customer_ref\":\"\",\"customer\":\"Mijoz\",\"item_code\":\"\",\"product\":\"Mahsulot\",\"status\":\"rulon\",\"material_display\":\"\",\"color\":\"\",\"image_id\":\"\",\"image_name\":\"\",\"image_mime\":\"\",\"image_size_bytes\":0,\"image_url\":\"\",\"frame_product_size_mm\":300.0,\"frame_count\":2.0,\"edge_allowance_mm\":15.0,\"width_mm\":0.0,\"waste_percent\":5.0,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}],\"first_layer_material\":\"pet\",\"first_layer_micron\":\"12\",\"second_layer_material\":\"\",\"second_layer_micron\":\"\",\"third_layer_material\":\"\",\"third_layer_micron\":\"\",\"note\":\"\",\"kg\":500.0},\"pending_order_id\":\"zakaz-9011\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"saved\":{\"map\":{\"id\":\"zakaz-9011\",\"product_code\":\"ITEM\",\"title\":\"Mahsulot\",\"nodes\":[],\"edges\":[],\"order_number\":\"9011\"},\"program\":{}},\"template\":{\"order_number\":\"9011\",\"kg\":500,\"customer\":\"Mijoz\",\"product\":\"Mahsulot\",\"status\":\"rulon\",\"production_options\":{\"print_method\":\"flexo\",\"cold_glue\":true,\"diameter_mm\":45.5},\"frame_product_size_mm\":300,\"frame_count\":2,\"layers\":[{\"material\":\"pet\",\"micron\":\"12\"}]}}"
+   }
+  },
+  {
+   "test": "pending list rejects forbidden responses without a fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/pending-orders",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"forbidden\"}"
+   }
+  }
+ ]
+}
