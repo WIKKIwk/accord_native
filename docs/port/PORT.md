@@ -29,7 +29,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
-| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 43/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
+| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 44/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
 | homashyo | | | | | Needs printing |
 | chat | | | | | iOS exists without tags; Android ships a stub |
 | rezka | | | | | |
