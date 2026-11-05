@@ -91,6 +91,30 @@ test('state delta validates patch fields and negotiated compact format', () => {
     error => error.code === 'production_map_snapshot_contract_invalid');
 });
 
+test('page window messages retain their wire value and expose the V2 revision', () => {
+  const { decodeProductionMapLiveMessage: decode } = api();
+  const event = { ok: true, type: 'page_window_checkpoint', window: 'window', epoch: 'server', rev: 7, version: 'v1',
+    next_cursors: [null] };
+  const result = decode(event, { paged: true });
+  assert.equal(result.revision, 7);
+  assert.equal(result.window, 'window');
+  assert.equal(result.value, event);
+  assert.throws(() => decode({ ...event, rev: -1 }, { paged: true }), error => error.code === 'production_map_snapshot_contract_invalid');
+});
+
+test('a live decoding error reaches the subscriber before stream completion', async () => {
+  const h = socketHarness();
+  try {
+    const events = [];
+    api().adminProductionMapLiveStream(session(), { paged: true }).subscribe(() => events.push('message'),
+      error => events.push(error.code), () => events.push('done'));
+    await Promise.resolve();
+    h.sockets[0].emit({ ok: true, type: 'snapshot' });
+    assert.deepEqual(events, ['paged_live_required', 'done']);
+    assert.equal(h.sockets[0].closed, true);
+  } finally { h.restore(); }
+});
+
 test('legacy full stream snapshots pass through the canonical queue decoder', () => {
   const { loadContract } = require('./support/contractFetch.cjs');
   const row = loadContract('order_scan_bootstrap_api_test').find(x => x.test === 'bootstrap decodes context and QR proof in one authorized request');

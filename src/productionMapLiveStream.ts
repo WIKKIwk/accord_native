@@ -32,7 +32,7 @@ export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: bo
     if (!['page_window_ready', 'page_window_delta', 'page_window_checkpoint', 'page_window_resync'].includes(type) ||
         typeof event.window !== 'string' || !event.window || typeof event.epoch !== 'string' || !event.epoch ||
         !Number.isInteger(event.rev) || (event.rev as number) < 0 || typeof event.version !== 'string' || !event.version) return fail('invalid page window event');
-    return { ...event };
+    return { ...event, revision: event.rev, value: event };
   }
   if (type === 'page_ready' || type === 'page_invalidated') {
     if (typeof event.epoch !== 'string' || !event.epoch || !Number.isInteger(event.rev) || (event.rev as number) < 0) return fail('invalid page live cursor');
@@ -63,7 +63,7 @@ export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: bo
 export type ProductionMapLiveStreamOptions = Omit<ProductionMapLiveOptions, 'delta' | 'notificationsOnly'> & { enableDelta?: boolean };
 export type ProductionMapLiveSubscription = (() => void) & { pause(): void; resume(): void };
 
-// The full-snapshot decoder is tracked separately before this method receives a V2 completion tag.
+/** @v2 adminProductionMapLiveStream */
 export function adminProductionMapLiveStream(session: Session, options: ProductionMapLiveStreamOptions = {}) {
   const token = activeSessionToken(session), scope = sessionReadScope(session), baseUrl = session.baseUrl;
   const current = () => !!token && activeSessionToken(session) === token && sessionReadScope(session) === scope && session.baseUrl === baseUrl;
@@ -77,7 +77,8 @@ export function adminProductionMapLiveStream(session: Session, options: Producti
         done = true;
         const old = socket; socket = null;
         old?.close();
-        if (error !== undefined) onError(error); else onDone?.();
+        if (error !== undefined) onError(error);
+        if (!cancelled) onDone?.();
       };
       const connect = (compact: boolean) => {
         if (cancelled || done) return;
