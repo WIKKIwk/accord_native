@@ -81,6 +81,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/productionMapAuditApi.ts` | `adminProductionMapAudit` | No V2 HTTP recording was found; focused V4 tests cover the source-derived request and report parsing |
 | `src/productionProgressCorrectionApi.ts` | `adminProgressBatchCorrect` | No V2 HTTP recording was found; focused V4 tests cover source-derived validation, request fields and response checks |
 | `src/scannedWipApi.ts` | `adminReturnScannedWip`, `adminScannedWips` | No V2 HTTP recordings were found; focused V4 tests cover their source-derived scopes, requests and response validation |
+| `src/paddonSuccessorApi.ts` | `createActivePaddonSuccessor` | No V2 HTTP recording was found; a focused V4 test covers the source-derived request and response checks |
 | `src/paddonConfirmPrintApi.ts` | `confirmPaddonPrint` | No V2 HTTP recording was found; focused V4 tests cover locking, identity and the source-derived request |
 | `src/chatDeviceTokenApi.ts` | `chatRegisterDeviceToken`, `chatUnregisterDeviceToken` | No V2 HTTP recordings were found; focused V4 tests cover registration, direct unregister and response errors |
 | `src/calculateApi.ts` | `calculate` | No V2 HTTP recording was found; focused V4 tests cover source-derived request serialization, response defaults and error handling |
