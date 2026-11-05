@@ -26,3 +26,14 @@ export async function pendingOrderDetail(session: Session, orderId: string) {
   if (!row || row.id !== id || !object(row.template)) throw invalid();
   return pendingOrderFromJson(row);
 }
+/** @v2 pendingOrders */
+export async function pendingOrders(session: Session) {
+  const response = await authorizedFetch(session, '/v1/mobile/admin/pending-orders');
+  if (response.status !== 200) {
+    let data: unknown; try { data = await response.json(); } catch { data = null; }
+    throw productionMapResponseError(response.status, data, 'pending_orders');
+  }
+  const payload: unknown = await response.json();
+  if (!Array.isArray(payload)) throw new TypeError('Invalid pending orders');
+  return payload.map(pendingOrderFromJson);
+}

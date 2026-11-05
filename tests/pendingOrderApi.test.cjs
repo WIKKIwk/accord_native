@@ -21,3 +21,10 @@ for (const [name, attempts, valid] of [['pending detail requests one ID and reta
   }
   replay.assertDone();
 });
+for (const [name, valid] of [['pending list and image are authenticated; completion sends same identity', true], ['pending list rejects forbidden responses without a fallback', false]]) test(name, async () => {
+  const stem = 'pending_orders_api_test', replay = contractFetch(stem, name, { onlyPaths: ['/v1/mobile/admin/pending-orders'] }), session = recordedSession(stem, name);
+  const api = load('pendingOrderApi', { './authorizedFetch': { authorizedFetch: (s, p, init = {}) => replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) } });
+  if (valid) { const rows = await api.pendingOrders(session); assert.equal(rows[0].id, 'zakaz-9011'); assert.equal(rows[0].template.kg, 500); }
+  else await assert.rejects(api.pendingOrders(session));
+  replay.assertDone();
+});
