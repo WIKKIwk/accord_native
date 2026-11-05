@@ -1,7 +1,7 @@
 # preparation
 
 Status: part 1 of 1 in progress
-Stopped at: port production models and APIs, then screen logic from the V2 baseline.
+Stopped at: port preparation screen state and actions, and write the platform UI contract.
 
 ## Open items
 | Where | V2 reference | What is needed |
