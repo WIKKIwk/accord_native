@@ -15,13 +15,20 @@ has to fit Android.
 2. `.port/role-<id>.md`, from `port_ledger.mjs role <id>`, for the surface list and its iOS checkboxes.
 3. The V2 widget named in the contract, only for anything the contract leaves unclear. Read it by line range.
 
-V2 is read-only. If there is no contract yet, stop and say that the logic session must run first.
+V2 is read-only. If there is no contract yet, stop and say that the logic session must run first. If
+`git branch --show-current` says `main`, stop and tell the user to run
+`.agents/skills/accord-port/scripts/port_worktree.sh <id>-ios` and open that folder.
 
 ## Scope fence
 
-Write only `*.ios.tsx`, `*.ios.ts`, and route files under `src/app/ios-<role>/`. An Android session may be
+Write only `*.ios.tsx`, `*.ios.ts`, route files under `src/app/ios-<role>/`, and your status file
+`docs/port/status/<id>-ios.md`. Its shape is in "Parallel sessions" of `$accord-port`. An Android session may be
 running at the same time. Shared files (`*Logic.ts`, `*Api.ts`, `*Model.ts`, `use*.ts`) belong to the logic
-session. If one needs a change, add a row to **Open items** in `PORT.md` and carry on with the rest.
+session. If one needs a change, add a row under "Needs from the integrator" and carry on with the
+rest. Do the same for the `src/app/index.tsx` entry that opens your routes; do not edit that file.
+
+Simulators and emulators are shared. Start Metro on your own port (`npx expo start --port <free port>`). If the
+device is in use, finish the code and report that it was not run.
 
 No `fetch`, parsing, validation or business rule goes in a view. A condition such as "this button is enabled
 when..." must come from the hook.
@@ -72,7 +79,7 @@ src/<domain>/
 - A missing component is resolved in this order: another Expo UI component, then a React Native view with
   `PlatformColor`, then a custom SwiftUI view from the extending guide at
   `https://docs.expo.dev/versions/v58.0.0/sdk/ui/swift-ui/extending.md`. Custom native views need a development
-  build, so open an item in `PORT.md` first.
+  build, so add an open item to your status file first.
 - `glassEffect` needs iOS 26 and Xcode 26. Provide what older iOS shows if V2 supports it.
 - Support light and dark mode, Dynamic Type and VoiceOver labels on icon-only controls.
 - All texts come from the contract's keys. Check Urdu right-to-left once localization lands.

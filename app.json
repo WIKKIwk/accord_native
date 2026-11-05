@@ -8,9 +8,11 @@
     "scheme": "accordmobilev4",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.accord.mobilev4",
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.accord.mobilev4",
       "softwareKeyboardLayoutMode": "pan",
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {

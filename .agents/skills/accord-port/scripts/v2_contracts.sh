@@ -27,6 +27,19 @@ if [ "${1:-}" = "--role" ]; then
     echo "Role $role has no V2 tests with HTTP mocks, so there is nothing to record."
     exit 0
   fi
+  # Roles share V2 tests. A fixture already recorded at this baseline is kept, so parallel sessions do not
+  # rewrite the same file. Naming a test file explicitly still records it again.
+  missing=""
+  for file in "$@"; do
+    existing="$v4/tests/contracts/$(basename "$file" .dart).json"
+    if [ -f "$existing" ] && grep -q "\"baseline\": \"$baseline\"" "$existing"; then continue; fi
+    missing="$missing $file"
+  done
+  set -- $missing
+  if [ "$#" -eq 0 ]; then
+    echo "Every V2 test of role $role is already recorded at this baseline."
+    exit 0
+  fi
 fi
 if [ "$#" -eq 0 ]; then
   echo "Usage: v2_contracts.sh --role <id> | <test file>..." >&2

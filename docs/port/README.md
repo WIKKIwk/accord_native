@@ -15,10 +15,11 @@ node .agents/skills/accord-port/scripts/port_ledger.mjs plan
 
 ## Codex'ni ishga tushirish
 
-Har doim `accord_mobile_v4` ichidan oching. Boshqa joydan ochilsa, skilllar va `AGENTS.md` to'g'ri yuklanmaydi.
+Har bir agent o'z papkasidan ochiladi (`accord_mobile_v4-<nom>`, pastdagi "Parallel ishlash" bo'limiga qarang).
+`accord_mobile_v4` ning o'zi `main` uchun: u yerda agent ishlamaydi, skill to'xtab papka ochishni so'raydi.
 
 ```bash
-cd /Users/wikki/Desktop/Accord_project/accord_mobile_v4 && codex -m gpt-6.1-terra -c model_reasoning_effort=max -s workspace-write -a on-request -c sandbox_workspace_write.network_access=true
+cd /Users/wikki/Desktop/Accord_project/accord_mobile_v4-preparation && codex -m gpt-6.1-terra -c model_reasoning_effort=max -s workspace-write -a on-request -c sandbox_workspace_write.network_access=true
 ```
 
 - `-m`: `config.toml` da `gpt-6-luna` (272 ming oyna) turibdi, terra va sol'da oyna 500 ming.
@@ -36,7 +37,41 @@ Codex'da `$` yozing: ro'yxatda uchalasi chiqishi kerak.
 Chiqmasa, deyarli har doim Codex `accord_mobile_v4` emas, `Accord_project` ildizidan ochilgan bo'ladi. Ildizdan
 ochilganda Codex faqat eski uchta skillni ko'radi (`flutter-to-expo-port`, `expo-ios-swiftui-screens`,
 `expo-android-compose-screens`). Shu paytda ildizga yozish ruxsati v2 ni ham qamraydi, shuning uchun u yerda portni
-boshlamang. Ilovada loyiha sifatida aynan `accord_mobile_v4` papkasini oching.
+boshlamang. Ilovada loyiha sifatida agentning o'z papkasini oching.
+
+## Parallel ishlash
+
+Har agentning o'z papkasi va branch'i bor, shuning uchun ular bir-biriga xalaqit bermaydi. Papkani shu buyruq ochadi,
+`<nom>` o'rniga jadvaldagi nomni yozing:
+
+```bash
+/Users/wikki/Desktop/Accord_project/accord_mobile_v4/.agents/skills/accord-port/scripts/port_worktree.sh <nom>
+```
+
+Keyin Codex'da `accord_mobile_v4-<nom>` papkasini oching va promptni yuboring. Agent tugagach, Claude'ga "`<nom>` tugadi"
+deb ayting. U branch'ni `main` ga qo'shadi, testlarni yuritadi va keyingi qadamni aytadi.
+
+| Qadam | Papka nomi | Prompt | Qachon |
+|---:|---|---|---|
+| 1 | `build` | `$accord-port "Build session" bo'limi bo'yicha ishla` | Hozir |
+| 1 | `printer` | `$accord-port "Printer session" bo'limi bo'yicha ishla` | Hozir |
+| 2 | `base` | `$accord-port "Base session" bo'limi bo'yicha ishla` | Hozirgi aparatchi agenti tugab, u `main` da bo'lgach |
+| 3 | `preparation` | `$accord-port preparation rolini port qil` | `base` qo'shilgach |
+| 3 | `boyoqchi`, `customer`, `supplier`, `homashyo` | `$accord-port <nom> rolini port qil` | `base` qo'shilgach, `preparation` bilan birga |
+| 4 | `preparation-android` | `$accord-port-android preparation rolining ekranlarini docs/port/roles/preparation.md bo'yicha yasa` | `preparation` qo'shilgach |
+| 4 | `preparation-ios` | `$accord-port-ios preparation rolining ekranlarini docs/port/roles/preparation.md bo'yicha yasa` | `preparation` qo'shilgach |
+| 5 | `preparation-audit` | `$accord-port preparation rolini audit qil: V2 bilan solishtir, kodni o'zgartirma` | Ekranlar qo'shilgach |
+| 6 | | Tayyorlov masterini haqiqiy telefonda sinash | Audit tugagach |
+
+Keyingi rollar shu tartibda: logika, `<nom>-android` va `<nom>-ios`, `<nom>-audit`.
+
+- **Bir vaqtda nechta:** birinchi rol telefonda ishlamaguncha, rol agentlarini 5 tadan oshirmang. Umumiy yondashuv xato
+  bo'lsa, xato hamma rolga tarqaladi. Keyin xohlagancha ko'paytirsa bo'ladi.
+- **Aparatchi:** hozirgi agent tugagach, qolgan qismlari kutib turadi. Uning papka nomi `aparatchi`.
+- **Agent yarim yo'lda to'xtasa:** shu papkada yangi chat oching va xuddi shu promptni yuboring. Holat fayli
+  `docs/port/status/<nom>.md` qayerda to'xtaganini ko'rsatadi.
+- **Ruxsatlar:** "Full access" bilan agent boshqa agentning papkasiga ham, V2 ga ham yoza oladi.
+  Ilovada papka bilan cheklangan rejimni tanlang.
 
 ## Bitta rol qanday o'tadi
 
@@ -61,9 +96,6 @@ $accord-port-ios preparation rolining ekranlarini docs/port/roles/preparation.md
 ```text
 $accord-port preparation rolini audit qil: V2 bilan solishtir, kodni o'zgartirma
 ```
-
-Android va iOS'ni bir vaqtda ishlatsangiz, har birini alohida worktree'da oching. Buning uchun avval `.agents/`,
-`docs/port/` va tsconfig fayllari commit qilingan bo'lishi kerak, worktree ichida esa `npm ci` kerak bo'ladi.
 
 ## Commitlar
 
@@ -126,15 +158,12 @@ Bu yerda `<id>` o'rniga jadvaldagi rol nomini yozasiz.
 
 ## Qayerdan boshlash kerak
 
-**Qaysi rolni birinchi olishni siz hal qilasiz.** Quyida men taklif qilgan sinov varianti bor, majburiy emas:
-**`preparation` (tayyorlov masteri)**. U arzon va v2 da testlari bor. Formulalar, materiallar, omborlar va
-ishlab chiqarish ro'yxatlari Expo Go'da ishlaydi. Faqat ishlab chiqarish ekranidagi QR yorliqni qayta chop etish printer
-orqali ishlaydi, shuning uchun u development build talab qiladi. Codex buni `PORT.md` dagi Open items ga yozib qoldiradi
-va qolganini davom ettiradi. Natija yoqsa, `base` va keyingi rollarga o'ting. Yoqmasa,
-kam narsa yo'qotasiz va skillni tuzatamiz.
+Birinchi navbatda tayyorlov masteri (`preparation`), qaror 2026-11-05 da qabul qilingan. Tartib "Parallel ishlash"
+bo'limida. Tayyorlov masterlari V4 ga o'tadi, qolgan rollar V2 da ishlayveradi va navbati kelganda ko'chadi. V2 muzlatilgan:
+yangi funksiya qo'shilmaydi, buglar V4 da tuzatiladi. To'liq qarorlar `PORT.md` da (D9-D12).
 
-Boshqa tartib kerak bo'lsa, `.agents/skills/accord-port/references/roles.json` dagi tartibni o'zgartiring, `plan`
-qayta hisoblaydi.
+QR yorliqni qayta chop etish `printer` agenti tugaguncha ishlamaydi. Shu vaqtgacha uni V2 da qilsa bo'ladi: ikkala ilova
+bir telefonda tura oladi. Bitta akkaunt bilan ikkalasiga kirish hali sinalmagan.
 
 ## Limitni tejash
 
@@ -168,6 +197,7 @@ node .agents/skills/accord-port/scripts/port_ledger.mjs drift
 ## Siz qaror qiladigan narsalar
 
 - `docs/port/PORT.md` dagi **Decisions** jadvali hozircha standart qarorlar.
-- **Open items** ga qarab turing: Codex savol berish o'rniga noaniq narsalarni shu yerga yozadi.
+- **Open items** ga qarab turing: Codex savol berish o'rniga noaniq narsalarni `docs/port/status/<nom>.md` ga yozadi,
+  Claude ularni birlashtirishda `PORT.md` ga ko'chiradi.
 - **Deviations candidates** dagi v2 xatolarini tuzatish yoki tuzatmaslikni siz hal qilasiz.
 - V2 ni qachon yangi baseline qilishni ham siz hal qilasiz: `drift` natijasini ko'rib, Codex'ga "drift sync qil" deysiz.

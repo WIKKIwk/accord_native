@@ -29,7 +29,7 @@
       "features": [
         "preparation"
       ],
-      "notes": "Suggested first trial of the whole cycle: it is cheap and has recorded V2 tests. Everything except one flow runs in Expo Go. The QR label reprint in preparation_production_screen.dart (RpsQrReprintSheet, adminPrepareRawMaterialStockReprint, adminConfirmRawMaterialStockReprint) needs the Bluetooth and USB printer channels, so port its API and logic, leave the printing step as an open item in PORT.md, and let the printing part of the aparatchi role finish it. If base is not done yet, add only the role routing this role needs: src/app/index.tsx currently sends every session to the worker UI."
+      "notes": "Suggested first trial of the whole cycle: it is cheap and has recorded V2 tests. Everything except one flow runs in Expo Go. The QR label reprint in preparation_production_screen.dart (RpsQrReprintSheet, adminPrepareRawMaterialStockReprint, adminConfirmRawMaterialStockReprint) needs the Bluetooth and USB printer channels, so port its API and logic, leave the printing step as an open item in your status file, and let the printer session finish it. If base is not done yet, add only the role routing this role needs: src/app/index.tsx currently sends every session to the worker UI."
     },
     {
       "id": "boyoqchi",

@@ -14,6 +14,8 @@ const USAGE = `Usage: node .agents/skills/accord-port/scripts/port_ledger.mjs <c
   plan                Every role in port order, with what it adds and how many sessions it needs.
   role <id> [part]    A role's reading list, API, surfaces and tests, from V2's real references.
                       Writes .port/role-<id>.md, or .port/role-<id>-<part>.md for one part.
+  shared [a,b,c]      Open API methods that two or more roles need, for the base session to port first.
+                      Default: every role not done, except admin and brigader. Writes .port/shared-api.md
   status              Coverage totals and per-domain table. Writes .port/STATUS.md
   worklist <regex>    Search by name instead of by role, matched on V2 paths, endpoints and names.
                       Writes .port/worklist-<slug>.md
@@ -427,6 +429,38 @@ function layOne(graph, config, id) {
   return { role, reach, fresh, earlier };
 }
 
+/** Admin and brigader reach nearly everything, so counting them would call every method shared. */
+const BROAD_ROLES = new Set(['admin', 'brigader']);
+
+function sharedReport(list) {
+  const graph = buildGraph(V2);
+  const config = readRoles();
+  const done = readDone();
+  const wanted = list ? new Set(list.split(',').map(item => item.trim()).filter(Boolean)) : null;
+  for (const id of wanted ?? []) if (!config.roles.some(role => role.id === id)) throw new Error(`Unknown role "${id}".`);
+  const picked = config.roles.filter(role => (wanted ? wanted.has(role.id) : !done.has(role.id) && !BROAD_ROLES.has(role.id)));
+  const tagIndex = indexTags(scanV4());
+  const users = new Map();
+  for (const role of picked) {
+    for (const node of reachForRole(graph, role).nodes) {
+      if (node.kind !== 'api' || node.name.startsWith('_') || tagIndex.get(node.name)?.length) continue;
+      const item = users.get(node.name) ?? { node, roles: [] };
+      item.roles.push(role.id);
+      users.set(node.name, item);
+    }
+  }
+  const shared = [...users.values()].filter(item => item.roles.length > 1).sort((a, b) => a.node.name.localeCompare(b.node.name));
+  const report = `# Open API methods that two or more roles need (${shared.length})
+
+The base session ports these, so sessions running in parallel do not write them twice.
+Roles checked: ${picked.map(role => role.id).join(', ')}.
+
+${shared.map(({ node, roles }) => `- [ ] ${node.name} <- ${node.file}:${node.line} (${tokens(node.bytes)} tok), needed by: ${roles.join(', ')}`).join('\n') || '- none'}
+`;
+  console.log(`${shared.length} open API methods are needed by two or more roles.`);
+  console.log(`Saved: ${writeOut('shared-api.md', report)}`);
+}
+
 function roleReport(id, partNumber) {
   if (!id) throw new Error('role needs an id. Run: plan');
   const graph = buildGraph(V2);
@@ -504,6 +538,7 @@ function roleReport(id, partNumber) {
   const borrowed = [...reach.borrowed.entries()].sort(([a], [b]) => b.bytes - a.bytes).slice(0, 40)
     .map(([node, from]) => `- ${node.name} (${tokens(node.bytes)} tok) <- ${from?.name ?? 'route'}: ${node.file}:${node.line}`);
   const bytes = scope.reduce((sum, node) => sum + node.bytes, 0);
+  const openBytes = scope.filter(node => !isTagged(node)).reduce((sum, node) => sum + node.bytes, 0);
   const already = [...earlier.entries()].map(([owner, size]) => `${owner} ${kTokens(size)}`).join(', ');
 
   const report = `# Role: ${role.title} (${id})${part ? `, part ${partNumber} of ${parts.length}` : ''}
@@ -511,6 +546,7 @@ function roleReport(id, partNumber) {
 ${role.notes ?? ''}
 
 To read: ${kTokens(bytes)} tokens of V2 code${part ? '' : `, in ${parts.length} part(s). Run \`role ${id} <part>\` for one part`}.
+Still open: about ${kTokens(openBytes)}. Entries marked [x] are already ported, possibly in another role's files: reuse them and do not read them again.
 Already ported roles that cover part of this code${already ? `: ${already}` : ': none, so the shared core is included below'}. Do not re-read the covered code unless something here depends on its details.
 JSON role values: ${(role.jsonRoles ?? []).join(', ') || 'none'}. Scanned from V2's working tree. Line numbers can shift, so search by symbol.
 
@@ -704,6 +740,7 @@ try {
   if (!fs.existsSync(path.join(V2, 'pubspec.yaml'))) throw new Error(`V2 not found at ${V2}. Pass --v2 <path>.`);
   if (command === 'plan') plan();
   else if (command === 'role') roleReport(param, args[2]);
+  else if (command === 'shared') sharedReport(param);
   else if (command === 'status') status();
   else if (command === 'worklist') worklist(param);
   else if (command === 'drift') drift();

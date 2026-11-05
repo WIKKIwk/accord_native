@@ -1,8 +1,7 @@
 # Native bridges and plugins
 
-V4 targets Expo Go today, and Expo Go cannot load custom native code. The first role that needs a local
-module moves V4 to a development build: add `expo-dev-client` and `eas.json`, and keep Expo Go working until
-then. `.port/role-<id>.md` lists the channels each part needs. Native folders are generated, so never edit `ios/` or
+Expo Go cannot load custom native code, so the `build` session moves V4 to a development build and keeps
+Expo Go working until every native role is done. `.port/role-<id>.md` lists the channels each part needs. Native folders are generated, so never edit `ios/` or
 `android/` by hand. Put native code in `modules/<name>/`, created with
 `npx create-expo-module@latest --local`, and permissions in `app.json` or a config plugin.
 
