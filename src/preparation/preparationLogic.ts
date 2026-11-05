@@ -82,3 +82,36 @@ export function preparationWarehouseChoices(editable: readonly string[], assigne
   const allowed = new Set(editable);
   return [...new Set([...editable, ...assigned])].sort().map(name => ({ name, editable: allowed.has(name), selected: assigned.includes(name) }));
 }
+
+export function preparationMaterialHistory(history: readonly Record<string, unknown>[], warehouse: string, itemCode: string) {
+  const receipts: Record<string, unknown>[] = [], consumptions: { doc: Record<string, unknown>; line: Record<string, unknown> }[] = [];
+  for (const doc of history) {
+    if (doc.warehouse !== warehouse) continue;
+    if ((doc.kind === 'receipt' || doc.kind === 'receipt_reversal') && (doc.item_code ?? '') === itemCode) receipts.push(doc);
+    if (doc.kind === 'consumption' && Array.isArray(doc.lines)) {
+      for (const value of doc.lines) {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const line = value as Record<string, unknown>;
+          if ((line.item_code ?? '') === itemCode) consumptions.push({ doc, line });
+        }
+      }
+    }
+  }
+  return { receipts, consumptions };
+}
+export function preparationReverseHistory(history: readonly Record<string, unknown>[], receiptId: string | null,
+  result: Record<string, unknown>, createdAt: string) {
+  return [{ ...result, created_at: createdAt }, ...history.map(entry => (entry.id == null ? null : String(entry.id)) === receiptId
+    ? { ...entry, reversed: true, can_reverse: false } : entry)];
+}
+export function preparationInputError(value: string, options: { quantity?: boolean; maxLength?: number; emptyError?: string } = {}): string | null {
+  if (!options.quantity) {
+    const trimmed = value.trim();
+    return !trimmed ? options.emptyError ?? 'Nom kiriting' : trimmed.length > (options.maxLength ?? 160) ? 'Matn juda uzun' : null;
+  }
+  try { preparationDecimal(value); return null; }
+  catch (error) { return error instanceof Error ? error.message : String(error); }
+}
+export function preparationReceiptMode(warehouse: string | null, materialWarehouses: readonly string[]) {
+  return warehouse == null ? 'warehouse' : materialWarehouses.includes(warehouse) ? 'manual' : 'scale';
+}

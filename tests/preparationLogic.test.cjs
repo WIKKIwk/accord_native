@@ -34,3 +34,19 @@ test('warehouse scope, receipt rounding and share validation match V2', () => {
   assert.throws(() => m.preparationFormulaShareInputs(['A', 'B'], ['30', '60']));
   assert.deepEqual(m.preparationWarehouseChoices(['Own'], ['Other']), [{ name: 'Other', editable: false, selected: true }, { name: 'Own', editable: true, selected: false }]);
 });
+test('material detail and reversal keep only matching warehouse and item history', () => {
+  const history = [
+    { kind: 'receipt', id: 'r1', warehouse: 'Own', item_code: 'C1', can_reverse: true },
+    { kind: 'receipt', id: 'r2', warehouse: 'Other', item_code: 'C1' },
+    { kind: 'consumption', warehouse: 'Own', lines: [{ item_code: 'C1', kg: '1' }, { item_code: 'C2', kg: '2' }] },
+  ];
+  const result = m.preparationMaterialHistory(history, 'Own', 'C1');
+  assert.deepEqual(result.receipts.map(x => x.id), ['r1']); assert.equal(result.consumptions.length, 1);
+  const reversed = m.preparationReverseHistory(history, 'r1', { id: 'rev', kind: 'receipt_reversal' }, '2026-10-01');
+  assert.equal(reversed[0].id, 'rev'); assert.equal(reversed[1].can_reverse, false); assert.equal(reversed[1].reversed, true);
+  assert.equal(m.preparationReceiptMode(null, ['Own']), 'warehouse');
+  assert.equal(m.preparationReceiptMode('Own', ['Own']), 'manual');
+  assert.equal(m.preparationReceiptMode('Other', ['Own']), 'scale');
+  assert.equal(m.preparationInputError(' ', {}), 'Nom kiriting');
+  assert.ok(m.preparationInputError('0', { quantity: true }));
+});
