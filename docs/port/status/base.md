@@ -17,7 +17,7 @@ Stopped at: shared API and base logic comparison
 
 | `updateNickname`, `uploadAvatar` | `mobile_api_auth_profile.dart` | No V2 HTTP recording exists; source-derived tests cover nickname, multipart bytes, response status and session update. Device upload still needs a native runtime check. |
 
-| Account switching runtime | `createRuntimeAccountSwitchController`, `SecurityController.saveSwitchPinForCurrentUser` | Connect Firebase push synchronization, separate profile-switch PIN, security unlock and the platform account-switcher views to the account controller. |
+| Account switching runtime | `createRuntimeAccountSwitchController`, `SecurityController.saveSwitchPinForCurrentUser` | Connect Firebase push synchronization, security unlock, the shared separate profile-switch PIN store and the platform account-switcher views to the account controller. |
 
 ## Deviations candidates
 
@@ -35,4 +35,5 @@ Stopped at: shared API and base logic comparison
 |---|---|---|
 | `src/LoginScreen.tsx` | `loginCodeUsesNumericKeyboard`, `loginFailureMessage`, `LoginScreen.submitLogin` | Use the shared prefix rule for the keyboard, port localized transport/error messages and match V2 login/back behavior in the platform-owned login views. |
 | `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing profile UI helpers impose additional validation and do not call the shared V2 API functions; reconcile those helpers and their platform screens when profile UI is ported. |
+| `src/app/ios-worker/_layout.tsx` | `SecurityController.clearForLogout` | Clear the separate shared profile-switch PIN along with the app-lock PIN during iOS logout. |
 | `src/app/android-worker/` | `AppSession.homeRoute` | Add the Android worker Expo Router route. Until then the existing Android worker screen renders at the root; base cannot create route files outside its scope. |

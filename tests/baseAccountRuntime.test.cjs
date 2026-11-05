@@ -21,12 +21,14 @@ function fixture() {
   const parser = load('authenticateAccount', { './workerControlsApi': { isCanonicalApparatusId: () => true } });
   const controller = load('shared/accountSwitchController', { '../savedAccountStore': saved });
   const endpoints = { baseUrl: 'https://example.test', setBaseUrl: async value => { endpoints.baseUrl = value; } };
+  const clearedPins = [];
   const auth = load('auth', { 'expo-secure-store': {}, 'react-native': { Platform: { OS: 'web' } }, './chunkedStorage': chunks,
     './authenticateAccount': parser, './serverEndpointRuntime': { initializeServerEndpoints: async () => endpoints },
     './savedAccountRuntime': { initializeSavedAccounts: async () => accountStore }, './shared/accountSwitchController': controller,
     './pushTokenRuntime': { unregisterCurrentPushToken: async () => {} }, './appLock': { clearAppLock: async () => {} },
-    './logoutSavedSession': { logoutSavedSession: async () => {} } });
-  return { auth, accountStore };
+    './logoutSavedSession': { logoutSavedSession: async () => {} },
+    './shared/switchPinRuntime': { switchPinStore: { clear: async account => clearedPins.push(account.profile.ref) } } });
+  return { auth, accountStore, clearedPins };
 }
 
 test('runtime switch reauthenticates and activates the saved session', async () => {
@@ -61,5 +63,22 @@ test('runtime switch retains the prior session when reauthentication changes ide
     await assert.rejects(controller.switchTo(second.id), /identity does not match/);
     assert.equal(await auth.loadSession(), first);
     assert.equal(accountStore.activeAccountId, 'https://example.test|aparatchi|one');
+  } finally { global.fetch = previousFetch; }
+});
+
+
+test('runtime logout clears the active profile switch PIN before ending the session', async () => {
+  const previousFetch = global.fetch;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const { auth, accountStore, clearedPins } = fixture();
+    await auth.login('https://example.test', 'one', '40');
+    await accountStore.upsertAuthenticated({ baseUrl: 'https://example.test', profile: { role: 'aparatchi', ref: 'two' },
+      token: 'two', phone: 'two', code: '42', makeActive: false });
+    const controller = await auth.createRuntimeAccountSwitchController();
+    await controller.logoutCurrent();
+    assert.deepEqual(clearedPins, ['one']);
+    assert.equal(await auth.loadSession(), null);
+    assert.equal(accountStore.accounts.length, 1);
   } finally { global.fetch = previousFetch; }
 });

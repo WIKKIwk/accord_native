@@ -457,6 +457,8 @@ export async function createRuntimeAccountSwitchController(baseUrl?: string) {
       if (!activeSession) return;
       const { clearAppLock } = await import('./appLock');
       await clearAppLock(activeSession);
+      const { switchPinStore } = await import('./shared/switchPinRuntime');
+      await switchPinStore.clear(activeSession);
     },
   });
 }

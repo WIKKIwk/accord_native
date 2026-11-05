@@ -9,6 +9,7 @@ import { bootstrapSession } from '../shared/loginLogic';
 import { clearAppLock } from '../appLock';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { homeTarget } from '../shared/appRoutes';
+import { switchPinStore } from '../shared/switchPinRuntime';
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
@@ -29,7 +30,8 @@ export default function Index() {
   </View>;
   const onLogout = () => {
     setLoading(true);
-    void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {})]).finally(() => {
+    void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {}),
+      switchPinStore.clear(session).catch(() => {})]).finally(() => {
       setSession(null);
       setLoading(false);
     });
