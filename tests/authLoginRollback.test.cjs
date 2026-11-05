@@ -258,6 +258,44 @@ test('reauthentication updates the active saved account token', async () => {
   } finally { global.fetch = original; }
 });
 
+// @v2-test test/mobile_api_saved_accounts_test_helpers_part_01.dart
+test('reauthentication accepts a changed returned identity and activates its saved account', async () => {
+  const original = global.fetch; let calls = 0;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++calls}`,
+    profile: { role: 'aparatchi', ref: calls === 1 ? 'one' : 'two' } }) });
+  try {
+    const api = auth({}); let resets = 0;
+    api.registerSessionResetHook(async () => { resets++; });
+    const session = await api.login('https://example.test', 'phone', 'code');
+    const previousScope = session.imageCacheScope;
+    assert.equal(await api.refreshSession(session, 'token-1'), true);
+    assert.equal(session.profile.ref, 'two'); assert.equal(session.token, 'token-2');
+    assert.notEqual(session.imageCacheScope, previousScope); assert.equal(resets, 1);
+    assert.equal(api.testAccountStore.activeAccountId, 'https://example.test|aparatchi|two');
+    assert.equal(api.testAccountStore.accounts.length, 2);
+    assert.equal(await api.refreshSession(session, 'token-2'), true);
+    assert.equal(session.token, 'token-3');
+  } finally { global.fetch = original; }
+});
+
+test('changed reauthentication identity persists when saved-account storage is unavailable', async () => {
+  const original = global.fetch, values = new Map(); let calls = 0;
+  const secure = { getItemAsync: async key => values.get(key) ?? null,
+    setItemAsync: async (key, value) => { values.set(key, value); }, deleteItemAsync: async key => { values.delete(key); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++calls}`,
+    profile: { role: 'aparatchi', ref: calls === 1 ? 'one' : 'two' } }) });
+  try {
+    const first = auth(secure, 'ios', undefined, true);
+    const session = await first.login('https://example.test', 'phone', 'code');
+    assert.equal(await first.refreshSession(session, 'token-1'), true);
+    const restarted = auth(secure, 'ios', undefined, true);
+    const restored = await restarted.loadSession();
+    assert.equal(restored.profile.ref, 'two');
+    assert.equal(await restarted.refreshSession(restored, 'token-2'), true);
+    assert.equal(restored.token, 'token-3');
+  } finally { global.fetch = original; }
+});
+
 test('profile updates synchronize the active saved account', async () => {
   const original = global.fetch;
   global.fetch = async () => ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) });

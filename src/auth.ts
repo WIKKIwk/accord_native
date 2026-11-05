@@ -377,14 +377,14 @@ export async function refreshSession(session: Session, failedToken: string): Pro
       if (!stillCurrent()) return false;
       const store = await savedAccountsFor(session.baseUrl, session, credentials);
       if (!stillCurrent()) return false;
-      const applyRefresh = async (next: Session): Promise<boolean> => {
+      const applyRefresh = async (next: Session, phone: string, code: string): Promise<boolean> => {
         if (!stillCurrent()) return false;
-        if (!sameIdentity(session, next)) throw new Error('Refreshed account identity does not match');
-        next.imageCacheScope = session.imageCacheScope;
+        if (sameIdentity(session, next)) next.imageCacheScope = session.imageCacheScope;
         await resetForChangedProfile(session, next);
         if (!stillCurrent()) return false;
         return inStorageOrder(async () => {
           if (!stillCurrent()) return false;
+          await writeCredentials({ baseUrl: next.baseUrl, phone, code, ...identity(next) });
           await writeSession(next);
           if (!stillCurrent()) return false;
           Object.assign(session, next);
@@ -405,10 +405,9 @@ export async function refreshSession(session: Session, failedToken: string): Pro
           try {
             const next = await authenticate(saved.account.base_url, saved.phone, saved.code);
             if (!stillCurrent()) return false;
-            if (!sameIdentity(session, next)) throw new Error('Refreshed account identity does not match');
             await store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
               phone: saved.phone, code: saved.code, makeActive: true });
-            return await applyRefresh(next);
+            return await applyRefresh(next, saved.phone, saved.code);
           } catch {
             await disconnect();
             return false;
@@ -420,7 +419,7 @@ export async function refreshSession(session: Session, failedToken: string): Pro
           credentials.role !== account.role || !credentials.phone || !credentials.code) return false;
       try {
         const next = await authenticate(credentials.baseUrl, credentials.phone, credentials.code);
-        return await applyRefresh(next);
+        return await applyRefresh(next, credentials.phone, credentials.code);
       } catch {
         if (stillCurrent()) await clearSession();
         return false;
