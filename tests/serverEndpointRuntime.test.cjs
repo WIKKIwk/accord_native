@@ -25,6 +25,7 @@ test('the shared API base URL follows the persisted active server', async () => 
   const { MobileApi } = load('mobileApi', { './serverEndpointRuntime': runtime });
   const [first, second] = await Promise.all([runtime.initializeServerEndpoints(), runtime.initializeServerEndpoints()]);
   assert.equal(first, second);
+  assert.equal(MobileApi.instance, MobileApi.instance);
   assert.equal(MobileApi.instance.baseUrl, 'https://selected.test');
   assert.equal(MobileApi.baseUrl, 'https://selected.test');
   await first.setBaseUrl('other.test');

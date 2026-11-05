@@ -1,6 +1,7 @@
 import { serverEndpointStore } from './serverEndpointRuntime';
 
 export class MobileApi {
+  /** @v2 instance */
   static readonly instance = new MobileApi();
   private constructor() {}
 
