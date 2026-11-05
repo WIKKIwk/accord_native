@@ -58,6 +58,8 @@ test('route guards enforce capability, session and role exceptions', () => {
   assert.equal(canOpenRoute(session('brigader', ['brigader.access']), r.adminFactoryMap), true);
   assert.equal(canOpenRoute(session('brigader', ['admin.access']), r.adminFactoryMap), false);
   assert.equal(canOpenRoute(session('rezka_master', ['rezka.master.access']), `${r.apparatusPaddons}?id=1`), true);
+  assert.equal(canOpenRoute(session('rezka_master', ['rezka.master.access']), `https://example.test${r.apparatusPaddons}?id=1`), true);
+  assert.equal(canOpenRoute(session('rezka_master', ['rezka.master.access']), 'apparatus-paddons?id=1'), false);
   assert.equal(canOpenRoute(session('rezka_master', ['rezka.master.access', 'admin.access']), r.adminProductionMapOrders), false);
   assert.equal(canOpenRoute(session('sales_manager', ['sales.access', 'werka.access']), r.werkaHome), false);
   assert.equal(canOpenRoute(session('admin', ['admin.settings.read']), r.adminPushConfig), true);

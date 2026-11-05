@@ -680,7 +680,12 @@ export function homeRoute(session: Session | null): string {
 
 /** @v2 AppRouter.canOpenRoute */
 export function canOpenRoute(session: Session | null, routeName: string | null): boolean {
-  if (routeName && routeName.split(/[?#]/, 1)[0] === appRoutes.apparatusPaddons) routeName = appRoutes.apparatusPaddons;
+  if (routeName && (routeName.startsWith('/') || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(routeName))) {
+    try {
+      const path = decodeURIComponent(new URL(routeName, 'https://route.invalid').pathname);
+      if (path === appRoutes.apparatusPaddons) routeName = appRoutes.apparatusPaddons;
+    } catch { /* An invalid URI is not the paddon route. */ }
+  }
   if (routeName === null || [appRoutes.login, appRoutes.profile, appRoutes.chat, appRoutes.chatDirectory,
     appRoutes.chatDetail, appRoutes.chatParticipantProfile, appRoutes.pinSetupEntry, appRoutes.pinSetupConfirm].some(route => route === routeName)) return true;
   if (!loggedIn(session)) return false;
