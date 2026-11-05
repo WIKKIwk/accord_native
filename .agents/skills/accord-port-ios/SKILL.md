@@ -27,8 +27,8 @@ running at the same time. Shared files (`*Logic.ts`, `*Api.ts`, `*Model.ts`, `us
 session. If one needs a change, add a row under "Needs from the integrator" and carry on with the
 rest. Do the same for the `src/app/index.tsx` entry that opens your routes; do not edit that file.
 
-Simulators and emulators are shared. Start Metro on your own port (`npx expo start --port <free port>`). If the
-device is in use, finish the code and report that it was not run.
+Do not use simulators or emulators, and never add stubs or fake behaviour for them (D15). The user tests on a real phone. Finish the code and
+report it as not run on a device.
 
 No `fetch`, parsing, validation or business rule goes in a view. A condition such as "this button is enabled
 when..." must come from the hook.
@@ -97,5 +97,5 @@ amend, rebase or reset. The full rules are in "Commits" of `$accord-port`.
   condition.
 - `npx tsc --noEmit -p tsconfig.ios.json` passes, and `npx expo lint` adds no new errors.
 - `port_ledger.mjs role <id>` shows the iOS box checked for each surface.
-- It was run on an iOS simulator against the test server, in light and dark mode. If you could not run it or had
-  no test account, say "not run on a simulator" in your report. Do not call it verified.
+- Your report says "not run on a device", and lists what the user should check on the phone, including light and
+  dark mode. Do not call it verified.

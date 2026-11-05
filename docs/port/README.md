@@ -57,8 +57,8 @@ deb ayting. U branch'ni `main` ga qo'shadi, testlarni yuritadi va keyingi qadamn
 | 1 | `printer` | `$accord-port "Printer session" bo'limi bo'yicha ishla` | Hozir |
 | 2 | `base` | `$accord-port "Base session" bo'limi bo'yicha ishla` | Hozirgi aparatchi agenti tugab, u `main` da bo'lgach |
 | 3 | `preparation` | `$accord-port preparation rolini port qil` | `base` qo'shilgach |
-| 3 | `base-ios` | `$accord-port-ios base ekranlarini docs/port/roles/base.md bo'yicha yasa` | `base` qo'shilgach |
-| 3 | `base-android` | `$accord-port-android base ekranlarini docs/port/roles/base.md bo'yicha yasa` | `base` qo'shilgach |
+| 3 | `base-ios` | `$accord-port-ios mavjud login, profil, sozlamalar va PIN ekranlarini docs/port/roles/base.md va V2 bilan solishtir, faqat kamini to'ldir, qayta yozma` | `base` qo'shilgach |
+| 3 | `base-android` | `$accord-port-android mavjud login, profil, sozlamalar va PIN ekranlarini docs/port/roles/base.md va V2 bilan solishtir, faqat kamini to'ldir, qayta yozma` | `base` qo'shilgach |
 | 3 | `boyoqchi`, `customer`, `supplier`, `homashyo` | `$accord-port <nom> rolini port qil` | `base` qo'shilgach, `preparation` bilan birga |
 | 4 | `preparation-android` | `$accord-port-android preparation rolining ekranlarini docs/port/roles/preparation.md bo'yicha yasa` | `preparation` qo'shilgach |
 | 4 | `preparation-ios` | `$accord-port-ios preparation rolining ekranlarini docs/port/roles/preparation.md bo'yicha yasa` | `preparation` qo'shilgach |

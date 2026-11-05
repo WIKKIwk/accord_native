@@ -27,8 +27,8 @@ be running at the same time. Shared files (`*Logic.ts`, `*Api.ts`, `*Model.ts`, 
 session. If one needs a change, add a row under "Needs from the integrator" and carry on with the
 rest. Do the same for the `src/app/index.tsx` entry that opens your routes; do not edit that file.
 
-Simulators and emulators are shared. Start Metro on your own port (`npx expo start --port <free port>`). If the
-device is in use, finish the code and report that it was not run.
+Do not use simulators or emulators, and never add stubs or fake behaviour for them (D15). The user tests on a real phone. Finish the code and
+report it as not run on a device.
 
 No `fetch`, parsing, validation or business rule goes in a view. A condition such as "this button is enabled
 when..." must come from the hook.
@@ -111,6 +111,5 @@ you stop if the session ends early. Never push, amend, rebase or reset. The full
   enable condition.
 - `npx tsc --noEmit -p tsconfig.android.json` adds no new errors, and `npx expo lint` adds no new errors.
 - `port_ledger.mjs role <id>` shows the Android box checked for each surface.
-- It was run on an Android emulator against the test server, in light and dark mode, including the hardware back
-  button. If you could not run it or had no test account, say "not run on an emulator" in your report. Do not
-  call it verified.
+- Your report says "not run on a device", and lists what the user should check on the phone, including light and
+  dark mode and the hardware back button. Do not call it verified.

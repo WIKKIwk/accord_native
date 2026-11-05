@@ -25,7 +25,8 @@ These are defaults, and the user can change any of them.
 | D11 | Sessions run in parallel, each in its own worktree on `port/<name>` with its own status file. Only the integrator writes to `main`, merging with `--no-ff` and running the gates after each merge. | One large session strains its context, and limits are not the constraint. At most 5 role sessions run until the first role works on a real phone |
 | D12 | Known V2 bugs and missing features are fixed in V4, not V2, after the 1:1 port and in separate commits with a Deviations row. | The V2 comparison stays clean and V2 stays frozen |
 | D13 | GoDEX printing is not ported (user, 2026-11-05). `GodexRpsRenderer.kt` and V2's GoDEX test method stay out; the Android USB path supports Zebra. GoDEX names still in `src/workerPrinter.ts`, `src/workerPrintJob.ts`, `src/workerQueueAction.ts`, `src/shared/printApi.ts` and `src/printing/printModels.ts` are for the aparatchi audit to review. | GoDEX is archived and no longer used |
-| D14 | Base screens get their own sessions, `base-ios` and `base-android`, next to `preparation`. | The base logic session does not write views, and a role cannot be tested on a phone without login, profile and PIN screens |
+| D14 | Base screens get their own sessions, `base-ios` and `base-android`, next to `preparation`. They compare the existing login, profile, settings and PIN screens with V2 and fill the gaps instead of rewriting them. | Profile is nearly finished on both platforms, and a role cannot be tested on a phone without these screens |
+| D15 | No simulators or emulators, and no stubs or fake behaviour for them (user, 2026-11-05). The user tests on real phones. | The user wants real behaviour only |
 
 ## Roles
 
@@ -54,9 +55,8 @@ The merged sessions keep their own rows in `status/base.md`, `status/build.md` a
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| `modules/accord-printer/ios/vendor/libPrinterSDK.a` | `ios/vendor/xprinter/README.md` | The library has x86_64 and device arm64 slices only, so an Apple Silicon simulator build cannot link it. Sent back to the printer session |
 | `origin` (`WIKKIwk/accord_native`) | `printer-lib-3.5.8.aar`, `PrinterSDK` | The repo is public and `main` now holds both vendor SDKs. Do not push until the user confirms their redistribution terms or makes the repo private |
-| This Mac | Android | No Android SDK is installed, so Android sessions cannot run on an emulator and `expo run:android` fails. Install it or use an EAS build |
+| This Mac | Android | No Android SDK is installed, so `expo run:android` fails. A real Android phone needs that SDK or an EAS build |
 | `tsconfig.android.json` | | 10 existing errors. `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx` import prop types from themselves once the platform suffix applies, so move those types to a shared file. `WorkerScreen.tsx:347` passes `statusText`, which the Android `WorkerOrderListItem` does not declare; confirm whether Android should show it |
 | `src/` | See `port_ledger.mjs check` | 5 V4 endpoints lack a literal V2 reference: `chat/conversations/{}`, `chat/media/{}`, `profile/avatar/view`, `push-config`, `rezka-master/print-side`. V2 constructs the last two dynamically in `mobile_api_push_config.dart` and `mobile_api_rezka_master.dart`; returned-paint image URLs are supplied by the server and appear in `test/returned_paint_models_test.dart` |
 | `src/authorizedFetch.ts` | `core/network/mobile_http_client.dart` | Confirm how RN `fetch` handles redirects compared with V2's manual policy |

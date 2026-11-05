@@ -83,8 +83,7 @@ branch mergeable.
   time.
 - **New package:** install it with `npx expo install` and commit only `package.json` and `package-lock.json`,
   alone, as `deps: <package>`. The integrator regenerates the lock file when merging.
-- **Simulators and emulators are shared.** Start Metro on your own port: `npx expo start --port <free port>`. If
-  the device is in use, finish the code and report that it was not run.
+- **No simulators or emulators.** Do not use simulators or emulators, and never add stubs or fake behaviour for them (D15). The user tests on a real phone.
 
 ## Base session
 
