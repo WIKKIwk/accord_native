@@ -45,6 +45,17 @@ test('opened order material restrictions round trip with the exact snapshot', ()
     ...payload.restrictions, unresolved_materials: true, locked_layer_indices: [] } }), /restrictions/);
 });
 
+test('template numeric fields use Dart decimal parsing rather than JavaScript hex coercion', () => {
+  const { calculateOrderTemplateFromJson } = load('workerOpenedOrderEditApi', { './authorizedFetch': {} });
+  const template = calculateOrderTemplateFromJson({ width_mm: '0x20', waste_percent: '-.5e2',
+    print_val_size_mm: '0b101', roll_count: 'NaN' });
+  assert.equal(template.width_mm, 0);
+  assert.equal(template.waste_percent, -50);
+  assert.equal(template.print_val_size_mm, null);
+  assert.equal(Number.isNaN(template.roll_count), true);
+  assert.equal(calculateOrderTemplateFromJson({ roll_count: 'nan' }).roll_count, null);
+});
+
 for (const name of ['GET conflict remains blocked without retries or creating an order', ...[400, 404, 409, 422].map(status => `edit preserves a business reason for HTTP ${status}`),
   'GET preserves the actual explained database failure', 'edit keeps the existing translation for a known server error']) {
   test(name, async () => {

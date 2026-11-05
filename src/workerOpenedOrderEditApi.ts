@@ -8,9 +8,10 @@ const object = (value: unknown): Obj | null => value !== null && typeof value ==
 const requiredObject = (value: unknown): Obj => { const row = object(value); if (!row) throw new TypeError('Expected an object'); return row; };
 const text = (value: unknown): string => value == null ? '' : String(value).trim();
 const optionalNumber = (value: unknown): number | null => {
-  const str = text(value); if (!str) return null;
-  const number = typeof value === 'number' ? value : Number(str);
-  return Number.isNaN(number) && str.toLowerCase() !== 'nan' ? null : number;
+  if (typeof value === 'number') return value;
+  const str = text(value);
+  if (!/^[+-]?(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|Infinity|NaN)$/.test(str)) return null;
+  return /^[+-]?NaN$/.test(str) ? NaN : Number(str);
 };
 const num = (value: unknown, fallback = 0): number => optionalNumber(value) ?? fallback;
 const integer = (value: unknown): number => {
