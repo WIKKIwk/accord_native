@@ -27,11 +27,13 @@ function parseRows(raw: unknown, ids: string[], kind: 'sequence' | 'order' | 'pe
   for (const id of ids) {
     const row = object(rows[id]);
     if (!row || row.id !== id || labels.some(key => typeof row[key] !== 'string') || !row.id.trim()) throw invalid();
+    const labelValues = Object.fromEntries(labels.map(key => [key, row[key]]));
     if (kind === 'sequence') {
       if (typeof row.queue_state !== 'string' || !queueStates.has(row.queue_state) ||
           typeof row.display_state !== 'string' || !displayStates.has(row.display_state) || typeof row.can_reorder !== 'boolean' ||
           (Object.hasOwn(row, 'frozen') && typeof row.frozen !== 'boolean')) throw invalid();
-      result[id] = { ...row, frozen: row.frozen ?? row.queue_state === 'frozen' };
+      result[id] = { ...labelValues, queue_state: row.queue_state, display_state: row.display_state,
+        can_reorder: row.can_reorder, frozen: row.frozen ?? row.queue_state === 'frozen' };
     } else if (kind === 'order') {
       if (!displayStates.has(row.display_state) || !Array.isArray(row.watermarks)) throw invalid();
       for (const value of row.watermarks) {
@@ -40,10 +42,11 @@ function parseRows(raw: unknown, ids: string[], kind: 'sequence' | 'order' | 'pe
             (watermark.apparatus_id && !isCanonicalApparatusId(watermark.apparatus_id)) ||
             !['active', 'paused', 'frozen', 'issue', 'waiting'].includes(watermark.kind)) throw invalid();
       }
-      result[id] = row;
+      result[id] = { ...labelValues, display_state: row.display_state,
+        watermarks: row.watermarks.map((value: Obj) => ({ apparatus_id: value.apparatus_id, kind: value.kind })) };
     } else {
       if (typeof row.kg !== 'number' || !Number.isFinite(row.kg)) throw invalid();
-      result[id] = row;
+      result[id] = { ...labelValues, kg: row.kg };
     }
   }
   return result;
@@ -113,7 +116,7 @@ export function productionOrderPageFromJson(value: unknown, session?: Session): 
 
 export interface ProductionOrderPageRequest { view: string; apparatus?: string; target?: string; search?: string; cursor?: string | null; ifVersion?: string | null }
 
-// Complete canonical snapshot and pending-order models are required before this method is tagged.
+/** @v2 adminProductionOrderPage */
 export async function adminProductionOrderPage(session: Session, request: ProductionOrderPageRequest) {
   const query = new URLSearchParams({ view: request.view, limit: '20' });
   if (request.view === 'sequence') query.set('projection', sequenceProjection);

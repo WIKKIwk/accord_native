@@ -43,6 +43,19 @@ test('summary validation rejects duplicate IDs and unsupported authority fields'
   assert.throws(() => parse({ ...base, total: 2, order_ids: ['same'], pending_ids: ['same'], rows: { same: { id: 'same', code: '', title: '', customer_name: '', image_id: '', display_state: 'pending', watermarks: [] } }, pending_rows: { same: { id: 'same', code: '', title: '', customer_name: '', image_id: '', kg: 1 } } }), e => e.code === 'order_page_invalid');
 });
 
+test('order page summaries retain only V2 display fields in decoded rows', () => {
+  const { productionOrderPageFromJson: parse } = api(() => { throw Error('unexpected request'); });
+  const value = { projection: 'orders_list_v1', version: 'v', epoch: 'e', rev: 1, scope: 's', offset: 0, total: 1,
+    next_cursor: null, order_ids: ['order'], pending_ids: [], pending_rows: {}, rows: { order: {
+      id: 'order', code: '1', title: 'Title', customer_name: 'Customer', image_id: '', display_state: 'pending', extra: 'ignored',
+      watermarks: [{ apparatus_id: 'apparatus:default:press', kind: 'waiting', extra: 'ignored' }],
+    } } };
+  const page = parse(value);
+  assert.equal(page.order_rows.order.extra, undefined);
+  assert.deepEqual(page.order_rows.order.watermarks, [{ apparatus_id: 'apparatus:default:press', kind: 'waiting' }]);
+  assert.equal(page.wire_value.rows.order.extra, 'ignored');
+});
+
 test('sequence summary validates row identities, ranks and authority like V2', () => {
   const { productionOrderPageFromJson: parse } = api(() => { throw Error('unexpected'); });
   const station = 'apparatus:default:bosma_7', ids = ['zakaz-1', 'training-zakaz-2'];
