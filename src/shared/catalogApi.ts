@@ -45,7 +45,8 @@ export async function gscaleItemsPage(session: Session, options: GscaleItemsOpti
   const limit = options.limit ?? 80, offset = options.offset ?? 0;
   if (limit > 0) query.set('limit', String(limit));
   if (offset > 0) query.set('offset', String(offset));
-  const response = await authorizedFetch(session, `/v1/mobile/gscale/items${query.size ? `?${query}` : ''}`);
+  const path = '/v1/mobile/gscale/items', suffix = query.toString();
+  const response = await authorizedFetch(session, suffix ? `${path}?${suffix}` : path);
   if (response.status !== 200) throw new WorkerControlException('gscale_items_failed', 'GScale items failed', response.status);
   const data: unknown = await response.json();
   if (!Array.isArray(data)) throw new TypeError('Invalid item list');
@@ -60,7 +61,8 @@ const roles = new Set(['supplier', 'werka', 'customer', 'aparatchi', 'qolipchi',
 export async function adminWarehouseAssignments(session: Session, warehouse = ''): Promise<WarehouseAssignment[]> {
   const query = new URLSearchParams();
   if (warehouse.trim()) query.set('warehouse', warehouse.trim());
-  const response = await authorizedFetch(session, `/v1/mobile/admin/warehouses/assignments${query.size ? `?${query}` : ''}`);
+  const path = '/v1/mobile/admin/warehouses/assignments', suffix = query.toString();
+  const response = await authorizedFetch(session, suffix ? `${path}?${suffix}` : path);
   if (response.status !== 200) throw new Error('Admin warehouse assignments failed');
   const data: unknown = await response.json();
   if (!Array.isArray(data)) throw new TypeError('Invalid assignments');
