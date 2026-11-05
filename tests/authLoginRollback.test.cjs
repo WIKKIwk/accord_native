@@ -332,3 +332,21 @@ test('a failed session reset rolls login back to the previous account', async ()
     unregister();
   } finally { global.fetch = original; }
 });
+
+
+test('failed stored-account reauthentication clears the active account and session', async () => {
+  const original = global.fetch; let loginAttempts = 0;
+  global.fetch = async () => {
+    loginAttempts++;
+    if (loginAttempts > 1) return { status: 401 };
+    return { status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) };
+  };
+  try {
+    const api = auth({});
+    const session = await api.login('https://example.test', 'one', '40');
+    assert.equal(await api.refreshSession(session, 'token'), false);
+    assert.equal(api.testAccountStore.activeAccountId, null);
+    assert.equal(await api.loadSession(), null);
+    assert.equal(api.testAccountStore.accounts.length, 1);
+  } finally { global.fetch = original; }
+});

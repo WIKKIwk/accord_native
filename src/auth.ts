@@ -357,33 +357,65 @@ export function updateSessionAssignments(session: Session, assigned: readonly st
   return true;
 }
 
-/** Refreshes an active session once for concurrent 401s; network errors retain local state. */
+/** Refreshes an active session once for concurrent 401s. */
 export async function refreshSession(session: Session, failedToken: string): Promise<boolean> {
   if (activeSession !== session) return false;
   if (session.token !== failedToken) return true;
   const epoch = sessionEpoch;
   if (refreshing?.session === session && refreshing.epoch === epoch) return refreshing.promise;
+  const stillCurrent = () => activeSession === session && epoch === sessionEpoch;
   const promise = (async () => {
     try {
       const credentials = await inStorageOrder(readCredentials);
-      if (activeSession !== session || epoch !== sessionEpoch || !credentials) return false;
+      if (!stillCurrent()) return false;
+      const store = await savedAccountsFor(session.baseUrl, session, credentials);
+      if (!stillCurrent()) return false;
+      const applyRefresh = async (next: Session): Promise<boolean> => {
+        if (!stillCurrent()) return false;
+        if (!sameIdentity(session, next)) throw new Error('Refreshed account identity does not match');
+        next.imageCacheScope = session.imageCacheScope;
+        return inStorageOrder(async () => {
+          if (!stillCurrent()) return false;
+          await writeSession(next);
+          if (!stillCurrent()) return false;
+          Object.assign(session, next);
+          return true;
+        });
+      };
+      if (store) {
+        return await store.runAccountOperation(async () => {
+          if (!stillCurrent()) return false;
+          const disconnect = async () => {
+            if (!stillCurrent()) return;
+            await store.clearActive();
+            if (stillCurrent()) await clearSession();
+          };
+          const id = store.activeAccountId;
+          const saved = id == null ? null : await store.sessionFor(id);
+          if (!saved || !saved.phone || !saved.code) { await disconnect(); return false; }
+          try {
+            const next = await authenticate(saved.account.base_url, saved.phone, saved.code);
+            if (!stillCurrent()) return false;
+            if (!sameIdentity(session, next)) throw new Error('Refreshed account identity does not match');
+            await store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
+              phone: saved.phone, code: saved.code, makeActive: true });
+            return await applyRefresh(next);
+          } catch {
+            await disconnect();
+            return false;
+          }
+        });
+      }
       const account = identity(session);
-      if (credentials.baseUrl !== session.baseUrl || credentials.ref !== account.ref || credentials.role !== account.role || !credentials.phone || !credentials.code) return false;
-      const next = await authenticate(credentials.baseUrl, credentials.phone, credentials.code);
-      if (!sameIdentity(session, next)) return false;
-      next.imageCacheScope = session.imageCacheScope;
-      return await inStorageOrder(async () => {
-        if (activeSession !== session || epoch !== sessionEpoch) return false;
-        const store = await savedAccountsFor(session.baseUrl, session, credentials);
-        if (activeSession !== session || epoch !== sessionEpoch) return false;
-        if (store) await store.runAccountOperation(() => store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
-          phone: credentials.phone, code: credentials.code, makeActive: false }));
-        if (activeSession !== session || epoch !== sessionEpoch) return false;
-        await writeSession(next);
-        if (activeSession !== session || epoch !== sessionEpoch) return false;
-        Object.assign(session, next);
-        return true;
-      });
+      if (!credentials || credentials.baseUrl !== session.baseUrl || credentials.ref !== account.ref ||
+          credentials.role !== account.role || !credentials.phone || !credentials.code) return false;
+      try {
+        const next = await authenticate(credentials.baseUrl, credentials.phone, credentials.code);
+        return await applyRefresh(next);
+      } catch {
+        if (stillCurrent()) await clearSession();
+        return false;
+      }
     } catch { return false; }
   })();
   refreshing = { session, epoch, promise };

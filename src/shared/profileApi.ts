@@ -45,7 +45,7 @@ export async function uploadAvatar(session: Session, bytes: readonly number[] | 
   body.set(head); body.set(content, head.length); body.set(tail, head.length + content.length);
   const response = await authorizedFetch(session, '/v1/mobile/profile/avatar', {
     method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body,
-  });
+  }, undefined, null);
   if (response.status !== 200) throw new Error('Avatar upload failed');
   return updateSessionProfile(session, await response.json());
 }

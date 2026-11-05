@@ -21,6 +21,10 @@ Stopped at: shared API and base logic comparison
 
 | Application updates | `AppUpdateService`, `NativeAppUpdatePlatform`, `AppUpdateCoordinator` | Manifest and version-policy models are ported; the native installer channel, update service/coordinator and platform dialogs are not yet connected. |
 
+| Transport response bodies | `MobileApi._get`, `_post`, `_put`, `_delete`, `_patch` | The shared ten-second timer covers fetch until response headers; V2 buffers the full response within its timeout. Complete response-body deadlines and explicit resilient GET behavior in the transport layer. |
+
+| Reauthentication identity | `MobileApi._performStoredAccountReauthentication` | V4 rejects a refreshed account whose identity changes; V2 accepts the returned account. Reconcile this existing guard for exact parity. |
+
 ## Deviations candidates
 
 ## Test mode pending

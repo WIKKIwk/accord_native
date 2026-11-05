@@ -5,15 +5,17 @@ export const currentQueueSnapshotReadEpoch = (): number => queueSnapshotReadEpoc
 export const invalidateQueueSnapshotReads = (): void => { queueSnapshotReadEpoch++; };
 
 /** Authenticated API request with a single retry after a successful 401 refresh. */
-export async function authorizedFetch(session: Session, path: string, init: RequestInit = {}, beforeSend?: () => void): Promise<Response> {
-  return authenticatedRequest(session, path, init, beforeSend, false);
+export async function authorizedFetch(session: Session, path: string, init: RequestInit = {}, beforeSend?: () => void,
+  timeoutMs: number | null = 10_000): Promise<Response> {
+  return authenticatedRequest(session, path, init, beforeSend, false, timeoutMs);
 }
 
 export async function authorizedImageFetch(session: Session, path: string, init: RequestInit = {}): Promise<Response> {
-  return authenticatedRequest(session, path, { ...init, method: 'GET' }, undefined, true);
+  return authenticatedRequest(session, path, { ...init, method: 'GET' }, undefined, true, 10_000);
 }
 
-async function authenticatedRequest(session: Session, path: string, init: RequestInit, beforeSend: (() => void) | undefined, image: boolean): Promise<Response> {
+async function authenticatedRequest(session: Session, path: string, init: RequestInit, beforeSend: (() => void) | undefined,
+  image: boolean, timeoutMs: number | null): Promise<Response> {
   const mutation = !['GET', 'HEAD', 'OPTIONS'].includes((init.method ?? 'GET').toUpperCase());
   if (mutation) invalidateQueueSnapshotReads();
   try {
@@ -21,11 +23,18 @@ async function authenticatedRequest(session: Session, path: string, init: Reques
     if (url.origin !== session.baseUrl || url.protocol !== 'https:' || (!image && !url.pathname.startsWith('/v1/mobile/'))) {
       throw new Error('API manzili noto‘g‘ri.');
     }
-    const send = (token: string) => {
+    const send = async (token: string) => {
       beforeSend?.();
       const headers = new Headers(init.headers);
       headers.set('Authorization', `Bearer ${token}`);
-      return fetch(url.toString(), { ...init, headers });
+      const request = fetch(url.toString(), { ...init, headers });
+      if (timeoutMs == null) return request;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([request, new Promise<never>((_, reject) => {
+          timer = setTimeout(() => { const error = new Error('API request timed out'); error.name = 'TimeoutError'; reject(error); }, timeoutMs);
+        })]);
+      } finally { if (timer !== undefined) clearTimeout(timer); }
     };
     const token = activeSessionToken(session);
     if (!token) throw new Error('Sessiya tugagan. Qayta kiring.');
