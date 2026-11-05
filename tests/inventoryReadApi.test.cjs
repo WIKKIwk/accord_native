@@ -22,3 +22,12 @@ test('inventory errors keep the server code and mapped message', async () => {
   const api = load('inventoryReadApi', { './authorizedFetch': { authorizedFetch: async () => ({ status: 404, json: async () => ({ error: 'inventory_asset_not_found' }) }) } });
   await assert.rejects(api.inventoryAssets({}), e => e.code === 'inventory_asset_not_found' && e.message === 'Mahsulot topilmadi');
 });
+
+test('inventory locations parse canonical apparatus and reject invalid IDs', async () => {
+  let path;
+  const api = load('inventoryReadApi', { './authorizedFetch': { authorizedFetch: async (_session, url) => { path = url; return { status: 200, json: async () => [{ id: 'state', kind: 'state', apparatus: [{ id: 'apparatus:default:press', name: 'Print' }] }] }; } } });
+  const locations = await api.inventoryLocations({});
+  assert.equal(path, '/v1/mobile/admin/inventory/locations'); assert.equal(locations[0].apparatus[0].name, 'Print');
+  const invalid = load('inventoryReadApi', { './authorizedFetch': { authorizedFetch: async () => ({ status: 200, json: async () => [{ apparatus: [{ id: 'wrong' }] }] }) } });
+  await assert.rejects(invalid.inventoryLocations({}), /canonical apparatus ID/);
+});

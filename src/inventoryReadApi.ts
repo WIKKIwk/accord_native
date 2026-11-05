@@ -1,7 +1,7 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerControlException } from './workerControlsApi';
-import { inventoryAssetFromJson } from './inventoryModels';
+import { inventoryAssetFromJson, inventoryLocationFromJson } from './inventoryModels';
 const errors: Record<string, string> = { inventory_asset_not_found: 'Mahsulot topilmadi', inventory_asset_unavailable: 'Mahsulot band qilingan yoki hozir mavjud emas',
   inventory_asset_not_in_source_warehouse: 'Mahsulotni transferdan oldin omborga qaytaring', inventory_location_not_found: 'Joylashuv topilmadi',
   inventory_location_inactive: 'Bu state faol emas', inventory_cross_warehouse_requires_transfer: 'Boshqa omborga faqat transfer orqali yuboriladi',
@@ -29,4 +29,13 @@ export async function inventoryAssets(session: Session, input: InventoryAssetsOp
   const payload: unknown = await response.json();
   if (!Array.isArray(payload)) throw new TypeError('Invalid inventory assets');
   return payload.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map(inventoryAssetFromJson);
+}
+
+/** @v2 inventoryLocations */
+export async function inventoryLocations(session: Session) {
+  const response = await authorizedFetch(session, '/v1/mobile/admin/inventory/locations');
+  if (response.status !== 200) throw await inventoryResponseError(response, 'inventory_locations_load_failed', 'Joylashuvlar yuklanmadi');
+  const payload: unknown = await response.json();
+  if (!Array.isArray(payload)) throw new TypeError('Invalid inventory locations');
+  return payload.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map(inventoryLocationFromJson);
 }
