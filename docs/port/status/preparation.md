@@ -6,7 +6,7 @@ Stopped at: port remaining screen actions and write the platform UI contract.
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Connect the printer session's Bluetooth and USB channels and verify on a real printer. |
+| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Connect printer selection and the printer session’s local and driver transports to `reprintPreparationRoll`, then verify on a real printer. |
 
 ## Deviations candidates
 
