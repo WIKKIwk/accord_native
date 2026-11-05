@@ -15,6 +15,17 @@ export function loginCodeUsesNumericKeyboard(code: string): boolean {
   return trimmed.length < 2 || ['40', '50', '80', '92'].includes(trimmed.substring(0, 2));
 }
 
+/** @v2 main */
+export async function loadBaseStartup(loadSession: () => Promise<Session | null>,
+  steps: readonly (() => Promise<void>)[]): Promise<Session | null> {
+  let session: Session | null = null;
+  try { session = await loadSession(); } catch { /* V2 continues after an individual startup failure. */ }
+  for (const step of steps) {
+    try { await step(); } catch { /* Remaining startup steps still run. */ }
+  }
+  return session;
+}
+
 /** @v2 AppEntryScreen._bootstrap */
 export async function bootstrapSession(
   load: () => Promise<Session | null>,
