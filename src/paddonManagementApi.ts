@@ -1,7 +1,7 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { productionMapResponseError, WorkerControlException } from './workerControlsApi';
-import { paddonFromJson } from './paddonModels';
+import { paddonFromJson, paddonSnapshotFromJson } from './paddonModels';
 
 type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -34,4 +34,18 @@ export async function adminPaddonDelete(session: Session, code: string): Promise
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'paddon_delete');
   }
+}
+
+/** @v2 adminPaddonDetail */
+export async function adminPaddonDetail(session: Session, code: string) {
+  const normalized = code.trim();
+  if (!normalized) throw new WorkerControlException('paddon_not_found', 'Paddon topilmadi');
+  const query = new URLSearchParams({ code: normalized });
+  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons/detail?${query}`);
+  if (response.status !== 200) {
+    let payload: unknown;
+    try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'paddon_not_found');
+  }
+  return paddonSnapshotFromJson(await response.json());
 }

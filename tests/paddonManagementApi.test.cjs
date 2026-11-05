@@ -46,3 +46,18 @@ test('paddon deletion sends the trimmed code and preserves server errors', async
   status = 409;
   await assert.rejects(client.adminPaddonDelete({}, 'P1'), error => error.code === 'paddon_locked');
 });
+
+// V2 has no recorded HTTP detail request; the request follows the baseline source.
+test('paddon detail validates the code and requests a decoded snapshot', async () => {
+  let url, calls = 0;
+  const client = api(async (_session, requested) => {
+    calls++; url = new URL(requested, 'https://example.test');
+    return new Response('{"paddon":{"code":"P1"},"items":[]}', { status: 200 });
+  });
+  await assert.rejects(client.adminPaddonDetail({}, ' '), error => error.code === 'paddon_not_found');
+  assert.equal(calls, 0);
+  const result = await client.adminPaddonDetail({}, ' P1 ');
+  assert.equal(url.pathname, '/v1/mobile/admin/production-maps/paddons/detail');
+  assert.equal(url.searchParams.get('code'), 'P1');
+  assert.equal(result.paddon.code, 'P1');
+});
