@@ -81,6 +81,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/productionMapAuditApi.ts` | `adminProductionMapAudit` | No V2 HTTP recording was found; focused V4 tests cover the source-derived request and report parsing |
 | `src/productionProgressCorrectionApi.ts` | `adminProgressBatchCorrect` | No V2 HTTP recording was found; focused V4 tests cover source-derived validation, request fields and response checks |
 | `src/scannedWipApi.ts` | `adminReturnScannedWip`, `adminScannedWips` | No V2 HTTP recordings were found; focused V4 tests cover their source-derived scopes, requests and response validation |
+| `src/calculateApi.ts` | `calculate` | No V2 HTTP recording was found; focused V4 tests cover source-derived request serialization, response defaults and error handling |
 | `src/authenticateAccount.ts` | `authenticateAccount` | No V2 login HTTP recording was found; focused V4 tests cover account parsing, HTTPS and the source-derived request |
 | `src/productionMapReplayApi.ts` | `adminProductionMapReplay` | No V2 HTTP recording was found; focused V4 tests cover the source-derived query and delta decoding |
 | `src/productionMapReadApi.ts` | `adminProductionMaps` | No V2 HTTP recording was found for the list route; a focused V4 test covers its source-derived request and parsing |
@@ -133,6 +134,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminUnlinkRawMaterialAssignment` | V2 removes unlocked in-memory assignments and preserves locked ones |
 | `adminValidateProductionMapQolipDetails` | V2 validates in-memory production maps and qolip catalog |
 | `cachedOrderImageBytes`, `peekCachedOrderImageBytes` | V2 returns no image in test mode |
+| `calculate` | V2 computes locally using test-mode materials |
 | `adminRezkaAstatkaReport` | V2 validates the apparatus and stores or replays an in-memory report |
 | `adminRezkaAstatkaSnapshot` | V2 derives its session and stage from in-memory queue state and replays stored reports |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
