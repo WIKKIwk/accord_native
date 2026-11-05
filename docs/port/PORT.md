@@ -29,7 +29,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
-| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 37/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
+| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 38/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
 | homashyo | | | | | Needs printing |
 | chat | | | | | iOS exists without tags; Android ships a stub |
 | rezka | | | | | |
@@ -66,6 +66,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/orderThumbnail.ts`, `src/components/WorkerOrderHeader.tsx` | `mobile_api_order_images.dart`, `core/cache/order_image_cache.dart` | URL construction is ported; the current image loading, ETag, cache-key, freshness and failed-read behavior still need comparison with V2's account/session-scoped image cache |
 | `src/dailyWork.ts`, `src/workerWip.ts`, `src/workerWipApi.ts`, `src/workerProgressApi.ts` | `adminProgressQrHistory`, `adminWipBatches`, `adminProgressQrLookup`, `AdminProgressBatch.fromJson` | Worker history uses V2's request scope, typed batches and paginated readers. Compare UI WIP selection/deduplication and the legacy QR lookup's full global-snapshot validation. V2 provided no recorded live HTTP test for progress history; focused source-derived V4 tests cover its worker query and pagination |
 | `src/workerOpeningWip.ts` | `adminLookupOpeningWip`, `test/admin_opening_wip_api_test.dart` | The V2 test exercises test-mode data only; focused V4 tests cover the live request and batch decoding from source. Implement its test-mode branch in the deferred test-mode pass |
+| `src/workerOpeningWipCandidatesApi.ts` | `adminOpeningWipCandidates` | No V2 live HTTP recording was found; focused V4 tests cover the source-derived request, filtering and error behavior |
 | V2 baseline oracle | `test/admin_order_early_close_test.dart`, `test/qolip_tasks_test.dart`, `test/worker_network_latency_test.dart`, `test/admin_sequence_list_widget_test.dart`, `test/opened_order_edit_api_test.dart`, `test/qolip_product_transfer_test.dart` | Running the 56 recorded test files against baseline `7c87a54e` produced 603 passes and 28 failures across these six files. Failed cases are not used as specifications; determine whether each relevant failure is a stale test or baseline defect |
 | `tests/appLock.test.cjs:52` | V4 test gate | One run failed because the randomly generated hexadecimal salt or digest contained the substring `1234`; a focused rerun and the full suite passed. Replace that probabilistic assertion when the PIN test is in scope |
 
@@ -99,6 +100,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminMoveProductionMapOrdersBatch` | V2 validates and mutates in-memory production maps and sequences |
 | `adminMoveProductionMapSequence` | V2 reorders its in-memory test-mode sequence |
 | `adminOpenedOrderEditSource` | V2 rejects order edits in test mode |
+| `adminOpeningWipCandidates` | V2 filters its in-memory confirmed opening-WIP batches |
 
 ## Drift log
 
