@@ -7,7 +7,7 @@ const typedList = (value: unknown): unknown[] => { if (value == null) return [];
 const roleNames = new Set(['supplier', 'werka', 'customer', 'aparatchi', 'qolipchi', 'boyoqchi', 'tayyorlov_masteri', 'material_taminotchi', 'admin', 'homashyo_rezkachi', 'sales_manager', 'brigader', 'rezka_master']);
 export class MobileLoginException extends Error { constructor(readonly statusCode: number) { super(`Login failed (${statusCode})`); } }
 
-function profileFromLogin(payload: Obj) {
+export function profileFromLogin(payload: Obj) {
   const source = object(payload.profile); if (!source) throw new TypeError('Invalid profile');
   const role = typedString(source.role).trim().toLowerCase(), normalizedRole = role === 'omborchi' ? 'werka' : role;
   if (!roleNames.has(normalizedRole)) throw new TypeError(`Unsupported user role: ${role}`);
