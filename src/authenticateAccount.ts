@@ -22,7 +22,7 @@ export function profileFromLogin(payload: Obj) {
     assigned_item_groups: strings(payload.assigned_item_groups),
     assigned_warehouses: typedList(warehouses).map(value => String(value)).filter(value => !!value.trim()) };
 }
-function werkaHomeFromJson(value: unknown) {
+export function werkaHomeFromJson(value: unknown) {
   const row = object(value); if (!row) throw new TypeError('Invalid Werka home');
   const summary = object(row.summary) ?? {};
   const count = (value: unknown) => { if (value == null) return 0; if (!Number.isInteger(value)) throw new TypeError('Invalid summary count'); return value; };
