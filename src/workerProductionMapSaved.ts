@@ -48,12 +48,12 @@ export function productionMapNodeFromJson(value: unknown) {
       .filter((item): item is number => typeof item === 'number' && Number.isFinite(item)).map(Math.trunc).filter(item => item > 0),
     x: numeric(row.x) ?? 0, y: numeric(row.y) ?? 0 };
 }
-function orderProductFromJson(value: unknown) {
+export function orderProductFromJson(value: unknown) {
   const row = requiredObject(value);
   return { id: string(row.id), item_code: string(row.item_code), product: string(row.product),
     frame_product_size_mm: numeric(row.frame_product_size_mm) ?? 0, frame_count: integer(row.frame_count) ?? 0 };
 }
-function comboFromJson(value: unknown) {
+export function comboFromJson(value: unknown) {
   const row = object(value); if (!row) return null;
   return { id: text(row.id), item_code: text(row.item_code), name: text(row.name), revision: integer(row.revision) ?? 0,
     layout_fingerprint: text(row.layout_fingerprint) };
