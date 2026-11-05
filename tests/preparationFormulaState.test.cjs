@@ -4,7 +4,8 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
-function setup() {
+function setup(settings = {}) {
+  let reads = 0;
   const sent = [], formulas = [{ product_code: 'P', formula_code: '', name: 'A', share_percent: '100.000000',
     lines: [{ item_code: 'C1', name: 'Kley', percent: '100.000000' }] }];
   const mocks = {
@@ -14,7 +15,7 @@ function setup() {
     '../sessionReadScope': { sessionReadScope: session => session.ref },
     '../workerControlsApi': { WorkerControlException: class extends Error { constructor(code, message, statusCode) { super(message); this.code = code; this.statusCode = statusCode; } } },
     './preparationFormulaApi': {
-      preparationFormulaDetails: async (session, code, opts) => { sent.push({ action: 'read', code, opts }); return { formulas, variant_name: 'LG', recipe_key: 'rk' }; },
+      preparationFormulaDetails: async (session, code, opts) => { sent.push({ action: 'read', code, opts }); if (settings.failRefresh && ++reads > 1) throw Error('offline'); return { formulas, variant_name: 'LG', recipe_key: 'rk' }; },
       preparationUpsertFormula: async (session, code, lines, opts) => { sent.push({ action: 'save', code, lines, opts }); },
       preparationDeleteFormula: async (session, code, name, opts) => { sent.push({ action: 'delete', code, name, opts }); },
       preparationUpdateFormulaShares: async (session, opts) => { sent.push({ action: 'shares', opts }); return formulas; },
@@ -63,4 +64,12 @@ test('an account change prevents editing operations from being sent', async () =
   x.controller.setRows([{ material: { code: 'C1', name: 'Kley' }, percent: '100' }]);
   x.session.ref = 'prep-2'; await x.controller.save();
   assert.equal(x.sent.some(item => item.action === 'save'), false);
+});
+
+test('a successful save remains closed when its follow-up refresh fails', async () => {
+  const x = setup({ failRefresh: true }); await x.controller.reload(); x.controller.openEditor();
+  x.controller.setRows([{ material: { code: 'C1', name: 'Kley' }, percent: '100' }]);
+  await x.controller.save();
+  assert.equal(x.controller.getSnapshot().editing, false);
+  assert.match(x.controller.getSnapshot().notice, /Internet aloqasini/);
 });

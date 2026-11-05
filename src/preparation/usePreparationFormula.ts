@@ -14,7 +14,7 @@ export type PreparationFormulaOptions = { orderId: string; orderCode: string; pr
   materialId: string; materialName: string; variantId?: string; variantName?: string; manageSavedFormula?: boolean;
   allowAddingFormula?: boolean; initialFormulaName?: string | null; openEditorOnLoad?: boolean };
 type FormulaState = { materials: Material[]; formulas: PreparationFormula[]; variantName: string; recipeKey: string | null;
-  estimatedMaterialKg: string | null; error: string | null; loading: boolean; saving: boolean; deleting: boolean;
+  estimatedMaterialKg: string | null; error: string | null; notice: string | null; loading: boolean; saving: boolean; deleting: boolean;
   openingReceipt: boolean; editing: boolean; editingName: string | null; rows: FormulaEditorRow[] };
 
 /** @v2 preparationFormulaErrorMessage */
@@ -36,7 +36,7 @@ export class PreparationFormulaState {
   constructor(private readonly session: Session, private readonly options: PreparationFormulaOptions) {
     this.scope = sessionReadScope(session);
     this.state = { materials: [], formulas: [], variantName: options.variantName ?? '', recipeKey: null, estimatedMaterialKg: null,
-      error: null, loading: true, saving: false, deleting: false, openingReceipt: false, editing: false, editingName: null, rows: [] };
+      error: null, notice: null, loading: true, saving: false, deleting: false, openingReceipt: false, editing: false, editingName: null, rows: [] };
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.state;
@@ -83,10 +83,15 @@ export class PreparationFormulaState {
   async refreshFormulas() {
     if (!this.sameScope) return;
     const generation = this.generation;
-    const details = await preparationFormulaDetails(this.session, this.options.productCode, this.query);
-    if (this.sameScope && generation === this.generation) this.update({ formulas: details.formulas,
-      variantName: details.variant_name as string | null ?? this.state.variantName, recipeKey: details.recipe_key as string | null });
+    try {
+      const details = await preparationFormulaDetails(this.session, this.options.productCode, this.query);
+      if (this.sameScope && generation === this.generation) this.update({ formulas: details.formulas,
+        variantName: details.variant_name as string | null ?? this.state.variantName, recipeKey: details.recipe_key as string | null });
+    } catch (error) {
+      if (this.sameScope && generation === this.generation) this.update({ notice: preparationFormulaErrorMessage(error) });
+    }
   }
+  clearNotice() { this.update({ notice: null }); }
   openEditor(existing?: PreparationFormula) {
     const rows = existing?.lines.length ? existing.lines.map(line => ({ material: this.state.materials.find(item => item.code.trim() === line.item_code.trim())
       ?? { code: line.item_code, name: line.name }, percent: preparationDisplay(line.percent) })) : [{ material: null, percent: '' }];
