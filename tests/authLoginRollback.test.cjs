@@ -14,6 +14,9 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
   const savedFile = path.resolve(__dirname, '../src/savedAccountStore.ts'), saved = new Module(savedFile, module);
   saved.filename = savedFile; saved.paths = module.paths;
   saved._compile(ts.transpileModule(fs.readFileSync(savedFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, savedFile);
+  const roleFile = path.resolve(__dirname, '../src/shared/searchActivityStore.ts'), role = new Module(roleFile, module);
+  role.filename = roleFile; role.paths = module.paths;
+  role._compile(ts.transpileModule(fs.readFileSync(roleFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, roleFile);
   const chunksFile = path.resolve(__dirname, '../src/chunkedStorage.ts'), chunks = new Module(chunksFile, module);
   chunks.filename = chunksFile; chunks.paths = module.paths;
   chunks._compile(ts.transpileModule(fs.readFileSync(chunksFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, chunksFile);
@@ -39,6 +42,7 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
       if (failAccountInitialization) throw new Error('saved account initialization failed');
       return accountStore;
     } }
+    : id === './shared/searchActivityStore' ? role.exports
     : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => endpoints }
     : id === './logoutSavedSession' ? logoutModule.exports : id === './pushTokenRuntime' ? push.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
@@ -254,6 +258,62 @@ test('reauthentication updates the active saved account token', async () => {
   } finally { global.fetch = original; }
 });
 
+test('same-account reauthentication does not rewrite legacy credentials', async () => {
+  const original = global.fetch, values = new Map(); let calls = 0, rejectCredentials = false;
+  const secure = { getItemAsync: async key => values.get(key) ?? null,
+    setItemAsync: async (key, value) => {
+      if (rejectCredentials && key === 'accord_v4_credentials') throw new Error('credentials unavailable');
+      values.set(key, value);
+    }, deleteItemAsync: async key => { values.delete(key); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++calls}`,
+    profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth(secure, 'ios');
+    const session = await api.login('https://example.test', 'phone', 'code');
+    rejectCredentials = true;
+    assert.equal(await api.refreshSession(session, 'token-1'), true);
+    assert.equal(session.token, 'token-2');
+  } finally { global.fetch = original; }
+});
+
+// @v2-test test/mobile_api_saved_accounts_test_helpers_part_01.dart
+test('reauthentication accepts a changed returned identity and activates its saved account', async () => {
+  const original = global.fetch; let calls = 0;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++calls}`,
+    profile: { role: 'aparatchi', ref: calls === 1 ? 'one' : 'two' } }) });
+  try {
+    const api = auth({}); let resets = 0;
+    api.registerSessionResetHook(async () => { resets++; });
+    const session = await api.login('https://example.test', 'phone', 'code');
+    const previousScope = session.imageCacheScope;
+    assert.equal(await api.refreshSession(session, 'token-1'), true);
+    assert.equal(session.profile.ref, 'two'); assert.equal(session.token, 'token-2');
+    assert.notEqual(session.imageCacheScope, previousScope); assert.equal(resets, 1);
+    assert.equal(api.testAccountStore.activeAccountId, 'https://example.test|aparatchi|two');
+    assert.equal(api.testAccountStore.accounts.length, 2);
+    assert.equal(await api.refreshSession(session, 'token-2'), true);
+    assert.equal(session.token, 'token-3');
+  } finally { global.fetch = original; }
+});
+
+test('changed reauthentication identity persists when saved-account storage is unavailable', async () => {
+  const original = global.fetch, values = new Map(); let calls = 0;
+  const secure = { getItemAsync: async key => values.get(key) ?? null,
+    setItemAsync: async (key, value) => { values.set(key, value); }, deleteItemAsync: async key => { values.delete(key); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++calls}`,
+    profile: { role: 'aparatchi', ref: calls === 1 ? 'one' : 'two' } }) });
+  try {
+    const first = auth(secure, 'ios', undefined, true);
+    const session = await first.login('https://example.test', 'phone', 'code');
+    assert.equal(await first.refreshSession(session, 'token-1'), true);
+    const restarted = auth(secure, 'ios', undefined, true);
+    const restored = await restarted.loadSession();
+    assert.equal(restored.profile.ref, 'two');
+    assert.equal(await restarted.refreshSession(restored, 'token-2'), true);
+    assert.equal(restored.token, 'token-3');
+  } finally { global.fetch = original; }
+});
+
 test('profile updates synchronize the active saved account', async () => {
   const original = global.fetch;
   global.fetch = async () => ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) });
@@ -330,5 +390,38 @@ test('a failed session reset rolls login back to the previous account', async ()
     assert.equal(api.activeSessionToken(previous), 'token-one');
     assert.equal(api.testAccountStore.activeAccountId, 'https://example.test|aparatchi|one');
     unregister();
+  } finally { global.fetch = original; }
+});
+
+
+test('failed stored-account reauthentication clears the active account and session', async () => {
+  const original = global.fetch; let loginAttempts = 0;
+  global.fetch = async () => {
+    loginAttempts++;
+    if (loginAttempts > 1) return { status: 401 };
+    return { status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) };
+  };
+  try {
+    const api = auth({});
+    const session = await api.login('https://example.test', 'one', '40');
+    assert.equal(await api.refreshSession(session, 'token'), false);
+    assert.equal(api.testAccountStore.activeAccountId, null);
+    assert.equal(await api.loadSession(), null);
+    assert.equal(api.testAccountStore.accounts.length, 1);
+  } finally { global.fetch = original; }
+});
+
+
+test('login and refresh reset session-scoped state when effective access role changes', async () => {
+  const original = global.fetch; let attempt = 0;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++attempt}`,
+    profile: { role: 'werka', ref: 'one' }, capabilities: [attempt === 1 ? 'supplier.access' : attempt === 2 ? 'customer.access' : 'werka.access'] }) });
+  try {
+    const api = auth({}); let resets = 0; api.registerSessionResetHook(async () => { resets++; });
+    await api.login('https://example.test', 'one', 'code');
+    const session = await api.login('https://example.test', 'one', 'code');
+    assert.equal(resets, 1);
+    assert.equal(await api.refreshSession(session, session.token), true);
+    assert.equal(resets, 2);
   } finally { global.fetch = original; }
 });

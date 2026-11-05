@@ -192,6 +192,16 @@ export function registerSessionResetHook(hook: () => Promise<void>): () => void 
   return () => { sessionResetHooks.delete(hook); };
 }
 
+async function resetForChangedProfile(previous: Session | null, next: Session): Promise<void> {
+  if (!previous) return;
+  const { sessionAccessRole } = await import('./shared/searchActivityStore');
+  const key = (value: Session) => `${sessionAccessRole(value) ?? 'custom'}:${String(value.profile.ref ?? '')}`;
+  if (key(previous) === key(next)) return;
+  const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+  const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+  if (failure) throw failure.reason;
+}
+
 export async function clearSession(): Promise<void> {
   sessionEpoch++;
   activeSession = null;
@@ -275,12 +285,7 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
     const store = await savedAccountsFor(previousSession?.baseUrl ?? server, previousSession, previousCredentials);
     if (epoch !== sessionEpoch) { if (store) await store.clearActive(); throw new Error('Sessiya o‘zgargan. Qayta kiring.'); }
     const installSession = async () => {
-      const previous = previousSession ? identity(previousSession) : null;
-      if (previous && (previous.ref !== account.ref || previous.role !== account.role)) {
-        const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
-        const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-        if (failure) throw failure.reason;
-      }
+      await resetForChangedProfile(previousSession, session);
       if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
       await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
       await writeSession(session);
@@ -333,6 +338,8 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   });
 }
 
+export function currentSession(): Session | null { return activeSession; }
+
 /** Returns a token only while this exact login session is still active. */
 export function activeSessionToken(session: Session): string | null {
   return activeSession === session ? session.token : null;
@@ -357,36 +364,142 @@ export function updateSessionAssignments(session: Session, assigned: readonly st
   return true;
 }
 
-/** Refreshes an active session once for concurrent 401s; network errors retain local state. */
+/** Refreshes an active session once for concurrent 401s. */
 export async function refreshSession(session: Session, failedToken: string): Promise<boolean> {
   if (activeSession !== session) return false;
   if (session.token !== failedToken) return true;
   const epoch = sessionEpoch;
   if (refreshing?.session === session && refreshing.epoch === epoch) return refreshing.promise;
+  const stillCurrent = () => activeSession === session && epoch === sessionEpoch;
   const promise = (async () => {
     try {
       const credentials = await inStorageOrder(readCredentials);
-      if (activeSession !== session || epoch !== sessionEpoch || !credentials) return false;
+      if (!stillCurrent()) return false;
+      const store = await savedAccountsFor(session.baseUrl, session, credentials);
+      if (!stillCurrent()) return false;
+      const applyRefresh = async (next: Session, phone: string, code: string): Promise<boolean> => {
+        if (!stillCurrent()) return false;
+        const changedIdentity = !sameIdentity(session, next);
+        if (!changedIdentity) next.imageCacheScope = session.imageCacheScope;
+        await resetForChangedProfile(session, next);
+        if (!stillCurrent()) return false;
+        return inStorageOrder(async () => {
+          if (!stillCurrent()) return false;
+          if (changedIdentity) await writeCredentials({ baseUrl: next.baseUrl, phone, code, ...identity(next) });
+          await writeSession(next);
+          if (!stillCurrent()) return false;
+          Object.assign(session, next);
+          return true;
+        });
+      };
+      if (store) {
+        return await store.runAccountOperation(async () => {
+          if (!stillCurrent()) return false;
+          const disconnect = async () => {
+            if (!stillCurrent()) return;
+            await store.clearActive();
+            if (stillCurrent()) await clearSession();
+          };
+          const id = store.activeAccountId;
+          const saved = id == null ? null : await store.sessionFor(id);
+          if (!saved || !saved.phone || !saved.code) { await disconnect(); return false; }
+          try {
+            const next = await authenticate(saved.account.base_url, saved.phone, saved.code);
+            if (!stillCurrent()) return false;
+            await store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
+              phone: saved.phone, code: saved.code, makeActive: true });
+            return await applyRefresh(next, saved.phone, saved.code);
+          } catch {
+            await disconnect();
+            return false;
+          }
+        });
+      }
       const account = identity(session);
-      if (credentials.baseUrl !== session.baseUrl || credentials.ref !== account.ref || credentials.role !== account.role || !credentials.phone || !credentials.code) return false;
-      const next = await authenticate(credentials.baseUrl, credentials.phone, credentials.code);
-      if (!sameIdentity(session, next)) return false;
-      next.imageCacheScope = session.imageCacheScope;
-      return await inStorageOrder(async () => {
-        if (activeSession !== session || epoch !== sessionEpoch) return false;
-        const store = await savedAccountsFor(session.baseUrl, session, credentials);
-        if (activeSession !== session || epoch !== sessionEpoch) return false;
-        if (store) await store.runAccountOperation(() => store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
-          phone: credentials.phone, code: credentials.code, makeActive: false }));
-        if (activeSession !== session || epoch !== sessionEpoch) return false;
-        await writeSession(next);
-        if (activeSession !== session || epoch !== sessionEpoch) return false;
-        Object.assign(session, next);
-        return true;
-      });
+      if (!credentials || credentials.baseUrl !== session.baseUrl || credentials.ref !== account.ref ||
+          credentials.role !== account.role || !credentials.phone || !credentials.code) return false;
+      try {
+        const next = await authenticate(credentials.baseUrl, credentials.phone, credentials.code);
+        return await applyRefresh(next, credentials.phone, credentials.code);
+      } catch {
+        if (stillCurrent()) await clearSession();
+        return false;
+      }
     } catch { return false; }
   })();
   refreshing = { session, epoch, promise };
   try { return await promise; }
   finally { if (refreshing?.promise === promise) refreshing = null; }
+}
+
+type AccountRuntimeSnapshot = { session: Session | null; credentials: Promise<Credentials | null> };
+
+/** @v2 createRuntimeAccountSwitchController */
+export async function createRuntimeAccountSwitchController(baseUrl?: string) {
+  const current = activeSession ?? await loadSession();
+  const { initializeServerEndpoints } = await import('./serverEndpointRuntime');
+  const endpoints = await initializeServerEndpoints();
+  const server = normalizeServer(baseUrl ?? current?.baseUrl ?? endpoints.baseUrl);
+  const credentials = await inStorageOrder(readCredentials);
+  const store = await savedAccountsFor(server, current, credentials);
+  if (!store) throw new Error('Saved account store is unavailable');
+  const { AccountSwitchController } = await import('./shared/accountSwitchController');
+
+  async function resetScopedState(): Promise<void> {
+    const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+    const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+    if (failure) throw failure.reason;
+  }
+  async function install(session: Session, nextCredentials: Credentials | null): Promise<void> {
+    const epoch = ++sessionEpoch;
+    await resetScopedState();
+    await inStorageOrder(async () => {
+      if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+      if (nextCredentials) await writeCredentials(nextCredentials);
+      else if (Platform.OS === 'web') webCredentials = null;
+      else await secureStorage.removeItem(CREDENTIALS_KEY);
+      await writeSession(session);
+      if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+      activeSession = session;
+      refreshing = null;
+    });
+  }
+
+  return new AccountSwitchController(store, {
+    current: () => activeSession,
+    snapshot: (): AccountRuntimeSnapshot => ({ session: activeSession, credentials: inStorageOrder(readCredentials) }),
+    restore: async snapshot => {
+      const previous = snapshot as AccountRuntimeSnapshot;
+      if (!previous.session) { await clearSession(); return; }
+      await install(previous.session, await previous.credentials);
+    },
+    activate: async (target, werkaHomeBootstrap) => {
+      const session = parseSession({ ...target.account.profile, profile: target.account.profile, token: target.token,
+        baseUrl: target.account.base_url, werka_home: werkaHomeBootstrap, imageCacheScope: newImageCacheScope() });
+      if (!session) throw new Error('Saved account session is invalid');
+      const account = identity(session);
+      await install(session, { baseUrl: session.baseUrl, phone: target.phone, code: target.code, ...account });
+    },
+    clear: clearSession,
+    reauthenticate: async target => {
+      const next = await authenticate(target.account.base_url, target.phone, target.code);
+      return { token: next.token, profile: savedProfile(next), werkaHomeBootstrap: next.werka_home };
+    },
+    unregisterCurrentPush: async () => {
+      if (!activeSession || activeSession.token === 'test-mode-token') return;
+      const { unregisterCurrentPushToken } = await import('./pushTokenRuntime');
+      await unregisterCurrentPushToken(activeSession);
+    },
+    logoutSavedSession: async target => {
+      const { logoutSavedSession } = await import('./logoutSavedSession');
+      await logoutSavedSession(target.token, target.account.base_url);
+    },
+    clearAfterLogout: async () => {
+      if (!activeSession) return;
+      const { clearAppLock } = await import('./appLock');
+      await clearAppLock(activeSession);
+      const { switchPinStore } = await import('./shared/switchPinRuntime');
+      await switchPinStore.clear(activeSession);
+    },
+  });
 }

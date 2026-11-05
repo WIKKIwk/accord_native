@@ -1,26 +1,42 @@
 import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import { LoginScreen } from '../LoginScreen';
 import { WorkerScreen } from '../WorkerScreen';
-import { loadSession, logout, type Session } from '../auth';
+import { activeSessionToken, loadSession, logout, type Session } from '../auth';
+import { profile } from '../profileApi';
+import { bootstrapSession, loadBaseStartup } from '../shared/loginLogic';
 import { clearAppLock } from '../appLock';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
+import { homeTarget } from '../shared/appRoutes';
+import { switchPinStore } from '../shared/switchPinRuntime';
+import { notificationUnreadStore } from '../shared/notificationStoresRuntime';
+import { localeController } from '../shared/localization/runtime';
+import { themeController } from '../shared/themeRuntime';
+import '../shared/productionSnapshotRuntime';
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    loadSession().then(value => { if (active) setSession(value); }).finally(() => { if (active) setLoading(false); });
+    bootstrapSession(() => loadBaseStartup(loadSession, [() => notificationUnreadStore.load(),
+      () => themeController.load(), () => localeController.load()]), profile, value => !!activeSessionToken(value))
+      .then(value => { if (active) setSession(value); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
   if (loading) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   if (!session) return <LoginScreen onLogin={setSession} />;
-  if (Platform.OS === 'ios') return <Redirect href="/ios-worker" />;
+  const target = homeTarget(session, Platform.OS);
+  if (target && target !== 'worker') return <Redirect href={target} />;
+  if (!target) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>Ushbu rol uchun Accord V2 ilovasidan foydalanishda davom eting.</Text>
+  </View>;
   const onLogout = () => {
     setLoading(true);
-    void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {})]).finally(() => {
+    void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {}),
+      switchPinStore.clear(session).catch(() => {})]).finally(() => {
       setSession(null);
       setLoading(false);
     });
