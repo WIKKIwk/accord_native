@@ -1,31 +1,23 @@
 # base
 
 Status: parts 1 and 2 in progress
-Stopped at: shared API and base logic comparison
+Stopped at: complete the remaining base logic, localization and V2 test comparisons listed below; then rerun both part gates.
 
 ## Open items
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Push token reader | `PushMessagingService.unregisterCurrentToken`, `logout` | Initialize Firebase Messaging on each native platform and register its FCM token reader. Firebase configuration must be supplied by the user. Logout otherwise remains ported. |
-
-| Notifications | `mobile_api_supplier_notifications.dart` | V2 has no recorded HTTP tests for notification detail, comments, or unannounced responses; source-derived request and parsing tests are in `tests/baseNotificationApi.test.cjs`. |
-
-| `adminConfirmRawMaterialStockReprint`, `qolipPrintCodeQr` | `mobile_api_admin_items_MobileApiAdminItems_methods_03.dart`, `mobile_api_qolip_MobileApiQolip_methods_04.dart` | V2 has no recorded HTTP test for these calls; source-derived request and response tests are in `tests/basePrintApi.test.cjs`. |
-
-| `gscaleItemsPage`, `adminWarehouseAssignments` | `mobile_api_gscale_declarations_part_01.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_03.dart` | V2 has no recorded HTTP test for these calls; source-derived request, parsing and account-scoped sorting tests are in `tests/baseCatalogApi.test.cjs`. |
-
-| `updateNickname`, `uploadAvatar` | `mobile_api_auth_profile.dart` | No V2 HTTP recording exists; source-derived tests cover nickname, multipart bytes, response status and session update. Device upload still needs a native runtime check. |
-
-| Account switching runtime | `createRuntimeAccountSwitchController`, `SecurityController.saveSwitchPinForCurrentUser` | Connect Firebase push synchronization, security unlock, the shared separate profile-switch PIN store and the platform account-switcher views to the account controller. |
-
-| Application updates | `AppUpdateService`, `NativeAppUpdatePlatform`, `AppUpdateCoordinator` | Manifest and version-policy models are ported; the native installer channel, update service/coordinator and platform dialogs are not yet connected. |
-
-| Transport response bodies | `MobileApi._get`, `_post`, `_put`, `_delete`, `_patch` | The shared ten-second timer covers fetch until response headers; V2 buffers the full response within its timeout. Complete response-body deadlines; `resilientApiRead` is available but its V2 opt-in callers still need to use it. |
-
-| Reauthentication identity | `MobileApi._performStoredAccountReauthentication` | V4 rejects a refreshed account whose identity changes; V2 accepts the returned account. Reconcile this existing guard for exact parity. |
-
-| Inventory live transport | `warehouse_live_client_io.dart`, `InventoryViewStore` | JS WebSocket does not expose V2’s 25-second protocol ping; verify native keepalive behavior on both platforms. The shared store must be configured for foreground/background lifecycle by platform entry points. |
+| Push token reader and sync | `PushMessagingService.unregisterCurrentToken`, `syncCurrentToken`, `FirebaseClientBootstrap` | The rest of logout is ported. Initialize native Firebase Messaging and register an FCM token reader after the user supplies Firebase configuration; connect push sync after account switches. |
+| Base reading and tests | `.port/role-base-1.md`, `.port/role-base-2.md`, `.port/role-base-tests.md` | Finish comparison of the untagged declarations and unreplayed contract/logic cases. The role generator includes worker, inventory, preparation and qolip dependencies; compare already-existing implementations rather than copying them. Widget-only assertions belong to the platform contracts. |
+| Platform screens and routes | `.port/role-base-1.md`, `.port/role-base-2.md` | Login, profile, PIN setup, welcome, account-switcher and update views/routes remain unchecked on iOS and Android. Their reviewed behavior and text keys are in `docs/port/roles/base.md`. |
+| Localization | `core/localization/` | Generate the four-locale catalog from the baseline, including parameterized strings and Urdu behavior; existing views still contain hard-coded Uzbek. |
+| Application updates | `AppUpdateService`, `NativeAppUpdatePlatform`, `AppUpdateCoordinator` | Manifest and version-policy models are ported; native installer, update service/coordinator and platform dialogs remain to be connected. |
+| Account switching | `createRuntimeAccountSwitchController`, `SecurityController` | Connect security unlock, the shared profile-switch PIN store and platform account-switcher views to the runtime controller. |
+| Session reauthentication | `MobileApi._performStoredAccountReauthentication` | V4 rejects a refreshed account whose identity changes; V2 accepts the returned identity. Reconcile the existing identity guard for exact parity. |
+| Transport | `MobileApi._get`, `_post`, `_put`, `_delete`, `_patch`, `resilientApiRead`, `SecureMobileApiClient` | The ten-second timer covers fetch until headers; V2 buffers the full response within its timeout. Connect the shared resilient GET helper at V2's opt-in call sites and verify redirect and sensitive-header handling. |
+| Inventory live transport | `warehouse_live_client_io.dart`, `InventoryViewStore` | JS WebSocket does not expose V2’s 25-second protocol ping; verify native keepalive on both platforms. Platform entry points must configure foreground/background lifecycle. |
+| Security lifecycle | `SecurityController`, `src/appLock.ts`, `WorkerSecurity` | Compare and connect the V2 privacy shield, resume lock and biometric flows; V4 currently uses different storage and UI components. |
+| Native device behavior | `secure_account_storage`, `uploadAvatar`, `app_update` | Saved-account secure storage and avatar multipart upload have mock/source-derived tests but need native runtime verification; update installation needs a native bridge. |
 
 ## Deviations candidates
 
@@ -37,13 +29,17 @@ Stopped at: shared API and base logic comparison
 | `qolipPrintCodeQr` | Its in-memory qolip lookup and print job branch. |
 | `gscaleItemsPage`, `adminWarehouseAssignments` | Their in-memory catalog and warehouse-assignment branches. |
 
+## Test coverage notes
+
+V2 has no recorded HTTP tests for `notificationDetail`, `addNotificationComment`, `supplierRespondUnannounced`, `adminConfirmRawMaterialStockReprint`, `qolipPrintCodeQr`, `gscaleItemsPage`, `adminWarehouseAssignments`, `updateNickname`, or `uploadAvatar`. Focused V4 tests assert their requests and source-derived parsing. `adminPrepareRawMaterialStockReprint` replays the V2 `qolip_tasks_test.dart` recording. Base tests also cover routing, saved-account switching, PIN, refresh, inventory windows, update models and transport.
+
 ## Needs from the integrator
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| `src/LoginScreen.tsx` | `loginCodeUsesNumericKeyboard`, `loginFailureMessage`, `LoginScreen.submitLogin` | Use the shared prefix rule for the keyboard, port localized transport/error messages and match V2 login/back behavior in the platform-owned login views. |
-| `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing profile UI helpers impose additional validation and do not call the shared V2 API functions; reconcile those helpers and their platform screens when profile UI is ported. |
-| `src/workerRawMaterials.ts` | `resilientApiRead` | Route the V2 opt-in raw-material GETs through the shared retry helper, retaining the caller session guards. |
-| `src/profileAvatarUpload.ts` and streamed uploads | `_sendMultipartAuthorized`, `_sendStreamedAuthorized` | Opt streamed/multipart calls out of the default request timer where V2 has no per-request deadline. |
+| `src/LoginScreen.tsx` | `loginCodeUsesNumericKeyboard`, `loginFailureMessage`, `LoginScreen.submitLogin` | Use the shared prefix rule, localized transport/error messages and V2 login/back behavior in the platform-owned login views. |
+| `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing UI helpers impose additional validation and do not call the shared V2 API functions; reconcile them when profile UI is ported. |
+| `src/workerRawMaterials.ts` | `resilientApiRead` | Route the V2 opt-in raw-material GETs through the shared retry helper, retaining their session guards. |
+| `src/profileAvatarUpload.ts` and streamed uploads | `_sendMultipartAuthorized`, `_sendStreamedAuthorized` | Opt streamed/multipart calls out of the shared request timer where V2 has no per-request deadline. |
 | `src/app/ios-worker/_layout.tsx` | `SecurityController.clearForLogout` | Clear the separate shared profile-switch PIN along with the app-lock PIN during iOS logout. |
 | `src/app/android-worker/` | `AppSession.homeRoute` | Add the Android worker Expo Router route. Until then the existing Android worker screen renders at the root; base cannot create route files outside its scope. |
