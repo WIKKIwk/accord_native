@@ -29,7 +29,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
-| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 102/120 listed API entries have tags and part 1 still has unchecked items. Needs a development build for printing |
+| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 108/120 listed API entries have tags and part 1 still has unchecked items. Needs a development build for printing |
 | homashyo | | | | | Needs printing |
 | chat | | | | | iOS exists without tags; Android ships a stub |
 | rezka | | | | | |
@@ -71,7 +71,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/profileApi.ts` | `profile` | No V2 HTTP recording was found; a focused V4 test covers response and conditional session update |
 | `src/mobilePushConfigApi.ts` | `mobilePushConfig` | No V2 HTTP recording was found; a focused V4 test covers the source-derived request and platform identity validation |
 | `src/logoutSavedSession.ts` | `logoutSavedSession` | No V2 HTTP recording was found; a focused V4 test covers direct token handling and the source-derived request |
-| `src/auth.ts`, `src/serverEndpointStore.ts` | `baseUrl`, `instance` | The endpoint store now implements V2 normalization, saved endpoints and active override persistence with focused tests. Connect it to the app's active server and API singleton; V4 currently carries the selected server in each session |
+| `src/auth.ts`, `src/serverEndpointStore.ts`, `src/mobileApi.ts` | `instance` | The endpoint store now implements V2 normalization, saved endpoints and active override persistence; the shared API base URL is connected to startup and sign-in. The singleton currently exposes the base URL, while V4's other API methods remain standalone functions; reconcile the full singleton surface before tagging `instance` |
 | `src/productionOrderPageApi.ts` | `adminProductionOrderPage`, `admin_order_page_api_test.dart`, `admin_orders_list_api_test.dart` | Conditional requests, projected rows, pagination checks and legacy-page reads have focused V2 replays. The diagnostic identity-compression flag uses Expo's public build variable `EXPO_PUBLIC_ACCORD_ADMIN_IDENTITY_COMPRESSION`. Full snapshot/template decoding is still needed before this method is tagged |
 | `src/productionOrderDetailApi.ts` | `adminProductionOrderDetail`, `admin_orders_list_api_test.dart`, `admin_sequence_list_api_test.dart` | The generic and apparatus-scoped requests and invalid-detail cases replay V2; the diagnostic identity-compression flag is also supported. The shared snapshot decoder still needs full parity before this method is tagged |
 | `src/OrderScreen.tsx` | `mobile_api_boyoqchi.dart` `returnedPaintImageUrl`, `test/returned_paint_models_test.dart` | V2 uses the `image_url` returned by the server and persists the image object. V4 currently reconstructs the image URL from `image_id`; port the returned URL and draft fields before marking this flow complete |

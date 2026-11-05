@@ -141,6 +141,9 @@ export async function loadSession(): Promise<Session | null> {
   return inStorageOrder(async () => {
     if (epoch !== sessionEpoch) return null;
     if (activeSession) return activeSession;
+    const { initializeServerEndpoints } = await import('./serverEndpointRuntime');
+    const endpoints = await initializeServerEndpoints();
+    if (epoch !== sessionEpoch) return null;
     let result: Session | null = null;
     if (Platform.OS === 'web') result = webSession;
     else {
@@ -156,7 +159,7 @@ export async function loadSession(): Promise<Session | null> {
       } catch { result = null; }
     }
     const credentials = await readCredentials();
-    const store = await savedAccountsFor(result?.baseUrl ?? DEFAULT_SERVER_URL, result, credentials);
+    const store = await savedAccountsFor(result?.baseUrl ?? endpoints.baseUrl, result, credentials);
     const saved = store.activeAccountId ? await store.sessionFor(store.activeAccountId) : null;
     if (epoch !== sessionEpoch) return null;
     if (saved) {
@@ -236,6 +239,11 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   const trimmedCode = code.trim();
   const epoch = ++sessionEpoch;
   const previousSession = activeSession;
+  const { initializeServerEndpoints } = await import('./serverEndpointRuntime');
+  const endpoints = await initializeServerEndpoints();
+  if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+  await endpoints.setBaseUrl(server);
+  if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
   const session = await authenticate(server, phone, code);
   const account = identity(session);
   if (!account.ref || !account.role) throw new Error('Server noto‘g‘ri hisob ma’lumotlarini qaytardi.');

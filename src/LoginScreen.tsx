@@ -2,12 +2,13 @@ import { Button, Column, FieldGroup, Host, Text as ExpoText, TextInput } from '@
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, PlatformColor, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { DEFAULT_SERVER_URL, login, type Session } from './auth';
+import { login, type Session } from './auth';
+import { MobileApi } from './mobileApi';
 
 type Props = { onLogin: (session: Session) => void };
 
 export function LoginScreen({ onLogin }: Props) {
-  const [server, setServer] = useState(DEFAULT_SERVER_URL);
+  const [server, setServer] = useState(MobileApi.instance.baseUrl);
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,7 +31,7 @@ export function LoginScreen({ onLogin }: Props) {
             <ExpoText>Ish joyingizga xush kelibsiz</ExpoText>
           </FieldGroup.Section>
           <FieldGroup.Section title="Server">
-            <TextInput defaultValue={DEFAULT_SERVER_URL} accessibilityLabel="Server manzili" placeholder="Server manzili" keyboardType="url" autoCapitalize="none" autoCorrect={false} onChangeText={setServer} editable={!busy} />
+            <TextInput defaultValue={server} accessibilityLabel="Server manzili" placeholder="Server manzili" keyboardType="url" autoCapitalize="none" autoCorrect={false} onChangeText={setServer} editable={!busy} />
           </FieldGroup.Section>
           <FieldGroup.Section title="Hisobga kirish">
             <TextInput accessibilityLabel="Telefon raqam" placeholder="Telefon raqam" keyboardType="phone-pad" autoComplete="tel" onChangeText={setPhone} editable={!busy} />
@@ -56,7 +57,7 @@ export function LoginScreen({ onLogin }: Props) {
           <Text style={styles.hint}>Telefon raqamingiz va kirish kodingizni kiriting.</Text>
           <Host matchContents={{ vertical: true }} style={styles.host}>
             <Column spacing={14}>
-              <TextInput defaultValue={DEFAULT_SERVER_URL} placeholder="Server manzili" keyboardType="url" autoCapitalize="none" autoCorrect={false} onChangeText={setServer} editable={!busy} />
+              <TextInput defaultValue={server} placeholder="Server manzili" keyboardType="url" autoCapitalize="none" autoCorrect={false} onChangeText={setServer} editable={!busy} />
               <TextInput placeholder="Telefon raqam" keyboardType="phone-pad" autoComplete="tel" onChangeText={setPhone} editable={!busy} />
               <TextInput placeholder="Kirish kodi" keyboardType="number-pad" secureTextEntry onChangeText={setCode} editable={!busy} />
               <Button label={busy ? 'Kirilmoqda…' : 'Kirish'} variant="filled" disabled={busy || !phone.trim() || !code.trim()} onPress={submit} />

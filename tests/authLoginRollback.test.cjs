@@ -17,15 +17,17 @@ function auth(store, platform = 'web', existingAccountStore) {
   const memory = () => { const values = new Map(); return { getItem: async key => values.get(key) ?? null,
     setItem: async (key, value) => { values.set(key, value); }, removeItem: async key => { values.delete(key); } }; };
   const accountStore = existingAccountStore ?? new saved.exports.SavedAccountStore(memory(), memory(), async value => crypto.createHash('sha256').update(value).digest('hex'));
+  const endpoints = { baseUrl: 'https://example.test', setBaseUrl: async value => { endpoints.baseUrl = value; return value; } };
   const logoutFile = path.resolve(__dirname, '../src/logoutSavedSession.ts'), logoutModule = new Module(logoutFile, module);
   logoutModule.filename = logoutFile; logoutModule.paths = module.paths;
   logoutModule._compile(ts.transpileModule(fs.readFileSync(logoutFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, logoutFile);
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: platform } }
     : id === './authenticateAccount' ? account.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => accountStore }
+    : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => endpoints }
     : id === './logoutSavedSession' ? logoutModule.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
-  return Object.assign(loaded.exports, { testAccountStore: accountStore });
+  return Object.assign(loaded.exports, { testAccountStore: accountStore, testEndpoints: endpoints });
 }
 const oldSession = () => ({ baseUrl: 'https://example.test', token: 'old-token', profile: { role: 'aparatchi', ref: 'old' }, capabilities: [], assigned_apparatus: [], assigned_apparatus_labels: [], imageCacheScope: 'old' });
 test('failed login retains the prior active session', async () => {
@@ -59,6 +61,7 @@ test('login uses V2 account parsing and keeps assigned machines in the session',
     const api = auth({});
     const session = await api.login('https://example.test', ' 123 ', ' 456 ');
     assert.deepEqual(sent, { phone: ' 123 ', code: ' 456 ' });
+    assert.equal(api.testEndpoints.baseUrl, 'https://example.test');
     assert.equal(session.token, 'token');
     assert.deepEqual(session.assigned_apparatus, ['apparatus:default:press']);
     assert.deepEqual(session.assigned_apparatus_labels, ['Press']);
