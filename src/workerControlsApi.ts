@@ -6,7 +6,7 @@ type JsonObject = Record<string, unknown>;
 
 export class WorkerControlException extends Error {
   constructor(readonly code: string, message: string, readonly statusCode?: number,
-    readonly diagnostics: JsonObject = {}) {
+    readonly diagnostics: JsonObject = {}, readonly requestId?: string) {
     super(message);
     this.name = 'MobileApiException';
   }
