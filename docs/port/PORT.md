@@ -29,7 +29,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
-| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 35/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
+| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 36/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
 | homashyo | | | | | Needs printing |
 | chat | | | | | iOS exists without tags; Android ships a stub |
 | rezka | | | | | |
@@ -96,6 +96,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminEarlyCloseProductionOrder` | V2 rejects early closure in test mode |
 | `adminLaminatsiyaAstatkaReport` | V2 stores an in-memory report based on the last report or order start |
 | `adminMoveProductionMapOrdersBatch` | V2 validates and mutates in-memory production maps and sequences |
+| `adminMoveProductionMapSequence` | V2 reorders its in-memory test-mode sequence |
 
 ## Drift log
 
