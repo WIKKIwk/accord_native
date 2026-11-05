@@ -15,7 +15,8 @@ export type UpdatePlatform = {
 };
 export type UpdateFiles = { exists(path: string): Promise<boolean>; size(path: string): Promise<number>; sha256(path: string): Promise<string> };
 export type UpdateServiceOptions = { baseUrl: string; storage: AccountStorage; platform: UpdatePlatform; files: UpdateFiles;
-  fetch?: typeof fetch; downloadPollIntervalMs?: number; automaticRetryDelayMs?: number };
+  fetch?: typeof fetch; socketFactory?: (url: string) => WebSocket; socketConnectTimeoutMs?: number;
+  downloadPollIntervalMs?: number; automaticRetryDelayMs?: number };
 type Progress = (received: number, total: number) => void;
 const fail = (code: string, message: string) => new AppUpdateException(code, message);
 
@@ -52,6 +53,30 @@ export class AppUpdateService {
   get isSupported(): boolean { return this.options.platform.isSupported; }
   get endpointKey(): string { return this.base.origin; }
   private get cacheKey(): string { return `app_update_manifest_v1:${this.endpointKey}`; }
+  /** @v2 AppUpdateService.releaseChanges */
+  releaseChanges(onChange: () => void, onEnd: (error?: unknown) => void): () => void {
+    const uri = new URL('/v1/mobile/app-update/android/live', this.base);
+    uri.protocol = uri.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = (this.options.socketFactory ?? (url => new WebSocket(url)))(uri.toString());
+    let stopped = false;
+    const timeout = setTimeout(() => finish(new Error('Update connection timed out')), this.options.socketConnectTimeoutMs ?? 10_000);
+    const finish = (error?: unknown) => {
+      if (!stopped) { stopped = true; clearTimeout(timeout); socket.close(); onEnd(error); }
+    };
+    socket.onopen = () => clearTimeout(timeout);
+    socket.onmessage = event => {
+      if (stopped || typeof event.data !== 'string') return;
+      let value: unknown;
+      try {
+        value = JSON.parse(event.data);
+        if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid update event');
+      } catch (error) { finish(error); return; }
+      if ((value as Record<string, unknown>).type === 'android_release_changed') onChange();
+    };
+    socket.onerror = event => finish(event);
+    socket.onclose = () => finish();
+    return () => { if (!stopped) { stopped = true; clearTimeout(timeout); socket.close(); } };
+  }
 
   async rememberUpdate(update: AppUpdateCheckResult): Promise<void> {
     if (update.updateAvailable) await this.options.storage.setItem(this.cacheKey, JSON.stringify(update.manifest!.toJson()));

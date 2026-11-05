@@ -4,6 +4,7 @@ import { AppUpdateCancellation, type InstallResult } from './appUpdateService';
 export type AppUpdateCoordinatorService = {
   readonly endpointKey: string;
   readonly isSupported: boolean;
+  releaseChanges(onChange: () => void, onEnd: (error?: unknown) => void): () => void;
   currentAppInfo(): Promise<AppInstallationInfo>;
   check(): Promise<AppUpdateCheckResult>;
   restorePendingUpdate(): Promise<AppUpdateCheckResult | null>;
@@ -44,6 +45,9 @@ export class AppUpdateCoordinator {
   get preparing(): boolean { return this.preparingArtifact !== null; }
   get isSupported(): boolean { return this.service.isSupported; }
   get endpointKey(): string { return this.service.endpointKey; }
+  releaseChanges(onChange: () => void, onEnd: (error?: unknown) => void): () => void {
+    return this.service.releaseChanges(onChange, onEnd);
+  }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   private notify(): void { if (!this.disposed) for (const listener of this.listeners) listener(); }
   setForeground(foreground: boolean): void { this.foreground = foreground; if (foreground) this.promptReady(); }

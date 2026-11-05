@@ -31,6 +31,7 @@ function fixture(options = {}) {
   const files = { exists: async () => true, size: async () => apk.length, sha256: async () => options.digest ?? sha };
   const fetch = async (url, init) => { calls.push(`${init.method} ${new URL(url).pathname}`); return new Response(JSON.stringify(manifest), { status: 200 }); };
   const service = new AppUpdateService({ baseUrl: 'https://erp.example/', platform, files, storage, fetch,
+    socketFactory: options.socketFactory, socketConnectTimeoutMs: options.socketConnectTimeoutMs,
     downloadPollIntervalMs: 0, automaticRetryDelayMs: 0 });
   return { service, calls, values, platform };
 }
@@ -76,4 +77,33 @@ test('manifest reads enforce the V2 size limit', async () => {
     files: { exists: async () => false, size: async () => 0, sha256: async () => '' },
     fetch: async () => new Response('x'.repeat(128 * 1024 + 1)) });
   await assert.rejects(service.check(), e => e.code === 'manifest_too_large');
+});
+
+// @v2-test test/warehouse_live_client_io_test.dart
+test('release changes filter live events and stop on invalid data or cancellation', () => {
+  const sockets = [], urls = [], ends = []; let changes = 0;
+  const f = fixture({ socketFactory: url => {
+    urls.push(url); const socket = { close() { this.closed = (this.closed ?? 0) + 1; } };
+    sockets.push(socket); return socket;
+  } });
+  const cancel = f.service.releaseChanges(() => changes++, error => ends.push(error));
+  assert.deepEqual(urls, ['wss://erp.example/v1/mobile/app-update/android/live']);
+  sockets[0].onopen();
+  sockets[0].onmessage({ data: JSON.stringify({ type: 'other' }) });
+  sockets[0].onmessage({ data: JSON.stringify({ type: 'android_release_changed' }) });
+  sockets[0].onmessage({ data: new Uint8Array([1]) });
+  assert.equal(changes, 1);
+  sockets[0].onmessage({ data: 'invalid' });
+  sockets[0].onclose(); cancel();
+  assert.equal(ends.length, 1); assert.ok(ends[0] instanceof Error); assert.equal(sockets[0].closed, 1);
+  const cancelSecond = f.service.releaseChanges(() => changes++, error => ends.push(error));
+  cancelSecond(); sockets[1].onclose();
+  assert.equal(ends.length, 1); assert.equal(sockets[1].closed, 1);
+});
+
+test('release connection times out and closes when no handshake completes', async () => {
+  let socket;
+  const f = fixture({ socketConnectTimeoutMs: 5, socketFactory: () => (socket = { close() { this.closed = true; } }) });
+  const error = await new Promise(resolve => f.service.releaseChanges(() => {}, resolve));
+  assert.match(error.message, /timed out/); assert.equal(socket.closed, true);
 });
