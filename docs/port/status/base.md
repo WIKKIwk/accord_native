@@ -9,6 +9,8 @@ Stopped at: shared API and base logic comparison
 |---|---|---|
 | Push token reader | `PushMessagingService.unregisterCurrentToken`, `logout` | Initialize Firebase Messaging on each native platform and register its FCM token reader. Firebase configuration must be supplied by the user. Logout otherwise remains ported. |
 
+| Notifications | `mobile_api_supplier_notifications.dart` | V2 has no recorded HTTP tests for notification detail, comments, or unannounced responses; source-derived request and parsing tests are in `tests/baseNotificationApi.test.cjs`. |
+
 ## Deviations candidates
 
 ## Test mode pending
