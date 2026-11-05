@@ -8,6 +8,7 @@ const object = (value: unknown): Obj | null => value !== null && typeof value ==
 const invalid = () => new WorkerControlException('production_map_snapshot_contract_invalid',
   'Production map navbati server shartnomasiga mos emas: invalid scoped worker detail');
 
+/** @v2 workerProductionOrderDetail */
 export async function workerProductionOrderDetail(session: Session, apparatus: string, orderId: string, signal?: AbortSignal): Promise<Obj> {
   const station = apparatus.trim(), order = orderId.trim();
   if (!isCanonicalApparatusId(station)) throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
