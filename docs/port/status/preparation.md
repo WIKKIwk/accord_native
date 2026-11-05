@@ -43,3 +43,41 @@ No V2 HTTP recordings were found for warehouse creation or deletion; source-deri
 - Add the preparation role home target and connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet.
 - Provide the shared `searchMatches` matcher and `AdminSequenceApparatusStore` selection logic for the preparation picker and order list.
 - Instantiate `PreparationOrdersWarmStore` with `productionSnapshotStore`, the active session and shared `AdminSequenceApparatusStore` selection; start/reset it with the app session. The shared apparatus selection store and startup wiring are outside this role’s write scope.
+
+## Verification
+
+- The ledger estimates 112k V2 tokens for this role; actual tokens read were not measured. The ledger API list moved from 5/26 previously tagged to 26/26 tagged, with additional preparation order and formula methods implemented.
+- `node --test tests/*.test.cjs`: 812 passed, 0 failed. There were 3 existing preparation read tests at the start; preparation-specific tests now span 22 files, plus existing shared tests.
+- iOS TypeScript: passed. Android TypeScript: the 10 known baseline errors in `WorkerOutputProgress.android.tsx`, `WorkerPaintPalette.android.tsx`, and `WorkerScreen.tsx`; no preparation errors. Expo lint: passed.
+- Ledger `check`: passed with six endpoint warnings; the preparation prefix is dynamic as explained above, the other five belong to other roles. `role preparation 1`: all 26 API entries are tagged; platform routes/screens remain unchecked.
+- V2 oracle: 31 passed and 3 warehouse widget tests failed at the baseline as detailed above; the order-scoped raw-material test passed separately. No simulator or device was used.
+
+## Checkpoints
+
+- `f191451` port(preparation/1): record contracts, 0 methods
+- `9a4ff48` port(preparation/1): formula models and precision, 0 methods
+- `051788d` port(preparation/1): formula API, 14 methods
+- `d2b92f5` port(preparation/1): material and warehouse API, 7 methods
+- `6fa98c1` port(preparation/1): persistent stock commands, 4 methods
+- `75cb619` port(preparation/1): production journal, 3 methods
+- `3159792` port(preparation/1): preparation screen rules, 0 methods
+- `e5331ed` port(preparation/1): production journal state, 0 methods
+- `2de4266` port(preparation/1): preparation home state, 0 methods
+- `ce6485f` port(preparation/1): formula editor state, 0 methods
+- `3b91e62` port(preparation/1): reprint coordination, 0 methods
+- `8120208` port(preparation/1): warehouse history rules, 0 methods
+- `eb5f2f0` port(preparation/1): scoped order list, 2 methods
+- `929397e` port(preparation/1): order live stream, 1 method
+- `25d38a0` port(preparation/1): order warm store, 0 methods
+- `33079c9` port(preparation/1): order list coordination, 0 methods
+- `bf0cf3c` port(preparation/1): material list state, 0 methods
+- `39b78c5` port(preparation/1): production journal adapters, 0 methods
+- `c2fd94d` port(preparation/1): draft UI contract, 0 methods
+- `28cee49` port(preparation/1): formula library state, 0 methods
+- `23ea4f3` port(preparation/1): variant screen state, 0 methods
+- `ba192c9` port(preparation/1): formula set detail state, 0 methods
+- `90000dc` port(preparation/1): route and estimate cases, 0 methods
+- `e078575` port(preparation/1): material authorization and UI texts, 0 methods
+- `26c2535` port(preparation/1): scoped assignment test, 0 methods
+- `7ffb62b` port(preparation/1): exact query encoding, 0 methods
+- `31b5fe3` port(preparation/1): detail decoder and test triage, 0 methods
