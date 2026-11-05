@@ -26,7 +26,7 @@ Stopped at: complete the UI text inventory and classify remaining V2 tests; plat
 
 Ledger `check` reports `/v1/mobile/preparation` because `preparationFormulaApi.ts` stores the prefix separately; V2 builds these same formula endpoints dynamically in `mobile_api_preparation.dart`. The other endpoint warnings belong to other sessions. The checker cannot resolve the nullable extension `_lineError`, documented at its V4 definition without an `@v2` tag.
 
-No V2 HTTP recordings were found for warehouse creation or deletion; source-derived request tests cover both.
+No V2 HTTP recordings were found for warehouse creation or deletion; source-derived request tests cover both. `admin_raw_material_api_test.dart` uses `HttpOverrides`, which the MockClient recorder cannot capture; `tests/preparationRawMaterials.test.cjs` replays its relevant order-only request and assertion from source.
 
 ## Needs from the integrator
 
