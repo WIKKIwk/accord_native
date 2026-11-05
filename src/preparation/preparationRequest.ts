@@ -34,8 +34,8 @@ export async function preparationRequest(session: Session, path: string, init: R
   return preparationResponse(response);
 }
 export function withQuery(path: string, params: Record<string, string>): string {
-  const query = new URLSearchParams(params).toString();
-  return query ? `${path}?${query}` : path;
+  const query = new URLSearchParams(params).toString().replace(/=(?=&|$)/g, '');
+  return `${path}?${query}`;
 }
 export function invalidResponse(message: string): never {
   throw new WorkerControlException('preparation_invalid_response', message);

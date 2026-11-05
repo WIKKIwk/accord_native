@@ -85,3 +85,11 @@ test('removing a variant is confined to its selected order', async () => {
   await api.preparationRemoveFormulaVariantFromOrder(session, { productCode: 'P', materialId: 'pe-pr', variantId: 'legacy', orderId: 'order-1' });
   replay.assertDone();
 });
+// Dart Uri.replace(queryParameters: {}) preserves the empty query marker.
+test('query serialization keeps V2 empty-query and empty-value syntax', () => {
+  const helpers = load('preparationRequest', { '../workerControlsApi': { WorkerControlException: class extends Error {} },
+    '../authorizedFetch': { authorizedFetch: async () => { throw Error('unexpected'); } } });
+  assert.equal(helpers.withQuery('/v1/mobile/preparation/formula-catalog', {}), '/v1/mobile/preparation/formula-catalog?');
+  assert.equal(helpers.withQuery('/v1/mobile/preparation/production/orders', { q: '', status: 'all' }),
+    '/v1/mobile/preparation/production/orders?q&status=all');
+});
