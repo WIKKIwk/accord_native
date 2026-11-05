@@ -3,8 +3,14 @@ import { accessibilityLabel, background, buttonStyle, contentShape, disabled, fo
 import { useState, type ComponentProps } from 'react';
 import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
+import { themeController } from '../shared/themeRuntime';
 import { ProfileAvatar } from './ProfileAvatar';
-import { ProfileSettings } from './ProfileSettings';
+import { ProfileAvatarPreview } from './ProfileAvatarPreview.ios';
+import { ProfileSettings } from './ProfileSettings.ios';
+import { ProfileSettingsPreferences } from './ProfileSettingsPreferences.ios';
+import { ProfileSwitchPin } from './ProfileSwitchPin.ios';
+import { useBaseLocale } from './useBaseLocale.ios';
+import { useSwitchPinSetup } from './useSwitchPinSetup.ios';
 import type { ProfileViewProps } from './profileViewTypes';
 
 type RowProps = { icon: ComponentProps<typeof Image>['systemName']; title: string; value: string };
@@ -53,6 +59,7 @@ function ApparatusRow({ labels }: { labels: string[] }) {
 function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftName, draftPhoto, busy, saving,
   onChangeName, onChoosePhoto, onSave, onCloseEditor }: ProfileViewProps) {
   const dark = useColorScheme() === 'dark';
+  const { text } = useBaseLocale();
   const name = useNativeState(draftName);
   return <Group modifiers={[
     presentationDetents([{ fraction: 0.72 }, 'large']), presentationDragIndicator('visible'),
@@ -60,7 +67,8 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
   ]}>
     <ScrollView modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'top' })]}>
       <VStack alignment="center" spacing={20} modifiers={[frame({ maxWidth: Infinity }), padding({ horizontal: 24, top: 24, bottom: 28 })]}>
-        <Text modifiers={[font({ textStyle: 'headline', weight: 'semibold' })]}>Profilni tahrirlash</Text>
+        <Text modifiers={[font({ textStyle: 'headline', weight: 'semibold' })]}>{text('profileEditTitle')}</Text>
+        <Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>{text('profileEditBody')}</Text>
         <Menu label={
           <ZStack alignment="bottomTrailing" modifiers={[contentShape(shapes.rectangle(), ['interaction', 'contextMenuPreview'])]}>
             <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken}
@@ -69,22 +77,22 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
               frame({ width: 34, height: 34 }), background('#000000', shapes.circle()),
             ]} />
           </ZStack>
-        } modifiers={[buttonStyle('plain'), menuIndicator('hidden'), menuOrder('fixed'), accessibilityLabel('Profil rasmini tanlash'), disabled(busy)]}>
-          <Button label="Rasmlar" systemImage="photo.on.rectangle" onPress={() => onChoosePhoto('library')} />
+        } modifiers={[buttonStyle('plain'), menuIndicator('hidden'), menuOrder('fixed'), accessibilityLabel(text('profilePhotoTitle')), disabled(busy)]}>
+          <Button label={text(draftPhoto ? 'changeImage' : 'chooseImage')} systemImage="photo.on.rectangle" onPress={() => onChoosePhoto('library')} />
           <Button label="Suratga olish" systemImage="camera" onPress={() => onChoosePhoto('camera')} />
           <Button label="Fayl tanlash" systemImage="folder" onPress={() => onChoosePhoto('file')} />
         </Menu>
         <VStack alignment="leading" spacing={8} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-          <Text modifiers={[font({ textStyle: 'subheadline' }), secondary]}>Ism</Text>
-          <TextField text={name} onTextChange={onChangeName} placeholder="Ismingiz" maxLength={100} modifiers={[
+          <Text modifiers={[font({ textStyle: 'subheadline' }), secondary]}>{text('nicknameLabel')}</Text>
+          <TextField text={name} onTextChange={onChangeName} placeholder={text('nicknameHint')} maxLength={100} modifiers={[
             font({ textStyle: 'body' }), textInputAutocapitalization('words'), padding({ horizontal: 16, vertical: 14 }),
             frame({ maxWidth: Infinity }),
             strokeBorder({ shape: 'roundedRectangle', cornerRadius: 18, content: dark ? '#5c5c60' : '#c7c7cc', style: { lineWidth: 1 } }),
-            accessibilityLabel('Ism'), disabled(busy),
+            accessibilityLabel(text('nicknameLabel')), disabled(busy),
           ]} />
         </VStack>
-        <Text modifiers={[font({ textStyle: 'footnote' }), secondary, frame({ maxWidth: Infinity, alignment: 'leading' }), multilineTextAlignment('leading')]}>Bu ism profilingizda boshqalarga ko‘rinadi.</Text>
-        <Button label={saving ? 'Saqlanmoqda…' : 'Saqlash'} onPress={onSave} modifiers={[
+        {draftPhoto ? <Text modifiers={[font({ textStyle: 'footnote' }), secondary, frame({ maxWidth: Infinity, alignment: 'leading' }), multilineTextAlignment('leading')]}>{text('selectedImageNotice')}</Text> : null}
+        <Button label={saving ? text('pinSaving') : text('save')} onPress={onSave} modifiers={[
           buttonStyle('plain'), font({ textStyle: 'body', weight: 'semibold' }),
           foregroundStyle(dark ? '#000000' : '#ffffff'), padding({ horizontal: 24, vertical: 12 }),
           background(dark ? '#ffffff' : '#1c1c1e', shapes.capsule()), disabled(saving),
@@ -100,13 +108,19 @@ export function ProfileView(props: ProfileViewProps) {
   const details = profileDisplay(snapshot);
   const dark = useColorScheme() === 'dark';
   const [settingsOpen, setSettingsOpen] = useState(false);
-  return <Host style={{ flex: 1 }}>
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const { text } = useBaseLocale();
+  const switchPin = useSwitchPinSetup(session);
+  const closeSettings = () => { if (!switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
+  return <><Host style={{ flex: 1 }}>
     <List modifiers={[listStyle('insetGrouped')]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), padding({ vertical: 14 })]}>
         <Spacer />
         <VStack alignment="center" spacing={6}>
           <ZStack alignment="bottomTrailing">
-            <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} size={80} revision={avatarRevision} /></RNHostView>
+            <Button onPress={() => setAvatarOpen(true)} modifiers={[buttonStyle('plain'), accessibilityLabel(text('profileAvatarZoomLabel'))]}>
+              <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} size={80} revision={avatarRevision} /></RNHostView>
+            </Button>
             <BottomSheet isPresented={editing} onIsPresentedChange={(isPresented) => { if (!isPresented) onCloseEditor(); }}
               anchor={<Button onPress={onOpenEditor} modifiers={[
                 buttonStyle('plain'), frame({ width: 32, height: 32 }),
@@ -132,9 +146,11 @@ export function ProfileView(props: ProfileViewProps) {
       </Section>
       <Section>
         <NavigationRow icon="calendar" title="Kunlik ish" onPress={onDailyWork} />
-        <BottomSheet isPresented={settingsOpen} onIsPresentedChange={setSettingsOpen}
+        <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) setSettingsOpen(true); else closeSettings(); }}
           anchor={<NavigationRow icon="gearshape" title="Sozlamalar" onPress={() => setSettingsOpen(true)} />}>
-          <ProfileSettings onClose={() => setSettingsOpen(false)} onLogout={onLogout} />
+          <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text}
+            preferences={<ProfileSettingsPreferences />} switchPin={<ProfileSwitchPin pin={switchPin} />} switchPinBusy={switchPin.busy}
+            onAppearanceChange={value => value === 'system' ? Promise.resolve() : themeController.setThemeMode(value)} />
         </BottomSheet>
       </Section>
       <Section>
@@ -142,5 +158,8 @@ export function ProfileView(props: ProfileViewProps) {
           onPress={onLogout} modifiers={[buttonStyle('plain')]} />
       </Section>
     </List>
-  </Host>;
+  </Host>
+  <ProfileAvatarPreview visible={avatarOpen} onClose={() => setAvatarOpen(false)} session={session} profile={snapshot.profile}
+    token={avatarToken} revision={avatarRevision} displayName={details.name} />
+  </>;
 }
