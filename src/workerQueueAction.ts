@@ -136,10 +136,16 @@ export function queueActionControlState(raw: unknown, contractOnly = false): Obj
   const actions = [...new Set<string>(control.allowed_actions.map((action: string) => action.trim()))];
   if (!validRezkaMergeState(control, actions)) return null;
   const freeze = object(control.freeze_request);
+  let normalizedFreeze: Obj | null = null;
   if (freeze) {
     const target = String(freeze.target_apparatus ?? '').trim();
     if ((target && !isCanonicalApparatusId(target)) || ['requested_at_unix', 'transitioned_at_unix']
       .some(key => freeze[key] != null && typeof freeze[key] !== 'number')) return null;
+    normalizedFreeze = { scope: String(freeze.scope ?? 'order'), stage_node_id: String(freeze.stage_node_id ?? ''),
+      request_id: String(freeze.request_id ?? ''), status: String(freeze.status ?? ''), target_session_id: String(freeze.target_session_id ?? ''),
+      target_apparatus: target, target_worker_role: String(freeze.target_worker_role ?? ''), target_worker_ref: String(freeze.target_worker_ref ?? ''),
+      target_worker_display_name: String(freeze.target_worker_display_name ?? ''), requested_at_unix: Math.trunc(freeze.requested_at_unix ?? 0),
+      transitioned_at_unix: Math.trunc(freeze.transitioned_at_unix ?? 0) };
   }
   const hold = Object.hasOwn(control, 'print_preflight') ? printPreflightHold(control.print_preflight) : undefined;
   if (hold === null) return null;
@@ -152,13 +158,27 @@ export function queueActionControlState(raw: unknown, contractOnly = false): Obj
     allowed_actions: actions, interaction: normalizedInteraction, previous_stage: String(control.previous_stage ?? '').trim(),
     stage_node_id: String(control.stage_node_id ?? '').trim(), stage_control_state: String(control.stage_control_state ?? '').trim(),
     closing_output_batch_id: typeof control.closing_output_batch_id === 'string' ? control.closing_output_batch_id.trim() : '',
-    ...(freeze ? { freeze_request: { ...freeze, status: String(freeze.status ?? '').trim().toLowerCase() } } : {}),
+    ...(normalizedFreeze ? { freeze_request: normalizedFreeze } : {}),
     ...(hold ? { print_preflight: hold } : {}) };
   if (!validOrderControl({ ok: true, control_state: { ...state, scope: '__action__',
     queue_state: state.queue_state.trim(), control: normalizedControl } }, state.apparatus, state.order_id, null, contractOnly)) return null;
   const stages = state.order_id === state.order_id.trim() ? Object.fromEntries(Object.entries(state.stage_states)
     .filter(([key]) => !!key.trim()).map(([key, value]) => [key.trim(), String(value).trim().toLowerCase()])) : {};
-  return { ...state, control: { ...normalizedControl, state: control.state.trim() }, stage_states: stages };
+  const stageWork = object(control.stage_work);
+  const normalizedStageWork = stageWork ? {
+    completed: stageWork.completed === true, local_completed: stageWork.local_completed === true,
+    upstream_closed: stageWork.upstream_closed === true, astatka_available: stageWork.astatka_available === true,
+    astatka_required: stageWork.astatka_required === true, report_session_id: String(stageWork.report_session_id ?? ''),
+    upstream_title: String(stageWork.upstream_title ?? ''), last_apparatus: String(stageWork.last_apparatus ?? ''),
+    last_worker_ref: String(stageWork.last_worker_ref ?? ''),
+  } : null;
+  const lastWorked = control.last_worked_at_unix;
+  return { ...state, control: { ...normalizedControl, state: control.state.trim(), freeze_request: normalizedFreeze,
+    stage_work: normalizedStageWork, work_activity: queueWorkActivity(control.work_activity),
+    last_worked_at_unix: Number.isInteger(lastWorked) && lastWorked > 0 ? lastWorked : 0,
+    temporarily_paused: control.temporarily_paused === true, print_preflight_allowed: control.print_preflight_allowed === true,
+    complete_requires_rezka_total_waste_only: control.complete_requires_rezka_total_waste_only === true,
+    rezka_total_waste_only: control.rezka_total_waste_only === true }, stage_states: stages };
 }
 
 export function parseQueueActionResponse(raw: unknown, input: Obj = {}): Obj {

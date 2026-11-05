@@ -73,3 +73,27 @@ test('snapshot accepts a global freeze wildcard with whitespace in target fields
       freeze_request: { request_id: 'freeze-1', status: 'pending', target_session_id: ' ', target_apparatus: ' ', target_worker_ref: ' ' } } } } };
   assert.equal(api.decodeCanonicalProductionMapSnapshot(wire).queue_action_controls[station][order].state, 'in_progress');
 });
+
+test('freeze metadata uses V2 string conversion and retains its status text', () => {
+  const api = load('productionMapSnapshot', { './authorizedFetch': {} });
+  const station = 'apparatus:default:press', order = 'order';
+  const wire = { maps: [], sequences: {}, visible_order_ids: { [station]: [order] }, queue_states: {}, queue_policies: [], stage_states: {},
+    order_controls: {}, frozen_orders_by_apparatus: {}, queue_action_controls: { [station]: { [order]: { state: 'in_progress', allowed_actions: ['pause'],
+      previous_stage_ready: false, complete_requires_full_report: false, interaction: { mode: 'freeze_requested', start_materials_mode: 'hidden',
+        material_scan_required: false, assigned_materials_display_only: true, material_intake_allowed: false, previous_wip_mode: 'not_required', qolip_mode: 'not_required' },
+      freeze_request: { request_id: 17, status: ' PENDING ', target_session_id: 32, target_apparatus: station } } } } };
+  const freeze = api.decodeCanonicalProductionMapSnapshot(wire).queue_action_controls[station][order].freeze_request;
+  assert.equal(freeze.request_id, '17'); assert.equal(freeze.target_session_id, '32'); assert.equal(freeze.status, ' PENDING ');
+});
+
+test('snapshot control normalizes optional stage work with V2 defaults', () => {
+  const api = load('productionMapSnapshot', { './authorizedFetch': {} });
+  const station = 'apparatus:default:press', order = 'order';
+  const wire = { maps: [], sequences: {}, visible_order_ids: {}, queue_states: {}, queue_policies: [], stage_states: {}, order_controls: {}, frozen_orders_by_apparatus: {},
+    queue_action_controls: { [station]: { [order]: { state: 'pending', allowed_actions: ['start'], previous_stage_ready: false, complete_requires_full_report: false,
+      interaction: { mode: 'fresh_start', start_materials_mode: 'hidden', material_scan_required: false, assigned_materials_display_only: true,
+        material_intake_allowed: false, previous_wip_mode: 'not_required', qolip_mode: 'not_required' }, stage_work: { upstream_closed: true, report_session_id: 42 } } } } };
+  const control = api.decodeCanonicalProductionMapSnapshot(wire).queue_action_controls[station][order];
+  assert.equal(control.stage_work.upstream_closed, true); assert.equal(control.stage_work.report_session_id, '42');
+  assert.equal(control.stage_work.astatka_required, false); assert.equal(control.freeze_request, null); assert.equal(control.last_worked_at_unix, 0);
+});

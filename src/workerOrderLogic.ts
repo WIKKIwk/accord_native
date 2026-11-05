@@ -155,7 +155,7 @@ export function validOrderControl(bootstrap: Obj | null, apparatus: string, orde
     const request = control.freeze_request;
     const wildcard = request && String(request.scope ?? 'order') === 'order' && String(request.stage_node_id ?? '') === '' &&
       !String(request.target_apparatus ?? '').trim() && !String(request.target_session_id ?? '').trim() && !String(request.target_worker_ref ?? '').trim();
-    if (!request || typeof request.request_id !== 'string' || !request.request_id.trim() || request.status !== 'pending' ||
+    if (!request || typeof request.request_id !== 'string' || !request.request_id.trim() || String(request.status ?? '').trim().toLowerCase() !== 'pending' ||
         (!String(request.target_apparatus ?? '').trim() && !wildcard) ||
         (control.state !== 'print_preflight' && !wildcard && !String(request.target_session_id ?? '').trim())) return false;
   } else if (orderControl === 'freeze_requested') {
