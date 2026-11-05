@@ -29,7 +29,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
-| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 52/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
+| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 53/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
 | homashyo | | | | | Needs printing |
 | chat | | | | | iOS exists without tags; Android ships a stub |
 | rezka | | | | | |
@@ -72,6 +72,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/paddonItemsApi.ts` | `adminPaddonAddWips`, `adminPaddonRemoveWip`, `adminPaddonRemoveWips` | No V2 HTTP recordings were found for these methods; focused V4 tests cover their source-derived requests and snapshot parsing |
 | `src/paddonManagementApi.ts` | `adminPaddonCreate`, `adminPaddonDelete`, `adminPaddonDetail` | No V2 HTTP recordings were found for these methods; focused V4 tests cover their source-derived requests and response validation |
 | `src/productionMapAuditApi.ts` | `adminProductionMapAudit` | No V2 HTTP recording was found; focused V4 tests cover the source-derived request and report parsing |
+| `src/productionCompletionApi.ts` | `adminProductionMapCompletionRequestDecisions` | No V2 HTTP recording was found; focused V4 tests cover the source-derived request and decision parsing |
 | V2 baseline oracle | `test/admin_order_early_close_test.dart`, `test/qolip_tasks_test.dart`, `test/worker_network_latency_test.dart`, `test/admin_sequence_list_widget_test.dart`, `test/opened_order_edit_api_test.dart`, `test/qolip_product_transfer_test.dart` | Running the 56 recorded test files against baseline `7c87a54e` produced 603 passes and 28 failures across these six files. Failed cases are not used as specifications; determine whether each relevant failure is a stale test or baseline defect |
 | `tests/appLock.test.cjs:52` | V4 test gate | One run failed because the randomly generated hexadecimal salt or digest contained the substring `1234`; a focused rerun and the full suite passed. Replace that probabilistic assertion when the PIN test is in scope |
 
@@ -111,6 +112,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminProductionCombo` | V2 reads its in-memory account-scoped combo revisions |
 | `adminProductionMap` | V2 reads its in-memory production maps |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
+| `adminProductionMapCompletionRequestDecisions` | V2 filters in-memory decisions by worker |
 
 ## Drift log
 
