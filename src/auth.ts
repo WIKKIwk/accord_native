@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { SavedAccountStore } from './savedAccountStore';
+import { chunkedStorage } from './chunkedStorage';
 
 export type Session = {
   token: string;
@@ -27,6 +28,8 @@ let sessionEpoch = 0;
 let storageQueue: Promise<void> = Promise.resolve();
 let refreshing: { session: Session; epoch: number; promise: Promise<boolean> } | null = null;
 let savedAccountStore: SavedAccountStore | null = null;
+const secureStorage = chunkedStorage({ getItem: key => SecureStore.getItemAsync(key),
+  setItem: (key, value) => SecureStore.setItemAsync(key, value), removeItem: key => SecureStore.deleteItemAsync(key) });
 const newImageCacheScope = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 
 function inStorageOrder<T>(action: () => Promise<T>): Promise<T> {
@@ -105,18 +108,18 @@ async function syncSavedProfile(session: Session): Promise<void> {
 async function writeSession(session: Session): Promise<void> {
   if (Platform.OS === 'web') { webSession = session; return; }
   const { token, ...metadata } = session;
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
-  try { await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(metadata)); }
-  catch (error) { await SecureStore.deleteItemAsync(TOKEN_KEY); throw error; }
+  await secureStorage.setItem(TOKEN_KEY, token);
+  try { await secureStorage.setItem(SESSION_KEY, JSON.stringify(metadata)); }
+  catch (error) { await secureStorage.removeItem(TOKEN_KEY); throw error; }
 }
 async function writeCredentials(credentials: Credentials): Promise<void> {
   if (Platform.OS === 'web') { webCredentials = credentials; return; }
-  await SecureStore.setItemAsync(CREDENTIALS_KEY, JSON.stringify(credentials));
+  await secureStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials));
 }
 async function readCredentials(): Promise<Credentials | null> {
   if (Platform.OS === 'web') return webCredentials;
   try {
-    const stored = await SecureStore.getItemAsync(CREDENTIALS_KEY);
+    const stored = await secureStorage.getItem(CREDENTIALS_KEY);
     if (!stored) return null;
     const value = JSON.parse(stored) as Record<string, unknown>;
     if (typeof value.baseUrl !== 'string' || typeof value.phone !== 'string' || typeof value.code !== 'string' || typeof value.ref !== 'string' || typeof value.role !== 'string') return null;
@@ -148,12 +151,12 @@ export async function loadSession(): Promise<Session | null> {
     if (Platform.OS === 'web') result = webSession;
     else {
       try {
-        const [token, metadata] = await Promise.all([SecureStore.getItemAsync(TOKEN_KEY), SecureStore.getItemAsync(SESSION_KEY)]);
+        const [token, metadata] = await Promise.all([secureStorage.getItem(TOKEN_KEY), secureStorage.getItem(SESSION_KEY)]);
         if (token && metadata) {
           const stored = JSON.parse(metadata) as Record<string, unknown>;
           result = parseSession({ ...stored, token });
           if (result && !stored.imageCacheScope) {
-            await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify({ ...stored, imageCacheScope: result.imageCacheScope })).catch(() => {});
+            await secureStorage.setItem(SESSION_KEY, JSON.stringify({ ...stored, imageCacheScope: result.imageCacheScope })).catch(() => {});
           }
         }
       } catch { result = null; }
@@ -195,7 +198,7 @@ export async function clearSession(): Promise<void> {
   const storage = inStorageOrder(async () => {
     webSession = null;
     webCredentials = null;
-    if (Platform.OS !== 'web') await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SESSION_KEY), SecureStore.deleteItemAsync(CREDENTIALS_KEY)]);
+    if (Platform.OS !== 'web') await Promise.all([secureStorage.removeItem(TOKEN_KEY), secureStorage.removeItem(SESSION_KEY), secureStorage.removeItem(CREDENTIALS_KEY)]);
   });
   const [results] = await Promise.all([resets, storage]);
   const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
@@ -283,10 +286,10 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
           try {
             if (previousCredentials) await writeCredentials(previousCredentials);
             else if (Platform.OS === 'web') webCredentials = null;
-            else await SecureStore.deleteItemAsync(CREDENTIALS_KEY);
+            else await secureStorage.removeItem(CREDENTIALS_KEY);
             if (previousSession) await writeSession(previousSession);
             else if (Platform.OS === 'web') webSession = null;
-            else await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SESSION_KEY)]);
+            else await Promise.all([secureStorage.removeItem(TOKEN_KEY), secureStorage.removeItem(SESSION_KEY)]);
             activeSession = previousSession;
           } catch (failure) { failures.push(failure); }
         }
@@ -314,7 +317,7 @@ export function updateSessionAssignments(session: Session, assigned: readonly st
     if (Platform.OS === 'web') webSession = session;
     else {
       const { token: _token, ...metadata } = session;
-      await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(metadata));
+      await secureStorage.setItem(SESSION_KEY, JSON.stringify(metadata));
     }
     if (activeSession === session && epoch === sessionEpoch) await syncSavedProfile(session);
   }).catch(() => {});

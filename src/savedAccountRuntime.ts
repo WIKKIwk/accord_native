@@ -3,13 +3,14 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { SavedAccountStore, type AccountStorage } from './savedAccountStore';
 import { appPreferences } from './appPreferences';
+import { chunkedStorage } from './chunkedStorage';
 
 const secureKey = (key: string) => key.replace(/:/g, '_');
-const nativeSecrets: AccountStorage = {
+const nativeSecrets: AccountStorage = chunkedStorage({
   getItem: key => SecureStore.getItemAsync(secureKey(key)),
   setItem: (key, value) => SecureStore.setItemAsync(secureKey(key), value),
   removeItem: key => SecureStore.deleteItemAsync(secureKey(key)),
-};
+});
 const webSecrets: AccountStorage = {
   getItem: key => appPreferences.getItem(`saved_account_local_secret_v1:${key}`),
   setItem: (key, value) => appPreferences.setItem(`saved_account_local_secret_v1:${key}`, value),

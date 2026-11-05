@@ -14,6 +14,9 @@ function auth(store, platform = 'web', existingAccountStore) {
   const savedFile = path.resolve(__dirname, '../src/savedAccountStore.ts'), saved = new Module(savedFile, module);
   saved.filename = savedFile; saved.paths = module.paths;
   saved._compile(ts.transpileModule(fs.readFileSync(savedFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, savedFile);
+  const chunksFile = path.resolve(__dirname, '../src/chunkedStorage.ts'), chunks = new Module(chunksFile, module);
+  chunks.filename = chunksFile; chunks.paths = module.paths;
+  chunks._compile(ts.transpileModule(fs.readFileSync(chunksFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, chunksFile);
   const memory = () => { const values = new Map(); return { getItem: async key => values.get(key) ?? null,
     setItem: async (key, value) => { values.set(key, value); }, removeItem: async key => { values.delete(key); } }; };
   const accountStore = existingAccountStore ?? new saved.exports.SavedAccountStore(memory(), memory(), async value => crypto.createHash('sha256').update(value).digest('hex'));
@@ -23,7 +26,7 @@ function auth(store, platform = 'web', existingAccountStore) {
   logoutModule._compile(ts.transpileModule(fs.readFileSync(logoutFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, logoutFile);
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: platform } }
-    : id === './authenticateAccount' ? account.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => accountStore }
+    : id === './authenticateAccount' ? account.exports : id === './chunkedStorage' ? chunks.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => accountStore }
     : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => endpoints }
     : id === './logoutSavedSession' ? logoutModule.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
@@ -67,6 +70,21 @@ test('login uses V2 account parsing and keeps assigned machines in the session',
     assert.deepEqual(session.assigned_apparatus_labels, ['Press']);
     assert.deepEqual(session.capabilities, ['work']);
     assert.equal(session.profile.ref, 'worker');
+  } finally { global.fetch = original; }
+});
+
+test('login and startup restore a large profile with bounded native storage values', async () => {
+  const original = global.fetch, values = new Map();
+  const secure = { getItemAsync: async key => values.get(key) ?? null,
+    setItemAsync: async (key, value) => { assert.ok(Buffer.byteLength(value) < 2048); values.set(key, value); },
+    deleteItemAsync: async key => { values.delete(key); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'token',
+    profile: { role: 'aparatchi', ref: 'one', display_name: '🔒'.repeat(1200) } }) });
+  try {
+    const first = auth(secure, 'ios');
+    await first.login('https://example.test', 'one', 'code');
+    const restarted = auth(secure, 'ios', first.testAccountStore);
+    assert.equal((await restarted.loadSession()).profile.display_name, '🔒'.repeat(1200));
   } finally { global.fetch = original; }
 });
 
