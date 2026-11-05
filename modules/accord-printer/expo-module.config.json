@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["AccordPrinterModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.accordprinter.AccordPrinterModule"]
+  }
+}
