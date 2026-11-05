@@ -13,6 +13,7 @@ import { switchPinStore } from '../shared/switchPinRuntime';
 import { notificationUnreadStore } from '../shared/notificationStoresRuntime';
 import { localeController } from '../shared/localization/runtime';
 import { themeController } from '../shared/themeRuntime';
+import '../shared/productionSnapshotRuntime';
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
