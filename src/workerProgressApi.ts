@@ -3,31 +3,22 @@ import { authorizedFetch } from './authorizedFetch';
 import { sessionReadScope } from './sessionReadScope';
 import { postWorkerApiRequest, productionMapResponseError, WorkerControlException } from './workerControlsApi';
 import { progressBatchFromJson, progressInputRoute } from './workerProgressBatch';
+import { adminProductionMapQueueSnapshot } from './productionMapQueueSnapshotApi';
 
 type Obj = Record<string, any>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
 
 async function requireActiveOrder(session: Session, orderId: string): Promise<void> {
-  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 10_000);
-  try {
-    const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/sequence', { signal: controller.signal });
-    if (response.status !== 200) {
-      let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, 'production_map_sequence');
-    }
-    const snapshot = object(await response.json());
-    if (!snapshot || !object(snapshot.sequences) || !object(snapshot.visible_order_ids) || !object(snapshot.queue_states) ||
-        !object(snapshot.queue_action_controls) || !Array.isArray(snapshot.queue_policies) || !object(snapshot.order_controls)) {
-      throw new WorkerControlException('production_map_snapshot_contract_invalid', 'Production map navbati server shartnomasiga mos emas');
-    }
-    const rawState = object(snapshot.order_controls[orderId])?.state;
-    const orderState = typeof rawState === 'string' ? rawState.trim() : rawState == null ? 'active' : '';
-    if (orderState === 'frozen') throw new WorkerControlException('order_frozen',
-      'Buyurtma muzlatilgan. Iltimos, adminga xabar bering va buyurtmani muzdan ochishini so‘rang.');
-    if (orderState === 'freeze_requested') throw new WorkerControlException('order_freeze_requested',
-      'Buyurtmani muzlatish so‘ralgan. Yangi ish boshlash mumkin emas. Iltimos, adminga murojaat qiling.');
-    if (orderState !== 'active') throw new WorkerControlException('production_map_snapshot_contract_invalid', '');
-  } finally { clearTimeout(timer); }
+  const snapshot = await adminProductionMapQueueSnapshot(session, { fresh: true });
+  const rawState = object(snapshot.order_controls[orderId])?.state;
+  const orderState = typeof rawState === 'string' ? rawState : 'active';
+  if (orderState === 'frozen') {
+    const title = snapshot.maps.find((order: Obj) => order.map.id.trim() === orderId)?.map.title ?? '';
+    throw new WorkerControlException('order_frozen',
+      'Buyurtma muzlatilgan. Iltimos, adminga xabar bering va buyurtmani muzdan ochishini so‘rang.', undefined, { order_title: title });
+  }
+  if (orderState === 'freeze_requested') throw new WorkerControlException('order_freeze_requested',
+    'Buyurtmani muzlatish so‘ralgan. Yangi ish boshlash mumkin emas. Iltimos, adminga murojaat qiling.');
 }
 
 export async function adminProgressQrLookup(session: Session, qrPayload: string, options: { apparatus?: string; orderId?: string;

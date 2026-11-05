@@ -19,7 +19,13 @@ function apiWith(authorizedFetch) {
   const controls = load('workerControlsApi', { './authorizedFetch': auth, './sessionReadScope': scope });
   const batch = load('workerProgressBatch', { './workerControlsApi': controls, './workerProgressModel': load('workerProgressModel') });
   return load('workerProgressApi', { './authorizedFetch': auth, './sessionReadScope': scope,
-    './workerControlsApi': controls, './workerProgressBatch': batch });
+    './workerControlsApi': controls, './workerProgressBatch': batch,
+    './productionMapQueueSnapshotApi': { adminProductionMapQueueSnapshot: async (session, options) => {
+      assert.equal(options.fresh, true);
+      const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/sequence', {});
+      const result = await response.json();
+      return { maps: [], ...result };
+    } } });
 }
 
 test('progress history uses the V2 worker query, bounded limit and typed batch', async () => {
