@@ -125,6 +125,7 @@ export function decodeCanonicalProductionMapSnapshot(value: unknown, requireMaps
   }
   const fullLive = Array.isArray(row.completed_orders) && Array.isArray(row.completion_requests) && Array.isArray(row.completion_request_decisions);
   const parseLiveLists = fullLive || requireMaps;
+  if (row.projection != null && typeof row.projection !== 'string') throw new TypeError('Invalid snapshot projection');
   if (!Object.hasOwn(row, 'visible_order_ids') || row.visible_order_ids == null) {
     throw new WorkerControlException('production_map_visible_order_ids_missing', 'Production map navbati noto‘liq');
   }
@@ -167,7 +168,7 @@ export function decodeCanonicalProductionMapSnapshot(value: unknown, requireMaps
   if (rawStatuses) for (const [id, value] of Object.entries(rawStatuses)) if (id.trim()) statuses[id.trim()] = productionOrderStatusDetail(value);
   const parsedControls = Object.fromEntries(Object.entries(orderControls).map(([id, value]) => [id.trim(), object(value)!.state.trim()]));
   const list = <T>(raw: unknown, decode: (value: unknown) => T): T[] => Array.isArray(raw) ? raw.map(decode) : [];
-  return { ...row, sequences, visible_order_ids: visible, queue_states: queueStates, queue_policies: parseApparatusQueuePolicyMap(row.queue_policies),
+  return { ...row, projection: row.projection ?? '', sequences, visible_order_ids: visible, queue_states: queueStates, queue_policies: parseApparatusQueuePolicyMap(row.queue_policies),
     queue_action_controls: controls, stage_states: parsedStages, order_controls: parsedControls,
     stage_order_controls: stageControls, stage_freeze_supported: Array.isArray(row.stage_order_controls),
     early_closing_order_ids: Object.entries(orderControls).filter(([, value]) => object(object(value)?.early_close)).map(([id]) => id.trim()),

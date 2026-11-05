@@ -23,6 +23,14 @@ test('canonical snapshot decodes scoped maps and queue authority', () => {
   assert.equal(value.revision, 7);
 });
 
+test('canonical snapshots default missing projection and reject a non-string projection', () => {
+  const value = context();
+  delete value.projection;
+  assert.equal(decoder.decodeCanonicalProductionMapSnapshot(value).projection, '');
+  value.projection = 7;
+  assert.throws(() => decoder.decodeCanonicalProductionMapSnapshot(value), TypeError);
+});
+
 test('canonical snapshot rejects malformed global queue controls', () => {
   for (const edit of [
     value => { delete value.visible_order_ids; },
