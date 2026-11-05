@@ -39,3 +39,49 @@ export async function adminProductionMapOrderImage(session: Session, orderId: st
     },
   });
 }
+
+/** @v2 orderImageAccountScope */
+export function orderImageAccountScope(session: Session): string {
+  const roles: Record<string, string> = { tayyorlov_masteri: 'tayyorlovMasteri', material_taminotchi: 'materialTaminotchi',
+    homashyo_rezkachi: 'homashyoRezkachi', sales_manager: 'salesManager', rezka_master: 'rezkaMaster' };
+  const role = session.profile?.role;
+  return JSON.stringify([session.baseUrl, typeof role === 'string' ? roles[role] ?? role : null, session.profile?.ref ?? null]);
+}
+/** @v2 orderImageCacheScope */
+export function orderImageCacheScope(session: Session): string {
+  return JSON.stringify([orderImageAccountScope(session), activeSessionToken(session)]);
+}
+function genericImageContext(session: Session, imageUrl: string, thumbnail: boolean) {
+  const uri = orderImageRequestUri(session.baseUrl, imageUrl, thumbnail), internal = uri.origin === new URL(session.baseUrl).origin;
+  const account = orderImageAccountScope(session), key = JSON.stringify([orderImageCacheScope(session), uri.toString()]);
+  const immutable = internal && !!(uri.searchParams.get('id') || uri.searchParams.get('image_id'));
+  return { uri, internal, key, immutable, isCurrent: () => orderImageAccountScope(session) === account };
+}
+/** @v2 peekCachedOrderImageBytes */
+export function peekCachedOrderImageBytes(session: Session, imageUrl: string, thumbnail = false): Uint8Array | null {
+  if (!imageUrl.trim()) return null;
+  const { internal, key, immutable, isCurrent } = genericImageContext(session, imageUrl, thumbnail);
+  if (internal && !activeSessionToken(session)) return null;
+  return imageCache.peek(key, immutable, isCurrent);
+}
+
+// Arbitrary same-origin paths and test-mode requests still need V2 transport parity.
+export async function cachedOrderImageBytes(session: Session, imageUrl: string, thumbnail = false): Promise<Uint8Array | null> {
+  if (!imageUrl.trim()) return null;
+  const { uri, internal, key, immutable, isCurrent } = genericImageContext(session, imageUrl, thumbnail);
+  if (internal && !activeSessionToken(session)) throw new Error('No session token');
+  return imageCache.load({ key, thumbnail, immutable, isCurrent, fetch: async etag => {
+    const headers: Record<string, string> = {};
+    if (etag != null) headers['If-None-Match'] = etag;
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const response = internal
+        ? await authorizedFetch(session, `${uri.pathname}${uri.search}`, { headers, signal: controller.signal })
+        : await fetch(uri.toString(), { headers, signal: controller.signal });
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (internal && response.status === 404 && !bytes.length)
+        throw new WorkerControlException('production_map_order_image_route_missing', 'Rasm xizmati topilmadi — server yangilanmagan');
+      return { status: response.status, bytes, etag: response.headers.get('etag'), cacheControl: response.headers.get('cache-control') ?? '' };
+    } finally { clearTimeout(timer); }
+  } });
+}

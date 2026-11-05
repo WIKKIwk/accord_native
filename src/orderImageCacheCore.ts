@@ -46,6 +46,7 @@ async function timeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 export class OrderImageCache {
   private memory = new Map<string, Entry>();
+  private sourceDigests = new Map<string, string>();
   private inflight = new Map<string, Promise<Uint8Array | null>>();
   private missingUntil = new Map<string, number>();
   private thumbnails = new DownloadPool(4);
@@ -58,6 +59,8 @@ export class OrderImageCache {
     const generation = this.generation;
     const key = await this.digest(options.key);
     if (generation !== this.generation || !(options.isCurrent?.() ?? true)) return null;
+    this.sourceDigests.delete(options.key); this.sourceDigests.set(options.key, key);
+    while (this.sourceDigests.size > 512) this.sourceDigests.delete(this.sourceDigests.keys().next().value!);
     if ((this.missingUntil.get(key) ?? 0) > this.now()) return null;
     this.missingUntil.delete(key);
     const existing = this.inflight.get(key);
@@ -68,6 +71,16 @@ export class OrderImageCache {
     });
     this.inflight.set(key, pending);
     return pending;
+  }
+
+  peek(key: string, immutable: boolean, isCurrent?: () => boolean): Uint8Array | null {
+    if (!(isCurrent?.() ?? true)) return null;
+    const digest = this.sourceDigests.get(key);
+    if (!digest || (this.missingUntil.get(digest) ?? 0) > this.now()) return null;
+    const entry = this.memory.get(digest);
+    if (!entry) return null;
+    const age = this.now() - entry.storedAt, ttl = immutable ? 86_400_000 : 30_000;
+    return age >= 0 && age < ttl ? entry.bytes : null;
   }
 
   private remember(key: string, entry: Entry): void {
@@ -119,7 +132,7 @@ export class OrderImageCache {
   }
 
   async clear(): Promise<void> {
-    this.generation++; this.inflight.clear(); this.memory.clear(); this.missingUntil.clear();
+    this.generation++; this.inflight.clear(); this.memory.clear(); this.sourceDigests.clear(); this.missingUntil.clear();
     try { await timeout(this.disk.clear(), 2000); } catch { /* optional cache */ }
   }
 }

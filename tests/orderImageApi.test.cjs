@@ -67,3 +67,27 @@ test('production order image replays the recorded authenticated thumbnail', asyn
   assert.deepEqual(await client.adminProductionMapOrderImage(account, 'order-1', { image_id: 'v1', thumbnail: true }), Uint8Array.from([7, 8, 9]));
   replay.assertDone();
 });
+
+test('generic image loading seeds a scoped synchronous peek', async () => {
+  let reads = 0;
+  const { client, reset } = api(async () => { reads++; return new Response(Uint8Array.from([2, 4]), { status: 200 }); });
+  const account = session(), url = '/v1/mobile/admin/production-maps/order-image/view?order_id=order&image_id=v1';
+  assert.equal(client.peekCachedOrderImageBytes(account, url, true), null);
+  assert.deepEqual(await client.cachedOrderImageBytes(account, url, true), Uint8Array.from([2, 4]));
+  assert.deepEqual(client.peekCachedOrderImageBytes(account, url, true), Uint8Array.from([2, 4]));
+  assert.equal(client.peekCachedOrderImageBytes(account, url, false), null);
+  assert.equal(client.peekCachedOrderImageBytes({ ...account, profile: { ...account.profile, ref: 'other' } }, url, true), null);
+  assert.equal(reads, 1);
+  await reset();
+  assert.equal(client.peekCachedOrderImageBytes(account, url, true), null);
+});
+
+test('external image requests use no account authorization', async () => {
+  const original = global.fetch; let headers;
+  global.fetch = async (_url, init) => { headers = init.headers; return new Response(Uint8Array.from([8]), { status: 200 }); };
+  try {
+    const { client } = api(async () => { throw Error('unexpected internal request'); });
+    assert.deepEqual(await client.cachedOrderImageBytes(session(), 'https://images.example.test/picture.png'), Uint8Array.from([8]));
+    assert.deepEqual(headers, {});
+  } finally { global.fetch = original; }
+});
