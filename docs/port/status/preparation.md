@@ -1,7 +1,7 @@
 # preparation
 
 Status: part 1 of 1 in progress
-Stopped at: port formula screen state and remaining screen actions, then write the platform UI contract.
+Stopped at: port remaining screen actions and write the platform UI contract.
 
 ## Open items
 | Where | V2 reference | What is needed |
