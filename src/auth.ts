@@ -171,21 +171,24 @@ export async function clearSession(): Promise<void> {
 
 export async function logout(session: Session): Promise<void> {
   if (activeSession !== session) return;
-  const token = session.token;
-  const baseUrl = session.baseUrl;
-  const clear = clearSession(); // Invalidate in-flight requests before awaiting the network.
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
-  try {
-    await fetch(`${baseUrl}/v1/mobile/auth/logout`, {
-      method: 'POST', headers: { Authorization: `Bearer ${token}` }, signal: controller.signal,
-    });
-  } catch {
-    // Local sign-out remains available if the server cannot be reached.
-  } finally {
-    clearTimeout(timer);
-    await clear;
-  }
+  const credentials = await inStorageOrder(readCredentials);
+  const store = await savedAccountsFor(session.baseUrl, session, credentials);
+  if (activeSession !== session) return;
+  await store.runAccountOperation(async () => {
+    try {
+      const id = store.activeAccountId;
+      const saved = id == null ? null : await store.sessionFor(id);
+      if (saved) {
+        try {
+          const { logoutSavedSession } = await import('./logoutSavedSession');
+          await logoutSavedSession(saved.token, saved.account.base_url);
+        } catch { /* Server logout is best-effort. */ }
+      }
+      if (id != null) await store.remove(id);
+    } finally {
+      if (activeSession === session) await clearSession();
+    }
+  });
 }
 
 async function authenticate(server: string, phone: string, code: string): Promise<Session> {

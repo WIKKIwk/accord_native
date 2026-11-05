@@ -17,9 +17,13 @@ function auth(store, platform = 'web') {
   const memory = () => { const values = new Map(); return { getItem: async key => values.get(key) ?? null,
     setItem: async (key, value) => { values.set(key, value); }, removeItem: async key => { values.delete(key); } }; };
   const accountStore = new saved.exports.SavedAccountStore(memory(), memory(), async value => crypto.createHash('sha256').update(value).digest('hex'));
+  const logoutFile = path.resolve(__dirname, '../src/logoutSavedSession.ts'), logoutModule = new Module(logoutFile, module);
+  logoutModule.filename = logoutFile; logoutModule.paths = module.paths;
+  logoutModule._compile(ts.transpileModule(fs.readFileSync(logoutFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, logoutFile);
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: platform } }
-    : id === './authenticateAccount' ? account.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => accountStore } : require(id);
+    : id === './authenticateAccount' ? account.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => accountStore }
+    : id === './logoutSavedSession' ? logoutModule.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return Object.assign(loaded.exports, { testAccountStore: accountStore });
 }
@@ -77,5 +81,27 @@ test('logging into another account retains the prior saved account and activates
     assert.equal(accounts.accounts.length, 2);
     assert.equal(accounts.activeAccountId, 'https://example.test|aparatchi|two');
     assert.equal((await accounts.sessionFor('https://example.test|aparatchi|one')).code, 'code-one');
+  } finally { global.fetch = original; }
+});
+
+test('logout removes only the active saved account even if server logout fails', async () => {
+  const original = global.fetch, requests = [];
+  global.fetch = async (url, init) => {
+    requests.push({ url: String(url), init });
+    if (String(url).endsWith('/logout')) throw new Error('network unavailable');
+    const ref = JSON.parse(init.body).phone;
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth({});
+    await api.login('https://example.test', 'one', 'code-one');
+    const current = await api.login('https://example.test', 'two', 'code-two');
+    await api.logout(current);
+    assert.equal(api.testAccountStore.activeAccountId, null);
+    assert.deepEqual(api.testAccountStore.accounts.map(account => account.profile.ref), ['one']);
+    assert.equal((await api.testAccountStore.sessionFor('https://example.test|aparatchi|one')).token, 'token-one');
+    assert.equal(await api.loadSession(), null);
+    const logoutRequest = requests.find(request => request.url.endsWith('/logout'));
+    assert.equal(logoutRequest.init.headers.Authorization, 'Bearer token-two');
   } finally { global.fetch = original; }
 });
