@@ -279,3 +279,70 @@ Generated from V2 baseline presentation sources. Each literal below is its `uiTe
 - `Ombor nomi` — line 40
 - `Omborni o‘chirish` — line 48
 - `Bekor qilish` — line 51
+
+## Interpolated literal lookup inventory
+
+Generated from direct V2 text arguments. The expressions shown are the V2 source templates; values are substituted at runtime. Text nested inside conditional expressions remains an open inventory item.
+
+### preparation_screen_forms.dart
+
+- `${material.name} — kirim` — line 54
+- `Ombor ochildi: $warehouse` — line 361
+- `-${preparationDisplay(line['kg'] as String? ?? '0')} kg` — line 887
+- `${doc['order_code']} ${doc['order_title']} • ${preparationDisplay(line['percent'] as String? ?? '0')}% • ${_formatDateTime(doc['created_at'])}` — line 889
+- `Mavjud: ${preparationDisplay(materials[entry.key]!.available(widget.warehouse))} kg` — line 1083
+- `Sarf: ${preparationDisplay(preparationRequiredKg(_order!.kg, entry.value.text))} kg` — line 1116
+- `Kirim — ${doc['name'] ?? ''}` — line 1210
+- `${doc['warehouse'] ?? ''} • ${preparationDisplay(doc['kg']?.toString() ?? '0')} kg` — line 1211
+- `${preparationDisplay(doc['kg']?.toString() ?? '0')} kg kirim bekor qilinsinmi? Bu amal tarixda saqlanadi.` — line 1251
+
+### preparation_materials_screen.dart
+
+- `«${material.name}» o‘chirilsinmi? Faqat ishlatilmagan homashyo o‘chiriladi. Qoldiq, kirim yoki formula bo‘lsa, o‘chirish rad etiladi.` — line 104
+
+### preparation_formula_catalog_screen.dart
+
+- `Barcha buyurtmalarning formulalari: ${entries.length} ta` — line 144
+
+### preparation_formula_orders_screen.dart
+
+- `«${entry.formula.name}» formulasi o‘chirilsinmi? $_sharedFormulaWarning` — line 326
+
+### preparation_order_formula_screen.dart
+
+- `«${formula.name}» formulasi o‘chirilsinmi?` — line 594
+- `${widget.variantName.isEmpty ? 'Saqlangan formulalar' : 'Ichki formulalar'} (${_formulas.length})` — line 917
+- `Formula: $name` — line 995
+- `${formula.lines.length} ta seriyo` — line 1102
+- `${i + 1}` — line 1142
+- `${preparationDisplay(formula.lines[i].percent)}%` — line 1154
+- `≈ $kg kg` — line 1162
+- `${index + 1}-seriyo` — line 1308
+
+### preparation_formula_variants_screen.dart
+
+- `${variant.name} shnek formulasi ${widget.orderCode} buyurtmasidan olib tashlanadi.` — line 261
+- `${variant.name} buyurtmadan olib tashlandi` — line 277
+- `${widget.materialName} • ${widget.orderCode}` — line 293
+- `${widget.orderCode} • ${widget.productTitle}` — line 320
+
+### preparation_formula_shares_sheet.dart
+
+- `${widget.materialName.isEmpty ? 'Homashyo' : widget.materialName}: shnek ulushlari jami 100% bo‘lsin. Har bir shnek ichidagi seriyolar alohida 100% hisoblanadi.` — line 143
+- `${widget.formulas[i].name} shnek ulushi` — line 157
+
+### preparation_production_screen.dart
+
+- `${order.displayCode} • ${order.title}` — line 366
+- `${batch.formulaName}\n${batch.active ? 'Davom etmoqda' : 'Yakunlangan'} • ${batch.warehouse} • ${_date(batch.lastActivityAt)}` — line 449
+- `${batch.warehouse}\nBoshlangan: ${_date(batch.startedAt)}${batch.endedAt.isEmpty ? '' : '\nTugagan: ${_date(batch.endedAt)}'}` — line 511
+- `${_date(roll.printedAt)} • ${roll.warehouse}` — line 532
+- `Shnek formulasi: ${recipe['variant_name'] ?? '—'}` — line 603
+- `Formula kodi: ${recipe['variant_code']}` — line 610
+- `Saqlangan tarkib • ${_date(recipe['captured_at']?.toString() ?? '')}` — line 611
+- `Shnek ${screw['name']} • ${preparationDisplay(screw['share_percent']?.toString() ?? '—')}%` — line 616
+- `${line['name'] ?? line['item_code']} — ${preparationDisplay(line['percent']?.toString() ?? '—')}%` — line 623
+
+### preparation_warehouse_management.dart
+
+- `«$warehouse» ombori o‘chirilsinmi? Ichida homashyo yoki bog‘langan yozuvlar bo‘lsa, o‘chirilmaydi.` — line 49

@@ -60,3 +60,17 @@ test('conditional 304 keeps the cached prefix', async () => {
   const result = await x.api.preparationOrders(x.session, { apparatus: cached.apparatus_id, baseline: cached });
   assert.deepEqual(result.rows, cached.rows); x.replay.assertDone();
 });
+// The borrowed shared decoder must accept a recorded preparation detail, not just the transport stub.
+test('recorded preparation order detail decodes through the shared snapshot parser', () => {
+  function loadRoot(name) {
+    const filename = path.resolve(__dirname, '../src', name.endsWith('.ts') ? name : `${name}.ts`), mod = new Module(filename, module);
+    mod.filename = filename; mod.paths = module.paths;
+    mod.require = id => id === './authorizedFetch' ? {} : id.startsWith('.') ? loadRoot(path.resolve(path.dirname(filename), id)) : require(id);
+    mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ESNext } }).outputText, filename);
+    return mod.exports;
+  }
+  const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, 'contracts/preparation_orders_list_test.json'))).records;
+  const record = fixture.find(r => r.test === 'master opens sheet before fetching only the tapped order detail' && r.url.endsWith('/preparation/orders/zakaz-1'));
+  const snapshot = loadRoot('productionMapSnapshot').decodeCanonicalProductionMapSnapshot(JSON.parse(record.responseBody.text));
+  assert.equal(snapshot.maps.length, 1); assert.equal(snapshot.maps[0].map.id, 'zakaz-1'); assert.equal(snapshot.revision, 7);
+});
