@@ -14,7 +14,7 @@ for V4. Do not apply it to V4 and do not try to remove Pods. Open an item if it 
 | Channel | What it does | V2 native source | V4 plan |
 |---|---|---|---|
 | `accord/bluetooth_printer`, `accord/bluetooth_printer/discovery` | Bluetooth label printing, device discovery | `BluetoothPrinterChannel.kt` (1,510 lines, `android/app/libs/printer-lib-3.5.8.aar`); `XPrinterBluetoothChannel.swift` (1,674 lines, `ios/vendor/xprinter/PrinterSDK`) | Local module. Vendor the same SDKs. Compare TSPL byte for byte with V2 output |
-| `accord/usb_printer` | USB printing on Android | `UsbPrinterChannel.kt`, `GodexRpsRenderer.kt` | Local module, Android only |
+| `accord/usb_printer` | USB printing on Android | `UsbPrinterChannel.kt` | Local module, Android only, Zebra. GoDEX is not ported (D13) |
 | `accord/app_update` | Download and install an APK | `AppUpdateChannel.kt` | Local module, Android only |
 | `gscale/bonjour`, `gscale/nsd`, `gscale/udp_discovery` | Local-network scale discovery | `SceneDelegate.swift` on iOS, `MainActivity.kt` on Android | Local module, plus iOS local-network permissions |
 | `accord/secure_account_storage` | Account secrets | `SecureAccountStorageChannel.kt`, `SceneDelegate.swift` | `expo-secure-store` first; confirm its value size limit against the V2 payload |
