@@ -19,3 +19,12 @@ test('qolip catalog detail loads and parses a product', async () => {
   const products = await api.qolipCatalogDetails(session, 'row-0');
   assert.equal(products[0].qolip_code, 'MOLD-001'); assert.equal(products[0].set_id, 'set-1'); replay.assertDone();
 });
+test('qolip catalog bounds pages and rejects stuck continuation', async () => {
+  const stem = 'qolip_catalog_test', name = 'catalog requests are bounded, scoped and reject a stuck continuation';
+  const replay = contractFetch(stem, name), session = recordedSession(stem, name);
+  const api = load('qolipCatalogApi', { './auth': { activeSessionToken: s => s.token }, './authorizedFetch': { authorizedFetch: (s, p, init = {}, guard) => { guard?.(); return replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }); } } });
+  const page = await api.qolipCatalogPage(session, { query: ' Product ', limit: 999 });
+  assert.equal(page.items.length, 200); assert.equal(page.next_cursor, 'next');
+  await assert.rejects(api.qolipCatalogPage(session, { query: 'Product', cursor: 'next' }), /Invalid Qolip catalog page/);
+  replay.assertDone();
+});
