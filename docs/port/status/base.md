@@ -21,7 +21,7 @@ Stopped at: shared API and base logic comparison
 
 | Application updates | `AppUpdateService`, `NativeAppUpdatePlatform`, `AppUpdateCoordinator` | Manifest and version-policy models are ported; the native installer channel, update service/coordinator and platform dialogs are not yet connected. |
 
-| Transport response bodies | `MobileApi._get`, `_post`, `_put`, `_delete`, `_patch` | The shared ten-second timer covers fetch until response headers; V2 buffers the full response within its timeout. Complete response-body deadlines and explicit resilient GET behavior in the transport layer. |
+| Transport response bodies | `MobileApi._get`, `_post`, `_put`, `_delete`, `_patch` | The shared ten-second timer covers fetch until response headers; V2 buffers the full response within its timeout. Complete response-body deadlines; `resilientApiRead` is available but its V2 opt-in callers still need to use it. |
 
 | Reauthentication identity | `MobileApi._performStoredAccountReauthentication` | V4 rejects a refreshed account whose identity changes; V2 accepts the returned account. Reconcile this existing guard for exact parity. |
 
@@ -41,5 +41,7 @@ Stopped at: shared API and base logic comparison
 |---|---|---|
 | `src/LoginScreen.tsx` | `loginCodeUsesNumericKeyboard`, `loginFailureMessage`, `LoginScreen.submitLogin` | Use the shared prefix rule for the keyboard, port localized transport/error messages and match V2 login/back behavior in the platform-owned login views. |
 | `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing profile UI helpers impose additional validation and do not call the shared V2 API functions; reconcile those helpers and their platform screens when profile UI is ported. |
+| `src/workerRawMaterials.ts` | `resilientApiRead` | Route the V2 opt-in raw-material GETs through the shared retry helper, retaining the caller session guards. |
+| `src/profileAvatarUpload.ts` and streamed uploads | `_sendMultipartAuthorized`, `_sendStreamedAuthorized` | Opt streamed/multipart calls out of the default request timer where V2 has no per-request deadline. |
 | `src/app/ios-worker/_layout.tsx` | `SecurityController.clearForLogout` | Clear the separate shared profile-switch PIN along with the app-lock PIN during iOS logout. |
 | `src/app/android-worker/` | `AppSession.homeRoute` | Add the Android worker Expo Router route. Until then the existing Android worker screen renders at the root; base cannot create route files outside its scope. |
