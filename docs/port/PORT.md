@@ -126,6 +126,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminRawMaterialLookup` | V2 looks up its in-memory raw-material assignment and order |
 | `adminReturnScannedWip` | V2 rejects WIP returns in test mode |
 | `adminScannedWips` | V2 returns an empty list in test mode |
+| `adminTransferProductionMapOrder` | V2 validates and applies an in-memory transfer and idempotency receipt |
 | `adminRezkaAstatkaReport` | V2 validates the apparatus and stores or replays an in-memory report |
 | `adminRezkaAstatkaSnapshot` | V2 derives its session and stage from in-memory queue state and replays stored reports |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
