@@ -12,6 +12,16 @@ const invalid = (detail: string) => new WorkerControlException('production_map_s
   `Production map navbati server shartnomasiga mos emas: ${detail}`);
 const states = new Set(['pending', 'print_preflight', 'in_progress', 'paused', 'frozen', 'completed']);
 
+/** @v2 AdminCompletedQueueOrder */
+export function completedQueueOrderFromJson(value: unknown) {
+  const row = object(value);
+  if (!row) throw new TypeError('Invalid completed queue order');
+  const apparatus = text(row.apparatus).trim();
+  if (!isCanonicalApparatusId(apparatus)) throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
+  return { apparatus, order_id: text(row.order_id), completed_at_unix: integer(row.completed_at_unix),
+    status: text(row.status).trim() || 'completed', issue_note: text(row.issue_note) };
+}
+
 /** @v2 parseProductionMapSnapshotRevision */
 export function parseProductionMapSnapshotRevision(value: unknown): number | null {
   if (typeof value === 'number') {

@@ -18,7 +18,9 @@ function load(name, mocks = {}) {
 const appearance = load('workerOrderAppearance');
 const scope = load('sessionReadScope');
 const controls = load('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': scope });
-const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls });
+const models = load('workerQueueModels', { './workerControlsApi': controls });
+const decisions = load('productionCompletionApi', { './workerControlsApi': controls, './workerQueueModels': models, './authorizedFetch': {} });
+const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls, './workerQueueModels': models, './productionCompletionApi': decisions });
 const { workerMachinesFromSnapshot, queueFromSnapshot, canWorkOnApparatus, workerOrderDetailFromSnapshot } = load('workerApi', {
   './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, './workerSnapshot': snapshotDecoder,
   './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {},

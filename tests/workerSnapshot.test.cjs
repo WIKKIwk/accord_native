@@ -19,7 +19,9 @@ function load(name, mocks = {}) {
 }
 const scope = load('sessionReadScope');
 const controls = load('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': scope });
-const decoder = load('workerSnapshot', { './workerControlsApi': controls });
+const models = load('workerQueueModels', { './workerControlsApi': controls });
+const decisions = load('productionCompletionApi', { './workerControlsApi': controls, './workerQueueModels': models, './authorizedFetch': {} });
+const decoder = load('workerSnapshot', { './workerControlsApi': controls, './workerQueueModels': models, './productionCompletionApi': decisions });
 const { applyWorkerDelta } = load('workerDelta', { './workerSnapshot': decoder });
 const station = 'apparatus:default:bosma_7';
 function fixture() {
@@ -69,6 +71,21 @@ test('V2 compact worker snapshot keeps rows, order, prompts and completed histor
   assert.deepEqual(result.visible_order_ids[station], ['work-1', 'work-2']);
   assert.equal(result.completed_orders[0].order_id, 'work-history');
   assert.equal('queue_action_controls' in result, false);
+});
+
+test('compact worker snapshots normalize completed orders and notification defaults', () => {
+  const value = fixture();
+  value.completed_orders[0] = { apparatus: ` ${station} `, order_id: 'work-history', completed_at_unix: 123.7, status: ' ', issue_note: 42 };
+  value.completion_requests = [{ apparatus: ` ${station} `, event_id: 17, created_at_unix: 12.8 }];
+  value.completion_request_decisions = [{ apparatus: station, event_id: 'decision', created_at_unix: 1.9 }];
+  const result = decoder.decodeWorkerListSnapshot(value);
+  assert.deepEqual(result.completed_orders[0], { apparatus: station, order_id: 'work-history', completed_at_unix: 123,
+    status: 'completed', issue_note: '42' });
+  assert.equal(result.completion_requests[0].event_id, '17');
+  assert.equal(result.completion_requests[0].notice_kind, 'completion_request');
+  assert.equal(result.completion_requests[0].decision_required, true);
+  assert.equal(result.completion_requests[0].created_at_unix, 12);
+  assert.equal(result.completion_request_decisions[0].created_at_unix, 1);
 });
 
 test('V2 compact snapshot rejects malformed identity, membership and authority', () => {

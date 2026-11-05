@@ -1,4 +1,6 @@
 import { isCanonicalApparatusId, WorkerControlException } from './workerControlsApi';
+import { apparatusQueuePolicy, completedQueueOrderFromJson, completionRequestNotification } from './workerQueueModels';
+import { completionRequestDecisionFromJson } from './productionCompletionApi';
 
 type Obj = Record<string, unknown>;
 const asObject = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -140,5 +142,9 @@ export function decodeWorkerListSnapshot(raw: unknown): Obj {
       }
     }
   }
-  return { ...value, sequences, visible_order_ids: visible, queue_states: queue };
+  return { ...value, sequences, visible_order_ids: visible, queue_states: queue,
+    queue_policies: value.queue_policies.map(apparatusQueuePolicy),
+    completed_orders: value.completed_orders.map(completedQueueOrderFromJson),
+    completion_requests: value.completion_requests.map(completionRequestNotification),
+    completion_request_decisions: value.completion_request_decisions.map(completionRequestDecisionFromJson) };
 }

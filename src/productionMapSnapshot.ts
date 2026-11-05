@@ -1,6 +1,6 @@
 import type { Session } from './auth';
 import { isCanonicalApparatusId, WorkerControlException } from './workerControlsApi';
-import { parseApparatusSequenceMap, parseApparatusQueueStateMap, parseApparatusQueuePolicyMap,
+import { completedQueueOrderFromJson, parseApparatusSequenceMap, parseApparatusQueueStateMap, parseApparatusQueuePolicyMap,
   parseProductionMapSnapshotRevisionFromJson, completionRequestNotification, productionOrderStatusDetail } from './workerQueueModels';
 import { queueActionControlState } from './workerQueueAction';
 import { productionMapSavedFromJson } from './workerProductionMapSaved';
@@ -24,13 +24,6 @@ const canonical = (value: unknown): string => {
   return id;
 };
 const knownStates = new Set(['pending', 'print_preflight', 'in_progress', 'paused', 'frozen', 'completed']);
-
-/** @v2 AdminCompletedQueueOrder */
-export function completedQueueOrderFromJson(value: unknown) {
-  const row = object(value); if (!row) throw new TypeError('Invalid completed queue order');
-  return { apparatus: canonical(row.apparatus), order_id: text(row.order_id), completed_at_unix: integer(row.completed_at_unix),
-    status: text(row.status).trim() || 'completed', issue_note: text(row.issue_note) };
-}
 
 /** @v2 AdminFrozenQueueOrder */
 export function frozenQueueOrderFromJson(value: unknown, fallbackApparatus = '') {
