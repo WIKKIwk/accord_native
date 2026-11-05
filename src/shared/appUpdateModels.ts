@@ -8,7 +8,8 @@ function integer(value: unknown): number {
 
 /** @v2 AppUpdateException */
 export class AppUpdateException extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
+  constructor(readonly code: string, message: string) { super(message); this.name = 'AppUpdateException'; }
+  toString(): string { return this.message; }
 }
 
 /** @v2 AppInstallationInfo */
