@@ -17,6 +17,8 @@ Stopped at: shared API and base logic comparison
 
 | `updateNickname`, `uploadAvatar` | `mobile_api_auth_profile.dart` | No V2 HTTP recording exists; source-derived tests cover nickname, multipart bytes, response status and session update. Device upload still needs a native runtime check. |
 
+| Account switching runtime | `createRuntimeAccountSwitchController`, `SecurityController.saveSwitchPinForCurrentUser` | Connect the new controller to the active-session runtime, push synchronization, separate profile-switch PIN and the platform account-switcher views. |
+
 ## Deviations candidates
 
 ## Test mode pending
