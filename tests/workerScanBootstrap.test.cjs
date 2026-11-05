@@ -37,6 +37,18 @@ function fixture(name = 'bootstrap decodes context and QR proof in one authorize
   return JSON.parse(loadContract(stem).find(record => record.test === name).responseBody.text);
 }
 
+test('scan bootstrap binds reclose authority when it decodes the response', () => {
+  const { api, session } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
+  session.profile = { role: 'aparatchi', ref: 'worker' };
+  session.assigned_apparatus = [station];
+  const value = fixture();
+  delete value.queue_context;
+  value.control_state.control.reclose = { session_id: 'run', stage_node_id: 'stage', token: 'a'.repeat(64),
+    worker_role: 'aparatchi', worker_ref: 'worker', readScope: 'server supplied' };
+  const result = api.parseWorkerScanBootstrap(value, station, order, qr, session);
+  assert.equal(result.control_state.control.reclose.readScope, load('sessionReadScope').sessionReadScope(session));
+});
+
 for (const [name, options] of [
   ['bootstrap sends one scoped GET and passes scanned barcodes', { materialBarcodes: ['ROLL1', 'ROLL2'] }],
   ['bootstrap context and QR flags remain additive for older servers', { includeSections: false, includeContext: true, qrPayload: qr }],

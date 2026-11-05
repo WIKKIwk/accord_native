@@ -14,7 +14,7 @@ const knownPatchFields = new Set(['worker_list_rows', 'worker_display_states', '
   'maps', 'map_order', 'map_order_edit', 'sequences', 'sequence_versions', 'sequence_revisions', 'sequence_positions_by_apparatus',
   'visible_order_ids', 'queue_states', 'stage_states', 'queue_policies', 'queue_action_controls', 'order_controls', 'stage_order_controls',
   'order_statuses', 'frozen_orders_by_apparatus', 'order_customers', 'completed_orders', 'completion_requests', 'completion_request_decisions']);
-export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: boolean; stateDelta?: boolean; compact?: boolean }): Obj {
+export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: boolean; stateDelta?: boolean; compact?: boolean }, session?: Session): Obj {
   if (event.ok !== true) {
     const code = String(event.error ?? '').trim();
     throw new WorkerControlException(code || 'production_map_live_failed', `Production map jonli holati olinmadi${code ? `. Server xato kodi: ${code} (HTTP 0)` : ''}. Oynani yangilang va qayta urinib ko‘ring.`);
@@ -57,7 +57,7 @@ export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: bo
     if (options.paged && (!Number.isInteger(event.snapshot_rev) || (event.snapshot_rev as number) < 0)) return fail('invalid paged delta cursor');
     return productionMapLiveDeltaFromJson(event);
   }
-  return decodeCanonicalProductionMapSnapshot(event, true);
+  return decodeCanonicalProductionMapSnapshot(event, true, session);
 }
 
 export type ProductionMapLiveStreamOptions = Omit<ProductionMapLiveOptions, 'delta' | 'notificationsOnly'> & { enableDelta?: boolean };
@@ -95,7 +95,7 @@ export function adminProductionMapLiveStream(session: Session, options: Producti
           try {
             const value = object(JSON.parse(String(message.data)));
             if (!value) throw new TypeError('Invalid live event');
-            decoded = decodeProductionMapLiveMessage(value, { paged: options.paged, stateDelta: options.stateDelta, compact });
+            decoded = decodeProductionMapLiveMessage(value, { paged: options.paged, stateDelta: options.stateDelta, compact }, session);
           } catch (error) {
             if (compact && !fallback && error instanceof WorkerControlException && error.code === 'state_delta_v2_unsupported') {
               fallback = true;

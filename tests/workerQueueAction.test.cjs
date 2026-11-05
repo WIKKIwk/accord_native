@@ -32,7 +32,7 @@ function setup(stem, name) {
   const preflight = load('workerPrintPreflight', { './workerControlsApi': controls, './workerOrderLogic': logic });
   return { replay, session, api: load('workerQueueAction', { './workerControlsApi': controls, './workerOrderLogic': logic,
     './workerProgressBatch': batch, './workerQueueModels': models, './workerPrintJob': print, './workerRezkaReport': rezka,
-    './workerPrintPreflight': preflight }), models, print, rezka };
+    './workerPrintPreflight': preflight }), models, print, rezka, controls };
 }
 const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
 
@@ -186,4 +186,24 @@ test('training output prepares a local print job from its batch when none is ret
   assert.equal(result.print_job.gross_qty, 10);
   assert.equal(result.print_job.tare_kg, 2);
   assert.equal(result.print_job.completed_at_unix, 123);
+});
+
+test('queue action binds reclose authority to the session that read it', async () => {
+  const stem = 'admin_queue_action_cursor_test';
+  const name = 'queue ACK opt-in control tolerates legacy/malformed presentation: 0';
+  const { api, session, controls } = setup(stem, name);
+  session.profile = { role: 'aparatchi', ref: 'worker' };
+  session.assigned_apparatus = [station];
+  const controlState = JSON.parse(loadContract(stem).find(record => record.test === name).responseBody.text).control_state;
+  controlState.control.reclose = { session_id: 'run', stage_node_id: 'stage', token: 'a'.repeat(64),
+    worker_role: 'aparatchi', worker_ref: 'worker', readScope: 'untrusted server value' };
+  const result = api.parseQueueActionResponse({ states: {}, control_state: controlState }, {}, session);
+  const authority = result.control_state.control.reclose;
+  const originalScope = load('sessionReadScope').sessionReadScope(session);
+  assert.equal(authority.readScope, originalScope);
+  session.assigned_apparatus = [];
+  const rechecked = controls.reactivationRecloseControl(authority, session);
+  assert.equal(rechecked.readScope, originalScope);
+  await assert.rejects(controls.adminRecloseReactivatedWork(session, station, order, rechecked),
+    error => error.code === 'queue_action_not_allowed');
 });

@@ -1,5 +1,5 @@
 import type { Session } from './auth';
-import { postWorkerApiRequest, WorkerControlException } from './workerControlsApi';
+import { postWorkerApiRequest, reactivationRecloseControl, WorkerControlException } from './workerControlsApi';
 import { validOrderControl } from './workerOrderLogic';
 
 type Obj = Record<string, unknown>;
@@ -21,14 +21,15 @@ export function printPreflightHold(raw: unknown): AdminPrintPreflightHold | null
 
 /** @v2 AdminPrintPreflightResponse */
 export type AdminPrintPreflightResponse = { hold: AdminPrintPreflightHold; control_state: Obj | null };
-export function printPreflightResponse(raw: unknown): AdminPrintPreflightResponse {
+export function printPreflightResponse(raw: unknown, session?: Session): AdminPrintPreflightResponse {
   const payload = object(raw), hold = printPreflightHold(payload?.hold);
   if (!hold) throw new WorkerControlException('print_preflight_invalid_response', 'Rang sinovi javobi noto‘g‘ri');
   const state = object(payload?.control_state);
   let control: Obj | null = null;
   if (state && typeof state.apparatus === 'string' && typeof state.order_id === 'string' && object(state.stage_states) &&
       validOrderControl({ ok: true, control_state: { ...state, scope: '__preflight__' } }, state.apparatus, state.order_id, null)) {
-    control = state;
+    const value = object(state.control);
+    control = session && value ? { ...state, control: { ...value, reclose: reactivationRecloseControl(value.reclose, session, false) } } : state;
   }
   return { hold, control_state: control };
 }
@@ -43,5 +44,5 @@ export async function adminPrintPreflight(session: Session, input: {
     ...(hold ? { hold_id: hold } : {}), ...(input.expected_revision != null ? { expected_revision: input.expected_revision } : {}),
     ...(key ? { idempotency_key: key } : {}),
   }, null, false, 'print_preflight_not_ready');
-  return printPreflightResponse(result);
+  return printPreflightResponse(result, session);
 }

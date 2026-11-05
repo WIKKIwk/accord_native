@@ -1,6 +1,6 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
-import { isCanonicalApparatusId, productionMapResponseError, WorkerControlException } from './workerControlsApi';
+import { isCanonicalApparatusId, productionMapResponseError, reactivationRecloseControl, WorkerControlException } from './workerControlsApi';
 import { rawMaterialAssignment } from './workerRawMaterials';
 import { validOrderControl } from './workerOrderLogic';
 import { progressBatchFromJson, progressInputRoute } from './workerProgressBatch';
@@ -207,13 +207,15 @@ function validateProgress(raw: unknown, state: Obj, qr: string) {
   return { ...proof, batch: progressBatchFromJson(batch, { inputRoute, hasInputRouteMetadata: true }), input_route: inputRoute };
 }
 
-export function parseWorkerScanBootstrap(raw: unknown, apparatus: string, orderId: string, qrPayload = ''): Obj {
+export function parseWorkerScanBootstrap(raw: unknown, apparatus: string, orderId: string, qrPayload = '', session?: Session): Obj {
   const data = object(raw), state = object(data?.control_state);
   if (!data || !state || !object(state.stage_states) || !validOrderControl(data, apparatus, orderId, null)) throw invalid('invalid scan bootstrap control');
   if (Object.hasOwn(data, 'queue_context')) validateContext(data.queue_context, state);
   const validatedProgress = Object.hasOwn(data, 'validated_progress') ? validateProgress(data.validated_progress, state, qrPayload) : undefined;
   const sections = object(data.sections) ?? {};
   const result: Obj = { ...data, sections: { ...sections } };
+  if (session) result.control_state = { ...state, control: { ...state.control,
+    reclose: reactivationRecloseControl(state.control.reclose, session, false) } };
   if (validatedProgress) result.validated_progress = validatedProgress;
   for (const [name, valid] of [
     ['materials', completeMaterials(object(sections.materials)?.status === 'ready' ? sections.materials.data : null, orderId)],
@@ -247,6 +249,6 @@ export async function adminOrderScanBootstrap(session: Session, input: {
       let payload: unknown; try { payload = JSON.parse(body); } catch { payload = null; }
       throw productionMapResponseError(response.status, payload, 'order_scan_bootstrap_failed');
     }
-    return parseWorkerScanBootstrap(JSON.parse(body), station, order, qr);
+    return parseWorkerScanBootstrap(JSON.parse(body), station, order, qr, session);
   } finally { clearTimeout(timer); }
 }

@@ -1,3 +1,4 @@
+import type { Session } from './auth';
 import { isCanonicalApparatusId, WorkerControlException } from './workerControlsApi';
 import { parseApparatusSequenceMap, parseApparatusQueueStateMap, parseApparatusQueuePolicyMap,
   parseProductionMapSnapshotRevisionFromJson, completionRequestNotification, productionOrderStatusDetail } from './workerQueueModels';
@@ -112,7 +113,7 @@ function frozenOrders(raw: unknown): Obj {
   }
   return result;
 }
-function actionControls(raw: unknown, states: Obj, stages: Obj): Obj {
+function actionControls(raw: unknown, states: Obj, stages: Obj, session?: Session): Obj {
   const value = object(raw); if (!value) return fail('queue_action_controls must be an object');
   const result: Obj = {};
   for (const [apparatus, entries] of Object.entries(value)) {
@@ -124,7 +125,7 @@ function actionControls(raw: unknown, states: Obj, stages: Obj): Obj {
       if (!id || !control) return fail('invalid queue action control');
       const queueState = states[station]?.[id] ?? control.state;
       const normalized = queueActionControlState({ apparatus: station, order_id: id, queue_state: queueState,
-        order_control: 'active', epoch: '__snapshot__', scope: '__snapshot__', rev: 0, stage_states: stages[id] ?? {}, control }, true);
+        order_control: 'active', epoch: '__snapshot__', scope: '__snapshot__', rev: 0, stage_states: stages[id] ?? {}, control }, true, session);
       if (!normalized) return fail('queue_action_controls contains an invalid order control');
       result[station][id] = normalized.control;
     }
@@ -133,7 +134,7 @@ function actionControls(raw: unknown, states: Obj, stages: Obj): Obj {
 }
 
 // Canonical snapshot parsing remains untagged until every optional control and projection branch is reconciled.
-export function decodeCanonicalProductionMapSnapshot(value: unknown, requireMaps = false): Obj {
+export function decodeCanonicalProductionMapSnapshot(value: unknown, requireMaps = false, session?: Session): Obj {
   const row = object(value); if (!row) return fail('snapshot must be an object');
   if (row.projection === 'worker_list_v1') return decodeWorkerListSnapshot(row);
   const fullLive = Array.isArray(row.completed_orders) && Array.isArray(row.completion_requests) && Array.isArray(row.completion_request_decisions);
@@ -158,7 +159,7 @@ export function decodeCanonicalProductionMapSnapshot(value: unknown, requireMaps
       return fail('order_controls contains an invalid item');
     }
   }
-  const parsedStages = stageStates(row.stage_states), controls = actionControls(row.queue_action_controls, queueStates, parsedStages);
+  const parsedStages = stageStates(row.stage_states), controls = actionControls(row.queue_action_controls, queueStates, parsedStages, session);
   let stageControls: ReturnType<typeof stageOrderControlFromJson>[] = [];
   if (row.stage_order_controls != null) {
     if (!Array.isArray(row.stage_order_controls)) return fail('stage order controls must be a list');

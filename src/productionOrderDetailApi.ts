@@ -19,7 +19,7 @@ export async function adminProductionOrderDetail(session: Session, input: { appa
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'order_detail_failed');
   }
-  const snapshot = decodeCanonicalProductionMapSnapshot(await response.json());
+  const snapshot = decodeCanonicalProductionMapSnapshot(await response.json(), false, session);
   if (snapshot.maps.length !== 1 || snapshot.maps[0].map.id !== id || snapshot.revision == null || snapshot.revision < 0 ||
       !snapshot.epoch || !snapshot.scope || Object.keys(snapshot.calculation_templates).some(key => key !== id)) throw invalid();
   return snapshot;

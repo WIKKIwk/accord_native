@@ -1,5 +1,5 @@
 import type { Session } from './auth';
-import { cancelStartControl, isCanonicalApparatusId, postWorkerApiRequest, resumePauseControl, temporaryPauseControl, WorkerControlException } from './workerControlsApi';
+import { cancelStartControl, isCanonicalApparatusId, postWorkerApiRequest, reactivationRecloseControl, resumePauseControl, temporaryPauseControl, WorkerControlException } from './workerControlsApi';
 import { validOrderControl } from './workerOrderLogic';
 import { progressBatchFromJson } from './workerProgressBatch';
 import { completionRequestNotification, productionOrderStatusDetail, queueWorkActivity } from './workerQueueModels';
@@ -128,7 +128,7 @@ function validRezkaMergeState(control: Obj, actions: string[]): boolean {
   return true;
 }
 
-export function queueActionControlState(raw: unknown, contractOnly = false): Obj | null {
+export function queueActionControlState(raw: unknown, contractOnly = false, session?: Session): Obj | null {
   const state = object(raw), control = object(state?.control), interaction = object(control?.interaction);
   if (!state || !control || !interaction || !object(state.stage_states) || typeof state.apparatus !== 'string' ||
       typeof state.order_id !== 'string' || typeof state.queue_state !== 'string' || !Array.isArray(control.allowed_actions)) return null;
@@ -180,13 +180,14 @@ export function queueActionControlState(raw: unknown, contractOnly = false): Obj
   return { ...state, control: { ...normalizedControl, state: control.state.trim(), interaction: interactionResult, freeze_request: normalizedFreeze,
     stage_work: normalizedStageWork, work_activity: queueWorkActivity(control.work_activity),
     temporary_pause: temporaryPauseControl(control.temporary_pause), cancel_start: cancelStartControl(control.cancel_start),
-    re_pause: resumePauseControl(control.re_pause), last_worked_at_unix: Number.isInteger(lastWorked) && lastWorked > 0 ? lastWorked : 0,
+    re_pause: resumePauseControl(control.re_pause), reclose: session ? reactivationRecloseControl(control.reclose, session, false) : null,
+    last_worked_at_unix: Number.isInteger(lastWorked) && lastWorked > 0 ? lastWorked : 0,
     temporarily_paused: control.temporarily_paused === true, print_preflight_allowed: control.print_preflight_allowed === true,
     complete_requires_rezka_total_waste_only: control.complete_requires_rezka_total_waste_only === true,
     rezka_total_waste_only: control.rezka_total_waste_only === true }, stage_states: stages };
 }
 
-export function parseQueueActionResponse(raw: unknown, input: Obj = {}): Obj {
+export function parseQueueActionResponse(raw: unknown, input: Obj = {}, session?: Session): Obj {
   const payload = object(raw);
   if (!payload) throw new TypeError('Invalid queue action response');
   const states = object(payload.states);
@@ -203,7 +204,7 @@ export function parseQueueActionResponse(raw: unknown, input: Obj = {}): Obj {
   };
   result.has_snapshot_cursor = result.rev !== null && !!result.epoch;
   if (!states) return result;
-  result.control_state = queueActionControlState(payload.control_state);
+  result.control_state = queueActionControlState(payload.control_state, false, session);
   const batches = Array.isArray(payload.progress_batches) ? payload.progress_batches.filter(object).map((item: unknown) => progressBatchFromJson(item)) : [];
   result.progress_batches = batches;
   result.progress_batch = object(payload.progress_batch) ? progressBatchFromJson(payload.progress_batch) : batches[0] ?? null;
@@ -230,5 +231,5 @@ export function parseQueueActionResponse(raw: unknown, input: Obj = {}): Obj {
 export async function adminApparatusQueueActionResult(session: Session, input: Obj): Promise<Obj> {
   const body = queueActionBody(input);
   return parseQueueActionResponse(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/queue-action',
-    body, null, false, 'queue_action_not_allowed'), input);
+    body, null, false, 'queue_action_not_allowed'), input, session);
 }

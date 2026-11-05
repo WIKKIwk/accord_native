@@ -1,7 +1,7 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { sessionReadScope } from './sessionReadScope';
-import { isCanonicalApparatusId, productionMapResponseError, WorkerControlException } from './workerControlsApi';
+import { isCanonicalApparatusId, productionMapResponseError, reactivationRecloseControl, WorkerControlException } from './workerControlsApi';
 import { validOrderControl } from './workerOrderLogic';
 import { parseProductionMapSnapshotRevisionFromJson } from './workerQueueModels';
 
@@ -54,7 +54,8 @@ export async function legacyWorkerScanControl(session: Session, apparatus: strin
     guard();
     const queue = snapshot.queue_states, controls = snapshot.queue_action_controls, orderControls = snapshot.order_controls;
     const stageStates = object(snapshot.stage_states)?.[order] ?? {};
-    const action = object(object(controls[station])?.[order]);
+    const rawAction = object(object(controls[station])?.[order]);
+    const action = rawAction ? { ...rawAction, reclose: reactivationRecloseControl(rawAction.reclose, session, false) } : null;
     const queueState = object(queue[station])?.[order];
     const controlState = { apparatus: station, order_id: order, rev: parseProductionMapSnapshotRevisionFromJson(snapshot), epoch: snapshot.epoch,
       scope: typeof snapshot.scope === 'string' && snapshot.scope ? snapshot.scope : scope,

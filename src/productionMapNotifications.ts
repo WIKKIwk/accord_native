@@ -11,13 +11,13 @@ type Feed = { subscribe: (next: Listener['next'], error: Listener['error'], done
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
 const feeds = new Map<string, Feed>();
 
-export function decodeProductionMapNotifications(value: unknown): Obj[] {
+export function decodeProductionMapNotifications(value: unknown, session?: Session): Obj[] {
   const event = object(value);
   if (!event) throw new TypeError('Invalid notification event');
   if (event.ok !== true) throw new WorkerControlException(event.error == null ? 'production_map_live_failed' : String(event.error),
     'Bildirishnomalar ulanishi uzildi.');
   if (event.type !== 'notifications_snapshot' && Array.isArray(event.maps) && Array.isArray(event.completion_requests)) {
-    return decodeCanonicalProductionMapSnapshot(event, true).completion_requests;
+    return decodeCanonicalProductionMapSnapshot(event, true, session).completion_requests;
   }
   if (event.type !== 'notifications_snapshot' || !Array.isArray(event.completion_requests) || !Number.isInteger(event.rev) ||
       typeof event.epoch !== 'string' || !event.epoch) {
@@ -59,7 +59,7 @@ export function adminProductionMapNotificationEvents(session: Session): Feed {
         if (generation !== activeGeneration || socket !== ws) return;
         if (!current()) { stale(); return; }
         let notifications: Obj[];
-        try { notifications = decodeProductionMapNotifications(JSON.parse(String(message.data))); }
+        try { notifications = decodeProductionMapNotifications(JSON.parse(String(message.data)), session); }
         catch (error) { finish(error); return; }
         latest = notifications;
         for (const listener of [...listeners]) listener.next(notifications);

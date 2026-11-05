@@ -48,7 +48,7 @@ function parseRows(raw: unknown, ids: string[], kind: 'sequence' | 'order' | 'pe
   return result;
 }
 
-export function productionOrderPageFromJson(value: unknown): Obj {
+export function productionOrderPageFromJson(value: unknown, session?: Session): Obj {
   const json = object(value);
   if (!json) throw new TypeError('Invalid order page');
   const projection = json.projection ?? '';
@@ -64,7 +64,7 @@ export function productionOrderPageFromJson(value: unknown): Obj {
   const ids = asList(json.order_ids);
   if (ids.some(id => typeof id !== 'string')) throw new TypeError('Invalid order ids');
   const orderIds = ids as string[], pendingIds: string[] = orders ? json.pending_ids : [];
-  const snapshot = Object.hasOwn(json, 'maps') && !summary ? decodeCanonicalProductionMapSnapshot(json) : null;
+  const snapshot = Object.hasOwn(json, 'maps') && !summary ? decodeCanonicalProductionMapSnapshot(json, false, session) : null;
   let versions: Obj = {}, revisions: Obj = {}, policies: Obj = {};
   if (sequence) {
     if (!Array.isArray(json.queue_policies) || json.queue_policies.length !== 1 || !object(json.queue_policies[0]) ||
@@ -127,5 +127,5 @@ export async function adminProductionOrderPage(session: Session, request: Produc
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'order_page_failed');
   }
-  return productionOrderPageFromJson(await response.json());
+  return productionOrderPageFromJson(await response.json(), session);
 }

@@ -42,7 +42,7 @@ export function adminProductionMapQueueSnapshot(session: Session, input: Snapsho
       try { payload = await response.json(); } catch { payload = null; }
       throw productionMapResponseError(response.status, payload, 'production_map_sequence');
     }
-    return decodeCanonicalProductionMapSnapshot(await response.json());
+    return decodeCanonicalProductionMapSnapshot(await response.json(), false, session);
   })().finally(() => { if (reads.get(key) === pending) reads.delete(key); });
   reads.set(key, pending);
   return pending;

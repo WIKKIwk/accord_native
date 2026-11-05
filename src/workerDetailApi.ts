@@ -24,7 +24,7 @@ export async function workerProductionOrderDetail(session: Session, apparatus: s
       throw productionMapResponseError(response.status, payload, 'worker_order_detail');
     }
     const wire = object(await response.json());
-    const snapshot = decodeCanonicalProductionMapSnapshot(wire);
+    const snapshot = decodeCanonicalProductionMapSnapshot(wire, false, session);
     const maps = snapshot.maps, revision = snapshot.revision;
     if ((snapshot.projection != null && snapshot.projection !== '' && snapshot.projection !== 'worker_detail_v1') ||
         maps.length !== 1 || maps[0].map.id !== order || typeof snapshot.epoch !== 'string' || !snapshot.epoch ||

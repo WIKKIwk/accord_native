@@ -64,7 +64,7 @@ export function resumePauseControl(raw: unknown): AdminResumePauseControl | null
 /** @v2 AdminReactivationRecloseControl */
 export type AdminReactivationRecloseControl = { session_id: string; stage_node_id: string; token: string;
   worker_role: 'aparatchi' | 'rezka_master'; worker_ref: string; readScope: string };
-export function reactivationRecloseControl(raw: unknown, session: Session): AdminReactivationRecloseControl | null {
+export function reactivationRecloseControl(raw: unknown, session: Session, preserveReadScope = true): AdminReactivationRecloseControl | null {
   const value = object(raw);
   if (!value || (value.worker_role !== 'aparatchi' && value.worker_role !== 'rezka_master') ||
       typeof value.session_id !== 'string' || typeof value.stage_node_id !== 'string' ||
@@ -72,7 +72,8 @@ export function reactivationRecloseControl(raw: unknown, session: Session): Admi
       !value.session_id.trim() || !value.stage_node_id.trim() || !value.token.trim() || !value.worker_ref.trim() ||
       !/^[a-f0-9]{64}$/.test(value.token) || value.session_id.length > 4096 || value.stage_node_id.length > 512) return null;
   return { session_id: value.session_id, stage_node_id: value.stage_node_id, token: value.token,
-    worker_role: value.worker_role, worker_ref: value.worker_ref, readScope: sessionReadScope(session) };
+    worker_role: value.worker_role, worker_ref: value.worker_ref,
+    readScope: preserveReadScope && typeof value.readScope === 'string' ? value.readScope : sessionReadScope(session) };
 }
 
 const denied = () => new WorkerControlException('queue_action_not_allowed', '');

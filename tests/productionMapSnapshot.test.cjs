@@ -109,3 +109,21 @@ test('queue control drops malformed optional resume data and supplies interactio
   assert.equal(control.re_pause, null); assert.equal(control.interaction.resume_input_requirement_known, false);
   assert.equal(control.interaction.qolip_policy_revision, 0);
 });
+
+test('snapshot binds reclose authority to the reading account and drops malformed authority', () => {
+  const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
+  const session = { baseUrl: 'https://example.test', profile: { role: 'aparatchi', ref: 'worker' },
+    capabilities: [], assigned_apparatus: [station] };
+  const wire = context();
+  wire.queue_action_controls[station][order].reclose = { session_id: 'run', stage_node_id: 'stage', token: 'a'.repeat(64),
+    worker_role: 'aparatchi', worker_ref: 'worker', readScope: 'server supplied' };
+  const parsed = decoder.decodeCanonicalProductionMapSnapshot(wire, true, session);
+  const reclose = parsed.queue_action_controls[station][order].reclose;
+  const originalScope = load('sessionReadScope').sessionReadScope(session);
+  assert.equal(reclose.readScope, originalScope);
+  session.assigned_apparatus = [];
+  const controls = load('workerControlsApi', { './authorizedFetch': {} });
+  assert.equal(controls.reactivationRecloseControl(reclose, session).readScope, originalScope);
+  wire.queue_action_controls[station][order].reclose.token = 'invalid';
+  assert.equal(decoder.decodeCanonicalProductionMapSnapshot(wire, true, session).queue_action_controls[station][order].reclose, null);
+});
