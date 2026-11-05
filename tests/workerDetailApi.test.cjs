@@ -90,3 +90,26 @@ test('worker detail returns the decoded snapshot rather than raw wire values', a
   assert.deepEqual(result.stage_states[order], { stage: 'completed' });
   assert.equal(result.order_controls[order], 'active');
 });
+
+test('worker overview shares one five-second deadline across a stale response retry', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const scope = load('sessionReadScope');
+  let count = 0, retrySignal;
+  const session = { baseUrl: 'https://example.test', profile: { role: 'aparatchi', ref: 'worker' } };
+  const workerApi = load('workerApi', { './authorizedFetch': {}, './workerOrderAppearance': load('workerOrderAppearance'),
+    './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerSnapshot': {}, './sessionReadScope': scope, './apparatusApi': {},
+    './workerDetailApi': { workerProductionOrderDetail: async (_session, _station, _order, signal) => {
+      if (++count === 1) return { epoch: 'e', rev: 2 };
+      retrySignal = signal;
+      return new Promise((_, reject) => signal.addEventListener('abort', () => reject(new Error('fetch aborted')), { once: true }));
+    } } });
+  const result = workerApi.readWorkerOrderDetail(session, station, order, { epoch: 'e', rev: 3 }, new AbortController().signal);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(count, 2);
+  t.mock.timers.tick(4999);
+  assert.equal(retrySignal.aborted, false);
+  t.mock.timers.tick(1);
+  await assert.rejects(result, /Scoped order detail timed out/);
+  assert.equal(retrySignal.aborted, true);
+});

@@ -79,15 +79,31 @@ export function workerOrderDetailFromSnapshot(snapshot: RecordValue, orderId: st
 export async function readWorkerOrderDetail(session: Session, apparatusId: string, orderId: string,
   cursor: QueueCursor | null, signal: AbortSignal): Promise<WorkerOrderDetail> {
   const scope = sessionReadScope(session);
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const snapshot = await workerProductionOrderDetail(session, apparatusId, orderId, signal);
-    if (scope !== sessionReadScope(session)) throw new Error('Sessiya o‘zgardi. Qayta urining.');
-    const valid = (!cursor?.epoch || snapshot.epoch === cursor.epoch) &&
-      (typeof cursor?.rev !== 'number' || snapshot.rev >= cursor.rev);
-    if (!valid) continue;
-    return workerOrderDetailFromSnapshot(snapshot, orderId);
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal.aborted) abort();
+  signal.addEventListener('abort', abort, { once: true });
+  let timer: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error('Scoped order detail timed out'));
+      controller.abort();
+    }, 5000);
+  });
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const snapshot = await Promise.race([workerProductionOrderDetail(session, apparatusId, orderId, controller.signal), deadline]);
+      if (scope !== sessionReadScope(session)) throw new Error('Sessiya o‘zgardi. Qayta urining.');
+      const valid = (!cursor?.epoch || snapshot.epoch === cursor.epoch) &&
+        (typeof cursor?.rev !== 'number' || snapshot.rev >= cursor.rev);
+      if (!valid) continue;
+      return workerOrderDetailFromSnapshot(snapshot, orderId);
+    }
+    throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+  } finally {
+    clearTimeout(timer!);
+    signal.removeEventListener('abort', abort);
   }
-  throw new Error('Buyurtma holati yangilandi. Qayta urining.');
 }
 
 export function canWorkOnApparatus(machine: Apparatus | undefined, assignedIds: readonly string[]): boolean {
