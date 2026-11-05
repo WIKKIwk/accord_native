@@ -3,7 +3,9 @@ import { Redirect } from 'expo-router';
 import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import { LoginScreen } from '../LoginScreen';
 import { WorkerScreen } from '../WorkerScreen';
-import { loadSession, logout, type Session } from '../auth';
+import { activeSessionToken, loadSession, logout, type Session } from '../auth';
+import { profile } from '../profileApi';
+import { bootstrapSession } from '../shared/loginLogic';
 import { clearAppLock } from '../appLock';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { homeTarget } from '../shared/appRoutes';
@@ -13,7 +15,9 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    loadSession().then(value => { if (active) setSession(value); }).finally(() => { if (active) setLoading(false); });
+    bootstrapSession(loadSession, profile, value => !!activeSessionToken(value))
+      .then(value => { if (active) setSession(value); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
   if (loading) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;

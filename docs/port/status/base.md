@@ -31,5 +31,6 @@ Stopped at: shared API and base logic comparison
 
 | Where | V2 reference | What is needed |
 |---|---|---|
+| `src/LoginScreen.tsx` | `loginCodeUsesNumericKeyboard`, `loginFailureMessage`, `LoginScreen.submitLogin` | Use the shared prefix rule for the keyboard, port localized transport/error messages and match V2 login/back behavior in the platform-owned login views. |
 | `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing profile UI helpers impose additional validation and do not call the shared V2 API functions; reconcile those helpers and their platform screens when profile UI is ported. |
 | `src/app/android-worker/` | `AppSession.homeRoute` | Add the Android worker Expo Router route. Until then the existing Android worker screen renders at the root; base cannot create route files outside its scope. |
