@@ -286,3 +286,19 @@ test('order alert keeps the request ID when the caller retries', async () => {
   await f.api.sendOrderAlert(f.session, input);
   f.replay.assertDone();
 });
+
+test('mutations advance the shared snapshot read epoch before and after the request', async () => {
+  const session = { baseUrl: 'https://example.test', token: 'token' };
+  const client = load('authorizedFetch', { './auth': { activeSessionToken: s => s.token, refreshSession: async () => false } });
+  const original = global.fetch;
+  let release;
+  global.fetch = () => new Promise(resolve => { release = resolve; });
+  try {
+    const before = client.currentQueueSnapshotReadEpoch();
+    const pending = client.authorizedFetch(session, '/v1/mobile/admin/test', { method: 'POST' });
+    assert.equal(client.currentQueueSnapshotReadEpoch(), before + 1);
+    release(new Response('{}', { status: 200 }));
+    await pending;
+    assert.equal(client.currentQueueSnapshotReadEpoch(), before + 2);
+  } finally { global.fetch = original; }
+});

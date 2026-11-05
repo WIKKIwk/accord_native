@@ -11,7 +11,7 @@ function load(name, mocks = {}) {
   const loaded = new Module(filename, module);
   loaded.filename = filename;
   loaded.paths = module.paths;
-  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./') ? load(id.slice(2), mocks) : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, filename);
@@ -135,7 +135,8 @@ test('scan bootstrap rejects malformed global context even outside the selected 
       value.queue_context.queue_action_controls[station].other = { ...value.control_state.control }; },
   ]) {
     const value = fixture(); edit(value);
-    assert.throws(() => api.parseWorkerScanBootstrap(value, station, order, qr), error => error.code === 'production_map_snapshot_contract_invalid');
+    assert.throws(() => api.parseWorkerScanBootstrap(value, station, order, qr), error =>
+      ['production_map_snapshot_contract_invalid', 'production_map_visible_order_ids_missing'].includes(error.code));
   }
 });
 
@@ -146,4 +147,11 @@ test('scan bootstrap returns a typed validated batch with the proven input route
   assert.equal(result.validated_progress.batch.has_input_route_metadata, true);
   assert.deepEqual(result.validated_progress.batch.input_route, result.validated_progress.input_route);
   assert.ok(result.validated_progress.batch.input_route.consumer_apparatus_ids.includes(station));
+});
+
+test('scan context accepts a numeric-string snapshot revision like V2', () => {
+  const { api } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
+  const value = fixture();
+  value.queue_context.rev = '7';
+  assert.equal(api.parseWorkerScanBootstrap(value, station, order, qr).control_state.rev, 7);
 });

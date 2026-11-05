@@ -4,6 +4,7 @@ import { WorkerControlException } from './workerControlsApi';
 import { adminProductionMapLiveUri, type ProductionMapLiveOptions } from './workerLiveUri';
 import { parseProductionMapSnapshotRevisionFromJson } from './workerQueueModels';
 import { productionMapDeltaOpFromJson } from './workerSequenceMoveApi';
+import { decodeCanonicalProductionMapSnapshot } from './productionMapSnapshot';
 
 type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -65,8 +66,7 @@ export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: bo
       snapshot_revision: typeof event.snapshot_rev === 'number' ? Math.trunc(event.snapshot_rev) : null,
       ops: Array.isArray(event.ops) ? event.ops.filter(item => object(item)).map(productionMapDeltaOpFromJson) : [] };
   }
-  // Legacy full-snapshot messages still need the shared canonical snapshot decoder.
-  return { ...event };
+  return decodeCanonicalProductionMapSnapshot(event, true);
 }
 
 export type ProductionMapLiveStreamOptions = Omit<ProductionMapLiveOptions, 'delta' | 'notificationsOnly'> & { enableDelta?: boolean };

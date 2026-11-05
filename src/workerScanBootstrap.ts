@@ -4,6 +4,7 @@ import { isCanonicalApparatusId, productionMapResponseError, WorkerControlExcept
 import { rawMaterialAssignment } from './workerRawMaterials';
 import { validOrderControl } from './workerOrderLogic';
 import { progressBatchFromJson, progressInputRoute } from './workerProgressBatch';
+import { decodeCanonicalProductionMapSnapshot } from './productionMapSnapshot';
 
 type Obj = Record<string, any>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -130,13 +131,15 @@ function completeInput(section: unknown, state: Obj): boolean {
 
 function validateContext(raw: unknown, state: Obj) {
   const context = object(raw), station = state.apparatus, order = state.order_id;
-  if (!context || context.ok !== true || !Array.isArray(context.maps) || !object(context.stage_states) ||
+  if (!context || context.ok !== true || !Array.isArray(context.maps) || !object(context.stage_states)) throw invalid('invalid scan queue context');
+  const decoded = decodeCanonicalProductionMapSnapshot(context);
+  if (decoded.maps.length !== context.maps.length ||
       !object(context.sequences) || !object(context.visible_order_ids) || !object(context.queue_states) ||
       !object(context.queue_action_controls) || !Array.isArray(context.queue_policies) || !object(context.order_controls) ||
-      context.epoch !== state.epoch || context.rev !== state.rev || context.scope !== state.scope ||
-      context.queue_states?.[station]?.[order] !== state.queue_state ||
-      (context.order_controls?.[order]?.state ?? 'active') !== state.order_control ||
-      !equal(context.stage_states[order] ?? {}, state.stage_states) ||
+      decoded.epoch !== state.epoch || decoded.revision !== state.rev || decoded.scope !== state.scope ||
+      decoded.queue_states?.[station]?.[order] !== state.queue_state ||
+      (decoded.order_controls?.[order] ?? 'active') !== state.order_control ||
+      !equal(decoded.stage_states[order] ?? {}, state.stage_states) ||
       !object(context.queue_action_controls?.[station]?.[order]) ||
       !equal(context.queue_action_controls[station][order], state.control)) throw invalid('invalid scan queue context');
   for (const field of ['sequences', 'visible_order_ids']) {

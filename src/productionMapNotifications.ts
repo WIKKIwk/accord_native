@@ -3,6 +3,7 @@ import { sessionReadScope } from './sessionReadScope';
 import { WorkerControlException } from './workerControlsApi';
 import { completionRequestNotification } from './workerQueueModels';
 import { adminProductionMapLiveUri } from './workerLiveUri';
+import { decodeCanonicalProductionMapSnapshot } from './productionMapSnapshot';
 
 type Obj = Record<string, unknown>;
 type Listener = { next: (value: Obj[]) => void; error: (error: unknown) => void; done?: () => void };
@@ -16,7 +17,7 @@ export function decodeProductionMapNotifications(value: unknown): Obj[] {
   if (event.ok !== true) throw new WorkerControlException(event.error == null ? 'production_map_live_failed' : String(event.error),
     'Bildirishnomalar ulanishi uzildi.');
   if (event.type !== 'notifications_snapshot' && Array.isArray(event.maps) && Array.isArray(event.completion_requests)) {
-    throw new WorkerControlException('production_map_snapshot_contract_invalid', 'Legacy notification snapshot decoder is not yet available.');
+    return decodeCanonicalProductionMapSnapshot(event, true).completion_requests;
   }
   if (event.type !== 'notifications_snapshot' || !Array.isArray(event.completion_requests) || !Number.isInteger(event.rev) ||
       typeof event.epoch !== 'string' || !event.epoch) {
@@ -25,7 +26,7 @@ export function decodeProductionMapNotifications(value: unknown): Obj[] {
   return event.completion_requests.map(completionRequestNotification);
 }
 
-// Legacy full-snapshot decoding is still pending, so this method is not tagged complete.
+// The canonical decoder remains under parity review, so this method is not tagged complete.
 export function adminProductionMapNotificationEvents(session: Session): Feed {
   const token = activeSessionToken(session), baseUrl = session.baseUrl, scope = sessionReadScope(session);
   const key = JSON.stringify([baseUrl, token, scope]);

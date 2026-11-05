@@ -75,3 +75,13 @@ test('notification events reject invalid cursors and malformed rows', () => {
     error => error.code === 'production_map_snapshot_contract_invalid');
   assert.throws(() => decode({ ok: true, type: 'notifications_snapshot', epoch: 'e', rev: 1, completion_requests: [null] }));
 });
+
+test('legacy notification snapshot uses the canonical queue decoder', () => {
+  const { loadContract } = require('./support/contractFetch.cjs');
+  const row = loadContract('order_scan_bootstrap_api_test').find(x => x.test === 'bootstrap decodes context and QR proof in one authorized request');
+  const context = JSON.parse(row.responseBody.text).queue_context;
+  const { decodeProductionMapNotifications: decode } = api();
+  assert.deepEqual(decode({ ...context, type: 'snapshot', completion_requests: [] }), []);
+  assert.throws(() => decode({ ...context, type: 'snapshot', completion_requests: [], queue_policies: null }),
+    error => error.code === 'production_map_snapshot_contract_invalid');
+});

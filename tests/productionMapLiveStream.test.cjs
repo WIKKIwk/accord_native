@@ -87,3 +87,12 @@ test('state delta validates patch fields and negotiated compact format', () => {
   assert.throws(() => decode({ ...valid, patch: { map_order: [], map_order_edit: {} } }, { stateDelta: true, compact: true }),
     error => error.code === 'production_map_snapshot_contract_invalid');
 });
+
+test('legacy full stream snapshots pass through the canonical queue decoder', () => {
+  const { loadContract } = require('./support/contractFetch.cjs');
+  const row = loadContract('order_scan_bootstrap_api_test').find(x => x.test === 'bootstrap decodes context and QR proof in one authorized request');
+  const context = JSON.parse(row.responseBody.text).queue_context;
+  const { decodeProductionMapLiveMessage: decode } = api();
+  assert.equal(decode({ ...context, type: 'snapshot' }, {}).maps[0].map.id, 'zakaz-scan-bootstrap');
+  assert.throws(() => decode({ ...context, type: 'snapshot', queue_policies: null }, {}), error => error.code === 'production_map_snapshot_contract_invalid');
+});
