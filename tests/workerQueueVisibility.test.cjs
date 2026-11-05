@@ -21,7 +21,7 @@ const controls = load('workerControlsApi', { './authorizedFetch': {}, './session
 const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls });
 const { workerMachinesFromSnapshot, queueFromSnapshot, canWorkOnApparatus, workerOrderDetailFromSnapshot } = load('workerApi', {
   './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, './workerSnapshot': snapshotDecoder,
-  './workerDetailApi': {}, './sessionReadScope': scope,
+  './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {},
 });
 
 const machine = (id, name, operation) => ({ runtime_projection: { apparatus_id: id, display: { display_name: name }, execution_profile: { operation } } });
@@ -42,7 +42,7 @@ test('the current account profile refreshes stale login assignments for the queu
     './workerOrderAppearance': appearance,
     './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 },
     './workerSnapshot': snapshotDecoder,
-    './workerDetailApi': {}, './sessionReadScope': scope,
+    './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': { adminApparatus: async () => catalog },
     './authorizedFetch': { authorizedFetch: async (_session, url) => ({ ok: true, json: async () =>
       url === '/v1/mobile/profile' ? profile : url.includes('/apparatus?') ? catalog : {
         projection: 'worker_list_v1', epoch: 'e', scope: 's', rev: 1, worker_show_all_apparatus_tabs: false,

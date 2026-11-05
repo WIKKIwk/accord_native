@@ -42,7 +42,9 @@ test('worker queue sends the compact request recorded from V2', async () => {
   const appearance = load('workerOrderAppearance');
   const api = load('workerApi', {
     './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerSnapshot': decoder,
-    './workerDetailApi': {}, './sessionReadScope': scope,
+    './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': { adminApparatus: async () => [
+      { runtime_projection: { apparatus_id: station, display: { display_name: 'Bosma' }, execution_profile: { operation: 'print' } } },
+    ] },
     './authorizedFetch': { authorizedFetch: async (s, url, init) => {
       if (url.startsWith('/v1/mobile/admin/production-maps/sequence')) {
         return replay(new URL(url, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } });

@@ -20,7 +20,7 @@ const scope = load('sessionReadScope');
 const controls = load('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': scope });
 const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls });
 const { queueFromSnapshot } = load('workerApi', { './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 0 },
-  './authorizedFetch': {}, './workerSnapshot': snapshotDecoder, './workerDetailApi': {}, './sessionReadScope': scope });
+  './authorizedFetch': {}, './workerSnapshot': snapshotDecoder, './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {} });
 const { applyWorkerDelta } = load('workerDelta', { './workerSnapshot': snapshotDecoder });
 
 test('queue cards use the selected apparatus and update from live display states', () => {

@@ -6,6 +6,7 @@ import type { QueueCursor } from './workerOrderLogic';
 import { decodeWorkerListSnapshot } from './workerSnapshot';
 import { workerProductionOrderDetail } from './workerDetailApi';
 import { sessionReadScope } from './sessionReadScope';
+import { adminApparatus } from './apparatusApi';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -98,7 +99,7 @@ export function workerOrderIsFrozen(snapshot: RecordValue | undefined, orderId: 
   return string(orderControl.state).toLowerCase() === 'frozen';
 }
 
-async function getJson(session: Session, path: string, resource: 'apparatus' | 'queue' | 'profile'): Promise<unknown> {
+async function getJson(session: Session, path: string, resource: 'queue' | 'profile'): Promise<unknown> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
@@ -111,9 +112,7 @@ async function getJson(session: Session, path: string, resource: 'apparatus' | '
         if (resource === 'queue' && !session.assigned_apparatus.length) {
           throw new Error('Hisobingizga aparat biriktirilmagan. Administratordan bosma aparatini biriktirishni so‘rang va qayta kiring.');
         }
-        throw new Error(resource === 'apparatus'
-          ? 'Server bu hisobga aparatlar ro‘yxatini ko‘rishga ruxsat bermadi.'
-          : resource === 'profile' ? 'Profilni yangilab bo‘lmadi.'
+        throw new Error(resource === 'profile' ? 'Profilni yangilab bo‘lmadi.'
           : 'Server bu hisobga aparat navbatini ko‘rishga ruxsat bermadi. Hisob ruxsatlari va aparat biriktirilishini tekshiring.');
       }
       throw new Error(`Server xatosi (${response.status})`);
@@ -126,7 +125,7 @@ export async function loadWorkerQueue(session: Session, search = '', queueLimit:
   const query = new URLSearchParams({ worker_scope: 'true', projection: 'worker_list_v1', queue_limit: String(queueLimit), queue_positions: 'true' });
   if (search.trim()) query.set('queue_search', search.trim());
   const [catalogResult, queueResult, profileResult] = await Promise.allSettled([
-    getJson(session, '/v1/mobile/admin/apparatus?limit=200', 'apparatus'),
+    adminApparatus(session, { limit: 200 }),
     getJson(session, `/v1/mobile/admin/production-maps/sequence?${query.toString()}`, 'queue'),
     getJson(session, '/v1/mobile/profile', 'profile'),
   ]);
@@ -162,9 +161,9 @@ export function workerMachinesFromSnapshot(catalog: unknown[], snapshot: RecordV
   const machines = catalog.flatMap((item): Apparatus[] => {
     const outer = object(item);
     const projection = Object.keys(object(outer.runtime_projection)).length ? object(outer.runtime_projection) : outer;
-    const id = string(projection.apparatus_id);
-    const name = string(object(projection.display).display_name);
-    const operation = string(object(projection.execution_profile).operation);
+    const id = string(projection.apparatus_id) || string(outer.id);
+    const name = string(object(projection.display).display_name) || string(outer.name);
+    const operation = string(object(projection.execution_profile).operation) || string(outer.operation);
     if (!id || !name || (!showAll && !assigned.has(id))) return [];
     return [{ id, name, operation }];
   });

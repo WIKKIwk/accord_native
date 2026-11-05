@@ -1,5 +1,5 @@
 import type { Session } from './auth';
-import { authorizedFetch } from './authorizedFetch';
+import { adminApparatus } from './apparatusApi';
 import { progressBatchStatusDetail } from './workerProgressModel';
 import { adminProgressQrHistory } from './workerProgressApi';
 import { WorkerControlException } from './workerControlsApi';
@@ -136,19 +136,11 @@ export function dailyWorkLocation(value: string, names: Record<string, string>):
 }
 
 export async function loadDailyWorkApparatus(session: Session, signal: AbortSignal): Promise<Record<string, string>> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/apparatus?limit=300', { signal });
-  if (!response.ok) throw new Error('Aparatlar ro‘yxatini yuklab bo‘lmadi.');
-  const rows: unknown = await response.json();
-  if (!Array.isArray(rows)) throw new Error('Aparatlar ro‘yxati noto‘g‘ri.');
+  const rows = await adminApparatus(session, { limit: 300, signal });
   const names: Record<string, string> = {};
   for (const item of rows) {
-    const outer = object(item);
-    const projection = object(outer.runtime_projection);
-    const display = object(projection.display);
-    const name = text(display.display_name) || text(outer.name);
-    if (!name) continue;
-    for (const id of [projection.apparatus_id, projection.physical_asset_id, projection.work_unit_id, outer.id]) {
-      if (text(id)) names[text(id)] = name;
+    for (const id of [item.id, item.physical_asset_id, item.work_unit_id]) {
+      if (id) names[id] = item.name;
     }
   }
   return names;

@@ -33,11 +33,16 @@ function load(fetch = async () => { throw new Error('unexpected request'); }) {
   progressApi.require = id => id === './authorizedFetch' ? { authorizedFetch: fetch } : id === './sessionReadScope' ? scope.exports :
     id === './workerControlsApi' ? controls.exports : id === './workerProgressBatch' ? batch.exports : require(id);
   progressApi._compile(ts.transpileModule(fs.readFileSync(apiFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, apiFile);
+  const apparatusFile = path.resolve(__dirname, '../src/apparatusApi.ts');
+  const apparatus = new Module(apparatusFile, module);
+  apparatus.filename = apparatusFile; apparatus.paths = module.paths;
+  apparatus.require = id => id === './authorizedFetch' ? { authorizedFetch: fetch } : id === './workerControlsApi' ? controls.exports : require(id);
+  apparatus._compile(ts.transpileModule(fs.readFileSync(apparatusFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, apparatusFile);
   const filename = path.resolve(__dirname, '../src/dailyWork.ts');
   const loaded = new Module(filename, module);
   loaded.filename = filename;
   loaded.paths = module.paths;
-  loaded.require = id => id === './authorizedFetch' ? { authorizedFetch: fetch } : id === './workerProgressModel' ? progress.exports :
+  loaded.require = id => id === './apparatusApi' ? apparatus.exports : id === './workerProgressModel' ? progress.exports :
     id === './workerProgressApi' ? progressApi.exports : id === './workerControlsApi' ? controls.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
@@ -109,11 +114,12 @@ test('invalid history and forbidden requests are reported instead of appearing e
 });
 
 test('apparatus names resolve from the catalog without exposing internal IDs', async () => {
-  const api = load(async () => ({ ok: true, json: async () => [{ runtime_projection: {
-    apparatus_id: 'apparatus:1', display: { display_name: 'Bosma 1' },
-  } }] }));
+  const api = load(async () => new Response(JSON.stringify([{ runtime_projection: {
+    apparatus_id: 'apparatus:default:press', display: { display_name: 'Bosma 1' }, source_revision: 1,
+    source_aasx_sha256: 'a'.repeat(64), execution_profile: { operation: 'print', technology: 'flexographic' },
+  } }]), { status: 200 }));
   const names = await api.loadDailyWorkApparatus({}, new AbortController().signal);
-  assert.equal(api.dailyWorkLocation('apparatus:1', names), 'Bosma 1');
+  assert.equal(api.dailyWorkLocation('apparatus:default:press', names), 'Bosma 1');
   assert.equal(api.dailyWorkLocation('apparatus:other', names), '');
   assert.equal(api.dailyWorkLocation('Ombor', names), 'Ombor');
 });
