@@ -1,14 +1,14 @@
 # printer
 
 Status: printer session in progress
-Stopped at: TSPL byte comparison and real-printer validation remain.
+Stopped at: iOS TSPL runtime comparison and real-printer validation remain.
 
 GoDEX is archived and outside this session by the user's instruction. The Android USB path supports Zebra; the V2 native GoDEX-specific test method is excluded.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| TSPL parity | `BluetoothPrinterChannel.kt`, `XPrinterBluetoothChannel.swift` | Compare Android and iOS TSPL bytes against V2 for identical label inputs. The platform-native label code is ported, but the byte comparison has not yet run. |
+| TSPL parity | `BluetoothPrinterChannel.kt`, `XPrinterBluetoothChannel.swift` | Android output matches V2 byte for byte for 11 label inputs, with native SDK fixtures checked by `testDebugUnitTest`. iOS command-generation source is identical to V2, but its SDK output still needs a runtime byte comparison. |
 | SDK licence | `ios/vendor/xprinter/README.md`, `android/app/libs/printer-lib-3.5.8.aar` | Confirm redistribution terms for the Xprinter iOS SDK and Android printer SDK; V2 does not include them. |
 | Hardware | Bluetooth and USB channels | Verify printing and discovery on real printers and devices. |
 | iOS simulator | `ios/vendor/xprinter/README.md` | The vendor library has no arm64 simulator slice; use an iOS device build or obtain a compatible vendor SDK. |
