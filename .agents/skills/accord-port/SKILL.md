@@ -93,7 +93,7 @@ everything `port_ledger.mjs shared` lists, into `src/shared/`. Those are the met
 this keeps parallel sessions from writing them twice. Own role routing as well: port `AppSession.homeRoute` and
 `AppRouter.canOpenRoute`, and make `src/app/index.tsx` redirect by role and platform (D7) through one table that
 a later role extends with one line. A role with no V4 screens yet shows one plain message telling the user to
-keep using V2. Do all parts of `base` in this session. Done means `shared` reports 0 and the gates pass.
+keep using V2. Do all parts of `base` in this session. Done means every method `shared` lists is ported or has an open item, and the gates pass. `logout` is ported except its push-token reader, which waits for a Firebase config only the user can add: keep it as an open item and do not block on it.
 
 ## Build session
 
