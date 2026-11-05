@@ -3,6 +3,9 @@
 The spec is the commit in `V2_BASELINE`. Generated numbers come from
 `node .agents/skills/accord-port/scripts/port_ledger.mjs plan` and `status`.
 
+Sessions write to `docs/port/status/<name>.md`. Only the integrator edits this file, and folds their rows in when
+merging a branch.
+
 ## Decisions
 
 These are defaults, and the user can change any of them.
@@ -17,6 +20,10 @@ These are defaults, and the user can change any of them.
 | D6 | Until cutover V4 keeps its own identity and storage keys, with no data migration from V2. | `app.json` sets no bundle id yet; V2 uses `com.example.accord_mobile_v2` on Android and `com.example.accordMobileV2.mirsaid.uzkingshark` on iOS |
 | D7 | Logic is ported once and shared. Screens and routes are separate per platform: `src/app/ios-<role>/` and `src/app/android-<role>/`, with `src/app/index.tsx` redirecting by role and platform. | Rules cannot differ by platform without breaking 1:1, while views often must differ |
 | D8 | New screens have no `.tsx` fallback, and platform code is type-checked with `tsconfig.ios.json` and `tsconfig.android.json`. | A missing platform file then fails loudly instead of shipping a stub. Plain `tsc` only checks callers against the fallback, and it missed the mismatch listed below |
+| D9 | V2 is frozen (agreed 2026-11-05): no new features, only fixes for errors that stop production. Such a fix reaches V4 through a drift sync. | V2 and V4 cannot both keep moving. `lib/src/features/preparation` alone got 7 commits in the 7 days before this |
+| D10 | Roles move to V4 one at a time while the rest stay on V2, against the same backend. V4 uses the bundle id `com.accord.mobilev4` on both platforms, so both apps install side by side. | No single risky cutover. Change the id any time before the first store upload |
+| D11 | Sessions run in parallel, each in its own worktree on `port/<name>` with its own status file. Only the integrator writes to `main`, merging with `--no-ff` and running the gates after each merge. | One large session strains its context, and limits are not the constraint. At most 5 role sessions run until the first role works on a real phone |
+| D12 | Known V2 bugs and missing features are fixed in V4, not V2, after the 1:1 port and in separate commits with a Deviations row. | The V2 comparison stays clean and V2 stays frozen |
 
 ## Roles
 
