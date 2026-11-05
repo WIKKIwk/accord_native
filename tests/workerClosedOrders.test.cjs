@@ -62,3 +62,27 @@ test('closed orders preserves server errors', async () => {
   const client = api(async () => new Response('{"error":"closed_orders"}', { status: 403 }));
   await assert.rejects(client.adminClosedProductionMapOrders({}), error => error.code === 'closed_orders');
 });
+
+// @v2-test test/admin_order_page_api_test.dart
+test('closed detail fetches one order only', async () => {
+  const { contractFetch, recordedSession } = require('./support/contractFetch.cjs');
+  const stem = 'admin_order_page_api_test', name = 'closed detail fetches one order only';
+  const replay = contractFetch(stem, name);
+  const session = recordedSession(stem, name);
+  const client = api((s, p, init = {}) => replay(new URL(p, s.baseUrl), {
+    ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` },
+  }));
+  const order = await client.adminClosedProductionOrderDetail(session, 'zakaz-42');
+  assert.equal(order.order_id, 'zakaz-42');
+  replay.assertDone();
+});
+
+test('closed detail encodes the unmodified ID and preserves server errors', async () => {
+  let url;
+  const client = api(async (_session, requested) => {
+    url = requested;
+    return new Response('{"error":"closed_order_failed"}', { status: 404 });
+  });
+  await assert.rejects(client.adminClosedProductionOrderDetail({}, ' a&b '), error => error.code === 'closed_order_failed');
+  assert.equal(new URL(url, 'https://example.test').searchParams.get('id'), ' a&b ');
+});

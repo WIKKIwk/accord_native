@@ -99,3 +99,15 @@ export async function adminClosedProductionMapOrders(session: Session) {
   if (!payload) throw new TypeError('Invalid closed orders response');
   return Array.isArray(payload.closed_orders) ? payload.closed_orders.map(closedProductionOrderFromJson) : [];
 }
+
+/** @v2 adminClosedProductionOrderDetail */
+export async function adminClosedProductionOrderDetail(session: Session, id: string) {
+  const query = new URLSearchParams({ id });
+  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/closed-order?${query}`);
+  if (response.status !== 200) {
+    let payload: unknown;
+    try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'closed_order_failed');
+  }
+  return closedProductionOrderFromJson(await response.json());
+}
