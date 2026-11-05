@@ -232,6 +232,7 @@ export function parseWorkerScanBootstrap(raw: unknown, apparatus: string, orderI
   return result;
 }
 
+/** @v2 adminOrderScanBootstrap */
 export async function adminOrderScanBootstrap(session: Session, input: {
   apparatus: string; orderId: string; materialBarcodes?: string[]; includeSections?: boolean; includeContext?: boolean;
   automaticQolipConfirmation?: boolean; qrPayload?: string;
