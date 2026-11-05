@@ -1,0 +1,1395 @@
+{
+ "source": "test/preparation_orders_list_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "cached master labels paint while HTTP validation is pending",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "cached master labels paint while HTTP validation is pending",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "cached master labels paint while HTTP validation is pending",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&if_version=0000000000000000000000000000000000000000000000000000000000000007",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "304 preserves an entire restored multi-page master prefix",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&if_version=0000000000000000000000000000000000000000000000000000000000000007",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 304,
+   "responseHeaders": {
+    "x-production-epoch": "preparation-orders-test",
+    "x-production-revision": "8",
+    "x-preparation-scope": "master|apparatus:default:bosma_7|",
+    "x-preparation-version": "0000000000000000000000000000000000000000000000000000000000000007"
+   },
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "304 preserves an entire restored multi-page master prefix",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "304 preserves an entire restored multi-page master prefix",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "304 preserves an entire restored multi-page master prefix",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-3&image_id=master-image-3&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master restores disk labels without waiting for HTTP",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":8,\"version\":\"0000000000000000000000000000000000000000000000000000000000000008\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Fresh master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Fresh master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master restores disk labels without waiting for HTTP",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master restores disk labels without waiting for HTTP",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master checkpoint retains rows, thumbnails and socket",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master checkpoint retains rows, thumbnails and socket",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master checkpoint retains rows, thumbnails and socket",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master delta adds, removes and reorders without another HTTP read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master delta adds, removes and reorders without another HTTP read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master delta adds, removes and reorders without another HTTP read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master delta adds, removes and reorders without another HTTP read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-3&image_id=master-image-3&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "missing master delta baseline starts only one HTTP repair",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "missing master delta baseline starts only one HTTP repair",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "missing master delta baseline starts only one HTTP repair",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "missing master delta baseline starts only one HTTP repair",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&if_version=0000000000000000000000000000000000000000000000000000000000000007",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":30,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12},{\"id\":\"zakaz-3\",\"code\":\"03\",\"order_number\":\"ORDER-3\",\"title\":\"Master product 3\",\"customer_name\":\"Master customer 3\",\"image_id\":\"master-image-3\",\"position\":13},{\"id\":\"zakaz-4\",\"code\":\"04\",\"order_number\":\"ORDER-4\",\"title\":\"Master product 4\",\"customer_name\":\"Master customer 4\",\"image_id\":\"master-image-4\",\"position\":14},{\"id\":\"zakaz-5\",\"code\":\"05\",\"order_number\":\"ORDER-5\",\"title\":\"Master product 5\",\"customer_name\":\"Master customer 5\",\"image_id\":\"master-image-5\",\"position\":15},{\"id\":\"zakaz-6\",\"code\":\"06\",\"order_number\":\"ORDER-6\",\"title\":\"Master product 6\",\"customer_name\":\"Master customer 6\",\"image_id\":\"master-image-6\",\"position\":16},{\"id\":\"zakaz-7\",\"code\":\"07\",\"order_number\":\"ORDER-7\",\"title\":\"Master product 7\",\"customer_name\":\"Master customer 7\",\"image_id\":\"master-image-7\",\"position\":17},{\"id\":\"zakaz-8\",\"code\":\"08\",\"order_number\":\"ORDER-8\",\"title\":\"Master product 8\",\"customer_name\":\"Master customer 8\",\"image_id\":\"master-image-8\",\"position\":18},{\"id\":\"zakaz-9\",\"code\":\"09\",\"order_number\":\"ORDER-9\",\"title\":\"Master product 9\",\"customer_name\":\"Master customer 9\",\"image_id\":\"master-image-9\",\"position\":19},{\"id\":\"zakaz-10\",\"code\":\"010\",\"order_number\":\"ORDER-10\",\"title\":\"Master product 10\",\"customer_name\":\"Master customer 10\",\"image_id\":\"master-image-10\",\"position\":20},{\"id\":\"zakaz-11\",\"code\":\"011\",\"order_number\":\"ORDER-11\",\"title\":\"Master product 11\",\"customer_name\":\"Master customer 11\",\"image_id\":\"master-image-11\",\"position\":21},{\"id\":\"zakaz-12\",\"code\":\"012\",\"order_number\":\"ORDER-12\",\"title\":\"Master product 12\",\"customer_name\":\"Master customer 12\",\"image_id\":\"master-image-12\",\"position\":22},{\"id\":\"zakaz-13\",\"code\":\"013\",\"order_number\":\"ORDER-13\",\"title\":\"Master product 13\",\"customer_name\":\"Master customer 13\",\"image_id\":\"master-image-13\",\"position\":23},{\"id\":\"zakaz-14\",\"code\":\"014\",\"order_number\":\"ORDER-14\",\"title\":\"Master product 14\",\"customer_name\":\"Master customer 14\",\"image_id\":\"master-image-14\",\"position\":24},{\"id\":\"zakaz-15\",\"code\":\"015\",\"order_number\":\"ORDER-15\",\"title\":\"Master product 15\",\"customer_name\":\"Master customer 15\",\"image_id\":\"master-image-15\",\"position\":25},{\"id\":\"zakaz-16\",\"code\":\"016\",\"order_number\":\"ORDER-16\",\"title\":\"Master product 16\",\"customer_name\":\"Master customer 16\",\"image_id\":\"master-image-16\",\"position\":26},{\"id\":\"zakaz-17\",\"code\":\"017\",\"order_number\":\"ORDER-17\",\"title\":\"Master product 17\",\"customer_name\":\"Master customer 17\",\"image_id\":\"master-image-17\",\"position\":27},{\"id\":\"zakaz-18\",\"code\":\"018\",\"order_number\":\"ORDER-18\",\"title\":\"Master product 18\",\"customer_name\":\"Master customer 18\",\"image_id\":\"master-image-18\",\"position\":28},{\"id\":\"zakaz-19\",\"code\":\"019\",\"order_number\":\"ORDER-19\",\"title\":\"Master product 19\",\"customer_name\":\"Master customer 19\",\"image_id\":\"master-image-19\",\"position\":29},{\"id\":\"zakaz-20\",\"code\":\"020\",\"order_number\":\"ORDER-20\",\"title\":\"Master product 20\",\"customer_name\":\"Master customer 20\",\"image_id\":\"master-image-20\",\"position\":30},{\"id\":\"zakaz-21\",\"code\":\"021\",\"order_number\":\"ORDER-21\",\"title\":\"Master product 21\",\"customer_name\":\"Master customer 21\",\"image_id\":\"master-image-21\",\"position\":31},{\"id\":\"zakaz-22\",\"code\":\"022\",\"order_number\":\"ORDER-22\",\"title\":\"Master product 22\",\"customer_name\":\"Master customer 22\",\"image_id\":\"master-image-22\",\"position\":32},{\"id\":\"zakaz-23\",\"code\":\"023\",\"order_number\":\"ORDER-23\",\"title\":\"Master product 23\",\"customer_name\":\"Master customer 23\",\"image_id\":\"master-image-23\",\"position\":33},{\"id\":\"zakaz-24\",\"code\":\"024\",\"order_number\":\"ORDER-24\",\"title\":\"Master product 24\",\"customer_name\":\"Master customer 24\",\"image_id\":\"master-image-24\",\"position\":34},{\"id\":\"zakaz-25\",\"code\":\"025\",\"order_number\":\"ORDER-25\",\"title\":\"Master product 25\",\"customer_name\":\"Master customer 25\",\"image_id\":\"master-image-25\",\"position\":35},{\"id\":\"zakaz-26\",\"code\":\"026\",\"order_number\":\"ORDER-26\",\"title\":\"Master product 26\",\"customer_name\":\"Master customer 26\",\"image_id\":\"master-image-26\",\"position\":36},{\"id\":\"zakaz-27\",\"code\":\"027\",\"order_number\":\"ORDER-27\",\"title\":\"Master product 27\",\"customer_name\":\"Master customer 27\",\"image_id\":\"master-image-27\",\"position\":37},{\"id\":\"zakaz-28\",\"code\":\"028\",\"order_number\":\"ORDER-28\",\"title\":\"Master product 28\",\"customer_name\":\"Master customer 28\",\"image_id\":\"master-image-28\",\"position\":38},{\"id\":\"zakaz-29\",\"code\":\"029\",\"order_number\":\"ORDER-29\",\"title\":\"Master product 29\",\"customer_name\":\"Master customer 29\",\"image_id\":\"master-image-29\",\"position\":39},{\"id\":\"zakaz-30\",\"code\":\"030\",\"order_number\":\"ORDER-30\",\"title\":\"Master product 30\",\"customer_name\":\"Master customer 30\",\"image_id\":\"master-image-30\",\"position\":40}]}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-3&image_id=master-image-3&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-4&image_id=master-image-4&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-5&image_id=master-image-5&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-6&image_id=master-image-6&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-7&image_id=master-image-7&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-8&image_id=master-image-8&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-9&image_id=master-image-9&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-10&image_id=master-image-10&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-11&image_id=master-image-11&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-12&image_id=master-image-12&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-13&image_id=master-image-13&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-14&image_id=master-image-14&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-15&image_id=master-image-15&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-16&image_id=master-image-16&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-17&image_id=master-image-17&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master loads only list data before deferring visible thumbnails",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-18&image_id=master-image-18&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master opens sheet before fetching only the tapped order detail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master opens sheet before fetching only the tapped order detail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master opens sheet before fetching only the tapped order detail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master opens sheet before fetching only the tapped order detail",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders/zakaz-1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"preparation-orders-test\",\"rev\":7,\"scope\":\"master-detail|zakaz-1\",\"maps\":[{\"map\":{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Full master product 1\",\"product_code\":\"MASTER-ITEM\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"width_mm\":384,\"base_length\":900,\"order_kg\":120,\"nodes\":[{\"id\":\"start\",\"kind\":\"start\",\"title\":\"Start\"},{\"id\":\"print\",\"kind\":\"apparatus\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"title\":\"Master machine\"},{\"id\":\"end\",\"kind\":\"end\",\"title\":\"Finished product\"}],\"edges\":[{\"from\":\"start\",\"to\":\"print\"},{\"from\":\"print\",\"to\":\"end\"}]},\"program\":{}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-1\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-1\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-1\":\"pending\"}},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{\"zakaz-1\":{}},\"order_controls\":{},\"order_statuses\":{},\"order_customers\":{\"zakaz-1\":\"Master customer 1\"},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "master does not see the combo details card",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master does not see the combo details card",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master does not see the combo details card",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master does not see the combo details card",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders/zakaz-1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"epoch\":\"preparation-orders-test\",\"rev\":7,\"scope\":\"master-detail|zakaz-1\",\"maps\":[{\"map\":{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Full master product 1\",\"product_code\":\"MASTER-ITEM\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"width_mm\":384,\"base_length\":900,\"order_kg\":120,\"combo\":{\"id\":\"combo-1\",\"item_code\":\"COMBO-1\",\"name\":\"Master combo\",\"revision\":1},\"products\":[{\"id\":\"p1\",\"item_code\":\"SKU-A\",\"product\":\"Yashil\",\"frame_product_size_mm\":120,\"frame_count\":2}],\"nodes\":[{\"id\":\"start\",\"kind\":\"start\",\"title\":\"Start\"},{\"id\":\"print\",\"kind\":\"apparatus\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"title\":\"Master machine\"},{\"id\":\"end\",\"kind\":\"end\",\"title\":\"Finished product\"}],\"edges\":[{\"from\":\"start\",\"to\":\"print\"},{\"from\":\"print\",\"to\":\"end\"}]},\"program\":{}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-1\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-1\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-1\":\"pending\"}},\"queue_policies\":[],\"queue_action_controls\":{},\"stage_states\":{\"zakaz-1\":{}},\"order_controls\":{},\"order_statuses\":{},\"order_customers\":{\"zakaz-1\":\"Master customer 1\"},\"frozen_orders_by_apparatus\":{}}"
+   }
+  },
+  {
+   "test": "master search stays on the server and keeps canonical numbering",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master search stays on the server and keeps canonical numbering",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master search stays on the server and keeps canonical numbering",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master search stays on the server and keeps canonical numbering",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&search=master+product+2",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|master product 2\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"master product 2\",\"total\":1,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master list failure retries without loading unrelated data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"store_failed\",\"message\":\"Offline\"}"
+   }
+  },
+  {
+   "test": "master list failure retries without loading unrelated data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master list failure retries without loading unrelated data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master list failure retries without loading unrelated data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master pagination and live refresh retain original positions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":3,\"next_cursor\":\"master-page-2\",\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master pagination and live refresh retain original positions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master pagination and live refresh retain original positions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master pagination and live refresh retain original positions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&cursor=master-page-2",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":3,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-3\",\"code\":\"03\",\"order_number\":\"ORDER-3\",\"title\":\"Master product 3\",\"customer_name\":\"Master customer 3\",\"image_id\":\"master-image-3\",\"position\":13}]}"
+   }
+  },
+  {
+   "test": "master pagination and live refresh retain original positions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-3&image_id=master-image-3&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master pagination and live refresh retain original positions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&if_version=0000000000000000000000000000000000000000000000000000000000000007",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":8,\"version\":\"0000000000000000000000000000000000000000000000000000000000000008\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":3,\"next_cursor\":\"master-page-2\",\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Updated master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Updated master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master pagination and live refresh retain original positions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&cursor=master-page-2",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":8,\"version\":\"0000000000000000000000000000000000000000000000000000000000000008\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":3,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-3\",\"code\":\"03\",\"order_number\":\"ORDER-3\",\"title\":\"Updated master product 3\",\"customer_name\":\"Master customer 3\",\"image_id\":\"master-image-3\",\"position\":13}]}"
+   }
+  },
+  {
+   "test": "master stale pagination cursor resets to a fresh first page",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":3,\"next_cursor\":\"stale-master-cursor\",\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master stale pagination cursor resets to a fresh first page",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master stale pagination cursor resets to a fresh first page",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master stale pagination cursor resets to a fresh first page",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&cursor=stale-master-cursor",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"order_page_changed\"}"
+   }
+  },
+  {
+   "test": "master stale pagination cursor resets to a fresh first page",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&if_version=0000000000000000000000000000000000000000000000000000000000000007",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":8,\"version\":\"0000000000000000000000000000000000000000000000000000000000000008\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":1,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-3\",\"code\":\"03\",\"order_number\":\"ORDER-3\",\"title\":\"Updated master product 3\",\"customer_name\":\"Master customer 3\",\"image_id\":\"master-image-3\",\"position\":13}]}"
+   }
+  },
+  {
+   "test": "master stale pagination cursor resets to a fresh first page",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-3&image_id=master-image-3&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master lightweight live invalidation reloads only list labels",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master lightweight live invalidation reloads only list labels",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master lightweight live invalidation reloads only list labels",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master lightweight live invalidation reloads only list labels",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&if_version=0000000000000000000000000000000000000000000000000000000000000007",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":8,\"version\":\"0000000000000000000000000000000000000000000000000000000000000008\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Updated master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Updated master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master permission rejection withdraws previously visible rows",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"projection\":\"preparation_order_list_v1\",\"scope\":\"master|apparatus:default:bosma_7|\",\"epoch\":\"preparation-orders-test\",\"rev\":7,\"version\":\"0000000000000000000000000000000000000000000000000000000000000007\",\"apparatus_id\":\"apparatus:default:bosma_7\",\"apparatus\":[{\"id\":\"apparatus:default:bosma_7\",\"name\":\"Master machine\"}],\"limit\":30,\"search\":\"\",\"total\":2,\"next_cursor\":null,\"rows\":[{\"id\":\"zakaz-1\",\"code\":\"01\",\"order_number\":\"ORDER-1\",\"title\":\"Master product 1\",\"customer_name\":\"Master customer 1\",\"image_id\":\"master-image-1\",\"position\":11},{\"id\":\"zakaz-2\",\"code\":\"02\",\"order_number\":\"ORDER-2\",\"title\":\"Master product 2\",\"customer_name\":\"Master customer 2\",\"image_id\":\"master-image-2\",\"position\":12}]}"
+   }
+  },
+  {
+   "test": "master permission rejection withdraws previously visible rows",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-1&image_id=master-image-1&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master permission rejection withdraws previously visible rows",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-image/view?order_id=zakaz-2&image_id=master-image-2&variant=thumb-v1",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{}"
+   }
+  },
+  {
+   "test": "master permission rejection withdraws previously visible rows",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/orders?limit=30&apparatus=apparatus%3Adefault%3Abosma_7&if_version=0000000000000000000000000000000000000000000000000000000000000007",
+   "requestHeaders": {
+    "Authorization": "Bearer master-list-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"forbidden\",\"message\":\"Master access revoked\"}"
+   }
+  }
+ ]
+}

@@ -1,0 +1,507 @@
+{
+ "source": "test/preparation_production_journal_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "master home opens the production journal",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[],\"assigned_warehouses\":[],\"material_warehouses\":[],\"materials\":[],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "master home opens the production journal",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "order opens material, frozen recipe and produced roll QR",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "order opens material, frozen recipe and produced roll QR",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/order?order_id=zakaz-0317&offset=0&limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"order\":{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"},\"batches\":[{\"batch_id\":\"batch-lg\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "order opens material, frozen recipe and produced roll QR",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/batch?batch_id=batch-lg&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"batch-lg\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}},\"rolls\":[{\"epc\":\"303132333435363738394142\",\"receipt_name\":\"MAT-TRACE-1\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"net_kg\":\"23.000000\",\"gross_kg\":\"25.000000\",\"length_m\":\"125.000000\",\"width_mm\":\"495.000000\",\"micron\":\"50.000000\",\"printed_at\":\"2026-10-29T05:01:00Z\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "order and batch lists use the shared admin row style",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"},{\"order_id\":\"zakaz-0318\",\"order_code\":\"0318\",\"order_title\":\"Silver choy 0318\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "order and batch lists use the shared admin row style",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/order?order_id=zakaz-0317&offset=0&limit=30",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"order\":{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"},\"batches\":[{\"batch_id\":\"batch-lg\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}},{\"batch_id\":\"batch-2\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE oq\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "legacy output has an explicit unknown formula",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/batch?batch_id=batch-lg&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"batch-lg\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":null},\"rolls\":[{\"epc\":\"303132333435363738394142\",\"receipt_name\":\"MAT-TRACE-1\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"net_kg\":\"23.000000\",\"gross_kg\":\"25.000000\",\"length_m\":\"125.000000\",\"width_mm\":\"495.000000\",\"micron\":\"50.000000\",\"printed_at\":\"2026-10-29T05:01:00Z\",\"preparation_formula\":null}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "batch details use shared list rows for status, recipe and rolls",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/batch?batch_id=batch-lg&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"batch-lg\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":null},\"rolls\":[{\"epc\":\"303132333435363738394142\",\"receipt_name\":\"MAT-TRACE-1\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"net_kg\":\"23.000000\",\"gross_kg\":\"25.000000\",\"length_m\":\"125.000000\",\"width_mm\":\"495.000000\",\"micron\":\"50.000000\",\"printed_at\":\"2026-10-29T05:01:00Z\",\"preparation_formula\":null},{\"epc\":\"303132333435363738394143\",\"receipt_name\":\"MAT-TRACE-1\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"net_kg\":\"23.000000\",\"gross_kg\":\"25.000000\",\"length_m\":\"125.000000\",\"width_mm\":\"495.000000\",\"micron\":\"50.000000\",\"printed_at\":\"2026-10-29T05:01:00Z\",\"preparation_formula\":null}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "saved recipe keeps its complete content in the segmented list",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/batch?batch_id=batch-lg&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"batch-lg\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}},\"rolls\":[{\"epc\":\"303132333435363738394142\",\"receipt_name\":\"MAT-TRACE-1\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"net_kg\":\"23.000000\",\"gross_kg\":\"25.000000\",\"length_m\":\"125.000000\",\"width_mm\":\"495.000000\",\"micron\":\"50.000000\",\"printed_at\":\"2026-10-29T05:01:00Z\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "production roll QR reprints the existing label (failure: false) (variant: TargetPlatform.iOS)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/batch?batch_id=batch-lg&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"batch-lg\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}},\"rolls\":[{\"epc\":\"303132333435363738394142\",\"receipt_name\":\"MAT-TRACE-1\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"net_kg\":\"23.000000\",\"gross_kg\":\"25.000000\",\"length_m\":\"125.000000\",\"width_mm\":\"495.000000\",\"micron\":\"50.000000\",\"printed_at\":\"2026-10-29T05:01:00Z\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "production roll QR reprints the existing label (failure: false) (variant: TargetPlatform.iOS)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock/reprint/prepare",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"barcode\":\"303132333435363738394142\",\"order_id\":\"zakaz-0317\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"reprint_id\":\"raw_label_test\",\"stock\":{\"barcode\":\"303132333435363738394142\",\"item_code\":\"PE PR\",\"qty\":23,\"source_receipt_id\":\"MAT-TRACE-1\"},\"print\":{\"epc\":\"303132333435363738394142\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"gross_qty\":23,\"label_kind\":\"material_product\",\"printer\":\"godex\"}}"
+   }
+  },
+  {
+   "test": "production roll QR reprints the existing label (failure: false) (variant: TargetPlatform.iOS)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock/reprint/confirm",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"barcode\":\"303132333435363738394142\",\"reprint_id\":\"raw_label_test\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "production roll QR reprints the existing label (failure: true) (variant: TargetPlatform.iOS)",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/batch?batch_id=batch-lg&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"batch\":{\"batch_id\":\"batch-lg\",\"order_id\":\"zakaz-0317\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"active\":true,\"started_at\":\"2026-10-29T05:00:00Z\",\"ended_at\":\"\",\"last_activity_at\":\"2026-10-29T05:01:00Z\",\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}},\"rolls\":[{\"epc\":\"303132333435363738394142\",\"receipt_name\":\"MAT-TRACE-1\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"warehouse\":\"Own W\",\"net_kg\":\"23.000000\",\"gross_kg\":\"25.000000\",\"length_m\":\"125.000000\",\"width_mm\":\"495.000000\",\"micron\":\"50.000000\",\"printed_at\":\"2026-10-29T05:01:00Z\",\"preparation_formula\":{\"variant_id\":\"variant-lg\",\"variant_name\":\"LG\",\"material_id\":\"pe-pr\",\"material_name\":\"PE PR\",\"captured_at\":\"2026-10-29T05:00:00Z\",\"formulas\":[{\"name\":\"A\",\"share_percent\":\"30.000000\",\"lines\":[{\"item_code\":\"S1\",\"name\":\"Seriya ORIGINAL\",\"percent\":\"88.000000\"},{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"12.000000\"}]},{\"name\":\"B\",\"share_percent\":\"70.000000\",\"lines\":[{\"item_code\":\"S2\",\"name\":\"Seriya 2\",\"percent\":\"100.000000\"}]}]}}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "production roll QR reprints the existing label (failure: true) (variant: TargetPlatform.iOS)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock/reprint/prepare",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"barcode\":\"303132333435363738394142\",\"order_id\":\"zakaz-0317\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"reprint_id\":\"raw_label_test\",\"stock\":{\"barcode\":\"303132333435363738394142\",\"item_code\":\"PE PR\",\"qty\":23,\"source_receipt_id\":\"MAT-TRACE-1\"},\"print\":{\"epc\":\"303132333435363738394142\",\"item_code\":\"PE PR\",\"item_name\":\"PE PR\",\"gross_qty\":23,\"label_kind\":\"material_product\",\"printer\":\"godex\"}}"
+   }
+  },
+  {
+   "test": "paging appends orders and searching starts a fresh result",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":true,\"next_offset\":1}"
+   }
+  },
+  {
+   "test": "paging appends orders and searching starts a fresh result",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=1&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0318\",\"order_code\":\"0318\",\"order_title\":\"Silver choy 0318\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "paging appends orders and searching starts a fresh result",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":true,\"next_offset\":1}"
+   }
+  },
+  {
+   "test": "paging appends orders and searching starts a fresh result",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=1&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0318\",\"order_code\":\"0318\",\"order_title\":\"Silver choy 0318\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "paging appends orders and searching starts a fresh result",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q=0317&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "paging appends orders and searching starts a fresh result",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q=0317&status=active&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "paging appends orders and searching starts a fresh result",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=active&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":true,\"next_offset\":1}"
+   }
+  },
+  {
+   "test": "a failed read can be retried without creating production",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"preparation_store\",\"error\":\"Unavailable\"}"
+   }
+  },
+  {
+   "test": "a failed read can be retried without creating production",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "late old-account results are discarded",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "automatic refresh stops on covered routes and paused app",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  },
+  {
+   "test": "automatic refresh stops on covered routes and paused app",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "error": "FlutterError"
+  },
+  {
+   "test": "automatic refresh stops on covered routes and paused app",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/production/orders?q&status=all&offset=0&limit=50",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"orders\":[{\"order_id\":\"zakaz-0317\",\"order_code\":\"0317\",\"order_title\":\"Silver choy 0317\",\"customer_name\":\"Silver choy\",\"active_batch_count\":1,\"batch_count\":1,\"roll_count\":1,\"total_net_kg\":\"23.000000\",\"total_length_m\":\"125.000000\",\"last_activity_at\":\"2026-10-29T05:01:00Z\"}],\"has_more\":false,\"next_offset\":null}"
+   }
+  }
+ ]
+}
