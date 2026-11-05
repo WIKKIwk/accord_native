@@ -29,7 +29,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
-| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 55/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
+| aparatchi | 1/4 in progress | | | | Worker controls, reactivation, material delivery, scan bootstrap, queue actions, astatka, preflight, image URLs and compact queue work started; 56/120 listed API symbols have tags and part 1 still has unchecked items. Needs a development build for printing |
 | homashyo | | | | | Needs printing |
 | chat | | | | | iOS exists without tags; Android ships a stub |
 | rezka | | | | | |
@@ -65,7 +65,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/productionMapLiveStream.ts` | `adminProductionMapLiveStream`, `admin_production_map_paged_socket_test.dart` | The scoped socket, compact-to-legacy negotiation, cursor checks and cancellation have focused tests. Legacy full snapshots still need the complete canonical snapshot decoder, and pause/resume backpressure still needs parity. This API remains unchecked until those branches are complete |
 | `src/productionMapNotifications.ts` | `adminProductionMapNotificationEvents`, `admin_production_map_paged_socket_test.dart` | Shared account-scoped notification sockets, latest-value replay, cancellation and cursor checks have focused tests. Older servers' full snapshots require the pending canonical snapshot decoder, so this API remains unchecked |
 | `src/OrderScreen.tsx` | `mobile_api_boyoqchi.dart` `returnedPaintImageUrl`, `test/returned_paint_models_test.dart` | V2 uses the `image_url` returned by the server and persists the image object. V4 currently reconstructs the image URL from `image_id`; port the returned URL and draft fields before marking this flow complete |
-| `src/orderThumbnail.ts`, `src/components/WorkerOrderHeader.tsx` | `mobile_api_order_images.dart`, `core/cache/order_image_cache.dart` | URL construction is ported; the current image loading, ETag, cache-key, freshness and failed-read behavior still need comparison with V2's account/session-scoped image cache |
+| `src/orderThumbnail.ts`, `src/components/WorkerOrderHeader.tsx`, `src/orderImageApi.ts` | `mobile_api_order_images.dart`, `core/cache/order_image_cache.dart` | The byte reader and account-scoped memory/disk cache now cover V2's TTL, ETag, missing-image and logout behavior in focused tests. Existing image views still use their prior loading path; connect and compare that rendering path during the platform UI work. The Expo disk adapter has been tested with a mock, not a device |
 | `src/dailyWork.ts`, `src/workerWip.ts`, `src/workerWipApi.ts`, `src/workerProgressApi.ts` | `adminProgressQrHistory`, `adminWipBatches`, `adminProgressQrLookup`, `AdminProgressBatch.fromJson` | Worker history uses V2's request scope, typed batches and paginated readers. Compare UI WIP selection/deduplication and the legacy QR lookup's full global-snapshot validation. V2 provided no recorded live HTTP test for progress history; focused source-derived V4 tests cover its worker query and pagination |
 | `src/workerOpeningWip.ts` | `adminLookupOpeningWip`, `test/admin_opening_wip_api_test.dart` | The V2 test exercises test-mode data only; focused V4 tests cover the live request and batch decoding from source. Implement its test-mode branch in the deferred test-mode pass |
 | `src/workerOpeningWipCandidatesApi.ts` | `adminOpeningWipCandidates` | No V2 live HTTP recording was found; focused V4 tests cover the source-derived request, filtering and error behavior |
@@ -117,6 +117,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminProductionMapCompletionRequestDecisions` | V2 filters in-memory decisions by worker |
 | `adminProductionMapCompletionRequests` | V2 returns its in-memory completion requests |
 | `adminProductionMapOrderControl` | V2 rejects stage control and mutates global controls in test mode |
+| `adminProductionMapOrderImage` | V2 returns no image in test mode |
 
 ## Drift log
 

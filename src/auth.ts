@@ -128,15 +128,24 @@ export async function loadSession(): Promise<Session | null> {
   });
 }
 
+const sessionResetHooks = new Set<() => Promise<void>>();
+
+export function registerSessionResetHook(hook: () => Promise<void>): () => void {
+  sessionResetHooks.add(hook);
+  return () => { sessionResetHooks.delete(hook); };
+}
+
 export async function clearSession(): Promise<void> {
   sessionEpoch++;
   activeSession = null;
   refreshing = null;
-  await inStorageOrder(async () => {
+  const resets = Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+  const storage = inStorageOrder(async () => {
     webSession = null;
     webCredentials = null;
     if (Platform.OS !== 'web') await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SESSION_KEY), SecureStore.deleteItemAsync(CREDENTIALS_KEY)]);
   });
+  await Promise.all([resets, storage]);
 }
 
 export async function logout(session: Session): Promise<void> {

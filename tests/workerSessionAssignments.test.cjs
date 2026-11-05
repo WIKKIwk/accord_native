@@ -36,3 +36,18 @@ test('updated assignments are saved for the active session and cannot revive a l
   assert.equal(auth.updateSessionAssignments(session, ['other'], ['Other']), false);
   assert.equal(await auth.loadSession(), null);
 });
+
+test('session reset hooks do not reorder a subsequent login', async () => {
+  const { auth } = authWithMemoryStore();
+  const session = token => ({ token, baseUrl: 'https://example.com', profile: { ref: token, role: 'aparatchi' },
+    capabilities: [], assigned_apparatus: [], assigned_apparatus_labels: [], imageCacheScope: token });
+  await auth.saveSession(session('old'));
+  let release;
+  const unhook = auth.registerSessionResetHook(() => new Promise(resolve => { release = resolve; }));
+  const clearing = auth.clearSession(), next = session('new'), saving = auth.saveSession(next);
+  await new Promise(resolve => queueMicrotask(resolve));
+  release();
+  await Promise.all([clearing, saving]);
+  unhook();
+  assert.equal((await auth.loadSession()).token, 'new');
+});
