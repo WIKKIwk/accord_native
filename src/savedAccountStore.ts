@@ -118,6 +118,26 @@ export class SavedAccountStore {
     return account;
   }
 
+  async migrateLegacySession(baseUrl: string): Promise<boolean> {
+    const token = (await this.preferences.getItem('app_session_token'))?.trim() ?? '';
+    const encoded = (await this.preferences.getItem('app_session_profile'))?.trim() ?? '';
+    if (!token || !encoded) return false;
+    let profile: Profile;
+    try {
+      const value = object(JSON.parse(encoded));
+      if (!value || typeof value.ref !== 'string' || !value.ref.trim()) return false;
+      savedAccountId(baseUrl, value);
+      profile = value;
+    } catch { return false; }
+    const phone = (await this.preferences.getItem('last_login_phone'))?.trim() ||
+      (typeof profile.phone === 'string' ? profile.phone.trim() : '');
+    const code = (await this.preferences.getItem('last_login_code'))?.trim() ?? '';
+    await this.upsertAuthenticated({ baseUrl, profile, token, phone, code, makeActive: true });
+    await this.preferences.removeItem('last_login_phone');
+    await this.preferences.removeItem('last_login_code');
+    return true;
+  }
+
   async sessionFor(id: string): Promise<SavedAccountSession | null> {
     const account = this.values.get(id);
     if (!account) return null;

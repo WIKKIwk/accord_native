@@ -105,3 +105,18 @@ test('account operations reject concurrent switching and profile identity change
   release(); await active;
   await assert.rejects(store.updateProfile(first.id, { role: 'aparatchi', ref: 'other' }), /identity changed/);
 });
+
+test('legacy session migration saves credentials before removing old login fields', async () => {
+  const prefs = storage(), secrets = storage(), store = new SavedAccountStore(prefs, secrets, sha256);
+  prefs.values.set('app_session_token', ' old-token ');
+  prefs.values.set('app_session_profile', JSON.stringify({ role: 'aparatchi', ref: 'one', phone: 'profile-phone' }));
+  prefs.values.set('last_login_phone', ' phone ');
+  prefs.values.set('last_login_code', ' code ');
+  assert.equal(await store.migrateLegacySession('https://example.test'), true);
+  const session = await store.sessionFor(store.activeAccountId);
+  assert.equal(session.token, 'old-token');
+  assert.equal(session.phone, 'phone');
+  assert.equal(session.code, 'code');
+  assert.equal(prefs.values.has('last_login_phone'), false);
+  assert.equal(prefs.values.has('last_login_code'), false);
+});
