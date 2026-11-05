@@ -26,3 +26,13 @@ test('report rejects nonfinite or missing metrics before transport', async () =>
   const client = load('rezkaAstatkaApi', { './authorizedFetch': { authorizedFetch: () => { throw Error('unexpected'); } } });
   await assert.rejects(client.adminRezkaAstatkaReport({}, { apparatus: 'apparatus:default:asset-010', order_id: 'order', request_id: 'request-a', session_id: 'session', total_waste: NaN, total_waste_only: true }), e => e.code === 'rezka_astatka_metrics_required');
 });
+
+test('snapshot binds a session and reconciles a saved receipt', async () => {
+  const name = 'rezka astatka snapshot binds session and reconciles saved receipt';
+  const replay = contractFetch(stem, name), session = recordedSession(stem, name);
+  const client = load('rezkaAstatkaApi', { './authorizedFetch': { authorizedFetch: (s, p, init = {}) => replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) } });
+  const input = { apparatus: 'apparatus:default:asset-010', order_id: 'order-a', request_id: 'request-a' };
+  assert.equal((await client.adminRezkaAstatkaSnapshot(session, input)).stage_node_id, 'cut-stage-a');
+  assert.equal((await client.adminRezkaAstatkaSnapshot(session, input)).request_result.report_id, 'saved-a');
+  replay.assertDone();
+});

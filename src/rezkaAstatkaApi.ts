@@ -1,5 +1,6 @@
 import type { Session } from './auth';
-import { isCanonicalApparatusId, postWorkerApiRequest, WorkerControlException } from './workerControlsApi';
+import { authorizedFetch } from './authorizedFetch';
+import { isCanonicalApparatusId, postWorkerApiRequest, productionMapResponseError, WorkerControlException } from './workerControlsApi';
 
 type Obj = Record<string, any>;
 const object = (v: unknown): Obj | null => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Obj : null;
@@ -51,4 +52,25 @@ export async function adminRezkaAstatkaReport(session: Session, input: RezkaAsta
   if (!report || !str(report.report_id).trim() || report.order_id !== order || report.apparatus !== apparatus)
     throw new WorkerControlException('rezka_astatka_invalid_response', 'Rezka astatka javobi noto‘g‘ri');
   return rezkaAstatkaReportFromJson(report);
+}
+
+/** @v2 adminRezkaAstatkaSnapshot */
+export async function adminRezkaAstatkaSnapshot(session: Session, input: { apparatus: string; order_id: string; request_id?: string }) {
+  const apparatus = input.apparatus.trim(), order = input.order_id.trim(), request = (input.request_id ?? '').trim();
+  if (!isCanonicalApparatusId(apparatus) || !order) throw new WorkerControlException('progress_input_invalid', '');
+  const query = new URLSearchParams({ apparatus, order_id: order });
+  if (request) query.set('request_id', request);
+  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/rezka-astatka?${query}`);
+  if (response.status !== 200) {
+    let data: unknown; try { data = await response.json(); } catch { data = null; }
+    throw productionMapResponseError(response.status, data, 'rezka_astatka_report_failed');
+  }
+  const payload = object(await response.json()); if (!payload) throw new TypeError('Invalid astatka snapshot');
+  const result = object(payload.request_result), rawReport = object(result?.report);
+  const sessionId = str(payload.session_id).trim(), stageId = str(payload.stage_node_id).trim();
+  if (!rawReport && (!sessionId || !stageId)) throw new WorkerControlException('rezka_astatka_invalid_response', '');
+  const report = rawReport ? rezkaAstatkaReportFromJson(rawReport) : null;
+  if (report && (!report.report_id || report.order_id !== order || report.apparatus !== apparatus))
+    throw new WorkerControlException('rezka_astatka_invalid_response', '');
+  return { session_id: sessionId, stage_node_id: stageId, request_result: report };
 }
