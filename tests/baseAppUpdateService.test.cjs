@@ -107,3 +107,29 @@ test('release connection times out and closes when no handshake completes', asyn
   const error = await new Promise(resolve => f.service.releaseChanges(() => {}, resolve));
   assert.match(error.message, /timed out/); assert.equal(socket.closed, true);
 });
+
+test('server changes affect new update requests without changing an in-flight manifest base', async () => {
+  const f = fixture(), urls = []; let endpoint = 'https://first.example', complete;
+  const storage = { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} };
+  const files = { exists: async () => false, size: async () => 0, sha256: async () => '' };
+  const service = new AppUpdateService({ baseUrl: () => endpoint, platform: f.platform, files, storage,
+    fetch: url => { urls.push(url); return new Promise(resolve => { complete = resolve; }); } });
+  const pending = service.check(); await new Promise(resolve => setImmediate(resolve));
+  endpoint = 'https://second.example';
+  complete(new Response(JSON.stringify(manifest), { status: 200 }));
+  const result = await pending;
+  assert.equal(urls[0], 'https://first.example/v1/mobile/app-update/android');
+  assert.equal(result.manifest.apkUri, 'https://first.example/accord.apk');
+  assert.equal(service.endpointKey, 'https://second.example');
+});
+
+test('a corrupt cached manifest is removed from the endpoint where the read started', async () => {
+  const f = fixture(), removed = []; let endpoint = 'https://first.example', complete;
+  const storage = { getItem: () => new Promise(resolve => { complete = resolve; }), setItem: async () => {},
+    removeItem: async key => { removed.push(key); } };
+  const service = new AppUpdateService({ baseUrl: () => endpoint, platform: f.platform, storage,
+    files: { exists: async () => false, size: async () => 0, sha256: async () => '' } });
+  const pending = service.restorePendingUpdate(); endpoint = 'https://second.example'; complete('invalid');
+  assert.equal(await pending, null);
+  assert.deepEqual(removed, ['app_update_manifest_v1:https://first.example']);
+});

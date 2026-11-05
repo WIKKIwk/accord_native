@@ -14,7 +14,7 @@ export type UpdatePlatform = {
   installApk(path: string, packageName: string, versionCode: number): Promise<InstallResult>;
 };
 export type UpdateFiles = { exists(path: string): Promise<boolean>; size(path: string): Promise<number>; sha256(path: string): Promise<string> };
-export type UpdateServiceOptions = { baseUrl: string; storage: AccountStorage; platform: UpdatePlatform; files: UpdateFiles;
+export type UpdateServiceOptions = { baseUrl: string | (() => string); storage: AccountStorage; platform: UpdatePlatform; files: UpdateFiles;
   fetch?: typeof fetch; socketFactory?: (url: string) => WebSocket; socketConnectTimeoutMs?: number;
   downloadPollIntervalMs?: number; automaticRetryDelayMs?: number };
 type Progress = (received: number, total: number) => void;
@@ -47,9 +47,9 @@ export class AppUpdateCancellation {
 
 /** @v2 AppUpdateService */
 export class AppUpdateService {
-  private readonly base: URL;
   private info: AppInstallationInfo | null = null;
-  constructor(private readonly options: UpdateServiceOptions) { this.base = new URL(options.baseUrl); }
+  constructor(private readonly options: UpdateServiceOptions) {}
+  private get base(): URL { return new URL(typeof this.options.baseUrl === 'function' ? this.options.baseUrl() : this.options.baseUrl); }
   get isSupported(): boolean { return this.options.platform.isSupported; }
   get endpointKey(): string { return this.base.origin; }
   private get cacheKey(): string { return `app_update_manifest_v1:${this.endpointKey}`; }
@@ -83,16 +83,17 @@ export class AppUpdateService {
     else await this.options.storage.removeItem(this.cacheKey);
   }
   async restorePendingUpdate(): Promise<AppUpdateCheckResult | null> {
-    const encoded = await this.options.storage.getItem(this.cacheKey);
+    const base = this.base, cacheKey = `app_update_manifest_v1:${base.origin}`;
+    const encoded = await this.options.storage.getItem(cacheKey);
     if (encoded == null) return null;
     let manifest: AppUpdateManifest;
     try {
       const parsed: unknown = JSON.parse(encoded);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new TypeError('Invalid manifest');
-      manifest = AppUpdateManifest.fromJson(parsed as Record<string, unknown>, this.base.toString());
-    } catch { await this.options.storage.removeItem(this.cacheKey); return null; }
+      manifest = AppUpdateManifest.fromJson(parsed as Record<string, unknown>, base.toString());
+    } catch { await this.options.storage.removeItem(cacheKey); return null; }
     const result = new AppUpdateCheckResult(await this.currentAppInfo(), manifest);
-    if (!result.updateAvailable) { await this.options.storage.removeItem(this.cacheKey); return null; }
+    if (!result.updateAvailable) { await this.options.storage.removeItem(cacheKey); return null; }
     return result;
   }
   async currentAppInfo(): Promise<AppInstallationInfo> {
@@ -103,8 +104,9 @@ export class AppUpdateService {
     return this.info;
   }
   async check(): Promise<AppUpdateCheckResult> {
+    const base = this.base;
     const current = await this.currentAppInfo();
-    const endpoint = new URL('/v1/mobile/app-update/android', this.base);
+    const endpoint = new URL('/v1/mobile/app-update/android', base);
     let response: Response;
     try {
       response = await this.timeout((this.options.fetch ?? fetch)(endpoint.toString(), { method: 'GET' }), 15_000,
@@ -127,7 +129,7 @@ export class AppUpdateService {
     try { decoded = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)); }
     catch { throw fail('invalid_manifest', 'Update ma’lumoti noto‘g‘ri'); }
     if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) throw fail('invalid_manifest', 'Update ma’lumoti noto‘g‘ri');
-    return new AppUpdateCheckResult(current, AppUpdateManifest.fromJson(decoded as Record<string, unknown>, this.base.toString()));
+    return new AppUpdateCheckResult(current, AppUpdateManifest.fromJson(decoded as Record<string, unknown>, base.toString()));
   }
   async downloadAndInstall(update: AppUpdateCheckResult, onProgress?: Progress, cancellation?: AppUpdateCancellation): Promise<InstallResult> {
     return this.installPreparedUpdate(await this.prepareUpdate(update, onProgress, cancellation));
