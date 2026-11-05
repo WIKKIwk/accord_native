@@ -9,6 +9,7 @@ export type Session = {
   assigned_apparatus_labels: string[];
   assigned_item_groups?: string[];
   assigned_warehouses?: string[];
+  werka_home?: Record<string, unknown> | null;
   baseUrl: string;
   imageCacheScope: string;
 };
@@ -59,6 +60,8 @@ function parseSession(value: unknown): Session | null {
       assigned_apparatus: strings(raw.assigned_apparatus), assigned_apparatus_labels: strings(raw.assigned_apparatus_labels),
       assigned_item_groups: strings(raw.assigned_item_groups),
       assigned_warehouses: strings(Array.isArray(raw.assigned_warehouses) ? raw.assigned_warehouses : profile.assigned_warehouses),
+      werka_home: raw.werka_home && typeof raw.werka_home === 'object' && !Array.isArray(raw.werka_home)
+        ? raw.werka_home as Record<string, unknown> : null,
       imageCacheScope: typeof raw.imageCacheScope === 'string' && raw.imageCacheScope ? raw.imageCacheScope : newImageCacheScope(),
     };
   } catch { return null; }
@@ -168,26 +171,10 @@ export async function logout(session: Session): Promise<void> {
 }
 
 async function authenticate(server: string, phone: string, code: string): Promise<Session> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
-  let response: Response;
-  try {
-    response = await fetch(`${server}/v1/mobile/auth/login`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, code }), signal: controller.signal,
-    });
-  } catch {
-    throw new Error('Serverga ulanib bo‘lmadi. Manzil va internetni tekshiring.');
-  } finally { clearTimeout(timer); }
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error('Telefon raqam yoki kod noto‘g‘ri.');
-    if (response.status === 429) throw new Error('Urinishlar soni ko‘p. Birozdan so‘ng qayta urinib ko‘ring.');
-    throw new Error(`Server xatosi (${response.status}). Qayta urinib ko‘ring.`);
-  }
-  let body: Record<string, unknown>;
-  try { body = await response.json() as Record<string, unknown>; }
-  catch { throw new Error('Server javobini o‘qib bo‘lmadi.'); }
-  const session = parseSession({ ...body, baseUrl: server, imageCacheScope: newImageCacheScope() });
+  const { authenticateAccount } = await import('./authenticateAccount');
+  const result = await authenticateAccount(server, phone, code);
+  const session = parseSession({ ...result.profile, token: result.token, profile: result.profile,
+    werka_home: result.werka_home, baseUrl: server, imageCacheScope: newImageCacheScope() });
   if (!session) throw new Error('Server noto‘g‘ri sessiya qaytardi.');
   return session;
 }

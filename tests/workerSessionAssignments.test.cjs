@@ -16,7 +16,8 @@ function authWithMemoryStore() {
   const loaded = new Module(filename, module);
   loaded.filename = filename;
   loaded.paths = module.paths;
-  loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: 'ios' } } : require(id);
+  loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: 'ios' } }
+    : id === './authenticateAccount' ? {} : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return { auth: loaded.exports, values };
 }
