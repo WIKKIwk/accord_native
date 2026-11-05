@@ -125,6 +125,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminProgressQrReprint` | V2 prepares a print job from its in-memory progress batch |
 | `adminRawMaterialLookup` | V2 looks up its in-memory raw-material assignment and order |
 | `adminReturnScannedWip` | V2 rejects WIP returns in test mode |
+| `adminRezkaAstatkaReport` | V2 validates the apparatus and stores or replays an in-memory report |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
 | `adminProductionMapCompletionRequestDecisions` | V2 filters in-memory decisions by worker |
 | `adminProductionMapCompletionRequests` | V2 returns its in-memory completion requests |
