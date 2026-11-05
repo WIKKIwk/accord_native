@@ -131,7 +131,7 @@ async function readAttempt(session: Session, path: string, timeoutMs: number, si
   }
 }
 
-async function readApparatus(session: Session, path: string, retryTransient: boolean, signal?: AbortSignal) {
+export async function readApparatus(session: Session, path: string, retryTransient: boolean, signal?: AbortSignal) {
   const start = Date.now(), attempts = retryTransient ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const remaining = retryTransient ? 15_000 - (Date.now() - start) : 10_000;
