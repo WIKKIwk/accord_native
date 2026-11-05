@@ -47,7 +47,7 @@ No V2 HTTP recordings were found for warehouse creation or deletion; source-deri
 ## Verification
 
 - The ledger estimates 112k V2 tokens for this role; actual tokens read were not measured. The ledger API list moved from 5/26 previously tagged to 26/26 tagged, with additional preparation order and formula methods implemented.
-- `node --test tests/*.test.cjs`: 812 passed, 0 failed. There were 3 existing preparation read tests at the start; preparation-specific tests now span 22 files, plus existing shared tests.
+- `node --test tests/*.test.cjs`: 813 passed, 0 failed. There were 3 existing preparation read tests at the start; preparation-specific tests now span 22 files, plus existing shared tests.
 - iOS TypeScript: passed. Android TypeScript: the 10 known baseline errors in `WorkerOutputProgress.android.tsx`, `WorkerPaintPalette.android.tsx`, and `WorkerScreen.tsx`; no preparation errors. Expo lint: passed.
 - Ledger `check`: passed with six endpoint warnings; the preparation prefix is dynamic as explained above, the other five belong to other roles. `role preparation 1`: all 26 API entries are tagged; platform routes/screens remain unchecked.
 - V2 oracle: 31 passed and 3 warehouse widget tests failed at the baseline as detailed above; the order-scoped raw-material test passed separately. No simulator or device was used.
@@ -81,3 +81,5 @@ No V2 HTTP recordings were found for warehouse creation or deletion; source-deri
 - `26c2535` port(preparation/1): scoped assignment test, 0 methods
 - `7ffb62b` port(preparation/1): exact query encoding, 0 methods
 - `31b5fe3` port(preparation/1): detail decoder and test triage, 0 methods
+- `7f6dc2c` port(preparation/1): record verification, 0 methods
+- `137e1b9` port(preparation/1): formula refresh recovery, 0 methods
