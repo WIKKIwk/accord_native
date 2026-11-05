@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const Module = require('node:module');
 const path = require('node:path');
@@ -10,11 +11,17 @@ function auth(store, platform = 'web') {
   account.filename = accountFile; account.paths = module.paths;
   account.require = id => id === './workerControlsApi' ? { isCanonicalApparatusId: value => /^apparatus:[^:]+:[^:]+$/.test(value) } : require(id);
   account._compile(ts.transpileModule(fs.readFileSync(accountFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, accountFile);
+  const savedFile = path.resolve(__dirname, '../src/savedAccountStore.ts'), saved = new Module(savedFile, module);
+  saved.filename = savedFile; saved.paths = module.paths;
+  saved._compile(ts.transpileModule(fs.readFileSync(savedFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, savedFile);
+  const memory = () => { const values = new Map(); return { getItem: async key => values.get(key) ?? null,
+    setItem: async (key, value) => { values.set(key, value); }, removeItem: async key => { values.delete(key); } }; };
+  const accountStore = new saved.exports.SavedAccountStore(memory(), memory(), async value => crypto.createHash('sha256').update(value).digest('hex'));
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: platform } }
-    : id === './authenticateAccount' ? account.exports : require(id);
+    : id === './authenticateAccount' ? account.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => accountStore } : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
-  return loaded.exports;
+  return Object.assign(loaded.exports, { testAccountStore: accountStore });
 }
 const oldSession = () => ({ baseUrl: 'https://example.test', token: 'old-token', profile: { role: 'aparatchi', ref: 'old' }, capabilities: [], assigned_apparatus: [], assigned_apparatus_labels: [], imageCacheScope: 'old' });
 test('failed login retains the prior active session', async () => {
@@ -35,21 +42,40 @@ test('storage failure rolls the prior session back', async () => {
     await assert.rejects(api.login('https://example.test', '123', '456'), /storage failure/);
     assert.equal(api.activeSessionToken(previous), 'old-token'); assert.equal(values.get('accord_v4_token'), 'old-token');
     assert.equal(JSON.parse(values.get('accord_v4_session')).profile.ref, 'old');
+    assert.equal(api.testAccountStore.activeAccountId, 'https://example.test|aparatchi|old');
   } finally { global.fetch = original; }
 });
 
 test('login uses V2 account parsing and keeps assigned machines in the session', async () => {
-  const original = global.fetch;
-  global.fetch = async (_url, init) => ({ status: 200, json: async () => ({ token: ' token ',
+  const original = global.fetch; let sent;
+  global.fetch = async (_url, init) => { sent = JSON.parse(init.body); return { status: 200, json: async () => ({ token: ' token ',
     profile: { role: 'aparatchi', ref: 'worker' }, capabilities: ['work'],
-    assigned_apparatus: ['apparatus:default:press', 'apparatus:default:press'], assigned_apparatus_labels: [' Press '] }) });
+    assigned_apparatus: ['apparatus:default:press', 'apparatus:default:press'], assigned_apparatus_labels: [' Press '] }) }; };
   try {
     const api = auth({});
-    const session = await api.login('https://example.test', '123', '456');
+    const session = await api.login('https://example.test', ' 123 ', ' 456 ');
+    assert.deepEqual(sent, { phone: ' 123 ', code: ' 456 ' });
     assert.equal(session.token, 'token');
     assert.deepEqual(session.assigned_apparatus, ['apparatus:default:press']);
     assert.deepEqual(session.assigned_apparatus_labels, ['Press']);
     assert.deepEqual(session.capabilities, ['work']);
     assert.equal(session.profile.ref, 'worker');
+  } finally { global.fetch = original; }
+});
+
+test('logging into another account retains the prior saved account and activates the new one', async () => {
+  const original = global.fetch;
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone.trim();
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth({});
+    await api.login('https://example.test', 'one', 'code-one');
+    await api.login('https://example.test', 'two', 'code-two');
+    const accounts = api.testAccountStore;
+    assert.equal(accounts.accounts.length, 2);
+    assert.equal(accounts.activeAccountId, 'https://example.test|aparatchi|two');
+    assert.equal((await accounts.sessionFor('https://example.test|aparatchi|one')).code, 'code-one');
   } finally { global.fetch = original; }
 });

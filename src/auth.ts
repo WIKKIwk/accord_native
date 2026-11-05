@@ -75,6 +75,24 @@ function sameIdentity(a: Session, b: Session): boolean {
   return !!x.ref && !!x.role && a.baseUrl === b.baseUrl && x.ref === y.ref && x.role === y.role;
 }
 
+function savedProfile(session: Session): Record<string, unknown> {
+  return { ...session.profile, capabilities: session.capabilities, assigned_apparatus: session.assigned_apparatus,
+    assigned_apparatus_labels: session.assigned_apparatus_labels, assigned_item_groups: session.assigned_item_groups ?? [],
+    assigned_warehouses: session.assigned_warehouses ?? [] };
+}
+
+async function savedAccountsFor(baseUrl: string, previous: Session | null, credentials: Credentials | null) {
+  const { initializeSavedAccounts } = await import('./savedAccountRuntime');
+  const store = await initializeSavedAccounts(baseUrl);
+  if (previous && !store.activeAccountId) {
+    const account = identity(previous);
+    const same = credentials && credentials.baseUrl === previous.baseUrl && credentials.ref === account.ref && credentials.role === account.role;
+    await store.upsertAuthenticated({ baseUrl: previous.baseUrl, profile: savedProfile(previous), token: previous.token,
+      phone: same ? credentials.phone : String(previous.profile.phone ?? ''), code: same ? credentials.code : '', makeActive: true });
+  }
+  return store;
+}
+
 async function writeSession(session: Session): Promise<void> {
   if (Platform.OS === 'web') { webSession = session; return; }
   const { token, ...metadata } = session;
@@ -186,35 +204,49 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   if (!normalizedPhone || !trimmedCode) throw new Error('Telefon raqam va kodni kiriting.');
   const epoch = ++sessionEpoch;
   const previousSession = activeSession;
-  const session = await authenticate(server, normalizedPhone, trimmedCode);
+  const session = await authenticate(server, phone, code);
   const account = identity(session);
   if (!account.ref || !account.role) throw new Error('Server noto‘g‘ri hisob ma’lumotlarini qaytardi.');
   return inStorageOrder(async () => {
     if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
     const previousCredentials = await readCredentials();
-    try {
-      await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
-      await writeSession(session);
-      if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
-      activeSession = session;
-      refreshing = null;
-      return session;
-    } catch (error) {
-      if (epoch === sessionEpoch) {
+    const store = await savedAccountsFor(previousSession?.baseUrl ?? server, previousSession, previousCredentials);
+    if (epoch !== sessionEpoch) { await store.clearActive(); throw new Error('Sessiya o‘zgargan. Qayta kiring.'); }
+    return store.runAccountOperation(async () => {
+      const previousId = store.activeAccountId;
+      try {
+        const saved = await store.upsertAuthenticated({ baseUrl: server, profile: savedProfile(session), token: session.token,
+          phone, code, makeActive: false });
+        if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+        await store.activate(saved.id);
+        if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+        await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
+        await writeSession(session);
+        if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+        activeSession = session;
+        refreshing = null;
+        return session;
+      } catch (error) {
+        const failures: unknown[] = [];
         try {
-          if (previousCredentials) await writeCredentials(previousCredentials);
-          else if (Platform.OS === 'web') webCredentials = null;
-          else await SecureStore.deleteItemAsync(CREDENTIALS_KEY);
-          if (previousSession) await writeSession(previousSession);
-          else if (Platform.OS === 'web') webSession = null;
-          else await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SESSION_KEY)]);
-          activeSession = previousSession;
-        } catch (rollbackError) {
-          throw new Error(`Login failed and session rollback was incomplete: ${String(error)}; ${String(rollbackError)}`);
+          if (previousId == null || epoch !== sessionEpoch) await store.clearActive();
+          else if (store.activeAccountId !== previousId) await store.activate(previousId);
+        } catch (failure) { failures.push(failure); }
+        if (epoch === sessionEpoch) {
+          try {
+            if (previousCredentials) await writeCredentials(previousCredentials);
+            else if (Platform.OS === 'web') webCredentials = null;
+            else await SecureStore.deleteItemAsync(CREDENTIALS_KEY);
+            if (previousSession) await writeSession(previousSession);
+            else if (Platform.OS === 'web') webSession = null;
+            else await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SESSION_KEY)]);
+            activeSession = previousSession;
+          } catch (failure) { failures.push(failure); }
         }
+        if (failures.length) throw new Error(`Login failed and session rollback was incomplete: ${String(error)}; ${failures.map(String).join('; ')}`);
+        throw error;
       }
-      throw error;
-    }
+    });
   });
 }
 
