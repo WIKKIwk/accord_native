@@ -33,3 +33,16 @@ test('completion decisions reject invalid items and accept a missing list', asyn
   body = '{"completion_request_decisions":[null]}';
   await assert.rejects(client.adminProductionMapCompletionRequestDecisions({}), /Invalid completion decision/);
 });
+
+// V2 has no recorded HTTP request for this reader; it follows the baseline source.
+test('completion requests decode notifications and handle a missing list', async () => {
+  let body = JSON.stringify({ completion_requests: [{ event_id: 'event', apparatus: 'apparatus:default:asset-005', order_id: 'order' }] });
+  let url;
+  const client = api(async (_session, requested) => { url = requested; return new Response(body, { status: 200 }); });
+  const [notification] = await client.adminProductionMapCompletionRequests({});
+  assert.equal(url, '/v1/mobile/admin/production-maps/completion-requests');
+  assert.equal(notification.event_id, 'event');
+  assert.equal(notification.order_id, 'order');
+  body = '{}';
+  assert.deepEqual(await client.adminProductionMapCompletionRequests({}), []);
+});

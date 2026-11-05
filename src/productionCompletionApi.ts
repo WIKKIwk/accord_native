@@ -1,6 +1,7 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { isCanonicalApparatusId, productionMapResponseError, WorkerControlException } from './workerControlsApi';
+import { completionRequestNotification } from './workerQueueModels';
 
 type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -35,4 +36,17 @@ export async function adminProductionMapCompletionRequestDecisions(session: Sess
   const payload = object(await response.json());
   if (!payload) throw new TypeError('Invalid completion decisions response');
   return Array.isArray(payload.completion_request_decisions) ? payload.completion_request_decisions.map(completionRequestDecisionFromJson) : [];
+}
+
+/** @v2 adminProductionMapCompletionRequests */
+export async function adminProductionMapCompletionRequests(session: Session) {
+  const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/completion-requests');
+  if (response.status !== 200) {
+    let payload: unknown;
+    try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'completion_requests');
+  }
+  const payload = object(await response.json());
+  if (!payload) throw new TypeError('Invalid completion requests response');
+  return Array.isArray(payload.completion_requests) ? payload.completion_requests.map(completionRequestNotification) : [];
 }
