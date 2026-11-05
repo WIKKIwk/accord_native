@@ -82,3 +82,28 @@ test('paddon QR report rejects a blank code before sending', async () => {
   const client = api(async () => { throw Error('unexpected request'); });
   await assert.rejects(client.adminPaddonQrReport({}, ' '), error => error.code === 'paddon_not_found');
 });
+
+test('paddon list replays recorded normal and selectable requests', async () => {
+  const { contractFetch, loadContract, recordedSession } = require('./support/contractFetch.cjs');
+  const stem = 'paddon_transfer_test', name = 'paddon list offers transfer only for a cutting worker: cut';
+  const route = '/v1/mobile/admin/production-maps/paddons';
+  const records = loadContract(stem).filter(x => x.test === name && x.method === 'GET' && new URL(x.url).pathname === route);
+  const replay = contractFetch(stem, name, { onlyPaths: [route], onlyMethods: ['GET'] });
+  const session = recordedSession(stem, name);
+  const client = api((s, p, init = {}) => replay(new URL(p, s.baseUrl), { ...init, headers: { Authorization: `Bearer ${s.token}` } }));
+  for (const record of records) {
+    const query = new URL(record.url).searchParams;
+    const result = await client.adminPaddons(session, { limit: Number(query.get('limit')), apparatus: query.get('apparatus'),
+      selectable_only: query.get('selectable_only') === 'true' });
+    assert.equal(result.length, 3);
+    assert.equal(result[0].code, '00001');
+  }
+  replay.assertDone();
+});
+
+test('paddon list bounds its limit and treats non-list payloads as empty', async () => {
+  let url;
+  const client = api(async (_session, requested) => { url = new URL(requested, 'https://example.test'); return new Response('{"paddons":{}}', { status: 200 }); });
+  assert.deepEqual(await client.adminPaddons({}, { limit: 0, apparatus: '  ' }), []);
+  assert.deepEqual(Object.fromEntries(url.searchParams), { limit: '1' });
+});

@@ -63,3 +63,20 @@ export async function adminPaddonQrReport(session: Session, code: string) {
   }
   return paddonSnapshotFromJson(await response.json());
 }
+
+/** @v2 adminPaddons */
+export async function adminPaddons(session: Session, input: { limit?: number; selectable_only?: boolean; apparatus?: string } = {}) {
+  const limit = Math.min(200, Math.max(1, Math.trunc(input.limit ?? 100)));
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (input.apparatus?.trim()) query.set('apparatus', input.apparatus.trim());
+  if (input.selectable_only) query.set('selectable_only', 'true');
+  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons?${query}`);
+  if (response.status !== 200) {
+    let payload: unknown;
+    try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'paddons_list');
+  }
+  const payload = object(await response.json());
+  if (!payload) throw new TypeError('Invalid paddon list response');
+  return Array.isArray(payload.paddons) ? payload.paddons.filter(item => object(item)).map(paddonFromJson) : [];
+}
