@@ -239,6 +239,7 @@ export function parseQueueActionResponse(raw: unknown, input: Obj = {}, session?
   return result;
 }
 
+/** @v2 adminApparatusQueueActionResult */
 export async function adminApparatusQueueActionResult(session: Session, input: Obj): Promise<Obj> {
   const body = queueActionBody(input);
   return parseQueueActionResponse(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/queue-action',
