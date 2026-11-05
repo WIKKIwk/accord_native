@@ -42,3 +42,21 @@ test('summary validation rejects duplicate IDs and unsupported authority fields'
   assert.throws(() => parse({ ...base, queue_states: {} }), e => e.code === 'order_page_invalid');
   assert.throws(() => parse({ ...base, total: 2, order_ids: ['same'], pending_ids: ['same'], rows: { same: { id: 'same', code: '', title: '', customer_name: '', image_id: '', display_state: 'pending', watermarks: [] } }, pending_rows: { same: { id: 'same', code: '', title: '', customer_name: '', image_id: '', kg: 1 } } }), e => e.code === 'order_page_invalid');
 });
+
+test('sequence summary validates row identities, ranks and authority like V2', () => {
+  const { productionOrderPageFromJson: parse } = api(() => { throw Error('unexpected'); });
+  const station = 'apparatus:default:bosma_7', ids = ['zakaz-1', 'training-zakaz-2'];
+  const make = () => ({ projection: 'sequence_list_v1', ok: true, version: 'v1', epoch: 'server', rev: 1, scope: 'selected-scope', offset: 0, total: 2, next_cursor: null,
+    order_ids: [...ids], sequence_positions: { [ids[0]]: 4, [ids[1]]: 12 }, sequence_versions: { [station]: 's1' }, sequence_revisions: { [station]: 1 },
+    queue_policies: [{ apparatus_id: station, apparatus: '7 rang', policy: 'strict_sequence', locked: false, reason: '' }],
+    rows: Object.fromEntries(ids.map(id => [id, { id, code: id, title: 'O‘zbek 😀', customer_name: 'Xaridor', image_id: 'photo-1', queue_state: 'pending', display_state: 'pending', can_reorder: true }])) });
+  assert.equal(parse(make()).sequence_rows[ids[0]].frozen, false);
+  for (const mutate of [
+    x => delete x.rows[ids[0]], x => delete x.rows[ids[0]].customer_name, x => { x.rows[ids[0]].id = 'other'; },
+    x => { x.rows[ids[0]].queue_state = 'unknown'; }, x => { x.rows[ids[0]].display_state = 'unknown'; },
+    x => { x.rows[ids[0]].can_reorder = 'true'; }, x => delete x.sequence_positions[ids[0]], x => { x.order_ids = [ids[0], ids[0]]; },
+    x => { x.scope = ''; }, x => { x.rev = 1.5; }, x => { x.sequence_versions = {}; },
+    x => { x.sequence_revisions[station] = -1; }, x => { x.queue_policies = []; }, x => { x.queue_policies[0].policy = 'future_policy'; },
+    x => x.queue_policies.push(x.queue_policies[0]), x => { x.maps = []; }, x => { x.projection = 'future_projection'; },
+  ]) { const wire = make(); mutate(wire); assert.throws(() => parse(wire)); }
+});
