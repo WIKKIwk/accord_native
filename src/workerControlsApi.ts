@@ -10,6 +10,7 @@ export class WorkerControlException extends Error {
     super(message);
     this.name = 'MobileApiException';
   }
+  get orderTitle(): string { return typeof this.diagnostics.order_title === 'string' ? this.diagnostics.order_title : ''; }
 }
 
 const object = (value: unknown): JsonObject | null => value !== null && typeof value === 'object' && !Array.isArray(value)

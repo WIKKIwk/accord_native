@@ -10,7 +10,8 @@ const object = (value: unknown): Obj | null => value !== null && typeof value ==
 
 async function requireActiveOrder(session: Session, orderId: string): Promise<void> {
   const snapshot = await adminProductionMapQueueSnapshot(session, { fresh: true });
-  const rawState = object(snapshot.order_controls[orderId])?.state;
+  const control = snapshot.order_controls[orderId];
+  const rawState = typeof control === 'string' ? control : object(control)?.state;
   const orderState = typeof rawState === 'string' ? rawState : 'active';
   if (orderState === 'frozen') {
     const title = snapshot.maps.find((order: Obj) => order.map.id.trim() === orderId)?.map.title ?? '';

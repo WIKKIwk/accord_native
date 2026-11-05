@@ -66,7 +66,7 @@ test('a legacy QR response without active-order proof checks the global order co
       validated_apparatus: station, validated_order_id: 'order',
       batch: { batch_id: 'roll', order_id: 'order', apparatus: station, wip_status: 'waiting', qr_payload: 'QR' },
     } : { sequences: {}, visible_order_ids: {}, queue_states: {}, queue_action_controls: {}, queue_policies: [],
-      order_controls: { order: { state } } } };
+      order_controls: { order: state } } };
   });
   const options = { apparatus: station, orderId: 'order', requireActiveOrder: true };
   await assert.rejects(api.adminProgressQrLookup({}, ' QR ', options), error => error.code === 'order_frozen');
