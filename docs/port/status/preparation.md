@@ -1,7 +1,7 @@
 # preparation
 
 Status: part 1 of 1 in progress
-Stopped at: connect preparation order screen coordination and remaining screen actions, then write the UI contract.
+Stopped at: connect the preparation order screen on both platforms and complete remaining screen state/UI contract.
 
 ## Open items
 | Where | V2 reference | What is needed |
