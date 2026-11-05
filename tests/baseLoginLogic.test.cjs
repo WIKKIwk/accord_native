@@ -7,7 +7,21 @@ const ts = require('typescript');
 const filename = path.resolve(__dirname, '../src/shared/loginLogic.ts');
 const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
 mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
-const { loginCodeUsesNumericKeyboard, bootstrapSession } = mod.exports;
+const { loginFailureMessage, loginCodeUsesNumericKeyboard, bootstrapSession } = mod.exports;
+
+// @v2-test test/login_failure_message_test.dart
+test('login distinguishes connection failures from rejected credentials', () => {
+  const messages = { loginConnectionFailed: 'connection', loginFailed: 'login' };
+  const timeout = new Error('deadline'); timeout.name = 'TimeoutError';
+  const aborted = new Error('cancelled'); aborted.name = 'AbortError';
+  for (const error of [new TypeError('Failed to fetch'), new TypeError('Network request failed'),
+    new TypeError('net::ERR_QUIC_PROTOCOL_ERROR'), timeout, aborted]) {
+    assert.equal(loginFailureMessage(error, messages), 'connection');
+  }
+  for (const error of [new Error('Login failed: 401'), new TypeError('Invalid profile'), null]) {
+    assert.equal(loginFailureMessage(error, messages), 'login');
+  }
+});
 
 test('login code keyboard follows V2 prefixes', () => {
   for (const input of ['', ' ', ' 4 ', '40ABC', ' 50x', '80', '92']) assert.equal(loginCodeUsesNumericKeyboard(input), true, input);

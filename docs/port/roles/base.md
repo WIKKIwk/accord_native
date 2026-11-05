@@ -26,7 +26,7 @@ This is a behavior contract for the later iOS and Android screen sessions. A hoo
 
 ## Login
 
-- V2 `LoginScreen`, `features/auth/presentation/login_screen.dart`, `login_screen_helpers_part_01.dart`, `login_screen__LoginScreenState_methods_01.dart`. Existing V4 `login` and `loginCodeUsesNumericKeyboard` supply part of the logic; the platform view and localized error mapping need reconciliation.
+- V2 `LoginScreen`, `features/auth/presentation/login_screen.dart`, `login_screen_helpers_part_01.dart`, `login_screen__LoginScreenState_methods_01.dart`. Existing V4 `login`, `loginCodeUsesNumericKeyboard` and `loginFailureMessage` supply part of the logic; the platform view needs reconciliation.
 - Phone and code are trimmed before submit. Empty input shows `loginRequiredFields`. While loading, submit is disabled and progress shown. Ordinary login calls `login`; add-account mode authenticates and calls `addAndSwitch`; success unlocks security and replaces the root stack with `homeRoute`. The test-mode branch is deferred. A network client/timeout failure shows `loginConnectionFailed`; a rejected or other login shows `loginFailed`; both retain editable inputs and allow retry.
 - The code keyboard is numeric until two characters exist, then numeric for prefixes `40`, `50`, `80`, `92`; otherwise use the ordinary text keyboard. Back returns to the caller when supplied; V2 also recognizes the horizontal back swipe. No pull refresh.
 - Text keys: `signInTitle`, `addProfileTitle`, `phoneLabel`, `codeLabel`, `loginAction`, `accountAdd`, `loginRequiredFields`, `loginConnectionFailed`, `loginFailed`.

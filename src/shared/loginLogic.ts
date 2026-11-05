@@ -1,5 +1,14 @@
 import type { Session } from '../auth';
 
+/** @v2 loginFailureMessage */
+export function loginFailureMessage(error: unknown, messages: { loginConnectionFailed: string; loginFailed: string }): string {
+  const exception = error instanceof Error ? error : null;
+  const connectionFailure = exception?.name === 'TimeoutError' || exception?.name === 'AbortError' ||
+    exception?.name === 'NetworkError' || (exception instanceof TypeError &&
+      /failed to fetch|fetch failed|network request failed|networkerror|load failed|net::err_/i.test(exception.message));
+  return connectionFailure ? messages.loginConnectionFailed : messages.loginFailed;
+}
+
 /** @v2 loginCodeUsesNumericKeyboard */
 export function loginCodeUsesNumericKeyboard(code: string): boolean {
   const trimmed = code.trim();
