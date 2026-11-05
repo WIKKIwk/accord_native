@@ -5,6 +5,8 @@ Stopped at: iOS TSPL runtime comparison and real-printer validation remain.
 
 GoDEX is archived and outside this session by the user's instruction. The Android USB path supports Zebra; the V2 native GoDEX-specific test method is excluded.
 
+Verification: 638 Node tests pass; default and iOS type checks and Expo lint pass. Android type checking reports the 10 known baseline errors in worker screens. The Android module compiles, its native TSPL test passes, and the generated app manifest merges successfully using a temporary SDK 36 configuration. The iOS module builds for a generic iOS device. No printer or simulator was used.
+
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
@@ -20,3 +22,7 @@ GoDEX is archived and outside this session by the user's instruction. The Androi
 ## Test mode pending
 
 ## Needs from the integrator
+
+| Where | V2 reference | What is needed |
+|---|---|---|
+| `port_ledger.mjs` | Printer session | Add printer session support to the role generator if a generated per-line role gate is required. |
