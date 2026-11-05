@@ -1,7 +1,7 @@
 # preparation
 
 Status: part 1 of 1 in progress
-Stopped at: port preparation order warm store and screen coordination, remaining screen actions and UI contract.
+Stopped at: connect preparation order screen coordination and remaining screen actions, then write the UI contract.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -19,3 +19,5 @@ Stopped at: port preparation order warm store and screen coordination, remaining
 No V2 HTTP recordings were found for warehouse creation or deletion; source-derived request tests cover both.
 
 ## Needs from the integrator
+
+- Instantiate `PreparationOrdersWarmStore` with `productionSnapshotStore`, the active session and shared `AdminSequenceApparatusStore` selection; start/reset it with the app session. The shared apparatus selection store and startup wiring are outside this role’s write scope.
