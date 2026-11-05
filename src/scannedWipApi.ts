@@ -1,6 +1,7 @@
 import type { Session } from './auth';
+import { authorizedFetch } from './authorizedFetch';
 import { sessionReadScope } from './sessionReadScope';
-import { isCanonicalApparatusId, postWorkerApiRequest, WorkerControlException } from './workerControlsApi';
+import { isCanonicalApparatusId, postWorkerApiRequest, productionMapResponseError, WorkerControlException } from './workerControlsApi';
 
 export interface ScannedWip {
   session_id: string; batch_id: string; qr_payload: string; source_apparatus: string; linked_at_unix: number;
@@ -35,4 +36,24 @@ export async function adminReturnScannedWip(session: Session, apparatus: string,
   }, scope, true, 'queue_action_not_allowed');
   if (!response || typeof response !== 'object' || Array.isArray(response) || (response as { ok?: unknown }).ok !== true)
     throw new TypeError('Invalid WIP return response');
+}
+
+/** @v2 adminScannedWips */
+export async function adminScannedWips(session: Session, apparatus: string, orderId: string, stageNodeId: string): Promise<ScannedWip[]> {
+  const scope = sessionReadScope(session), station = apparatus.trim(), order = orderId.trim(), stage = stageNodeId.trim();
+  if (!isCanonicalApparatusId(station)) throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
+  if (!order || !stage) throw new TypeError('Invalid scanned WIP scope');
+  const guard = () => { if (scope !== sessionReadScope(session)) throw new WorkerControlException('session_scope_changed', ''); };
+  await Promise.resolve(); guard();
+  const query = new URLSearchParams({ apparatus: station, order_id: order, stage_node_id: stage });
+  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/scanned-wips?${query}`, {}, guard);
+  guard();
+  if (response.status !== 200) {
+    let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'scanned_wips');
+  }
+  const body: unknown = await response.json();
+  if (!body || typeof body !== 'object' || Array.isArray(body) || !Array.isArray((body as { items?: unknown }).items))
+    throw new TypeError('Invalid scanned WIP response');
+  return (body as { items: unknown[] }).items.map(scannedWipFromJson);
 }
