@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import type { SavedAccountStore } from './savedAccountStore';
 
 export type Session = {
   token: string;
@@ -25,6 +26,7 @@ let activeSession: Session | null = null;
 let sessionEpoch = 0;
 let storageQueue: Promise<void> = Promise.resolve();
 let refreshing: { session: Session; epoch: number; promise: Promise<boolean> } | null = null;
+let savedAccountStore: SavedAccountStore | null = null;
 const newImageCacheScope = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 
 function inStorageOrder<T>(action: () => Promise<T>): Promise<T> {
@@ -84,6 +86,7 @@ function savedProfile(session: Session): Record<string, unknown> {
 async function savedAccountsFor(baseUrl: string, previous: Session | null, credentials: Credentials | null) {
   const { initializeSavedAccounts } = await import('./savedAccountRuntime');
   const store = await initializeSavedAccounts(baseUrl);
+  savedAccountStore = store;
   if (previous && !store.activeAccountId) {
     const account = identity(previous);
     const same = credentials && credentials.baseUrl === previous.baseUrl && credentials.ref === account.ref && credentials.role === account.role;
@@ -91,6 +94,12 @@ async function savedAccountsFor(baseUrl: string, previous: Session | null, crede
       phone: same ? credentials.phone : String(previous.profile.phone ?? ''), code: same ? credentials.code : '', makeActive: true });
   }
   return store;
+}
+
+async function syncSavedProfile(session: Session): Promise<void> {
+  const store = savedAccountStore, account = identity(session);
+  const id = `${session.baseUrl}|${account.role}|${account.ref}`;
+  if (store?.activeAccountId === id) await store.updateProfile(id, savedProfile(session));
 }
 
 async function writeSession(session: Session): Promise<void> {
@@ -120,7 +129,10 @@ export async function saveSession(session: Session): Promise<void> {
   await inStorageOrder(async () => {
     if (epoch !== sessionEpoch) return;
     await writeSession(session);
-    if (epoch === sessionEpoch) activeSession = session;
+    if (epoch === sessionEpoch) {
+      activeSession = session;
+      await syncSavedProfile(session);
+    }
   });
 }
 
@@ -283,9 +295,12 @@ export function updateSessionAssignments(session: Session, assigned: readonly st
   const epoch = sessionEpoch;
   void inStorageOrder(async () => {
     if (activeSession !== session || epoch !== sessionEpoch) return;
-    if (Platform.OS === 'web') { webSession = session; return; }
-    const { token: _token, ...metadata } = session;
-    await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(metadata));
+    if (Platform.OS === 'web') webSession = session;
+    else {
+      const { token: _token, ...metadata } = session;
+      await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(metadata));
+    }
+    if (activeSession === session && epoch === sessionEpoch) await syncSavedProfile(session);
   }).catch(() => {});
   return true;
 }

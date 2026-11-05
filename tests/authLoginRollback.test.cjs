@@ -136,3 +136,23 @@ test('reauthentication updates the active saved account token', async () => {
     assert.equal((await api.testAccountStore.sessionFor(api.testAccountStore.activeAccountId)).token, 'new-token');
   } finally { global.fetch = original; }
 });
+
+test('profile updates synchronize the active saved account', async () => {
+  const original = global.fetch;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth({});
+    const session = await api.login('https://example.test', 'one', 'code');
+    session.profile.display_name = 'Updated';
+    session.assigned_apparatus = ['apparatus:default:press'];
+    await api.saveSession(session);
+    const saved = await api.testAccountStore.sessionFor(api.testAccountStore.activeAccountId);
+    assert.equal(saved.account.profile.display_name, 'Updated');
+    assert.deepEqual(saved.account.profile.assigned_apparatus, ['apparatus:default:press']);
+    assert.equal(api.updateSessionAssignments(session, ['apparatus:default:second'], ['Second']), true);
+    await api.loadSession();
+    const after = await api.testAccountStore.sessionFor(api.testAccountStore.activeAccountId);
+    assert.deepEqual(after.account.profile.assigned_apparatus, ['apparatus:default:second']);
+    assert.deepEqual(after.account.profile.assigned_apparatus_labels, ['Second']);
+  } finally { global.fetch = original; }
+});
