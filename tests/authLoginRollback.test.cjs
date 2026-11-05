@@ -24,6 +24,15 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
   const logoutFile = path.resolve(__dirname, '../src/logoutSavedSession.ts'), logoutModule = new Module(logoutFile, module);
   logoutModule.filename = logoutFile; logoutModule.paths = module.paths;
   logoutModule._compile(ts.transpileModule(fs.readFileSync(logoutFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, logoutFile);
+  const chatFile = path.resolve(__dirname, '../src/chatDeviceTokenApi.ts'), chat = new Module(chatFile, module);
+  chat.filename = chatFile; chat.paths = module.paths;
+  chat.require = id => id === './auth' ? loaded.exports : id === './authorizedFetch' ? {} :
+    id === './workerControlsApi' ? { WorkerControlException: class extends Error {} } : require(id);
+  chat._compile(ts.transpileModule(fs.readFileSync(chatFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, chatFile);
+  const pushFile = path.resolve(__dirname, '../src/pushTokenRuntime.ts'), push = new Module(pushFile, module);
+  push.filename = pushFile; push.paths = module.paths;
+  push.require = id => id === './chatDeviceTokenApi' ? chat.exports : require(id);
+  push._compile(ts.transpileModule(fs.readFileSync(pushFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, pushFile);
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: platform } }
     : id === './authenticateAccount' ? account.exports : id === './chunkedStorage' ? chunks.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => {
@@ -31,9 +40,9 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
       return accountStore;
     } }
     : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => endpoints }
-    : id === './logoutSavedSession' ? logoutModule.exports : require(id);
+    : id === './logoutSavedSession' ? logoutModule.exports : id === './pushTokenRuntime' ? push.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
-  return Object.assign(loaded.exports, { testAccountStore: accountStore, testEndpoints: endpoints });
+  return Object.assign(loaded.exports, { testAccountStore: accountStore, testEndpoints: endpoints, testPush: push.exports });
 }
 const oldSession = () => ({ baseUrl: 'https://example.test', token: 'old-token', profile: { role: 'aparatchi', ref: 'old' }, capabilities: [], assigned_apparatus: [], assigned_apparatus_labels: [], imageCacheScope: 'old' });
 test('failed login retains the prior active session', async () => {
@@ -149,6 +158,68 @@ test('logout removes only the active saved account even if server logout fails',
     assert.equal(await api.loadSession(), null);
     const logoutRequest = requests.find(request => request.url.endsWith('/logout'));
     assert.equal(logoutRequest.init.headers.Authorization, 'Bearer token-two');
+  } finally { global.fetch = original; }
+});
+
+test('logout unregisters the current Firebase token before ending the server session', async () => {
+  const original = global.fetch, requests = [];
+  global.fetch = async (url, init) => {
+    requests.push({ url: String(url), init });
+    return { status: 200, json: async () => ({ token: 'session-token', profile: { role: 'aparatchi', ref: 'one' } }) };
+  };
+  try {
+    const api = auth({}), session = await api.login('https://example.test', 'one', 'code');
+    const removeReader = api.testPush.registerPushTokenReader(async () => ' fcm-token ');
+    await api.logout(session);
+    const [unregister, logout] = requests.filter(request => request.init.method !== 'POST' || request.url.endsWith('/logout'));
+    assert.equal(unregister.init.method, 'DELETE');
+    assert.equal(new URL(unregister.url).searchParams.get('token'), 'fcm-token');
+    assert.equal(unregister.init.headers.Authorization, 'Bearer session-token');
+    assert.ok(logout.url.endsWith('/logout'));
+    removeReader();
+  } finally { global.fetch = original; }
+});
+
+test('logout continues when the push token reader fails and no account store is available', async () => {
+  const original = global.fetch, requests = [];
+  global.fetch = async url => {
+    requests.push(String(url));
+    return { status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) };
+  };
+  try {
+    const api = auth({}, 'web', undefined, true), session = await api.login('https://example.test', 'one', 'code');
+    api.testPush.registerPushTokenReader(async () => { throw Error('Firebase unavailable'); });
+    await api.logout(session);
+    assert.ok(requests.some(url => url.endsWith('/logout')));
+    assert.equal(await api.loadSession(), null);
+  } finally { global.fetch = original; }
+});
+
+test('logout unregisters push even when the active saved session is missing', async () => {
+  const original = global.fetch, requests = [];
+  global.fetch = async (url, init) => {
+    requests.push({ url: String(url), init });
+    return { status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) };
+  };
+  try {
+    const api = auth({}), session = await api.login('https://example.test', 'one', 'code');
+    api.testAccountStore.sessionFor = async () => null;
+    api.testPush.registerPushTokenReader(async () => 'fcm-token');
+    await api.logout(session);
+    assert.ok(requests.some(request => request.init.method === 'DELETE' && request.url.includes('/device-token')));
+    assert.equal(requests.some(request => request.url.endsWith('/logout')), false);
+    assert.equal(api.activeSessionToken(session), null);
+  } finally { global.fetch = original; }
+});
+
+test('logout clears the active session even if removing the saved account fails', async () => {
+  const original = global.fetch;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth({}), session = await api.login('https://example.test', 'one', 'code');
+    api.testAccountStore.remove = async () => { throw Error('account removal failed'); };
+    await assert.rejects(api.logout(session), /account removal failed/);
+    assert.equal(api.activeSessionToken(session), null);
   } finally { global.fetch = original; }
 });
 

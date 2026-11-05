@@ -214,6 +214,10 @@ export async function logout(session: Session): Promise<void> {
   if (activeSession !== session) return;
   if (!store) {
     try {
+      const { unregisterCurrentPushToken } = await import('./pushTokenRuntime');
+      await unregisterCurrentPushToken(session);
+    } catch { /* Push unregister is best-effort. */ }
+    try {
       const { logoutSavedSession } = await import('./logoutSavedSession');
       await logoutSavedSession(session.token, session.baseUrl);
     } catch { /* Server logout is best-effort. */ }
@@ -224,6 +228,10 @@ export async function logout(session: Session): Promise<void> {
     try {
       const id = store.activeAccountId;
       const saved = id == null ? null : await store.sessionFor(id);
+      try {
+        const { unregisterCurrentPushToken } = await import('./pushTokenRuntime');
+        await unregisterCurrentPushToken(session);
+      } catch { /* Push unregister is best-effort. */ }
       if (saved) {
         try {
           const { logoutSavedSession } = await import('./logoutSavedSession');
