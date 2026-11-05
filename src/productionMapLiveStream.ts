@@ -3,7 +3,7 @@ import { sessionReadScope } from './sessionReadScope';
 import { WorkerControlException } from './workerControlsApi';
 import { adminProductionMapLiveUri, type ProductionMapLiveOptions } from './workerLiveUri';
 import { parseProductionMapSnapshotRevisionFromJson } from './workerQueueModels';
-import { productionMapDeltaOpFromJson } from './workerSequenceMoveApi';
+import { productionMapLiveDeltaFromJson } from './productionMapDelta';
 import { decodeCanonicalProductionMapSnapshot } from './productionMapSnapshot';
 
 type Obj = Record<string, unknown>;
@@ -14,11 +14,6 @@ const knownPatchFields = new Set(['worker_list_rows', 'worker_display_states', '
   'maps', 'map_order', 'map_order_edit', 'sequences', 'sequence_versions', 'sequence_revisions', 'sequence_positions_by_apparatus',
   'visible_order_ids', 'queue_states', 'stage_states', 'queue_policies', 'queue_action_controls', 'order_controls', 'stage_order_controls',
   'order_statuses', 'frozen_orders_by_apparatus', 'order_customers', 'completed_orders', 'completion_requests', 'completion_request_decisions']);
-const parseIntValue = (value: unknown): number => {
-  if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
-  const text = String(value ?? ''); return /^[+-]?\d+$/.test(text) ? Number(text) : 0;
-};
-
 export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: boolean; stateDelta?: boolean; compact?: boolean }): Obj {
   if (event.ok !== true) {
     const code = String(event.error ?? '').trim();
@@ -60,11 +55,7 @@ export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: bo
   }
   if (type === 'delta') {
     if (options.paged && (!Number.isInteger(event.snapshot_rev) || (event.snapshot_rev as number) < 0)) return fail('invalid paged delta cursor');
-    return { type, epoch: String(event.epoch ?? ''), apparatus: String(event.apparatus ?? event.canonical_apparatus_id ?? ''),
-      base_revision: parseIntValue(event.base_revision), revision: parseIntValue(event.revision),
-      version: String(event.version ?? ''), base_version: String(event.base_version ?? ''),
-      snapshot_revision: typeof event.snapshot_rev === 'number' ? Math.trunc(event.snapshot_rev) : null,
-      ops: Array.isArray(event.ops) ? event.ops.filter(item => object(item)).map(productionMapDeltaOpFromJson) : [] };
+    return productionMapLiveDeltaFromJson(event);
   }
   return decodeCanonicalProductionMapSnapshot(event, true);
 }
