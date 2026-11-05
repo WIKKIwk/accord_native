@@ -32,3 +32,35 @@ export async function preparationOrderMaterials(session: Session, orderId: strin
   const data = await readPreparation(session, `/v1/mobile/preparation/order-materials?${query}`);
   return Array.isArray(data.materials) ? data.materials.filter(object).map(preparationResponsibilityFromJson) : [];
 }
+/** @v2 PreparationSnapshot */
+export function preparationSnapshotFromJson(value: unknown) {
+  const row = object(value); if (!row) throw new TypeError('Invalid preparation snapshot');
+  const list = (value: unknown): unknown[] => { if (!Array.isArray(value)) throw new TypeError('Invalid preparation list'); return value; };
+  const warehouseList = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  const requiredString = (value: unknown) => { if (typeof value !== 'string') throw new TypeError('Invalid preparation string'); return value; };
+  const materials = list(row.materials).map(value => {
+    const item = object(value); if (!item) throw new TypeError('Invalid preparation material');
+    const balances: Record<string, string> = {};
+    for (const raw of item.balances == null ? [] : list(item.balances)) {
+      const balance = object(raw); if (!balance) throw new TypeError('Invalid preparation balance');
+      balances[requiredString(balance.warehouse)] = requiredString(balance.kg);
+    }
+    const visible = Object.hasOwn(item, 'visible_warehouses') ? [...new Set(warehouseList(item.visible_warehouses).map(v => v.trim().toLowerCase()).filter(Boolean))] : null;
+    return { code: requiredString(item.item_code), name: requiredString(item.name), can_receive: item.can_receive !== false,
+      visible_warehouses: visible, balances };
+  });
+  const orders = list(row.orders).map(value => {
+    const item = object(value); if (!item) throw new TypeError('Invalid preparation order');
+    const widthText = item.width_mm == null ? '' : String(item.width_mm).trim(), parsed = widthText ? Number(widthText) : NaN;
+    return { id: requiredString(item.id), code: item.code == null ? '' : requiredString(item.code), title: item.title == null ? '' : requiredString(item.title),
+      kg: requiredString(item.order_kg), width_mm: Number.isNaN(parsed) ? null : parsed, saved: item.saved === true };
+  });
+  const history = list(row.history).map(value => { const item = object(value); if (!item) throw new TypeError('Invalid preparation history'); return item; });
+  return { warehouses: warehouseList(row.warehouses), assigned_warehouses: warehouseList(row.assigned_warehouses),
+    material_warehouses: warehouseList(row.material_warehouses), managed_warehouses: warehouseList(row.managed_warehouses),
+    materials, orders, history, responsibilities: (row.responsibilities == null ? [] : list(row.responsibilities)).map(preparationResponsibilityFromJson) };
+}
+/** @v2 preparationSnapshot */
+export async function preparationSnapshot(session: Session) {
+  return preparationSnapshotFromJson(await readPreparation(session, '/v1/mobile/preparation/snapshot'));
+}

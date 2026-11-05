@@ -24,3 +24,11 @@ test('preparation scope requires the appropriate role and capability', async () 
   const client = load('preparationReadApi', { './authorizedFetch': { authorizedFetch: () => { throw Error('unexpected'); } } });
   await assert.rejects(client.preparationOrderMaterials({ profile: { role: 'aparatchi', ref: 'x' }, capabilities: [] }, 'order'), e => e.code === 'forbidden');
 });
+test('preparation snapshot reads scoped orders and warehouse lists', async () => {
+  const stem = 'preparation_formula_estimates_test', name = 'order 0278 shows its own kg beside shared recipe percentages';
+  const replay = contractFetch(stem, name, { onlyPaths: ['/v1/mobile/preparation/snapshot'] }), session = recordedSession(stem, name);
+  session.profile = { role: 'tayyorlov_masteri', ref: 'worker' }; session.capabilities = ['preparation.access'];
+  const client = load('preparationReadApi', { './authorizedFetch': { authorizedFetch: (s, p, init = {}, guard) => { guard?.(); return replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }); } } });
+  const snapshot = await client.preparationSnapshot(session);
+  assert.equal(snapshot.orders[0].id, '0278'); assert.equal(snapshot.orders[0].kg, '1000.000000'); replay.assertDone();
+});
