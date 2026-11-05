@@ -49,3 +49,17 @@ export async function adminPaddonDetail(session: Session, code: string) {
   }
   return paddonSnapshotFromJson(await response.json());
 }
+
+/** @v2 adminPaddonQrReport */
+export async function adminPaddonQrReport(session: Session, code: string) {
+  const normalized = code.trim();
+  if (!normalized) throw new WorkerControlException('paddon_not_found', 'Paddon topilmadi');
+  const query = new URLSearchParams({ code: normalized });
+  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons/qr/report?${query}`);
+  if (response.status !== 200) {
+    let payload: unknown;
+    try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'paddon_not_found');
+  }
+  return paddonSnapshotFromJson(await response.json());
+}

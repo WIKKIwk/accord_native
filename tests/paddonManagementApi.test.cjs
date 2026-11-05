@@ -61,3 +61,24 @@ test('paddon detail validates the code and requests a decoded snapshot', async (
   assert.equal(url.searchParams.get('code'), 'P1');
   assert.equal(result.paddon.code, 'P1');
 });
+
+test('paddon QR report replays the recorded scoped GET requests', async () => {
+  const { contractFetch, loadContract, recordedSession } = require('./support/contractFetch.cjs');
+  const stem = 'paddon_transfer_test', name = 'paddon list offers transfer only for a cutting worker: cut';
+  const route = '/v1/mobile/admin/production-maps/paddons/qr/report';
+  const records = loadContract(stem).filter(x => x.test === name && x.method === 'GET' && new URL(x.url).pathname === route);
+  const replay = contractFetch(stem, name, { onlyPaths: [route], onlyMethods: ['GET'] });
+  const session = recordedSession(stem, name);
+  const client = api((s, p, init = {}) => replay(new URL(p, s.baseUrl), { ...init, headers: { Authorization: `Bearer ${s.token}` } }));
+  for (const record of records) {
+    const code = new URL(record.url).searchParams.get('code');
+    const result = await client.adminPaddonQrReport(session, ` ${code} `);
+    assert.equal(result.paddon.code, code);
+  }
+  replay.assertDone();
+});
+
+test('paddon QR report rejects a blank code before sending', async () => {
+  const client = api(async () => { throw Error('unexpected request'); });
+  await assert.rejects(client.adminPaddonQrReport({}, ' '), error => error.code === 'paddon_not_found');
+});
