@@ -49,6 +49,18 @@ test('scan bootstrap binds reclose authority when it decodes the response', () =
   assert.equal(result.control_state.control.reclose.readScope, load('sessionReadScope').sessionReadScope(session));
 });
 
+test('scan bootstrap returns decoded queue context and normalized control fields', () => {
+  const { api, session } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
+  const value = fixture();
+  value.control_state.control.allowed_actions = [' start ', 'start'];
+  value.queue_context.queue_action_controls[station][order].allowed_actions = [' start ', 'start'];
+  const result = api.parseWorkerScanBootstrap(value, station, order, qr, session);
+  assert.deepEqual(result.control_state.control.allowed_actions, ['start']);
+  assert.equal(result.control_state.control.interaction.resume_input_requirement_known, false);
+  assert.equal(result.queue_context.queue_action_controls[station][order].state, 'pending');
+  assert.equal(result.queue_context.order_controls[order], 'active');
+});
+
 for (const [name, options] of [
   ['bootstrap sends one scoped GET and passes scanned barcodes', { materialBarcodes: ['ROLL1', 'ROLL2'] }],
   ['bootstrap context and QR flags remain additive for older servers', { includeSections: false, includeContext: true, qrPayload: qr }],

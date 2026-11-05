@@ -1,10 +1,10 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
-import { isCanonicalApparatusId, productionMapResponseError, reactivationRecloseControl, WorkerControlException } from './workerControlsApi';
+import { isCanonicalApparatusId, productionMapResponseError, WorkerControlException } from './workerControlsApi';
 import { rawMaterialAssignment } from './workerRawMaterials';
-import { validOrderControl } from './workerOrderLogic';
 import { progressBatchFromJson, progressInputRoute } from './workerProgressBatch';
 import { decodeCanonicalProductionMapSnapshot } from './productionMapSnapshot';
+import { queueActionControlState } from './workerQueueAction';
 
 type Obj = Record<string, any>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -129,10 +129,10 @@ function completeInput(section: unknown, state: Obj): boolean {
   });
 }
 
-function validateContext(raw: unknown, state: Obj) {
+function validateContext(raw: unknown, state: Obj, session?: Session) {
   const context = object(raw), station = state.apparatus, order = state.order_id;
   if (!context || context.ok !== true || !Array.isArray(context.maps) || !object(context.stage_states)) throw invalid('invalid scan queue context');
-  const decoded = decodeCanonicalProductionMapSnapshot(context);
+  const decoded = decodeCanonicalProductionMapSnapshot(context, false, session);
   if (decoded.maps.length !== context.maps.length ||
       !object(context.sequences) || !object(context.visible_order_ids) || !object(context.queue_states) ||
       !object(context.queue_action_controls) || !Array.isArray(context.queue_policies) || !object(context.order_controls) ||
@@ -193,6 +193,7 @@ function validateContext(raw: unknown, state: Obj) {
     return map.id.trim();
   });
   if (ids.some((id: string) => !id) || new Set(ids).size !== ids.length || !ids.includes(order)) throw invalid('invalid scan queue maps');
+  return decoded;
 }
 
 function validateProgress(raw: unknown, state: Obj, qr: string) {
@@ -209,19 +210,22 @@ function validateProgress(raw: unknown, state: Obj, qr: string) {
 
 export function parseWorkerScanBootstrap(raw: unknown, apparatus: string, orderId: string, qrPayload = '', session?: Session): Obj {
   const data = object(raw), state = object(data?.control_state);
-  if (!data || !state || !object(state.stage_states) || !validOrderControl(data, apparatus, orderId, null)) throw invalid('invalid scan bootstrap control');
-  if (Object.hasOwn(data, 'queue_context')) validateContext(data.queue_context, state);
-  const validatedProgress = Object.hasOwn(data, 'validated_progress') ? validateProgress(data.validated_progress, state, qrPayload) : undefined;
+  let control: Obj | null = null;
+  try { control = state ? queueActionControlState(state, false, session) : null; } catch { /* Invalid control data is not authoritative. */ }
+  if (!data || data.ok !== true || !state || !control || state.apparatus !== apparatus || state.order_id !== orderId ||
+      typeof state.scope !== 'string' || !state.scope) throw invalid('invalid scan bootstrap control');
+  const contextState = { ...control, control: state.control };
+  const queueContext = Object.hasOwn(data, 'queue_context') ? validateContext(data.queue_context, contextState, session) : undefined;
+  const validatedProgress = Object.hasOwn(data, 'validated_progress') ? validateProgress(data.validated_progress, control, qrPayload) : undefined;
   const sections = object(data.sections) ?? {};
-  const result: Obj = { ...data, sections: { ...sections } };
-  if (session) result.control_state = { ...state, control: { ...state.control,
-    reclose: reactivationRecloseControl(state.control.reclose, session, false) } };
+  const result: Obj = { ...data, control_state: control, sections: { ...sections } };
+  if (queueContext) result.queue_context = queueContext;
   if (validatedProgress) result.validated_progress = validatedProgress;
   for (const [name, valid] of [
     ['materials', completeMaterials(object(sections.materials)?.status === 'ready' ? sections.materials.data : null, orderId)],
-    ['qolips', completeQolips(object(sections.qolips)?.status === 'ready' ? sections.qolips.data : null, state.control.interaction)],
-    ['material_assignments', completeAssignments(sections.material_assignments, state)],
-    ['input_progress', completeInput(sections.input_progress, state)],
+    ['qolips', completeQolips(object(sections.qolips)?.status === 'ready' ? sections.qolips.data : null, control.control.interaction)],
+    ['material_assignments', completeAssignments(sections.material_assignments, control)],
+    ['input_progress', completeInput(sections.input_progress, control)],
   ] as const) {
     if (!valid && object(sections[name])?.status === 'ready') result.sections[name] = { ...sections[name], status: 'incomplete' };
   }
