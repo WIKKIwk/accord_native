@@ -22,6 +22,7 @@ async function requireActiveOrder(session: Session, orderId: string): Promise<vo
     'Buyurtmani muzlatish so‘ralgan. Yangi ish boshlash mumkin emas. Iltimos, adminga murojaat qiling.');
 }
 
+/** @v2 adminProgressQrLookup */
 export async function adminProgressQrLookup(session: Session, qrPayload: string, options: { apparatus?: string; orderId?: string;
   requireActiveOrder?: boolean } = {}): Promise<Obj> {
   const station = (options.apparatus ?? '').trim(), order = (options.orderId ?? '').trim(), scoped = !!station || !!order;
