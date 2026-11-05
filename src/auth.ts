@@ -99,7 +99,7 @@ async function savedAccountsFor(baseUrl: string, previous: Session | null, crede
 async function syncSavedProfile(session: Session): Promise<void> {
   const store = savedAccountStore, account = identity(session);
   const id = `${session.baseUrl}|${account.role}|${account.ref}`;
-  if (store?.activeAccountId === id) await store.updateProfile(id, savedProfile(session));
+  if (store?.activeAccountId === id) await store.runAccountOperation(() => store.updateProfile(id, savedProfile(session)));
 }
 
 async function writeSession(session: Session): Promise<void> {
@@ -328,8 +328,8 @@ export async function refreshSession(session: Session, failedToken: string): Pro
         if (activeSession !== session || epoch !== sessionEpoch) return false;
         const store = await savedAccountsFor(session.baseUrl, session, credentials);
         if (activeSession !== session || epoch !== sessionEpoch) return false;
-        await store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
-          phone: credentials.phone, code: credentials.code, makeActive: false });
+        await store.runAccountOperation(() => store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
+          phone: credentials.phone, code: credentials.code, makeActive: false }));
         if (activeSession !== session || epoch !== sessionEpoch) return false;
         await writeSession(next);
         if (activeSession !== session || epoch !== sessionEpoch) return false;

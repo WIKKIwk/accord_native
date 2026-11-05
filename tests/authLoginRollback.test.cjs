@@ -174,3 +174,27 @@ test('login resets session-scoped state only when the account identity changes',
     unregister();
   } finally { global.fetch = original; }
 });
+
+test('reauthentication cannot update a saved account while logout owns the account operation', async () => {
+  const original = global.fetch;
+  let releaseLogout, signalStart, logins = 0;
+  const started = new Promise(resolve => { signalStart = resolve; });
+  global.fetch = async (url) => {
+    if (String(url).endsWith('/logout')) {
+      signalStart();
+      await new Promise(resolve => { releaseLogout = resolve; });
+      return { status: 200 };
+    }
+    return { status: 200, json: async () => ({ token: ++logins === 1 ? 'old-token' : 'new-token',
+      profile: { role: 'aparatchi', ref: 'one' } }) };
+  };
+  try {
+    const api = auth({});
+    const session = await api.login('https://example.test', 'one', 'code');
+    const loggingOut = api.logout(session);
+    await started;
+    assert.equal(await api.refreshSession(session, 'old-token'), false);
+    assert.equal((await api.testAccountStore.sessionFor(api.testAccountStore.activeAccountId)).token, 'old-token');
+    releaseLogout(); await loggingOut;
+  } finally { global.fetch = original; }
+});
