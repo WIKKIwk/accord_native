@@ -5,7 +5,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
-function auth(store, platform = 'web', existingAccountStore) {
+function auth(store, platform = 'web', existingAccountStore, failAccountInitialization = false) {
   const filename = path.resolve(__dirname, '../src/auth.ts'), loaded = new Module(filename, module);
   const accountFile = path.resolve(__dirname, '../src/authenticateAccount.ts'), account = new Module(accountFile, module);
   account.filename = accountFile; account.paths = module.paths;
@@ -26,7 +26,10 @@ function auth(store, platform = 'web', existingAccountStore) {
   logoutModule._compile(ts.transpileModule(fs.readFileSync(logoutFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, logoutFile);
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: platform } }
-    : id === './authenticateAccount' ? account.exports : id === './chunkedStorage' ? chunks.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => accountStore }
+    : id === './authenticateAccount' ? account.exports : id === './chunkedStorage' ? chunks.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => {
+      if (failAccountInitialization) throw new Error('saved account initialization failed');
+      return accountStore;
+    } }
     : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => endpoints }
     : id === './logoutSavedSession' ? logoutModule.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
@@ -85,6 +88,28 @@ test('login and startup restore a large profile with bounded native storage valu
     await first.login('https://example.test', 'one', 'code');
     const restarted = auth(secure, 'ios', first.testAccountStore);
     assert.equal((await restarted.loadSession()).profile.display_name, '🔒'.repeat(1200));
+  } finally { global.fetch = original; }
+});
+
+test('login, refresh, restart and logout work when the saved account runtime is unavailable', async () => {
+  const original = global.fetch, values = new Map(), requests = []; let token = 0;
+  const secure = { getItemAsync: async key => values.get(key) ?? null,
+    setItemAsync: async (key, value) => { values.set(key, value); }, deleteItemAsync: async key => { values.delete(key); } };
+  global.fetch = async url => {
+    requests.push(String(url));
+    return { status: 200, json: async () => ({ token: `token-${++token}`, profile: { role: 'aparatchi', ref: 'one' } }) };
+  };
+  try {
+    const first = auth(secure, 'ios', undefined, true);
+    const initial = await first.login('https://example.test', 'one', 'code');
+    assert.equal(await first.refreshSession(initial, 'token-1'), true);
+    const restarted = auth(secure, 'ios', undefined, true);
+    const session = await restarted.loadSession();
+    assert.equal(session.token, 'token-2');
+    await restarted.logout(session);
+    assert.ok(requests.some(url => url.endsWith('/logout')));
+    assert.equal(await restarted.loadSession(), null);
+    assert.equal(values.size, 0);
   } finally { global.fetch = original; }
 });
 

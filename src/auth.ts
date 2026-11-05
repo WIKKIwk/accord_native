@@ -88,7 +88,9 @@ function savedProfile(session: Session): Record<string, unknown> {
 
 async function savedAccountsFor(baseUrl: string, previous: Session | null, credentials: Credentials | null) {
   const { initializeSavedAccounts } = await import('./savedAccountRuntime');
-  const store = await initializeSavedAccounts(baseUrl);
+  let store: SavedAccountStore;
+  try { store = await initializeSavedAccounts(baseUrl); }
+  catch { savedAccountStore = null; return null; }
   savedAccountStore = store;
   if (previous && !store.activeAccountId) {
     const account = identity(previous);
@@ -163,7 +165,7 @@ export async function loadSession(): Promise<Session | null> {
     }
     const credentials = await readCredentials();
     const store = await savedAccountsFor(result?.baseUrl ?? endpoints.baseUrl, result, credentials);
-    const saved = store.activeAccountId ? await store.sessionFor(store.activeAccountId) : null;
+    const saved = store?.activeAccountId ? await store.sessionFor(store.activeAccountId) : null;
     if (epoch !== sessionEpoch) return null;
     if (saved) {
       const profile = saved.account.profile;
@@ -210,6 +212,14 @@ export async function logout(session: Session): Promise<void> {
   const credentials = await inStorageOrder(readCredentials);
   const store = await savedAccountsFor(session.baseUrl, session, credentials);
   if (activeSession !== session) return;
+  if (!store) {
+    try {
+      const { logoutSavedSession } = await import('./logoutSavedSession');
+      await logoutSavedSession(session.token, session.baseUrl);
+    } catch { /* Server logout is best-effort. */ }
+    if (activeSession === session) await clearSession();
+    return;
+  }
   await store.runAccountOperation(async () => {
     try {
       const id = store.activeAccountId;
@@ -236,6 +246,7 @@ async function authenticate(server: string, phone: string, code: string): Promis
   return session;
 }
 
+/** @v2 login */
 export async function login(baseUrl: string, phone: string, code: string): Promise<Session> {
   const server = normalizeServer(baseUrl);
   const normalizedPhone = phone.trim();
@@ -254,7 +265,43 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
     if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
     const previousCredentials = await readCredentials();
     const store = await savedAccountsFor(previousSession?.baseUrl ?? server, previousSession, previousCredentials);
-    if (epoch !== sessionEpoch) { await store.clearActive(); throw new Error('Sessiya o‘zgargan. Qayta kiring.'); }
+    if (epoch !== sessionEpoch) { if (store) await store.clearActive(); throw new Error('Sessiya o‘zgargan. Qayta kiring.'); }
+    const installSession = async () => {
+      const previous = previousSession ? identity(previousSession) : null;
+      if (previous && (previous.ref !== account.ref || previous.role !== account.role)) {
+        const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+        const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+        if (failure) throw failure.reason;
+      }
+      if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+      await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
+      await writeSession(session);
+      if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+      activeSession = session;
+      refreshing = null;
+      return session;
+    };
+    const restoreSession = async (failures: unknown[]) => {
+      if (epoch !== sessionEpoch) return;
+      try {
+        if (previousCredentials) await writeCredentials(previousCredentials);
+        else if (Platform.OS === 'web') webCredentials = null;
+        else await secureStorage.removeItem(CREDENTIALS_KEY);
+        if (previousSession) await writeSession(previousSession);
+        else if (Platform.OS === 'web') webSession = null;
+        else await Promise.all([secureStorage.removeItem(TOKEN_KEY), secureStorage.removeItem(SESSION_KEY)]);
+        activeSession = previousSession;
+      } catch (failure) { failures.push(failure); }
+    };
+    if (!store) {
+      try { return await installSession(); }
+      catch (error) {
+        const failures: unknown[] = [];
+        await restoreSession(failures);
+        if (failures.length) throw new Error(`Login failed and session rollback was incomplete: ${String(error)}; ${failures.map(String).join('; ')}`);
+        throw error;
+      }
+    }
     return store.runAccountOperation(async () => {
       const previousId = store.activeAccountId;
       try {
@@ -263,36 +310,14 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
         if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
         await store.activate(saved.id);
         if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
-        const previous = previousSession ? identity(previousSession) : null;
-        if (previous && (previous.ref !== account.ref || previous.role !== account.role)) {
-          const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
-          const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-          if (failure) throw failure.reason;
-        }
-        if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
-        await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
-        await writeSession(session);
-        if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
-        activeSession = session;
-        refreshing = null;
-        return session;
+        return await installSession();
       } catch (error) {
         const failures: unknown[] = [];
         try {
           if (previousId == null || epoch !== sessionEpoch) await store.clearActive();
           else if (store.activeAccountId !== previousId) await store.activate(previousId);
         } catch (failure) { failures.push(failure); }
-        if (epoch === sessionEpoch) {
-          try {
-            if (previousCredentials) await writeCredentials(previousCredentials);
-            else if (Platform.OS === 'web') webCredentials = null;
-            else await secureStorage.removeItem(CREDENTIALS_KEY);
-            if (previousSession) await writeSession(previousSession);
-            else if (Platform.OS === 'web') webSession = null;
-            else await Promise.all([secureStorage.removeItem(TOKEN_KEY), secureStorage.removeItem(SESSION_KEY)]);
-            activeSession = previousSession;
-          } catch (failure) { failures.push(failure); }
-        }
+        await restoreSession(failures);
         if (failures.length) throw new Error(`Login failed and session rollback was incomplete: ${String(error)}; ${failures.map(String).join('; ')}`);
         throw error;
       }
@@ -343,7 +368,7 @@ export async function refreshSession(session: Session, failedToken: string): Pro
         if (activeSession !== session || epoch !== sessionEpoch) return false;
         const store = await savedAccountsFor(session.baseUrl, session, credentials);
         if (activeSession !== session || epoch !== sessionEpoch) return false;
-        await store.runAccountOperation(() => store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
+        if (store) await store.runAccountOperation(() => store.upsertAuthenticated({ baseUrl: next.baseUrl, profile: savedProfile(next), token: next.token,
           phone: credentials.phone, code: credentials.code, makeActive: false }));
         if (activeSession !== session || epoch !== sessionEpoch) return false;
         await writeSession(next);
