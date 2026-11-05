@@ -76,3 +76,14 @@ test('warehouse create and delete use trimmed names and require a warehouse conf
   assert.equal(calls[1].method, 'DELETE');
   assert.equal(calls[1].path, '/v1/mobile/preparation/warehouses?warehouse=Child');
 });
+// @v2-test test/preparation_material_management_test.dart
+for (const role of ['material_taminotchi', 'homashyo_rezkachi']) {
+  test(`${role} cannot list or mutate preparation materials`, async () => {
+    const x = setup('preparation_material_management_test', 'rename prefilled own material, duplicate=false', { onlyPaths: ['/v1/mobile/preparation/materials'] });
+    x.session.profile.role = role;
+    for (const operation of [() => x.api.preparationOwnedMaterials(x.session), () => x.api.preparationRenameMaterial(x.session, 'PREP-1', 'No'),
+      () => x.api.preparationDeleteMaterial(x.session, 'PREP-1'), () => x.api.preparationSetMaterialWarehouses(x.session, 'PREP-1', ['Own'])]) {
+      await assert.rejects(operation(), e => e.code === 'forbidden');
+    }
+  });
+}

@@ -91,3 +91,191 @@ Tap a row opens a non-dismissible detail host immediately, then reads only that 
 History shows the last 100 receipt/consumption records or `Hali kirim yoki sarf yo‘q.` A non-reversed receipt long press offers `Kirimni bekor qilish`; it is enabled only when `can_reverse` is true. Require a nonempty reason up to 500 characters and destructive confirmation; after success prepend the reversal, mark the matching receipt reversed/non-reversible, reload parent, and show `Kirim bekor qilindi`. Failure retains history. Pull refresh delegates to the parent.
 
 Input dialog trims values, rejects an empty name (`Nom kiriting` or supplied error) and text beyond the supplied maximum (`Matn juda uzun`); default max is 160. Quantity input accepts digits, comma and period and validates the six-place positive decimal rule. `Saqlash` returns the trimmed value; `Bekor qilish` returns no value. Dialog back/cancel leaves data unchanged.
+
+## Static literal lookup inventory
+
+Generated from V2 baseline presentation sources. Each literal below is its `uiText`/`UrduAwareText` lookup input or a directly displayed literal; the source line is the authority for conditional usage. Dynamic interpolation and literals nested inside expressions remain subject to the open text-inventory item.
+
+### preparation_screen.dart
+
+- `Saqlandi` — line 153
+- `Homashyo tanlang` — line 208
+- `Mahsulot formulasi` — line 224
+- `Homashyolar` — line 230
+- `Ombor` — line 235
+- `Tarozi kirimi` — line 241
+- `Kirim` — line 250
+- `Buyurtmalar` — line 255
+- `Tarix` — line 260
+- `Tayyorlov masteri` — line 287
+- `Ichki homashyo ta’minoti` — line 288
+- `Xatolik yuz berdi` — line 319
+- `Tasdiqlanmagan operatsiya` — line 343
+- `Sizga ombor biriktirilmagan. Admin foydalanuvchi kartasidan ombor biriktirishi kerak.` — line 390
+- `Ishlab chiqarish` — line 472
+- `Ishlab chiqarilgan homashyolar` — line 486
+
+### preparation_screen_forms.dart
+
+- `Qidirish` — line 17
+- `Yangi homashyo` — line 40
+- `Homashyo nomi` — line 40
+- `Kirim (kg)` — line 54
+- `Order tanlang` — line 66
+- `Homashyo tanlang` — line 81
+- `Sarfni saqlash` — line 110
+- `Hisoblangan homashyolar ombordan sarflansinmi?` — line 111
+- `Bekor qilish` — line 112
+- `Saqlash va sarflash` — line 113
+- `Bola ombor ochish` — line 297
+- `Saqlash` — line 339
+- `Homashyo qo‘shish` — line 441
+- `Ombor qo‘shish` — line 450
+- `Ombor` — line 461
+- `Tanlanmagan` — line 462
+- `Sizga ombor biriktirilmagan.` — line 504
+- `Yuqoridagi filtrdan ombor tanlang.` — line 514
+- `Bu omborda hali kirim yo‘q.` — line 524
+- `Mavjud qoldiq` — line 600
+- `Kirimlar` — line 802
+- `Chiqimlar` — line 864
+- `Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.` — line 906
+- `Buyurtmalar` — line 992
+- `Sarf (kg) = Order KG × foiz ÷ 100. Har bir homashyo foizi alohida hisoblanadi.` — line 1035
+- `Olib tashlash` — line 1072
+- `Foiz (%)` — line 1103
+- `Sarf: —` — line 1124
+- `Homashyo tanlash` — line 1142
+- `Saqlash bosilganda ko‘rsatilgan miqdor ombordan sarflanadi. Bu orderning saqlangan retsepti qayta sarflanmaydi.` — line 1148
+- `Kirimni bekor qilish` — line 1215
+- `Yopish` — line 1225
+- `Sabab` — line 1242
+- `Sabab kiriting` — line 1243
+- `Qaytish` — line 1253
+- `Kirim bekor qilindi` — line 1285
+- `Tarix` — line 1304
+- `Oxirgi 100 ta kirim va sarf` — line 1305
+- `Hali kirim yoki sarf yo‘q.` — line 1321
+
+### preparation_materials_screen.dart
+
+- `Homashyolar bilan amal bajarilmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring` — line 35
+- `Nomini o‘zgartirish` — line 68
+- `Omborga biriktirish` — line 73
+- `O‘chirish` — line 78
+- `Homashyo nomini o‘zgartirish` — line 96
+- `Homashyo nomi` — line 97
+- `Homashyoni o‘chirish` — line 103
+- `Bekor qilish` — line 106
+- `Sizga exclusive ombor biriktirilmagan.` — line 185
+- `Bu biriktirishni faqat administrator o‘zgartira oladi` — line 199
+- `Bu amal ombordagi qoldiqni ko‘chirmaydi.` — line 218
+- `Saqlash` — line 226
+- `Ombor biriktirish yangilandi` — line 244
+- `Homashyolar` — line 264
+- `Homashyoni qidirish` — line 274
+- `Qayta urinish` — line 304
+- `Homashyo amallari` — line 348
+
+### preparation_formula_catalog_screen.dart
+
+- `Formulalar` — line 114
+- `Formula nomi, kodi yoki buyurtmani qidirish` — line 125
+- `Qayta urinish` — line 150
+- `Nomini o‘zgartirish` — line 198
+
+### preparation_formula_orders_screen.dart
+
+- `Nomini o‘zgartirish` — line 86
+- `Komplekt nomini o‘zgartirish` — line 97
+- `Komplekt nomi` — line 98
+- `Komplekt nomi o‘zgartirildi` — line 115
+- `Formulalar` — line 136
+- `Kod, nom yoki buyurtmani qidirish` — line 146
+- `Qayta urinish` — line 175
+- `Formulani o‘chirish` — line 325
+- `Bekor qilish` — line 328
+- `O‘chirish` — line 329
+- `Formula o‘chirildi` — line 345
+- `Bu komplektda formula qolmadi.` — line 384
+
+### preparation_order_formula_screen.dart
+
+- `Formula ma’lumotlari` — line 57
+- `Shnek ulushlarini belgilash` — line 78
+- `Seriyo tanlang` — line 443
+- `Qidirish` — line 444
+- `Formula saqlandi` — line 577
+- `Formulani o‘chirish` — line 593
+- `Bekor qilish` — line 595
+- `O‘chirish` — line 596
+- `Formula o‘chirildi` — line 616
+- `Ishlab chiqarishni boshlash` — line 679
+- `Seriyo qo‘shish` — line 855
+- `Shnek ulushlari` — line 893
+- `Nom avtomatik beriladi` — line 1003
+- `Tahrirlash` — line 1120
+- `100% shart` — line 1217
+- `Olib tashlash` — line 1317
+
+### preparation_formula_variants_screen.dart
+
+- `Shnek formulasini tanlang` — line 149
+- `Formula nomi, kodi yoki buyurtmani qidirish` — line 150
+- `Tahrirlash` — line 217
+- `O‘chirish` — line 218
+- `Nomini o‘zgartirish` — line 221
+- `Shnek formulasini olib tashlash` — line 260
+- `Bekor qilish` — line 262
+- `Shnek formulalar` — line 292
+- `Variant qo‘shish` — line 298
+- `Qidirib variant qo‘shish` — line 303
+- `Qayta urinish` — line 330
+- `Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.` — line 335
+- `Akkaunt o‘zgargan. Sahifani qayta oching` — line 431
+- `Variant nomi` — line 460
+
+### preparation_formula_shares_sheet.dart
+
+- `Akkaunt o‘zgargan. Sahifani qayta oching` — line 92
+- `Shnek ulushlari saqlanmadi. Qayta urinib ko‘ring` — line 116
+- `Shnek ulushlari` — line 140
+
+### preparation_production_screen.dart
+
+- `Ma’lumotlarni yuklab bo‘lmadi. Qayta urinib ko‘ring` — line 178
+- `Qayta urinish` — line 220
+- `Yana yuklash` — line 233
+- `Ishlab chiqarish` — line 286
+- `Buyurtma, homashyo yoki formula` — line 298
+- `Holat` — line 324
+- `Barchasi` — line 325
+- `Davom etmoqda` — line 336
+- `Yakunlangan` — line 340
+- `Hali ishlab chiqarish yozuvlari yo‘q.` — line 356
+- `Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q.` — line 426
+- `Hali rulon kirim qilinmagan.` — line 500
+- `Formula qayd etilmagan` — line 598
+- `Serverdagi QR identifikatori mos kelmadi` — line 709
+
+### preparation_navigation.dart
+
+- `Tayyorlov` — line 35
+- `Amallar` — line 45
+- `Profil` — line 57
+- `Formulalar` — line 100
+- `Ishlab chiqarish` — line 106
+- `Ketma-ketlik` — line 114
+- `Kirim` — line 122
+- `Chat` — line 129
+- `Ishlab chiqarilgan homashyolar` — line 136
+
+### preparation_warehouse_management.dart
+
+- `Ombor bilan amal bajarilmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring` — line 4
+- `Nomini o‘zgartirish` — line 20
+- `O‘chirish` — line 25
+- `Ombor nomini o‘zgartirish` — line 39
+- `Ombor nomi` — line 40
+- `Omborni o‘chirish` — line 48
+- `Bekor qilish` — line 51
