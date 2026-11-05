@@ -33,6 +33,30 @@ test('parameterized methods and table strings substitute V2 placeholders', () =>
   assert.equal(localizedMethod('sentToCustomerLine', 'en', { qty: 2, uom: 'kg' }), '2.00 kg sent to customer');
 });
 
+test('conditional localization methods retain V2 locale and fallback rules', () => {
+  assert.equal(localizedMethod('statusWithName', 'en', { name: 'A', status: 'Open' }), 'Open • A');
+  assert.equal(localizedMethod('receiptCountLabel', 'uz', { count: 3 }), '3 ta receipt');
+  assert.equal(localizedMethod('receiptCountLabel', 'ru', { count: 3 }), '3 receipts');
+  assert.equal(localizedMethod('recordCountLabel', 'ur', { count: 2 }), '2 ریکارڈ');
+  assert.equal(localizedMethod('customerFlowMetric', 'en', { qty: 4.2, uom: 'kg' }), '4 kg sent to customer');
+  assert.equal(localizedMethod('acceptedQtyLabel', 'uz', { qty: 2, uom: 'kg' }), 'Qabul: 2 kg');
+  assert.equal(localizedMethod('adminRoleKindLabel', 'en', { system: true }), 'system');
+  assert.equal(localizedMethod('adminRoleKindLabel', 'en', { system: false }), 'custom');
+  assert.equal(localizedMethod('adminTelegramQrError', 'en', { code: 'invalid_password' }), 'Incorrect Telegram password. Try again.');
+  assert.equal(localizedMethod('adminTelegramQrError', 'en', { code: 'other' }), 'Could not connect to Telegram. Try again.');
+  assert.equal(localizedMethod('recordsLoadFailedWith', 'en', { error: 'ignored' }), 'Server disconnected. Try again.');
+  assert.equal(localizedMethod('productionCount', 'en', { count: 1, kind: 'molds' }), '1 mold');
+  assert.equal(localizedMethod('productionCount', 'en', { count: 2, kind: 'materials' }), '2 materials');
+  assert.equal(localizedMethod('qolipQuantityShort', 'uz', { count: 3 }), '3 ta');
+  assert.equal(localizedMethod('qolipCount', 'uz', { count: 3 }), '3 ta qolip');
+  assert.equal(localizedMethod('adminCapabilityLabel', 'en', { code: 'production.map.read', fallback: '?' }), 'View work map');
+  assert.equal(localizedMethod('adminCapabilityLabel', 'en', { code: 'missing', fallback: 'Fallback' }), 'Fallback');
+  assert.equal(localizedMethod('systemRoleLabel', 'en', { id: '  CUSTOMER ', fallback: '?' }), localizedGetter('customerRoleName', 'en'));
+  assert.equal(localizedMethod('roleLabelForCode', 'en', { code: 'unknown' }), 'unknown');
+  assert.equal(localizedMethod('qolipColorName', 'en', { raw: ' qizil ' }), productionText('qolip.color.red', 'en'));
+  assert.equal(localizedMethod('qolipColorName', 'en', { raw: ' custom ' }), ' custom ');
+});
+
 test('locale selection defaults to Uzbek and persists explicit Urdu', async () => {
   const data = new Map(), storage = { getItem: async key => data.get(key) ?? null, setItem: async (key, value) => data.set(key, value) };
   const controller = new LocaleController(storage); let notifications = 0;

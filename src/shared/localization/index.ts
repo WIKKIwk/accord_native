@@ -34,8 +34,69 @@ export function localizedGetter(key: string, locale: string): string {
 /** Simple parameterized V2 AppLocalizations methods. */
 export function localizedMethod(key: string, locale: string, values: Record<string, unknown>): string {
   const entry = methods[key];
-  if (!entry) throw new Error(`Unknown localization method: ${key}`);
-  return interpolate(entry[language(locale)], values);
+  if (entry) return interpolate(entry[language(locale)], values);
+  const code = language(locale), text = (name: string) => String(values[name] ?? '');
+  const qty = () => {
+    if (typeof values.qty !== 'number') throw new TypeError('Quantity must be numeric');
+    return values.qty.toFixed(0);
+  };
+  switch (key) {
+    case 'statusWithName': return `${text('status')} • ${text('name')}`;
+    case 'recordsLoadFailedWith': case 'statusListLoadFailedWith': case 'notificationsLoadFailedWith': case 'recentLoadFailedWith':
+      return localizedGetter('serverDisconnectedRetry', locale);
+    case 'sentQtyStatus': return `${qty()} ${text('uom')} ${text('statusWord')}`;
+    case 'receiptCountLabel': return `${text('count')} ${code === 'uz' ? 'ta receipt' : code === 'ur' ? 'رسیدیں' : 'receipts'}`;
+    case 'recordCountLabel': return `${text('count')} ${code === 'uz' ? 'ta hujjat' : code === 'ur' ? 'ریکارڈ' : 'records'}`;
+    case 'customerFlowMetric': return `${qty()} ${text('uom')} ${localizedGetter('sentToCustomer', locale)}`;
+    case 'supplierFlowMetric': return `${qty()} ${text('uom')} ${localizedGetter('receivedFromSupplier', locale)}`;
+    case 'acceptedQtyLabel': return `${localizedGetter('acceptedFromQtyPrefix', locale)}: ${qty()} ${text('uom')}`;
+    case 'customerShipmentPendingNote': return {
+      uz: 'Bu jo‘natma omborchi tomonidan haridorga yuborilgan. Qaytarish yoki tasdiqlash haridor tomonidan qilinadi.',
+      en: 'This shipment was sent by Werka to the customer. Any rejection or approval must be done by the customer.',
+      ru: 'Эта отправка была сделана кладовщиком для покупателя. Возврат или подтверждение должен выполнить покупатель.',
+      ur: 'یہ کھیپ ورکا کی جانب سے گاہک کو بھیجی گئی ہے۔ اسے مسترد یا منظور کرنے کی کارروائی گاہک کو کرنی ہوگی۔',
+    }[code];
+    case 'adminRoleKindLabel': return localizedGetter(values.system === true ? 'adminSystemRoleKind' : 'adminCustomRoleKind', locale);
+    case 'roleLabelForCode': case 'systemRoleLabel': {
+      const source = key === 'roleLabelForCode' ? text('code') : text('id').trim().toLowerCase();
+      const names: Record<string, string> = { sales_manager: 'adminTelegramSalesManagerRoleTitle', admin: 'adminRoleName',
+        werka: 'werkaRoleName', customer: 'customerRoleName', supplier: 'supplierRoleName' };
+      return names[source] ? localizedGetter(names[source], locale) : key === 'roleLabelForCode' ? source : text('fallback');
+    }
+    case 'adminCapabilityLabel': {
+      const capability = text('code');
+      if (capability === 'sales.access') return localizedGetter('adminTelegramSalesManagerRoleTitle', locale);
+      return extensions.adminCapabilityLabel?.[capability]?.[code] ?? text('fallback');
+    }
+    case 'productionCount': case 'qolipCount': case 'qolipQuantityShort': {
+      const count = text('count'), kind = key === 'productionCount' ? (text('kind') || 'items') : 'molds';
+      if (code === 'uz') return `${count} ta${key === 'qolipCount' ? ' qolip' : ''}`;
+      if (code === 'ur') return `${count} ${kind === 'molds' ? 'مولڈز' : kind === 'materials' ? 'مواد' : 'اشیا'}`;
+      if (code === 'ru') return `${count} ${kind === 'molds' ? 'форм' : kind === 'materials' ? 'материалов' : 'шт.'}`;
+      const singular = values.count === 1;
+      return `${count} ${kind === 'molds' ? (singular ? 'mold' : 'molds') : kind === 'materials' ? (singular ? 'material' : 'materials') : (singular ? 'item' : 'items')}`;
+    }
+    case 'qolipColorName': {
+      const raw = text('raw'), name = raw.trim().toUpperCase();
+      const colors: Record<string, string> = { '#E53935': 'red', QIZIL: 'red', '#FB8C00': 'orange', 'TO‘Q SARIQ': 'orange', "TO'Q SARIQ": 'orange',
+        '#FDD835': 'yellow', SARIQ: 'yellow', '#43A047': 'green', YASHIL: 'green', '#00ACC1': 'cyan', MOVIY: 'cyan',
+        '#1E88E5': 'blue', 'KO‘K': 'blue', "KO'K": 'blue', '#3949AB': 'indigo', 'TO‘Q KO‘K': 'indigo', "TO'Q KO'K": 'indigo',
+        '#8E24AA': 'purple', BINAFSHA: 'purple', '#D81B60': 'pink', PUSHTI: 'pink', '#6D4C41': 'brown', JIGARRANG: 'brown',
+        '#D4A72C': 'gold', TILLA: 'gold', '#757575': 'gray', KULRANG: 'gray', '#B7BCC2': 'silver', MATLAK: 'silver',
+        '#C7CDD3': 'kumush', KUMUSH: 'kumush', '#212121': 'black', QORA: 'black', '#FFFFFF': 'white', OQ: 'white' };
+      return colors[name] ? productionText(`qolip.color.${colors[name]}`, locale) : raw;
+    }
+    case 'qolipText': return productionText(`qolip.${text('key')}`, locale,
+      values.values && typeof values.values === 'object' && !Array.isArray(values.values) ? values.values as Record<string, unknown> : {});
+    case 'adminTelegramQrError': {
+      const translated = extensions.adminTelegramQrError?.[text('code')];
+      if (translated) return translated[code];
+      const fallback = { uz: 'Telegramga ulanish amalga oshmadi. Qayta urining.',
+        en: 'Could not connect to Telegram. Try again.', ru: 'Не удалось подключиться к Telegram. Повторите попытку.' };
+      return code === 'ur' ? (translateFrom(fallback.en, urduEnglish, englishTemplates) ?? fallback.en) : fallback[code];
+    }
+    default: throw new Error(`Unknown localization method: ${key}`);
+  }
 }
 
 /** @v2 productionText */

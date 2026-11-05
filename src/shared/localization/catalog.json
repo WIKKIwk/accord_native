@@ -21537,6 +21537,212 @@
     }
   },
   "extensions": {
+    "adminCapabilityLabel": {
+      "admin.access": {
+        "uz": "Admin panel",
+        "en": "Admin panel",
+        "ru": "Панель администратора",
+        "ur": "منتظم پینل"
+      },
+      "admin.activity.read": {
+        "uz": "Admin harakatlarini ko‘rish",
+        "en": "Admin activity read",
+        "ru": "Просмотр активности администратора",
+        "ur": "منتظم کی سرگرمی دیکھنے کی اجازت"
+      },
+      "admin.settings.manage": {
+        "uz": "Admin sozlamalarini boshqarish",
+        "en": "Admin settings manage",
+        "ru": "Управление настройками администратора",
+        "ur": "منتظم کی ترتیبات منظم کرنے کی اجازت"
+      },
+      "admin.settings.read": {
+        "uz": "Admin sozlamalarini ko‘rish",
+        "en": "Admin settings read",
+        "ru": "Просмотр настроек администратора",
+        "ur": "منتظم کی ترتیبات دیکھنے کی اجازت"
+      },
+      "catalog.item.bulk_move": {
+        "uz": "Mahsulotlarni guruhlar orasida ko‘chirish",
+        "en": "Catalog item bulk move",
+        "ru": "Массовый перенос товаров между группами",
+        "ur": "کیٹلاگ آئٹمز کی اجتماعی منتقلی"
+      },
+      "catalog.item.create": {
+        "uz": "Katalog mahsulot yaratish",
+        "en": "Catalog item create",
+        "ru": "Создание товара каталога",
+        "ur": "کیٹلاگ آئٹم بنائیں"
+      },
+      "catalog.item.read": {
+        "uz": "Katalog mahsulotlarini ko‘rish",
+        "en": "Catalog item read",
+        "ru": "Просмотр товаров каталога",
+        "ur": "کیٹلاگ آئٹم دیکھنے کی اجازت"
+      },
+      "catalog.item_group.manage": {
+        "uz": "Mahsulot guruhlarini boshqarish",
+        "en": "Catalog item group manage",
+        "ru": "Управление группами товаров",
+        "ur": "کیٹلاگ آئٹم گروپ منظم کریں"
+      },
+      "catalog.item_group.read": {
+        "uz": "Mahsulot guruhlarini ko‘rish",
+        "en": "Catalog item group read",
+        "ru": "Просмотр групп товаров",
+        "ur": "کیٹلاگ آئٹم گروپ دیکھنے کی اجازت"
+      },
+      "customer.access": {
+        "uz": "Haridor oynasi",
+        "en": "Customer workspace",
+        "ru": "Рабочее место покупателя",
+        "ur": "گاہک کا ورک اسپیس"
+      },
+      "gscale.catalog.read": {
+        "uz": "GScale katalogini ko‘rish",
+        "en": "GScale catalog read",
+        "ru": "Просмотр каталога GScale",
+        "ur": "GScale کیٹلاگ دیکھنے کی اجازت"
+      },
+      "gscale.print": {
+        "uz": "GScale chop etish",
+        "en": "GScale print",
+        "ru": "Печать GScale",
+        "ur": "GScale پرنٹ"
+      },
+      "party.customer.code.manage": {
+        "uz": "Haridor kodini boshqarish",
+        "en": "Customer code manage",
+        "ru": "Управление кодом покупателя",
+        "ur": "گاہک کا کوڈ منظم کرنے کی اجازت"
+      },
+      "party.customer.item.assign": {
+        "uz": "Haridorga mahsulot biriktirish",
+        "en": "Customer item assign",
+        "ru": "Назначение товаров покупателю",
+        "ur": "گاہک کو آئٹم مختص کرنے کی اجازت"
+      },
+      "party.customer.manage": {
+        "uz": "Haridorlarni boshqarish",
+        "en": "Customer directory manage",
+        "ru": "Управление покупателями",
+        "ur": "گاہکوں کی فہرست منظم کرنے کی اجازت"
+      },
+      "party.customer.read": {
+        "uz": "Haridorlar ro‘yxatini ko‘rish",
+        "en": "Customer directory read",
+        "ru": "Просмотр справочника покупателей",
+        "ur": "گاہکوں کی فہرست دیکھنے کی اجازت"
+      },
+      "party.supplier.code.manage": {
+        "uz": "Ta'minotchi kodini boshqarish",
+        "en": "Supplier code manage",
+        "ru": "Управление кодом поставщика",
+        "ur": "سپلائر کا کوڈ منظم کرنے کی اجازت"
+      },
+      "party.supplier.item.assign": {
+        "uz": "Ta'minotchiga mahsulot biriktirish",
+        "en": "Supplier item assign",
+        "ru": "Назначение товаров поставщику",
+        "ur": "سپلائر کو آئٹم مختص کرنے کی اجازت"
+      },
+      "party.supplier.manage": {
+        "uz": "Ta'minotchilarni boshqarish",
+        "en": "Supplier directory manage",
+        "ru": "Управление поставщиками",
+        "ur": "سپلائر فہرست منظم کرنے کی اجازت"
+      },
+      "party.supplier.read": {
+        "uz": "Ta'minotchilar ro‘yxatini ko‘rish",
+        "en": "Supplier directory read",
+        "ru": "Просмотр справочника поставщиков",
+        "ur": "سپلائر فہرست دیکھنے کی اجازت"
+      },
+      "production.map.edit": {
+        "uz": "Xaritani tahrirlash",
+        "en": "Edit map",
+        "ru": "Редактирование карты",
+        "ur": "نقشے میں ترمیم کریں"
+      },
+      "production.map.manage": {
+        "uz": "Production map boshqarish",
+        "en": "Production map manage",
+        "ru": "Управление картой производства",
+        "ur": "پیداواری نقشہ منظم کرنے کی اجازت"
+      },
+      "production.map.read": {
+        "uz": "Ish xaritasini ko‘rish",
+        "en": "View work map",
+        "ru": "Просмотр карты работ",
+        "ur": "View work map"
+      },
+      "production.order.create": {
+        "uz": "Buyurtma ochish",
+        "en": "Create order",
+        "ru": "Создание заказа",
+        "ur": "آرڈر بنائیں"
+      },
+      "production.order.edit": {
+        "uz": "Buyurtmani tahrirlash",
+        "en": "Edit order",
+        "ru": "Редактирование заказа",
+        "ur": "Edit order"
+      },
+      "push.token.manage": {
+        "uz": "Push token boshqarish",
+        "en": "Push token manage",
+        "ru": "Управление push-токенами",
+        "ur": "پش ٹوکن منظم کرنے کی اجازت"
+      },
+      "rezka.split.manage": {
+        "uz": "Rezka bo‘lishni boshqarish",
+        "en": "Rezka split manage",
+        "ru": "Управление резкой",
+        "ur": "Rezka تقسیم منظم کرنے کی اجازت"
+      },
+      "role.capability.manage": {
+        "uz": "Role huquqlarini boshqarish",
+        "en": "Role capability manage",
+        "ru": "Управление правами ролей",
+        "ur": "کردار کی اجازتیں منظم کریں"
+      },
+      "role.capability.read": {
+        "uz": "Role huquqlarini ko‘rish",
+        "en": "Role capability catalog read",
+        "ru": "Просмотр каталога прав ролей",
+        "ur": "کردار کی اجازتوں کا کیٹلاگ دیکھیں"
+      },
+      "rps.batch.manage": {
+        "uz": "RPS batch boshqarish",
+        "en": "RPS batch manage",
+        "ru": "Управление batch RPS",
+        "ur": "RPS بیچ منظم کرنے کی اجازت"
+      },
+      "supplier.access": {
+        "uz": "Ta'minotchi oynasi",
+        "en": "Supplier workspace",
+        "ru": "Рабочее место поставщика",
+        "ur": "سپلائر کا ورک اسپیس"
+      },
+      "supplier.avatar.manage": {
+        "uz": "Ta'minotchi avatarini boshqarish",
+        "en": "Supplier avatar manage",
+        "ru": "Управление аватаром поставщика",
+        "ur": "سپلائر کی تصویر منظم کرنے کی اجازت"
+      },
+      "werka.access": {
+        "uz": "Omborchi oynasi",
+        "en": "Werka workspace",
+        "ru": "Рабочее место кладовщика",
+        "ur": "ورکا ورک اسپیس"
+      },
+      "werka.code.manage": {
+        "uz": "Omborchi kodini boshqarish",
+        "en": "Werka code manage",
+        "ru": "Управление кодом кладовщика",
+        "ur": "ورکا کوڈ منظم کرنے کی اجازت"
+      }
+    },
     "adminTelegramQrError": {
       "already_registered": {
         "uz": "Bu Telegram user allaqachon ro‘yxatda. QR yangi user qo‘shish uchun.",

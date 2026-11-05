@@ -166,6 +166,26 @@ for (const [name, source] of orderedSources) {
       (extensions[namespace] ??= {})[key] = { uz: values[0], en: values[1], ru: values[2], ur: values[3] ?? urduFor(values[1]) };
     } catch { unsupported.push(`${name}:${match[1]}`); }
   }
+  const statementCases = /\bcase\s+('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*:\s*return\s+_t\s*\(/g;
+  for (const match of source.matchAll(statementCases)) {
+    try {
+      const key = literal(source, match.index + match[0].indexOf(match[1])).value;
+      let position = match.index + match[0].length; const values = [];
+      while (values.length < 4) {
+        const item = literal(source, position);
+        if (item.interpolation) throw new Error('Interpolated switch value');
+        values.push(item.value); position = whitespace(source, item.end);
+        if (source[position] !== ',') break;
+        position = whitespace(source, position + 1);
+        if (source[position] === ')') break;
+      }
+      if (values.length < 3 || source[position] !== ')') throw new Error('Unsupported switch translation');
+      const owners = [...source.slice(0, match.index).matchAll(/^\s*String\s+(?:get\s+)?(\w+)\s*(?:\(|=>)/gm)];
+      const namespace = owners.at(-1)?.[1];
+      if (!namespace) throw new Error('Unknown translation owner');
+      (extensions[namespace] ??= {})[key] = { uz: values[0], en: values[1], ru: values[2], ur: values[3] ?? urduFor(values[1]) };
+    } catch { unsupported.push(`${name}:${match[1]}`); }
+  }
   if (!/\/(?:admin_|app_localizations_)/.test(name)) continue;
   const nested = /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*:\s*\{/g;
   for (const match of source.matchAll(nested)) {
