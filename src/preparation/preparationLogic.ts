@@ -59,7 +59,7 @@ export function preparationFormulaShareInputs(names: readonly string[], values: 
   if (total !== 100000000n) throw new Error('Shnek ulushlari jami 100% bo‘lishi kerak');
   return shares;
 }
-/** @v2 _lineError */
+// V2 _PreparationForms._lineError (the ledger does not parse nullable-return extensions).
 export function preparationConsumptionLineError(orderKg: string, percent: string, availableKg: string): string | null {
   try {
     return preparationDecimal(preparationRequiredKg(orderKg, percent)) > preparationDecimal(availableKg, true)
