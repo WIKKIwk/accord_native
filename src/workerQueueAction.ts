@@ -128,7 +128,7 @@ function validRezkaMergeState(control: Obj, actions: string[]): boolean {
   return true;
 }
 
-export function queueActionControlState(raw: unknown): Obj | null {
+export function queueActionControlState(raw: unknown, contractOnly = false): Obj | null {
   const state = object(raw), control = object(state?.control), interaction = object(control?.interaction);
   if (!state || !control || !interaction || !object(state.stage_states) || typeof state.apparatus !== 'string' ||
       typeof state.order_id !== 'string' || typeof state.queue_state !== 'string' || !Array.isArray(control.allowed_actions)) return null;
@@ -155,7 +155,7 @@ export function queueActionControlState(raw: unknown): Obj | null {
     ...(freeze ? { freeze_request: { ...freeze, status: String(freeze.status ?? '').trim().toLowerCase() } } : {}),
     ...(hold ? { print_preflight: hold } : {}) };
   if (!validOrderControl({ ok: true, control_state: { ...state, scope: '__action__',
-    queue_state: state.queue_state.trim(), control: normalizedControl } }, state.apparatus, state.order_id, null)) return null;
+    queue_state: state.queue_state.trim(), control: normalizedControl } }, state.apparatus, state.order_id, null, contractOnly)) return null;
   const stages = state.order_id === state.order_id.trim() ? Object.fromEntries(Object.entries(state.stage_states)
     .filter(([key]) => !!key.trim()).map(([key, value]) => [key.trim(), String(value).trim().toLowerCase()])) : {};
   return { ...state, control: { ...normalizedControl, state: control.state.trim() }, stage_states: stages };

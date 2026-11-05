@@ -35,3 +35,29 @@ test('canonical snapshot rejects malformed global queue controls', () => {
     assert.throws(() => decoder.decodeCanonicalProductionMapSnapshot(value, true));
   }
 });
+
+test('snapshot accepts a valid freeze request independently of global consistency', () => {
+  const api = load('productionMapSnapshot', { './authorizedFetch': {} });
+  const station = 'apparatus:default:press', order = 'order';
+  const wire = { maps: [], sequences: {}, visible_order_ids: { [station]: [order] }, queue_states: {}, queue_policies: [], stage_states: {},
+    order_controls: { [order]: { state: 'freeze_requested' } }, frozen_orders_by_apparatus: {},
+    queue_action_controls: { [station]: { [order]: { state: 'in_progress', allowed_actions: ['pause'], previous_stage_ready: false,
+      complete_requires_full_report: false, interaction: { mode: 'freeze_requested', start_materials_mode: 'hidden', material_scan_required: false,
+        assigned_materials_display_only: true, material_intake_allowed: false, previous_wip_mode: 'not_required', qolip_mode: 'not_required', blocking_reason_code: 'order_freeze_requested' },
+      freeze_request: { request_id: 'freeze-1', status: 'pending', target_session_id: 'session-1', target_apparatus: station } } } } };
+  const snapshot = api.decodeCanonicalProductionMapSnapshot(wire);
+  assert.equal(snapshot.queue_action_controls[station][order].interaction.mode, 'freeze_requested');
+  delete wire.queue_action_controls[station][order].freeze_request.request_id;
+  assert.throws(() => api.decodeCanonicalProductionMapSnapshot(wire), e => e.code === 'production_map_snapshot_contract_invalid');
+});
+
+test('snapshot accepts a frozen queue control without forcing an active global order', () => {
+  const api = load('productionMapSnapshot', { './authorizedFetch': {} });
+  const station = 'apparatus:default:press', order = 'order';
+  const wire = { maps: [], sequences: {}, visible_order_ids: { [station]: [order] }, queue_states: { [station]: { [order]: 'frozen' } },
+    queue_policies: [], stage_states: {}, order_controls: { [order]: { state: 'frozen' } }, frozen_orders_by_apparatus: {},
+    queue_action_controls: { [station]: { [order]: { state: 'frozen', allowed_actions: [], previous_stage_ready: false, complete_requires_full_report: false,
+      interaction: { mode: 'frozen', start_materials_mode: 'hidden', material_scan_required: false, assigned_materials_display_only: true,
+        material_intake_allowed: false, previous_wip_mode: 'not_required', qolip_mode: 'not_required' } } } } };
+  assert.equal(api.decodeCanonicalProductionMapSnapshot(wire).queue_action_controls[station][order].state, 'frozen');
+});

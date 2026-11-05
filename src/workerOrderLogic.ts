@@ -63,7 +63,7 @@ export function materialStartReadiness(interaction: Obj, section: Obj | undefine
 }
 
 /** Only a scoped, current server control can enable production actions. */
-export function validOrderControl(bootstrap: Obj | null, apparatus: string, orderId: string, baseline: QueueCursor | null): boolean {
+export function validOrderControl(bootstrap: Obj | null, apparatus: string, orderId: string, baseline: QueueCursor | null, contractOnly = false): boolean {
   const state = bootstrap?.control_state;
   const control = state?.control;
   if (bootstrap?.ok !== true || !state || state.apparatus !== apparatus || state.order_id !== orderId ||
@@ -133,6 +133,15 @@ export function validOrderControl(bootstrap: Obj | null, apparatus: string, orde
   if (hold && ['held', 'running'].includes(hold.status) &&
       !(control.state === 'print_preflight' && ((mode === 'fresh_start_blocked' && !control.allowed_actions.length) ||
         (mode === 'freeze_requested' && control.allowed_actions.length === 1 && control.allowed_actions[0] === 'freeze')))) return false;
+  if (mode === 'freeze_requested') {
+    const request = control.freeze_request;
+    const wildcard = request && (request.scope ?? 'order') === 'order' && !request.stage_node_id && !request.target_apparatus && !request.target_session_id && !request.target_worker_ref;
+    if (!request || typeof request.request_id !== 'string' || !request.request_id.trim() ||
+        String(request.status ?? '').trim().toLowerCase() !== 'pending' ||
+        (!String(request.target_apparatus ?? '').trim() && !wildcard) ||
+        (control.state !== 'print_preflight' && !wildcard && !String(request.target_session_id ?? '').trim())) return false;
+  }
+  if (contractOnly) return true;
   let orderControl = state.order_control;
   if (orderControl === 'active' && ['frozen', 'freeze_requested'].includes(control.stage_control_state)) {
     if (!String(control.stage_node_id ?? '').trim()) return false;

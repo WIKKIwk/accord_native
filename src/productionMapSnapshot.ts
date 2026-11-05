@@ -124,7 +124,7 @@ function actionControls(raw: unknown, states: Obj, stages: Obj): Obj {
       if (!id || !control) return fail('invalid queue action control');
       const queueState = states[station]?.[id] ?? control.state;
       const normalized = queueActionControlState({ apparatus: station, order_id: id, queue_state: queueState,
-        order_control: 'active', epoch: '__snapshot__', scope: '__snapshot__', rev: 0, stage_states: stages[id] ?? {}, control });
+        order_control: 'active', epoch: '__snapshot__', scope: '__snapshot__', rev: 0, stage_states: stages[id] ?? {}, control }, true);
       if (!normalized) return fail('queue_action_controls contains an invalid order control');
       result[station][id] = normalized.control;
     }
