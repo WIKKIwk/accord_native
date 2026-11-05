@@ -128,6 +128,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminScannedWips` | V2 returns an empty list in test mode |
 | `adminTransferProductionMapOrder` | V2 validates and applies an in-memory transfer and idempotency receipt |
 | `adminUnlinkRawMaterialAssignment` | V2 removes unlocked in-memory assignments and preserves locked ones |
+| `adminValidateProductionMapQolipDetails` | V2 validates in-memory production maps and qolip catalog |
 | `adminRezkaAstatkaReport` | V2 validates the apparatus and stores or replays an in-memory report |
 | `adminRezkaAstatkaSnapshot` | V2 derives its session and stage from in-memory queue state and replays stored reports |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
