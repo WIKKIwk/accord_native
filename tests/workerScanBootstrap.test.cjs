@@ -117,3 +117,33 @@ test('scoped candidate pages require matching scope, unique identities and valid
   assert.equal(parsed.sections.input_progress.status, 'incomplete');
   assert.equal(parsed.sections.materials.status, 'ready');
 });
+
+test('scan bootstrap rejects malformed global context even outside the selected order', () => {
+  const { api } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
+  for (const edit of [
+    value => { delete value.queue_context.sequences; },
+    value => { delete value.queue_context.visible_order_ids; },
+    value => { value.queue_context.queue_policies = {}; },
+    value => { value.queue_context.order_controls.other = { state: 'unknown' }; },
+    value => { value.queue_context.queue_states['apparatus:default:other'] = { other: 'unknown' }; },
+    value => { value.queue_context.sequences['bad apparatus'] = ['other']; },
+    value => { value.queue_context.queue_action_controls['bad apparatus'] = {}; },
+    value => { value.queue_context.stage_states.other = { stage: 'unknown' }; },
+    value => { value.queue_context.queue_action_controls[station].other = { ...value.control_state.control, state: 'unknown' }; },
+    value => { value.queue_context.queue_action_controls[station].other = { ...value.control_state.control, allowed_actions: ['unexpected'] }; },
+    value => { value.queue_context.queue_states[station].other = 'paused';
+      value.queue_context.queue_action_controls[station].other = { ...value.control_state.control }; },
+  ]) {
+    const value = fixture(); edit(value);
+    assert.throws(() => api.parseWorkerScanBootstrap(value, station, order, qr), error => error.code === 'production_map_snapshot_contract_invalid');
+  }
+});
+
+test('scan bootstrap returns a typed validated batch with the proven input route', () => {
+  const { api } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
+  const value = fixture();
+  const result = api.parseWorkerScanBootstrap(value, station, order, qr);
+  assert.equal(result.validated_progress.batch.has_input_route_metadata, true);
+  assert.deepEqual(result.validated_progress.batch.input_route, result.validated_progress.input_route);
+  assert.ok(result.validated_progress.batch.input_route.consumer_apparatus_ids.includes(station));
+});

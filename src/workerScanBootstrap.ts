@@ -131,12 +131,59 @@ function completeInput(section: unknown, state: Obj): boolean {
 function validateContext(raw: unknown, state: Obj) {
   const context = object(raw), station = state.apparatus, order = state.order_id;
   if (!context || context.ok !== true || !Array.isArray(context.maps) || !object(context.stage_states) ||
+      !object(context.sequences) || !object(context.visible_order_ids) || !object(context.queue_states) ||
+      !object(context.queue_action_controls) || !Array.isArray(context.queue_policies) || !object(context.order_controls) ||
       context.epoch !== state.epoch || context.rev !== state.rev || context.scope !== state.scope ||
       context.queue_states?.[station]?.[order] !== state.queue_state ||
       (context.order_controls?.[order]?.state ?? 'active') !== state.order_control ||
       !equal(context.stage_states[order] ?? {}, state.stage_states) ||
       !object(context.queue_action_controls?.[station]?.[order]) ||
       !equal(context.queue_action_controls[station][order], state.control)) throw invalid('invalid scan queue context');
+  for (const field of ['sequences', 'visible_order_ids']) {
+    for (const [apparatus, ids] of Object.entries(context[field])) {
+      if (!isCanonicalApparatusId(apparatus.trim()) || !Array.isArray(ids) ||
+          ids.some(id => typeof id !== 'string' || !id.trim())) throw invalid(`invalid scan ${field}`);
+    }
+  }
+  const knownStates = new Set(['pending', 'print_preflight', 'in_progress', 'paused', 'frozen', 'completed']);
+  for (const [apparatus, rawStates] of Object.entries(context.queue_states)) {
+    const states = object(rawStates);
+    if (!isCanonicalApparatusId(apparatus.trim()) || !states || Object.entries(states).some(([id, value]) =>
+      !id.trim() || typeof value !== 'string' || !knownStates.has(value.trim().toLowerCase()))) throw invalid('invalid scan queue states');
+  }
+  for (const [apparatus, rawControls] of Object.entries(context.queue_action_controls)) {
+    const controls = object(rawControls);
+    if (!isCanonicalApparatusId(apparatus.trim()) || !controls || Object.entries(controls).some(([id, value]) =>
+      !id.trim() || !object(value))) throw invalid('invalid scan action controls');
+    for (const [id, value] of Object.entries(controls)) {
+      const control = object(value)!;
+      const queueState = context.queue_states[apparatus]?.[id];
+      if (typeof control.state !== 'string' || !knownStates.has(control.state.trim().toLowerCase()) ||
+          !Array.isArray(control.allowed_actions) || control.allowed_actions.some((action: unknown) =>
+            typeof action !== 'string' || !['start', 'pause', 'detach_roll', 'merge', 'resume', 'roll_complete', 'complete', 'freeze'].includes(action.trim())) ||
+          !object(control.interaction) || typeof control.previous_stage_ready !== 'boolean' ||
+          typeof control.complete_requires_full_report !== 'boolean' ||
+          (typeof queueState === 'string' && queueState.trim() && queueState.trim().toLowerCase() !== control.state.trim().toLowerCase())) {
+        throw invalid('invalid scan action control');
+      }
+    }
+  }
+  for (const [id, value] of Object.entries(context.stage_states)) {
+    const stages = object(value);
+    if (!id.trim() || !stages) continue;
+    if (Object.entries(stages).some(([stage, status]) => stage.trim() && !knownStates.has(String(status).trim().toLowerCase()))) {
+      throw invalid('invalid scan stage state');
+    }
+  }
+  if (context.queue_policies.some((rawPolicy: unknown) => {
+    const policy = object(rawPolicy);
+    return !policy || typeof policy.apparatus_id !== 'string' || !isCanonicalApparatusId(policy.apparatus_id.trim()) ||
+      typeof policy.policy !== 'string' || !['strict_sequence', 'free_pick'].includes(policy.policy.trim());
+  }) || Object.entries(context.order_controls).some(([id, value]) => {
+    const control = object(value);
+    return !id.trim() || !control || typeof control.state !== 'string' ||
+      !['active', 'freeze_requested', 'frozen'].includes(control.state.trim());
+  })) throw invalid('invalid scan queue policies or order controls');
   const ids = context.maps.map((row: unknown) => {
     const entry = object(row), map = object(entry?.map);
     if (!entry || !map || !object(entry.program) || typeof map.id !== 'string') throw invalid('invalid scan queue map');
@@ -152,16 +199,19 @@ function validateProgress(raw: unknown, state: Obj, qr: string) {
       batch.order_id !== state.order_id || !qr.trim() || typeof batch.qr_payload !== 'string' ||
       batch.qr_payload.trim().toUpperCase() !== qr.trim().toUpperCase() || batch.wip_status !== 'waiting' ||
       !validBatch(batch) || !route || (proof.input_route_error != null && proof.input_route_error !== '')) throw invalid('invalid scan progress proof');
-  if (!progressInputRoute(route).consumer_apparatus_ids.includes(state.apparatus)) throw invalid('invalid scan progress route');
+  const inputRoute = progressInputRoute(route);
+  if (!inputRoute.consumer_apparatus_ids.includes(state.apparatus)) throw invalid('invalid scan progress route');
+  return { ...proof, batch: progressBatchFromJson(batch, { inputRoute, hasInputRouteMetadata: true }), input_route: inputRoute };
 }
 
 export function parseWorkerScanBootstrap(raw: unknown, apparatus: string, orderId: string, qrPayload = ''): Obj {
   const data = object(raw), state = object(data?.control_state);
   if (!data || !state || !object(state.stage_states) || !validOrderControl(data, apparatus, orderId, null)) throw invalid('invalid scan bootstrap control');
   if (Object.hasOwn(data, 'queue_context')) validateContext(data.queue_context, state);
-  if (Object.hasOwn(data, 'validated_progress')) validateProgress(data.validated_progress, state, qrPayload);
+  const validatedProgress = Object.hasOwn(data, 'validated_progress') ? validateProgress(data.validated_progress, state, qrPayload) : undefined;
   const sections = object(data.sections) ?? {};
-  const result = { ...data, sections: { ...sections } };
+  const result: Obj = { ...data, sections: { ...sections } };
+  if (validatedProgress) result.validated_progress = validatedProgress;
   for (const [name, valid] of [
     ['materials', completeMaterials(object(sections.materials)?.status === 'ready' ? sections.materials.data : null, orderId)],
     ['qolips', completeQolips(object(sections.qolips)?.status === 'ready' ? sections.qolips.data : null, state.control.interaction)],
