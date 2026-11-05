@@ -26,6 +26,7 @@ These are defaults, and the user can change any of them.
 | D12 | Known V2 bugs and missing features are fixed in V4, not V2, after the 1:1 port and in separate commits with a Deviations row. | The V2 comparison stays clean and V2 stays frozen |
 | D13 | GoDEX printing is not ported (user, 2026-11-05). `GodexRpsRenderer.kt` and V2's GoDEX test method stay out; the Android USB path supports Zebra. GoDEX names still in `src/workerPrinter.ts`, `src/workerPrintJob.ts`, `src/workerQueueAction.ts`, `src/shared/printApi.ts` and `src/printing/printModels.ts` are for the aparatchi audit to review. | GoDEX is archived and no longer used |
 | D14 | Base screens get their own sessions, `base-ios` and `base-android`, next to `preparation`. They compare the existing login, profile, settings and PIN screens with V2 and fill the gaps instead of rewriting them. | Profile is nearly finished on both platforms, and a role cannot be tested on a phone without these screens |
+| D16 | A wire session finishes what logic and screen sessions list under "Needs from the integrator". `base-wire` owns the shared login, profile, PIN and app-entry files, so no two sessions edit them at once. | Both base screen sessions stopped at the same shared files |
 | D15 | No simulators or emulators, and no stubs or fake behaviour for them (user, 2026-11-05). The user tests on real phones. | The user wants real behaviour only |
 
 ## Roles
@@ -34,8 +35,8 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 
 | Role | Logic | Android | iOS | Audit | Notes |
 |---|---|---|---|---|---|
-| base | 2/2 | | | | Shared API done except the push-token part of `logout`. Open rows are in `status/base.md`; most belong to the role and screen sessions that use them |
-| preparation | | | | | Suggested first trial of the whole cycle. The QR label reprint in the production screen needs printing, which waits for a development build |
+| base | 2/2 | partial | partial | | Shared API done except the push-token part of `logout`. Open rows are in `status/base.md`; most belong to the role and screen sessions that use them |
+| preparation | 1/1, wiring open | | | | All 26 listed API methods are tagged. Open rows are in `status/preparation.md`; not yet in `DONE_ROLES.txt` |
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
@@ -51,7 +52,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 
 ## Open items
 
-The merged sessions keep their own rows in `status/base.md`, `status/build.md` and `status/printer.md`.
+The merged sessions keep their own rows in `docs/port/status/`: `base`, `base-ios`, `base-android`, `build`, `printer` and `preparation`.
 
 | Where | V2 reference | What is needed |
 |---|---|---|

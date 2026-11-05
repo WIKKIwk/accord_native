@@ -70,6 +70,7 @@ branch mergeable.
   | `<id>` | `src/<domain>/**`, existing files of this role, `tests/<domain>*.test.cjs`, `tests/contracts/*.json`, `docs/port/roles/<id>.md` |
   | `<id>-android`, `<id>-ios` | What the screen skill's scope fence says |
   | `<id>-audit` | Only its status file. No code |
+  | `base-wire`, `preparation` in its wiring turn | What "Wire session" below says |
   | `build` | `app.json`, `eas.json`, `package.json`, `package-lock.json`, `docs/port/BUILD.md` |
   | `printer` | `modules/accord-printer/**`, `src/printing/**`, `tests/printing*.test.cjs`, the `android.permissions` and `ios.infoPlist` keys of `app.json` |
 
@@ -93,6 +94,26 @@ this keeps parallel sessions from writing them twice. Own role routing as well: 
 `AppRouter.canOpenRoute`, and make `src/app/index.tsx` redirect by role and platform (D7) through one table that
 a later role extends with one line. A role with no V4 screens yet shows one plain message telling the user to
 keep using V2. Do all parts of `base` in this session. Done means every method `shared` lists is ported or has an open item, and the gates pass. `logout` is ported except its push-token reader, which waits for a Firebase config only the user can add: keep it as an open item and do not block on it.
+
+## Wire session
+
+Logic and screen sessions stop at their fences and list the rest under "Needs from the integrator". A wire session
+finishes those rows. V2 is the spec. Change what exists instead of rewriting it, add no stubs or fake behaviour, and
+move each finished row out of the status file it came from. Update an existing test only where it asserts behaviour
+V2 does not have, and say so in your report. Do not edit a file of a role other than the one named below.
+
+**`base-wire`** closes the rows in `docs/port/status/base.md`, `base-ios.md` and `base-android.md` that are about
+login, the saved-account chooser and welcome entry, profile, settings, PIN, app lock, theme and locale. It may write
+`src/app/index.tsx`, `src/app/_layout.tsx`, `src/auth.ts`, `src/shared/**`, the profile, login, PIN, settings and
+security files in `src/` and `src/components/` on both platforms, and their tests. Keep these as open items: the
+Firebase push token, the native APK installer, and rows that name worker files (they go to `aparatchi`).
+
+**`preparation`** closes the rows in `docs/port/status/preparation.md`, including the shared `searchMatches` and
+`AdminSequenceApparatusStore` as new files in `src/shared/`, starting `PreparationOrdersWarmStore` from a new
+`src/preparation/preparationRuntime.ts` with one import line in `src/app/index.tsx`, the inventory-movements route,
+the printer connection, the text inventory and the remaining test triage. Add one line to `homeTargets` in
+`src/shared/appRoutes.ts`: `/ios-preparation` and `/android-preparation`. Screens stay with the `preparation-ios`
+and `preparation-android` sessions. Keep real-printer checks and native WebSocket pings as open items.
 
 ## Build session
 

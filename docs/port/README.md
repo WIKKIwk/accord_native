@@ -60,6 +60,8 @@ deb ayting. U branch'ni `main` ga qo'shadi, testlarni yuritadi va keyingi qadamn
 | 3 | `base-ios` | `$accord-port-ios mavjud login, profil, sozlamalar va PIN ekranlarini docs/port/roles/base.md va V2 bilan solishtir, faqat kamini to'ldir, qayta yozma` | `base` qo'shilgach |
 | 3 | `base-android` | `$accord-port-android mavjud login, profil, sozlamalar va PIN ekranlarini docs/port/roles/base.md va V2 bilan solishtir, faqat kamini to'ldir, qayta yozma` | `base` qo'shilgach |
 | 3 | `boyoqchi`, `customer`, `supplier`, `homashyo` | `$accord-port <nom> rolini port qil` | `base` qo'shilgach, `preparation` bilan birga |
+| 4 | `base-wire` | `$accord-port "Wire session" bo'limi bo'yicha base-wire ishini bajar` | `base-ios` va `base-android` qo'shilgach |
+| 4 | `preparation` (o'sha papka va chat) | `$accord-port "Wire session" bo'limi bo'yicha preparation ishini bajar` | `preparation` qo'shilgach |
 | 4 | `preparation-android` | `$accord-port-android preparation rolining ekranlarini docs/port/roles/preparation.md bo'yicha yasa` | `preparation` qo'shilgach |
 | 4 | `preparation-ios` | `$accord-port-ios preparation rolining ekranlarini docs/port/roles/preparation.md bo'yicha yasa` | `preparation` qo'shilgach |
 | 5 | `preparation-audit` | `$accord-port preparation rolini audit qil: V2 bilan solishtir, kodni o'zgartirma` | Ekranlar qo'shilgach |
