@@ -19,6 +19,8 @@ Stopped at: shared API and base logic comparison
 
 | Account switching runtime | `createRuntimeAccountSwitchController`, `SecurityController.saveSwitchPinForCurrentUser` | Connect Firebase push synchronization, security unlock, the shared separate profile-switch PIN store and the platform account-switcher views to the account controller. |
 
+| Application updates | `AppUpdateService`, `NativeAppUpdatePlatform`, `AppUpdateCoordinator` | Manifest and version-policy models are ported; the native installer channel, update service/coordinator and platform dialogs are not yet connected. |
+
 ## Deviations candidates
 
 ## Test mode pending
