@@ -96,3 +96,20 @@ test('legacy full stream snapshots pass through the canonical queue decoder', ()
   assert.equal(decode({ ...context, type: 'snapshot' }, {}).maps[0].map.id, 'zakaz-scan-bootstrap');
   assert.throws(() => decode({ ...context, type: 'snapshot', queue_policies: null }, {}), error => error.code === 'production_map_snapshot_contract_invalid');
 });
+
+test('paused live subscriptions buffer messages and completion in order', () => {
+  const h = socketHarness();
+  try {
+    const messages = [], errors = [], done = [];
+    const subscription = api().adminProductionMapLiveStream(session(), { paged: true })
+      .subscribe(message => messages.push(message.revision), error => errors.push(error), () => done.push(true));
+    subscription.pause();
+    h.sockets[0].emit({ ok: true, type: 'page_ready', epoch: 'server', rev: 1 });
+    h.sockets[0].emit({ ok: true, type: 'page_invalidated', epoch: 'server', rev: 2 });
+    h.sockets[0].close();
+    assert.deepEqual(messages, []); assert.deepEqual(done, []);
+    subscription.resume();
+    assert.deepEqual(messages, [1, 2]); assert.deepEqual(done, [true]); assert.deepEqual(errors, []);
+    subscription();
+  } finally { h.restore(); }
+});

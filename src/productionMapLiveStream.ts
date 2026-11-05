@@ -61,14 +61,17 @@ export function decodeProductionMapLiveMessage(event: Obj, options: { paged?: bo
 }
 
 export type ProductionMapLiveStreamOptions = Omit<ProductionMapLiveOptions, 'delta' | 'notificationsOnly'> & { enableDelta?: boolean };
+export type ProductionMapLiveSubscription = (() => void) & { pause(): void; resume(): void };
 
 // The full-snapshot decoder is tracked separately before this method receives a V2 completion tag.
 export function adminProductionMapLiveStream(session: Session, options: ProductionMapLiveStreamOptions = {}) {
   const token = activeSessionToken(session), scope = sessionReadScope(session), baseUrl = session.baseUrl;
   const current = () => !!token && activeSessionToken(session) === token && sessionReadScope(session) === scope && session.baseUrl === baseUrl;
   return {
-    subscribe(onMessage: (message: Obj) => void, onError: (error: unknown) => void, onDone?: () => void): () => void {
-      let cancelled = false, done = false, generation = 0, socket: WebSocket | null = null, fallback = false;
+    subscribe(onMessage: (message: Obj) => void, onError: (error: unknown) => void, onDone?: () => void): ProductionMapLiveSubscription {
+      let cancelled = false, done = false, paused = false, generation = 0, socket: WebSocket | null = null, fallback = false;
+      const pending: (() => void)[] = [];
+      const dispatch = (event: () => void) => { if (paused) pending.push(event); else event(); };
       const finish = (error?: unknown) => {
         if (cancelled || done) return;
         done = true;
@@ -85,7 +88,7 @@ export function adminProductionMapLiveStream(session: Session, options: Producti
         try { ws = new WebSocket(url.toString()); }
         catch (error) { finish(error); return; }
         socket = ws;
-        ws.onmessage = message => {
+        ws.onmessage = message => dispatch(() => {
           if (cancelled || done || activeGeneration !== generation) return;
           if (!current()) { finish(new WorkerControlException('session_changed', 'Live stream account changed.')); return; }
           let decoded: Obj;
@@ -102,12 +105,19 @@ export function adminProductionMapLiveStream(session: Session, options: Producti
             return;
           }
           onMessage(decoded);
-        };
-        ws.onerror = () => { if (!cancelled && activeGeneration === generation) finish(new Error('Production map live connection failed')); };
-        ws.onclose = () => { if (!cancelled && activeGeneration === generation) finish(); };
+        });
+        ws.onerror = () => dispatch(() => { if (!cancelled && activeGeneration === generation) finish(new Error('Production map live connection failed')); });
+        ws.onclose = () => dispatch(() => { if (!cancelled && activeGeneration === generation) finish(); });
       };
       connect(options.stateDelta === true && (options.compactStateDelta ?? true));
-      return () => { cancelled = true; generation++; const old = socket; socket = null; old?.close(); };
+      const cancel = () => { cancelled = true; generation++; pending.length = 0; const old = socket; socket = null; old?.close(); };
+      return Object.assign(cancel, {
+        pause: () => { if (!cancelled && !done) paused = true; },
+        resume: () => {
+          paused = false;
+          while (!paused && !cancelled && pending.length) pending.shift()!();
+        },
+      });
     },
   };
 }
