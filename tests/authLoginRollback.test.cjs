@@ -258,6 +258,24 @@ test('reauthentication updates the active saved account token', async () => {
   } finally { global.fetch = original; }
 });
 
+test('same-account reauthentication does not rewrite legacy credentials', async () => {
+  const original = global.fetch, values = new Map(); let calls = 0, rejectCredentials = false;
+  const secure = { getItemAsync: async key => values.get(key) ?? null,
+    setItemAsync: async (key, value) => {
+      if (rejectCredentials && key === 'accord_v4_credentials') throw new Error('credentials unavailable');
+      values.set(key, value);
+    }, deleteItemAsync: async key => { values.delete(key); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++calls}`,
+    profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth(secure, 'ios');
+    const session = await api.login('https://example.test', 'phone', 'code');
+    rejectCredentials = true;
+    assert.equal(await api.refreshSession(session, 'token-1'), true);
+    assert.equal(session.token, 'token-2');
+  } finally { global.fetch = original; }
+});
+
 // @v2-test test/mobile_api_saved_accounts_test_helpers_part_01.dart
 test('reauthentication accepts a changed returned identity and activates its saved account', async () => {
   const original = global.fetch; let calls = 0;

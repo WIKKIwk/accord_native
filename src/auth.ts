@@ -379,12 +379,13 @@ export async function refreshSession(session: Session, failedToken: string): Pro
       if (!stillCurrent()) return false;
       const applyRefresh = async (next: Session, phone: string, code: string): Promise<boolean> => {
         if (!stillCurrent()) return false;
-        if (sameIdentity(session, next)) next.imageCacheScope = session.imageCacheScope;
+        const changedIdentity = !sameIdentity(session, next);
+        if (!changedIdentity) next.imageCacheScope = session.imageCacheScope;
         await resetForChangedProfile(session, next);
         if (!stillCurrent()) return false;
         return inStorageOrder(async () => {
           if (!stillCurrent()) return false;
-          await writeCredentials({ baseUrl: next.baseUrl, phone, code, ...identity(next) });
+          if (changedIdentity) await writeCredentials({ baseUrl: next.baseUrl, phone, code, ...identity(next) });
           await writeSession(next);
           if (!stillCurrent()) return false;
           Object.assign(session, next);
