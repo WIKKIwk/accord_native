@@ -38,3 +38,13 @@ test('production map decodes a saved map and its program', async () => {
   assert.equal(result.map.id, 'map');
   assert.deepEqual(result.program.operations, []);
 });
+
+// V2 has no recorded production-map list request; the request follows its source.
+test('production map list fetches and decodes all saved maps', async () => {
+  let url;
+  const client = api(async (_session, requested) => { url = requested;
+    return new Response('[{"map":{"id":"one"},"program":{}},{"map":{"id":"two"},"program":{}}]', { status: 200 }); });
+  const result = await client.adminProductionMaps({});
+  assert.equal(url, '/v1/mobile/admin/production-maps');
+  assert.deepEqual(result.map(item => item.map.id), ['one', 'two']);
+});
