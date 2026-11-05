@@ -1,14 +1,19 @@
 # build
 
-Status: in progress — build configuration prepared; physical installation and EAS account steps remain.
-Stopped at: complete device verification and have the account owner run the EAS steps in `docs/port/BUILD.md`.
+Status: in progress — iOS development build installed and launched alongside V2; Android and EAS distribution remain unverified.
+Stopped at: have the account owner run the EAS steps in `docs/port/BUILD.md` and verify Android installation.
 
 ## Open items
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| EAS and physical devices | Build session goal | The account owner must link EAS, supply signing credentials, build and install the app as described in `docs/port/BUILD.md`. |
+| EAS distribution | Build session | The account owner must link EAS and provide signing credentials to build and distribute the app as described in `docs/port/BUILD.md`. |
 | Local Android build | Build session | Android SDK and Android build tools are not installed on this Mac, so `expo run:android` could not run. |
+| Android physical device | Build session goal | Build and install an Android APK after an Android toolchain or EAS account is available. |
+
+iOS was built locally with an existing development identity and installed on an iPhone 11 Pro that already had V2. Both bundle identifiers were confirmed installed; V4 launched and loaded its JavaScript bundle from Metro. No Expo account command or EAS build was run.
+
+Checks: the Node test suite, default and iOS typechecks, lint, both Expo Go bundles, the iOS native build and prebuild passed. Android typecheck reports the 10 existing errors documented in `PORT.md`. Expo Doctor reports the existing package mismatches below. Ledger check reports the five existing endpoint warnings in `PORT.md`; `role build 1` is unsupported because build is not a ledger role.
 
 ## Deviations candidates
 

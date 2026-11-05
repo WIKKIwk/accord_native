@@ -89,6 +89,11 @@ bu buyruq ilovalarni do‘konlarga avtomatik yubormaydi.
 yaratdi; `ios/` va `android/` generatsiya qilinadi va Git’ga kiritilmaydi. Lokal
 Android build bu Mac’da Android SDK topilmagani uchun ishlatilmadi.
 
+V4 development build’i mavjud lokal sertifikat va provisioning profil bilan iPhone 11
+Pro’da yig‘ilib o‘rnatildi. Shu qurilmada V2 ham saqlangani, V4 ishga tushishi va
+Metro’dan iOS JavaScript to‘plamini yuklashi tekshirildi. Bu lokal tekshiruv EAS
+orqali boshqa qurilmalar uchun imzolash va tarqatish o‘rnini bosmaydi.
+
 `expo-doctor` mavjud loyihadagi yettita SDK paket versiyasi nomuvofiqligini ko‘rsatdi:
 `react-native-safe-area-context`, `@expo/ui`, `expo`, `expo-constants`, `expo-linking`,
 `expo-router` va `expo-splash-screen`. Ularni integrator boshqa parallel ishlarga
