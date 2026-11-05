@@ -114,7 +114,15 @@ function actionControls(raw: unknown, states: Obj, stages: Obj, session?: Sessio
 // Canonical snapshot parsing remains untagged until every optional control and projection branch is reconciled.
 export function decodeCanonicalProductionMapSnapshot(value: unknown, requireMaps = false, session?: Session): Obj {
   const row = object(value); if (!row) return fail('snapshot must be an object');
-  if (row.projection === 'worker_list_v1') return decodeWorkerListSnapshot(row);
+  if (row.projection === 'worker_list_v1') {
+    const compact = decodeWorkerListSnapshot(row);
+    const controls = object(compact.order_controls)!;
+    return { ...compact, maps: [], queue_action_controls: {}, stage_states: {}, stage_order_controls: [],
+      stage_freeze_supported: false, early_closing_order_ids: [], order_customers: {}, order_statuses: {},
+      frozen_orders_by_apparatus: {}, calculation_templates: {},
+      queue_policies: parseApparatusQueuePolicyMap(compact.queue_policies),
+      order_controls: Object.fromEntries(Object.entries(controls).map(([id, control]) => [id.trim(), object(control)!.state])) };
+  }
   const fullLive = Array.isArray(row.completed_orders) && Array.isArray(row.completion_requests) && Array.isArray(row.completion_request_decisions);
   const parseLiveLists = fullLive || requireMaps;
   if (!Object.hasOwn(row, 'visible_order_ids') || row.visible_order_ids == null) {

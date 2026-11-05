@@ -68,6 +68,8 @@ test('a compact snapshot can be reused as the next long-poll cursor', async () =
   });
   const session = { token: 't', baseUrl: 'https://example.test', profile: { role: 'aparatchi' } };
   const snapshot = await client.adminProductionMapQueueSnapshot(session, { worker_scope: true });
+  assert.deepEqual(snapshot.maps, []);
+  assert.equal(snapshot.order_controls['work-1'], wire.order_controls['work-1'].state);
   const result = await client.adminProductionMapQueueSnapshot(session, { worker_scope: true, since: snapshot, wait_for_changes: true });
   assert.equal(result, snapshot);
   assert.equal(nextUrl.searchParams.get('if_rev'), String(wire.rev));

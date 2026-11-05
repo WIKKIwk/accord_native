@@ -36,6 +36,19 @@ test('canonical snapshot rejects malformed global queue controls', () => {
   }
 });
 
+test('compact canonical snapshots expose V2 empty authority fields and typed order controls', () => {
+  const record = loadContract('worker_list_api_test').find(value => value.test.startsWith('worker HTTP and v2 socket'));
+  const wire = JSON.parse(record.responseBody.text);
+  wire.order_controls['work-1'] = { state: 'frozen' };
+  const value = decoder.decodeCanonicalProductionMapSnapshot(wire);
+  assert.equal(value.order_controls['work-1'], 'frozen');
+  assert.deepEqual(value.maps, []);
+  assert.deepEqual(value.queue_action_controls, {});
+  assert.deepEqual(value.stage_states, {});
+  assert.deepEqual(value.calculation_templates, {});
+  assert.equal(value.queue_policies['apparatus:default:bosma_7'].policy, 'strict_sequence');
+});
+
 test('snapshot accepts a valid freeze request independently of global consistency', () => {
   const api = load('productionMapSnapshot', { './authorizedFetch': {} });
   const station = 'apparatus:default:press', order = 'order';
