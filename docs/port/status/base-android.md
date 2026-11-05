@@ -32,6 +32,6 @@ Stopped at: shared profile and security hooks needed for the remaining parity ga
 
 ## Validation
 
-- Android type-check reports the same 10 pre-existing worker errors; no new errors were added. Expo lint and the iOS type-check pass.
+- All 742 project tests, Expo lint, the default type-check and the iOS type-check pass. Android type-check reports the same 10 pre-existing worker errors; no new errors were added.
 - Focused checks cover login helpers, settings selections, biometric busy/offer behavior, disconnect ordering and avatar preview gestures.
 - Not run on a device. Check light and dark mode, keyboard changes, profile editing, avatar zoom, settings selections, biometrics and the hardware back button on an Android phone.

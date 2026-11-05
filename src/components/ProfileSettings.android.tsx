@@ -9,7 +9,7 @@ import { localeController } from '../shared/localization/runtime';
 import type { AppThemeVariant } from '../shared/themeController';
 import { themeController } from '../shared/themeRuntime';
 import { useAppSettings } from './AppSettings';
-import { usePinSetup } from './usePinSetup';
+import { usePinSetup } from './usePinSetup.android';
 
 type Props = { onClose: () => void; onLogout: () => void };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
