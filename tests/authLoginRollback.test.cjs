@@ -198,3 +198,20 @@ test('reauthentication cannot update a saved account while logout owns the accou
     releaseLogout(); await loggingOut;
   } finally { global.fetch = original; }
 });
+
+test('a failed session reset rolls login back to the previous account', async () => {
+  const original = global.fetch;
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth({});
+    const previous = await api.login('https://example.test', 'one', 'code');
+    const unregister = api.registerSessionResetHook(async () => { throw Error('reset failure'); });
+    await assert.rejects(api.login('https://example.test', 'two', 'code'), /reset failure/);
+    assert.equal(api.activeSessionToken(previous), 'token-one');
+    assert.equal(api.testAccountStore.activeAccountId, 'https://example.test|aparatchi|one');
+    unregister();
+  } finally { global.fetch = original; }
+});

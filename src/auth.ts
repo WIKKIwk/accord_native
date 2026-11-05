@@ -194,7 +194,9 @@ export async function clearSession(): Promise<void> {
     webCredentials = null;
     if (Platform.OS !== 'web') await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SESSION_KEY), SecureStore.deleteItemAsync(CREDENTIALS_KEY)]);
   });
-  await Promise.all([resets, storage]);
+  const [results] = await Promise.all([resets, storage]);
+  const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+  if (failure) throw failure.reason;
 }
 
 export async function logout(session: Session): Promise<void> {
@@ -252,7 +254,9 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
         if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
         const previous = previousSession ? identity(previousSession) : null;
         if (previous && (previous.ref !== account.ref || previous.role !== account.role)) {
-          await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+          const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+          const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+          if (failure) throw failure.reason;
         }
         if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
         await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
