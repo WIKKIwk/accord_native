@@ -25,7 +25,10 @@ export function initializeSavedAccounts(baseUrl: string): Promise<SavedAccountSt
     value => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value));
   const pending = (async () => {
     await store.load();
-    await store.migrateLegacySession(baseUrl);
+    if (await store.migrateLegacySession(baseUrl)) {
+      await appPreferences.removeItem('app_session_token');
+      await appPreferences.removeItem('app_session_profile');
+    }
     return store;
   })();
   initialization = pending;
