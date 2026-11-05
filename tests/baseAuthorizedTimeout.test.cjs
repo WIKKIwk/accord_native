@@ -33,3 +33,27 @@ test('each authorized retry gets its own timeout and multipart may opt out', asy
     assert.equal((await transport.authorizedFetch({ ...session }, '/v1/mobile/profile/avatar', {}, undefined, null)).status, 200);
   } finally { global.fetch = original; }
 });
+
+test('the request deadline includes reading the full response body', async () => {
+  const original = global.fetch;
+  global.fetch = async () => new Response(new ReadableStream({ start(controller) {
+    setTimeout(() => { controller.enqueue(new TextEncoder().encode('{"ok":true}')); controller.close(); }, 30);
+  } }), { headers: { 'content-type': 'application/json' } });
+  try {
+    await assert.rejects(api().authorizedFetch({ ...session }, '/v1/mobile/profile', {}, undefined, 2), e => e.name === 'TimeoutError');
+    const response = await api().authorizedFetch({ ...session }, '/v1/mobile/profile', {}, undefined, 100);
+    assert.deepEqual(await response.json(), { ok: true });
+    assert.equal(response.headers.get('content-type'), 'application/json');
+  } finally { global.fetch = original; }
+});
+
+test('streamed uploads may receive headers before their response body completes', async () => {
+  const original = global.fetch; let finish;
+  global.fetch = async () => new Response(new ReadableStream({ start(controller) { finish = () => {
+    controller.enqueue(new TextEncoder().encode('done')); controller.close();
+  }; } }));
+  try {
+    const response = await api().authorizedFetch({ ...session }, '/v1/mobile/profile/avatar', { method: 'POST' }, undefined, null);
+    finish(); assert.equal(await response.text(), 'done');
+  } finally { global.fetch = original; }
+});

@@ -33,9 +33,16 @@ async function authenticatedRequest(session: Session, path: string, init: Reques
         let currentUrl = url, remaining = 5;
         while (true) {
           const response = await fetch(currentUrl.toString(), { ...init, headers, redirect: 'manual', credentials: 'omit' });
-          if (!['GET', 'HEAD'].includes(method) || ![301, 302, 303, 307, 308].includes(response.status)) return response;
+          const complete = async () => {
+            // V2's non-streamed client buffers the response before its request timeout ends.
+            if (timeoutMs != null && typeof response.clone === 'function') await response.clone().arrayBuffer();
+            return response;
+          };
+          if (!['GET', 'HEAD'].includes(method) || ![301, 302, 303, 307, 308].includes(response.status)) {
+            return complete();
+          }
           const location = response.headers.get('location');
-          if (!location) return response;
+          if (!location) return complete();
           if (response.body) await response.arrayBuffer();
           const destination = new URL(location, currentUrl);
           if (destination.protocol !== 'https:' || !destination.hostname || destination.username || destination.password) {
