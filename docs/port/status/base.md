@@ -11,9 +11,16 @@ Stopped at: shared API and base logic comparison
 
 | Notifications | `mobile_api_supplier_notifications.dart` | V2 has no recorded HTTP tests for notification detail, comments, or unannounced responses; source-derived request and parsing tests are in `tests/baseNotificationApi.test.cjs`. |
 
+| `adminConfirmRawMaterialStockReprint`, `qolipPrintCodeQr` | `mobile_api_admin_items_MobileApiAdminItems_methods_03.dart`, `mobile_api_qolip_MobileApiQolip_methods_04.dart` | V2 has no recorded HTTP test for these calls; source-derived request and response tests are in `tests/basePrintApi.test.cjs`. |
+
 ## Deviations candidates
 
 ## Test mode pending
+
+| V4 function | V2 symbol |
+|---|---|
+| `adminPrepareRawMaterialStockReprint`, `adminConfirmRawMaterialStockReprint` | Their in-memory stock matching, lock checks and confirmation branches. |
+| `qolipPrintCodeQr` | Its in-memory qolip lookup and print job branch. |
 
 ## Needs from the integrator
 
