@@ -232,7 +232,6 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   const server = normalizeServer(baseUrl);
   const normalizedPhone = phone.trim();
   const trimmedCode = code.trim();
-  if (!normalizedPhone || !trimmedCode) throw new Error('Telefon raqam va kodni kiriting.');
   const epoch = ++sessionEpoch;
   const previousSession = activeSession;
   const session = await authenticate(server, phone, code);
@@ -250,6 +249,11 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
           phone, code, makeActive: false });
         if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
         await store.activate(saved.id);
+        if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+        const previous = previousSession ? identity(previousSession) : null;
+        if (previous && (previous.ref !== account.ref || previous.role !== account.role)) {
+          await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
+        }
         if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
         await writeCredentials({ baseUrl: server, phone: normalizedPhone, code: trimmedCode, ...account });
         await writeSession(session);

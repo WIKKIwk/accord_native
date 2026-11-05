@@ -156,3 +156,21 @@ test('profile updates synchronize the active saved account', async () => {
     assert.deepEqual(after.account.profile.assigned_apparatus_labels, ['Second']);
   } finally { global.fetch = original; }
 });
+
+test('login resets session-scoped state only when the account identity changes', async () => {
+  const original = global.fetch;
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth({}); let resets = 0;
+    const unregister = api.registerSessionResetHook(async () => { resets++; });
+    await api.login('https://example.test', 'one', 'code');
+    await api.login('https://example.test', 'one', 'code');
+    assert.equal(resets, 0);
+    await api.login('https://example.test', 'two', 'code');
+    assert.equal(resets, 1);
+    unregister();
+  } finally { global.fetch = original; }
+});
