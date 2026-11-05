@@ -8,7 +8,7 @@ type SnapshotOptions = { apparatus?: string; order_id?: string; fresh?: boolean;
   queue_search?: string; since?: Obj | null; wait_for_changes?: boolean };
 const reads = new Map<string, Promise<Obj>>();
 
-// The full canonical decoder and demo store are tracked before this method receives its V2 completion tag.
+/** @v2 adminProductionMapQueueSnapshot */
 export function adminProductionMapQueueSnapshot(session: Session, input: SnapshotOptions = {}): Promise<Obj> {
   if (input.fresh) invalidateQueueSnapshotReads();
   const apparatus = input.apparatus?.trim() ?? '', order = input.order_id?.trim() ?? '';
