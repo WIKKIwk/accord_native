@@ -9,6 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.accord.mobilev4",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "The app uses Bluetooth to find and print labels on the XP-P323B printer.",
+        "NSBluetoothPeripheralUsageDescription": "The app uses Bluetooth to connect to the XP-P323B printer."
+      },
       "icon": "./assets/expo.icon"
     },
     "android": {
