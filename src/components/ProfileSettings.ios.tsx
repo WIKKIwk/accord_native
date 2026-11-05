@@ -59,7 +59,7 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
             {!pin.mode ? <>
               <Button label={pin.security.hasPin ? label('pinChange', 'PIN kodni o‘zgartirish') : label('pinSet', 'PIN kodni o‘rnatish')} systemImage="lock" onPress={() => pin.open('set')} />
               {pin.security.hasPin ? <Button label={label('pinRemove', 'PIN kodni olib tashlash')} systemImage="lock.open" onPress={() => pin.open('remove')} /> : null}
-              <Toggle label={label('biometricEnableTitle', 'Biometrik ochish')} isOn={pin.security.biometric} modifiers={[disabled(!pin.security.hasPin || !pin.security.canUseBiometric || biometricBusy)]}
+              <Toggle label={label('biometricEnableTitle', 'Biometrik ochish')} isOn={pin.security.biometric} modifiers={[disabled(!pin.security.hasPin || biometricBusy)]}
                 onIsOnChange={setBiometric} />
               {!pin.security.canUseBiometric ? <Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>Biometrik ochish qurilma yoki ilovaning ushbu versiyasida mavjud emas.</Text> : null}
             </> : <>

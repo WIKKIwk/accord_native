@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { themeController } from '../shared/themeRuntime';
 import { ProfileAvatar } from './ProfileAvatar';
+import { ProfileAvatarPreview } from './ProfileAvatarPreview.ios';
 import { ProfileSettings } from './ProfileSettings.ios';
 import { ProfileSettingsPreferences } from './ProfileSettingsPreferences.ios';
 import { ProfileSwitchPin } from './ProfileSwitchPin.ios';
@@ -107,16 +108,19 @@ export function ProfileView(props: ProfileViewProps) {
   const details = profileDisplay(snapshot);
   const dark = useColorScheme() === 'dark';
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const { text } = useBaseLocale();
   const switchPin = useSwitchPinSetup(session);
   const closeSettings = () => { if (!switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
-  return <Host style={{ flex: 1 }}>
+  return <><Host style={{ flex: 1 }}>
     <List modifiers={[listStyle('insetGrouped')]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), padding({ vertical: 14 })]}>
         <Spacer />
         <VStack alignment="center" spacing={6}>
           <ZStack alignment="bottomTrailing">
-            <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} size={80} revision={avatarRevision} /></RNHostView>
+            <Button onPress={() => setAvatarOpen(true)} modifiers={[buttonStyle('plain'), accessibilityLabel(text('profileAvatarZoomLabel'))]}>
+              <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} size={80} revision={avatarRevision} /></RNHostView>
+            </Button>
             <BottomSheet isPresented={editing} onIsPresentedChange={(isPresented) => { if (!isPresented) onCloseEditor(); }}
               anchor={<Button onPress={onOpenEditor} modifiers={[
                 buttonStyle('plain'), frame({ width: 32, height: 32 }),
@@ -154,5 +158,8 @@ export function ProfileView(props: ProfileViewProps) {
           onPress={onLogout} modifiers={[buttonStyle('plain')]} />
       </Section>
     </List>
-  </Host>;
+  </Host>
+  <ProfileAvatarPreview visible={avatarOpen} onClose={() => setAvatarOpen(false)} session={session} profile={snapshot.profile}
+    token={avatarToken} revision={avatarRevision} displayName={details.name} />
+  </>;
 }
