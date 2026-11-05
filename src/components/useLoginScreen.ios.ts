@@ -1,5 +1,5 @@
 import { useNativeState } from '@expo/ui';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRuntimeAccountSwitchController, loadSession, login, type Session } from '../auth';
 import { authenticateAccount } from '../authenticateAccount';
 import { MobileApi } from '../mobileApi';
@@ -15,6 +15,12 @@ export function useLoginScreen(onLogin: (session: Session) => void, addAccountMo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const submitting = useRef(false);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const changeCode = (value: string) => {
     const numericPrefix = code.trim().length >= 2 && loginCodeUsesNumericKeyboard(code);
@@ -38,17 +44,18 @@ export function useLoginScreen(onLogin: (session: Session) => void, addAccountMo
           phone: normalizedPhone, code: normalizedCode, werkaHomeBootstrap: account.werka_home });
         const session = await loadSession();
         if (!session) throw new Error('Account session is unavailable');
-        onLogin(session);
+        if (mounted.current) onLogin(session);
       } else {
-        onLogin(await login(server, normalizedPhone, normalizedCode));
+        const session = await login(server, normalizedPhone, normalizedCode);
+        if (mounted.current) onLogin(session);
       }
     } catch (failure) {
-      setError(loginFailureMessage(failure, {
+      if (mounted.current) setError(loginFailureMessage(failure, {
         loginConnectionFailed: text('loginConnectionFailed'), loginFailed: text('loginFailed'),
       }));
     } finally {
       submitting.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
 

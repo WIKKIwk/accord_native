@@ -2,6 +2,7 @@ import { Button, FieldGroup, Host, Text as ExpoText, TextInput } from '@expo/ui'
 import { ActivityIndicator, PlatformColor, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from './auth';
+import { useLoginBackGesture } from './components/useLoginBackGesture.ios';
 import { useLoginScreen } from './components/useLoginScreen.ios';
 
 type Props = { onLogin: (session: Session) => void; onBack?: () => void; addAccountMode?: boolean };
@@ -9,11 +10,12 @@ type Props = { onLogin: (session: Session) => void; onBack?: () => void; addAcco
 // @v2 LoginScreen
 export function LoginScreen({ onLogin, onBack, addAccountMode = false }: Props) {
   const form = useLoginScreen(onLogin, addAccountMode);
-  return <SafeAreaView style={[styles.page, { backgroundColor: PlatformColor('systemGroupedBackground') }]} edges={['top', 'bottom']}>
+  const backGesture = useLoginBackGesture(onBack);
+  return <SafeAreaView {...backGesture.panHandlers} style={[styles.page, { backgroundColor: PlatformColor('systemGroupedBackground') }]} edges={['top', 'bottom']}>
     <Host style={styles.page}>
       <FieldGroup>
         <FieldGroup.Section>
-          {onBack ? <Button label={form.text('closeAction')} disabled={form.busy} onPress={onBack} /> : null}
+          {onBack ? <Button label={form.text('closeAction')} onPress={onBack} /> : null}
           <ExpoText textStyle={{ fontSize: 28, fontWeight: '700' }}>Accord</ExpoText>
           <ExpoText>{form.text(addAccountMode ? 'addProfileTitle' : 'signInTitle')}</ExpoText>
         </FieldGroup.Section>
