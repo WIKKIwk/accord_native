@@ -1,0 +1,474 @@
+{
+ "source": "test/preparation_material_management_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "Tayyorlov home opens own-material page, excludes shared catalog, searches",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\"],\"assigned_warehouses\":[\"Own\"],\"material_warehouses\":[\"Own\"],\"materials\":[{\"item_code\":\"SHARED\",\"name\":\"Shared catalog item\",\"can_receive\":false}],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "Tayyorlov home opens own-material page, excludes shared catalog, searches",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "rename prefilled own material, duplicate=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "rename prefilled own material, duplicate=false",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"name\":\"New glue\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"name\":\"New glue\"}"
+   }
+  },
+  {
+   "test": "rename prefilled own material, duplicate=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "rename prefilled own material, duplicate=true",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"name\":\"New glue\"}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"preparation_material_name_taken\",\"error\":\"dhsjkl\"}"
+   }
+  },
+  {
+   "test": "delete requires confirmation and removes only on success, blocked=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "delete requires confirmation and removes only on success, blocked=false",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials?item_code=PREP-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"deleted\":true}"
+   }
+  },
+  {
+   "test": "delete requires confirmation and removes only on success, blocked=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "delete requires confirmation and removes only on success, blocked=true",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials?item_code=PREP-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"preparation_material_in_use\"}"
+   }
+  },
+  {
+   "test": "failed list is readable and retry shows an empty state",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "dhsjkl"
+   }
+  },
+  {
+   "test": "failed list is readable and retry shows an empty state",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[]}"
+   }
+  },
+  {
+   "test": "no refresh or duplicate back button; pull keeps default animation mounted",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "no refresh or duplicate back button; pull keeps default animation mounted",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[]}"
+   }
+  },
+  {
+   "test": "no refresh or duplicate back button; pull keeps default animation mounted",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[]}"
+   }
+  },
+  {
+   "test": "three-dot warehouse editing uses exclusive choices, blocked=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "three-dot warehouse editing uses exclusive choices, blocked=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\",\"Second\",\"Other\",\"Shared\"],\"material_warehouses\":[\"Own\",\"Second\"],\"materials\":[],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "three-dot warehouse editing uses exclusive choices, blocked=false",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials/warehouses",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"warehouses\":[\"Second\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Second\"]}"
+   }
+  },
+  {
+   "test": "three-dot warehouse editing uses exclusive choices, blocked=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "three-dot warehouse editing uses exclusive choices, blocked=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Own\",\"Second\",\"Other\",\"Shared\"],\"material_warehouses\":[\"Own\",\"Second\"],\"materials\":[],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "three-dot warehouse editing uses exclusive choices, blocked=true",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials/warehouses",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"warehouses\":[\"Second\"]}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"preparation_material_warehouse_in_use\",\"error\":\"dhsjkl\"}"
+   }
+  },
+  {
+   "test": "warehouse sheet cancellation does not save; can unlink an unused material",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"materials\":[{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[\"Own\"]},{\"item_code\":\"PREP-2\",\"name\":\"Un\",\"warehouses\":[\"Own\"]}]}"
+   }
+  },
+  {
+   "test": "warehouse sheet cancellation does not save; can unlink an unused material",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"material_warehouses\":[\"Own\"],\"materials\":[],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "warehouse sheet cancellation does not save; can unlink an unused material",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"material_warehouses\":[\"Own\"],\"materials\":[],\"orders\":[],\"history\":[]}"
+   }
+  },
+  {
+   "test": "warehouse sheet cancellation does not save; can unlink an unused material",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/materials/warehouses",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"warehouses\":[]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"item_code\":\"PREP-1\",\"name\":\"Kley\",\"warehouses\":[]}"
+   }
+  }
+ ]
+}

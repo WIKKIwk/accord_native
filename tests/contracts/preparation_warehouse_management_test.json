@@ -1,0 +1,57 @@
+{
+ "source": "test/preparation_warehouse_management_test.dart",
+ "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "records": [
+  {
+   "test": "warehouse errors are readable: preparation_warehouse_name_taken",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/warehouses",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"warehouse\":\"Child\",\"name\":\"Own\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"code\":\"preparation_warehouse_name_taken\",\"error\":\"dhsjkl\"}"
+   }
+  },
+  {
+   "test": "warehouse errors are readable: preparation_warehouse_not_exclusive",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/warehouses",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"warehouse\":\"Child\",\"name\":\"Own\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"code\":\"preparation_warehouse_not_exclusive\",\"error\":\"dhsjkl\"}"
+   }
+  },
+  {
+   "test": "warehouse errors are readable: unknown",
+   "method": "PATCH",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/warehouses",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"warehouse\":\"Child\",\"name\":\"Own\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"code\":\"unknown\",\"error\":\"dhsjkl\"}"
+   }
+  }
+ ]
+}
