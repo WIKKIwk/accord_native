@@ -73,3 +73,20 @@ test('worker detail rejects inconsistent canonical action authority', async () =
   const api = load('workerDetailApi', { './authorizedFetch': auth });
   await assert.rejects(api.workerProductionOrderDetail({}, station, order), error => error.code === 'production_map_snapshot_contract_invalid');
 });
+
+test('worker detail returns the decoded snapshot rather than raw wire values', async () => {
+  const { loadContract } = require('./support/contractFetch.cjs');
+  const record = loadContract('worker_list_api_test').find(value => value.test === 'worker single detail requests one ID and returns full action authority');
+  const wire = JSON.parse(record.responseBody.text);
+  wire.queue_action_controls[station][order].allowed_actions = [' start ', 'start'];
+  wire.queue_states[station][order] = ' PENDING ';
+  wire.stage_states[order] = { ' stage ': ' COMPLETED ' };
+  wire.order_controls[order] = { state: 'active' };
+  const auth = { authorizedFetch: async () => ({ status: 200, json: async () => wire }) };
+  const api = load('workerDetailApi', { './authorizedFetch': auth });
+  const result = await api.workerProductionOrderDetail({}, station, order);
+  assert.deepEqual(result.queue_action_controls[station][order].allowed_actions, ['start']);
+  assert.equal(result.queue_states[station][order], 'pending');
+  assert.deepEqual(result.stage_states[order], { stage: 'completed' });
+  assert.equal(result.order_controls[order], 'active');
+});
