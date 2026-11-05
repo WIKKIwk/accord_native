@@ -31,7 +31,8 @@ function load(fetch = async () => { throw new Error('unexpected request'); }) {
   const progressApi = new Module(apiFile, module);
   progressApi.filename = apiFile; progressApi.paths = module.paths;
   progressApi.require = id => id === './authorizedFetch' ? { authorizedFetch: fetch } : id === './sessionReadScope' ? scope.exports :
-    id === './workerControlsApi' ? controls.exports : id === './workerProgressBatch' ? batch.exports : require(id);
+    id === './workerControlsApi' ? controls.exports : id === './workerProgressBatch' ? batch.exports :
+    id === './productionMapQueueSnapshotApi' ? { adminProductionMapQueueSnapshot: async () => { throw new Error('unexpected snapshot request'); } } : require(id);
   progressApi._compile(ts.transpileModule(fs.readFileSync(apiFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, apiFile);
   const apparatusFile = path.resolve(__dirname, '../src/apparatusApi.ts');
   const apparatus = new Module(apparatusFile, module);
