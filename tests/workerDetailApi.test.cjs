@@ -10,7 +10,7 @@ function load(name, mocks = {}) {
   const filename = path.resolve(__dirname, `../src/${name}.ts`);
   const loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
-  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./') ? load(id.slice(2), mocks) : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return loaded.exports;
 }
@@ -62,4 +62,14 @@ test('worker overview retries a stale detail and rejects a changed session scope
     './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerSnapshot': {}, './sessionReadScope': scope, './apparatusApi': {},
     './workerDetailApi': { workerProductionOrderDetail: async () => { session.profile.ref = 'other'; return { epoch: 'e', rev: 4 }; } } });
   await assert.rejects(stale.readWorkerOrderDetail(session, station, order, { epoch: 'e', rev: 3 }, new AbortController().signal), /Sessiya/);
+});
+
+test('worker detail rejects inconsistent canonical action authority', async () => {
+  const { loadContract } = require('./support/contractFetch.cjs');
+  const record = loadContract('worker_list_api_test').find(value => value.test === 'worker single detail requests one ID and returns full action authority');
+  const wire = JSON.parse(record.responseBody.text);
+  wire.queue_action_controls[station][order].state = 'paused';
+  const auth = { authorizedFetch: async () => ({ status: 200, json: async () => wire }) };
+  const api = load('workerDetailApi', { './authorizedFetch': auth });
+  await assert.rejects(api.workerProductionOrderDetail({}, station, order), error => error.code === 'production_map_snapshot_contract_invalid');
 });
