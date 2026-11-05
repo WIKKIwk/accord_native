@@ -26,12 +26,13 @@ function api() { return load('productionMapLiveStream', {
 }); }
 const session = () => ({ token: 'token', baseUrl: 'https://example.test', profile: { role: 'aparatchi', ref: 'worker' } });
 
-test('older backend v2 response falls back to v1 before publishing a snapshot', () => {
+test('older backend v2 response falls back to v1 before publishing a snapshot', async () => {
   const h = socketHarness();
   try {
     const client = api(), messages = [], errors = [];
     const cancel = client.adminProductionMapLiveStream(session(), { stateDelta: true, queueLimit: 5, epoch: 'server', revision: 8, scope: 'scope-five' })
       .subscribe(message => messages.push(message), error => errors.push(error));
+    await Promise.resolve();
     assert.equal(h.sockets[0].url.searchParams.get('protocol'), 'state_delta_v2');
     h.sockets[0].emit({ ok: true, type: 'snapshot', maps: [] });
     assert.equal(h.sockets.length, 2);
@@ -59,17 +60,19 @@ test('paged admin requires cursor-bearing delta and refuses full snapshots', () 
   assert.equal(delta.ops[0].after_id, 'second');
 });
 
-test('retained stream never opens for a different account and closes on account change', () => {
+test('retained stream never opens for a different account and closes on account change', async () => {
   const h = socketHarness();
   try {
     const client = api(), first = session(), errors = [];
     const retained = client.adminProductionMapLiveStream(first, { stateDelta: true });
     first.token = 'other';
     retained.subscribe(() => {}, error => errors.push(error));
+    await Promise.resolve();
     assert.equal(h.sockets.length, 0);
     assert.equal(errors[0].code, 'session_changed');
     const next = session();
     client.adminProductionMapLiveStream(next, { stateDelta: true }).subscribe(() => {}, error => errors.push(error));
+    await Promise.resolve();
     next.token = 'other';
     h.sockets[0].emit({ ok: true, type: 'snapshot' });
     assert.equal(errors.at(-1).code, 'session_changed');
@@ -97,13 +100,14 @@ test('legacy full stream snapshots pass through the canonical queue decoder', ()
   assert.throws(() => decode({ ...context, type: 'snapshot', queue_policies: null }, {}), error => error.code === 'production_map_snapshot_contract_invalid');
 });
 
-test('paused live subscriptions buffer messages and completion in order', () => {
+test('paused live subscriptions buffer messages and completion in order', async () => {
   const h = socketHarness();
   try {
     const messages = [], errors = [], done = [];
     const subscription = api().adminProductionMapLiveStream(session(), { paged: true })
       .subscribe(message => messages.push(message.revision), error => errors.push(error), () => done.push(true));
     subscription.pause();
+    await Promise.resolve();
     h.sockets[0].emit({ ok: true, type: 'page_ready', epoch: 'server', rev: 1 });
     h.sockets[0].emit({ ok: true, type: 'page_invalidated', epoch: 'server', rev: 2 });
     h.sockets[0].close();
@@ -111,5 +115,16 @@ test('paused live subscriptions buffer messages and completion in order', () => 
     subscription.resume();
     assert.deepEqual(messages, [1, 2]); assert.deepEqual(done, [true]); assert.deepEqual(errors, []);
     subscription();
+  } finally { h.restore(); }
+});
+
+
+test('cancellation before asynchronous setup does not open a live socket', async () => {
+  const h = socketHarness();
+  try {
+    const cancel = api().adminProductionMapLiveStream(session(), {}).subscribe(() => {}, () => {});
+    cancel();
+    await Promise.resolve();
+    assert.equal(h.sockets.length, 0);
   } finally { h.restore(); }
 });

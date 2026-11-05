@@ -109,7 +109,7 @@ export function adminProductionMapLiveStream(session: Session, options: Producti
         ws.onerror = () => dispatch(() => { if (!cancelled && activeGeneration === generation) finish(new Error('Production map live connection failed')); });
         ws.onclose = () => dispatch(() => { if (!cancelled && activeGeneration === generation) finish(); });
       };
-      connect(options.stateDelta === true && (options.compactStateDelta ?? true));
+      void Promise.resolve().then(() => connect(options.stateDelta === true && (options.compactStateDelta ?? true)));
       const cancel = () => { cancelled = true; generation++; pending.length = 0; const old = socket; socket = null; old?.close(); };
       return Object.assign(cancel, {
         pause: () => { if (!cancelled && !done) paused = true; },
