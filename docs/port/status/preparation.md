@@ -1,12 +1,13 @@
 # preparation
 
 Status: part 1 of 1 in progress
-Stopped at: port the preparation order live stream and warm store, remaining screen actions and UI contract.
+Stopped at: port preparation order warm store and screen coordination, remaining screen actions and UI contract.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Preparation order detail decoder | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `productionMapSnapshot.ts` | The shared snapshot decoder has existing open parity work; integrate its fixes for the read-only preparation order sheet. |
+| Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
 | QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Connect printer selection and the printer session’s local and driver transports to `reprintPreparationRoll`, then verify on a real printer. |
 
 ## Deviations candidates
