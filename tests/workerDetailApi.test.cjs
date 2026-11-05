@@ -74,6 +74,14 @@ test('worker detail rejects inconsistent canonical action authority', async () =
   await assert.rejects(api.workerProductionOrderDetail({}, station, order), error => error.code === 'production_map_snapshot_contract_invalid');
 });
 
+test('worker detail rejects a valid compact list with the V2 contract error', async () => {
+  const { loadContract } = require('./support/contractFetch.cjs');
+  const record = loadContract('worker_list_api_test').find(value => value.test.startsWith('worker HTTP and v2 socket'));
+  const wire = JSON.parse(record.responseBody.text);
+  const api = load('workerDetailApi', { './authorizedFetch': { authorizedFetch: async () => ({ status: 200, json: async () => wire }) } });
+  await assert.rejects(api.workerProductionOrderDetail({}, station, order), error => error.code === 'production_map_snapshot_contract_invalid');
+});
+
 test('worker detail returns the decoded snapshot rather than raw wire values', async () => {
   const { loadContract } = require('./support/contractFetch.cjs');
   const record = loadContract('worker_list_api_test').find(value => value.test === 'worker single detail requests one ID and returns full action authority');

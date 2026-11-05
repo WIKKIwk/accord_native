@@ -4,7 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
-const { contractFetch, recordedSession } = require('./support/contractFetch.cjs');
+const { contractFetch, loadContract, recordedSession } = require('./support/contractFetch.cjs');
 function load(name, mocks = {}) {
   const filename = path.resolve(__dirname, `../src/${name}.ts`);
   const loaded = new Module(filename, module);
@@ -28,6 +28,14 @@ for (const [stem, name, apparatus] of [
 test('detail refuses a missing order before sending', async () => {
   const client = api(async () => { throw Error('unexpected request'); });
   await assert.rejects(client.adminProductionOrderDetail({}, { apparatus: '', order_id: ' ' }), error => error.code === 'order_page_invalid');
+});
+
+test('admin detail rejects a valid compact worker snapshot as an invalid page', async () => {
+  const record = loadContract('worker_list_api_test').find(value => value.test.startsWith('worker HTTP and v2 socket'));
+  const wire = JSON.parse(record.responseBody.text);
+  const client = api(async () => ({ status: 200, json: async () => wire }));
+  await assert.rejects(client.adminProductionOrderDetail({}, { apparatus: '', order_id: 'work-1' }),
+    error => error.code === 'order_page_invalid');
 });
 
 for (const [stem, name, apparatus, attempts] of [

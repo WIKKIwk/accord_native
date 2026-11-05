@@ -20,7 +20,7 @@ export async function adminProductionOrderDetail(session: Session, input: { appa
     throw productionMapResponseError(response.status, payload, 'order_detail_failed');
   }
   const snapshot = decodeCanonicalProductionMapSnapshot(await response.json(), false, session);
-  if (snapshot.maps.length !== 1 || snapshot.maps[0].map.id !== id || snapshot.revision == null || snapshot.revision < 0 ||
+  if (!Array.isArray(snapshot.maps) || snapshot.maps.length !== 1 || snapshot.maps[0].map.id !== id || snapshot.revision == null || snapshot.revision < 0 ||
       !snapshot.epoch || !snapshot.scope || Object.keys(snapshot.calculation_templates).some(key => key !== id)) throw invalid();
   return snapshot;
 }
