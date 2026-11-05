@@ -6,6 +6,7 @@ import { parseApparatusQueuePolicyMap } from './workerQueueModels';
 import { closedProductionOrderFromJson } from './workerClosedOrders';
 import { productionWorkflowAuditReportFromJson } from './productionMapAuditApi';
 import { calculateOrderTemplateFromJson } from './workerOpenedOrderEditApi';
+import { pendingOrderFromJson } from './pendingOrderApi';
 
 type Obj = Record<string, any>;
 const object = (v: unknown): Obj | null => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Obj : null;
@@ -80,11 +81,7 @@ export function productionOrderPageFromJson(value: unknown): Obj {
   if (!positions || Object.entries(positions).some(([key, n]) => !orderIds.includes(key) || !Number.isInteger(n) || (n as number) <= 0) ||
       (Object.keys(positions).length !== 0 && Object.keys(positions).length !== orderIds.length) ||
       new Set(Object.values(positions)).size !== Object.keys(positions).length) throw invalid();
-  const pendingOrders = asList(json.pending_orders).map(item => {
-    const row = object(item);
-    if (!row || typeof row.id !== 'string' || !object(row.template) || (row.manager_name != null && typeof row.manager_name !== 'string')) throw new TypeError('Invalid pending order');
-    return { id: row.id, template: calculateOrderTemplateFromJson(row.template), manager_name: row.manager_name ?? '', completed: row.completion != null };
-  });
+  const pendingOrders = asList(json.pending_orders).map(pendingOrderFromJson);
   const closedOrders = asList(json.closed_orders).map(closedProductionOrderFromJson);
   const audit = object(json.workflow_audit) ? productionWorkflowAuditReportFromJson(json.workflow_audit) : null;
   const templates = snapshot?.calculation_templates ?? Object.fromEntries(Object.entries(object(json.calculation_templates) ?? {})
