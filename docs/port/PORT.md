@@ -77,6 +77,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/paddonItemsApi.ts` | `adminPaddonAddWips`, `adminPaddonRemoveWip`, `adminPaddonRemoveWips` | No V2 HTTP recordings were found for these methods; focused V4 tests cover their source-derived requests and snapshot parsing |
 | `src/paddonManagementApi.ts` | `adminPaddonCreate`, `adminPaddonDelete`, `adminPaddonDetail` | No V2 HTTP recordings were found for these methods; focused V4 tests cover their source-derived requests and response validation |
 | `src/productionMapAuditApi.ts` | `adminProductionMapAudit` | No V2 HTTP recording was found; focused V4 tests cover the source-derived request and report parsing |
+| `src/productionProgressCorrectionApi.ts` | `adminProgressBatchCorrect` | No V2 HTTP recording was found; focused V4 tests cover source-derived validation, request fields and response checks |
 | `src/productionMapReplayApi.ts` | `adminProductionMapReplay` | No V2 HTTP recording was found; focused V4 tests cover the source-derived query and delta decoding |
 | `src/productionMapReadApi.ts` | `adminProductionMaps` | No V2 HTTP recording was found for the list route; a focused V4 test covers its source-derived request and parsing |
 | `src/productionCompletionApi.ts` | `adminProductionMapCompletionRequestDecisions`, `adminProductionMapCompletionRequests` | No V2 HTTP recordings were found; focused V4 tests cover the source-derived requests and notification parsing |
@@ -119,6 +120,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `adminProductionCombo` | V2 reads its in-memory account-scoped combo revisions |
 | `adminProductionMap` | V2 reads its in-memory production maps |
 | `adminProductionMaps` | V2 returns its in-memory production maps and can simulate a load failure |
+| `adminProgressBatchCorrect` | V2 validates and updates an in-memory progress batch |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
 | `adminProductionMapCompletionRequestDecisions` | V2 filters in-memory decisions by worker |
 | `adminProductionMapCompletionRequests` | V2 returns its in-memory completion requests |
