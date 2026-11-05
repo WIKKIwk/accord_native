@@ -135,7 +135,8 @@ export function validOrderControl(bootstrap: Obj | null, apparatus: string, orde
         (mode === 'freeze_requested' && control.allowed_actions.length === 1 && control.allowed_actions[0] === 'freeze')))) return false;
   if (mode === 'freeze_requested') {
     const request = control.freeze_request;
-    const wildcard = request && (request.scope ?? 'order') === 'order' && !request.stage_node_id && !request.target_apparatus && !request.target_session_id && !request.target_worker_ref;
+    const wildcard = request && String(request.scope ?? 'order') === 'order' && String(request.stage_node_id ?? '') === '' &&
+      !String(request.target_apparatus ?? '').trim() && !String(request.target_session_id ?? '').trim() && !String(request.target_worker_ref ?? '').trim();
     if (!request || typeof request.request_id !== 'string' || !request.request_id.trim() ||
         String(request.status ?? '').trim().toLowerCase() !== 'pending' ||
         (!String(request.target_apparatus ?? '').trim() && !wildcard) ||
@@ -152,7 +153,8 @@ export function validOrderControl(bootstrap: Obj | null, apparatus: string, orde
   if (orderControl === 'frozen' && (mode !== 'frozen' || control.allowed_actions.length)) return false;
   if (orderControl === 'freeze_requested' && mode === 'freeze_requested') {
     const request = control.freeze_request;
-    const wildcard = request && (request.scope ?? 'order') === 'order' && !request.stage_node_id && !request.target_apparatus && !request.target_session_id && !request.target_worker_ref;
+    const wildcard = request && String(request.scope ?? 'order') === 'order' && String(request.stage_node_id ?? '') === '' &&
+      !String(request.target_apparatus ?? '').trim() && !String(request.target_session_id ?? '').trim() && !String(request.target_worker_ref ?? '').trim();
     if (!request || typeof request.request_id !== 'string' || !request.request_id.trim() || request.status !== 'pending' ||
         (!String(request.target_apparatus ?? '').trim() && !wildcard) ||
         (control.state !== 'print_preflight' && !wildcard && !String(request.target_session_id ?? '').trim())) return false;

@@ -61,3 +61,15 @@ test('snapshot accepts a frozen queue control without forcing an active global o
         material_intake_allowed: false, previous_wip_mode: 'not_required', qolip_mode: 'not_required' } } } } };
   assert.equal(api.decodeCanonicalProductionMapSnapshot(wire).queue_action_controls[station][order].state, 'frozen');
 });
+
+test('snapshot accepts a global freeze wildcard with whitespace in target fields', () => {
+  const api = load('productionMapSnapshot', { './authorizedFetch': {} });
+  const station = 'apparatus:default:press', order = 'order';
+  const wire = { maps: [], sequences: {}, visible_order_ids: { [station]: [order] }, queue_states: {}, queue_policies: [], stage_states: {},
+    order_controls: { [order]: { state: 'freeze_requested' } }, frozen_orders_by_apparatus: {},
+    queue_action_controls: { [station]: { [order]: { state: 'in_progress', allowed_actions: ['pause'], previous_stage_ready: false,
+      complete_requires_full_report: false, interaction: { mode: 'freeze_requested', start_materials_mode: 'hidden', material_scan_required: false,
+        assigned_materials_display_only: true, material_intake_allowed: false, previous_wip_mode: 'not_required', qolip_mode: 'not_required' },
+      freeze_request: { request_id: 'freeze-1', status: 'pending', target_session_id: ' ', target_apparatus: ' ', target_worker_ref: ' ' } } } } };
+  assert.equal(api.decodeCanonicalProductionMapSnapshot(wire).queue_action_controls[station][order].state, 'in_progress');
+});
