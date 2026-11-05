@@ -1,5 +1,6 @@
 import { isCanonicalApparatusId, WorkerControlException } from './workerControlsApi';
-import { apparatusQueuePolicy, completedQueueOrderFromJson, completionRequestNotification } from './workerQueueModels';
+import { apparatusQueuePolicy, completedQueueOrderFromJson, completionRequestNotification,
+  productionMapSequenceRevisions, productionMapStringMap } from './workerQueueModels';
 import { completionRequestDecisionFromJson } from './productionCompletionApi';
 
 type Obj = Record<string, unknown>;
@@ -126,14 +127,10 @@ export function decodeWorkerListSnapshot(raw: unknown): Obj {
     if (!notification || typeof notification.apparatus !== 'string' || !isCanonicalApparatusId(notification.apparatus) ||
         (notification.created_at_unix != null && typeof notification.created_at_unix !== 'number')) return fail('invalid worker notification');
   }
-  if (value.sequence_revisions != null) {
-    const revisions = asObject(value.sequence_revisions);
-    if (!revisions || Object.values(revisions).some(rev => rev != null && (!Number.isInteger(rev) || (rev as number) < 0))) {
-      return fail('invalid sequence revisions');
-    }
-  }
+  const revisions = productionMapSequenceRevisions(value.sequence_revisions);
+  let positions: Record<string, Obj> = {};
   if (value.sequence_positions_by_apparatus !== undefined) {
-    const positions = nested(value.sequence_positions_by_apparatus, 'sequence positions');
+    positions = nested(value.sequence_positions_by_apparatus, 'sequence positions');
     for (const [machine, entries] of Object.entries(positions)) {
       const ids = visible[machine] ?? [], ranks = Object.values(entries);
       if (Object.keys(entries).length !== new Set(ids).size || new Set(ranks).size !== ranks.length ||
@@ -142,7 +139,10 @@ export function decodeWorkerListSnapshot(raw: unknown): Obj {
       }
     }
   }
-  return { ...value, sequences, visible_order_ids: visible, queue_states: queue,
+  return { ...value, sequences, visible_order_ids: visible, queue_states: queue, worker_pending_report_ids: pending,
+    sequence_versions: productionMapStringMap(value.sequence_versions), sequence_revisions: revisions,
+    sequence_positions_by_apparatus: positions, revision: value.rev,
+    worker_show_all_apparatus_tabs: value.worker_show_all_apparatus_tabs === true,
     queue_policies: value.queue_policies.map(apparatusQueuePolicy),
     completed_orders: value.completed_orders.map(completedQueueOrderFromJson),
     completion_requests: value.completion_requests.map(completionRequestNotification),

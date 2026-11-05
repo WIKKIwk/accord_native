@@ -22,6 +22,26 @@ export function completedQueueOrderFromJson(value: unknown) {
     status: text(row.status).trim() || 'completed', issue_note: text(row.issue_note) };
 }
 
+export function productionMapStringMap(raw: unknown): Record<string, string> {
+  const row = object(raw);
+  if (!row) return {};
+  return Object.fromEntries(Object.entries(row).map(([key, value]) => [key.trim(), String(value).trim()])
+    .filter(([key, value]) => key && value));
+}
+
+export function productionMapSequenceRevisions(raw: unknown): Record<string, number> {
+  if (raw == null) return {};
+  const row = object(raw);
+  if (!row) throw invalid('invalid sequence revisions');
+  const result: Record<string, number> = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (value == null) continue;
+    if (!Number.isInteger(value) || (value as number) < 0) throw invalid('invalid sequence revision');
+    result[key] = value as number;
+  }
+  return result;
+}
+
 /** @v2 parseProductionMapSnapshotRevision */
 export function parseProductionMapSnapshotRevision(value: unknown): number | null {
   if (typeof value === 'number') {

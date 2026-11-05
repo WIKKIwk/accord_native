@@ -1,7 +1,8 @@
 import type { Session } from './auth';
 import { isCanonicalApparatusId, WorkerControlException } from './workerControlsApi';
 import { completedQueueOrderFromJson, parseApparatusSequenceMap, parseApparatusQueueStateMap, parseApparatusQueuePolicyMap,
-  parseProductionMapSnapshotRevisionFromJson, completionRequestNotification, productionOrderStatusDetail } from './workerQueueModels';
+  parseProductionMapSnapshotRevisionFromJson, completionRequestNotification, productionOrderStatusDetail,
+  productionMapSequenceRevisions, productionMapStringMap } from './workerQueueModels';
 import { queueActionControlState } from './workerQueueAction';
 import { productionMapSavedFromJson } from './workerProductionMapSaved';
 import { calculateOrderTemplateFromJson } from './workerOpenedOrderEditApi';
@@ -63,22 +64,6 @@ function sequencePositions(raw: unknown, visible: Record<string, string[]>): Obj
     }
   }
   return positions;
-}
-function stringMap(raw: unknown): Record<string, string> {
-  const row = object(raw); if (!row) return {};
-  return Object.fromEntries(Object.entries(row).map(([key, value]) => [key.trim(), String(value).trim()])
-    .filter(([key, value]) => key && value));
-}
-function sequenceRevisions(raw: unknown): Obj {
-  if (raw == null) return {};
-  const row = object(raw); if (!row) return fail('invalid sequence revisions');
-  const result: Obj = {};
-  for (const [key, value] of Object.entries(row)) {
-    if (value == null) continue;
-    if (!Number.isInteger(value) || (value as number) < 0) return fail('invalid sequence revision');
-    result[key] = value;
-  }
-  return result;
 }
 function stageStates(raw: unknown): Obj {
   const row = object(raw); if (!row) return {};
@@ -178,8 +163,8 @@ export function decodeCanonicalProductionMapSnapshot(value: unknown, requireMaps
     queue_action_controls: controls, stage_states: parsedStages, order_controls: parsedControls,
     stage_order_controls: stageControls, stage_freeze_supported: Array.isArray(row.stage_order_controls),
     early_closing_order_ids: Object.entries(orderControls).filter(([, value]) => object(object(value)?.early_close)).map(([id]) => id.trim()),
-    order_customers: stringMap(row.order_customers), order_statuses: statuses, frozen_orders_by_apparatus: frozenOrders(row.frozen_orders_by_apparatus),
-    sequence_versions: stringMap(row.sequence_versions), sequence_revisions: sequenceRevisions(row.sequence_revisions),
+    order_customers: productionMapStringMap(row.order_customers), order_statuses: statuses, frozen_orders_by_apparatus: frozenOrders(row.frozen_orders_by_apparatus),
+    sequence_versions: productionMapStringMap(row.sequence_versions), sequence_revisions: productionMapSequenceRevisions(row.sequence_revisions),
     sequence_positions_by_apparatus: sequencePositions(row.sequence_positions_by_apparatus, visible), maps, calculation_templates: templates,
     revision: parseProductionMapSnapshotRevisionFromJson(row), epoch: typeof row.epoch === 'string' ? row.epoch : '',
     scope: typeof row.scope === 'string' ? row.scope : '', worker_show_all_apparatus_tabs: row.worker_show_all_apparatus_tabs === true,

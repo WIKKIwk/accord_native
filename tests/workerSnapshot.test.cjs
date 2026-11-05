@@ -88,6 +88,22 @@ test('compact worker snapshots normalize completed orders and notification defau
   assert.equal(result.completion_request_decisions[0].created_at_unix, 1);
 });
 
+test('compact worker snapshots expose normalized cursors and optional collections', () => {
+  const value = fixture();
+  delete value.worker_pending_report_ids;
+  delete value.sequence_positions_by_apparatus;
+  value.sequence_revisions = { [station]: 4, 'not-yet-persisted': null };
+  value.sequence_versions = { [` ${station} `]: ' version-1 ', ignored: '' };
+  value.worker_show_all_apparatus_tabs = 'true';
+  const result = decoder.decodeWorkerListSnapshot(value);
+  assert.deepEqual(result.worker_pending_report_ids, {});
+  assert.deepEqual(result.sequence_revisions, { [station]: 4 });
+  assert.deepEqual(result.sequence_versions, { [station]: 'version-1' });
+  assert.deepEqual(result.sequence_positions_by_apparatus, {});
+  assert.equal(result.revision, value.rev);
+  assert.equal(result.worker_show_all_apparatus_tabs, false);
+});
+
 test('V2 compact snapshot rejects malformed identity, membership and authority', () => {
   const changes = [
     w => { w.worker_list_rows['work-1'].id = 'wrong'; },

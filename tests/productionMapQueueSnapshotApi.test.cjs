@@ -56,3 +56,21 @@ test('snapshot preserves a valid cursor on 304 and requests bounded long polling
   assert.equal(url.searchParams.get('if_rev'), '7');
   assert.equal(url.searchParams.get('wait_ms'), '6000');
 });
+
+test('a compact snapshot can be reused as the next long-poll cursor', async () => {
+  const record = loadContract('worker_list_api_test').find(value => value.test.startsWith('worker HTTP and v2 socket'));
+  const wire = JSON.parse(record.responseBody.text);
+  let calls = 0, nextUrl;
+  const { client } = api(async (_session, requested) => {
+    if (++calls === 1) return new Response(JSON.stringify(wire), { status: 200 });
+    nextUrl = new URL(requested, 'https://example.test');
+    return new Response(null, { status: 304 });
+  });
+  const session = { token: 't', baseUrl: 'https://example.test', profile: { role: 'aparatchi' } };
+  const snapshot = await client.adminProductionMapQueueSnapshot(session, { worker_scope: true });
+  const result = await client.adminProductionMapQueueSnapshot(session, { worker_scope: true, since: snapshot, wait_for_changes: true });
+  assert.equal(result, snapshot);
+  assert.equal(nextUrl.searchParams.get('if_rev'), String(wire.rev));
+  assert.equal(nextUrl.searchParams.get('if_scope'), wire.scope);
+  assert.equal(nextUrl.searchParams.get('wait_ms'), '6000');
+});
