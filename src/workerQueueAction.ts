@@ -177,10 +177,21 @@ export function queueActionControlState(raw: unknown, contractOnly = false, sess
     resume_input_requirement_known: typeof interaction.resume_input_required === 'boolean',
     qolip_automatic_confirmation: interaction.qolip_automatic_confirmation === true,
     qolip_policy_revision: interaction.qolip_policy_revision ?? 0 };
+  const lineage = Array.isArray(control.rezka_input_lineage) ? control.rezka_input_lineage.map((item: Obj) => ({
+    input_batch_id: String(item.input_batch_id).trim(), sequence_no: item.sequence_no, status: String(item.status).trim().toLowerCase(),
+  })) : [];
+  const partialRolls = Array.isArray(control.rezka_active_partial_rolls) ? control.rezka_active_partial_rolls.map((item: Obj) => ({
+    slot_index: item.slot_index, generation: item.generation, contained_kadr_count: item.contained_kadr_count,
+    source_input_batch_ids: item.source_input_batch_ids.map((id: string) => id.trim()),
+  })) : [];
   return { ...state, control: { ...normalizedControl, state: control.state.trim(), interaction: interactionResult, freeze_request: normalizedFreeze,
     stage_work: normalizedStageWork, work_activity: queueWorkActivity(control.work_activity),
     temporary_pause: temporaryPauseControl(control.temporary_pause), cancel_start: cancelStartControl(control.cancel_start),
     re_pause: resumePauseControl(control.re_pause), reclose: session ? reactivationRecloseControl(control.reclose, session, false) : null,
+    rezka_input_lineage: lineage, rezka_active_partial_rolls: partialRolls,
+    rezka_output_kadr_counts: Array.isArray(control.rezka_output_kadr_counts) ? [...control.rezka_output_kadr_counts] : [],
+    rezka_output_report: control.rezka_output_report == null ? null : rezkaReportFromJson(control.rezka_output_report),
+    server_contract_signature: JSON.stringify(control),
     last_worked_at_unix: Number.isInteger(lastWorked) && lastWorked > 0 ? lastWorked : 0,
     temporarily_paused: control.temporarily_paused === true, print_preflight_allowed: control.print_preflight_allowed === true,
     complete_requires_rezka_total_waste_only: control.complete_requires_rezka_total_waste_only === true,

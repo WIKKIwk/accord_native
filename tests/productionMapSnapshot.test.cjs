@@ -127,3 +127,25 @@ test('snapshot binds reclose authority to the reading account and drops malforme
   wire.queue_action_controls[station][order].reclose.token = 'invalid';
   assert.equal(decoder.decodeCanonicalProductionMapSnapshot(wire, true, session).queue_action_controls[station][order].reclose, null);
 });
+
+test('snapshot normalizes rezka lineage, partial rolls and the original control signature', () => {
+  const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
+  const wire = context(), original = wire.queue_action_controls[station][order];
+  original.rezka_input_lineage = [
+    { input_batch_id: ' roll-1 ', sequence_no: 1, status: ' IN_USE ', source_kind: 'progress_batch' },
+    { input_batch_id: 'roll-2', sequence_no: 2, status: 'processed', source_kind: 'opening_wip' },
+  ];
+  original.rezka_active_partial_rolls = [{ slot_index: 1, generation: 2, contained_kadr_count: 3,
+    source_input_batch_ids: [' roll-1 ', 'roll-2'], status: 'ACTIVE' }];
+  original.rezka_output_kadr_counts = [3, 2];
+  const parsed = decoder.decodeCanonicalProductionMapSnapshot(wire, true).queue_action_controls[station][order];
+  assert.deepEqual(parsed.rezka_input_lineage, [
+    { input_batch_id: 'roll-1', sequence_no: 1, status: 'in_use' },
+    { input_batch_id: 'roll-2', sequence_no: 2, status: 'processed' },
+  ]);
+  assert.deepEqual(parsed.rezka_active_partial_rolls, [{ slot_index: 1, generation: 2, contained_kadr_count: 3,
+    source_input_batch_ids: ['roll-1', 'roll-2'] }]);
+  assert.deepEqual(parsed.rezka_output_kadr_counts, [3, 2]);
+  assert.equal(parsed.rezka_output_report, null);
+  assert.equal(parsed.server_contract_signature, JSON.stringify(original));
+});
