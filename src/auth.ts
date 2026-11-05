@@ -333,6 +333,8 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   });
 }
 
+export function currentSession(): Session | null { return activeSession; }
+
 /** Returns a token only while this exact login session is still active. */
 export function activeSessionToken(session: Session): string | null {
   return activeSession === session ? session.token : null;

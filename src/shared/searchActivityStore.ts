@@ -8,7 +8,8 @@ const enumNames: Record<string, string> = { rezka_master: 'rezkaMaster', sales_m
 const compare = (left: string, right: string) => left < right ? -1 : left > right ? 1 : 0;
 const normalize = (value: string) => value.trim().toLowerCase();
 
-function accessRole(session: Session): string | null {
+/** @v2 SessionProfile.accessRole */
+export function sessionAccessRole(session: Session): string | null {
   const role = session.profile.role, has = (capability: string) => session.capabilities.includes(capability);
   const special = [['rezka_master', 'rezka.master.access'], ['brigader', 'brigader.access'],
     ['sales_manager', 'sales.access'], ['homashyo_rezkachi', 'raw_material.split'],
@@ -29,7 +30,7 @@ export class SearchActivityStore {
   constructor(private readonly storage: AccountStorage) {}
 
   private async load(session: Session | null) {
-    const scope = session ? `${accessRole(session) ?? 'custom'}:${String(session.profile.ref ?? '').trim().toLowerCase()}` : 'guest';
+    const scope = session ? `${sessionAccessRole(session) ?? 'custom'}:${String(session.profile.ref ?? '').trim().toLowerCase()}` : 'guest';
     if (this.scope === scope) return;
     this.scope = scope;
     const raw = await this.storage.getItem(`search_item_activity_v1:${scope}`);

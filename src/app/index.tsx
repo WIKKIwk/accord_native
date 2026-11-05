@@ -10,13 +10,18 @@ import { clearAppLock } from '../appLock';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { homeTarget } from '../shared/appRoutes';
 import { switchPinStore } from '../shared/switchPinRuntime';
+import { notificationUnreadStore } from '../shared/notificationStoresRuntime';
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    bootstrapSession(loadSession, profile, value => !!activeSessionToken(value))
+    bootstrapSession(async () => {
+      const value = await loadSession();
+      try { await notificationUnreadStore.load(); } catch { /* Match V2's independent startup steps. */ }
+      return value;
+    }, profile, value => !!activeSessionToken(value))
       .then(value => { if (active) setSession(value); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
