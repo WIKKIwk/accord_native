@@ -18,13 +18,44 @@ const integer = (value: unknown): number => {
   if (typeof value === 'number') return Math.trunc(value);
   const str = text(value); return /^[+-]?\d+$/.test(str) ? Number(str) : 0;
 };
-function date(value: unknown): Date {
+type CalculateDate = Date & { readonly microsecond: number; readonly is_utc: boolean; readonly microseconds_since_epoch: bigint };
+function calculateDateValue(milliseconds: number, microsecond: number, isUtc: boolean): CalculateDate {
+  const result = new Date(milliseconds) as CalculateDate;
+  if (!Number.isFinite(result.getTime())) throw new RangeError('Date is outside the supported range');
+  Object.defineProperties(result, {
+    microsecond: { value: microsecond }, is_utc: { value: isUtc },
+    microseconds_since_epoch: { value: BigInt(result.getTime()) * 1000n + BigInt(microsecond) },
+  });
+  return result;
+}
+function date(value: unknown): CalculateDate {
   const str = text(value);
-  if (!str) return new Date(0);
-  const parsed = /^\d{4}-?\d{2}-?\d{2}/.test(str) ? Date.parse(str) : NaN;
-  if (!Number.isNaN(parsed)) return new Date(parsed);
-  if (/^[+-]?\d+$/.test(str)) return new Date(Math.trunc(Number(str) / 1000));
-  return new Date(0);
+  const match = /^([+-]?\d{4,6})-?(\d\d)-?(\d\d)(?:[ T](\d\d)(?::?(\d\d)(?::?(\d\d)(?:[.,](\d+))?)?)?( ?[zZ]| ?([-+])(\d\d)(?::?(\d\d))?)?)?$/.exec(str);
+  if (match) {
+    const year = Number(match[1]), month = Number(match[2]) - 1, day = Number(match[3]);
+    const hour = Number(match[4] ?? 0), seconds = Number(match[6] ?? 0);
+    const fraction = Number((match[7] ?? '').slice(0, 6).padEnd(6, '0'));
+    let minute = Number(match[5] ?? 0);
+    const isUtc = match[8] !== undefined;
+    if (match[9]) minute -= (match[9] === '-' ? -1 : 1) * (Number(match[10]) * 60 + Number(match[11] ?? 0));
+    const parsed = new Date(0);
+    if (isUtc) {
+      parsed.setUTCFullYear(year, month, day);
+      parsed.setUTCHours(hour, minute, seconds, Math.trunc(fraction / 1000));
+    } else {
+      parsed.setFullYear(year, month, day);
+      parsed.setHours(hour, minute, seconds, Math.trunc(fraction / 1000));
+    }
+    if (Number.isFinite(parsed.getTime())) return calculateDateValue(parsed.getTime(), fraction % 1000, isUtc);
+  }
+  if (/^[+-]?(?:\d+|0x[0-9a-f]+)$/i.test(str)) {
+    const negative = str.startsWith('-'), unsigned = str.replace(/^[+-]/, '');
+    const micros = BigInt(unsigned) * (negative ? -1n : 1n);
+    let millis = micros / 1000n, remainder = micros % 1000n;
+    if (remainder < 0) { millis -= 1n; remainder += 1000n; }
+    return calculateDateValue(Number(millis), Number(remainder), true);
+  }
+  return calculateDateValue(0, 0, true);
 }
 function layer(value: Obj) { return { material_id: text(value.material_id), material: text(value.material), micron: text(value.micron) }; }
 const layerPresent = (value: ReturnType<typeof layer>) => !!value.material || !!value.micron;

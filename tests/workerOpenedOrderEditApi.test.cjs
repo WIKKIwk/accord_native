@@ -56,6 +56,25 @@ test('template numeric fields use Dart decimal parsing rather than JavaScript he
   assert.equal(calculateOrderTemplateFromJson({ roll_count: 'nan' }).roll_count, null);
 });
 
+test('template dates retain Dart microseconds, local dates, offsets and overflow', () => {
+  const { calculateOrderTemplateFromJson: parse } = load('workerOpenedOrderEditApi', { './authorizedFetch': {} });
+  const precise = parse({ saved_at: '2026-11-05T10:11:12.123456Z' }).saved_at;
+  assert.equal(precise.getTime(), Date.parse('2026-11-05T10:11:12.123Z'));
+  assert.equal(precise.microsecond, 456);
+  assert.equal(precise.microseconds_since_epoch, BigInt(precise.getTime()) * 1000n + 456n);
+  assert.equal(precise.is_utc, true);
+  const compact = parse({ saved_at: '20260101' }).saved_at;
+  assert.equal(compact.getTime(), new Date(2026, 0, 1).getTime());
+  assert.equal(compact.is_utc, false);
+  const offset = parse({ saved_at: '2020-01-42T00:00:00,654321+05:00' }).saved_at;
+  assert.equal(offset.getTime(), Date.UTC(2020, 1, 10, 19, 0, 0, 654));
+  assert.equal(offset.microsecond, 321);
+  const beforeEpoch = parse({ saved_at: '-1' }).saved_at;
+  assert.equal(beforeEpoch.getTime(), -1);
+  assert.equal(beforeEpoch.microsecond, 999);
+  assert.equal(beforeEpoch.microseconds_since_epoch, -1n);
+});
+
 for (const name of ['GET conflict remains blocked without retries or creating an order', ...[400, 404, 409, 422].map(status => `edit preserves a business reason for HTTP ${status}`),
   'GET preserves the actual explained database failure', 'edit keeps the existing translation for a known server error']) {
   test(name, async () => {
