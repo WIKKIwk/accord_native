@@ -3,11 +3,14 @@ import { isCanonicalApparatusId, postWorkerApiRequest, WorkerControlException } 
 import { validOrderControl } from './workerOrderLogic';
 import { progressBatchFromJson } from './workerProgressBatch';
 import { completionRequestNotification, productionOrderStatusDetail, queueWorkActivity } from './workerQueueModels';
+import { printJobFromJson, type WorkerPrintJob } from './workerPrintJob';
+import { rezkaReportFromJson, rezkaReportFromSession } from './workerRezkaReport';
+import { printPreflightHold } from './workerPrintPreflight';
 
 type Obj = Record<string, any>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
 const trimmed = (value: unknown) => typeof value === 'string' ? value.trim() : '';
-const automaticInvalid = () => new WorkerControlException('qolip_automatic_confirmation_invalid', 'Qoliplarni avtomatik tasdiqlash ma’lumotlari noto‘g‘ri');
+const automaticInvalid = () => new WorkerControlException('qolip_automatic_confirmation_invalid', 'Qoliplarni avtomatik tasdiqlash ma’lumoti tasdiqlanmadi');
 
 export function queueActionBody(input: Obj): Obj {
   const { apparatus, order_id: orderId, action } = input;
@@ -58,36 +61,141 @@ export function queueActionBody(input: Obj): Obj {
   for (const key of ['produced_qty', 'gross_qty', 'bobina_kg', 'diameter', 'return_ink_kg', 'lamination_print_leftover_rolls',
     'lamination_film_leftover_rolls', 'rezka_bosma_waste', 'rezka_lamination_waste', 'rezka_edge_waste',
     'total_waste', 'finished_goods_kg', 'finished_goods_meter', 'rezka_record_frame_index']) if (input[key] != null) body[key] = input[key];
-  for (const key of ['rezka_frames', 'rezka_expected_kadr_counts', 'returned_paint_items']) {
+  for (const key of ['rezka_frames', 'rezka_expected_kadr_counts']) {
     if (Array.isArray(input[key]) && input[key].length) body[key] = input[key];
+  }
+  if (Array.isArray(input.returned_paint_items) && input.returned_paint_items.length) {
+    body.returned_paint_items = input.returned_paint_items.map((item: Obj) => ({ usage: item.usage, category: item.category,
+      name: item.name, values: item.values }));
   }
   for (const key of ['rezka_output_cycle', 'rezka_expected_epoch']) if (typeof input[key] === 'string' && input[key]) body[key] = input[key];
   return body;
 }
 
-export function parseQueueActionResponse(raw: unknown): Obj {
+function trainingPrintJobs(batches: Obj[], input: Obj): WorkerPrintJob[] {
+  return batches.map(batch => {
+    const payload = object(batch.payload_json) ?? {}, gross = payload.gross_qty ?? batch.finished_goods_kg ?? batch.produced_qty;
+    const tare = batch.bobina_kg ?? 0, customer = trimmed(input.customer_name) || String(payload.customer_name ?? '');
+    return printJobFromJson({ epc: batch.qr_payload, item_code: batch.label_item_code, item_name: batch.label_item_name,
+      order_code: '', warehouse: `Ijrochi: ${batch.executor_name}`, printer: trimmed(input.printer) || 'godex',
+      print_mode: trimmed(input.print_mode) || 'label', gross_qty: gross, unit: 'kg', label_kind: 'progress',
+      executor_name: batch.executor_name, progress_qty: batch.finished_goods_meter ?? batch.produced_qty,
+      progress_unit: batch.uom === '' ? 'm' : batch.uom, completed_at_unix: batch.completed_at_unix,
+      tare_enabled: tare > 0, tare_kg: tare, include_bobina_in_net: payload.include_bobina_in_net === true, customer_name: customer });
+  });
+}
+
+function validRezkaMergeState(control: Obj, actions: string[]): boolean {
+  const positive = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value > 0;
+  const lineage: { id: string; sequence: number; inUse: boolean }[] = [];
+  if (Object.hasOwn(control, 'rezka_input_lineage')) {
+    if (!Array.isArray(control.rezka_input_lineage)) return false;
+    for (const raw of control.rezka_input_lineage) {
+      const row = object(raw), id = String(row?.input_batch_id ?? '').trim(), sequence = row?.sequence_no;
+      const state = String(row?.status ?? '').trim().toLowerCase(), kind = String(row?.source_kind ?? '').trim().toLowerCase();
+      if (!row || !id || !positive(sequence) || !['in_use', 'processed'].includes(state) ||
+          !['progress_batch', 'opening_wip'].includes(kind)) return false;
+      lineage.push({ id, sequence, inUse: state === 'in_use' });
+    }
+  }
+  const ids = new Set<string>(), sequences = new Set<number>(), active: string[] = [];
+  for (const link of lineage) {
+    if (ids.has(link.id) || sequences.has(link.sequence)) return false;
+    ids.add(link.id); sequences.add(link.sequence);
+    if (link.inUse) active.push(link.id);
+  }
+  if (active.length > 1 || (actions.includes('merge') && Object.hasOwn(control, 'rezka_input_lineage') && active.length !== 1)) return false;
+  if (Object.hasOwn(control, 'rezka_active_partial_rolls')) {
+    if (!Array.isArray(control.rezka_active_partial_rolls)) return false;
+    const slots = new Set<number>();
+    for (const raw of control.rezka_active_partial_rolls) {
+      const row = object(raw), sources = row?.source_input_batch_ids;
+      if (!row || !positive(row.slot_index) || !positive(row.generation) || !positive(row.contained_kadr_count) ||
+          String(row.status ?? '').trim().toLowerCase() !== 'active' || !Array.isArray(sources) || slots.has(row.slot_index) ||
+          sources.some((value: unknown) => typeof value !== 'string' || !value.trim())) return false;
+      const normalized = sources.map((value: string) => value.trim());
+      if (new Set(normalized).size !== normalized.length || normalized.some((id: string) => !ids.has(id)) ||
+          (active.length ? !normalized.includes(active[0]) : normalized.length > 0)) return false;
+      slots.add(row.slot_index);
+    }
+  }
+  const counts = control.rezka_output_kadr_counts;
+  if (Object.hasOwn(control, 'rezka_output_kadr_counts') && (!Array.isArray(counts) || counts.some((value: unknown) => !positive(value)))) return false;
+  if (control.rezka_output_report != null) {
+    const report = rezkaReportFromJson(control.rezka_output_report);
+    if (!report || report.frames.some(frame => frame.index > (Array.isArray(counts) ? counts.length : 0))) return false;
+  }
+  return true;
+}
+
+export function queueActionControlState(raw: unknown): Obj | null {
+  const state = object(raw), control = object(state?.control), interaction = object(control?.interaction);
+  if (!state || !control || !interaction || !object(state.stage_states) || typeof state.apparatus !== 'string' ||
+      typeof state.order_id !== 'string' || typeof state.queue_state !== 'string' || !Array.isArray(control.allowed_actions)) return null;
+  if (control.allowed_actions.some((action: unknown) => typeof action !== 'string' || !action.trim())) return null;
+  const actions = [...new Set<string>(control.allowed_actions.map((action: string) => action.trim()))];
+  if (!validRezkaMergeState(control, actions)) return null;
+  const freeze = object(control.freeze_request);
+  if (freeze) {
+    const target = String(freeze.target_apparatus ?? '').trim();
+    if ((target && !isCanonicalApparatusId(target)) || ['requested_at_unix', 'transitioned_at_unix']
+      .some(key => freeze[key] != null && typeof freeze[key] !== 'number')) return null;
+  }
+  const hold = Object.hasOwn(control, 'print_preflight') ? printPreflightHold(control.print_preflight) : undefined;
+  if (hold === null) return null;
+  const normalizedInteraction = { ...interaction,
+    mode: String(interaction.mode ?? '').trim(), start_materials_mode: String(interaction.start_materials_mode ?? '').trim(),
+    previous_wip_mode: String(interaction.previous_wip_mode ?? '').trim(),
+    opening_wip_mode: interaction.opening_wip_mode == null ? 'not_required' : String(interaction.opening_wip_mode).trim(),
+    qolip_mode: String(interaction.qolip_mode ?? '').trim(), blocking_reason_code: String(interaction.blocking_reason_code ?? '').trim() };
+  const normalizedControl = { ...control, state: typeof control.state === 'string' ? control.state.trim().toLowerCase() : control.state,
+    allowed_actions: actions, interaction: normalizedInteraction, previous_stage: String(control.previous_stage ?? '').trim(),
+    stage_node_id: String(control.stage_node_id ?? '').trim(), stage_control_state: String(control.stage_control_state ?? '').trim(),
+    closing_output_batch_id: typeof control.closing_output_batch_id === 'string' ? control.closing_output_batch_id.trim() : '',
+    ...(freeze ? { freeze_request: { ...freeze, status: String(freeze.status ?? '').trim().toLowerCase() } } : {}),
+    ...(hold ? { print_preflight: hold } : {}) };
+  if (!validOrderControl({ ok: true, control_state: { ...state, scope: '__action__',
+    queue_state: state.queue_state.trim(), control: normalizedControl } }, state.apparatus, state.order_id, null)) return null;
+  const stages = state.order_id === state.order_id.trim() ? Object.fromEntries(Object.entries(state.stage_states)
+    .filter(([key]) => !!key.trim()).map(([key, value]) => [key.trim(), String(value).trim().toLowerCase()])) : {};
+  return { ...state, control: { ...normalizedControl, state: control.state.trim() }, stage_states: stages };
+}
+
+export function parseQueueActionResponse(raw: unknown, input: Obj = {}): Obj {
   const payload = object(raw);
   if (!payload) throw new TypeError('Invalid queue action response');
   const states = object(payload.states);
+  const rawOrderControl = object(payload.order_control), rawState = trimmed(rawOrderControl?.state);
+  const orderControl = rawOrderControl ? { state: ['frozen', 'freeze_requested'].includes(rawState) ? rawState : 'active' } : null;
   const result: Obj = {
     states: states ? Object.fromEntries(Object.entries(states).map(([key, value]) => [key, String(value)])) : {},
     rev: states && Number.isInteger(payload.rev) && payload.rev >= 0 ? payload.rev : null,
     epoch: states && typeof payload.epoch === 'string' ? payload.epoch.trim() : '',
-    order_control: object(payload.order_control), order_status: productionOrderStatusDetail(payload.order_status),
-    has_order_status: !!object(payload.order_status), control_state: null,
+    order_control: orderControl, order_status: productionOrderStatusDetail(payload.order_status),
+    has_order_status: !!object(payload.order_status), control_state: null, work_activity: null, has_work_activity: false,
+    progress_batch: null, progress_batches: [], rezka_output_report: null, completion_request: null,
+    print_job: null, print_jobs: [], print: null, prints: [],
   };
   result.has_snapshot_cursor = result.rev !== null && !!result.epoch;
   if (!states) return result;
-  const state = object(payload.control_state);
-  if (state && object(state.stage_states) && typeof state.apparatus === 'string' && typeof state.order_id === 'string' &&
-      validOrderControl({ ok: true, control_state: { ...state, scope: state.scope || '__action__' } }, state.apparatus, state.order_id, null)) {
-    result.control_state = state;
-  }
+  result.control_state = queueActionControlState(payload.control_state);
   const batches = Array.isArray(payload.progress_batches) ? payload.progress_batches.filter(object).map((item: unknown) => progressBatchFromJson(item)) : [];
   result.progress_batches = batches;
   result.progress_batch = object(payload.progress_batch) ? progressBatchFromJson(payload.progress_batch) : batches[0] ?? null;
-  result.prints = Array.isArray(payload.prints) ? payload.prints.filter((item: unknown) => object(item)?.ok === true) : [];
-  result.print = object(payload.print)?.ok === true ? payload.print : result.prints[0] ?? null;
+  const completionTimes = new Map<string, number>();
+  for (const batch of [...batches, ...(result.progress_batch ? [result.progress_batch] : [])]) {
+    if (batch.completed_at_unix > 0) completionTimes.set(String(batch.qr_payload).trim().toLowerCase(), batch.completed_at_unix);
+  }
+  const parseJob = (rawJob: Obj) => printJobFromJson(rawJob,
+    completionTimes.get(String(rawJob.epc ?? rawJob.qr_payload ?? '').trim().toLowerCase()) ?? 0);
+  let jobs = Array.isArray(payload.prints) ? payload.prints.filter((item: unknown) => object(item)?.ok === true).map(parseJob) : [];
+  if (String(input.order_id ?? '').trim().startsWith('training-') && ['offline', 'bluetooth'].includes(input.print_transport) && !jobs.length) {
+    jobs = trainingPrintJobs(batches, input);
+  }
+  const print = object(payload.print)?.ok === true ? parseJob(payload.print) : jobs[0] ?? null;
+  result.print_jobs = result.prints = jobs;
+  result.print_job = result.print = print;
+  result.rezka_output_report = rezkaReportFromSession(payload.session);
   result.completion_request = object(payload.completion_request) ? completionRequestNotification(payload.completion_request) : null;
   result.work_activity = queueWorkActivity(payload.work_activity);
   result.has_work_activity = Object.hasOwn(payload, 'work_activity');
@@ -97,5 +205,5 @@ export function parseQueueActionResponse(raw: unknown): Obj {
 export async function adminApparatusQueueActionResult(session: Session, input: Obj): Promise<Obj> {
   const body = queueActionBody(input);
   return parseQueueActionResponse(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/queue-action',
-    body, null, false, 'queue_action_not_allowed'));
+    body, null, false, 'queue_action_not_allowed'), input);
 }

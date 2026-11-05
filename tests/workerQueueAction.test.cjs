@@ -27,8 +27,12 @@ function setup(stem, name) {
   const logic = load('workerOrderLogic', { './workerControlsApi': controls });
   const batch = load('workerProgressBatch', { './workerControlsApi': controls, './workerProgressModel': load('workerProgressModel') });
   const models = load('workerQueueModels', { './workerControlsApi': controls });
+  const print = load('workerPrintJob', { './workerControlsApi': controls });
+  const rezka = load('workerRezkaReport');
+  const preflight = load('workerPrintPreflight', { './workerControlsApi': controls, './workerOrderLogic': logic });
   return { replay, session, api: load('workerQueueAction', { './workerControlsApi': controls, './workerOrderLogic': logic,
-    './workerProgressBatch': batch, './workerQueueModels': models }), models };
+    './workerProgressBatch': batch, './workerQueueModels': models, './workerPrintJob': print, './workerRezkaReport': rezka,
+    './workerPrintPreflight': preflight }), models, print, rezka };
 }
 const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
 
@@ -86,7 +90,7 @@ test('a response without states keeps only V2 acknowledged status fields', () =>
   const result = api.parseQueueActionResponse({ rev: 9, epoch: 'server', progress_batch: { batch_id: 'roll' }, order_control: { state: 'active' } });
   assert.deepEqual(result.states, {});
   assert.equal(result.has_snapshot_cursor, false);
-  assert.equal(result.progress_batch, undefined);
+  assert.equal(result.progress_batch, null);
   assert.equal(result.order_control.state, 'active');
 });
 
@@ -100,4 +104,86 @@ test('queue activity and completion models follow the V2 ownership and defaults'
   assert.equal(result.completion_request.notice_kind, 'completion_request');
   assert.equal(result.completion_request.decision_required, true);
   assert.equal(models.queueWorkActivity({ worker_role: 'aparatchi', worker_ref: '', state: 'paused' }), null);
+});
+
+test('queue print jobs retain their own V2 batch completion timestamps', async () => {
+  const stem = 'worker_wip_completion_print_test', name = 'queue labels keep each WIP completion time through saved Bluetooth jobs';
+  const { api, replay, session, print } = setup(stem, name);
+  const result = await api.adminApparatusQueueActionResult(session, { apparatus: station, order_id: order,
+    action: 'complete', print_transport: 'bluetooth' });
+  assert.deepEqual(result.print_jobs.map(job => job.completed_at_unix), [1792210320, 1792316220]);
+  assert.equal(result.print_job.completed_at_unix, 1792316220);
+  for (const job of result.print_jobs) {
+    const saved = print.printJobToJson(job);
+    assert.equal(print.printJobFromJson(saved).completed_at_unix, job.completed_at_unix);
+    assert.equal(saved.order_code, 'WORK-42');
+  }
+  replay.assertDone();
+});
+
+for (const name of ['single roll save carries cycle and slot and restores authoritative fields',
+  'individual issue sends only note and restores a locked slot without QR']) {
+  test(`queue action replays V2 rezka report: ${name}`, async () => {
+    const stem = 'rezka_output_report_api_test';
+    const { api, replay, session, rezka } = setup(stem, name);
+    const record = loadContract(stem).find(item => item.test === name);
+    const result = await api.adminApparatusQueueActionResult(session, JSON.parse(record.requestBody.text));
+    assert.equal(result.rezka_output_report.cycle_id, 'cycle-1');
+    assert.equal(rezka.rezkaFrameAt(result.rezka_output_report, 0), null);
+    const frame = rezka.rezkaFrameAt(result.rezka_output_report, 1);
+    assert.equal(frame.qr_payload, name.startsWith('single roll') ? 'QR-2' : '');
+    assert.equal(rezka.rezkaFrameIssueNote(frame), name.startsWith('single roll') ? '' : 'Kadr yirtilgan');
+    assert.deepEqual(result.print_jobs, []);
+    replay.assertDone();
+  });
+}
+
+test('rezka reports reject hybrid, duplicate and unresolved frame authority', () => {
+  const { rezka } = setup('admin_queue_action_cursor_test', 'queue ACK optional cursor {} preserves committed payload');
+  const issue = { frame_index: 1, batch_id: '', qr_payload: '', input: { issue_note: 'Kadr yirtilgan' } };
+  assert.equal(rezka.rezkaReportFromJson({ cycle_id: 'cycle', frames: [issue, { ...issue, frame_index: 2 }] }).frames.length, 2);
+  for (const invalid of [
+    { ...issue, batch_id: 'roll', qr_payload: 'QR' },
+    { ...issue, input: { issue_note: ' ' } },
+    { ...issue, input: { issue_note: 7 } },
+  ]) assert.equal(rezka.rezkaReportFromJson({ cycle_id: 'cycle', frames: [invalid] }), null);
+  assert.equal(rezka.rezkaReportFromJson({ cycle_id: 'cycle', frames: [issue, issue] }), null);
+  assert.equal(rezka.rezkaReportFromJson({ cycle_id: 'cycle', frames: [issue], reference_frame_index: 1 }), null);
+});
+
+test('queue ACK control decodes V2 normalized actions and rejects malformed rezka authority', () => {
+  const stem = 'admin_queue_action_cursor_test';
+  const name = 'queue ACK opt-in control tolerates legacy/malformed presentation: 0';
+  const { api } = setup(stem, name);
+  const control = JSON.parse(loadContract(stem).find(record => record.test === name).responseBody.text).control_state;
+  control.control.allowed_actions = ['start', ' start '];
+  control.control.state = ' PENDING ';
+  control.control.interaction.mode = ' fresh_start ';
+  control.stage_states = { ' stage ': ' COMPLETED ' };
+  const parsed = api.queueActionControlState(control);
+  assert.deepEqual(parsed.control.allowed_actions, ['start']);
+  assert.equal(parsed.control.state, 'PENDING');
+  assert.deepEqual(parsed.stage_states, { stage: 'completed' });
+  for (const patch of [
+    { rezka_input_lineage: null },
+    { rezka_input_lineage: [{ input_batch_id: 'r1', sequence_no: 1, status: 'in_use', source_kind: 'unknown' }] },
+    { rezka_active_partial_rolls: [{ slot_index: 1, generation: 1, contained_kadr_count: 1, status: 'active', source_input_batch_ids: ['missing'] }] },
+    { rezka_output_kadr_counts: [0] },
+    { rezka_output_report: { cycle_id: 'cycle', frames: [{ frame_index: 1, batch_id: 'r1', qr_payload: 'q', input: {} }] } },
+  ]) {
+    assert.equal(api.queueActionControlState({ ...control, control: { ...control.control, ...patch } }), null);
+  }
+});
+
+test('training output prepares a local print job from its batch when none is returned', () => {
+  const { api } = setup('admin_queue_action_cursor_test', 'queue ACK optional cursor {} preserves committed payload');
+  const result = api.parseQueueActionResponse({ states: { 'training-order': 'completed' }, progress_batches: [{
+    batch_id: 'roll', order_id: 'training-order', apparatus: station, qr_payload: 'QR', produced_qty: 90, uom: 'm',
+    bobina_kg: 2, finished_goods_kg: 10, executor_name: 'Worker', completed_at_unix: 123,
+  }], prints: [] }, { order_id: 'training-order', print_transport: 'bluetooth', printer: '', print_mode: '' });
+  assert.equal(result.print_jobs.length, 1);
+  assert.equal(result.print_job.epc, 'QR');
+  assert.equal(result.print_job.gross_qty, 10);
+  assert.equal(result.print_job.tare_kg, 2);
+  assert.equal(result.print_job.completed_at_unix, 123);
 });
