@@ -81,6 +81,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | `src/productionMapAuditApi.ts` | `adminProductionMapAudit` | No V2 HTTP recording was found; focused V4 tests cover the source-derived request and report parsing |
 | `src/productionProgressCorrectionApi.ts` | `adminProgressBatchCorrect` | No V2 HTTP recording was found; focused V4 tests cover source-derived validation, request fields and response checks |
 | `src/scannedWipApi.ts` | `adminReturnScannedWip`, `adminScannedWips` | No V2 HTTP recordings were found; focused V4 tests cover their source-derived scopes, requests and response validation |
+| `src/inventoryRelocateApi.ts` | `inventoryRelocate` | No V2 HTTP recording was found; a focused V4 test covers validation and its source-derived mutation |
 | `src/inventoryReadApi.ts` | `inventoryAssets`, `inventoryLocations` | No V2 HTTP recordings were found; focused V4 tests cover source-derived queries, model validation, assignment-presence metadata and errors |
 | `src/paddonSuccessorApi.ts` | `createActivePaddonSuccessor` | No V2 HTTP recording was found; a focused V4 test covers the source-derived request and response checks |
 | `src/paddonConfirmPrintApi.ts` | `confirmPaddonPrint` | No V2 HTTP recording was found; focused V4 tests cover locking, identity and the source-derived request |
@@ -141,6 +142,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `calculate` | V2 computes locally using test-mode materials |
 | `inventoryAssets` | V2 filters and annotates in-memory inventory assets |
 | `inventoryLocations` | V2 sorts its in-memory location catalog |
+| `inventoryRelocate` | V2 updates the in-memory asset placement and owner |
 | `adminRezkaAstatkaReport` | V2 validates the apparatus and stores or replays an in-memory report |
 | `adminRezkaAstatkaSnapshot` | V2 derives its session and stage from in-memory queue state and replays stored reports |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
