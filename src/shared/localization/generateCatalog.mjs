@@ -86,6 +86,7 @@ function urduFor(english) {
 }
 
 const getters = {}, methods = {}, production = {}, admin = {}, extensions = {};
+const rawProduction = {}, rawAdmin = {};
 const productionParts = [
   'app_localizations_qr_history.dart', 'app_localizations_paddon_print.dart', 'app_localizations_paddon_management.dart',
   'app_localizations_paddon_scanning.dart', 'app_localizations_qolip_product_transfer.dart', 'app_localizations_re_pause.dart',
@@ -189,8 +190,8 @@ for (const [name, source] of orderedSources) {
       const english = values.en ?? key;
       const entry = { uz: values.uz ?? english, en: english, ru: values.ru ?? english, ur: values.ur ?? urduFor(english) };
       const file = path.basename(name);
-      if (productionParts.includes(file)) production[key] = entry;
-      else if (adminParts.includes(file)) admin[key] = entry;
+      if (productionParts.includes(file)) { production[key] = entry; rawProduction[key] = values; }
+      else if (adminParts.includes(file)) { admin[key] = entry; rawAdmin[key] = values; }
       else if (file.startsWith('app_localizations_')) {
         const namespace = file.slice('app_localizations_'.length, -'.dart'.length);
         (extensions[namespace] ??= {})[key] = entry;
@@ -199,8 +200,21 @@ for (const [name, source] of orderedSources) {
   }
 }
 const ordered = value => Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
+const urduUi = new Map();
+for (const table of [rawProduction, rawAdmin]) for (const values of Object.values(table)) {
+  if (values.uz != null && values.en != null) urduUi.set(values.uz, values.ur ?? urduFor(values.en));
+}
+const uiSource = sources.get('lib/src/core/localization/urdu_ui_text_translations.dart');
+const uiSection = uiSource.slice(uiSource.indexOf('byUzbek ='), uiSource.indexOf('\n  };', uiSource.indexOf('byUzbek =')));
+for (const match of uiSection.matchAll(pair)) {
+  try {
+    const key = literal(uiSection, match.index).value, translated = literal(uiSection, match.index + match[0].length);
+    if (!translated.interpolation) urduUi.set(key, translated.value);
+  } catch { /* Non-literal entries are not emitted. */ }
+}
 const output = { baseline, getters: ordered(getters), methods: ordered(methods), production: ordered(production), admin: ordered(admin),
-  extensions: Object.fromEntries(Object.entries(extensions).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, value]) => [key, ordered(value)])) };
+  extensions: Object.fromEntries(Object.entries(extensions).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, value]) => [key, ordered(value)])),
+  urduEnglish: [...urdu], urduUi: [...urduUi] };
 writeFileSync(path.join(root, 'src/shared/localization/catalog.json'), JSON.stringify(output, null, 2) + '\n');
 process.stdout.write(`Generated ${Object.keys(getters).length} getters, ${Object.keys(methods).length} parameterized methods, ${Object.keys(production).length} production keys, ${Object.keys(admin).length} admin keys; ${unsupported.length} non-literal entries skipped.\n`);
 if (unsupported.length) process.stdout.write(`Skipped: ${unsupported.join(', ')}\n`);

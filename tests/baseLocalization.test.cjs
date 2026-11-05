@@ -9,7 +9,7 @@ const catalog = require('../src/shared/localization/catalog.json');
 const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
 mod.require = name => name === './catalog.json' ? catalog : require(name);
 mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, filename);
-const { localizedGetter, localizedMethod, productionText, adminText, extensionText, LocaleController } = mod.exports;
+const { localizedGetter, localizedMethod, productionText, adminText, extensionText, uiText, LocaleController } = mod.exports;
 
 test('baseline catalog provides static strings in four V2 locales', () => {
   assert.match(catalog.baseline, /^7c87a54e/);
@@ -42,4 +42,12 @@ test('locale selection defaults to Uzbek and persists explicit Urdu', async () =
   assert.equal(controller.isUrdu, true); assert.equal(data.get('app_locale_code'), 'ur');
   await controller.setLocale('ur-PK'); assert.equal(notifications, 2);
   const restored = new LocaleController(storage); await restored.load(); assert.equal(restored.locale, 'ur-PK');
+});
+
+
+test('Urdu UI text translates literal, interpolated and English fallback strings', () => {
+  assert.equal(uiText('4 xonali PIN kiriting', 'ur-PK'), 'اپنا 4 ہندسوں کا PIN درج کریں');
+  assert.equal(uiText('Ali uchun PIN kiriting', 'ur'), 'Ali کے لیے PIN درج کریں');
+  assert.equal(uiText('Login failed', 'ur'), 'لاگ اِن ناکام ہو گیا');
+  assert.equal(uiText('4 xonali PIN kiriting', 'uz'), '4 xonali PIN kiriting');
 });
