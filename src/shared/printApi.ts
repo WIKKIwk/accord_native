@@ -1,6 +1,6 @@
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
-import { WorkerControlException } from '../workerControlsApi';
+import { MobileApiException } from './mobileApiException';
 import { printJobFromJson, type WorkerPrintJob } from '../workerPrintJob';
 
 type Obj = Record<string, unknown>;
@@ -22,7 +22,7 @@ export type RawMaterialStock = {
 };
 export type RawMaterialReprint = { reprint_id: string; stock: RawMaterialStock; print_request: WorkerPrintJob };
 
-async function reprintException(response: Response): Promise<WorkerControlException> {
+async function reprintException(response: Response): Promise<MobileApiException> {
   let code = 'raw_material_stock_reprint_failed';
   try {
     const body: unknown = await response.json();
@@ -34,13 +34,13 @@ async function reprintException(response: Response): Promise<WorkerControlExcept
     raw_material_stock_not_found: 'Homashyo omborda topilmadi',
     forbidden: 'Bu homashyo sizga biriktirilgan omborda emas',
   };
-  return new WorkerControlException(code, messages[code] ?? 'QR kodini qayta chop etib bo‘lmadi', response.status);
+  return new MobileApiException({ code, message: messages[code] ?? 'QR kodini qayta chop etib bo‘lmadi', statusCode: response.status });
 }
 
 /** @v2 adminPrepareRawMaterialStockReprint */
 export async function adminPrepareRawMaterialStockReprint(session: Session, barcode: string, orderId = ''): Promise<RawMaterialReprint> {
   const normalized = barcode.trim();
-  if (!normalized) throw new WorkerControlException('raw_material_stock_reprint_invalid', 'QR kodi topilmadi');
+  if (!normalized) throw new MobileApiException({ code: 'raw_material_stock_reprint_invalid', message: 'QR kodi topilmadi' });
   const response = await authorizedFetch(session, '/v1/mobile/admin/raw-material-stock/reprint/prepare', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ barcode: normalized, ...(orderId.trim() ? { order_id: orderId.trim() } : {}) }),

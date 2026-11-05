@@ -12,11 +12,10 @@ function load(file, overrides = {}) {
   return mod.exports;
 }
 const { SearchActivityStore } = load('shared/searchActivityStore');
-class ApiError extends Error { constructor(code, message, statusCode) { super(message); this.code = code; this.statusCode = statusCode; } }
 const session = (role, capabilities, ref = 'U') => ({ profile: { role, ref }, capabilities });
 function fixture(fetch) {
   const data = new Map(), storage = { getItem: async key => data.get(key) ?? null, setItem: async (key, value) => data.set(key, value) };
-  const api = load('shared/catalogApi', { '../authorizedFetch': { authorizedFetch: fetch }, '../workerControlsApi': { WorkerControlException: ApiError },
+  const api = load('shared/catalogApi', { '../authorizedFetch': { authorizedFetch: fetch }, './mobileApiException': load('shared/mobileApiException'),
     '../appPreferences': { appPreferences: storage }, './searchActivityStore': { SearchActivityStore } });
   return { ...api, data };
 }

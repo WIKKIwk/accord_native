@@ -1,6 +1,6 @@
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
-import { WorkerControlException } from '../workerControlsApi';
+import { MobileApiException } from './mobileApiException';
 import { appPreferences } from '../appPreferences';
 import { SearchActivityStore } from './searchActivityStore';
 
@@ -47,7 +47,7 @@ export async function gscaleItemsPage(session: Session, options: GscaleItemsOpti
   if (offset > 0) query.set('offset', String(offset));
   const path = '/v1/mobile/gscale/items', suffix = query.toString();
   const response = await authorizedFetch(session, suffix ? `${path}?${suffix}` : path);
-  if (response.status !== 200) throw new WorkerControlException('gscale_items_failed', 'GScale items failed', response.status);
+  if (response.status !== 200) throw new MobileApiException({ code: 'gscale_items_failed', message: 'GScale items failed', statusCode: response.status });
   const data: unknown = await response.json();
   if (!Array.isArray(data)) throw new TypeError('Invalid item list');
   return searchActivityStore.sortByItemCode(session, data.map(supplierItem), item => item.code,

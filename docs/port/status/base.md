@@ -39,6 +39,7 @@ V2 has no recorded HTTP tests for `notificationDetail`, `addNotificationComment`
 |---|---|---|
 | `src/LoginScreen.tsx` | `loginCodeUsesNumericKeyboard`, `loginFailureMessage`, `LoginScreen.submitLogin` | Use the shared prefix rule, localized transport/error messages and V2 login/back behavior in the platform-owned login views. |
 | `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing UI helpers impose additional validation and do not call the shared V2 API functions; reconcile them when profile UI is ported. |
+| `src/workerControlsApi.ts` | `MobileApiException` | Reconcile the existing worker exception with `src/shared/mobileApiException.ts`, including V2 diagnostic fields and message formatting. |
 | `src/workerRawMaterials.ts` | `resilientApiRead` | Route the V2 opt-in raw-material GETs through the shared retry helper, retaining their session guards. |
 | `src/profileAvatarUpload.ts` and streamed uploads | `_sendMultipartAuthorized`, `_sendStreamedAuthorized` | Opt streamed/multipart calls out of the shared request timer where V2 has no per-request deadline. |
 | `src/app/ios-worker/_layout.tsx` | `SecurityController.clearForLogout` | Clear the separate shared profile-switch PIN along with the app-lock PIN during iOS logout. |

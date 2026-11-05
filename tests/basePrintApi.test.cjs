@@ -6,7 +6,6 @@ const test = require('node:test');
 const ts = require('typescript');
 const { contractFetch, recordedSession } = require('./support/contractFetch.cjs');
 
-class ApiError extends Error { constructor(code, message, statusCode) { super(message); this.code = code; this.statusCode = statusCode; } }
 function load(file, overrides) {
   const filename = path.resolve(__dirname, '../src', file + '.ts');
   const loaded = new Module(filename, module); loaded.filename = filename; loaded.paths = module.paths;
@@ -17,7 +16,7 @@ function load(file, overrides) {
 function fixture(fetch) {
   const print = load('workerPrintJob', { './workerControlsApi': { isCanonicalApparatusId: () => true } });
   return load('shared/printApi', { '../authorizedFetch': { authorizedFetch: fetch },
-    '../workerControlsApi': { WorkerControlException: ApiError }, '../workerPrintJob': print });
+    './mobileApiException': load('shared/mobileApiException'), '../workerPrintJob': print });
 }
 
 // @v2-test test/qolip_tasks_test.dart
