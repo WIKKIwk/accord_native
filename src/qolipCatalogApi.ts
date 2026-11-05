@@ -61,3 +61,12 @@ export async function qolipCatalogPage(session: Session, input: { query?: string
   });
   return { items, next_cursor: data.has_more ? next as string : null };
 }
+/** @v2 qolipProductMolds */
+export async function qolipProductMolds(session: Session, itemCode: string) {
+  const query = new URLSearchParams({ item_code: itemCode.trim() });
+  const response = await authorizedFetch(session, `/v1/mobile/qolip/shared-sets?${query}`);
+  if (response.status !== 200) throw await qolipResponseError(response, 'qolip_set_load_failed');
+  const data = object(await response.json());
+  if (!data || !Array.isArray(data.products)) throw new TypeError('Invalid Qolip products');
+  return data.products.map(qolipProductFromJson);
+}

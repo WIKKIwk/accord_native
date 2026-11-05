@@ -28,3 +28,10 @@ test('qolip catalog bounds pages and rejects stuck continuation', async () => {
   await assert.rejects(api.qolipCatalogPage(session, { query: 'Product', cursor: 'next' }), /Invalid Qolip catalog page/);
   replay.assertDone();
 });
+for (const [name, valid] of [['product molds sends the exact code and keeps every returned mold', true], ['product molds preserves product_not_found and its server message', false]]) test(name, async () => {
+  const stem = 'qolip_product_molds_api_test', replay = contractFetch(stem, name), session = recordedSession(stem, name);
+  const api = load('qolipCatalogApi', { './auth': { activeSessionToken: s => s.token }, './authorizedFetch': { authorizedFetch: (s, p, init = {}) => replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) } });
+  if (valid) { const rows = await api.qolipProductMolds(session, ' Zizi '); assert.ok(rows.length > 1); assert.equal(rows[0].code, 'Zizi'); }
+  else await assert.rejects(api.qolipProductMolds(session, 'Zizi'), e => e.code === 'product_not_found');
+  replay.assertDone();
+});

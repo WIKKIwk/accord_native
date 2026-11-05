@@ -150,7 +150,7 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 | `inventoryTransfers` | V2 filters its in-memory transfers by warehouse and status |
 | `mobilePushConfig` | V2 rejects requests in test mode |
 | `pendingOrders` | V2 returns an empty list in test mode |
-| `qolipCatalogDetails`, `qolipCatalogPage` | V2 filters and pages its in-memory qolip product catalog |
+| `qolipCatalogDetails`, `qolipCatalogPage`, `qolipProductMolds` | V2 filters and pages its in-memory qolip product catalog |
 | `adminRezkaAstatkaReport` | V2 validates the apparatus and stores or replays an in-memory report |
 | `adminRezkaAstatkaSnapshot` | V2 derives its session and stage from in-memory queue state and replays stored reports |
 | `adminProductionMapAudit` | V2 returns counts from its in-memory production maps |
