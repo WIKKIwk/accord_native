@@ -6,7 +6,7 @@ import { adminProductionReadIdentityCompression } from './productionReadSettings
 
 const invalid = () => new WorkerControlException('order_page_invalid', 'Buyurtmalar sahifasi noto‘g‘ri. Qayta yuklang.');
 
-// The canonical snapshot decoder still needs complete parity before tagging this method.
+/** @v2 adminProductionOrderDetail */
 export async function adminProductionOrderDetail(session: Session, input: { apparatus: string; order_id: string }) {
   const apparatus = input.apparatus.trim(), id = input.order_id.trim();
   if (apparatus && !isCanonicalApparatusId(apparatus)) throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
