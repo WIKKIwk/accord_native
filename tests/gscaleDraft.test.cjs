@@ -26,3 +26,21 @@ test('draft saves and restores V2 fields, normalizing printer and quantity sourc
   data = '{invalid';
   assert.deepEqual(await d.loadOperatorControlDraft(storage), d.emptyOperatorControlDraft());
 });
+
+test('explicit preparation destination overrides a saved warehouse and resets context', () => {
+  const current = { ...d.emptyOperatorControlDraft(), printer: 'zebra', print_mode: 'rfid', quantity_source: 'scale' };
+  const saved = { ...current, order_id: 'o1', item_code: 'PET', item_name: 'PET', warehouse: 'Old',
+    warehouse_mode: 'default', default_warehouse: 'Old', context_saved: true };
+  const restored = d.restoreOperatorDraft(current, saved, { materialReceipt: false, linkedOrderId: 'o1', linkedOrderWidthMm: null,
+    initialWarehouse: 'New', activeBatch: false, freshForm: false });
+  assert.equal(restored.warehouse, 'New'); assert.equal(restored.warehouse_mode, 'manual'); assert.equal(restored.context_saved, false);
+});
+
+test('material order changes do not restore another order’s product or dimensions', () => {
+  const current = { ...d.emptyOperatorControlDraft(), printer: 'zebra', print_mode: 'rfid', quantity_source: 'scale' };
+  const saved = { ...current, order_id: 'old', item_code: 'PET', warehouse: 'W', width_text: '400', micron_text: '12', length_text: '100' };
+  const restored = d.restoreOperatorDraft(current, saved, { materialReceipt: true, linkedOrderId: 'new', linkedOrderWidthMm: 500,
+    initialWarehouse: null, activeBatch: false, freshForm: false });
+  assert.equal(restored.item_code, ''); assert.equal(restored.width_text, '500');
+  assert.equal(restored.micron_text, ''); assert.equal(restored.length_text, '');
+});

@@ -42,3 +42,33 @@ export async function loadOperatorControlDraft(storage: AccountStorage): Promise
   } catch { /* V2 returns an empty draft when the saved JSON is invalid. */ }
   return emptyOperatorControlDraft();
 }
+
+/** Draft restoration rules from _loadControlDraftPreferences. */
+export function restoreOperatorDraft(current: OperatorControlDraft, saved: OperatorControlDraft, options: {
+  materialReceipt: boolean; linkedOrderId: string; linkedOrderWidthMm: number | null;
+  initialWarehouse: string | null; activeBatch: boolean; freshForm: boolean;
+}): OperatorControlDraft {
+  const orderId = options.linkedOrderId.trim();
+  if (options.freshForm && !options.activeBatch) {
+    const printer = saved.printer || current.printer;
+    return { ...emptyOperatorControlDraft(), order_id: orderId, printer,
+      print_mode: printer === 'godex' ? 'label' : saved.print_mode || current.print_mode, quantity_source: 'scale' };
+  }
+  if (options.freshForm) return current;
+  const sameOrder = !options.materialReceipt || saved.order_id === orderId;
+  const result = { ...current, manual_qty_text: saved.manual_qty_text, manual_duplicate_text: saved.manual_duplicate_text,
+    material_supplier: ['Xitoy', 'Sirdaryo'].includes(saved.material_supplier) ? saved.material_supplier : '',
+    default_warehouse: saved.default_warehouse };
+  if (options.activeBatch) return result;
+  const printer = saved.printer || current.printer;
+  const width = options.linkedOrderWidthMm;
+  return { ...result, order_id: orderId, item_code: sameOrder ? saved.item_code : '',
+    item_name: sameOrder ? saved.item_name || saved.item_code : '', item_requires_dimensions: sameOrder && saved.item_requires_dimensions,
+    warehouse: options.initialWarehouse?.trim() || (sameOrder && saved.item_code ? saved.warehouse : ''),
+    warehouse_mode: options.initialWarehouse?.trim() ? 'manual' : sameOrder && saved.warehouse_mode === 'default' ? 'default' : 'manual',
+    context_saved: !options.initialWarehouse?.trim() && sameOrder && saved.context_saved,
+    print_mode: printer === 'godex' ? 'label' : saved.print_mode || current.print_mode, printer,
+    quantity_source: saved.quantity_source || current.quantity_source, babina_enabled: saved.babina_enabled, babina_text: saved.babina_text,
+    width_text: sameOrder ? saved.width_text : width != null && Number.isFinite(width) && width > 0 ? width.toFixed(3).replace(/\.?0+$/, '') : '',
+    micron_text: sameOrder ? saved.micron_text : '', length_text: sameOrder ? saved.length_text : '' };
+}
