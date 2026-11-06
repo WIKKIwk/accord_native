@@ -705,6 +705,7 @@ export function canOpenRoute(session: Session | null, routeName: string | null):
 // Add a single row when both platform screens for a V2 home become available.
 const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
+  [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
 };
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {

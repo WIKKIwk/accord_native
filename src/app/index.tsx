@@ -14,10 +14,12 @@ import { notificationUnreadStore } from '../shared/notificationStoresRuntime';
 import { initializeBasePreferences } from '../shared/basePreferences';
 import { unlockAfterLogin } from '../shared/securityUnlockRuntime';
 import '../shared/productionSnapshotRuntime';
+import { usePreparationRuntime } from '../preparation/preparationRuntime';
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  usePreparationRuntime(session);
   useEffect(() => {
     let active = true;
     bootstrapSession(() => loadBaseStartup(loadSession, [() => notificationUnreadStore.load(),

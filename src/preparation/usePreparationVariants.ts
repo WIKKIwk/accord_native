@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import type { Session } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
+import { searchMatches } from '../shared/searchNormalizer';
 import { newPreparationRequestId } from './preparationCommandApi';
-import { preparationCreateFormulaVariant, preparationFormulaVariants, preparationRemoveFormulaVariantFromOrder,
+import { preparationCreateFormulaVariant, preparationFormulaCatalog, preparationFormulaVariants, preparationRemoveFormulaVariantFromOrder,
   preparationRenameFormulaVariant, preparationReuseFormulaVariant } from './preparationFormulaApi';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
 import { preparationVariantName, preparationVariantNameCanSave } from './usePreparationLibrary';
 
 type Variant = Awaited<ReturnType<typeof preparationFormulaVariants>>[number];
+type CatalogEntry = Awaited<ReturnType<typeof preparationFormulaCatalog>>[number];
+export function preparationReuseSubtitle(entry: CatalogEntry): string {
+  return [entry.formula_code || null, entry.material_name, entry.product_title,
+    entry.set_name && entry.set_name !== entry.product_title ? entry.set_name : null, entry.product_code,
+    entry.order_codes.length ? `Buyurtmalar: ${entry.order_codes.join(', ')}` : null]
+    .filter((value): value is string => value !== null).join(' • ');
+}
 export type PreparationVariantsOptions = { orderId: string; productCode: string; materialId: string };
 type State = { variants: Variant[]; loading: boolean; creating: boolean; opening: boolean; copying: boolean; removing: boolean;
   savingName: boolean; requestId: string | null; nameError: string | null; error: string | null };
@@ -16,6 +24,7 @@ export class PreparationVariantsState {
     savingName: false, requestId: null, nameError: null, error: null };
   private active = true;
   private generation = 0;
+  private catalogRequest: Promise<CatalogEntry[]> | null = null;
   private readonly scope: string;
   private readonly listeners = new Set<() => void>();
   constructor(private readonly session: Session, private readonly options: PreparationVariantsOptions) { this.scope = sessionReadScope(session); }
@@ -63,9 +72,21 @@ export class PreparationVariantsState {
   }
   beginReuse() {
     if (this.state.creating || this.state.opening || this.state.removing || !this.current) return false;
-    this.update({ creating: true }); return true;
+    this.catalogRequest = null; this.update({ creating: true }); return true;
   }
-  cancelReuse() { if (!this.state.copying) this.update({ creating: false }); }
+  cancelReuse() { if (!this.state.copying) { this.catalogRequest = null; this.update({ creating: false }); } }
+  async loadReusePage(query: string, offset: number, limit: number): Promise<CatalogEntry[]> {
+    if (!this.current || !this.state.creating) throw new Error('Akkaunt o‘zgargan');
+    const request = this.catalogRequest ??= preparationFormulaCatalog(this.session, this.options);
+    try {
+      const entries = await request;
+      if (!this.current || !this.state.creating || this.catalogRequest !== request) throw new Error('Akkaunt o‘zgargan');
+      return entries.filter(entry => searchMatches(query, [entry.name, preparationReuseSubtitle(entry)])).slice(offset, offset + limit);
+    } catch (error) {
+      if (this.catalogRequest === request) this.catalogRequest = null;
+      throw error;
+    }
+  }
   async reuse(sourceVariantId: string) {
     if (!this.current || !this.state.creating || this.state.copying) return null;
     this.update({ copying: true });
@@ -73,7 +94,7 @@ export class PreparationVariantsState {
       const variant = await preparationReuseFormulaVariant(this.session, { ...this.options, sourceVariantId });
       if (!this.current) return null;
       this.update({ variants: [...this.state.variants.filter(item => item.id !== variant.id), variant] }); return variant;
-    } finally { this.update({ creating: false, copying: false }); }
+    } finally { this.catalogRequest = null; this.update({ creating: false, copying: false }); }
   }
   async rename(variant: Variant, name: string) {
     if (!this.current || this.state.creating || this.state.opening || this.state.removing || !preparationVariantNameCanSave(name, variant.name)) return null;
