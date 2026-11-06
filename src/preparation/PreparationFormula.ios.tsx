@@ -1,4 +1,4 @@
-import { Button, Host, HStack, List, Menu, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { Button, Host, HStack, List, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { disabled, keyboardType } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useFocusEffect, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,6 +8,7 @@ import { usePreparationContext } from './PreparationContext';
 import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
 import { PreparationNotice } from './PreparationNotice';
 import { PreparationSharesDialog } from './PreparationSharesDialog';
+import { PreparationSeriyoPicker } from './PreparationSeriyoPicker';
 import { preparationNextFormulaName, type FormulaEditorRow } from './preparationLogic';
 import { preparationFormulaSharesComplete, type PreparationFormula as Formula } from './preparationModel';
 import { preparationFormulaCard, preparationFormulaHeading } from './preparationFormulaPresentation';
@@ -18,14 +19,12 @@ import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { openPreparationScale } from './PreparationRoutes';
 
 type Material = ReturnType<typeof usePreparationFormula>['materials'][number];
-function FormulaLine({ row, index, materials, busy, change, remove, canRemove }: { row: FormulaEditorRow; index: number; materials: Material[];
-  busy: boolean; change: (row: FormulaEditorRow) => void; remove: () => void; canRemove: boolean }) {
+function FormulaLine({ row, index, busy, change, pick, remove, canRemove }: { row: FormulaEditorRow; index: number;
+  busy: boolean; change: (row: FormulaEditorRow) => void; pick: () => void; remove: () => void; canRemove: boolean }) {
   const nativePercent = useNativeState(row.percent), t = usePreparationText();
   return <Section title={`${index + 1}-seriyo`}>
     {canRemove && <Button label={t('Olib tashlash')} role="destructive" modifiers={[disabled(busy)]} onPress={remove} />}
-    <Menu label={row.material?.name ?? t('Seriyo tanlang')} modifiers={[disabled(busy)]}>
-      {materials.filter(item => item.can_receive).map(item => <Button key={item.code} label={item.name} onPress={() => change({ ...row, material: item })} />)}
-    </Menu>
+    <Button label={row.material?.name || row.material?.code || t('Seriyo tanlang')} modifiers={[disabled(busy)]} onPress={pick} />
     {row.material && <TextField text={nativePercent} placeholder={t('Foiz (%)')} modifiers={[keyboardType('decimal-pad'), disabled(busy)]}
       onTextChange={percent => change({ ...row, percent })} />}
   </Section>;
@@ -65,6 +64,15 @@ export function PreparationFormula() {
   const total = preparationShareSummary(state.rows.map(row => row.percent));
   usePreventRemove(state.saving || state.deleting, () => {});
   const updateRow = (index: number, row: FormulaEditorRow) => controller.setRows(state.rows.map((old, i) => i === index ? row : old));
+  const pickMaterial = (index: number) => {
+    let selected: Material | null = null;
+    sheet.open(<PreparationSeriyoPicker materials={state.materials} choose={material => { selected = material; sheet.close(); }} />,
+      { dismissible: true, onDismiss: () => {
+        if (!selected) return;
+        const rows = controller.getSnapshot().rows;
+        if (index < rows.length) controller.setRows(rows.map((row, i) => i === index ? { ...row, material: selected } : row));
+      } });
+  };
   const failure = (error: unknown) => showNotice(preparationFormulaErrorMessage(error));
   const remove = (formula: Formula) => Alert.alert(t('Formulani o‘chirish'), `«${formula.name}» formulasi o‘chirilsinmi?`, [
     { text: t('Bekor qilish'), style: 'cancel' }, { text: t('O‘chirish'), style: 'destructive', onPress: () => {
@@ -91,8 +99,9 @@ export function PreparationFormula() {
         <Section><Text>{state.editingName === null ? t('Yangi formula') : `«${state.editingName}»`}</Text>
           {state.editingName === null && <><Text>{`Formula: ${preparationNextFormulaName(state.formulas.map(formula => formula.name))}`}</Text>
             <Text>{t('Nom avtomatik beriladi')}</Text></>}</Section>
-        {state.rows.map((row, index) => <FormulaLine key={`${state.editingName ?? 'new'}:${index}:${row.material?.code ?? ''}`} row={row} index={index} materials={state.materials}
-          busy={busy} canRemove={state.rows.length > 1} change={value => updateRow(index, value)} remove={() => controller.setRows(state.rows.filter((_, i) => i !== index))} />)}
+        {state.rows.map((row, index) => <FormulaLine key={`${state.editingName ?? 'new'}:${index}:${row.material?.code ?? ''}`} row={row} index={index}
+          busy={busy} canRemove={state.rows.length > 1} change={value => updateRow(index, value)} pick={() => pickMaterial(index)}
+          remove={() => controller.setRows(state.rows.filter((_, i) => i !== index))} />)}
         <Section><Button label={t('Seriyo qo‘shish')} modifiers={[disabled(busy)]} onPress={() => controller.setRows([...state.rows, { material: null, percent: '' }])} />
           <Text>{total.total === null ? 'Jami: —' : `Jami: ${total.total}%`}</Text><Text>{t('100% shart')}</Text>
           {!!state.editorError && <Text>{state.editorError}</Text>}

@@ -7,6 +7,8 @@ import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { usePreparationContext } from './PreparationContext.android';
 import { PreparationFormulaDetails, type FormulaDetailAction } from './PreparationFormulaDetails.android';
+import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
+import type { PreparationMaterial } from './preparationLogic';
 import { preparationDisplay, preparationFormulaSharesComplete, type PreparationFormula } from './preparationModel';
 import { openPreparationScale, preparationShareDisplay, readPreparationRouteData } from './preparationNavigation.android';
 import { preparationNextFormulaName } from './preparationLogic';
@@ -88,11 +90,14 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
       estimatedKg={state.estimatedMaterialKg} onSelect={action => { selected = action; sheet.close(); }} />,
     { dismissible: true, compact: true, onDismiss: () => { if (selected) void formulaAction(formula, selected); } });
   };
-  const chooseMaterial = async (index: number) => {
-    const code = await dialogs.choose('Seriyo tanlang', state.materials.filter(item => item.can_receive)
-      .map(item => ({ label: item.name, searchText: item.code, value: item.code })), undefined, true);
-    const material = state.materials.find(item => item.code === code);
-    if (material) state.controller.setRows(state.rows.map((row, i) => i === index ? { ...row, material } : row));
+  const chooseMaterial = (index: number) => {
+    let selected: PreparationMaterial | null = null;
+    sheet.open(<PreparationSeriyoPicker materials={state.materials} choose={material => { selected = material; sheet.close(); }} />,
+      { dismissible: true, onDismiss: () => {
+        if (!selected) return;
+        const rows = state.controller.getSnapshot().rows;
+        if (index < rows.length) state.controller.setRows(rows.map((row, i) => i === index ? { ...row, material: selected } : row));
+      } });
   };
   return <>
     <View style={{ flex: 1 }}><PreparationPage title={state.variantName || 'Formulalar'} refreshing={state.loading} onRefresh={() => void state.controller.reload()}>
@@ -107,7 +112,7 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
           <PreparationText>{t('Nom avtomatik beriladi')}</PreparationText></> : null}
         {state.rows.map((row, index) => <PreparationRowEditor key={`${index}:${row.material?.code ?? ''}`} index={index} row={row} disabled={state.saving}
           canRemove={state.rows.length > 1}
-          choose={() => void chooseMaterial(index)} update={percent => state.controller.setRows(state.rows.map((entry, i) => i === index ? { ...entry, percent } : entry))}
+          choose={() => chooseMaterial(index)} update={percent => state.controller.setRows(state.rows.map((entry, i) => i === index ? { ...entry, percent } : entry))}
           remove={() => state.controller.setRows(state.rows.filter((_, i) => i !== index))} />)}
         <PreparationButton label="Seriyo qo‘shish" disabled={state.saving} onPress={() => state.controller.setRows([...state.rows, { material: null, percent: '' }])} />
         <PreparationText>{total.total === null ? 'Jami: —' : `Jami: ${total.total}%`}</PreparationText><PreparationText>{t('100% shart')}</PreparationText>
