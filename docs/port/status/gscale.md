@@ -16,6 +16,7 @@ Stopped at: connect discovery and saved device selection, then port the operator
 | `src/gscale/gscaleBatchStart.ts` | `_startRsBatchFromSelection` | Order, warehouse, dimensions and apparatus are checked before batch start; wire the dependencies to the operator state and platform picker. |
 | `src/gscale/gscalePreparation.ts` | `gscale_mobile_app_preparation_receipt.dart`, `_submitSimpleReceipt` | Formula preset matching, conflict guards and simple-receipt checks are implemented; connect them to the operator state and preparation entry. |
 | `src/gscale/gscaleDraft.ts` | `OperatorControlDraft` | Draft persistence is implemented; wire it to operator state, including V2's debounce and preparation fresh-form reset. |
+| `src/gscale/gscaleArchive.ts` | `MobileArchiveSession`, `_reprintArchiveReceipt`, `buildMaterialBatchPrintPlan` | Batch aggregation, QR plans and receipt reprint identity checks are implemented; connect archive loading, UI and both print transports, then verify with a real printer. |
 | `src/gscale/gscaleMonitor.ts` | `MonitorSnapshot.fromJson` | JavaScript JSON parsing does not retain whether a scale value was encoded as an integer or a decimal such as `2.0`; preserve that distinction if the exact displayed text must match V2. Connect the snapshot and live stream to the operator view. |
 | `src/app/ios-gscale/**`, `src/app/android-gscale/**` | `gscale_mode_screen.dart` | Implement both route trees, GScaleModeArgs and the platform screens. |
 
