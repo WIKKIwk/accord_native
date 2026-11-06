@@ -44,6 +44,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Verification
 
+- Preparation iOS wiring: 854 tests passed; iOS and default TypeScript checks and Expo lint passed. Android retains the 10 known baseline TypeScript errors. Real device and printer checks remain open.
 - The ledger estimates 112k V2 tokens for this role; actual tokens read were not measured. The prior logic session tagged 26/26 listed APIs; this wiring turn additionally implemented the two inventory transfer mutation methods and added preparation-scoped access to the existing inventory store.
 - `node --test tests/*.test.cjs`: 826 passed, 0 failed, up from 813 before wiring. The 13 added tests cover search, apparatus preferences, startup, targets, printer adapters and inventory transfer/access. An existing variant test loader gained mocks for the new dependencies; no existing assertion was changed.
 - iOS TypeScript: passed. Android TypeScript: the 10 known baseline errors in `WorkerOutputProgress.android.tsx`, `WorkerPaintPalette.android.tsx`, and `WorkerScreen.tsx`; no preparation errors. Expo lint: passed.

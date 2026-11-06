@@ -27,7 +27,7 @@ Stopped at: integrate the missing GScale route and network discovery, reconcile 
 
 ## Verification
 
-- `node --test tests/*.test.cjs`: 851 passed before adding the final inventory QR reprint cases. Focused reprint tests passed afterward. Native views are not rendered by these tests.
+- `node --test tests/*.test.cjs`: 854 passed. Focused printer tests also passed after the final address-normalization adjustment. Native views are not rendered by these tests.
 - iOS and default TypeScript checks passed; Android typecheck retains the 10 errors recorded in `PORT.md`.
 - `npx expo lint` passed. `port_ledger.mjs check` passed with the seven previously documented dynamic/other-role endpoint warnings. All 16 iOS surface tags are present; the role ledger still has unchecked route and Android entries, so no claim of complete role parity is made.
 - V2 role reading estimate: 112k tokens; actual tokens read were not measured. Two source-derived inventory assignment API methods were added; no V2 recording existed for them in this role's fixtures.
@@ -47,3 +47,4 @@ Stopped at: integrate the missing GScale route and network discovery, reconcile 
 - `6709349` port(preparation/ios): preparation order summary and formulas
 - `3bb75b4` port(preparation/ios): inventory order assignments
 - `d32ce7e` port(preparation/ios): clear preparation on account reset
+- `e40f827` port(preparation/ios): inventory QR reprint

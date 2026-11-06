@@ -19,13 +19,15 @@ const truthy = (value: unknown) => value === true || (typeof value === 'number' 
 export function preparationPrinterServerUrl(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) throw new Error('Manzil formati noto‘g‘ri');
+  const source = trimmed.includes('://') ? trimmed : `http://${trimmed}`;
   let url: URL;
-  try { url = new URL(trimmed.includes('://') ? trimmed : `http://${trimmed}`); }
+  try { url = new URL(source); }
   catch { throw new Error('Manzil formati noto‘g‘ri'); }
   if (!url.hostname || !['http:', 'https:'].includes(url.protocol)) throw new Error('Manzil formati noto‘g‘ri');
   if (['localhost', '127.0.0.1', '::1', '[::1]', '10.0.2.2'].includes(url.hostname.toLowerCase()))
     throw new Error('Localhost emas, Wi‑Fi server manzilini kiriting');
-  return `${url.protocol}//${url.hostname}:${url.port || '39117'}`;
+  const explicitPort = source.match(/^[a-z][a-z\d+.-]*:\/\/(?:[^@/?#]*@)?(?:\[[^\]]+\]|[^:/?#]+)(?::(\d+))?(?:[/?#]|$)/i)?.[1];
+  return `${url.protocol}//${url.hostname}:${explicitPort || url.port || '39117'}`;
 }
 
 async function fetchJsonWithTimeout(url: string, init: RequestInit, timeout: number): Promise<{ response: Response; payload: unknown }> {
@@ -65,7 +67,6 @@ export async function pickPreparationPrinter(options: {
   } catch { return null; }
 }
 
-/** @v2 _InventoryAssetQrSheetState */
 export async function pickPreparationInventoryPrinter(options: {
   isCurrent: () => boolean; selectDevice: () => Promise<PreparationDeviceSelection | null>;
 }): Promise<Printer | null> {
