@@ -7,7 +7,7 @@ Stopped at: integrate the shared sequence/detail, scale, printer and other role 
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Home and warehouse | `preparation_screen.dart`, `preparation_screen_forms.dart` | Connect scale receipt, inventory movements, sequence, chat and profile destinations. The shared destination implementations are not available to this screen session. Restore the full drawer and dock destinations when they exist. |
-| Sequence | `_PreparationOrdersListState`, `AdminProductionMapOrdersScreen` | The native list component accepts an injected `PreparationOrdersState`, apparatus selector and read-only detail opener. Shared apparatus selection, warm-store startup and the borrowed detail view are not available yet, so the component has no route and the home action is omitted. Wire the real store, detail host, order material picker and variants route. |
+| Sequence | `_PreparationOrdersListState`, `AdminProductionMapOrdersScreen` | The Android route now connects the warm store, apparatus selection, scoped detail loading and the order-material picker to variants. The shared worker overview covers only part of the borrowed admin read-only detail; compare the remaining admin detail sections and calculation-template-derived values before claiming full parity. |
 | Formula variants | `preparation_formula_variants_screen.dart` `_reuse` | Add searchable reuse with the shared V2 `searchMatches` implementation once the integrator supplies it. |
 | Scale destination | `gscale_mode_screen.dart` `GScaleModeArgs` | Home, warehouse, material and formula actions now push `/android-gscale` with serialized arguments; the GScale session must supply that route and consume its `data` parameter. The formula opening guard remains active until return. |
 | Formula shares | `_FormulaSharesSheet` | The share editor currently uses a native alert dialog so saving can block dismissal. Move it to the native sheet host once that host can also block hardware back while saving. |
@@ -26,7 +26,7 @@ The preparation logic session owns the deferred test-mode branches.
 ## Needs from the integrator
 
 - Add `/android-preparation` to the shared role home-target table and connect the native route tree.
-- Supply `AdminSequenceApparatusStore`, start `PreparationOrdersWarmStore` with the active session, and provide the read-only order detail host and its preparation formula action.
+- Complete the borrowed read-only admin order detail sections and calculation-template-derived values.
 - Supply shared `searchMatches`, the scale receipt and inventory-movement routes, the Android chat destination, a role-appropriate profile destination, and printer selection/transport.
 - Review the existing shared controllers' account-scope invalidation and complete the contract's dynamic localization inventory.
 

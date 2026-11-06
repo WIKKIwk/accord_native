@@ -42,6 +42,7 @@ export function PreparationHomeScreen() {
       { label: 'Ombor', value: 'warehouse', disabled: home.locked },
       { label: 'Homashyolar', value: 'materials', disabled: home.locked },
       { label: 'Mahsulot formulasi', value: 'sets', disabled: home.locked },
+      { label: 'Buyurtmalar', value: 'sequence' },
       ...(canOpenRoute(session, appRoutes.gscaleMode) ? [{ label: 'Tarozi kirimi', value: 'scale', disabled: home.locked }] : []),
       ...(preparationReceiptMode(home.warehouse, data.material_warehouses) !== 'scale' ? [{ label: 'Kirim', value: 'receive', disabled: home.locked }] : []),
       { label: 'Tarix', value: 'history' },
@@ -51,6 +52,7 @@ export function PreparationHomeScreen() {
     else if (chosen === 'warehouse') router.push('/android-preparation/warehouse' as Href);
     else if (chosen === 'materials') router.push('/android-preparation/materials' as Href);
     else if (chosen === 'sets') router.push('/android-preparation/sets' as Href);
+    else if (chosen === 'sequence') router.push('/android-preparation/sequence' as Href);
     else if (chosen === 'history') router.push('/android-preparation/history' as Href);
   };
   return <PreparationPage title="Tayyorlov masteri" root drawer actions={data ? () => void actions() : undefined} refreshing={home.loading && !!data}
@@ -67,6 +69,7 @@ export function PreparationHomeScreen() {
       <PreparationRow title={t('Ombor')} subtitle={home.warehouse ?? t('Tanlanmagan')} disabled={home.locked} onPress={() => router.push('/android-preparation/warehouse' as Href)} />
       <PreparationRow title={t('Homashyolar')} disabled={home.locked} onPress={() => router.push('/android-preparation/materials' as Href)} />
       <PreparationRow title={t('Mahsulot formulasi')} disabled={home.locked} onPress={() => router.push('/android-preparation/sets' as Href)} />
+      <PreparationRow title={t('Buyurtmalar')} onPress={() => router.push('/android-preparation/sequence' as Href)} />
       <PreparationRow title={t('Ishlab chiqarish')} onPress={() => router.replace('/android-preparation/production' as Href)} />
       <PreparationRow title={t('Tarix')} onPress={() => router.push('/android-preparation/history' as Href)} />
     </> : null}

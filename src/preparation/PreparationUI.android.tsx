@@ -99,6 +99,7 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
       <PreparationRow title={t('Tayyorlov')} onPress={() => navigate('/android-preparation')} />
       <PreparationRow title={t('Formulalar')} onPress={() => navigate('/android-preparation/formulas')} />
       <PreparationRow title={t('Ishlab chiqarish')} onPress={() => navigate('/android-preparation/production')} />
+      <PreparationRow title={t('Ketma-ketlik')} onPress={() => { setDrawerOpen(false); router.push('/android-preparation/sequence' as Href); }} />
     </View>}>{content}</Drawer></GestureHandlerRootView>;
 }
 
