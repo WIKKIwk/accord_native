@@ -8,12 +8,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildGraph, featureOf, reachForRole } from './v2_graph.mjs';
+import { comparable, dartStrings, fragmentsOf, isUiText, lineAt, nearest, shownInDart, shownInTs, surfacesIn, tsStrings } from './ui_text.mjs';
 
 const USAGE = `Usage: node .agents/skills/accord-port/scripts/port_ledger.mjs <command>
 
   plan                Every role in port order, with what it adds and how many sessions it needs.
   role <id> [part]    A role's reading list, API, surfaces and tests, from V2's real references.
                       Writes .port/role-<id>.md, or .port/role-<id>-<part>.md for one part.
+  page <query> [part] Same report for one V2 screen, sheet or dialog: a class name, an AppRoutes name, or a word shown
+                      on it. Writes .port/role-page-<name>.md and prints the session name.
+  text <id> [platform] Gate: compares what a person reads in V2 with V4, both ways, and lists every sheet, dialog and
+                      snackbar. <id> is a role id or page:<query>. platform is ios, android or both (default).
+                      Writes .port/text-<id>.md. Accepted differences go in docs/port/text/<id>.tsv.
   shared [a,b,c]      Open API methods that two or more roles need, for the base session to port first.
                       Default: every role not done, except admin and brigader. Writes .port/shared-api.md
   status              Coverage totals and per-domain table. Writes .port/STATUS.md
@@ -461,10 +467,45 @@ ${shared.map(({ node, roles }) => `- [ ] ${node.name} <- ${node.file}:${node.lin
   console.log(`Saved: ${writeOut('shared-api.md', report)}`);
 }
 
-function roleReport(id, partNumber) {
+const toKebab = name => name.replace(/^_+/, '').replace(/(Screen|Page)$/, '').replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+
+/** Finds the one V2 surface a query means and describes it as a role, so reports and gates work the same. */
+function pageRole(graph, query) {
+  if (!query) throw new Error('page needs a query: a class name, an AppRoutes name, or a word shown on the page.');
+  const surfaces = [...scanV2().surfaces.values()];
+  const wanted = query.replace(/^AppRoutes\./, '').toLowerCase();
+  const routeNames = [...graph.routeScreens.keys()];
+  const route = routeNames.find(name => name.toLowerCase() === wanted);
+  const routeScreens = route ? graph.routeScreens.get(route) ?? [] : [];
+  let hits = surfaces.filter(item => item.name.toLowerCase() === wanted || routeScreens.includes(item.name));
+  if (!hits.length) hits = surfaces.filter(item => item.name.toLowerCase().includes(wanted));
+  if (!hits.length) {
+    hits = surfaces.filter(item => graph.texts.get(item.ref.split(':')[0])?.includes(query));
+  }
+  if (!hits.length) throw new Error(`No V2 screen, sheet or dialog matches "${query}".`);
+  if (hits.length > 1) {
+    const list = hits.slice(0, 40).map(item => `- ${item.name} (${item.kind}) <- ${item.ref}`).join('\n');
+    const error = new Error(`"${query}" matches ${hits.length} surfaces. Ask the user which one:\n${list}`);
+    error.exitCode = 2;
+    throw error;
+  }
+  const [hit] = hits;
+  const file = hit.ref.split(':')[0];
+  const ownRoutes = routeNames.filter(name => (graph.routeScreens.get(name) ?? []).includes(hit.name));
+  const role = { id: `page-${toKebab(hit.name)}`, title: `Page ${hit.name}`, seeds: [hit.name], routes: ownRoutes, features: [featureOf(file)].filter(Boolean) };
+  const opened = new Set();
+  for (const node of reachForRole(graph, role).nodes) {
+    for (const m of node.source.matchAll(/\bAppRoutes\s*\.\s*(\w+)/g)) if (!ownRoutes.includes(m[1])) opened.add(m[1]);
+  }
+  role.notes = `One page and what it opens directly. V2 source: ${hit.ref}.${opened.size ? ` It also opens these routes, which are other pages and not in this scope: ${[...opened].sort().map(name => `AppRoutes.${name}`).join(', ')}.` : ''}`;
+  return role;
+}
+
+function roleReport(id, partNumber, extraRole = null) {
   if (!id) throw new Error('role needs an id. Run: plan');
   const graph = buildGraph(V2);
   const config = readRoles();
+  if (extraRole) config.roles.push(extraRole);
   const entry = layOne(graph, config, id);
   if (!entry) throw new Error(`Unknown role "${id}". Known: ${config.roles.map(role => role.id).join(', ')}`);
   const { role, reach, fresh, earlier } = entry;
@@ -545,7 +586,7 @@ function roleReport(id, partNumber) {
 
 ${role.notes ?? ''}
 
-To read: ${kTokens(bytes)} tokens of V2 code${part ? '' : `, in ${parts.length} part(s). Run \`role ${id} <part>\` for one part`}.
+To read: ${kTokens(bytes)} tokens of V2 code${part ? '' : `, in ${parts.length} part(s). Run \`${extraRole ? 'page <query>' : `role ${id}`} <part>\` for one part`}.
 Still open: about ${kTokens(openBytes)}. Entries marked [x] are already ported, possibly in another role's files: reuse them and do not read them again.
 Already ported roles that cover part of this code${already ? `: ${already}` : ': none, so the shared core is included below'}. Do not re-read the covered code unless something here depends on its details.
 JSON role values: ${(role.jsonRoles ?? []).join(', ') || 'none'}. Scanned from V2's working tree. Line numbers can shift, so search by symbol.
@@ -610,6 +651,131 @@ ${borrowed.join('\n') || '- none'}
   fs.writeFileSync(path.join(OUT, `role-${id}.contract-tests.txt`), contractTests.map(row => row.file).join('\n') + '\n');
   console.log(`${role.title}: ${kTokens(bytes)} tokens to read${part ? ` in part ${partNumber}/${parts.length}` : ` in ${parts.length} part(s)`}, ${publicApi.length} API methods, ${endpoints.size} endpoints, ${surfaces.length} screens/sheets, ${contractTests.length} contract tests, ${logicTests.length} logic tests, ${widgetOnly.length} widget tests.`);
   console.log(`Saved: ${saved}`);
+}
+
+function pageReport(query, partNumber) {
+  const role = pageRole(buildGraph(V2), query);
+  roleReport(role.id, partNumber, role);
+  console.log(`Session name: ${role.id}`);
+}
+
+const TEXT_DIR = path.join(V4, 'docs/port/text');
+const PLATFORMS = ['ios', 'android'];
+
+function readTextExceptions(id) {
+  const file = path.join(TEXT_DIR, `${id}.tsv`);
+  const rows = new Map();
+  if (!fs.existsSync(file)) return rows;
+  for (const line of read(file).split('\n')) {
+    if (!line.trim() || line.startsWith('#')) continue;
+    const [platform, text, reason] = line.split('\t');
+    if (!text || !reason?.trim()) throw new Error(`${rel(V4, file)}: every row needs platform, text and a reason: ${line}`);
+    rows.set(`${platform}\t${text}`, reason.trim());
+  }
+  return rows;
+}
+
+/** V4 files for one platform: the folders holding this scope's @v2 tags, plus shared UI code and the platform's routes. */
+function scopeFiles(scopeNames, platform) {
+  const other = platform === 'ios' ? 'android' : 'ios';
+  const visible = file => !file.includes(`.${other}.`) && !file.includes(`src/app/${other}-`);
+  const tagged = new Set(scanV4().tags.filter(tag => scopeNames.has(tag.symbol.split('.').pop())).map(tag => tag.file));
+  const folders = new Set([...tagged].map(file => path.posix.dirname(file)).filter(folder => !/^src(\/(shared|components|printing|app)(\/|$)|$)/.test(folder)));
+  const all = walk(path.join(V4, 'src'), name => /\.(ts|tsx)$/.test(name)).map(file => rel(V4, file)).filter(visible);
+  const own = all.filter(file => tagged.has(file) || [...folders].some(folder => file.startsWith(`${folder}/`)));
+  const shown = all.filter(file => own.includes(file) || file.startsWith('src/shared/') || file.startsWith('src/components/') || file.startsWith(`src/app/${platform}-`));
+  return { own, shown };
+}
+
+function textReport(scope, which = 'both') {
+  if (!scope) throw new Error('text needs a role id or page:<query>.');
+  if (which !== 'both' && !PLATFORMS.includes(which)) throw new Error(`Unknown platform "${which}". Use ios, android or both.`);
+  const platforms = which === 'both' ? PLATFORMS : [which];
+  const graph = buildGraph(V2);
+  const config = readRoles();
+  let id = scope;
+  if (scope.startsWith('page:')) {
+    const role = pageRole(graph, scope.slice(5));
+    config.roles.push(role);
+    id = role.id;
+  }
+  const entry = layOne(graph, config, id);
+  if (!entry) throw new Error(`Unknown role "${id}". Known: ${config.roles.map(role => role.id).join(', ')}`);
+  const nodes = entry.fresh.filter(node => !node.file.startsWith('lib/src/core/localization/'));
+  const scopeNames = new Set(nodes.map(node => node.name));
+
+  const v2Texts = new Map();
+  const surfaces = new Map();
+  for (const node of nodes) {
+    for (const item of dartStrings(node.source)) {
+      if (!shownInDart(item) || !isUiText(item.parts)) continue;
+      const row = v2Texts.get(item.text) ?? { fragments: fragmentsOf(item.parts), refs: new Set() };
+      row.refs.add(`${node.file}:${node.line + lineAt(node.source, item.offset) - 1}`);
+      v2Texts.set(item.text, row);
+    }
+    if (node.kind === 'api') continue;
+    for (const item of surfacesIn(node.source)) {
+      surfaces.set(`${node.file}:${node.line + lineAt(node.source, item.offset) - 1}`, { kind: item.kind, owner: node.name });
+    }
+  }
+  const v2All = comparable(walk(path.join(V2, 'lib'), name => name.endsWith('.dart')).map(read).join('\n'));
+  const exceptions = readTextExceptions(id);
+  const accepted = (platform, text) => exceptions.has(`${platform}\t${text}`) || exceptions.has(`both\t${text}`);
+  const v2Fragments = [...new Set([...v2Texts.values()].flatMap(row => row.fragments))];
+  const result = {};
+  for (const platform of platforms) {
+    const { own, shown } = scopeFiles(scopeNames, platform);
+    const corpus = comparable(shown.map(file => read(path.join(V4, file))).join('\n'));
+    const v4Strings = new Map();
+    for (const file of own) {
+      const source = read(path.join(V4, file));
+      for (const item of tsStrings(source)) {
+        if (!shownInTs(item) || !isUiText(item.parts)) continue;
+        const row = v4Strings.get(item.text) ?? { fragments: fragmentsOf(item.parts), refs: new Set() };
+        row.refs.add(`${file}:${lineAt(source, item.offset)}`);
+        v4Strings.set(item.text, row);
+      }
+    }
+    const v4Fragments = [...new Set([...v4Strings.values()].flatMap(row => row.fragments))];
+    const missing = [...v2Texts].filter(([text, row]) => !accepted(platform, text) && row.fragments.some(part => !corpus.includes(part)))
+      .map(([text, row]) => ({ text, ref: [...row.refs][0], near: nearest(row.fragments.find(part => !corpus.includes(part)), v4Fragments) }));
+    const added = [...v4Strings].filter(([text, row]) => !accepted(platform, text) && row.fragments.some(part => !v2All.includes(part)))
+      .map(([text, row]) => ({ text, ref: [...row.refs][0], near: nearest(row.fragments.find(part => !v2All.includes(part)), v2Fragments) }));
+    result[platform] = { missing, added, files: own.length };
+  }
+
+  const cell = text => text.replace(/\n/g, ' ').replace(/\|/g, '\\|');
+  const section = (title, rows, closest) => `### ${title} (${rows.length})
+
+${rows.length ? `| Text | Where | ${closest} |\n|---|---|---|\n${rows.map(row => `| ${cell(row.text)} | ${row.ref} | ${row.near ? cell(row.near) : ''} |`).join('\n')}` : 'None.'}
+`;
+  const grouped = new Map();
+  for (const [ref, item] of surfaces) grouped.set(item.kind, [...(grouped.get(item.kind) ?? []), `${ref} (${item.owner})`]);
+  const report = `# What a person reads: ${id}
+
+V2 text in scope: ${v2Texts.size}. Scanned from V2's working tree. Port words exactly: same spelling, punctuation and capitals.
+
+Every row needs one verdict: fix V4, or add a row to docs/port/text/${id}.tsv as \`platform<TAB>text<TAB>reason\`, where platform is ios, android or both. A reason names a fact, such as "V2 never shows this: <file:line>". A row in that file is the only way to accept a difference.
+
+${platforms.map(platform => `## ${platform}, ${result[platform].files} V4 files
+
+${section('V2 text not found in V4', result[platform].missing, 'Closest in V4, maybe reworded')}
+${section('V4 text not found in V2', result[platform].added, 'Closest in V2, maybe reworded')}`).join('\n')}
+## Sheets, dialogs, snackbars and back guards in V2 (${surfaces.size})
+
+Check each one against V4 on every platform you port: when it opens, its words, its buttons and their order, what each button does, whether it can be dismissed.
+
+${[...grouped].sort(([a], [b]) => a.localeCompare(b)).map(([kind, list]) => `### ${kind} (${list.length})\n\n${list.sort().map(item => `- [ ] ${item}`).join('\n')}`).join('\n\n')}
+`;
+  const saved = writeOut(`text-${id}.md`, report);
+  let open = 0;
+  for (const platform of platforms) {
+    const { missing, added } = result[platform];
+    open += missing.length + added.length;
+    console.log(`${platform}: ${missing.length} V2 texts not found in V4, ${added.length} V4 texts not found in V2.`);
+  }
+  console.log(`${surfaces.size} sheets, dialogs, snackbars and back guards listed. Saved: ${saved}`);
+  if (open) process.exitCode = 1;
 }
 
 function worklist(pattern) {
@@ -740,6 +906,8 @@ try {
   if (!fs.existsSync(path.join(V2, 'pubspec.yaml'))) throw new Error(`V2 not found at ${V2}. Pass --v2 <path>.`);
   if (command === 'plan') plan();
   else if (command === 'role') roleReport(param, args[2]);
+  else if (command === 'page') pageReport(param, args[2]);
+  else if (command === 'text') textReport(param, args[2]);
   else if (command === 'shared') sharedReport(param);
   else if (command === 'status') status();
   else if (command === 'worklist') worklist(param);
@@ -749,5 +917,5 @@ try {
   else console.log(USAGE);
 } catch (error) {
   console.error(error.message);
-  process.exitCode = 1;
+  process.exitCode = error.exitCode ?? 1;
 }

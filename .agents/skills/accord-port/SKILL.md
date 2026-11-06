@@ -74,6 +74,7 @@ branch mergeable.
   | `gscale` | `src/gscale/**`, `modules/accord-gscale/**`, `src/app/ios-gscale/**`, `src/app/android-gscale/**`, `tests/gscale*.test.cjs`, `docs/port/roles/gscale.md`, the `ios.infoPlist` and `android.permissions` keys of `app.json` |
   | `build` | `app.json`, `eas.json`, `package.json`, `package-lock.json`, `docs/port/BUILD.md` |
   | `printer` | `modules/accord-printer/**`, `src/printing/**`, `tests/printing*.test.cjs`, the `android.permissions` and `ios.infoPlist` keys of `app.json` |
+  | `$port` session | What `$port` says |
 
   Existing flat files belong to their domain: `src/worker*`, `OrderScreen` and `WorkerScreen` to `aparatchi`,
   `src/chat*` to `chat`, `src/preparation*` to `preparation`. Everything else is shared and belongs to the
@@ -258,6 +259,7 @@ Read `references/v2-anatomy.md` once. The facts that break naive ports:
 - Generate the localization catalog with a script instead of reading V2's 24,000 lines of tables. Until it
   exists, keep V2's Uzbek string and record the key in the UI contract.
 - Add no feature, cache, retry or cleanup that V2 does not have.
+- Keep every text a person reads exactly as V2 writes it, and add none. `port_ledger.mjs text <id>` lists the differences.
 
 ## When something has no 1:1 answer
 
@@ -303,7 +305,7 @@ node .agents/skills/accord-port/scripts/port_ledger.mjs role <id> <part>
 ```
 
 Known baseline, listed in `PORT.md`: `tsconfig.android.json` reports 10 errors in `WorkerOutputProgress.android.tsx`,
-`WorkerPaintPalette.android.tsx` and `WorkerScreen.tsx`, and `expo lint` reports 3 `import/no-unresolved` errors.
+`WorkerPaintPalette.android.tsx` and `WorkerScreen.tsx`, and `expo lint` passes.
 Do not add more. Every line of the part must be checked, excluded in `docs/port/EXCLUDED.txt`, or listed in
 **Open items** of your status file. Resolve every `check` warning that belongs to this role: a V4 endpoint V2 never mentions is
 either dynamic in V2 or invented.

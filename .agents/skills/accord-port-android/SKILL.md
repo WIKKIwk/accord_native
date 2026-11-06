@@ -96,6 +96,7 @@ lists that do not need this.
   `src/workerOrderAppearance.ts`. Otherwise use Material dynamic colours.
 - Support light and dark mode, TalkBack descriptions on icon-only controls (`semantics`), and a `testID` on
   primary actions. All texts come from the contract's keys. Check Urdu right-to-left once localization lands.
+- Copy V2's words letter for letter and add none. The native look is yours; the words, the kind of surface and the order are V2's. `port_ledger.mjs text <id> android` lists the differences.
 
 ## Commits
 

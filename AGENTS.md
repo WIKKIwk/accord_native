@@ -45,6 +45,7 @@ Docs: https://docs.expo.dev/eas/index.md
 This repo is a 1:1 behavioural port of the Flutter app in `../accord_mobile_v2`.
 
 - `../accord_mobile_v2` is read-only. Never write there or run `flutter`, `dart`, `make` or `pub` in it.
+- To port a whole role or page in one go: use `$port`. It asks what to port and uses the skills below.
 - For API, models, business rules, realtime, localization and native bridges: use `$accord-port`.
 - For `*.ios.tsx` views: use `$accord-port-ios`. For `*.android.tsx` views: use `$accord-port-android`.
 - Work goes role by role, in parallel sessions. Logic is ported once and shared; Android and iOS each own their screens and routes.

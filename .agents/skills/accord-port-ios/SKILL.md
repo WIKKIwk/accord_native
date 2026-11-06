@@ -83,6 +83,7 @@ src/<domain>/
 - `glassEffect` needs iOS 26 and Xcode 26. Provide what older iOS shows if V2 supports it.
 - Support light and dark mode, Dynamic Type and VoiceOver labels on icon-only controls.
 - All texts come from the contract's keys. Check Urdu right-to-left once localization lands.
+- Copy V2's words letter for letter and add none. The native look is yours; the words, the kind of surface and the order are V2's. `port_ledger.mjs text <id> ios` lists the differences.
 
 ## Commits
 

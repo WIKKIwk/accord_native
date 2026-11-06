@@ -13,6 +13,18 @@ Qancha ish borligini shu buyruq ko'rsatadi:
 node .agents/skills/accord-port/scripts/port_ledger.mjs plan
 ```
 
+## Eng oson yo'l: `$port`
+
+Codex'da `Accord_project` yoki `accord_mobile_v4` papkasini oching va faqat shuni yozing:
+
+```text
+$port
+```
+
+U qaysi role yoki page'ni, qaysi platformani so'raydi. Siz javob berasiz, qolganini o'zi qiladi: o'z papkasini ochadi, logika,
+ekranlar, ulash, so'zma-so'z matn tekshiruvi va V2 bilan solishtirish. Ish `main` ga o'zi qo'shilmaydi, oxirida qaysi papka
+va shoxda ekanini aytadi. Pastdagi bo'limlar ko'p agentni parallel ishlatish uchun.
+
 ## Codex'ni ishga tushirish
 
 Har bir agent o'z papkasidan ochiladi (`accord_mobile_v4-<nom>`, pastdagi "Parallel ishlash" bo'limiga qarang).
