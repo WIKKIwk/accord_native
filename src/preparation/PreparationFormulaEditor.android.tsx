@@ -12,10 +12,11 @@ import { openPreparationScale, preparationFormulaPresentation, preparationShareD
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationFormulaView } from './usePreparationAndroidView.android';
 import type { PreparationFormulaOptions } from './usePreparationFormula';
+import { preparationShareErrorMessage, preparationShareIntroduction } from './preparationSharePresentation';
 
 // @v2 _FormulaSharesSheet
-export function PreparationSharesDialog({ formulas, onSave, onClose }: {
-  formulas: PreparationFormula[]; onSave: (values: string[]) => Promise<void>; onClose: () => void;
+export function PreparationSharesDialog({ formulas, materialName, onSave, onClose }: {
+  formulas: PreparationFormula[]; materialName: string; onSave: (values: string[]) => Promise<void>; onClose: () => void;
 }) {
   const [values, setValues] = useState(() => formulas.map(formula => formula.share_percent ? preparationDisplay(formula.share_percent) : ''));
   const [saving, setSaving] = useState(false), [error, setError] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export function PreparationSharesDialog({ formulas, onSave, onClose }: {
     if (!status.valid || savingRef.current) return;
     savingRef.current = true; setSaving(true); setError(null);
     try { await onSave(values); onClose(); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : t('Shnek ulushlari saqlanmadi. Qayta urinib ko‘ring')); }
+    catch (failure) { setError(preparationShareErrorMessage(failure)); }
     finally { savingRef.current = false; setSaving(false); }
   };
   return <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
@@ -40,12 +41,12 @@ export function PreparationSharesDialog({ formulas, onSave, onClose }: {
       <RNHostView matchContents><ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: height * 0.8, width }}
         contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 20, gap: 12 }}>
         <PreparationText title>{t('Shnek ulushlari')}</PreparationText>
+        <PreparationText>{preparationShareIntroduction(materialName)}</PreparationText>
         {formulas.map((formula, index) => <PreparationField key={`${index}:${formula.name}`} label={`${formula.name} shnek ulushi`}
-          initial={values[index]} decimal enabled={!saving} onChange={value => { setError(null); setValues(old => old.map((entry, i) => i === index ? value : entry)); }} />)}
+          initial={values[index]} decimal suffix="%" enabled={!saving} onChange={value => { setError(null); setValues(old => old.map((entry, i) => i === index ? value : entry)); }} />)}
         <PreparationText>{status.total === null ? t('Har bir shnek uchun 0 dan katta, 100 gacha foiz kiriting') : `${t('Jami')}: ${status.total}% / 100%`}</PreparationText>
         {error ? <PreparationText>{error}</PreparationText> : null}
         <PreparationButton label={saving ? 'Saqlanmoqda…' : 'Saqlash'} id="preparation-screw-shares-save" disabled={!status.valid || saving} onPress={() => void save()} />
-        <PreparationButton label="Bekor qilish" disabled={saving} onPress={close} />
       </ScrollView></RNHostView>
     </ModalBottomSheet>
   </Host>;
@@ -116,7 +117,8 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
           try { openPreparationScale(args); } catch (error) { scaleReturn.current = null; reject(error); }
         })).catch(showError); }} /> : null}
     </PreparationPage>
-    {shares ? <PreparationSharesDialog formulas={state.formulas} onSave={values => state.controller.saveShares(values)} onClose={() => setShares(false)} /> : null}
+    {shares ? <PreparationSharesDialog formulas={state.formulas} materialName={options.materialName}
+      onSave={values => state.controller.saveShares(values)} onClose={() => setShares(false)} /> : null}
   </>;
 }
 

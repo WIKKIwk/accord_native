@@ -116,7 +116,7 @@ function SetDetail({ set, recipes }: { set: FormulaSet; recipes: Recipe[] }) {
       onLongPress={() => { setRenameError(null); setRenameTarget(recipe); }} />)}
     {state.legacyFormulas.map(entry => <PreparationRow key={`${entry.material_id}:${entry.variant_id}:${entry.formula.name}`}
       title={entry.formula.name} subtitle={entry.material_name} disabled={state.busy} onPress={() => legacy(entry)} />)}
-  </PreparationPage>{shares ? <PreparationSharesDialog formulas={state.controller.formulasFor(shares)}
+  </PreparationPage>{shares ? <PreparationSharesDialog formulas={state.controller.formulasFor(shares)} materialName={shares.material_name}
     onSave={values => state.controller.saveShares(shares, values)} onClose={() => setShares(null)} /> : null}
   {renameTarget ? <VariantNameDialog initial={renameTarget.name} busy={renaming} error={renameError}
     clearError={() => setRenameError(null)} submit={name => void rename(name)} cancel={() => setRenameTarget(null)} /> : null}</>;

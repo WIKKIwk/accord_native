@@ -10,6 +10,7 @@ Stopped at: complete the remaining V2 text and surface comparisons on both platf
 | Material management on iOS and Android | `preparation_materials_screen.dart`, `_PreparationInputDialog` | Material actions, confirmation, warehouse selection and feedback were aligned with the V2 source; verify native dismissal, input and notice behavior on both phones. |
 | Preparation history on iOS and Android | `preparation_screen_forms.dart` `PreparationHistoryScreen` | Receipt, reversal and consumption rows and the reversal flow were compared with V2. Verify long-press, sheet/dialog dismissal and notices on both phones. |
 | Formula variants on iOS and Android | `preparation_formula_variants_screen.dart` | Variant edit now requests the formula editor, deletion uses V2's confirmation, and creation/rename use a dialog. Verify gestures, modal transitions, reuse picker and navigation on both phones. The FAB and remaining screen details still need a complete surface comparison. |
+| Formula shares on iOS and Android | `preparation_formula_shares_sheet.dart` | Values, text, error mapping and the save/dismiss guards were compared with V2. Verify native keyboard, swipe, back and outside-tap behavior during a save on both phones. |
 | Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android preparation routes, sequence, inventory and the GScale destination exist; remaining parity gaps are in `preparation-ios.md`, `preparation-android.md` and `gscale.md`. |
 | Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity is not complete. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
@@ -58,6 +59,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Checkpoints
 
+- This session: aligned the formula-share sheet and separated it from formula details on both platforms.
 - This session: aligned variant action sheets, edit entry, naming, list text and deletion feedback on both platforms.
 - This session: aligned history rows, long-press actions and receipt reversal on both platforms.
 - This session: aligned material action and warehouse-assignment flows on both platforms, including scoped mutation completion and V2 confirmation text.
@@ -104,3 +106,4 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 | `PreparationMaterialsScreen`, `preparation_materials_screen.dart` | `PreparationMaterials.ios.tsx`, `PreparationMaterials.android.tsx` | qisman | qisman | Action and assignment flows were compared with V2. The separate trailing action icon and native gesture/dismissal behavior still need comparison on a device. |
 | `PreparationHistoryScreen`, `preparation_screen_forms.dart` | `PreparationHistory.ios.tsx`, `PreparationStock.android.tsx` | qisman | qisman | Row content and reversal steps were compared with V2. Native long-press, dialog transitions and notice presentation still need device verification. |
 | `PreparationFormulaVariantsScreen`, `_VariantNameDialog` | `PreparationVariants.ios.tsx`, `PreparationVariants.android.tsx` | qisman | qisman | Action ordering, edit, naming and delete were compared. The FAB, reuse-picker details and native interaction still need the complete comparison. |
+| `_FormulaSharesSheet`, `preparation_formula_shares_sheet.dart` | `PreparationSharesDialog.ios.tsx`, `PreparationFormulaEditor.android.tsx` | qisman | qisman | Labels, totals and save rules were compared. Native dismissal and keyboard behavior remain unverified. |

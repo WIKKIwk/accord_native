@@ -30,14 +30,15 @@ export function PreparationButton({ label, onPress, disabled, id }: { label: str
     modifiers={[fillMaxWidth(), ...(id ? [testID(id)] : [])]}><Text>{t(label)}</Text></Button></Host>;
 }
 
-export function PreparationField({ label, initial = '', onChange, enabled = true, decimal = false }: {
-  label: string; initial?: string; onChange: (value: string) => void; enabled?: boolean; decimal?: boolean;
+export function PreparationField({ label, initial = '', onChange, enabled = true, decimal = false, suffix }: {
+  label: string; initial?: string; onChange: (value: string) => void; enabled?: boolean; decimal?: boolean; suffix?: string;
 }) {
   const t = usePreparationText();
   const value = useNativeState(initial);
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={value} singleLine enabled={enabled}
     onValueChange={onChange} keyboardOptions={{ keyboardType: decimal ? 'decimal' : 'text' }} modifiers={[fillMaxWidth()]}>
     <OutlinedTextField.Label><Text>{t(label)}</Text></OutlinedTextField.Label>
+    {suffix ? <OutlinedTextField.Suffix><Text>{suffix}</Text></OutlinedTextField.Suffix> : null}
   </OutlinedTextField></Host>;
 }
 

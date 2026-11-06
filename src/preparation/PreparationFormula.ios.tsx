@@ -6,14 +6,13 @@ import { Alert } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
-import { PreparationSharesSheet } from './PreparationFormulaSheets';
+import { PreparationSharesDialog } from './PreparationSharesDialog';
 import type { FormulaEditorRow } from './preparationLogic';
 import { preparationEstimatedKgDisplay, preparationFormulaSharesComplete, preparationScrewLineKg, type PreparationFormula as Formula } from './preparationModel';
 import { usePreparationFormula, type PreparationFormulaOptions } from './usePreparationFormula';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { openPreparationScale } from './PreparationRoutes';
 
-type FormulaController = ReturnType<typeof usePreparationFormula>['controller'];
 type Material = ReturnType<typeof usePreparationFormula>['materials'][number];
 function FormulaLine({ row, index, materials, busy, change, remove, canRemove }: { row: FormulaEditorRow; index: number; materials: Material[];
   busy: boolean; change: (row: FormulaEditorRow) => void; remove: () => void; canRemove: boolean }) {
@@ -27,22 +26,15 @@ function FormulaLine({ row, index, materials, busy, change, remove, canRemove }:
     <Button label={t('Olib tashlash')} role="destructive" modifiers={[disabled(busy || !canRemove)]} onPress={remove} />
   </Section>;
 }
-function FormulaDetails({ formula, formulas, controller, close }: {
-  formula: Formula; formulas: Formula[]; controller: FormulaController; close: () => void;
+function FormulaDetails({ formula, select }: {
+  formula: Formula; select: (action: 'shares' | 'edit' | 'delete') => void;
 }) {
-  const t = usePreparationText(), [sharing, setSharing] = useState(false);
-  if (sharing) return <PreparationSharesSheet formulas={formulas} close={close} save={values => controller.saveShares(values)} />;
-  const remove = () => Alert.alert(t('Formulani o‘chirish'), `«${formula.name}» formulasi o‘chirilsinmi?`, [
-    { text: t('Bekor qilish'), style: 'cancel' }, { text: t('O‘chirish'), style: 'destructive', onPress: () => {
-      close(); void controller.remove(formula.name).catch(preparationAlert);
-    } },
-  ]);
-  return <Host style={{ minHeight: 300 }}><VStack><Text>{formula.name}</Text><List>
+  const t = usePreparationText();
+  return <Host style={{ minHeight: 300 }}><VStack><Text>{t('Formula ma’lumotlari')}</Text><Text>{formula.name}</Text><List>
     {formula.lines.map(line => <Text key={line.item_code}>{line.name} · {line.percent}%</Text>)}
-  </List><Button label={t('Shnek ulushlarini belgilash')} onPress={() => setSharing(true)} />
-    <Button label={t('Tahrirlash')} onPress={() => { controller.openEditor(formula); close(); }} />
-    <Button label={t('O‘chirish')} role="destructive" onPress={remove} />
-    <Button label={t('Yopish')} onPress={close} /></VStack></Host>;
+  </List><Button label={t('Tahrirlash')} onPress={() => select('edit')} />
+    <Button label={t('O‘chirish')} role="destructive" onPress={() => select('delete')} />
+    <Button label={t('Shnek ulushlarini belgilash')} onPress={() => select('shares')} /></VStack></Host>;
 }
 
 // @v2 PreparationOrderFormulaScreen
@@ -57,6 +49,7 @@ export function PreparationFormula() {
       params.allowAddingFormula, params.openEditorOnLoad]);
   const { session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet();
   const state = usePreparationFormula(session, options), { controller } = state;
+  const [sharing, setSharing] = useState(false);
   const scaleReturn = useRef<(() => void) | null>(null);
   useFocusEffect(useCallback(() => { scaleReturn.current?.(); scaleReturn.current = null; }, []));
   useEffect(() => () => { scaleReturn.current?.(); scaleReturn.current = null; }, []);
@@ -68,8 +61,19 @@ export function PreparationFormula() {
     try { return ` · ≈ ${preparationEstimatedKgDisplay(preparationScrewLineKg(state.estimatedMaterialKg, formula.share_percent, percent))} kg`; }
     catch { return ''; }
   };
-  const openDetails = (formula: Formula) => sheet.open(<FormulaDetails formula={formula} formulas={state.formulas}
-    controller={controller} close={sheet.close} />, { compact: true, dismissible: false });
+  const openDetails = (formula: Formula) => {
+    let selected: 'shares' | 'edit' | 'delete' | null = null;
+    sheet.open(<FormulaDetails formula={formula} select={action => { selected = action; sheet.close(); }} />,
+      { compact: true, dismissible: true, onDismiss: () => {
+        if (selected === 'shares') setSharing(true);
+        else if (selected === 'edit') controller.openEditor(formula);
+        else if (selected === 'delete') Alert.alert(t('Formulani o‘chirish'), `«${formula.name}» formulasi o‘chirilsinmi?`, [
+          { text: t('Bekor qilish'), style: 'cancel' }, { text: t('O‘chirish'), style: 'destructive', onPress: () => {
+            void controller.remove(formula.name).catch(preparationAlert);
+          } },
+        ]);
+      } });
+  };
   return <><Stack.Screen options={{ title: options.variantName || t('Formula'), gestureEnabled: !state.saving && !state.deleting }} />
     <PreparationList refresh={() => controller.reload()}>
       <PreparationStatus loading={state.loading || state.saving || state.deleting} error={state.error} retry={() => { void controller.reload(); }} />
@@ -92,13 +96,13 @@ export function PreparationFormula() {
             try { openPreparationScale(args); } catch (error) { scaleReturn.current = null; reject(error); }
           })).catch(preparationAlert); }} />}
         {!state.formulas.length && <Text>{t(options.manageSavedFormula && !options.allowAddingFormula ? 'Bu formulada ichki tarkib yo‘q.' : 'Hali formula yo‘q. FAB orqali formula qo‘shing.')}</Text>}
-        {state.formulas.length > 0 && <Button label={t('Shnek ulushlari')} modifiers={[disabled(busy)]} onPress={() => sheet.open(
-          <PreparationSharesSheet formulas={state.formulas} close={sheet.close} save={values => controller.saveShares(values)} />,
-          { compact: true, dismissible: false })} />}
+        {state.formulas.length > 0 && <Button label={t('Shnek ulushlari')} modifiers={[disabled(busy)]} onPress={() => setSharing(true)} />}
         {state.formulas.map(formula => <Button key={formula.name} modifiers={[disabled(busy)]} onPress={() => openDetails(formula)}>
           <VStack alignment="leading"><Text>{formula.name}</Text><Text>{formula.lines.map(line => `${line.name} ${line.percent}%${lineEstimate(formula, line.percent)}`).join(' · ')}</Text></VStack>
         </Button>)}
         {(!options.manageSavedFormula || options.allowAddingFormula) && <Button label={t('Formula qo‘shish')} modifiers={[disabled(busy)]} onPress={() => controller.openEditor()} />}
       </Section>}
-    </PreparationList></>;
+    </PreparationList>
+    {sharing && <PreparationSharesDialog formulas={state.formulas} materialName={options.materialName} close={() => setSharing(false)}
+      save={values => controller.saveShares(values)} />}</>;
 }

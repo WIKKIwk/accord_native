@@ -6,7 +6,8 @@ import { Alert } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationInputSheet, PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
-import { PreparationSharesSheet, PreparationVariantNameSheet } from './PreparationFormulaSheets';
+import { PreparationVariantNameSheet } from './PreparationFormulaSheets';
+import { PreparationSharesDialog } from './PreparationSharesDialog';
 import { openPreparationFormula, openPreparationRoute } from './PreparationRoutes';
 import { preparationVariantName, usePreparationLibrary } from './usePreparationLibrary';
 import { usePreparationSetDetail } from './usePreparationSetDetail';
@@ -69,23 +70,21 @@ export function PreparationFormulaSets() {
   </PreparationList></>;
 }
 
-function LegacyFormulaSheet({ entry, formulas, close, edit, remove, saveShares }: {
-  entry: FormulaSet['formulas'][number]; formulas: FormulaSet['formulas'][number]['formula'][];
-  close: () => void; edit: () => void; remove: () => void; saveShares: (values: string[]) => Promise<void>;
+function LegacyFormulaSheet({ entry, select }: {
+  entry: FormulaSet['formulas'][number]; select: (action: 'shares' | 'edit' | 'delete') => void;
 }) {
-  const t = usePreparationText(), [sharing, setSharing] = useState(false);
-  if (sharing) return <PreparationSharesSheet formulas={formulas} close={close} save={saveShares} />;
-  return <Host style={{ minHeight: 280 }}><VStack><Text>{entry.formula.name}</Text><Text>{entry.material_name}</Text><List>
+  const t = usePreparationText();
+  return <Host style={{ minHeight: 280 }}><VStack><Text>{t('Formula ma’lumotlari')}</Text><Text>{entry.formula.name}</Text><Text>{entry.material_name}</Text><List>
     {entry.formula.lines.map(line => <Text key={line.item_code}>{line.name} · {line.percent}%</Text>)}
-  </List><Button label={t('Shnek ulushlarini belgilash')} onPress={() => setSharing(true)} />
-    <Button label={t('Tahrirlash')} onPress={() => { close(); edit(); }} />
-    <Button label={t('O‘chirish')} role="destructive" onPress={() => { close(); remove(); }} />
-    <Button label={t('Yopish')} onPress={close} /></VStack></Host>;
+  </List><Button label={t('Tahrirlash')} onPress={() => select('edit')} />
+    <Button label={t('O‘chirish')} role="destructive" onPress={() => select('delete')} />
+    <Button label={t('Shnek ulushlarini belgilash')} onPress={() => select('shares')} /></VStack></Host>;
 }
 
 function SetDetailsContent({ set, recipes }: { set: FormulaSet; recipes: Recipe[] }) {
   const { session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet();
   const state = usePreparationSetDetail(session, set, recipes), { controller } = state;
+  const [shareEntry, setShareEntry] = useState<FormulaSet['formulas'][number] | null>(null);
   const reload = useCallback(() => controller.reload(), [controller]); useReloadOnReturn(reload);
   const rename = (recipe: Recipe) => sheet.open(<PreparationVariantNameSheet initial={recipe.name} close={sheet.close} save={async name => {
     const { preparationRenameFormulaVariant } = await import('./preparationFormulaApi');
@@ -98,11 +97,16 @@ function SetDetailsContent({ set, recipes }: { set: FormulaSet; recipes: Recipe[
   const edit = (entry: typeof state.legacyFormulas[number]) => openPreparationFormula({ orderId: set.set_id, orderCode: set.set_id,
     productCode: set.product_code, productTitle: set.name, materialId: entry.material_id, materialName: entry.material_name,
     initialFormulaName: entry.formula.name, variantId: entry.variant_id, variantName: entry.variant_name, manageSavedFormula: true });
-  const details = (entry: typeof state.legacyFormulas[number]) => sheet.open(<LegacyFormulaSheet entry={entry}
-    formulas={controller.formulasFor(entry)} close={sheet.close} edit={() => edit(entry)} remove={() => remove(entry)}
-    saveShares={values => controller.saveShares(entry, values)} />, { compact: true, dismissible: false });
-  const shares = (entry: typeof state.legacyFormulas[number]) => sheet.open(<PreparationSharesSheet formulas={controller.formulasFor(entry)}
-    close={sheet.close} save={values => controller.saveShares(entry, values)} />, { compact: true, dismissible: false });
+  const details = (entry: typeof state.legacyFormulas[number]) => {
+    let selected: 'shares' | 'edit' | 'delete' | null = null;
+    sheet.open(<LegacyFormulaSheet entry={entry} select={action => { selected = action; sheet.close(); }} />,
+      { compact: true, dismissible: true, onDismiss: () => {
+        if (selected === 'shares') setShareEntry(entry);
+        else if (selected === 'edit') edit(entry);
+        else if (selected === 'delete') remove(entry);
+      } });
+  };
+  const shares = (entry: typeof state.legacyFormulas[number]) => setShareEntry(entry);
   return <><Stack.Screen options={{ title: set.name }} /><PreparationList refresh={reload}>
     <Section><Text>{t('Katalogdagi o‘zgarishlar formula keyingi safar buyurtmaga biriktirilganda olinadi.')}</Text></Section>
     <PreparationStatus loading={state.busy} error={state.error} retry={() => { void reload(); }} />
@@ -117,7 +121,8 @@ function SetDetailsContent({ set, recipes }: { set: FormulaSet; recipes: Recipe[
         <Button label={t('Shnek ulushlarini belgilash')} onPress={() => shares(entry)} />
         <Button label={t('O‘chirish')} role="destructive" onPress={() => remove(entry)} /></ContextMenu.Items></ContextMenu>)}
     </Section>
-  </PreparationList></>;
+  </PreparationList>{shareEntry && <PreparationSharesDialog formulas={controller.formulasFor(shareEntry)} materialName={shareEntry.material_name}
+    close={() => setShareEntry(null)} save={values => controller.saveShares(shareEntry, values)} />}</>;
 }
 export function PreparationFormulaSetDetail() {
   const { id } = useLocalSearchParams<{ id: string }>(), { session } = usePreparationContext();
