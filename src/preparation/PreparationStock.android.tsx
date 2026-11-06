@@ -6,6 +6,8 @@ import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRena
 import { preparationMaterialAvailable, preparationMaterialHistory, preparationReceiptMode, preparationReceiptPayload,
   preparationReverseHistory, preparationVisibleMaterials, type PreparationMaterial } from './preparationLogic';
 import { preparationDisplay } from './preparationModel';
+import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { openPreparationScale } from './preparationNavigation.android';
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 function useStockActions() {
@@ -93,6 +95,8 @@ export function PreparationWarehouseScreen() {
       <PreparationButton label="Kirim" disabled={home.locked || managing} onPress={() => void pickReceipt()} id="preparation-receipt" />
       <PreparationButton label="Homashyo qo‘shish" disabled={home.locked || managing} onPress={() => void createMaterial()} />
     </> : null}
+    {warehouse && !manual && canOpenRoute(session, appRoutes.gscaleMode) ? <PreparationButton label="Tarozi kirimi"
+      disabled={home.locked || managing} onPress={() => openPreparationScale({ warehouse })} /> : null}
     {data?.material_warehouses.length ? <PreparationButton label="Ombor qo‘shish" disabled={home.locked || managing} onPress={() => void manage('create')} /> : null}
   </PreparationPage>;
 }
@@ -111,7 +115,7 @@ function historySubtitle(doc: Record<string, unknown>) {
 // @v2 PreparationMaterialDetailScreen
 export function PreparationMaterialDetailScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
-  const { home } = usePreparationContext(), { receive } = useStockActions(), t = usePreparationText();
+  const { home, session } = usePreparationContext(), { receive } = useStockActions(), t = usePreparationText();
   const item = home.snapshot?.materials.find(material => material.code === code);
   const warehouse = home.warehouse;
   const history = preparationMaterialHistory(home.snapshot?.history ?? [], warehouse ?? '', code ?? '');
@@ -119,6 +123,8 @@ export function PreparationMaterialDetailScreen() {
   return <PreparationPage title={item?.name ?? 'Homashyo'} refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
     {item ? <PreparationRow title={item.name} subtitle={`${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`} /> : null}
     {item && manual && item.can_receive ? <PreparationButton label="Kirim qilish" disabled={home.locked} onPress={() => void receive(item)} /> : null}
+    {item && !manual && canOpenRoute(session, appRoutes.gscaleMode) ? <PreparationButton label="Tarozi kirimi"
+      disabled={home.locked} onPress={() => openPreparationScale({ warehouse })} /> : null}
     {!history.receipts.length && !history.consumptions.length ? <PreparationText>{t('Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.')}</PreparationText> : null}
     {history.receipts.length ? <PreparationText title>{t('Kirimlar')}</PreparationText> : null}
     {history.receipts.map((doc, index) => <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={historyTitle(doc)} subtitle={historySubtitle(doc)} />)}
