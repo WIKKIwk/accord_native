@@ -1,14 +1,21 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ActivityIndicator, Alert, AppState, Modal, Pressable, StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
 import type { Session } from '../auth';
 import { biometricAvailable, clearAppLock, loadAppLock, saveAppPin, setAppBiometric, unlockAppWithBiometric, verifyAppPin } from '../appLock';
+import { consumeLoginUnlock } from '../shared/securityUnlockRuntime';
+import { localizedGetter } from '../shared/localization';
+import { localeController } from '../shared/localization/runtime';
+import { securityLifecycleChange, type SecurityLifecycle } from '../shared/securityLifecycle';
+
+const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
+const currentLocale = () => localeController.locale;
 
 type Security = {
   hasPin: boolean;
   biometric: boolean;
   canUseBiometric: boolean;
-  savePin: (pin: string, previous?: string) => Promise<void>;
-  removePin: (pin: string) => Promise<void>;
+  savePin: (pin: string) => Promise<void>;
+  removePin: () => Promise<void>;
   setBiometric: (enabled: boolean) => Promise<void>;
 };
 
@@ -21,6 +28,8 @@ export function useWorkerSecurity(): Security {
 }
 
 export function WorkerSecurityProvider({ session, onLogout, children }: { session: Session; onLogout: () => void; children: ReactNode }) {
+  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+  const text = (key: string) => localizedGetter(key, locale);
   const dark = useColorScheme() === 'dark';
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -32,7 +41,7 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const pinPresent = useRef(false);
-  const wasInactive = useRef(false);
+  const lifecycle = useRef<SecurityLifecycle>({ wasBackgrounded: false, suspendResumeLock: false });
   const authenticating = useRef(false);
   const unlocking = useRef(false);
   const autoBiometricAttempted = useRef(false);
@@ -46,7 +55,8 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
       pinPresent.current = state.hasPin;
       setHasPin(state.hasPin);
       setBiometric(state.biometric);
-      setLocked(state.hasPin);
+      const unlocked = consumeLoginUnlock(session);
+      setLocked(state.hasPin && !(AppState.currentState === 'active' && unlocked));
       setLoadError('');
     } catch {
       if (mounted.current) setLoadError('Qulf ma’lumotini yuklab bo‘lmadi.');
@@ -61,7 +71,8 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
       pinPresent.current = state.hasPin;
       setHasPin(state.hasPin);
       setBiometric(state.biometric);
-      setLocked(state.hasPin);
+      const unlocked = consumeLoginUnlock(session);
+      setLocked(state.hasPin && !(AppState.currentState === 'active' && unlocked));
       setLoadError('');
     }, () => { if (active) setLoadError('Qulf ma’lumotini yuklab bo‘lmadi.'); })
       .finally(() => { if (active) setLoaded(true); });
@@ -70,52 +81,39 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
 
   useEffect(() => {
     const listener = AppState.addEventListener('change', state => {
-      if (authenticating.current) {
-        if (state === 'background' && pinPresent.current) { lifecycleEpoch.current++; wasInactive.current = true; setShield(true); }
-        return;
-      }
-      if (state === 'inactive' || state === 'background') {
-        if (pinPresent.current) { lifecycleEpoch.current++; wasInactive.current = true; setShield(true); }
-      } else if (state === 'active' && wasInactive.current) {
-        wasInactive.current = false;
-        setLocked(pinPresent.current);
-        setShield(false);
-        setInput('');
-        setError('');
-      }
+      const change = securityLifecycleChange(lifecycle.current, state, pinPresent.current, authenticating.current);
+      lifecycle.current = change.state;
+      if (change.incrementEpoch) lifecycleEpoch.current++;
+      if (change.shield !== null) setShield(change.shield);
+      if (change.lock) setLocked(true);
+      if (change.clearInput) { setInput(''); setError(''); }
     });
     return () => listener.remove();
   }, []);
 
-  const savePin = useCallback(async (pin: string, previous?: string) => {
-    if (pinPresent.current && !(await verifyAppPin(session, previous ?? ''))) throw new Error('Joriy PIN noto‘g‘ri.');
+  const savePin = useCallback(async (pin: string) => {
     await saveAppPin(session, pin);
     if (mounted.current) {
       pinPresent.current = true;
       setHasPin(true);
-      if (AppState.currentState !== 'active') { wasInactive.current = true; setShield(true); }
+      if (AppState.currentState !== 'active') { lifecycle.current.wasBackgrounded = true; setShield(true); }
     }
   }, [session]);
 
-  const removePin = useCallback(async (pin: string) => {
-    if (!(await verifyAppPin(session, pin))) throw new Error('Joriy PIN noto‘g‘ri.');
+  const removePin = useCallback(async () => {
     await clearAppLock(session);
     if (mounted.current) { pinPresent.current = false; setHasPin(false); setBiometric(false); setLocked(false); setShield(false); }
   }, [session]);
 
   const setBiometricEnabled = useCallback(async (enabled: boolean) => {
     if (authenticating.current) throw new Error('Biometrik tasdiq davom etmoqda.');
-    authenticating.current = true;
+    authenticating.current = enabled;
     try {
       await setAppBiometric(session, enabled);
+      if (enabled) lifecycle.current.suspendResumeLock = true;
       if (mounted.current) setBiometric(enabled);
     } finally {
       authenticating.current = false;
-      if (wasInactive.current && AppState.currentState === 'active' && mounted.current) {
-        wasInactive.current = false;
-        setLocked(pinPresent.current);
-        setShield(false);
-      }
     }
   }, [session]);
 
@@ -129,8 +127,8 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
       if (!mounted.current) return;
       if (startedAt !== lifecycleEpoch.current || AppState.currentState !== 'active') return;
       if (ok) { setLocked(false); setInput(''); setError(''); }
-      else { setInput(''); setError('PIN noto‘g‘ri.'); }
-    } catch { if (mounted.current) setError('PIN tekshirilmadi. Qayta urinib ko‘ring.'); }
+      else { setInput(''); setError(text('pinWrong')); }
+    } catch { if (mounted.current) setError(text('pinWrong')); }
     finally { unlocking.current = false; if (mounted.current) setBusy(false); }
   };
 
@@ -142,22 +140,18 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
     authenticating.current = true;
     try {
       const ok = await unlockAppWithBiometric(session);
+      if (ok) lifecycle.current.suspendResumeLock = true;
       if (mounted.current && startedAt === lifecycleEpoch.current && ok) { setLocked(false); setInput(''); setError(''); }
-      else if (mounted.current && startedAt === lifecycleEpoch.current) setError('Biometrik tasdiq bajarilmadi. PIN bilan oching.');
-    } catch { if (mounted.current) setError('Biometrik tasdiq bajarilmadi. PIN bilan oching.'); }
+      else if (mounted.current && startedAt === lifecycleEpoch.current) setError(localizedGetter('biometricFailed', locale));
+    } catch { if (mounted.current) setError(localizedGetter('biometricFailed', locale)); }
     finally {
       authenticating.current = false;
       unlocking.current = false;
       if (mounted.current) {
-        if (wasInactive.current && AppState.currentState === 'active') {
-          wasInactive.current = false;
-          setLocked(pinPresent.current);
-          setShield(false);
-        }
         setBusy(false);
       }
     }
-  }, [session]);
+  }, [session, locale]);
 
   useEffect(() => {
     if (!locked || shield) { autoBiometricAttempted.current = false; return; }
@@ -173,26 +167,26 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
   return <SecurityContext.Provider value={value}>
     <View style={styles.flex}>{loaded && !loadError ? children : <View style={[styles.center, { backgroundColor: bg }]}>
       {loadError ? <><Text style={[styles.message, { color: foreground }]}>{loadError}</Text>
-        <Pressable accessibilityRole="button" onPress={() => { setLoaded(false); void load(); }}><Text style={styles.action}>Qayta urinish</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={onLogout}><Text style={styles.action}>Hisobdan chiqish</Text></Pressable></> : <ActivityIndicator />}
+        <Pressable accessibilityRole="button" onPress={() => { setLoaded(false); void load(); }}><Text style={styles.action}>{text('retry')}</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={onLogout}><Text style={styles.action}>{text('logoutTitle')}</Text></Pressable></> : <ActivityIndicator />}
     </View>}</View>
     <Modal visible={loaded && !loadError && (locked || shield)} animationType="fade" presentationStyle="fullScreen" onRequestClose={() => {}}>
       <View style={[styles.center, { backgroundColor: bg }]}>
         {locked && !shield ? <>
-          <Text style={[styles.title, { color: foreground }]}>Ilova qulflangan</Text>
-          <Text style={[styles.message, { color: foreground }]}>PIN kodingizni kiriting</Text>
+          <Text style={[styles.title, { color: foreground }]}>{text('appLockTitle')}</Text>
+          <Text style={[styles.message, { color: foreground }]}>{text('appLockSubtitle')}</Text>
           <TextInput value={input} onChangeText={value => setInput(value.replace(/\D/g, '').slice(0, 4))} keyboardType="number-pad"
             secureTextEntry maxLength={4} accessibilityLabel="PIN kod" style={[styles.input, { color: foreground, borderColor: dark ? '#636366' : '#c7c7cc' }]} />
           {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
           <Pressable accessibilityRole="button" disabled={busy} onPress={() => { void unlock(); }} style={styles.button}>
-            <Text style={styles.buttonText}>{busy ? 'Tekshirilmoqda…' : 'Ochish'}</Text>
+            <Text style={styles.buttonText}>{text(busy ? 'checking' : 'unlock')}</Text>
           </Pressable>
           {biometric && biometricAvailable() ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => { void unlockBiometric(); }}>
-            <Text style={styles.action}>Biometrik ochish</Text>
+            <Text style={styles.action}>{text('biometricCta')}</Text>
           </Pressable> : null}
-          <Pressable accessibilityRole="button" onPress={() => Alert.alert('Hisobdan chiqish', 'Ushbu qurilmada hisobdan chiqilsinmi?', [
-            { text: 'Bekor qilish', style: 'cancel' }, { text: 'Chiqish', style: 'destructive', onPress: onLogout },
-          ])}><Text style={styles.action}>Hisobdan chiqish</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => Alert.alert(text('logoutTitle'), text('logoutPrompt'), [
+            { text: text('no'), style: 'cancel' }, { text: text('logoutTitle'), style: 'destructive', onPress: onLogout },
+          ])}><Text style={styles.action}>{text('logoutTitle')}</Text></Pressable>
         </> : null}
       </View>
     </Modal>

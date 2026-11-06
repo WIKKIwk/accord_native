@@ -15,6 +15,12 @@ export function loginCodeUsesNumericKeyboard(code: string): boolean {
   return trimmed.length < 2 || ['40', '50', '80', '92'].includes(trimmed.substring(0, 2));
 }
 
+/** @v2 LoginScreen._numericRolePrefixSelected */
+export function filterLoginCode(previous: string, next: string): string {
+  return previous.trim().length >= 2 && loginCodeUsesNumericKeyboard(previous)
+    ? next.replace(/[^0-9]/g, '') : next;
+}
+
 /** @v2 main */
 export async function loadBaseStartup(loadSession: () => Promise<Session | null>,
   steps: readonly (() => Promise<void>)[]): Promise<Session | null> {

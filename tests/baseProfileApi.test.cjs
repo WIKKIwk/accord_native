@@ -15,8 +15,8 @@ function fixture(status = 200) {
   const calls = [], saved = [];
   const parser = load('authenticateAccount', { './workerControlsApi': { isCanonicalApparatusId: () => true } });
   const api = load('shared/profileApi', { '../auth': { saveSession: async s => saved.push({ ...s }) },
-    '../authenticateAccount': parser, '../authorizedFetch': { authorizedFetch: async (s, p, init) => {
-      calls.push({ route: p, ...init }); return { status, json: async () => ({ role: 'aparatchi', ref: 'one',
+    '../authenticateAccount': parser, '../authorizedFetch': { authorizedFetch: async (s, p, init, beforeSend, timeout) => {
+      calls.push({ route: p, ...init, timeout }); return { status, json: async () => ({ role: 'aparatchi', ref: 'one',
         display_name: 'New', capabilities: ['apparatus.queue.read'], assigned_item_groups: ['A'] }) };
     } } });
   const session = { token: 'token', profile: { role: 'aparatchi', ref: 'one' }, capabilities: [],
@@ -40,6 +40,7 @@ test('avatar upload sends the V2 multipart file and byte content', async () => {
   await f.uploadAvatar(f.session, [0, 255, 13, 10], 'name"\n.png');
   const call = f.calls[0];
   assert.equal(call.route, '/v1/mobile/profile/avatar');
+  assert.equal(call.timeout, null);
   const boundary = call.headers['Content-Type'].split('boundary=')[1];
   assert.equal(boundary.length, 70);
   const bytes = Buffer.from(call.body);

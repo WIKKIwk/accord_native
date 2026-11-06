@@ -14,7 +14,8 @@ export type UpdatePlatform = {
   installApk(path: string, packageName: string, versionCode: number): Promise<InstallResult>;
 };
 export type UpdateFiles = { exists(path: string): Promise<boolean>; size(path: string): Promise<number>; sha256(path: string): Promise<string> };
-export type UpdateServiceOptions = { baseUrl: string | (() => string); storage: AccountStorage; platform: UpdatePlatform; files: UpdateFiles;
+type UpdateInfoPlatform = Pick<UpdatePlatform, 'isSupported' | 'currentAppInfo'>;
+export type UpdateServiceOptions = { baseUrl: string | (() => string); storage: AccountStorage; platform: UpdatePlatform | UpdateInfoPlatform; files?: UpdateFiles;
   fetch?: typeof fetch; socketFactory?: (url: string) => WebSocket; socketConnectTimeoutMs?: number;
   downloadPollIntervalMs?: number; automaticRetryDelayMs?: number };
 type Progress = (received: number, total: number) => void;
@@ -51,6 +52,15 @@ export class AppUpdateService {
   constructor(private readonly options: UpdateServiceOptions) {}
   private get base(): URL { return new URL(typeof this.options.baseUrl === 'function' ? this.options.baseUrl() : this.options.baseUrl); }
   get isSupported(): boolean { return this.options.platform.isSupported; }
+  private get platform(): UpdatePlatform {
+    const platform = this.options.platform;
+    if (!('startOrAttachDownload' in platform)) throw fail('unsupported_platform', 'Bu qurilmada APK faylini o‘rnatib bo‘lmaydi');
+    return platform;
+  }
+  private get files(): UpdateFiles {
+    if (!this.options.files) throw fail('unsupported_platform', 'Bu qurilmada APK faylini o‘rnatib bo‘lmaydi');
+    return this.options.files;
+  }
   get endpointKey(): string { return this.base.origin; }
   private get cacheKey(): string { return `app_update_manifest_v1:${this.endpointKey}`; }
   /** @v2 AppUpdateService.releaseChanges */
@@ -141,31 +151,31 @@ export class AppUpdateService {
     if (manifest.sizeBytes > 512 * 1024 * 1024) throw fail('apk_too_large', 'APK hajmi ruxsat etilgan chegaradan katta');
     await this.rememberUpdate(update);
     const path = await this.download(manifest, onProgress, cancellation);
-    if (!await this.options.files.exists(path) || await this.options.files.size(path) !== manifest.sizeBytes) {
-      await this.options.platform.cancelDownload(manifest);
+    if (!await this.files.exists(path) || await this.files.size(path) !== manifest.sizeBytes) {
+      await this.platform.cancelDownload(manifest);
       throw fail('apk_size_mismatch', 'APK to‘liq yuklanmadi');
     }
     if (!await this.matchesManifest(path, manifest)) {
-      await this.options.platform.cancelDownload(manifest);
+      await this.platform.cancelDownload(manifest);
       throw fail('apk_checksum_mismatch', 'APK xavfsizlik tekshiruvidan o‘tmadi');
     }
     onProgress?.(manifest.sizeBytes, manifest.sizeBytes);
-    await this.options.platform.validateApk(path, update.current.packageName, manifest.versionCode);
+    await this.platform.validateApk(path, update.current.packageName, manifest.versionCode);
     return { update, path };
   }
   async installPreparedUpdate(prepared: PreparedAppUpdate): Promise<InstallResult> {
     const manifest = prepared.update.manifest!;
     if (!await this.matchesManifest(prepared.path, manifest)) throw fail('prepared_apk_missing', 'Tayyor yangilanish qayta yuklanmoqda');
-    return this.options.platform.installApk(prepared.path, prepared.update.current.packageName, manifest.versionCode);
+    return this.platform.installApk(prepared.path, prepared.update.current.packageName, manifest.versionCode);
   }
   async activeDownload(update: AppUpdateCheckResult): Promise<DownloadSnapshot | null> {
     if (!update.manifest || !update.updateAvailable) return null;
-    const snapshot = await this.options.platform.queryDownload(update.manifest);
+    const snapshot = await this.platform.queryDownload(update.manifest);
     return ['pending', 'running', 'paused', 'successful'].includes(snapshot.status) ? snapshot : null;
   }
   private async download(manifest: AppUpdateManifest, progress?: Progress, cancellation?: AppUpdateCancellation): Promise<string> {
     if (cancellation?.isCancelled) await this.cancelDownload(manifest, cancellation);
-    let snapshot = await this.options.platform.startOrAttachDownload(manifest), retries = 0;
+    let snapshot = await this.platform.startOrAttachDownload(manifest), retries = 0;
     while (true) {
       if (cancellation?.isCancelled) await this.cancelDownload(manifest, cancellation);
       progress?.(Math.max(0, Math.min(manifest.sizeBytes, snapshot.receivedBytes)), manifest.sizeBytes);
@@ -175,17 +185,17 @@ export class AppUpdateService {
       }
       if (snapshot.status === 'failed' || snapshot.status === 'missing') {
         if (retries < 4 && (snapshot.status === 'missing' || snapshot.retryable)) {
-          retries++; await this.options.platform.cancelDownload(manifest);
+          retries++; await this.platform.cancelDownload(manifest);
           const delay = Math.min(30_000, (this.options.automaticRetryDelayMs ?? 2000) * 2 ** Math.min(retries - 1, 3));
           await this.wait(delay, cancellation, manifest);
-          snapshot = await this.options.platform.startOrAttachDownload(manifest); continue;
+          snapshot = await this.platform.startOrAttachDownload(manifest); continue;
         }
         if (snapshot.reason === 1006) throw fail('insufficient_storage', 'Yangilanish uchun qurilmada bo‘sh joy yetarli emas');
         if (snapshot.reason === 404) throw fail('apk_not_found', 'Yangilanish APK fayli serverda topilmadi');
         throw fail('apk_download_failed', snapshot.reason > 0 ? `APK yuklanmadi (${snapshot.reason})` : 'APK yuklanmadi');
       }
       await this.wait(this.options.downloadPollIntervalMs ?? 750, cancellation, manifest);
-      snapshot = await this.options.platform.queryDownload(manifest);
+      snapshot = await this.platform.queryDownload(manifest);
     }
   }
   private async wait(ms: number, cancellation: AppUpdateCancellation | undefined, manifest: AppUpdateManifest): Promise<void> {
@@ -197,13 +207,13 @@ export class AppUpdateService {
     if (cancellation?.isCancelled) await this.cancelDownload(manifest, cancellation);
   }
   private async cancelDownload(manifest: AppUpdateManifest, cancellation: AppUpdateCancellation): Promise<never> {
-    if (!cancellation.preserveDownload) await this.options.platform.cancelDownload(manifest);
+    if (!cancellation.preserveDownload) await this.platform.cancelDownload(manifest);
     throw fail('cancelled', 'Yangilanish bekor qilindi');
   }
   private async matchesManifest(path: string, manifest: AppUpdateManifest): Promise<boolean> {
     try {
-      return await this.options.files.exists(path) && await this.options.files.size(path) === manifest.sizeBytes &&
-        (await this.options.files.sha256(path)).toLowerCase() === manifest.sha256;
+      return await this.files.exists(path) && await this.files.size(path) === manifest.sizeBytes &&
+        (await this.files.sha256(path)).toLowerCase() === manifest.sha256;
     } catch { throw fail('update_storage_failed', 'Yuklangan APK faylini o‘qib bo‘lmadi'); }
   }
   private async readLimited(response: Response): Promise<Uint8Array> {

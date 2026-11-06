@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, Platform, Text, View } from 'react-native';
-import { LoginScreen } from '../LoginScreen';
+import { AppEntry } from '../components/AppEntry';
 import { WorkerScreen } from '../WorkerScreen';
 import { activeSessionToken, loadSession, logout, type Session } from '../auth';
 import { profile } from '../profileApi';
@@ -11,8 +11,8 @@ import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { homeTarget } from '../shared/appRoutes';
 import { switchPinStore } from '../shared/switchPinRuntime';
 import { notificationUnreadStore } from '../shared/notificationStoresRuntime';
-import { localeController } from '../shared/localization/runtime';
-import { themeController } from '../shared/themeRuntime';
+import { initializeBasePreferences } from '../shared/basePreferences';
+import { unlockAfterLogin } from '../shared/securityUnlockRuntime';
 import '../shared/productionSnapshotRuntime';
 
 export default function Index() {
@@ -21,13 +21,13 @@ export default function Index() {
   useEffect(() => {
     let active = true;
     bootstrapSession(() => loadBaseStartup(loadSession, [() => notificationUnreadStore.load(),
-      () => themeController.load(), () => localeController.load()]), profile, value => !!activeSessionToken(value))
+      initializeBasePreferences]), profile, value => !!activeSessionToken(value))
       .then(value => { if (active) setSession(value); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
   if (loading) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
-  if (!session) return <LoginScreen onLogin={setSession} />;
+  if (!session) return <AppEntry onLogin={value => { unlockAfterLogin(value); setSession(value); }} />;
   const target = homeTarget(session, Platform.OS);
   if (target && target !== 'worker') return <Redirect href={target} />;
   if (!target) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>

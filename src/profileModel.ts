@@ -33,6 +33,12 @@ function labels(value: unknown): string[] {
   return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
 }
 
+/** @v2 ProfileScreen._normalizeWerkaLabel */
+function normalizeWerkaLabel(value: unknown, role: string): string {
+  const name = text(value);
+  return role === 'werka' && name.toLowerCase() === 'werka' ? 'Wmanager' : name;
+}
+
 export function initialProfileSnapshot(session: Session): ProfileSnapshot {
   return { profile: session.profile, apparatusLabels: labels(session.assigned_apparatus_labels) };
 }
@@ -55,8 +61,8 @@ export function profileSnapshotFromResponse(session: Session, value: unknown): P
 export function profileDisplay(snapshot: ProfileSnapshot) {
   const profile = snapshot.profile;
   const role = text(profile.role).toLowerCase();
-  const name = text(profile.display_name) || text(profile.legal_name) || 'Foydalanuvchi';
-  const legalName = text(profile.legal_name);
+  const name = normalizeWerkaLabel(profile.display_name, role) || normalizeWerkaLabel(profile.legal_name, role) || 'Foydalanuvchi';
+  const legalName = normalizeWerkaLabel(profile.legal_name, role);
   return {
     name,
     role: profileRoleLabel(role),
@@ -66,20 +72,18 @@ export function profileDisplay(snapshot: ProfileSnapshot) {
   };
 }
 
-/** Use only the active server's avatar endpoint; never use a token from avatar_url. */
+/** @v2 ProfileAvatarCache.refreshFromUrl */
 export function profileAvatarSource(session: Session, profile: Record<string, unknown>) {
   const rawAvatar = text(profile.avatar_url);
   if (!rawAvatar) return null;
   try {
-    const base = new URL(session.baseUrl);
-    if (base.protocol !== 'https:' || base.origin !== session.baseUrl) return null;
-    const uri = new URL('/v1/mobile/profile/avatar/view', base.origin);
-    let version = '';
-    try { version = new URL(rawAvatar, base.origin).searchParams.get('v') ?? ''; } catch { /* Use the current avatar. */ }
-    if (version) uri.searchParams.set('v', version);
+    const uri = new URL(rawAvatar);
+    if (uri.protocol !== 'https:' && uri.protocol !== 'http:') return null;
+    let hash = 2166136261;
+    for (let index = 0; index < rawAvatar.length; index++) hash = Math.imul(hash ^ rawAvatar.charCodeAt(index), 16777619);
     return {
-      uri: uri.toString(),
-      cacheKey: JSON.stringify(['profile-avatar', session.imageCacheScope, base.origin, text(profile.role), text(profile.ref), version]),
+      uri: rawAvatar,
+      cacheKey: JSON.stringify(['profile-avatar', session.imageCacheScope, session.baseUrl, text(profile.role), text(profile.ref), hash >>> 0]),
     };
   } catch {
     return null;

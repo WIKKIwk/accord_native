@@ -1,5 +1,5 @@
-import { BottomSheet, Button, DisclosureGroup, Group, Host, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
+import { BottomSheet, Button, DisclosureGroup, Group, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
+import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, refreshable, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
 import { useState, type ComponentProps } from 'react';
 import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
@@ -8,6 +8,7 @@ import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileAvatarPreview } from './ProfileAvatarPreview.ios';
 import { ProfileSettings } from './ProfileSettings.ios';
 import { ProfileSettingsPreferences } from './ProfileSettingsPreferences.ios';
+import { BaseHost as Host } from './BaseHost';
 import { ProfileSwitchPin } from './ProfileSwitchPin.ios';
 import { useBaseLocale } from './useBaseLocale.ios';
 import { useSwitchPinSetup } from './useSwitchPinSetup.ios';
@@ -56,7 +57,8 @@ function ApparatusRow({ labels }: { labels: string[] }) {
   </DisclosureGroup>;
 }
 
-function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftName, draftPhoto, busy, saving,
+// @v2 _ProfileSelectionSheet
+function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,
   onChangeName, onChoosePhoto, onSave, onCloseEditor }: ProfileViewProps) {
   const dark = useColorScheme() === 'dark';
   const { text } = useBaseLocale();
@@ -72,7 +74,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
         <Menu label={
           <ZStack alignment="bottomTrailing" modifiers={[contentShape(shapes.rectangle(), ['interaction', 'contextMenuPreview'])]}>
             <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken}
-              size={108} revision={avatarRevision} previewUri={draftPhoto} /></RNHostView>
+              size={108} revision={avatarRevision} previewUri={draftPhoto} cachedUri={cachedAvatar} /></RNHostView>
             <Image systemName="camera" size={17} color="#ffffff" modifiers={[
               frame({ width: 34, height: 34 }), background('#000000', shapes.circle()),
             ]} />
@@ -103,6 +105,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
   </Group>;
 }
 
+// @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
   const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
   const details = profileDisplay(snapshot);
@@ -113,13 +116,13 @@ export function ProfileView(props: ProfileViewProps) {
   const switchPin = useSwitchPinSetup(session);
   const closeSettings = () => { if (!switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
   return <><Host style={{ flex: 1 }}>
-    <List modifiers={[listStyle('insetGrouped')]}>
+    <List modifiers={[listStyle('insetGrouped'), refreshable(props.onRefresh)]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), padding({ vertical: 14 })]}>
         <Spacer />
         <VStack alignment="center" spacing={6}>
           <ZStack alignment="bottomTrailing">
             <Button onPress={() => setAvatarOpen(true)} modifiers={[buttonStyle('plain'), accessibilityLabel(text('profileAvatarZoomLabel'))]}>
-              <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} size={80} revision={avatarRevision} /></RNHostView>
+              <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} size={80} revision={avatarRevision} cachedUri={props.cachedAvatar} /></RNHostView>
             </Button>
             <BottomSheet isPresented={editing} onIsPresentedChange={(isPresented) => { if (!isPresented) onCloseEditor(); }}
               anchor={<Button onPress={onOpenEditor} modifiers={[
@@ -127,7 +130,7 @@ export function ProfileView(props: ProfileViewProps) {
                 background(dark ? '#2c2c2e' : '#e5e5ea', shapes.circle()),
                 strokeBorder({ shape: 'circle', content: dark ? '#000000' : '#f2f2f7', style: { lineWidth: 2 } }),
                 padding({ all: 6 }), contentShape(shapes.rectangle()), offset({ x: 9, y: 9 }),
-                accessibilityLabel('Profilni tahrirlash'), disabled(busy),
+                accessibilityLabel(text('profileEditTitle')), disabled(busy),
               ]}><Image systemName="pencil" size={15} color={dark ? '#ffffff' : '#1c1c1e'} /></Button>}>
               <ProfileEditor {...props} />
             </BottomSheet>
@@ -140,26 +143,26 @@ export function ProfileView(props: ProfileViewProps) {
         <Spacer />
       </HStack>
       <Section title="Hisob">
-        {details.legalName ? <ProfileRow icon="person.text.rectangle" title="To‘liq ism" value={details.legalName} /> : null}
-        {details.phone ? <ProfileRow icon="phone" title="Telefon" value={details.phone} /> : null}
+        {details.legalName ? <ProfileRow icon="person.text.rectangle" title={text('legalNameLabel')} value={details.legalName} /> : null}
+        {details.phone ? <ProfileRow icon="phone" title={text('phoneLabel')} value={details.phone} /> : null}
         <ApparatusRow labels={details.apparatusLabels} />
       </Section>
       <Section>
         <NavigationRow icon="calendar" title="Kunlik ish" onPress={onDailyWork} />
         <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) setSettingsOpen(true); else closeSettings(); }}
-          anchor={<NavigationRow icon="gearshape" title="Sozlamalar" onPress={() => setSettingsOpen(true)} />}>
+          anchor={<NavigationRow icon="gearshape" title={text('profileSettingsTitle')} onPress={() => setSettingsOpen(true)} />}>
           <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text}
             preferences={<ProfileSettingsPreferences />} switchPin={<ProfileSwitchPin pin={switchPin} />} switchPinBusy={switchPin.busy}
             onAppearanceChange={value => value === 'system' ? Promise.resolve() : themeController.setThemeMode(value)} />
         </BottomSheet>
       </Section>
       <Section>
-        <Button role="destructive" label="Hisobdan chiqish" systemImage="rectangle.portrait.and.arrow.right"
+        <Button role="destructive" label={text('logoutTitle')} systemImage="rectangle.portrait.and.arrow.right"
           onPress={onLogout} modifiers={[buttonStyle('plain')]} />
       </Section>
     </List>
   </Host>
   <ProfileAvatarPreview visible={avatarOpen} onClose={() => setAvatarOpen(false)} session={session} profile={snapshot.profile}
-    token={avatarToken} revision={avatarRevision} displayName={details.name} />
+    token={avatarToken} revision={avatarRevision} displayName={details.name} cachedUri={props.cachedAvatar} />
   </>;
 }

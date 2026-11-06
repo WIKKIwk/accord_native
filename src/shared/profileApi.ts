@@ -23,16 +23,16 @@ async function updateSessionProfile(session: Session, value: unknown) {
 }
 
 /** @v2 updateNickname */
-export async function updateNickname(session: Session, nickname: string) {
+export async function updateNickname(session: Session, nickname: string, signal?: AbortSignal) {
   const response = await authorizedFetch(session, '/v1/mobile/profile', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname }),
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname }), ...(signal ? { signal } : {}),
   });
   if (response.status !== 200) throw new Error('Nickname update failed');
   return updateSessionProfile(session, await response.json());
 }
 
 /** @v2 uploadAvatar */
-export async function uploadAvatar(session: Session, bytes: readonly number[] | Uint8Array, filename: string) {
+export async function uploadAvatar(session: Session, bytes: readonly number[] | Uint8Array, filename: string, signal?: AbortSignal) {
   // Match package:http's multipart file headers and preserve the original bytes on native and web.
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let boundary = 'dart-http-boundary-';
@@ -44,7 +44,7 @@ export async function uploadAvatar(session: Session, bytes: readonly number[] | 
   const content = Uint8Array.from(bytes), body = new Uint8Array(head.length + content.length + tail.length);
   body.set(head); body.set(content, head.length); body.set(tail, head.length + content.length);
   const response = await authorizedFetch(session, '/v1/mobile/profile/avatar', {
-    method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body,
+    method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body, ...(signal ? { signal } : {}),
   }, undefined, null);
   if (response.status !== 200) throw new Error('Avatar upload failed');
   return updateSessionProfile(session, await response.json());

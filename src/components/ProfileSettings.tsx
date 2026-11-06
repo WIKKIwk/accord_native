@@ -2,10 +2,11 @@ import { Button, Column, ScrollView, Switch, Text, TextInput } from '@expo/ui';
 import Constants from 'expo-constants';
 import { Alert, Platform, useColorScheme } from 'react-native';
 import type { AppearancePreference } from '../appAppearance';
+import type { Session } from '../auth';
 import { useAppSettings } from './AppSettings';
 import { usePinSetup } from './usePinSetup';
 
-type Props = { onClose: () => void; onLogout: () => void };
+type Props = { session?: Session; onClose: () => void; onLogout: () => void };
 const choices: { id: AppearancePreference; label: string }[] = [
   { id: 'system', label: 'Tizim' }, { id: 'light', label: 'Yorug‘' }, { id: 'dark', label: 'Qorong‘i' },
 ];

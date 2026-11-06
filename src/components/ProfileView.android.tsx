@@ -1,4 +1,5 @@
-import { Button, Column, FieldGroup, Host, ListItem, RNHostView, Row, ScrollView, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
+import { Button, Column, FieldGroup, ListItem, RNHostView, Row, ScrollView, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
+import { PullToRefreshBox } from '@expo/ui/jetpack-compose';
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
@@ -8,12 +9,14 @@ import { localeController } from '../shared/localization/runtime';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileAvatarPreview } from './ProfileAvatarPreview.android';
 import { ProfileSettings } from './ProfileSettings';
+import { BaseHost as Host } from './BaseHost';
+import { useBaseTheme } from './useBaseTheme';
 import type { ProfileViewProps } from './profileViewTypes';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 
-function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftName, draftPhoto, busy, saving,
+function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,
   onChangeName, onChoosePhoto, onSave }: ProfileViewProps) {
   const name = useNativeState(draftName);
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
@@ -28,7 +31,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
     <ListItem supportingText={t(draftPhoto ? 'changeImage' : 'chooseImage')}
       onPress={busy ? undefined : () => onChoosePhoto('library')}
       leading={<RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken}
-        size={48} revision={avatarRevision} previewUri={draftPhoto} /></RNHostView>}>
+        size={48} revision={avatarRevision} previewUri={draftPhoto} cachedUri={cachedAvatar} /></RNHostView>}>
       {t('profilePhotoTitle')}
     </ListItem>
     {draftPhoto ? <Text>{t('selectedImageNotice')}</Text> : null}
@@ -40,7 +43,9 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
 export function ProfileView(props: ProfileViewProps) {
   const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const muted = useColorScheme() === 'dark' ? '#aeaeb2' : '#6d6d72';
+  const dark = useColorScheme() === 'dark';
+  const theme = useBaseTheme();
+  const muted = theme.colors.onSurfaceVariant ?? (dark ? '#aeaeb2' : '#6d6d72');
   const [apparatusExpanded, setApparatusExpanded] = useState(false);
   const editorSheet = useNativeSheet();
   const settingsSheet = useNativeSheet();
@@ -72,21 +77,21 @@ export function ProfileView(props: ProfileViewProps) {
     }
     if (settingsSheet.isOpen()) {
       settingsSheet.update(<Host style={{ flex: 1 }}>
-        <ProfileSettings onClose={settingsSheet.close} onLogout={requestDisconnect} />
+        <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
       </Host>, { dismissible: true, onDismiss: settingsDismissed });
     }
-  }, [editing, busy, props, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet]);
+  }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet]);
   const openSettings = () => settingsSheet.open(<Host style={{ flex: 1 }}>
-    <ProfileSettings onClose={settingsSheet.close} onLogout={requestDisconnect} />
+    <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
   </Host>, { dismissible: true, onDismiss: settingsDismissed });
   const details = profileDisplay(snapshot);
   return <Host style={{ flex: 1 }}>
-    <FieldGroup>
+    <PullToRefreshBox isRefreshing={props.refreshing} onRefresh={() => { void props.onRefresh(); }}><FieldGroup>
       <FieldGroup.Section title={localizedGetter('profileTitle', locale)}>
         <Row spacing={16} alignment="center" style={{ paddingVertical: 8 }}>
           <RNHostView matchContents><ProfileAvatarPreview session={session} profile={snapshot.profile} token={avatarToken}
             revision={avatarRevision} name={details.name} zoomLabel={localizedGetter('profileAvatarZoomLabel', locale)}
-            closeLabel={localizedGetter('closeAction', locale)} /></RNHostView>
+            closeLabel={localizedGetter('closeAction', locale)} cachedUri={props.cachedAvatar} /></RNHostView>
           <Column spacing={4}>
             <Text textStyle={{ fontSize: 20, fontWeight: '600' }}>{details.name}</Text>
             <Text textStyle={{ fontSize: 15, color: muted }}>{details.role}</Text>
@@ -94,10 +99,10 @@ export function ProfileView(props: ProfileViewProps) {
         </Row>
         <Button label={localizedGetter('profileEditTitle', locale)} disabled={busy} onPress={onOpenEditor} testID="profile-edit" />
         {details.legalName ? <Row spacing={12} style={{ width: '100%' }}>
-          <Text>To‘liq ism</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.legalName}</Text>
+          <Text>{localizedGetter('legalNameLabel', locale)}</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.legalName}</Text>
         </Row> : null}
         {details.phone ? <Row spacing={12} style={{ width: '100%' }}>
-          <Text>Telefon</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.phone}</Text>
+          <Text>{localizedGetter('phoneLabel', locale)}</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.phone}</Text>
         </Row> : null}
         {details.apparatusLabels.length === 1 ? <Row spacing={12} style={{ width: '100%' }}>
           <Text>Apparat</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.apparatusLabels[0]}</Text>
@@ -117,8 +122,8 @@ export function ProfileView(props: ProfileViewProps) {
         <Button label={localizedGetter('profileSettingsTitle', locale)} variant="text" onPress={openSettings} testID="profile-settings" />
       </FieldGroup.Section>
       <FieldGroup.Section>
-        <Button label="Hisobdan chiqish" variant="outlined" onPress={onLogout} />
+        <Button label={localizedGetter('logoutTitle', locale)} variant="outlined" onPress={onLogout} />
       </FieldGroup.Section>
-    </FieldGroup>
+    </FieldGroup></PullToRefreshBox>
   </Host>;
 }

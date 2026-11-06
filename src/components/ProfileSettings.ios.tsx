@@ -4,10 +4,12 @@ import Constants from 'expo-constants';
 import { useState, type ReactNode } from 'react';
 import { Alert } from 'react-native';
 import { isAppearancePreference, type AppearancePreference } from '../appAppearance';
+import type { Session } from '../auth';
 import { useAppSettings } from './AppSettings';
 import { usePinSetup } from './usePinSetup.ios';
+import { useAppUpdate } from './AppUpdateProvider';
 
-type Props = { onClose: () => void; onLogout: () => void; preferences?: ReactNode; switchPin?: ReactNode;
+type Props = { session?: Session; onClose: () => void; onLogout: () => void; preferences?: ReactNode; switchPin?: ReactNode;
   switchPinBusy?: boolean; onAppearanceChange?: (value: AppearancePreference) => Promise<void>;
   translate?: (key: string) => string };
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
@@ -16,6 +18,7 @@ const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 export function ProfileSettings({ onClose, onLogout, preferences, switchPin, switchPinBusy = false, onAppearanceChange, translate }: Props) {
   const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
+  const openUpdate = useAppUpdate();
   const [biometricBusy, setBiometricBusy] = useState(false);
   const label = (key: string, fallback: string) => translate ? translate(key) : fallback;
   const setBiometric = (enabled: boolean) => {
@@ -33,10 +36,7 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
       { text: label('yes', 'Ha'), onPress: () => setBiometric(true) },
     ]);
   };
-  const closeSettings = async () => {
-    if (pin.mode === 'remove' && !(await pin.submit())) return;
-    onClose();
-  };
+  const closeSettings = () => { onClose(); };
   return <Group modifiers={[presentationDetents(['large']), presentationDragIndicator('visible'), interactiveDismissDisabled(pin.busy || biometricBusy || switchPinBusy)]}>
     <NavigationStack>
       <Toolbar modifiers={[navigationTitle(label('profileSettingsTitle', 'Sozlamalar')), navigationBarTitleDisplayMode('inline')]}>
@@ -50,7 +50,6 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
               if (isAppearancePreference(value)) void Promise.all([setAppearance(value), onAppearanceChange?.(value)])
                 .catch(() => Alert.alert('Saqlab bo‘lmadi', 'Sozlamani qayta saqlab ko‘ring.'));
             }} modifiers={[pickerStyle('menu')]}>
-              <Text modifiers={[tag('system')]}>Tizim</Text>
               <Text modifiers={[tag('light')]}>Yorug‘</Text>
               <Text modifiers={[tag('dark')]}>Qorong‘i</Text>
             </Picker>
@@ -58,14 +57,12 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
           <Section title={label('securityTitle', 'Xavfsizlik')}>
             {!pin.mode ? <>
               <Button label={pin.security.hasPin ? label('pinChange', 'PIN kodni o‘zgartirish') : label('pinSet', 'PIN kodni o‘rnatish')} systemImage="lock" onPress={() => pin.open('set')} />
-              {pin.security.hasPin ? <Button label={label('pinRemove', 'PIN kodni olib tashlash')} systemImage="lock.open" onPress={() => pin.open('remove')} /> : null}
+              {pin.security.hasPin ? <Button label={label('pinRemove', 'PIN kodni olib tashlash')} systemImage="lock.open" onPress={() => { void pin.remove(); }} modifiers={[disabled(pin.busy)]} /> : null}
               <Toggle label={label('biometricEnableTitle', 'Biometrik ochish')} isOn={pin.security.biometric} modifiers={[disabled(!pin.security.hasPin || biometricBusy)]}
                 onIsOnChange={setBiometric} />
               {!pin.security.canUseBiometric ? <Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>Biometrik ochish qurilma yoki ilovaning ushbu versiyasida mavjud emas.</Text> : null}
             </> : <>
-              {pin.mode === 'remove' ? <Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>PIN’ni olib tashlash uchun joriy PIN’ni kiriting.</Text> : null}
               {pin.mode === 'set' ? <Text>{label(pin.phase === 'entry' ? 'pinEnterTitle' : 'pinRepeatTitle', pin.phase === 'entry' ? 'PIN kiriting' : 'PIN takrorlang')}</Text> : null}
-              {pin.security.hasPin && (pin.mode === 'remove' || pin.phase === 'entry') ? <SecureField text={pin.current} maxLength={4} placeholder="Joriy PIN" onTextChange={value => pin.change('current', value)} modifiers={[keyboardType('ascii-capable-number-pad'), disabled(pin.busy)]} /> : null}
               {pin.mode === 'set' && pin.phase === 'entry' ? <SecureField text={pin.pin} maxLength={4} placeholder="PIN" onTextChange={value => pin.change('pin', value)} modifiers={[keyboardType('ascii-capable-number-pad'), disabled(pin.busy)]} /> : null}
               {pin.mode === 'set' && pin.phase === 'confirm' ? <SecureField text={pin.repeat} maxLength={4} placeholder="PIN" onTextChange={value => pin.change('repeat', value)} modifiers={[keyboardType('ascii-capable-number-pad'), disabled(pin.busy)]} /> : null}
               {pin.mode === 'set' && pin.phaseError ? <Text>{pin.phaseError}</Text> : null}
@@ -76,6 +73,7 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
           </Section>
           {switchPin}
           <Section title="Ilova">
+            <Button label={label('appUpdateSettingsTitle', 'Ilovani yangilash')} systemImage="arrow.triangle.2.circlepath" onPress={openUpdate} />
             <HStack spacing={12}>
               <Image systemName="info.circle" size={18} modifiers={[frame({ width: 22 }), secondary]} />
               <Text>Versiya</Text><Spacer />
@@ -93,7 +91,7 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
           </Section>
           <Section><Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>Ko‘rinish tanlovi ushbu qurilmada saqlanadi.</Text></Section>
         </List>
-        <Toolbar.Content><ToolbarItem placement="topBarTrailing"><Button label="Tayyor" onPress={() => { void closeSettings(); }} modifiers={[disabled(pin.busy || biometricBusy || switchPinBusy)]} /></ToolbarItem></Toolbar.Content>
+        <Toolbar.Content><ToolbarItem placement="topBarTrailing"><Button label="Tayyor" onPress={closeSettings} modifiers={[disabled(pin.busy || biometricBusy || switchPinBusy)]} /></ToolbarItem></Toolbar.Content>
       </Toolbar>
     </NavigationStack>
   </Group>;

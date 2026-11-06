@@ -23,10 +23,6 @@ export function usePinSetupCore<T extends { set: (value: string) => void }>(curr
   const submit = async (): Promise<boolean> => {
     if (saving.current || !mode) return false;
     const entered = values.current;
-    if (mode === 'remove' && !/^\d{4}$/.test(entered.current)) {
-      Alert.alert('PIN kod', 'Joriy 4 xonali PIN’ni kiriting.');
-      return false;
-    }
     if (mode === 'set' && (!/^\d{4}$/.test(entered.pin) || entered.pin !== entered.repeat)) {
       Alert.alert('PIN noto‘g‘ri', '4 ta raqam kiriting va PIN’ni bir xil takrorlang.');
       return false;
@@ -34,8 +30,8 @@ export function usePinSetupCore<T extends { set: (value: string) => void }>(curr
     saving.current = true;
     setBusy(true);
     try {
-      if (mode === 'remove') await security.removePin(entered.current);
-      else await security.savePin(entered.pin, entered.current);
+      if (mode === 'remove') await security.removePin();
+      else await security.savePin(entered.pin);
       if (mounted.current) { reset(); setMode(null); }
       return true;
     } catch (error) {
@@ -43,5 +39,12 @@ export function usePinSetupCore<T extends { set: (value: string) => void }>(curr
       return false;
     } finally { saving.current = false; if (mounted.current) setBusy(false); }
   };
-  return { security, mode, busy, current, pin, repeat, change, open, close, submit };
+  const remove = async (): Promise<boolean> => {
+    if (saving.current) return false;
+    saving.current = true; setBusy(true);
+    try { await security.removePin(); return true; }
+    catch { if (mounted.current) Alert.alert('PIN kod', 'PIN’ni olib tashlab bo‘lmadi.'); return false; }
+    finally { saving.current = false; if (mounted.current) setBusy(false); }
+  };
+  return { security, mode, busy, current, pin, repeat, change, open, close, submit, remove };
 }

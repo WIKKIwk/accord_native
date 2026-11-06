@@ -17,9 +17,10 @@ type Props = {
   name: string;
   zoomLabel: string;
   closeLabel: string;
+  cachedUri?: string | null;
 };
 
-export function ProfileAvatarPreview({ session, profile, token, revision, name, zoomLabel, closeLabel }: Props) {
+export function ProfileAvatarPreview({ session, profile, token, revision, name, zoomLabel, closeLabel, cachedUri }: Props) {
   const [visible, setVisible] = useState(false);
   const [failed, setFailed] = useState(false);
   const { width, height } = useWindowDimensions();
@@ -53,7 +54,7 @@ export function ProfileAvatarPreview({ session, profile, token, revision, name, 
 
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel={zoomLabel} onPress={() => { setFailed(false); setVisible(true); }}>
-      <ProfileAvatar session={session} profile={profile} token={token} revision={revision} />
+      <ProfileAvatar session={session} profile={profile} token={token} revision={revision} cachedUri={cachedUri} />
     </Pressable>
     <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <GestureHandlerRootView style={styles.root}>
@@ -62,7 +63,7 @@ export function ProfileAvatarPreview({ session, profile, token, revision, name, 
           <GestureDetector gesture={gestures}>
             <Animated.View style={[styles.preview, { width: previewWidth, height: previewHeight, backgroundColor: colors.surfaceContainerHighest }, motion]}>
               <Text style={[styles.initial, { color: colors.onSurface }]}>{(name || 'U').charAt(0).toUpperCase()}</Text>
-              {source && token && !failed ? <Image source={{ ...source, cacheKey: `${source.cacheKey}:${revision}`, headers: { Authorization: `Bearer ${token}` } }}
+              {cachedUri || (source && token && !failed) ? <Image source={cachedUri ? { uri: cachedUri } : { ...source!, cacheKey: `${source!.cacheKey}:${revision}` }}
                 style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" onError={() => setFailed(true)} /> : null}
             </Animated.View>
           </GestureDetector>

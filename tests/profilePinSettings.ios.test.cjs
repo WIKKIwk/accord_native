@@ -36,9 +36,8 @@ function fixture() {
   const alerts = [];
   const security = {
     hasPin: true, biometric: false, canUseBiometric: false, attempts: [],
-    async removePin(pin) {
-      this.attempts.push(pin);
-      if (pin !== '1234') throw new Error('Joriy PIN noto‘g‘ri.');
+    async removePin() {
+      this.attempts.push('remove');
       this.hasPin = false;
     },
   };
@@ -71,6 +70,7 @@ function fixture() {
     'expo-constants': { __esModule: true, default: { expoConfig: { version: '1' } } },
     '../appAppearance': { isAppearancePreference: () => true },
     './AppSettings': { useAppSettings: () => ({ appearance: 'system', setAppearance: async () => {} }) },
+    './AppUpdateProvider': { useAppUpdate: () => () => {} },
     './usePinSetup.ios': { usePinSetup: () => usePinSetupCore(field, field, field) },
   });
   const render = () => {
@@ -97,35 +97,18 @@ function byName(tree, name, label) {
   return result;
 }
 
-test('Done removes the PIN only after the current PIN is entered correctly', async () => {
+test('removing the PIN does not require the previous PIN', async () => {
   const app = fixture();
   byName(app.render(), 'Button', 'PIN kodni olib tashlash').props.onPress();
-  let tree = app.render();
-
-  byName(tree, 'Button', 'Tayyor').props.onPress();
   await new Promise(setImmediate);
   assert.equal(app.closed(), 0);
-  assert.equal(app.security.hasPin, true);
-  assert.match(app.alerts.at(-1)[1], /Joriy 4 xonali PIN/);
-
-  byName(tree, 'SecureField').props.onTextChange('9999');
-  byName(tree, 'Button', 'Tayyor').props.onPress();
-  await new Promise(setImmediate);
-  assert.equal(app.closed(), 0);
-  assert.equal(app.security.hasPin, true);
-  assert.match(app.alerts.at(-1)[1], /Joriy PIN noto‘g‘ri/);
-
-  tree = app.render();
-  byName(tree, 'SecureField').props.onTextChange('1234');
-  byName(tree, 'Button', 'Tayyor').props.onPress();
-  await new Promise(setImmediate);
-  assert.equal(app.closed(), 1);
   assert.equal(app.security.hasPin, false);
-  assert.deepEqual(app.security.attempts, ['9999', '1234']);
+  assert.deepEqual(app.security.attempts, ['remove']);
 });
 
-test('Done closes normal settings without removing the PIN', async () => {
+test('Done closes settings during PIN setup without removing the existing PIN', async () => {
   const app = fixture();
+  byName(app.render(), 'Button', 'PIN kodni o‘zgartirish').props.onPress();
   byName(app.render(), 'Button', 'Tayyor').props.onPress();
   await new Promise(setImmediate);
   assert.equal(app.closed(), 1);
