@@ -1,7 +1,7 @@
 # gscale
 
 Status: in progress
-Stopped at: connect the catalog and role-specific order loaders, then implement the platform views and routes.
+Stopped at: implement the platform views and routes on the catalog, order, device and operator controllers.
 
 ## Open items
 
@@ -11,7 +11,7 @@ Stopped at: connect the catalog and role-specific order loaders, then implement 
 | `src/gscale/**` | `gscale_mobile_app*.dart` | Complete the operator dashboard and picker views, compare every remaining state and action against V2, and connect the runtime to the platform routes. |
 | `src/gscale/gscaleDiscovery.ts` | `gscale_mobile_app_helpers_part_10.dart` | V2 iOS additionally runs a Dart UDP fallback after its native UDP pass. Verify whether a second native pass is needed for equivalent results on physical devices. |
 | `src/gscale/gscaleBatchApi.ts` | `mobile_api_gscale_declarations_part_01.dart` | Batch requests and response models have source-derived tests and are connected to operator state. No direct V2 HTTP recording was found for these methods; verify the complete flow against the baseline. |
-| `src/gscale/gscaleAdminApi.ts` | `mobile_api_admin_items_MobileApiAdminItems_methods_01.dart`, `mobile_api_admin_raw_materials_MobileApiAdminRawMaterials_methods_01.dart` | The three catalog/order reads have source-derived tests; no direct V2 HTTP recordings were found. Wire them to the picker and verify the complete flow. |
+| `src/gscale/gscaleAdminApi.ts` | `mobile_api_admin_items_MobileApiAdminItems_methods_01.dart`, `mobile_api_admin_raw_materials_MobileApiAdminRawMaterials_methods_01.dart` | The three catalog/order reads have source-derived tests; no direct V2 HTTP recordings were found. Verify the complete flow with the platform pickers. |
 | `src/gscale/gscaleControlLogic.ts` | `gscale_mobile_app_helpers_part_07.dart`, `gscale_mobile_app_declarations_part_06.dart` | Quantity/weight gates and receipt-label conversion are connected to operator state; compare remaining actions and states with V2. |
 | `src/gscale/gscaleBatchPrint.ts` | `_printActiveRsBatch` | Local preparation, physical printing and confirmation, including one EPC per label, are implemented and need operator UI wiring and real-printer verification. |
 | `src/gscale/gscaleBatchStart.ts` | `_startRsBatchFromSelection` | Order, warehouse, dimensions and apparatus are checked before batch start; connect the platform apparatus picker. |

@@ -14,6 +14,7 @@ import type { DiscoveredServer } from './gscaleDiscovery';
 import { MobileApiException } from '../shared/mobileApiException';
 import type { ArchivePrintEntry, ArchiveSession } from './gscaleArchive';
 import type { GScaleArchiveContext } from './gscaleArchiveRuntime';
+import type { PrintDeviceSelection } from './gscalePreferences';
 
 type Receipt = ReturnType<typeof materialReceiptPrintResponseFromJson>;
 type Item = { code: string; name: string; requiresDimensions: boolean };
@@ -135,6 +136,21 @@ export class GScaleOperatorStore {
   }
 
   openMaterialPicker(): void { this.materialPickerOpened = true; }
+
+  selectConnection(connection: 'wifi' | 'bluetooth' | 'usb' | null): void { this.deps.devices.selectConnection(connection); }
+  scanDevices(): Promise<void> { return this.deps.devices.scan(); }
+  checkDeviceAddress(raw: string) { return this.deps.devices.checkAddress(raw); }
+  selectDevice(selection: PrintDeviceSelection): Promise<void> { return this.deps.devices.select(selection); }
+  retryBatchState(): Promise<void> { return this.deps.batch.refresh(true); }
+
+  selectMaterialChoice(item: Item, micron: number | null): void {
+    const previousMicron = this.state.draft.micron_text;
+    this.selectItem(item);
+    if (this.controlOnly && this.role === 'material_taminotchi' && previousMicron !== (micron == null ? '' : formatCompactKg(micron))) {
+      this.editDraft({ length_text: '' });
+    }
+    if (micron != null) this.editDraft({ micron_text: formatCompactKg(micron) });
+  }
 
   setOrder(order: GScaleModeArgs['order']): void {
     if (!this.alive || !this.state.batch.resolved || this.state.presetLoading || this.state.batch.batch?.active ||

@@ -14,6 +14,25 @@ export function serializeGScaleModeArgs(args: GScaleModeArgs): Record<string, st
 }
 
 export function parseGScaleModeArgs(params: Params): GScaleModeArgs {
+  // The Android preparation routes currently wrap their arguments in `data`.
+  // Normalize that existing route shape before using the same parser as iOS.
+  if (typeof params.data === 'string') {
+    const data: unknown = JSON.parse(params.data);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new TypeError('Invalid GScale arguments');
+    const row = data as Record<string, unknown>, normalized: Params = {};
+    for (const key of ['warehouse', 'materialId', 'materialName', 'formulaVariantId'] as const) {
+      if (row[key] != null) {
+        if (typeof row[key] !== 'string') throw new TypeError('Invalid GScale arguments');
+        normalized[key] = row[key] as string;
+      }
+    }
+    if (row.order != null) normalized.order = JSON.stringify(row.order);
+    if (row.freshForm != null) {
+      if (typeof row.freshForm !== 'boolean') throw new TypeError('Invalid GScale arguments');
+      normalized.freshForm = String(row.freshForm);
+    }
+    return parseGScaleModeArgs(normalized);
+  }
   const string = (key: string): string | undefined => typeof params[key] === 'string' ? params[key] as string : undefined;
   let order: GScaleModeArgs['order'] = null;
   const rawOrder = string('order');
