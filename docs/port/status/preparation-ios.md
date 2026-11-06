@@ -1,14 +1,13 @@
 # preparation-ios
 
 Status: in progress
-Stopped at: integrate the missing GScale route and network discovery, reconcile optional order-detail controls, and verify the native flows on hardware.
+Stopped at: the separate GScale route and shared order-detail decoder, the shared manual-server default-port handling, and physical-device verification.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Scale entry | `preparation_screen.dart`, `preparation_order_formula_screen.dart` | Actions now navigate to `/ios-gscale` with warehouse or production arguments; that route is not present in this checkout. Its receiving parameter contract and return behaviour require integration with the GScale session. |
-| Variant picker search | `preparation_formula_variants_screen.dart` `_reuse` | The scoped catalog picker is connected and shared `searchMatches` exists; connect its searchable picker UI. |
-| QR reprint | `preparation_production_screen.dart` `_reprintRoll`, `inventory_movements_screen_declarations_part_02.dart`, `gscale_mobile_app_widgets_part_02.dart` | Production and inventory QR reprint support Bluetooth discovery and manual Wi-Fi server selection. Automatic Wi-Fi server discovery awaits the GScale native discovery module; verify both flows with a real printer. |
+| QR reprint | `preparation_production_screen.dart` `_reprintRoll`, `inventory_movements_screen_declarations_part_02.dart`, `gscale_mobile_app_widgets_part_02.dart` | The picker offers Bluetooth and automatic Wi-Fi discovery using the existing native discovery runtime; manual Wi-Fi entry probes the server before selection. Both production and inventory flows require a real-device and printer check. |
 | Sequence detail | `admin_production_map_orders_preparation_list.dart`, `admin_production_map_orders_detail_widgets.dart` | The scoped summary, image viewer and order-material-to-variants flow are connected. Native sheet-to-variants back navigation needs real-device verification; optional snapshot-control decoder parity remains open in `preparation.md`. |
 | Navigation | `preparation_navigation.dart` | Inventory is connected and scale links target `/ios-gscale`. Shared chat screens still hard-code worker routes and were outside this task. Verify native root-replacement behaviour. |
 
@@ -19,7 +18,9 @@ Stopped at: integrate the missing GScale route and network discovery, reconcile 
 ## Needs from the integrator
 
 - Supply the `/ios-gscale` screen and confirm its parameter encoding. Verify native detail-sheet navigation on a physical iPhone.
-- Supply the GScale network-discovery module for automatic printer-server discovery.
+- Reconcile the optional order-detail snapshot controls in the shared decoder, as recorded in `preparation.md`.
+- The shared `preparationPrinterServerAddress` normalizes explicitly supplied `http` port 80 and `https` port 443 to 39117 because `URL.port` drops the scheme's default port. Preserve those explicit ports in the shared helper; it was not changed in this iOS task.
+- The QR-printing row in `preparation.md` describes the earlier iOS picker; this file records the current wiring.
 
 ## Drift
 
@@ -27,9 +28,10 @@ Stopped at: integrate the missing GScale route and network discovery, reconcile 
 
 ## Verification
 
-- `node --test tests/*.test.cjs`: 854 passed. Focused printer tests also passed after the final address-normalization adjustment. Native views are not rendered by these tests.
-- iOS and default TypeScript checks passed; Android typecheck retains the 10 errors recorded in `PORT.md`.
-- `npx expo lint` passed. `port_ledger.mjs check` passed with the seven previously documented dynamic/other-role endpoint warnings. All 16 iOS surface tags are present; the role ledger still has unchecked route and Android entries, so no claim of complete role parity is made.
+- The iOS variant picker uses the shared scoped, paginated `searchMatches` catalog. Focused JavaScript picker checks covered stale results, pagination, selection, discovery and cancellation; native picker interaction still needs a phone.
+- `node --test tests/*.test.cjs`: 942 passed. Native views are not rendered by these tests.
+- iOS and default TypeScript checks passed. The previous Android typecheck recorded 10 baseline errors in `PORT.md`; it was not rerun in this turn.
+- `npx expo lint` passed. `port_ledger.mjs check` passed with the seven previously documented dynamic/other-role endpoint warnings. All 16 iOS and Android surface tags are present; the role ledger still has unchecked shared route entries, so no claim of complete role parity is made.
 - V2 role reading estimate: 112k tokens; actual tokens read were not measured. Two source-derived inventory assignment API methods were added; no V2 recording existed for them in this role's fixtures.
 - No simulator or physical device was used. Check sequence detail, formula navigation, inventory scanning and transfers, printer selection, scale return, accessibility, and light/dark appearance on a real iPhone.
 
@@ -48,3 +50,5 @@ Stopped at: integrate the missing GScale route and network discovery, reconcile 
 - `3bb75b4` port(preparation/ios): inventory order assignments
 - `d32ce7e` port(preparation/ios): clear preparation on account reset
 - `e40f827` port(preparation/ios): inventory QR reprint
+- `b8eab25` port(preparation/ios): searchable variant picker
+- `03795fa` port(preparation/ios): keep rapid picker searches current

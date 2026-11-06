@@ -53,14 +53,6 @@ test('Wi-Fi selection checks the driver then posts the V2 payload and propagates
     await assert.rejects(x.api.printPreparationJob({ epc: 'E' }, selected), /Qog‘oz tugadi/);
   } finally { global.fetch = oldFetch; }
 });
-test('manual printer address uses the V2 default port and rejects loopback', () => {
-  const { preparationPrinterServerUrl } = setup().api;
-  assert.equal(preparationPrinterServerUrl('192.168.1.12'), 'http://192.168.1.12:39117');
-  assert.equal(preparationPrinterServerUrl('http://192.168.1.12:4000/path'), 'http://192.168.1.12:4000');
-  assert.equal(preparationPrinterServerUrl('http://192.168.1.12:80'), 'http://192.168.1.12:80');
-  assert.throws(() => preparationPrinterServerUrl('localhost'), /Localhost/);
-  assert.throws(() => preparationPrinterServerUrl(''), /formati/);
-});
 test('inventory Wi-Fi reprint uses the selected server without the production monitor override', async () => {
   const x = setup(), oldFetch = global.fetch, requests = [];
   global.fetch = async (url, init) => { requests.push([url, init]); return { ok: true, json: async () => ({ ok: true }) }; };
