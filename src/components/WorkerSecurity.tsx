@@ -5,6 +5,7 @@ import { biometricAvailable, clearAppLock, loadAppLock, saveAppPin, setAppBiomet
 import { consumeLoginUnlock } from '../shared/securityUnlockRuntime';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
+import { securityLifecycleChange, type SecurityLifecycle } from '../shared/securityLifecycle';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -40,7 +41,7 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const pinPresent = useRef(false);
-  const wasInactive = useRef(false);
+  const lifecycle = useRef<SecurityLifecycle>({ wasBackgrounded: false, suspendResumeLock: false });
   const authenticating = useRef(false);
   const unlocking = useRef(false);
   const autoBiometricAttempted = useRef(false);
@@ -54,7 +55,8 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
       pinPresent.current = state.hasPin;
       setHasPin(state.hasPin);
       setBiometric(state.biometric);
-      setLocked(state.hasPin && !(AppState.currentState === 'active' && consumeLoginUnlock(session)));
+      const unlocked = consumeLoginUnlock(session);
+      setLocked(state.hasPin && !(AppState.currentState === 'active' && unlocked));
       setLoadError('');
     } catch {
       if (mounted.current) setLoadError('Qulf ma’lumotini yuklab bo‘lmadi.');
@@ -69,7 +71,8 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
       pinPresent.current = state.hasPin;
       setHasPin(state.hasPin);
       setBiometric(state.biometric);
-      setLocked(state.hasPin && !(AppState.currentState === 'active' && consumeLoginUnlock(session)));
+      const unlocked = consumeLoginUnlock(session);
+      setLocked(state.hasPin && !(AppState.currentState === 'active' && unlocked));
       setLoadError('');
     }, () => { if (active) setLoadError('Qulf ma’lumotini yuklab bo‘lmadi.'); })
       .finally(() => { if (active) setLoaded(true); });
@@ -78,19 +81,12 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
 
   useEffect(() => {
     const listener = AppState.addEventListener('change', state => {
-      if (authenticating.current) {
-        if (state === 'background' && pinPresent.current) { lifecycleEpoch.current++; wasInactive.current = true; setShield(true); }
-        return;
-      }
-      if (state === 'inactive' || state === 'background') {
-        if (pinPresent.current) { lifecycleEpoch.current++; wasInactive.current = true; setShield(true); }
-      } else if (state === 'active' && wasInactive.current) {
-        wasInactive.current = false;
-        setLocked(pinPresent.current);
-        setShield(false);
-        setInput('');
-        setError('');
-      }
+      const change = securityLifecycleChange(lifecycle.current, state, pinPresent.current, authenticating.current);
+      lifecycle.current = change.state;
+      if (change.incrementEpoch) lifecycleEpoch.current++;
+      if (change.shield !== null) setShield(change.shield);
+      if (change.lock) setLocked(true);
+      if (change.clearInput) { setInput(''); setError(''); }
     });
     return () => listener.remove();
   }, []);
@@ -100,7 +96,7 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
     if (mounted.current) {
       pinPresent.current = true;
       setHasPin(true);
-      if (AppState.currentState !== 'active') { wasInactive.current = true; setShield(true); }
+      if (AppState.currentState !== 'active') { lifecycle.current.wasBackgrounded = true; setShield(true); }
     }
   }, [session]);
 
@@ -111,17 +107,13 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
 
   const setBiometricEnabled = useCallback(async (enabled: boolean) => {
     if (authenticating.current) throw new Error('Biometrik tasdiq davom etmoqda.');
-    authenticating.current = true;
+    authenticating.current = enabled;
     try {
       await setAppBiometric(session, enabled);
+      if (enabled) lifecycle.current.suspendResumeLock = true;
       if (mounted.current) setBiometric(enabled);
     } finally {
       authenticating.current = false;
-      if (wasInactive.current && AppState.currentState === 'active' && mounted.current) {
-        wasInactive.current = false;
-        setLocked(pinPresent.current);
-        setShield(false);
-      }
     }
   }, [session]);
 
@@ -148,6 +140,7 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
     authenticating.current = true;
     try {
       const ok = await unlockAppWithBiometric(session);
+      if (ok) lifecycle.current.suspendResumeLock = true;
       if (mounted.current && startedAt === lifecycleEpoch.current && ok) { setLocked(false); setInput(''); setError(''); }
       else if (mounted.current && startedAt === lifecycleEpoch.current) setError(localizedGetter('biometricFailed', locale));
     } catch { if (mounted.current) setError(localizedGetter('biometricFailed', locale)); }
@@ -155,11 +148,6 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
       authenticating.current = false;
       unlocking.current = false;
       if (mounted.current) {
-        if (wasInactive.current && AppState.currentState === 'active') {
-          wasInactive.current = false;
-          setLocked(pinPresent.current);
-          setShield(false);
-        }
         setBusy(false);
       }
     }

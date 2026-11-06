@@ -21,7 +21,6 @@ Stopped at: compare the remaining generated base readings and V2 test cases, res
 | Account switching | `createRuntimeAccountSwitchController`, `SecurityController` | Connect security unlock, the shared profile-switch PIN store and platform account-switcher views to the runtime controller. |
 | Transport | `MobileApi._get`, `_post`, `_put`, `_delete`, `_patch`, `resilientApiRead`, `SecureMobileApiClient` | Connect the shared resilient GET helper at V2's opt-in call sites. Full-response deadlines, manual redirects and cross-origin header stripping have mocked tests; verify native behavior on both platforms. |
 | Inventory live transport | `warehouse_live_client_io.dart`, `InventoryViewStore` | JS WebSocket does not expose V2’s 25-second protocol ping; verify native keepalive on both platforms. Platform entry points must configure foreground/background lifecycle. |
-| Security lifecycle | `SecurityController`, `src/appLock.ts`, `WorkerSecurity` | Compare and connect the V2 privacy shield, resume lock and biometric flows; V4 currently uses different storage and UI components. |
 | Native device behavior | `secure_account_storage`, `uploadAvatar`, `app_update` | Saved-account secure storage and avatar multipart upload have mock/source-derived tests but need native runtime verification; update installation needs a native bridge. |
 
 ## Deviations candidates

@@ -15,6 +15,7 @@ Stopped at: finish security lifecycle and final verification.
 | Standalone PIN routes | `PinSetupEntryScreen`, `PinSetupConfirmScreen` | Settings now use the entry and confirmation flows for both PIN purposes, but other callers need Expo Router route files. The wire session may edit only `src/app/index.tsx` and `src/app/_layout.tsx`. |
 | Avatar device behavior | `ProfileAvatarCache`, `ProfileScreen._pickAvatar` | Validate image picking, compression and cached image rendering on a real phone. |
 | Role-owned theme and locale surfaces | `ThemeController`, `LocaleController` | Base native hosts use the persisted theme and RTL, but worker and other role-owned hosts still need to adopt the shared palette/direction and translate their own hard-coded text. Verify the base surfaces on devices. |
+| Security lifecycle device behavior | `SecurityController.didChangeAppLifecycleState`, `unlockWithBiometric` | Privacy shielding, resume locking and biometric resume suppression have focused tests; verify them on real iOS and Android devices. |
 
 ## Deviations candidates
 
