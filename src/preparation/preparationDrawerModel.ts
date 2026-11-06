@@ -8,7 +8,7 @@ export function preparationDrawerItems(access: { scale: boolean; inventory: bool
     { id: 'production', label: t('Ishlab chiqarish'), symbol: { ios: 'gearshape.2', android: 'precision_manufacturing' } },
     { id: 'sequence', label: t('Ketma-ketlik'), symbol: { ios: 'list.number', android: 'format_list_numbered' } },
     ...(access.scale ? [{ id: 'scale', label: t('Kirim'), symbol: { ios: 'scalemass' as const, android: 'scale' as const } }] : []),
-    { id: 'chat', label: t('Chat'), symbol: { ios: 'bubble.left', android: 'chat_bubble_outline' }, disabled: true },
+    { id: 'chat', label: t('Chat'), symbol: { ios: 'bubble.left', android: 'chat_bubble_outline' } },
     ...(access.inventory ? [{ id: 'inventory', label: t('Ishlab chiqarilgan homashyolar'), symbol: { ios: 'arrow.left.arrow.right' as const, android: 'swap_horiz' as const } }] : []),
     { id: 'profile', label: t('Profil'), symbol: { ios: 'person', android: 'person' } },
   ];
@@ -19,7 +19,7 @@ export function preparationDrawerActive(pathname: string) {
   if (!page) return 'home';
   if (page === 'catalog' || page === 'formulas') return 'formulas';
   if (page.startsWith('production')) return 'production';
-  return ['sequence', 'inventory', 'profile'].includes(page) ? page : '';
+  return ['sequence', 'inventory', 'profile', 'chat'].includes(page) ? page : '';
 }
 
 export function preparationDrawerRoute(id: string, platform: 'ios' | 'android'): { path: string; kind: 'root' | 'push' | 'tab' } | null {
@@ -30,6 +30,7 @@ export function preparationDrawerRoute(id: string, platform: 'ios' | 'android'):
     case 'production': return { path: `${base}/production`, kind: 'root' };
     case 'sequence': return { path: `${base}/sequence`, kind: 'push' };
     case 'inventory': return { path: `${base}/inventory`, kind: 'push' };
+    case 'chat': return { path: platform === 'ios' ? `${base}/chat` : '/android-chat', kind: platform === 'ios' ? 'tab' : 'push' };
     case 'profile': return { path: `${base}/profile`, kind: 'tab' };
     default: return null;
   }

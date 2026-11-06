@@ -15,7 +15,7 @@ export function ChatAvatar({ session, peer, token, size = 48 }: Props) {
   const showImage = source && failed !== requestKey && (!source.authenticated || token);
 
   return <View accessible={false} pointerEvents="none" style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: dark ? '#2c2c2e' : '#e5e5ea' }]}>
-    <SymbolView name="person.fill" size={Math.round(size * 0.46)} tintColor={dark ? '#aeaeb2' : '#8e8e93'} />
+    <SymbolView name={{ ios: 'person.fill', android: 'person' }} size={Math.round(size * 0.46)} tintColor={dark ? '#aeaeb2' : '#8e8e93'} />
     {showImage ? <Image source={{ uri: source.uri, cacheKey: source.cacheKey,
       ...(source.authenticated ? { headers: { Authorization: `Bearer ${token}` } } : {}) }}
       style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" onError={() => setFailed(requestKey)} /> : null}

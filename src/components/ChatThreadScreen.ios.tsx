@@ -11,7 +11,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import type { Session } from '../auth';
 import { draftAfterSending } from '../chatComposer';
 import { discardChatMedia, prepareChatDocument, prepareChatMedia, type ChatMediaDraft } from '../chatMedia';
-import { chatTimeline, outgoingMessageKey, type ChatAttachment, type ChatMessage, type ChatPeer } from '../chatModel';
+import { chatTimeline, outgoingMessageKey, type ChatAttachment, type ChatMessage } from '../chatModel';
 import type { PendingChatText } from '../chatOutbox';
 import { RECENT_FLIGHT_MS, recentBackGesture } from '../chatRecentPhotoMotion';
 import { prepareRecentChatPhoto, type RecentChatPhoto } from '../chatRecentPhotos';
@@ -20,7 +20,7 @@ import { CHAT_HEADER_CONTENT_HEIGHT, ChatThreadHeader } from './ChatThreadHeader
 import { ChatMediaThumbnail, openChatMedia, SelectedChatMediaPreview } from './ChatMediaPreview.ios';
 import { RecentChatPhotoStrip, RecentChatPhotosButton, type RecentPhotoExit, type RecentPhotoStrip } from './RecentChatPhotos.ios';
 
-type Props = { session: Session; conversationId: string; title: string; peer: ChatPeer | null };
+import type { ChatThreadProps as Props } from '../shared/chat/chatPageTypes';
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 const MEDIA_LEAVE_MS = 130;
 const MEDIA_SPRING = Animation.spring({ response: 0.36, dampingFraction: 0.86 });
