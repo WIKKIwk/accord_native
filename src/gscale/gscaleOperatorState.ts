@@ -35,7 +35,7 @@ export type GScaleOperatorDependencies = {
   printArchive(context: GScaleArchiveContext, session: ArchiveSession): Promise<string>;
   reprintArchiveReceipt(context: GScaleArchiveContext, entry: ArchivePrintEntry): Promise<string | null>;
 };
-export type GScaleOperatorState = { draft: OperatorControlDraft; device: GScaleDeviceState; batch: GScaleBatchState;
+export type GScaleOperatorState = { draft: OperatorControlDraft; draftRestored: boolean; device: GScaleDeviceState; batch: GScaleBatchState;
   monitor: MonitorSnapshot; materialWarehouses: string[]; presetLoading: boolean; presetApplied: boolean; presetItem: Item | null;
   presetError: string; contextEditing: boolean; actionLoading: boolean; manualPrintLoading: boolean; simpleLoading: boolean;
   requestInFlight: boolean; startConflict: boolean; error: string; notice: string; lastReceipt: Receipt | null;
@@ -66,7 +66,7 @@ export class GScaleOperatorStore {
     this.controlOnly = role === 'material_taminotchi' || role === 'tayyorlov_masteri';
     this.linkedOrderId = args.order?.id.trim() ?? '';
     const draft = { ...emptyOperatorControlDraft(), order_id: this.linkedOrderId, printer: 'zebra', print_mode: 'rfid', quantity_source: 'scale' };
-    this.state = { draft, device: deps.devices.getSnapshot(), batch: deps.batch.getSnapshot(), monitor: emptyMonitorSnapshot(),
+    this.state = { draft, draftRestored: false, device: deps.devices.getSnapshot(), batch: deps.batch.getSnapshot(), monitor: emptyMonitorSnapshot(),
       materialWarehouses: [], presetLoading: this.controlOnly && !!args.freshForm, presetApplied: false, presetItem: null,
       presetError: '', contextEditing: false, actionLoading: false, manualPrintLoading: false, simpleLoading: false,
       requestInFlight: false, startConflict: false, error: '', notice: '', lastReceipt: null,
@@ -109,6 +109,7 @@ export class GScaleOperatorStore {
       linkedOrderId: this.linkedOrderId, linkedOrderWidthMm: this.args.order?.width_mm ?? null,
       initialWarehouse: this.args.warehouse ?? null, activeBatch: active, freshForm: this.controlOnly && !!this.args.freshForm });
     this.setDraft(draft, false);
+    this.update({ draftRestored: true });
     if (this.controlOnly && this.args.freshForm) {
       const generation = ++this.presetGeneration;
       try {
@@ -142,6 +143,14 @@ export class GScaleOperatorStore {
   checkDeviceAddress(raw: string) { return this.deps.devices.checkAddress(raw); }
   selectDevice(selection: PrintDeviceSelection): Promise<void> { return this.deps.devices.select(selection); }
   retryBatchState(): Promise<void> { return this.deps.batch.refresh(true); }
+
+  /** @v2 _persistWarehouseSetup */
+  setWarehouseSetup(mode: 'manual' | 'default', warehouse: string): void {
+    const value = warehouse.trim();
+    if (mode === 'default' && !value) { this.update({ error: 'Standart ombor tanlang' }); return; }
+    this.setDraft({ ...this.state.draft, warehouse_mode: mode, default_warehouse: value, warehouse: '' });
+    this.update({ notice: 'Ombor sozlamalari saqlandi' });
+  }
 
   selectMaterialChoice(item: Item, micron: number | null): void {
     const previousMicron = this.state.draft.micron_text;
@@ -271,7 +280,7 @@ export class GScaleOperatorStore {
 
   editDraft(patch: Partial<OperatorControlDraft>): void {
     if (this.state.actionLoading || this.state.batch.loading || this.state.manualPrintLoading || this.state.simpleLoading) return;
-    const editableDuringBatch = new Set(['manual_qty_text', 'manual_duplicate_text', 'material_supplier']);
+    const editableDuringBatch = new Set(['manual_qty_text', 'manual_duplicate_text', 'material_supplier', 'babina_text']);
     const changesContext = Object.keys(patch).some(key => !editableDuringBatch.has(key));
     if (changesContext && (this.state.batch.batch?.active || (this.usesOrder && !this.state.batch.resolved) || this.state.presetLoading)) return;
     this.setDraft({ ...this.state.draft, ...patch });
@@ -282,6 +291,7 @@ export class GScaleOperatorStore {
       context_saved: false, ...(changed ? { micron_text: '', ...(this.usesOrder ? { length_text: '' } : {}),
         ...(!(this.role === 'material_taminotchi' && this.linkedOrderId) ? { width_text: '' } : {}),
         ...(!['material_taminotchi', 'tayyorlov_masteri'].includes(this.role) ? { warehouse: '' } : {}) } : {}) });
+    if (this.controlOnly && this.args.freshForm && this.state.draft.item_code === item.code) this.update({ presetApplied: true });
   }
   handleManualQtyTap(): void {
     if (this.qtyCleared || !this.state.draft.manual_qty_text.trim()) return;

@@ -75,6 +75,19 @@ test('manual tap restores the previous weight when nothing new was entered', asy
   store.dispose();
 });
 
+test('warehouse setup switches mode, clears the selected warehouse and retains the default', async () => {
+  const { store } = setup(); store.start(); await flush();
+  store.editDraft({ warehouse: 'Old' });
+  store.setWarehouseSetup('default', ' New ');
+  assert.equal(store.getSnapshot().draft.warehouse_mode, 'default');
+  assert.equal(store.getSnapshot().draft.default_warehouse, 'New');
+  assert.equal(store.getSnapshot().draft.warehouse, '');
+  store.setWarehouseSetup('manual', store.getSnapshot().draft.default_warehouse);
+  assert.equal(store.getSnapshot().draft.warehouse_mode, 'manual');
+  assert.equal(store.getSnapshot().draft.default_warehouse, 'New');
+  store.dispose();
+});
+
 test('a single order material is prefilled unless the picker was opened', async () => {
   const first = setup();
   first.deps.prefillMaterialOrder = async () => ({ item: { code: 'PET', name: 'PET', requiresDimensions: true }, micron: 12 });

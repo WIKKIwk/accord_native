@@ -63,7 +63,7 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
     warehouseAllowed,
     startBatch: (context, choose) => startGScaleBatch(context, {
       warehouseAllowed, detectOfflinePrinter: () => PrintService.detectOfflinePrinter(),
-      itemPage: (query, orderId, useBackend) => catalog.itemPage(query, 0, 200, orderId, useBackend),
+      itemPage: (query, orderId, useBackend) => gscaleItemsPage(session, { query, orderId, offset: 0, limit: 200, useBackend }),
       chooseApparatus: choose,
       current: () => { const state = store.getSnapshot(); return { mounted: store.isActive(), linkedOrderId: store.currentArgs().order?.id ?? '',
         draftOrderId: state.draft.order_id, batchResolved: state.batch.resolved, batchActive: state.batch.batch?.active === true }; },

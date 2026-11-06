@@ -55,6 +55,9 @@ the item before its item-scoped warehouse. Material roles may pick warehouse fir
 the selected order can restrict materials and expand micron choices. Changing an
 order or item invalidates stale selection results. Initial warehouse and a fresh
 formula preset are honored; preset loading/errors and conflicts are shown.
+The V2 product picker also offers photo-based AI search through the shared
+`WerkaAiSearchService` and `werkaAiSearchSuggestion`; this shared service has not
+yet been ported and is tracked as an open item rather than replaced by a barcode scan.
 
 `Eni (mm)`, `Mikron` and `Metraj (m)` use the controller's dimension requirements
 and validation, including the displayed order-width warning. `Miqdor (kg)` selects
@@ -83,6 +86,7 @@ checks and confirmation through `GScaleOperatorStore`.
 
 The non-control `Server` section shows the selected server and connection, scale,
 printer and batch states, latency, RPS driver and RS / ERP address; an unavailable
-server offers device selection and retry. `Boshqaruv`, `Arxiv`, `Server`, `Print`,
+server offers device selection and retry. Warehouse settings select manual or a
+searchable default warehouse and save the choice to the local draft. `Boshqaruv`, `Arxiv`, `Server`, `Print`,
 `Print tarixi`, `Qidirish`, `Qayta urinish`, `Yangilash`, `Bekor qilish`, `Boshlash`,
 `To‘xtatish`, `Chop etish`, and `Saqlash` are localization source keys.
