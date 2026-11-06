@@ -1,7 +1,7 @@
 # preparation-android
 
 Status: in progress
-Stopped at: complete the searchable variant picker, queue-control decoder, remaining Android details and device verification.
+Stopped at: complete the queue-control decoder, remaining Android details and device verification.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -9,7 +9,6 @@ Stopped at: complete the searchable variant picker, queue-control decoder, remai
 | Home and warehouse | `preparation_screen.dart`, `preparation_screen_forms.dart` | Sequence, inventory and scale actions are connected. Chat and profile destinations remain for their owning sessions. |
 | Inventory | `inventory_movements_screen.dart` | Android has scoped warehouse, asset and transfer windows, QR lookup, asset details, transfer requests and the order-assignment editor. Complete the remaining V2 detail presentation and device verification. |
 | Sequence | `_PreparationOrdersListState`, `AdminProductionMapOrdersScreen` | The Android route connects the warm store, apparatus selection, scoped detail, calculation-template-derived summary and order-material picker, restoring the detail after variants. Complete optional queue-control decoder parity and device verification. |
-| Formula variants | `preparation_formula_variants_screen.dart` `_reuse` | Add searchable reuse with the shared V2 `searchMatches` implementation once the integrator supplies it. |
 | Formula shares | `_FormulaSharesSheet` | The share editor currently uses a native alert dialog so saving can block dismissal. Move it to the native sheet host once that host can also block hardware back while saving. |
 | Roll QR | `RpsQrReprintSheet`, `preparation_production_screen.dart` `_reprintRoll` | Reprint offers paired Bluetooth, USB (Zebra only, D13) and manual Wi-Fi selection. Android V2 also uses paired Bluetooth devices. Wi-Fi server discovery and physical-printer verification remain open. |
 | Platform parity | `docs/port/roles/preparation.md` | Compare all implemented screen states, localization, input behavior, navigation and accessibility against the V2 contract on a real Android device. No simulator or device was used. |

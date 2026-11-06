@@ -50,3 +50,23 @@ test('reuse picker shares a scoped catalog request and filters its V2 subtitle',
   session.scope = 'b';
   await assert.rejects(state.loadReusePage('', 0, 80), /Akkaunt o‘zgargan/);
 });
+
+test('reuse selection copies the chosen variant to the current order and cancellation performs no write', async () => {
+  const requests = [];
+  const api = load('preparation/usePreparationVariants.ts', {
+    react: {}, '../sessionReadScope': { sessionReadScope: session => session.scope }, '../shared/searchNormalizer': search,
+    './preparationCommandApi': {}, './usePreparationFormula': {}, './usePreparationLibrary': {},
+    './preparationFormulaApi': { preparationReuseFormulaVariant: async (_session, value) => {
+      requests.push(value); return { id: 'copy', name: 'Formula' };
+    } },
+  });
+  const state = new api.PreparationVariantsState({ scope: 'a' }, { orderId: 'order', productCode: 'product', materialId: 'material' });
+  assert.equal(state.beginReuse(), true);
+  state.cancelReuse();
+  assert.equal(await state.reuse('source'), null);
+  assert.equal(requests.length, 0);
+  assert.equal(state.beginReuse(), true);
+  assert.equal((await state.reuse('source')).id, 'copy');
+  assert.deepEqual(requests, [{ orderId: 'order', productCode: 'product', materialId: 'material', sourceVariantId: 'source' }]);
+  assert.equal(state.getSnapshot().creating, false);
+});

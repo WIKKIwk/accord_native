@@ -1,18 +1,42 @@
 import { AlertDialog, Column, Host, OutlinedTextField, Text, TextButton, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, View, useWindowDimensions } from 'react-native';
+import { WorkerOrderSheet } from '../components/WorkerOrderSheet';
 import { usePreparationContext } from './PreparationContext.android';
 import { openPreparationFormula, readPreparationRouteData } from './preparationNavigation.android';
 import { PreparationButton, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { preparationVariantNameCanSave } from './usePreparationLibrary';
 import { usePreparationVariantsView } from './usePreparationAndroidView.android';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
-import type { PreparationVariantsOptions } from './usePreparationVariants';
+import { preparationReuseSubtitle, type PreparationVariantsOptions, type PreparationVariantsState } from './usePreparationVariants';
+import { usePreparationReusePicker } from './usePreparationReusePicker.android';
 
 type Options = PreparationVariantsOptions & { orderCode: string; productTitle: string; materialName: string };
 type Variant = ReturnType<typeof usePreparationVariantsView>['variants'][number];
+
+function ReusePicker({ controller, close, choose }: { controller: PreparationVariantsState; close: () => void; choose: (id: string) => void }) {
+  const picker = usePreparationReusePicker(controller), query = useNativeState(''), t = usePreparationText();
+  return <WorkerOrderSheet onClose={close} dismissible>
+    <View style={{ flex: 1, padding: 16, gap: 10 }}>
+      <PreparationText title>{t('Shnek formulasini tanlang')}</PreparationText>
+      <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={query} singleLine autoFocus
+        onValueChange={picker.setQuery} modifiers={[fillMaxWidth(), testID('preparation-variant-reuse-search')]}>
+        <OutlinedTextField.Label><Text>{t('Formula nomi, kodi yoki buyurtmani qidirish')}</Text></OutlinedTextField.Label>
+      </OutlinedTextField></Host>
+      <FlatList data={picker.items} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled"
+        onEndReached={picker.loadMore} onEndReachedThreshold={0.4}
+        renderItem={({ item }) => <PreparationRow title={item.name} subtitle={preparationReuseSubtitle(item)} onPress={() => choose(item.id)} />}
+        contentContainerStyle={{ gap: 8, paddingBottom: 16, flexGrow: 1 }}
+        ListEmptyComponent={!picker.loading && !picker.error ? <PreparationText>{t('Formula topilmadi.')}</PreparationText> : undefined}
+        ListFooterComponent={<>{picker.loading ? <ActivityIndicator /> : null}
+          {picker.error ? <><PreparationText>{picker.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={picker.retry} /></> : null}
+          {picker.hasMore && !picker.loading && !picker.error ? <PreparationButton label="Yana yuklash" onPress={picker.loadMore} /> : null}</>} />
+      <PreparationButton label="Bekor qilish" onPress={close} />
+    </View>
+  </WorkerOrderSheet>;
+}
 
 // @v2 _VariantNameDialog
 export function VariantNameDialog({ initial, busy, error, submit, cancel, orderScoped = false, clearError }: { initial?: string; busy: boolean; error: string | null;
@@ -47,9 +71,11 @@ function Variants({ options }: { options: Options }) {
   const { session } = usePreparationContext(), state = usePreparationVariantsView(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
   const [nameDialog, setNameDialog] = useState<'create' | Variant | null>(null), [renaming, setRenaming] = useState(false), [renameError, setRenameError] = useState<string | null>(null);
   const [hideCreateError, setHideCreateError] = useState(false);
+  const [reusePicker, setReusePicker] = useState(false);
   const renameInFlight = useRef(false);
   const focused = useRef(false);
   useFocusEffect(useCallback(() => { if (focused.current) void state.controller.load(); focused.current = true; }, [state.controller]));
+  useEffect(() => { if (reusePicker && !state.creating && !state.copying) setReusePicker(false); }, [reusePicker, state.creating, state.copying]);
   const blocked = state.actionsBlocked;
   const open = (variant: Variant) => openPreparationFormula({ ...options, variantId: variant.id, variantName: variant.name });
   const menu = async (variant: Variant) => {
@@ -74,6 +100,11 @@ function Variants({ options }: { options: Options }) {
       finally { renameInFlight.current = false; setRenaming(false); }
     }
   };
+  const chooseReuse = async (id: string) => {
+    setReusePicker(false);
+    try { const variant = await state.controller.reuse(id); if (variant) open(variant); }
+    catch (error) { dialogs.message('Xatolik yuz berdi', preparationFormulaErrorMessage(error)); }
+  };
   return <>
     <PreparationPage title={options.materialName || 'Formulalar'} refreshing={state.loading && !!state.variants.length} onRefresh={() => void state.controller.load()}>
       {state.loading && !state.variants.length ? <ActivityIndicator /> : null}
@@ -86,10 +117,16 @@ function Variants({ options }: { options: Options }) {
       <PreparationButton label="Variant qo‘shish" disabled={blocked} id="preparation-variant-add" onPress={() => {
         void state.controller.beginCreate().then(id => { if (id) setNameDialog('create'); });
       }} />
+      <PreparationButton label="Qidirib variant qo‘shish" disabled={blocked} id="preparation-variant-reuse" onPress={() => {
+        if (state.controller.beginReuse()) setReusePicker(true);
+      }} />
     </PreparationPage>
     {nameDialog ? <VariantNameDialog initial={nameDialog === 'create' ? undefined : nameDialog.name} busy={state.savingName || renaming}
       error={nameDialog === 'create' ? (hideCreateError ? null : state.nameError) : renameError} submit={name => void submit(name)} orderScoped
       clearError={() => { setRenameError(null); setHideCreateError(true); }}
       cancel={() => { if (nameDialog === 'create') state.controller.cancelCreate(); setNameDialog(null); }} /> : null}
+    {reusePicker ? <ReusePicker controller={state.controller} choose={id => void chooseReuse(id)} close={() => {
+      state.controller.cancelReuse(); setReusePicker(false);
+    }} /> : null}
   </>;
 }
