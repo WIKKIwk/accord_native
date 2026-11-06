@@ -10,7 +10,6 @@ Stopped at: connect the preparation sequence to the shared runtime and finish sh
 | Variant picker search | `preparation_formula_variants_screen.dart` `_reuse` | The scoped catalog picker is connected, but fuzzy/transliteration search requires the shared `searchMatches` port. |
 | Roll QR reprint | `preparation_production_screen.dart` `_reprintRoll`, `gscale_mobile_app_widgets_part_02.dart` | QR reprint now supports Bluetooth discovery and manual Wi-Fi server selection through `reprintPreparationRollWithPrinter`. Automatic Wi-Fi server discovery awaits the GScale native discovery module; verify the flow with a real printer. |
 | Sequence detail | `admin_production_map_orders_preparation_list.dart`, `admin_production_map_orders_detail_widgets.dart` | The scoped summary, image viewer and order-material-to-variants flow are connected. Native sheet-to-variants back navigation needs real-device verification; optional snapshot-control decoder parity remains open in `preparation.md`. |
-| Inventory assignment | `inventory_movements_screen.dart`, `raw_material_order_assignment_section.dart` | The iOS inventory route uses the shared live store, warehouse filter, QR lookup and transfer action. The conditional raw-material order-assignment editor still needs its shared implementation. |
 | Navigation | `preparation_navigation.dart` | Shared chat screens hard-code worker routes; connect chat, scale and inventory destinations when role-neutral platform routes are available. Verify native root-replacement behaviour. |
 
 ## Deviations candidates
@@ -20,7 +19,7 @@ Stopped at: connect the preparation sequence to the shared runtime and finish sh
 ## Needs from the integrator
 
 - Add the iOS preparation home target to `src/shared/appRoutes.ts` and connect the platform route from app startup.
-- Supply the `/ios-gscale` screen and confirm its parameter encoding. Supply the raw-material order-assignment editor and complete the borrowed order-detail presentation.
+- Supply the `/ios-gscale` screen and confirm its parameter encoding. Verify native detail-sheet navigation on a physical iPhone.
 - The apparatus store, warm-store startup and `searchMatches` matcher are present in this checkout.
 
 ## Drift

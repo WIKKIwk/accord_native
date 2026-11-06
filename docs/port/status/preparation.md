@@ -39,7 +39,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Needs from the integrator
 
-- The iOS inventory route now connects the shared store, scoped assets, QR lookup and transfer; its conditional raw-material order-assignment editor remains open. Android still needs its inventory route and detail UI.
+- The iOS inventory route now connects the shared store, scoped assets, QR lookup, transfer and conditional raw-material order-assignment editor. Android still needs its inventory route and detail UI. The candidate-order and assignment requests have source-derived tests; V2 did not record them in this role's fixtures.
 - Connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet. The preparation home targets are configured, but those platform routes do not exist in this branch yet.
 
 ## Verification

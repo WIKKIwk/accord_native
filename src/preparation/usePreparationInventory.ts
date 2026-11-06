@@ -6,14 +6,16 @@ import type { InventoryViewLease, InventoryViewStore } from '../shared/inventory
 import { preparationInventoryAssets, preparationInventoryStore, type PreparationInventoryLocation } from './preparationInventory';
 
 function useLease(acquire: () => InventoryViewLease) {
-  const [lease, setLease] = useState<InventoryViewLease | null>(null);
+  const [current, setCurrent] = useState<{ acquire: () => InventoryViewLease; lease: InventoryViewLease } | null>(null);
   const [, update] = useState(0);
   useEffect(() => {
+    let active = true;
     const next = acquire(), changed = () => update(value => value + 1);
-    next.addListener(changed); setLease(next);
-    return () => { next.removeListener(changed); next.dispose(); };
+    next.addListener(changed);
+    void Promise.resolve().then(() => { if (active) setCurrent({ acquire, lease: next }); });
+    return () => { active = false; next.removeListener(changed); next.dispose(); };
   }, [acquire]);
-  return lease;
+  return current?.acquire === acquire ? current.lease : null;
 }
 
 export function usePreparationInventory(session: Session) {
@@ -37,9 +39,13 @@ export function usePreparationInventory(session: Session) {
   const assets = useLease(useCallback(() => preparationInventoryAssets(store, warehouse, query), [store, warehouse, query]));
   const incoming = useLease(useCallback(() => store.transfers({ direction: 'incoming' }), [store]));
   const outgoing = useLease(useCallback(() => store.transfers({ direction: 'outgoing' }), [store]));
-  const warehouses = ((locations?.rows ?? []) as PreparationInventoryLocation[]).filter(item => item.kind === 'warehouse' && item.active);
+  const warehouses = useMemo(() => ((locations?.rows ?? []) as PreparationInventoryLocation[])
+    .filter(item => item.kind === 'warehouse' && item.active), [locations?.rows]);
   useEffect(() => {
-    if (restored && locations?.rows && warehouse && !warehouses.some(item => item.warehouse_id === warehouse)) setWarehouse('');
+    let active = true;
+    if (restored && locations?.rows && warehouse && !warehouses.some(item => item.warehouse_id === warehouse))
+      void Promise.resolve().then(() => { if (active) setWarehouse(''); });
+    return () => { active = false; };
   }, [restored, locations?.rows, warehouse, warehouses]);
   const selectWarehouse = (value: string) => { setWarehouse(value); void appPreferences.setItem(key, value.trim()).catch(() => {}); };
   return { store: store as InventoryViewStore, locations, assets, incoming, outgoing, warehouses, warehouse, selectWarehouse, query, setQuery, invalidated };

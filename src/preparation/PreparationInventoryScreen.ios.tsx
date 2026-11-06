@@ -6,7 +6,7 @@ import { Stack } from 'expo-router';
 import qrFactory from 'qrcode-generator';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { activeSessionToken, type Session } from '../auth';
+import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import type { InventoryViewStore } from '../shared/inventoryViewStore';
 import { usePreparationContext } from './PreparationContext';
@@ -14,10 +14,13 @@ import { PreparationList, PreparationStatus, usePreparationText } from './Prepar
 import { lookupPreparationInventoryQr, preparationInventoryCanTransfer, preparationInventoryIsInternalTransfer,
   requestPreparationInventoryTransfer, type PreparationInventoryAsset as Asset, type PreparationInventoryLocation as Location } from './preparationInventory';
 import { usePreparationInventory } from './usePreparationInventory';
+import { PreparationInventoryAssignment } from './PreparationInventoryAssignmentSection';
 
 function AssetSheet({ session, asset, warehouses, store }: { session: Session; asset: Asset; warehouses: Location[]; store: InventoryViewStore }) {
   const t = usePreparationText(), [showQr, setShowQr] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const assigned = session.assigned_warehouses ?? [];
+  const owns = assigned.some(name => name.trim().toLowerCase() === asset.custody_warehouse.trim().toLowerCase());
+  const showAssignment = session.capabilities.includes('raw_material.assign') && owns;
   const barcode = asset.identifier.trim() || asset.asset_ref.replace(/^[^:]*:/, '').trim();
   const qr = useMemo(() => { try { const value = qrFactory(0, 'M'); value.addData(barcode); value.make(); return value.createDataURL(5, 20); } catch { return ''; } }, [barcode]);
   const transfer = (destination: Location) => {
@@ -38,10 +41,12 @@ function AssetSheet({ session, asset, warehouses, store }: { session: Session; a
   return <Host style={{ minHeight: 350 }}><VStack spacing={10}><Text>{asset.item_name || asset.item_code}</Text><List>
     <Section><Text>{t('Identifikator')}: {asset.identifier}</Text><Text>{t('Miqdor')}: {asset.qty} {asset.uom}</Text>
       <Text>{t('Fizik joy')}: {asset.physical_location.name}</Text><Text>{t('Holat')}: {asset.status}</Text>
-      {!!asset.order_assignment?.order_label && <Text>{t('Buyurtma')}: {asset.order_assignment.order_label}</Text>}
+      {!showAssignment && !!asset.order_assignment?.order_label && <Text>{t('Buyurtma')}: {asset.order_assignment.order_label}</Text>}
       {!!barcode && <Button label={t('QR kodni ko‘rish')} onPress={() => setShowQr(!showQr)} />}
       {showQr && !!qr && <RNHostView matchContents><Image source={{ uri: qr }} style={{ width: 200, height: 200, backgroundColor: 'white' }} contentFit="contain" /></RNHostView>}
     </Section>
+    {showAssignment && !!barcode && <PreparationInventoryAssignment session={session} barcode={barcode}
+      allow={preparationInventoryCanTransfer(asset, assigned)} changed={() => store.reconcileAfterWrite()} />}
     {preparationInventoryCanTransfer(asset, assigned) && <Section><Menu label={t('Transfer')} modifiers={[disabled(busy)]}>
       {warehouses.filter(item => item.warehouse_id !== asset.custody_warehouse_id).map(item =>
         <Button key={item.warehouse_id} label={item.name} onPress={() => transfer(item)} />)}
@@ -56,8 +61,9 @@ export function PreparationInventory() {
   const [search, setSearch] = useState(''), [scanning, setScanning] = useState(false), [scanBusy, setScanBusy] = useState(false);
   const [scanError, setScanError] = useState(''), [scanned, setScanned] = useState<Asset[]>([]);
   const [permission, requestPermission] = useCameraPermissions(), scanLock = useRef(false);
-  useEffect(() => { const timer = setTimeout(() => model.setQuery(search.trim()), 250); return () => clearTimeout(timer); }, [search, model.setQuery]);
-  useEffect(() => { if (model.invalidated) { sheet.close(); setScanned([]); setScanning(false); } }, [model.invalidated, sheet]);
+  const setQuery = model.setQuery;
+  useEffect(() => { const timer = setTimeout(() => setQuery(search.trim()), 250); return () => clearTimeout(timer); }, [search, setQuery]);
+  useEffect(() => registerSessionResetHook(async () => { sheet.close(); setScanned([]); setScanning(false); }), [sheet]);
   const openAsset = (asset: Asset) => sheet.open(<AssetSheet session={session} asset={asset} warehouses={model.warehouses} store={model.store} />,
     { dismissible: true });
   const scan = async (value: string) => {

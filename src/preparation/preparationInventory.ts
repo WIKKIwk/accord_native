@@ -30,7 +30,7 @@ export function preparationInventoryBarcode(raw: string): string {
       for (const key of ['barcode', 'epc', 'qr']) {
         const candidate = url.searchParams.get(key)?.trim(); if (candidate) return candidate;
       }
-      const last = url.pathname.split('/').filter(Boolean).pop();
+      const last = url.pathname.split('/').pop();
       if (last) return decodeURIComponent(last).trim();
     }
   } catch { /* A plain code is not a URL. */ }
