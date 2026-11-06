@@ -1,4 +1,4 @@
-import { Button, Host, List, Menu, RNHostView, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
+import { Button, Host, List, Menu, RNHostView, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { disabled } from '@expo/ui/swift-ui/modifiers';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
@@ -88,7 +88,8 @@ export function PreparationInventory() {
   const model = usePreparationInventory(session), [tab, setTab] = useState<'assets' | 'incoming' | 'outgoing'>('assets');
   const [search, setSearch] = useState(''), [scanning, setScanning] = useState(false), [scanBusy, setScanBusy] = useState(false);
   const [scanError, setScanError] = useState(''), [scanned, setScanned] = useState<Asset[]>([]);
-  const [permission, requestPermission] = useCameraPermissions(), scanLock = useRef(false);
+  const [manualOpen, setManualOpen] = useState(false), [manual, setManual] = useState('');
+  const manualValue = useNativeState(''), [permission, requestPermission] = useCameraPermissions(), scanLock = useRef(false), lastScan = useRef('');
   const setQuery = model.setQuery;
   useEffect(() => { const timer = setTimeout(() => setQuery(search.trim()), 250); return () => clearTimeout(timer); }, [search, setQuery]);
   useEffect(() => registerSessionResetHook(async () => { sheet.close(); setScanned([]); setScanning(false); }), [sheet]);
@@ -121,13 +122,23 @@ export function PreparationInventory() {
         <Menu label={t(tab === 'assets' ? 'Mahsulotlar' : tab === 'incoming' ? 'Kiruvchi' : 'Chiquvchi')}>
           <Button label={t('Mahsulotlar')} onPress={() => setTab('assets')} /><Button label={t('Kiruvchi')} onPress={() => setTab('incoming')} />
           <Button label={t('Chiquvchi')} onPress={() => setTab('outgoing')} /></Menu>
-        <Button label={t(scanning ? 'Yopish' : 'QR kodni skanerlash')} onPress={() => { setScanning(!scanning); setScanned([]); setScanError(''); }} />
+        <Button label={t(scanning ? 'QR izlashni yopish' : 'QR orqali izlash')} onPress={() => {
+          if (!scanning && !permission?.granted) void requestPermission();
+          setScanning(!scanning); setScanned([]); setScanError(''); setManualOpen(false); lastScan.current = '';
+        }} />
       </Section>
       {scanning ? <Section><Text>{t('QR kodni ramkaga keltiring')}</Text>
         {permission?.granted ? <RNHostView matchContents><CameraView style={{ width: 300, height: 260 }}
-          barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }} onBarcodeScanned={scanBusy || !!scanError ? undefined : event => { void scan(event.data); }} /></RNHostView>
-          : <Button label={t('Kameraga ruxsat berish')} onPress={() => { void requestPermission(); }} />}
-        {!!scanError && <><Text>{scanError}</Text><Button label={t('Qayta skanerlash')} onPress={() => setScanError('')} /></>}
+          barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }} onBarcodeScanned={scanBusy ? undefined : event => {
+            if (event.data !== lastScan.current) { lastScan.current = event.data; void scan(event.data); }
+          }} /></RNHostView>
+          : <Text>{t('Kamera ochilmadi. Quyidagi maydonga QR yoki barcode kiriting.')}</Text>}
+        <Button label={t(manualOpen ? 'Barcode maydonini yopish' : 'Barcode kiritish')} onPress={() => setManualOpen(value => !value)} />
+        {manualOpen && <><TextField text={manualValue} placeholder={t('QR / barcode')} onTextChange={setManual} modifiers={[disabled(scanBusy)]} />
+          <Button label={t('Qabul qilish')} modifiers={[disabled(scanBusy || !manual.trim())]} onPress={() => {
+            void scan(manual).then(() => { setManual(''); manualValue.set(''); });
+          }} /></>}
+        {!!scanError && <Text>{scanError}</Text>}
         {scanned.map(asset => <Button key={asset.asset_ref} label={`${asset.item_name} · ${asset.identifier}`} onPress={() => openAsset(asset)} />)}
       </Section> : <>
         <PreparationStatus loading={!!model.locations?.loading || !!lease?.loading || !lease} error={model.locations?.error ?? lease?.error ?? null}

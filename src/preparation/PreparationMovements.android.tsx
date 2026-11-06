@@ -22,9 +22,9 @@ export function PreparationInventoryScreen() {
   const assigned = home.snapshot?.assigned_warehouses ?? [];
   const inventory = usePreparationInventory(session, assigned), dialogs = usePreparationDialogs(), t = usePreparationText();
   const [asset, setAsset] = useState<PreparationInventoryAsset | null>(null), [transfer, setTransfer] = useState<PreparationInventoryTransfer | null>(null);
-  const [scanning, setScanning] = useState(false), [manual, setManual] = useState('');
+  const [scanning, setScanning] = useState(false), [manual, setManual] = useState(''), [manualOpen, setManualOpen] = useState(false), [manualKey, setManualKey] = useState(0);
   const [permission, requestPermission] = useCameraPermissions();
-  const scanLock = useRef(false);
+  const scanLock = useRef(false), lastScan = useRef('');
   const chooseWarehouse = async () => {
     const value = await dialogs.choose('Ombor', [{ label: 'Barcha omborlar', value: '' },
       ...inventory.warehouses.map(location => ({ label: location.name, value: location.warehouse_id }))], undefined, true);
@@ -47,13 +47,20 @@ export function PreparationInventoryScreen() {
       <PreparationField label="Mahsulot, kod yoki QR qidirish" onChange={inventory.setQuery} />
       <PreparationRow title={t('Ombor')} subtitle={inventory.warehouses.find(item => item.warehouse_id === inventory.warehouse)?.name ?? t('Barcha omborlar')}
         onPress={() => void chooseWarehouse()} />
-      <PreparationButton label={scanning ? 'QR izlashni yopish' : 'QR orqali izlash'} onPress={() => { setScanning(!scanning); inventory.clearQr(); }} />
+      <PreparationButton label={scanning ? 'QR izlashni yopish' : 'QR orqali izlash'} onPress={() => {
+        if (!scanning && !permission?.granted) void requestPermission();
+        setScanning(!scanning); setManualOpen(false); lastScan.current = ''; inventory.clearQr();
+      }} />
       {scanning ? <>
         <PreparationText>{t('QR kodni ramkaga keltiring')}</PreparationText>
         {permission?.granted ? <CameraView style={{ height: 280, width: '100%' }} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }}
-          onBarcodeScanned={inventory.busy ? undefined : ({ data }) => { void lookup(data); }} />
-          : <PreparationButton label="Kameraga ruxsat berish" onPress={() => { void requestPermission(); }} />}
-        <PreparationField label="QR kodi" onChange={setManual} /><PreparationButton label="Qidirish" disabled={inventory.busy} onPress={() => void lookup(manual)} />
+          onBarcodeScanned={inventory.busy ? undefined : ({ data }) => { if (data !== lastScan.current) { lastScan.current = data; void lookup(data); } }} />
+          : <PreparationText>{t('Kamera ochilmadi. Quyidagi maydonga QR yoki barcode kiriting.')}</PreparationText>}
+        <PreparationButton label={manualOpen ? 'Barcode maydonini yopish' : 'Barcode kiritish'} onPress={() => setManualOpen(value => !value)} />
+        {manualOpen && <><PreparationField key={manualKey} label="QR / barcode" onChange={setManual} enabled={!inventory.busy} />
+          <PreparationButton label="Qabul qilish" disabled={inventory.busy || !manual.trim()} onPress={() => {
+            void lookup(manual).then(() => { setManual(''); setManualKey(value => value + 1); });
+          }} /></>}
         {inventory.busy ? <ActivityIndicator /> : null}{inventory.qrError ? <PreparationText>{inventory.qrError}</PreparationText> : null}
         {inventory.qrAssets.map(item => <AssetRow key={`${item.kind}:${item.asset_ref}`} asset={item} open={() => setAsset(item)} />)}
       </> : <>

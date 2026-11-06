@@ -6,13 +6,14 @@ Stopped at: complete the remaining V2 text and surface comparisons on both platf
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Role-wide surface and text audit | `.port/role-preparation.md`, `.port/text-preparation.md` | The text gate reports missing or extra strings on both platforms. Compare the remaining screens, sheets, messages and back guards with V2; the ledger tags alone do not establish parity. |
+| Role-wide surface audit | `.port/role-preparation.md`, `.port/text-preparation.md` | The text gate now reports no unmatched strings after 62 documented verdicts, but compare the remaining screens, sheets, messages and back guards with V2; ledger tags alone do not establish parity. |
 | Material management on iOS and Android | `preparation_materials_screen.dart`, `_PreparationInputDialog` | Material actions, the trailing action button, confirmation, warehouse selection and feedback were aligned with the V2 source; verify native dismissal, input and notice behavior on both phones. |
 | Warehouse management on iOS and Android | `preparation_screen_forms.dart`, `preparation_warehouse_management.dart` | Creation, parent defaults, managed warehouse actions, receipt picker, input validation and feedback were compared with V2. Verify filter long-press, dropdown, picker paging, dismissal and mutation feedback on both phones; the FAB requires further comparison. |
 | Material detail on iOS and Android | `preparation_screen_forms.dart` `PreparationMaterialDetailScreen` | Warehouse-scoped receipt and consumption rows, material code, actions and fixed warehouse navigation were compared. Verify the scale return and native presentation on phones. |
 | Preparation home on iOS and Android | `preparation_screen.dart`, `_pick` | Home cards, pending labels, action order, receipt picker and feedback were compared with V2. The current action menus still differ from V2's floating action menu, and picker/dialog transitions need phone verification. |
 | Formula sets and catalog on iOS and Android | `preparation_formula_orders_screen.dart`, `preparation_formula_catalog_screen.dart` | List text, set-detail rows, shared warning and rename/delete/share actions were compared. Verify long-press, sheet and dialog transitions on phones. |
 | Production journal on iOS and Android | `preparation_production_screen.dart`, `preparation_production_models.dart` | Order, batch and roll rows, filters, paging placement, captured recipe text and malformed nested responses were compared. Verify timer, focus, native interaction and roll reprinting on phones. |
+| Inventory scanner on iOS and Android | `inventory_movements_screen__InventoryMovementsScreenState_methods_03.dart`, `raw_material_scan_dialog_models_part_02.dart` | The scanner requests camera access on opening, provides manual barcode entry and continues after errors. Verify camera permissions, repeated detections, manual entry and transfer flows on phones; the broader inventory surface still needs comparison. |
 | Preparation history on iOS and Android | `preparation_screen_forms.dart` `PreparationHistoryScreen` | Receipt, reversal and consumption rows and the reversal flow were compared with V2. Verify long-press, sheet/dialog dismissal and notices on both phones. |
 | Formula variants on iOS and Android | `preparation_formula_variants_screen.dart` | Variant edit now requests the formula editor, deletion uses V2's confirmation, and creation/rename use a dialog. Verify gestures, modal transitions, reuse picker and navigation on both phones. The FAB and remaining screen details still need a complete surface comparison. |
 | Formula shares on iOS and Android | `preparation_formula_shares_sheet.dart` | Values, text, error mapping and the save/dismiss guards were compared with V2. Verify native keyboard, swipe, back and outside-tap behavior during a save on both phones. |
@@ -54,6 +55,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Verification
 
+- Text gate: no unmatched V2 or V4 strings on either platform; 62 rows in `docs/port/text/preparation.tsv` document excluded GoDEX/web code, deferred test mode, non-visible diagnostics, or equivalent dynamic strings. The 57 listed surfaces are not automatically certified by this result.
 - History checkpoint: 7 focused history/material/logic tests passed. Native history gestures and dialog transitions have not been run on a device.
 - Material checkpoint: 3 focused tests passed, iOS TypeScript passed and Expo lint passed. Android TypeScript still reports the 10 existing worker errors listed in `PORT.md`; none is in the preparation files.
 - Preparation iOS wiring: 854 tests passed; iOS and default TypeScript checks and Expo lint passed. Android retains the 10 known baseline TypeScript errors. Real device and printer checks remain open.
@@ -65,6 +67,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Checkpoints
 
+- This session: aligned scanner permission/manual entry and Android Bluetooth empty-state retry; recorded 62 fact-based text verdicts.
 - This session: added the material row action button and aligned the preparation navigation label.
 - This session: aligned production journal rows, filters, pagination and nested model errors on both platforms.
 - This session: aligned warehouse-scoped material detail and receipt/consumption rows on both platforms.
