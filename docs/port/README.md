@@ -64,8 +64,11 @@ deb ayting. U branch'ni `main` ga qo'shadi, testlarni yuritadi va keyingi qadamn
 | 4 | `preparation` (o'sha papka va chat) | `$accord-port "Wire session" bo'limi bo'yicha preparation ishini bajar` | `preparation` qo'shilgach |
 | 4 | `preparation-android` | `$accord-port-android preparation rolining ekranlarini docs/port/roles/preparation.md bo'yicha yasa` | `preparation` qo'shilgach |
 | 4 | `preparation-ios` | `$accord-port-ios preparation rolining ekranlarini docs/port/roles/preparation.md bo'yicha yasa` | `preparation` qo'shilgach |
-| 5 | `preparation-audit` | `$accord-port preparation rolini audit qil: V2 bilan solishtir, kodni o'zgartirma` | Ekranlar qo'shilgach |
-| 6 | | Tayyorlov masterini haqiqiy telefonda sinash | Audit tugagach |
+| 5 | `preparation-flow-ios` | `$accord-port-ios docs/port/status/preparation-ios.md va preparation.md dagi ochiq qatorlarni yop: ketma-ketlik va detali, inventar, QR printer tanlash, akkaunt almashganda tozalash. Tarozi tugmalari /ios-gscale ga ulansin, chatga tegma` | Birinchi merge'dan keyin |
+| 5 | `preparation-flow-android` | `$accord-port-android docs/port/status/preparation-android.md va preparation.md dagi ochiq qatorlarni yop: ketma-ketlik va detali, inventar, QR printer tanlash, akkaunt almashganda tozalash. Tarozi tugmalari /android-gscale ga ulansin, chatga tegma` | Birinchi merge'dan keyin |
+| 5 | `gscale` | `$accord-port "GScale session" bo'limi bo'yicha ishla` | Birinchi merge'dan keyin |
+| 6 | `preparation-audit` | `$accord-port preparation rolini audit qil: V2 bilan solishtir, kodni o'zgartirma` | Ekranlar qo'shilgach |
+| 7 | | Tayyorlov masterini to'liq sinash va buglarni tuzatish | Audit tugagach |
 
 Keyingi rollar shu tartibda: logika, `<nom>-android` va `<nom>-ios`, `<nom>-audit`.
 

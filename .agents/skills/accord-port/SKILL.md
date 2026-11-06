@@ -71,6 +71,7 @@ branch mergeable.
   | `<id>-android`, `<id>-ios` | What the screen skill's scope fence says |
   | `<id>-audit` | Only its status file. No code |
   | `base-wire`, `preparation` in its wiring turn | What "Wire session" below says |
+  | `gscale` | `src/gscale/**`, `modules/accord-gscale/**`, `src/app/ios-gscale/**`, `src/app/android-gscale/**`, `tests/gscale*.test.cjs`, the `ios.infoPlist` and `android.permissions` keys of `app.json` |
   | `build` | `app.json`, `eas.json`, `package.json`, `package-lock.json`, `docs/port/BUILD.md` |
   | `printer` | `modules/accord-printer/**`, `src/printing/**`, `tests/printing*.test.cjs`, the `android.permissions` and `ios.infoPlist` keys of `app.json` |
 
@@ -114,6 +115,14 @@ Firebase push token, the native APK installer, and rows that name worker files (
 the printer connection, the text inventory and the remaining test triage. Add one line to `homeTargets` in
 `src/shared/appRoutes.ts`: `/ios-preparation` and `/android-preparation`. Screens stay with the `preparation-ios`
 and `preparation-android` sessions. Keep real-printer checks and native WebSocket pings as open items.
+
+## GScale session
+
+Goal: `AppRoutes.gscaleMode` and what it opens work in V4 on both platforms for the roles that can open it, with
+real local-network scale discovery through a local module. Read `gscale_mode_screen.dart`, `gscale_mobile_app.dart`
+and the `gscale/*` rows of `references/native-bridges.md`. This session writes the logic, the module and both
+platforms' views. The routes are `/ios-gscale` and `/android-gscale`, and they take V2's `GScaleModeArgs` as params,
+because the preparation screen sessions link to them. Add no stubs. Hardware checks stay as open items.
 
 ## Build session
 
