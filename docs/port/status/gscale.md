@@ -19,7 +19,7 @@ Stopped at: connect discovery and saved device selection, then port the operator
 | `src/gscale/gscaleDraft.ts` | `OperatorControlDraft` | Draft persistence is implemented; wire it to operator state, including V2's debounce and preparation fresh-form reset. |
 | `src/gscale/gscaleArchive.ts` | `MobileArchiveSession`, `_reprintArchiveReceipt`, `buildMaterialBatchPrintPlan` | Batch aggregation, QR plans and receipt reprint identity checks are implemented; connect archive loading, UI and both print transports, then verify with a real printer. |
 | `src/gscale/gscaleMonitor.ts` | `MonitorSnapshot.fromJson` | JavaScript JSON parsing does not retain whether a scale value was encoded as an integer or a decimal such as `2.0`; preserve that distinction if the exact displayed text must match V2. Connect the snapshot and live stream to the operator view. |
-| `src/app/ios-gscale/**`, `src/app/android-gscale/**` | `gscale_mode_screen.dart` | Implement both route trees, GScaleModeArgs and the platform screens. |
+| `src/app/ios-gscale/**`, `src/app/android-gscale/**` | `gscale_mode_screen.dart` | Implement both route trees and platform screens using `serializeGScaleModeArgs` / `parseGScaleModeArgs`. |
 
 ## Deviations candidates
 
@@ -34,3 +34,5 @@ GScale test-mode branches remain for the shared test-mode pass.
 Preparation screens currently disable scale entry; connect their entry actions to the new platform routes once the GScale routes and arguments are available. Role routing for GScale-only users also belongs to the shared route owner.
 
 The shared `adminItemsPage` and `adminWarehouses` API methods used by `gscale_catalog.dart` are absent in this checkout. Supply those shared methods so the GScale catalog adapter can use the same API for admin and other eligible roles.
+
+The role ledger does not recognize `gscale`, so `port_ledger.mjs role gscale 1` cannot generate a reading list or satisfy the role gate. Add GScale session support to the ledger.
