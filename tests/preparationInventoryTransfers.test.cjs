@@ -51,7 +51,7 @@ test('preparation inventory reuses the shared store with raw-material assignment
   assert.equal(loaded.exports.preparationInventoryAssets(store, 'w', 'search'), 'lease');
   assert.deepEqual(calls, [{ warehouseId: 'w', query: 'search', assetKind: 'raw_material', includeOrderAssignment: true }]);
   assert.throws(() => loaded.exports.preparationInventoryStore({ ...session, allowed: false }), /Inventar ruxsatlari/);
-  const asset = { kind: 'raw_material', asset_ref: 'A', identifier: 'QR', item_code: 'M', status: 'available',
+  const asset = { kind: 'raw_material', asset_ref: 'A', identifier: 'QR', item_code: 'M', status: 'available', transfer_id: '',
     custody_warehouse: 'Ombor A', physical_location: { kind: 'warehouse' } };
   assert.equal(loaded.exports.preparationInventoryCanTransfer(asset, ['ombor a']), true);
   assert.equal(loaded.exports.preparationInventoryCanTransfer({ ...asset, status: 'transfer_reserved' }, ['Ombor A']), false);

@@ -5,8 +5,11 @@ const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
 
-const filename = path.resolve(__dirname, '../src/preparation/preparationInventoryLogic.ts');
+const filename = path.resolve(__dirname, '../src/preparation/preparationInventory.ts');
 const loaded = new Module(filename, module);
+const deps = { '../shared/appRoutes': {}, '../shared/inventoryViewRuntime': {}, '../auth': {}, '../inventoryReadApi': {},
+  './preparationInventoryTransfers': {} };
+loaded.require = id => Object.hasOwn(deps, id) ? deps[id] : require(id);
 loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
 const logic = loaded.exports;
 const asset = (overrides = {}) => ({ identifier: 'EPC-1', asset_ref: 'raw:EPC-1', item_code: 'ITEM', status: 'available', transfer_id: '',
@@ -24,11 +27,11 @@ test('QR lookup preserves opaque identifiers and prefers exact warehouse matches
 });
 
 test('preparation transfer requires available custody in an assigned warehouse', () => {
-  assert.equal(logic.preparationCanTransfer(asset(), ['main']), true);
-  assert.equal(logic.preparationCanTransfer(asset({ transfer_id: 't' }), ['main']), false);
-  assert.equal(logic.preparationCanTransfer(asset({ status: 'reserved' }), ['main']), false);
-  assert.equal(logic.preparationCanTransfer(asset({ physical_location: { kind: 'state' } }), ['main']), false);
-  assert.equal(logic.preparationCanTransfer(asset(), ['other']), false);
+  assert.equal(logic.preparationInventoryCanTransfer(asset(), ['main']), true);
+  assert.equal(logic.preparationInventoryCanTransfer(asset({ transfer_id: 't' }), ['main']), false);
+  assert.equal(logic.preparationInventoryCanTransfer(asset({ status: 'reserved' }), ['main']), false);
+  assert.equal(logic.preparationInventoryCanTransfer(asset({ physical_location: { kind: 'state' } }), ['main']), false);
+  assert.equal(logic.preparationInventoryCanTransfer(asset(), ['other']), false);
 });
 
 test('transfer windows apply warehouse and line search independently', () => {
@@ -36,4 +39,12 @@ test('transfer windows apply warehouse and line search independently', () => {
   assert.deepEqual(logic.preparationInventoryTransfersFor([row], 'Other', 'incoming', 'film'), [row]);
   assert.deepEqual(logic.preparationInventoryTransfersFor([row], 'Other', 'outgoing', ''), []);
   assert.deepEqual(logic.preparationInventoryTransfersFor([row], '', 'outgoing', 'missing'), []);
+});
+
+test('inventory detail uses V2 status and quantity presentation', () => {
+  assert.equal(logic.preparationInventoryStatus('available'), 'Mavjud');
+  assert.equal(logic.preparationInventoryStatus('transfer_reserved'), 'Band');
+  assert.equal(logic.preparationInventoryStatus(''), '—');
+  assert.equal(logic.preparationInventoryQuantity(3), '3');
+  assert.equal(logic.preparationInventoryQuantity(3.1254), '3.125');
 });

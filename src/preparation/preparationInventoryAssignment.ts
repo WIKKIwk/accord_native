@@ -29,12 +29,12 @@ export async function preparationAssignmentCandidates(session: Session, barcode:
 }
 
 /** @v2 adminAssignRawMaterialToOrder */
-export async function preparationAssignMaterial(session: Session, orderId: string, barcode: string, apparatus: string) {
+export async function preparationAssignMaterial(session: Session, orderId: string, barcode: string, apparatus: string, beforeSend?: () => void) {
   const station = apparatus.trim();
   if (station && !isCanonicalApparatusId(station)) throw new TypeError('Invalid apparatus');
   const response = await authorizedFetch(session, '/v1/mobile/admin/raw-material-assignments', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: orderId.trim(), barcode: barcode.trim(),
-      ...(station ? { apparatus: station } : {}) }) });
+      ...(station ? { apparatus: station } : {}) }) }, beforeSend);
   const payload: unknown = await response.json();
   if (response.status !== 200) throw productionMapResponseError(response.status, payload, 'raw_material_assignments');
   return rawMaterialAssignment(payload);

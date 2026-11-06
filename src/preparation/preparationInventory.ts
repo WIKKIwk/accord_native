@@ -4,11 +4,13 @@ import { inventoryViewRuntimeFor } from '../shared/inventoryViewRuntime';
 import type { InventoryViewStore } from '../shared/inventoryViewStore';
 import { activeSessionToken } from '../auth';
 import { inventoryAssets } from '../inventoryReadApi';
-import type { inventoryAssetFromJson, inventoryLocationFromJson } from '../inventoryModels';
+import type { inventoryAssetFromJson, inventoryLocationFromJson, inventoryTransferFromJson } from '../inventoryModels';
 import { inventoryCreateTransfer } from './preparationInventoryTransfers';
 
 export type PreparationInventoryAsset = ReturnType<typeof inventoryAssetFromJson>;
 export type PreparationInventoryLocation = ReturnType<typeof inventoryLocationFromJson>;
+export type PreparationInventoryTransfer = ReturnType<typeof inventoryTransferFromJson>;
+const lower = (value: string) => value.trim().toLowerCase();
 
 /** Reuse the shared inventory live windows for the preparation movements route. */
 export function preparationInventoryStore(session: Session): InventoryViewStore {
@@ -38,11 +40,37 @@ export function preparationInventoryBarcode(raw: string): string {
 }
 
 /** @v2 _qrAssetMatchesBarcode */
-export function preparationInventoryQrMatches(assets: PreparationInventoryAsset[], barcode: string) {
+export function preparationInventoryQrMatches(assets: readonly PreparationInventoryAsset[], barcode: string) {
   const value = barcode.trim().toLowerCase();
   const warehouse = assets.filter(asset => asset.physical_location.kind === 'warehouse');
   const exact = warehouse.filter(asset => [asset.identifier, asset.asset_ref, asset.item_code].some(item => item.trim().toLowerCase() === value));
   return exact.length ? exact : warehouse.length === 1 ? warehouse : [];
+}
+
+export function preparationInventoryAssetBarcode(asset: PreparationInventoryAsset): string {
+  const identifier = asset.identifier.trim();
+  if (identifier) return identifier;
+  const ref = asset.asset_ref.trim(), separator = ref.indexOf(':');
+  return separator < 0 ? ref : ref.slice(separator + 1).trim();
+}
+
+/** @v2 _statusLabel */
+export function preparationInventoryStatus(status: string): string {
+  const labels: Record<string, string> = { available: 'Mavjud', requested: 'So‘ralgan', approved: 'Tasdiqlangan',
+    in_transit: 'Yo‘lda', received: 'Qabul qilingan', rejected: 'Rad etilgan', cancelled: 'Bekor qilingan',
+    reserved: 'Band', transfer_reserved: 'Band' };
+  return Object.hasOwn(labels, status) ? labels[status] : status || '—';
+}
+
+/** @v2 _qty */
+export function preparationInventoryQuantity(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/** @v2 _transferTimestamp */
+export function preparationInventoryTransferTimestamp(transfer: PreparationInventoryTransfer): string {
+  const date = new Date(transfer.created_at_unix * 1000), two = (value: number) => String(value).padStart(2, '0');
+  return `${two(date.getDate())}.${two(date.getMonth() + 1)}.${date.getFullYear()} ${two(date.getHours())}:${two(date.getMinutes())}`;
 }
 
 export async function lookupPreparationInventoryQr(session: Session, raw: string) {
@@ -58,7 +86,21 @@ export async function lookupPreparationInventoryQr(session: Session, raw: string
 /** @v2 _showAssetDetails */
 export function preparationInventoryCanTransfer(asset: PreparationInventoryAsset, assigned: readonly string[]) {
   const names = new Set(assigned.map(name => name.trim().toLowerCase()));
-  return asset.status === 'available' && asset.physical_location.kind === 'warehouse' && names.has(asset.custody_warehouse.trim().toLowerCase());
+  return lower(asset.status) === 'available' && !asset.transfer_id.trim() && asset.physical_location.kind === 'warehouse' &&
+    names.has(lower(asset.custody_warehouse));
+}
+
+/** @v2 _filterTransfersByWarehouse */
+export function preparationInventoryTransfersFor(transfers: readonly PreparationInventoryTransfer[], warehouseName: string,
+  direction: 'incoming' | 'outgoing', query: string) {
+  const warehouse = lower(warehouseName), search = lower(query);
+  return transfers.filter(transfer => {
+    const location = direction === 'incoming' ? transfer.destination_warehouse : transfer.source_warehouse;
+    if (warehouse && lower(String(location)) !== warehouse) return false;
+    return !search || [transfer.source_warehouse, transfer.destination_warehouse, transfer.note,
+      ...transfer.lines.flatMap((line: Record<string, unknown>) => [line.item_name, line.item_code, line.identifier, line.asset_ref])]
+      .some(value => String(value ?? '').toLowerCase().includes(search));
+  });
 }
 
 export function preparationInventoryIsInternalTransfer(asset: PreparationInventoryAsset, destination: PreparationInventoryLocation,

@@ -27,3 +27,20 @@ test('unlink decodes a nested assignment after trimming inputs', async () => {
   assert.deepEqual(sent, { order_id: 'order', barcode: 'abc' });
   assert.equal(result.barcode, 'abc');
 });
+
+test('unlink checks the original account scope before a 401 retry', async () => {
+  const originalFetch = global.fetch;
+  let requests = 0;
+  const session = { baseUrl: 'https://example.test', token: 'old', identity: 'first' };
+  const auth = { activeSessionToken: value => value.token, refreshSession: async value => {
+    value.token = 'new'; value.identity = 'second'; return true;
+  } };
+  const client = load('rawMaterialUnlinkApi', { './auth': auth });
+  global.fetch = async () => { requests++; return new Response('', { status: 401 }); };
+  try {
+    await assert.rejects(client.adminUnlinkRawMaterialAssignment(session, 'order', 'abc', () => {
+      if (session.identity !== 'first') throw new Error('scope changed');
+    }), /scope changed/);
+    assert.equal(requests, 1);
+  } finally { global.fetch = originalFetch; }
+});

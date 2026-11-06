@@ -118,7 +118,7 @@ export function ProfileView(props: ProfileViewProps) {
         </Column> : null}
       </FieldGroup.Section>
       <FieldGroup.Section>
-        <Button label="Kunlik ish" variant="text" onPress={onDailyWork} />
+        {session.profile.role !== 'tayyorlov_masteri' ? <Button label="Kunlik ish" variant="text" onPress={onDailyWork} /> : null}
         <Button label={localizedGetter('profileSettingsTitle', locale)} variant="text" onPress={openSettings} testID="profile-settings" />
       </FieldGroup.Section>
       <FieldGroup.Section>

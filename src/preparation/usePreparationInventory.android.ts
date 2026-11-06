@@ -6,9 +6,9 @@ import { activeSessionToken, registerSessionResetHook, type Session } from '../a
 import { inventoryAssets } from '../inventoryReadApi';
 import { sessionReadScope } from '../sessionReadScope';
 import type { InventoryViewLease } from '../shared/inventoryViewStore';
-import { preparationInventoryAssets, preparationInventoryStore } from './preparationInventory';
-import { preparationCanTransfer, preparationInventoryBarcode, preparationInventoryQrMatches, preparationInventoryTransfersFor,
-  type PreparationInventoryAsset, type PreparationInventoryLocation, type PreparationInventoryTransfer } from './preparationInventoryLogic';
+import { preparationInventoryAssets, preparationInventoryStore, preparationInventoryCanTransfer, preparationInventoryBarcode,
+  preparationInventoryQrMatches, preparationInventoryTransfersFor, type PreparationInventoryAsset, type PreparationInventoryLocation,
+  type PreparationInventoryTransfer } from './preparationInventory';
 import { inventoryCreateTransfer } from './preparationInventoryTransfers';
 
 type Window<T> = { rows: readonly T[] | null; loading: boolean; error: string | null; refresh: () => Promise<void> };
@@ -77,7 +77,7 @@ export function usePreparationInventory(session: Session, assignedWarehouses: re
     finally { busyRef.current = false; if (current()) setBusy(false); }
   };
   const transfer = async (asset: PreparationInventoryAsset, destination: PreparationInventoryLocation) => {
-    if (busyRef.current || !current() || !preparationCanTransfer(asset, assignedWarehouses) || !destination.active ||
+    if (busyRef.current || !current() || !preparationInventoryCanTransfer(asset, assignedWarehouses) || !destination.active ||
         destination.kind !== 'warehouse' || destination.warehouse_id === asset.custody_warehouse_id) return null;
     busyRef.current = true; setBusy(true);
     try {
@@ -91,5 +91,5 @@ export function usePreparationInventory(session: Session, assignedWarehouses: re
   };
   return { tab, setTab, warehouse: selectedWarehouse, chooseWarehouse, warehouses, query, setQuery, locations, assets, transfers,
     visibleAssets, visibleTransfers, qrAssets, qrError, busy, lookup, transfer, clearQr: () => { setQrAssets([]); setQrError(null); },
-    canTransfer: (asset: PreparationInventoryAsset) => preparationCanTransfer(asset, assignedWarehouses), current };
+    canTransfer: (asset: PreparationInventoryAsset) => preparationInventoryCanTransfer(asset, assignedWarehouses), current };
 }

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { adminApparatus } from '../apparatusApi';
+import { sessionReadScope } from '../sessionReadScope';
 import { adminRawMaterialLookup, adminUnlinkRawMaterialAssignment, preparationAssignMaterial, preparationAssignmentCandidates } from './preparationInventoryAssignment';
 
 type Lookup = Awaited<ReturnType<typeof adminRawMaterialLookup>>;
@@ -10,7 +11,8 @@ export function usePreparationInventoryAssignment(session: Session, barcode: str
   const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const valid = useRef(true), generation = useRef(0);
-  const current = () => valid.current && !!activeSessionToken(session);
+  const scope = useMemo(() => sessionReadScope(session), [session]);
+  const current = () => valid.current && !!activeSessionToken(session) && scope === sessionReadScope(session);
   const load = useCallback(async () => {
     const id = ++generation.current;
     if (!current()) return;
@@ -33,7 +35,7 @@ export function usePreparationInventoryAssignment(session: Session, barcode: str
     finally { if (current() && id === generation.current) setLoading(false); }
   // Session and barcode define the scoped read.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, barcode, allow]);
+  }, [session, barcode, allow, scope]);
   useEffect(() => {
     let active = true;
     valid.current = true;
@@ -45,13 +47,17 @@ export function usePreparationInventoryAssignment(session: Session, barcode: str
   const assign = async (candidate: Candidate, apparatus: string) => {
     if (!allow || saving || !current()) return;
     setSaving(true);
-    try { await preparationAssignMaterial(session, candidate.order.map.id, barcode, apparatus); if (current()) { await load(); await changed(); } }
+    try { await preparationAssignMaterial(session, candidate.order.map.id, barcode, apparatus, () => {
+      if (!current()) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching');
+    }); if (current()) { await load(); await changed(); } }
     finally { if (current()) setSaving(false); }
   };
   const unlink = async () => {
     if (!lookup?.assignment || saving || !current()) return;
     setSaving(true);
-    try { await adminUnlinkRawMaterialAssignment(session, lookup.assignment.order_id, barcode); if (current()) { await load(); await changed(); } }
+    try { await adminUnlinkRawMaterialAssignment(session, lookup.assignment.order_id, barcode, () => {
+      if (!current()) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching');
+    }); if (current()) { await load(); await changed(); } }
     finally { if (current()) setSaving(false); }
   };
   return { lookup, candidates, names, loading, saving, error, load, assign, unlink };

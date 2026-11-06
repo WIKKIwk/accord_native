@@ -14,8 +14,9 @@ function setup() {
     '../workerControlsApi': { isCanonicalApparatusId: id => id.startsWith('apparatus:'), productionMapResponseError: () => Error('server') },
     '../workerProductionMapSaved': { productionMapSavedFromJson: value => value },
     '../workerRawMaterials': { rawMaterialAssignment: value => value },
+    '../rawMaterialLookupApi': {}, '../rawMaterialUnlinkApi': {},
   };
-  const filename = path.resolve(__dirname, '../src/preparation/preparationInventoryAssignments.ts'), loaded = new Module(filename, module);
+  const filename = path.resolve(__dirname, '../src/preparation/preparationInventoryAssignment.ts'), loaded = new Module(filename, module);
   loaded.require = id => id in deps ? deps[id] : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return { api: loaded.exports, calls };
@@ -26,7 +27,7 @@ test('inventory assignment uses V2 candidate and order-link requests', async () 
   const candidates = await x.api.preparationAssignmentCandidates({}, ' QR-1 ');
   assert.equal(x.calls[0].url, '/v1/mobile/admin/raw-material-assignments/candidate-orders?barcode=QR-1');
   assert.equal(x.calls[0].retry, true);
-  assert.deepEqual(candidates[0].apparatusOptions, ['apparatus:default:one']);
+  assert.deepEqual(candidates[0].apparatus_options, ['apparatus:default:one']);
   await x.api.preparationAssignMaterial({}, ' order-1 ', ' QR-1 ', 'apparatus:default:one');
   assert.equal(x.calls[1].url, '/v1/mobile/admin/raw-material-assignments');
   assert.equal(x.calls[1].init.method, 'POST');

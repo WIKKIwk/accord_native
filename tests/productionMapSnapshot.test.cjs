@@ -170,3 +170,51 @@ test('snapshot normalizes rezka lineage, partial rolls and the original control 
   assert.equal(parsed.rezka_output_report, null);
   assert.equal(parsed.server_contract_signature, JSON.stringify(original));
 });
+
+test('queue controls normalize optional worker authority and preserve its server signature', () => {
+  const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
+  const wire = context(), control = wire.queue_action_controls[station][order];
+  control.work_activity = { worker_role: ' aparatchi ', worker_ref: ' worker ', state: ' in_progress ' };
+  control.re_pause = { resume_id: ' resume ', worker_role: 'aparatchi', worker_ref: ' worker ' };
+  control.last_worked_at_unix = 1.5;
+  control.stage_work = { local_completed: true, report_session_id: 42 };
+  const parsed = decoder.decodeCanonicalProductionMapSnapshot(wire, true).queue_action_controls[station][order];
+  assert.deepEqual(parsed.work_activity, { worker_role: 'aparatchi', worker_ref: 'worker', state: 'in_progress' });
+  assert.deepEqual(parsed.re_pause, { resume_id: 'resume', worker_role: 'aparatchi', worker_ref: 'worker' });
+  assert.equal(parsed.last_worked_at_unix, 0);
+  assert.equal(parsed.stage_work.local_completed, true);
+  assert.equal(parsed.stage_work.report_session_id, '42');
+  assert.equal(parsed.stage_work.completed, false);
+  assert.equal(parsed.server_contract_signature, JSON.stringify(control));
+  control.work_activity = { worker_role: 'aparatchi', worker_ref: '', state: 'paused' };
+  control.re_pause = { resume_id: '' };
+  const malformed = decoder.decodeCanonicalProductionMapSnapshot(wire, true).queue_action_controls[station][order];
+  assert.equal(malformed.work_activity, null);
+  assert.equal(malformed.re_pause, null);
+});
+
+test('queue controls reject malformed optional authority and inconsistent state', () => {
+  const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
+  for (const change of [
+    control => { control.temporary_pause = { session_id: 's', token: 'bad' }; },
+    control => { control.cancel_start = { session_id: 's', token: 'bad' }; },
+    control => { control.temporarily_paused = 'false'; },
+    control => { control.print_preflight = null; },
+    control => { control.interaction.qolip_policy_revision = -1; },
+    control => { control.rezka_output_kadr_counts = [0]; },
+    control => { control.state = 'paused'; },
+  ]) {
+    const wire = context(); change(wire.queue_action_controls[station][order]);
+    assert.throws(() => decoder.decodeCanonicalProductionMapSnapshot(wire, true), e => e.code === 'production_map_snapshot_contract_invalid');
+  }
+});
+
+test('queue-control maps retain a literal __proto__ order without prototype mutation', () => {
+  const station = 'apparatus:default:bosma_7', wire = context();
+  const control = wire.queue_action_controls[station]['zakaz-scan-bootstrap'];
+  const orders = JSON.parse('{"__proto__":{}}'); orders.__proto__ = control;
+  const parsed = decoder.parseProductionQueueActionControls({ [station]: orders }, {}, {});
+  assert.equal(Object.hasOwn(parsed[station], '__proto__'), true);
+  assert.equal(parsed[station].__proto__.state, 'pending');
+  assert.equal(Object.getPrototypeOf(parsed[station]), Object.prototype);
+});
