@@ -73,7 +73,7 @@ export function ProfileView(props: ProfileViewProps) {
       {editing ? <ProfileEditor {...props} /> : null}
     </BottomSheet>
     <BottomSheet isPresented={settingsOpen} onDismiss={() => setSettingsOpen(false)}>
-      {settingsOpen ? <ProfileSettings onClose={() => setSettingsOpen(false)} onLogout={onLogout} /> : null}
+      {settingsOpen ? <ProfileSettings session={session} onClose={() => setSettingsOpen(false)} onLogout={onLogout} /> : null}
     </BottomSheet>
   </>;
 }

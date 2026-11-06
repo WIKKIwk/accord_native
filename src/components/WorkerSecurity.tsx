@@ -8,8 +8,8 @@ type Security = {
   hasPin: boolean;
   biometric: boolean;
   canUseBiometric: boolean;
-  savePin: (pin: string, previous?: string) => Promise<void>;
-  removePin: (pin: string) => Promise<void>;
+  savePin: (pin: string) => Promise<void>;
+  removePin: () => Promise<void>;
   setBiometric: (enabled: boolean) => Promise<void>;
 };
 
@@ -88,8 +88,7 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
     return () => listener.remove();
   }, []);
 
-  const savePin = useCallback(async (pin: string, previous?: string) => {
-    if (pinPresent.current && !(await verifyAppPin(session, previous ?? ''))) throw new Error('Joriy PIN noto‘g‘ri.');
+  const savePin = useCallback(async (pin: string) => {
     await saveAppPin(session, pin);
     if (mounted.current) {
       pinPresent.current = true;
@@ -98,8 +97,7 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
     }
   }, [session]);
 
-  const removePin = useCallback(async (pin: string) => {
-    if (!(await verifyAppPin(session, pin))) throw new Error('Joriy PIN noto‘g‘ri.');
+  const removePin = useCallback(async () => {
     await clearAppLock(session);
     if (mounted.current) { pinPresent.current = false; setHasPin(false); setBiometric(false); setLocked(false); setShield(false); }
   }, [session]);

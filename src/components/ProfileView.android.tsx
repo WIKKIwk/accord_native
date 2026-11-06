@@ -72,12 +72,12 @@ export function ProfileView(props: ProfileViewProps) {
     }
     if (settingsSheet.isOpen()) {
       settingsSheet.update(<Host style={{ flex: 1 }}>
-        <ProfileSettings onClose={settingsSheet.close} onLogout={requestDisconnect} />
+        <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
       </Host>, { dismissible: true, onDismiss: settingsDismissed });
     }
   }, [editing, busy, props, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet]);
   const openSettings = () => settingsSheet.open(<Host style={{ flex: 1 }}>
-    <ProfileSettings onClose={settingsSheet.close} onLogout={requestDisconnect} />
+    <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
   </Host>, { dismissible: true, onDismiss: settingsDismissed });
   const details = profileDisplay(snapshot);
   return <Host style={{ flex: 1 }}>

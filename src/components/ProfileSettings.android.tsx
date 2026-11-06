@@ -1,8 +1,9 @@
 import { Button, Column, Host, OutlinedButton, OutlinedTextField, Row, Switch, Text, TextButton } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, padding, semantics, testID, verticalScroll, weight } from '@expo/ui/jetpack-compose/modifiers';
 import Constants from 'expo-constants';
-import { useRef, useState, useSyncExternalStore } from 'react';
-import { Alert } from 'react-native';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Alert, BackHandler } from 'react-native';
+import type { Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
@@ -10,8 +11,9 @@ import type { AppThemeVariant } from '../shared/themeController';
 import { themeController } from '../shared/themeRuntime';
 import { useAppSettings } from './AppSettings';
 import { usePinSetup } from './usePinSetup.android';
+import { useSwitchPinSetup } from './useSwitchPinSetup.android';
 
-type Props = { onClose: () => void; onLogout: () => void };
+type Props = { session: Session; onClose: () => void; onLogout: () => void };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 const subscribeTheme = (listener: () => void) => themeController.addListener(listener);
@@ -20,16 +22,25 @@ const currentThemeMode = () => themeController.themeMode;
 
 // @v2 _ProfileSettingsSheet
 // @v2 _ProfileSelectionSheet
-export function ProfileSettings({ onClose, onLogout }: Props) {
+export function ProfileSettings({ session, onClose, onLogout }: Props) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const variant = useSyncExternalStore(subscribeTheme, currentVariant, currentVariant);
   const themeMode = useSyncExternalStore(subscribeTheme, currentThemeMode, currentThemeMode);
   const t = (key: string) => localizedGetter(key, locale);
   const { setAppearance } = useAppSettings();
   const pin = usePinSetup();
+  const switchPin = useSwitchPinSetup(session);
   const [biometricBusy, setBiometricBusy] = useState(false);
   const biometricPending = useRef(false);
   const selectionSheet = useNativeSheet();
+  useEffect(() => {
+    if (!pin.mode && !switchPin.stage) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (pin.mode) pin.back(); else switchPin.back();
+      return true;
+    });
+    return () => subscription.remove();
+  });
 
   const setBiometric = async (enabled: boolean) => {
     if (biometricPending.current) return;
@@ -102,32 +113,45 @@ export function ProfileSettings({ onClose, onLogout }: Props) {
       <Button enabled={!pin.busy} onClick={() => pin.open('set')} modifiers={[fillMaxWidth(), testID('profile-pin-set')]}>
         <Text>{t(pin.security.hasPin ? 'pinChange' : 'pinSet')}</Text>
       </Button>
-      {pin.security.hasPin ? <OutlinedButton enabled={!pin.busy} onClick={() => pin.open('remove')} modifiers={[fillMaxWidth()]}><Text>{t('pinRemove')}</Text></OutlinedButton> : null}
+      {pin.security.hasPin ? <OutlinedButton enabled={!pin.busy} onClick={() => { void pin.remove(); }} modifiers={[fillMaxWidth()]}><Text>{t('pinRemove')}</Text></OutlinedButton> : null}
       <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}>
         <Column modifiers={[weight(1)]}><Text>{t('biometricEnableTitle')}</Text><Text>{t(pin.security.biometric ? 'biometricEnabledBody' : 'biometricDisabledBody')}</Text></Column>
         <Switch value={pin.security.biometric} enabled={pin.security.hasPin && !biometricBusy} onCheckedChange={enabled => { void setBiometric(enabled); }}
           modifiers={[semantics({ contentDescription: t('biometricEnableTitle') })]} />
       </Row>
     </> : <>
-      {pin.security.hasPin ? <OutlinedTextField value={pin.current} enabled={!pin.busy} singleLine maxLength={4} visualTransformation="password"
-        keyboardOptions={{ keyboardType: 'numberPassword' }} onValueChange={value => pin.change('current', value)} modifiers={[fillMaxWidth()]}>
-        <OutlinedTextField.Label><Text>Joriy PIN</Text></OutlinedTextField.Label></OutlinedTextField> : null}
-      {pin.mode === 'set' ? <>
+      {pin.mode === 'set' && pin.phase === 'entry' ? <>
         <OutlinedTextField value={pin.pin} enabled={!pin.busy} singleLine maxLength={4} visualTransformation="password"
           keyboardOptions={{ keyboardType: 'numberPassword' }} onValueChange={value => pin.change('pin', value)} modifiers={[fillMaxWidth()]}>
           <OutlinedTextField.Label><Text>{t('pinEnterTitle')}</Text></OutlinedTextField.Label></OutlinedTextField>
+      </> : null}
+      {pin.mode === 'set' && pin.phase === 'confirm' ? <>
         <OutlinedTextField value={pin.repeat} enabled={!pin.busy} singleLine maxLength={4} visualTransformation="password"
           keyboardOptions={{ keyboardType: 'numberPassword' }} onValueChange={value => pin.change('repeat', value)} modifiers={[fillMaxWidth()]}>
           <OutlinedTextField.Label><Text>{t('pinRepeatTitle')}</Text></OutlinedTextField.Label></OutlinedTextField>
       </> : null}
-      <Button enabled={!pin.busy} onClick={() => { void submitPin(); }} modifiers={[fillMaxWidth(), testID('profile-pin-save')]}>
-        <Text>{t(pin.busy ? 'pinSaving' : pin.mode === 'remove' ? 'pinRemove' : 'save')}</Text>
-      </Button>
-      <TextButton enabled={!pin.busy} onClick={pin.close}><Text>{t('no')}</Text></TextButton>
+      {pin.phaseError ? <Text>{pin.phaseError}</Text> : null}
+      {pin.phase === 'entry' ? <Button enabled={!pin.busy && pin.canNext} onClick={pin.next} modifiers={[fillMaxWidth()]}><Text>{t('nextItemAction')}</Text></Button> :
+        <Button enabled={!pin.busy} onClick={() => { void submitPin(); }} modifiers={[fillMaxWidth(), testID('profile-pin-save')]}><Text>{t(pin.busy ? 'pinSaving' : 'save')}</Text></Button>}
+      <TextButton enabled={!pin.busy} onClick={pin.back}><Text>{t('no')}</Text></TextButton>
+    </>}
+    <Text>{t('switchPinTitle')}</Text><Text>{t('switchPinBody')}</Text>
+    {!switchPin.stage ? <>
+      <Button enabled={!switchPin.busy && switchPin.hasPin !== null} onClick={switchPin.open} modifiers={[fillMaxWidth()]}>
+        <Text>{t(switchPin.hasPin ? 'switchPinChange' : 'switchPinSet')}</Text></Button>
+      {switchPin.hasPin ? <OutlinedButton enabled={!switchPin.busy} onClick={() => { void switchPin.remove(); }} modifiers={[fillMaxWidth()]}><Text>{t('switchPinRemove')}</Text></OutlinedButton> : null}
+    </> : <>
+      <OutlinedTextField value={switchPin.field} enabled={!switchPin.busy} singleLine maxLength={4} visualTransformation="password"
+        keyboardOptions={{ keyboardType: 'numberPassword' }} onValueChange={switchPin.change} modifiers={[fillMaxWidth()]}>
+        <OutlinedTextField.Label><Text>{t(switchPin.stage === 'entry' ? 'switchPinEnterTitle' : 'switchPinRepeatTitle')}</Text></OutlinedTextField.Label></OutlinedTextField>
+      {switchPin.error ? <Text>{switchPin.error}</Text> : null}
+      <Button enabled={!switchPin.busy} onClick={() => { void switchPin.submit(); }} modifiers={[fillMaxWidth()]}>
+        <Text>{t(switchPin.stage === 'entry' ? 'nextItemAction' : 'save')}</Text></Button>
+      <TextButton enabled={!switchPin.busy} onClick={switchPin.back}><Text>{t('no')}</Text></TextButton>
     </>}
     <Text>{`Versiya: ${Constants.expoConfig?.version ?? '—'}`}</Text>
     <TextButton onClick={onLogout} modifiers={[fillMaxWidth(), testID('profile-disconnect')]}><Text>{t('disconnectSessionTitle')}</Text></TextButton>
     <Text>{t('disconnectSessionBody')}</Text>
-    <TextButton enabled={!pin.busy && !biometricBusy} onClick={onClose}><Text>{t('closeAction')}</Text></TextButton>
+    <TextButton enabled={!pin.busy && !switchPin.busy && !biometricBusy} onClick={onClose}><Text>{t('closeAction')}</Text></TextButton>
   </Column>;
 }
