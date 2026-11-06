@@ -15,7 +15,7 @@ import { refreshGScaleMonitor } from './gscaleLive';
 import { createGScaleLiveMonitor } from './gscaleLiveRuntime';
 import { loadPreparationReceiptPreset, submitSimpleGScaleReceipt } from './gscalePreparation';
 import { GScaleOperatorStore } from './gscaleOperatorState';
-import { GScaleMaterialPicker } from './gscaleMaterialPicker';
+import { createGScaleCatalogRuntime } from './gscaleCatalogRuntime';
 import { loadGScaleArchive, printGScaleArchiveSession, reprintGScaleArchiveReceipt } from './gscaleArchiveRuntime';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
 
@@ -39,7 +39,7 @@ export async function materialAssignedWarehouseNames(session: Session): Promise<
 export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs): GScaleOperatorStore {
   const role = String(session.profile.role ?? ''), controlOnly = role === 'material_taminotchi' || role === 'tayyorlov_masteri';
   const batch = new GScaleBatchStateStore({ state: () => gscaleRpsBatchState(session), stop: (id, rev) => gscaleRpsBatchStop(session, id, rev) });
-  const materialPicker = new GScaleMaterialPicker((query, offset, limit, orderId) => gscaleItemsPage(session, { query, offset, limit, orderId }));
+  const catalog = createGScaleCatalogRuntime(session, () => materialAssignedWarehouseNames(session));
   const materialWarehouses = async () => (await timed(preparationSnapshot(session), 4000)).material_warehouses;
   const warehouseAllowed = async (warehouse: string) => role !== 'material_taminotchi' ||
     (await materialAssignedWarehouseNames(session)).has(warehouse.trim().toLowerCase());
@@ -49,7 +49,7 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
     loadDraft: () => loadOperatorControlDraft(appPreferences), saveDraft: draft => saveOperatorControlDraft(appPreferences, draft),
     loadMaterialWarehouses: materialWarehouses,
     prefillMaterialOrder: async orderId => {
-      const choice = await materialPicker.singleOrderChoice(orderId);
+      const choice = await catalog.singleOrderChoice(orderId);
       return choice ? { item: { code: choice.item.code, name: choice.item.name || choice.item.code,
         requiresDimensions: choice.item.requires_dimensions }, micron: choice.micron } : null;
     },

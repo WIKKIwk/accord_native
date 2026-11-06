@@ -23,7 +23,7 @@ const { GScaleBatchStateStore } = load('gscale/gscaleBatchState.ts');
 const { batchSessionFromJson, materialReceiptPrintResponseFromJson } = load('gscale/gscaleBatchModel.ts');
 const { emptyOperatorControlDraft } = load('gscale/gscaleDraft.ts');
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function setup() {
+function setup(role = 'material_taminotchi', args = { order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } }) {
   const listeners = new Set();
   const deviceState = { selection: { transport: 'bluetooth', bluetoothPrinter: { name: 'XP', address: 'AA', printer: 'xp-p323b', printMode: 'label' } },
     transport: 'bluetooth', needsAttention: false, connection: null, scanning: false, scanResult: null, checkingAddress: false, addressError: '' };
@@ -41,7 +41,7 @@ function setup() {
     submitSimple: async () => {}, loadArchive: async () => [], printArchive: async () => '', reprintArchiveReceipt: async () => null,
     refreshMonitor: async () => { throw new Error('unexpected'); },
     makeLive: () => { throw new Error('unexpected'); } };
-  const store = new GScaleOperatorStore('material_taminotchi', { order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } }, deps);
+  const store = new GScaleOperatorStore(role, args, deps);
   return { store, calls, active, batch, deps };
 }
 
@@ -59,6 +59,19 @@ test('operator saves valid context, starts a batch and can edit manual weight wh
   store.dispose();
 });
 
+test('preparation conflict remains visible after a batch refresh until the conflict ends', async () => {
+  const fixture = setup('tayyorlov_masteri', { freshForm: true, materialId: 'm1', formulaVariantId: 'v1',
+    order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } });
+  fixture.deps.loadPreparationPreset = async () => ({ code: 'PET', name: 'PET', requiresDimensions: true });
+  fixture.store.start(); await flush();
+  fixture.batch.apply(batchSessionFromJson({ id: 'other', active: true, item_code: 'OTHER',
+    order_assignment: { order_id: 'o2', preparation_formula: { material_id: 'm2' } } }));
+  assert.match(fixture.store.preparationProblem(), /Boshqa homashyo yoki order/);
+  await fixture.store.retryBatchState();
+  assert.equal(fixture.store.preparationProblem(), '');
+  fixture.store.dispose();
+});
+
 test('operator refuses to save an unassigned warehouse', async () => {
   const { store, calls } = setup(); store.start(); await flush();
   store.editDraft({ item_code: 'PET', item_name: 'PET', warehouse: '', length_text: '125' });
@@ -72,6 +85,19 @@ test('manual tap restores the previous weight when nothing new was entered', asy
   store.editDraft({ manual_qty_text: '7.25' });
   store.handleManualQtyTap(); assert.equal(store.getSnapshot().draft.manual_qty_text, '');
   store.restoreManualQtyIfEmpty(); assert.equal(store.getSnapshot().draft.manual_qty_text, '7.25');
+  store.dispose();
+});
+
+test('warehouse setup switches mode, clears the selected warehouse and retains the default', async () => {
+  const { store } = setup(); store.start(); await flush();
+  store.editDraft({ warehouse: 'Old' });
+  store.setWarehouseSetup('default', ' New ');
+  assert.equal(store.getSnapshot().draft.warehouse_mode, 'default');
+  assert.equal(store.getSnapshot().draft.default_warehouse, 'New');
+  assert.equal(store.getSnapshot().draft.warehouse, '');
+  store.setWarehouseSetup('manual', store.getSnapshot().draft.default_warehouse);
+  assert.equal(store.getSnapshot().draft.warehouse_mode, 'manual');
+  assert.equal(store.getSnapshot().draft.default_warehouse, 'New');
   store.dispose();
 });
 
