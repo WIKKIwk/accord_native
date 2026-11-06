@@ -48,7 +48,7 @@ export function PreparationHome() {
       <Button label={t('Ombor')} systemImage="building.2" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/warehouse' as Href)} />
       <Button label={t('Homashyolar')} systemImage="shippingbox" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/materials' as Href)} />
       <Button label={t('Mahsulot formulasi')} systemImage="list.bullet.rectangle" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/sets' as Href)} />
-      <Button label={t('Buyurtmalar')} systemImage="list.number" onPress={() => router.push('/ios-preparation/sequence' as Href)} />
+      <Button label={t('Buyurtmalar')} systemImage="list.number" modifiers={[disabled(true)]} />
       <Button label={t('Ishlab chiqarish')} systemImage="chart.bar" onPress={() => router.push('/ios-preparation/production' as Href)} />
       <Button label={t('Tarix')} systemImage="clock.arrow.circlepath" onPress={() => router.push('/ios-preparation/history' as Href)} />
     </Section>
