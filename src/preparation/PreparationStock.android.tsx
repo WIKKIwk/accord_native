@@ -1,11 +1,16 @@
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
+import { View } from 'react-native';
+import { useNativeSheet } from '../nativeSheet';
 import { preparationReverseReceipt } from './preparationCommandApi';
 import { usePreparationContext } from './PreparationContext.android';
 import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRenameWarehouse } from './preparationManagementApi';
 import { preparationMaterialAvailable, preparationMaterialHistory, preparationReceiptMode, preparationReceiptPayload,
   preparationReverseHistory, preparationVisibleMaterials, type PreparationMaterial } from './preparationLogic';
 import { preparationDisplay } from './preparationModel';
+import { preparationHistoryCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
+import { PreparationNotice } from './PreparationNotice';
+import { usePreparationNotice } from './usePreparationNotice';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { openPreparationScale } from './preparationNavigation.android';
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
@@ -144,26 +149,37 @@ export function PreparationMaterialDetailScreen() {
 // @v2 PreparationHistoryScreen
 export function PreparationHistoryScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
-  const [local, setLocal] = useState<Record<string, unknown>[] | null>(null), [busy, setBusy] = useState(false);
-  const history = local ?? home.snapshot?.history ?? [];
-  const refresh = async () => { await home.controller.reload(); setLocal(null); };
+  const sheet = useNativeSheet(), notice = usePreparationNotice(), afterSheet = useRef<(() => void) | null>(null);
+  const [history, setHistory] = useState<Record<string, unknown>[]>(() => [...(home.snapshot?.history ?? [])]);
   const reverse = async (doc: Record<string, unknown>) => {
-    const action = await dialogs.choose(historyTitle(doc), [{ label: 'Kirimni bekor qilish', value: 'reverse', disabled: doc.can_reverse !== true }]);
-    if (action !== 'reverse') return;
     const reason = await dialogs.input({ title: 'Kirimni bekor qilish', label: 'Sabab', emptyError: 'Sabab kiriting', maxLength: 500 });
-    if (reason === null || !(await dialogs.confirm('Kirimni bekor qilish', `${String(doc.kg ?? '0')} kg kirim bekor qilinsinmi? Bu amal tarixda saqlanadi.`, 'Bekor qilish'))) return;
-    setBusy(true);
+    if (reason === null || !(await dialogs.confirm('Kirimni bekor qilish', preparationReceiptReverseMessage(doc), 'Bekor qilish', 'Qaytish'))) return;
     try {
       const id = doc.id == null ? null : String(doc.id);
       const result = await preparationReverseReceipt(session, id ?? '', reason);
-      setLocal(preparationReverseHistory(history, id, result, new Date().toISOString()));
-      await home.controller.reload(); dialogs.message('Kirim bekor qilindi', t('Kirim bekor qilindi'));
-    } catch (error) { dialogs.message('Xatolik yuz berdi', String(error)); }
-    finally { setBusy(false); }
+      setHistory(current => preparationReverseHistory(current, id, result, new Date().toISOString()));
+      await home.controller.reload(); notice.show(t('Kirim bekor qilindi'));
+    } catch (error) { notice.show(String(error)); }
   };
-  return <PreparationPage title="Tarix" refreshing={home.loading} onRefresh={() => void refresh()}>
+  const openActions = (doc: Record<string, unknown>) => {
+    sheet.open(<View style={{ padding: 16, gap: 10 }}>
+      <PreparationText title>{`Kirim — ${String(doc.name ?? '')}`}</PreparationText>
+      <PreparationText>{preparationReceiptActionSubtitle(doc)}</PreparationText>
+      <PreparationRow title={t('Kirimni bekor qilish')} subtitle={t(doc.can_reverse === true
+        ? 'Ishlatilmagan va orderga ulanmagan kirim' : 'Bu kirim ishlatilgan yoki orderga ulangan')}
+        disabled={doc.can_reverse !== true} onPress={() => { afterSheet.current = () => { void reverse(doc); }; sheet.close(); }} />
+      <PreparationRow title={t('Yopish')} onPress={sheet.close} />
+    </View>, { compact: true, dismissible: true, onDismiss: () => {
+      const next = afterSheet.current; afterSheet.current = null; next?.();
+    } });
+  };
+  return <View style={{ flex: 1 }}><PreparationPage title="Tarix" refreshing={home.loading} onRefresh={() => void home.controller.reload()}>
+    <PreparationText>{t('Oxirgi 100 ta kirim va sarf')}</PreparationText>
     {!history.length ? <PreparationText>{t('Hali kirim yoki sarf yo‘q.')}</PreparationText> : null}
-    {history.map((doc, index) => <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={historyTitle(doc)} subtitle={historySubtitle(doc)}
-      onLongPress={doc.kind === 'receipt' && doc.reversed !== true && !busy ? () => void reverse(doc) : undefined} />)}
-  </PreparationPage>;
+    {history.map((doc, index) => {
+      const card = preparationHistoryCard(doc);
+      return <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={card.title} subtitle={`${card.subtitle}\n${card.value}`}
+        onLongPress={doc.kind === 'receipt' && doc.reversed !== true ? () => openActions(doc) : undefined} />;
+    })}
+  </PreparationPage><PreparationNotice message={notice.message} /></View>;
 }

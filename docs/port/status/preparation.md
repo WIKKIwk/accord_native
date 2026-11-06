@@ -8,6 +8,7 @@ Stopped at: complete the remaining V2 text and surface comparisons on both platf
 |---|---|---|
 | Role-wide surface and text audit | `.port/role-preparation.md`, `.port/text-preparation.md` | The text gate reports missing or extra strings on both platforms. Compare the remaining screens, sheets, messages and back guards with V2; the ledger tags alone do not establish parity. |
 | Material management on iOS and Android | `preparation_materials_screen.dart`, `_PreparationInputDialog` | Material actions, confirmation, warehouse selection and feedback were aligned with the V2 source; verify native dismissal, input and notice behavior on both phones. |
+| Preparation history on iOS and Android | `preparation_screen_forms.dart` `PreparationHistoryScreen` | Receipt, reversal and consumption rows and the reversal flow were compared with V2. Verify long-press, sheet/dialog dismissal and notices on both phones. |
 | Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android preparation routes, sequence, inventory and the GScale destination exist; remaining parity gaps are in `preparation-ios.md`, `preparation-android.md` and `gscale.md`. |
 | Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity is not complete. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
@@ -45,6 +46,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Verification
 
+- History checkpoint: 7 focused history/material/logic tests passed. Native history gestures and dialog transitions have not been run on a device.
 - Material checkpoint: 3 focused tests passed, iOS TypeScript passed and Expo lint passed. Android TypeScript still reports the 10 existing worker errors listed in `PORT.md`; none is in the preparation files.
 - Preparation iOS wiring: 854 tests passed; iOS and default TypeScript checks and Expo lint passed. Android retains the 10 known baseline TypeScript errors. Real device and printer checks remain open.
 - The ledger estimates 112k V2 tokens for this role; actual tokens read were not measured. The prior logic session tagged 26/26 listed APIs; this wiring turn additionally implemented the two inventory transfer mutation methods and added preparation-scoped access to the existing inventory store.
@@ -55,6 +57,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Checkpoints
 
+- This session: aligned history rows, long-press actions and receipt reversal on both platforms.
 - This session: aligned material action and warehouse-assignment flows on both platforms, including scoped mutation completion and V2 confirmation text.
 - `f191451` port(preparation/1): record contracts, 0 methods
 - `9a4ff48` port(preparation/1): formula models and precision, 0 methods
@@ -91,3 +94,10 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 - `7cfa238` port(preparation/wire): printer transports, 3 methods
 - `aa9a856` port(preparation/wire): inventory access and transfers, 2 methods
 - `add7709` port(preparation/wire): text inventory and test triage, 0 methods
+
+## Surface audit
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| `PreparationMaterialsScreen`, `preparation_materials_screen.dart` | `PreparationMaterials.ios.tsx`, `PreparationMaterials.android.tsx` | qisman | qisman | Action and assignment flows were compared with V2. The separate trailing action icon and native gesture/dismissal behavior still need comparison on a device. |
+| `PreparationHistoryScreen`, `preparation_screen_forms.dart` | `PreparationHistory.ios.tsx`, `PreparationStock.android.tsx` | qisman | qisman | Row content and reversal steps were compared with V2. Native long-press, dialog transitions and notice presentation still need device verification. |

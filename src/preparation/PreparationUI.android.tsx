@@ -118,12 +118,12 @@ type Choice = { label: string; subtitle?: string; value: string; disabled?: bool
 type Dialog = { kind: 'input'; title: string; label: string; initial?: string; quantity?: boolean; maxLength?: number; emptyError?: string;
   validate?: (value: string) => string | null; resolve: (value: string | null) => void }
   | { kind: 'choice'; title: string; choices: Choice[]; message?: string; searchable?: boolean; resolve: (value: string | null) => void }
-  | { kind: 'confirm'; title: string; message: string; confirm: string; resolve: (value: boolean) => void }
+  | { kind: 'confirm'; title: string; message: string; confirm: string; cancel: string; resolve: (value: boolean) => void }
   | { kind: 'message'; title: string; message: string; resolve: () => void };
 type Dialogs = {
   input: (options: Omit<Extract<Dialog, { kind: 'input' }>, 'kind' | 'resolve'>) => Promise<string | null>;
   choose: (title: string, choices: Choice[], message?: string, searchable?: boolean) => Promise<string | null>;
-  confirm: (title: string, message: string, confirm?: string) => Promise<boolean>;
+  confirm: (title: string, message: string, confirm?: string, cancel?: string) => Promise<boolean>;
   message: (title: string, message: string) => void;
 };
 const DialogContext = createContext<Dialogs | null>(null);
@@ -149,7 +149,7 @@ function DialogContent({ dialog, close }: { dialog: Dialog; close: () => void })
     <AlertDialog onDismissRequest={cancel}>
       <AlertDialog.Title><Text>{t(dialog.title)}</Text></AlertDialog.Title>
       <AlertDialog.Text>{dialog.kind === 'input' ? <Column verticalArrangement={{ spacedBy: 8 }}>
-        <OutlinedTextField value={nativeValue} singleLine onValueChange={setValue} maxLength={dialog.maxLength}
+        <OutlinedTextField value={nativeValue} singleLine onValueChange={setValue}
           keyboardOptions={{ keyboardType: dialog.quantity ? 'decimal' : 'text' }} modifiers={[fillMaxWidth()]}>
           <OutlinedTextField.Label><Text>{t(dialog.label)}</Text></OutlinedTextField.Label>
         </OutlinedTextField>{error ? <Text>{t(error)}</Text> : null}</Column>
@@ -160,7 +160,7 @@ function DialogContent({ dialog, close }: { dialog: Dialog; close: () => void })
           {dialog.choices.filter(item => `${item.label} ${item.subtitle ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())).map(item => <PreparationRow key={item.value} title={t(item.label)} subtitle={item.subtitle}
             disabled={item.disabled} onPress={() => { close(); dialog.resolve(item.value); }} />)}
         </ScrollView></RNHostView></Column> : <Text>{dialog.message}</Text>}</AlertDialog.Text>
-      {dialog.kind !== 'message' && <AlertDialog.DismissButton><TextButton onClick={cancel}><Text>{t('Bekor qilish')}</Text></TextButton></AlertDialog.DismissButton>}
+      {dialog.kind !== 'message' && <AlertDialog.DismissButton><TextButton onClick={cancel}><Text>{t(dialog.kind === 'confirm' ? dialog.cancel : 'Bekor qilish')}</Text></TextButton></AlertDialog.DismissButton>}
       {dialog.kind !== 'choice' && <AlertDialog.ConfirmButton><TextButton onClick={accept}><Text>{t(dialog.kind === 'confirm' ? dialog.confirm : dialog.kind === 'message' ? 'OK' : 'Saqlash')}</Text></TextButton></AlertDialog.ConfirmButton>}
     </AlertDialog>
   </Host>;
@@ -181,7 +181,7 @@ export function PreparationDialogs({ children }: { children: ReactNode }) {
   const value: Dialogs = {
     input: options => new Promise(resolve => show({ ...options, kind: 'input', resolve })),
     choose: (title, choices, message, searchable) => new Promise(resolve => show({ kind: 'choice', title, choices, message, searchable, resolve })),
-    confirm: (title, message, confirm = 'Saqlash') => new Promise(resolve => show({ kind: 'confirm', title, message, confirm, resolve })),
+    confirm: (title, message, confirm = 'Saqlash', cancel = 'Bekor qilish') => new Promise(resolve => show({ kind: 'confirm', title, message, confirm, cancel, resolve })),
     message: (title, message) => show({ kind: 'message', title, message, resolve: () => {} }),
   };
   return <DialogContext.Provider value={value}>{children}{dialog && <DialogContent key={dialog.kind + dialog.title} dialog={dialog} close={close} />}</DialogContext.Provider>;

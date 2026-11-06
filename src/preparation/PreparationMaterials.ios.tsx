@@ -1,14 +1,13 @@
-import { Button, Host, List, Section, Text, TextField, Toggle, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { Button, Host, List, Section, Text, TextField, Toggle, VStack } from '@expo/ui/swift-ui';
 import { disabled } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from 'react-native';
-import { useWorkerColors } from '../components/useWorkerColors';
+import { Alert, View } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
+import { PreparationInputDialog } from './PreparationInputDialog';
 import { PreparationNotice } from './PreparationNotice';
 import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
-import { preparationInputError } from './preparationLogic';
 import { preparationMaterialDeleteMessage, preparationMaterialsEmptyMessage, preparationMaterialsErrorMessage, usePreparationMaterials } from './usePreparationMaterials';
 import { usePreparationNotice } from './usePreparationNotice';
 
@@ -43,30 +42,6 @@ function AssignmentSheet({ name, choices, save }: { name: string; choices: Choic
     <Text>{t('Bu amal ombordagi qoldiqni ko‘chirmaydi.')}</Text>
     <Button label={t('Saqlash')} modifiers={[disabled(!changed)]} onPress={() => save([...selected].sort())} />
   </VStack></Host>;
-}
-
-function RenameDialog({ initial, close, save }: { initial: string; close: () => void; save: (name: string) => void }) {
-  const t = usePreparationText(), colors = useWorkerColors(), nativeValue = useNativeState(initial);
-  const [value, setValue] = useState(initial), [error, setError] = useState<string | null>(null);
-  const submit = () => {
-    const issue = preparationInputError(value);
-    if (issue) { setError(issue); return; }
-    save(value.trim());
-  };
-  return <Modal visible transparent animationType="fade" onRequestClose={close}>
-    <KeyboardAvoidingView behavior="padding" style={styles.backdrop}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={close} />
-      <View accessibilityViewIsModal style={[styles.dialog, { backgroundColor: colors.surface }]}>
-        <Host matchContents={{ vertical: true }}><VStack spacing={14}>
-          <Text>{t('Homashyo nomini o‘zgartirish')}</Text>
-          <TextField text={nativeValue} autoFocus placeholder={t('Homashyo nomi')} onTextChange={setValue} />
-          {!!error && <Text>{t(error)}</Text>}
-          <Button label={t('Saqlash')} onPress={submit} />
-          <Button label={t('Bekor qilish')} role="cancel" onPress={close} />
-        </VStack></Host>
-      </View>
-    </KeyboardAvoidingView>
-  </Modal>;
 }
 
 // @v2 PreparationMaterialsScreen
@@ -120,14 +95,10 @@ export function PreparationMaterials() {
       </Button>)}
     </Section>
   </PreparationList><PreparationNotice message={notice.message} />
-    {renameItem && <RenameDialog key={renameItem.item_code} initial={renameItem.name} close={() => setRenameItem(null)} save={name => {
+    {renameItem && <PreparationInputDialog key={renameItem.item_code} title="Homashyo nomini o‘zgartirish" label="Homashyo nomi"
+      initial={renameItem.name} close={() => setRenameItem(null)} save={name => {
       const item = renameItem; setRenameItem(null);
       void controller.rename(item, name).then(saved => { if (saved) notice.show(t('Homashyo nomi o‘zgartirildi')); }).catch(failure);
     }} />}
   </View>;
 }
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,0.32)' },
-  dialog: { borderRadius: 20, padding: 24 },
-});
