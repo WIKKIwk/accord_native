@@ -13,13 +13,14 @@ Stopped at: connect discovery and saved device selection, then port the operator
 | `src/gscale/gscaleBatchApi.ts` | `mobile_api_gscale_declarations_part_01.dart` | Batch requests and response models have source-derived tests; connect them to the operator flow. No direct V2 HTTP recording was found for these methods. |
 | `src/gscale/gscaleControlLogic.ts` | `gscale_mobile_app_helpers_part_07.dart`, `gscale_mobile_app_declarations_part_06.dart` | Quantity/weight gates and receipt-label conversion are ported; connect them to the operator flow and port its remaining actions. |
 | `src/gscale/gscaleBatchPrint.ts` | `_printActiveRsBatch` | Local preparation, physical printing and confirmation, including one EPC per label, are implemented and need operator UI wiring and real-printer verification. |
+| `src/gscale/gscaleBatchStart.ts` | `_startRsBatchFromSelection` | Order, warehouse, dimensions and apparatus are checked before batch start; wire the dependencies to the operator state and platform picker. |
 | `src/gscale/gscalePreparation.ts` | `gscale_mobile_app_preparation_receipt.dart`, `_submitSimpleReceipt` | Formula preset matching, conflict guards and simple-receipt checks are implemented; connect them to the operator state and preparation entry. |
 | `src/gscale/gscaleMonitor.ts` | `MonitorSnapshot.fromJson` | JavaScript JSON parsing does not retain whether a scale value was encoded as an integer or a decimal such as `2.0`; preserve that distinction if the exact displayed text must match V2. Connect the snapshot and live stream to the operator view. |
 | `src/app/ios-gscale/**`, `src/app/android-gscale/**` | `gscale_mode_screen.dart` | Implement both route trees, GScaleModeArgs and the platform screens. |
 
 ## Deviations candidates
 
-None recorded.
+- `buildGScaleRpsBatchStartRequest` normalizes the Bluetooth printer value `xp-p323b` to `zebra` while retaining label mode. V4 preserves this V2 behaviour.
 
 ## Test mode pending
 
