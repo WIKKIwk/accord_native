@@ -142,7 +142,7 @@ function gestureFixture(readPhotos, capture = async () => 'data:image/jpeg;base6
       selectionAsync: async () => { haptics.push('selection'); } },
     'expo-image': { Image },
     'expo-symbols': { SymbolView() {} },
-    'react-native': { View, Pressable, Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
+    'react-native': { View, Pressable, PlatformColor: (...semantic) => ({ semantic }), Alert: { alert: (...args) => alerts.push(args) }, Linking: { openSettings: async () => {} },
       StyleSheet: { create: styles => styles, absoluteFill: {} }, useColorScheme: () => 'dark', useWindowDimensions: () => ({ width: 375, height: 800 }) },
     'react-native-reanimated': { __esModule: true, default: { View: AnimatedView }, Easing: { out: value => value, quad() {} },
       useAnimatedStyle: worklet => worklet(), useReducedMotion: () => false, useSharedValue: initial => host.next(() => shared(initial)),
@@ -492,7 +492,7 @@ test('an image preview has no opaque layer behind a landing photo and reports wh
     react: { useEffect() {}, useState() {} },
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     'expo-image': { Image }, 'expo-symbols': { SymbolView() {} }, 'expo-web-browser': {},
-    'react-native': { Alert: {}, View, StyleSheet: { create: styles => styles, absoluteFill: {} } },
+    'react-native': { Alert: {}, Platform: { OS: 'ios' }, PlatformColor: (...semantic) => ({ semantic }), View, StyleSheet: { create: styles => styles, absoluteFill: {} } },
     '../chatMedia': { chatMediaTicket() {} },
   });
   const flat = node => Object.assign({}, ...node.props.style);
@@ -503,7 +503,7 @@ test('an image preview has no opaque layer behind a landing photo and reports wh
   loaded.props.onLoad();
   loaded.props.onError();
   assert.equal(settled, 2);
-  assert.equal(flat(preview.SelectedChatMediaPreview({ draft: { kind: 'video', uri: 'file:///a.mov' } })).backgroundColor, '#e5e5ea');
+  assert.deepEqual(flat(preview.SelectedChatMediaPreview({ draft: { kind: 'video', uri: 'file:///a.mov' } })).backgroundColor, { semantic: ['systemGray5'] });
 });
 
 test('a landing targets the slot the next attachment preview will fill', () => {

@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ColorValue } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
 import { isThumbnailMissing, retryThumbnail, scheduleThumbnail, thumbnailSource } from '../orderThumbnail';
 
-type Props = { session: Session; orderId: string; imageId: string; active: boolean; backgroundColor: string; iconColor: string; size?: number };
+type Props = { session: Session; orderId: string; imageId: string; active: boolean; backgroundColor: ColorValue; iconColor: ColorValue; size?: number };
 
 export const WorkerOrderThumbnail = memo(function WorkerOrderThumbnail({ session, orderId, imageId, active, backgroundColor, iconColor, size = 40 }: Props) {
   const [laidOut, setLaidOut] = useState(false);

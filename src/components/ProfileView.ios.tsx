@@ -1,7 +1,7 @@
 import { BottomSheet, Button, DisclosureGroup, Group, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
 import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, refreshable, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
 import { useState, type ComponentProps } from 'react';
-import { useColorScheme } from 'react-native';
+import { PlatformColor } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { themeController } from '../shared/themeRuntime';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -60,7 +60,6 @@ function ApparatusRow({ labels }: { labels: string[] }) {
 // @v2 _ProfileSelectionSheet
 function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,
   onChangeName, onChoosePhoto, onSave, onCloseEditor }: ProfileViewProps) {
-  const dark = useColorScheme() === 'dark';
   const { text } = useBaseLocale();
   const name = useNativeState(draftName);
   return <Group modifiers={[
@@ -75,8 +74,8 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
           <ZStack alignment="bottomTrailing" modifiers={[contentShape(shapes.rectangle(), ['interaction', 'contextMenuPreview'])]}>
             <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken}
               size={108} revision={avatarRevision} previewUri={draftPhoto} cachedUri={cachedAvatar} /></RNHostView>
-            <Image systemName="camera" size={17} color="#ffffff" modifiers={[
-              frame({ width: 34, height: 34 }), background('#000000', shapes.circle()),
+            <Image systemName="camera" size={17} color={PlatformColor('systemBackground')} modifiers={[
+              frame({ width: 34, height: 34 }), background(PlatformColor('label'), shapes.circle()),
             ]} />
           </ZStack>
         } modifiers={[buttonStyle('plain'), menuIndicator('hidden'), menuOrder('fixed'), accessibilityLabel(text('profilePhotoTitle')), disabled(busy)]}>
@@ -89,15 +88,15 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
           <TextField text={name} onTextChange={onChangeName} placeholder={text('nicknameHint')} maxLength={100} modifiers={[
             font({ textStyle: 'body' }), textInputAutocapitalization('words'), padding({ horizontal: 16, vertical: 14 }),
             frame({ maxWidth: Infinity }),
-            strokeBorder({ shape: 'roundedRectangle', cornerRadius: 18, content: dark ? '#5c5c60' : '#c7c7cc', style: { lineWidth: 1 } }),
+            strokeBorder({ shape: 'roundedRectangle', cornerRadius: 18, content: PlatformColor('separator'), style: { lineWidth: 1 } }),
             accessibilityLabel(text('nicknameLabel')), disabled(busy),
           ]} />
         </VStack>
         {draftPhoto ? <Text modifiers={[font({ textStyle: 'footnote' }), secondary, frame({ maxWidth: Infinity, alignment: 'leading' }), multilineTextAlignment('leading')]}>{text('selectedImageNotice')}</Text> : null}
         <Button label={saving ? text('pinSaving') : text('save')} onPress={onSave} modifiers={[
           buttonStyle('plain'), font({ textStyle: 'body', weight: 'semibold' }),
-          foregroundStyle(dark ? '#000000' : '#ffffff'), padding({ horizontal: 24, vertical: 12 }),
-          background(dark ? '#ffffff' : '#1c1c1e', shapes.capsule()), disabled(saving),
+          foregroundStyle(PlatformColor('systemBackground')), padding({ horizontal: 24, vertical: 12 }),
+          background(PlatformColor('label'), shapes.capsule()), disabled(saving),
         ]} />
         <Button label="Bekor qilish" onPress={onCloseEditor} modifiers={[buttonStyle('plain'), secondary, disabled(busy)]} />
       </VStack>
@@ -109,7 +108,6 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
 export function ProfileView(props: ProfileViewProps) {
   const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
   const details = profileDisplay(snapshot);
-  const dark = useColorScheme() === 'dark';
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const { text } = useBaseLocale();
@@ -127,11 +125,11 @@ export function ProfileView(props: ProfileViewProps) {
             <BottomSheet isPresented={editing} onIsPresentedChange={(isPresented) => { if (!isPresented) onCloseEditor(); }}
               anchor={<Button onPress={onOpenEditor} modifiers={[
                 buttonStyle('plain'), frame({ width: 32, height: 32 }),
-                background(dark ? '#2c2c2e' : '#e5e5ea', shapes.circle()),
-                strokeBorder({ shape: 'circle', content: dark ? '#000000' : '#f2f2f7', style: { lineWidth: 2 } }),
+                background(PlatformColor('systemGray5'), shapes.circle()),
+                strokeBorder({ shape: 'circle', content: PlatformColor('systemGroupedBackground'), style: { lineWidth: 2 } }),
                 padding({ all: 6 }), contentShape(shapes.rectangle()), offset({ x: 9, y: 9 }),
                 accessibilityLabel(text('profileEditTitle')), disabled(busy),
-              ]}><Image systemName="pencil" size={15} color={dark ? '#ffffff' : '#1c1c1e'} /></Button>}>
+              ]}><Image systemName="pencil" size={15} color={PlatformColor('label')} /></Button>}>
               <ProfileEditor {...props} />
             </BottomSheet>
           </ZStack>

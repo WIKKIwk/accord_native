@@ -9,7 +9,7 @@ type Props = { headline: string; supportingText: string; statusText?: string; st
 export function OrderListItem({ headline, supportingText, onPress, onLongPress, session, orderId, imageId, imageActive, cardTone = 'neutral', fontFamily, headlineFontFamily }: Props) {
   const colors = useWorkerColors();
   const dark = useColorScheme() === 'dark';
-  const appearance = orderCardAppearance(cardTone, dark ? '#101410' : colors.surface, dark);
+  const appearance = orderCardAppearance(cardTone, dark ? '#101410' : typeof colors.surface === 'string' ? colors.surface : '#ffffff', dark);
   return <Pressable accessibilityRole="button" onPress={onPress} onLongPress={onLongPress} style={[styles.row, { backgroundColor: appearance.color, backgroundImage: appearance.gradient }]}>
     <WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active={imageActive} backgroundColor={colors.field} iconColor={colors.muted} />
     <View style={styles.text}><Text numberOfLines={1} style={{ color: appearance.text ?? (dark ? '#fff' : '#111'), fontFamily: headlineFontFamily, fontWeight: headlineFontFamily ? undefined : '500' }}>{headline}</Text>

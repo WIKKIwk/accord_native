@@ -115,7 +115,7 @@ function fixture(pickerResult, cameraAllowed = true) {
       launchImageLibraryAsync: async options => { pickerCalls.push({ source: 'library', options }); return pickerResult; } },
     'expo-document-picker': { getDocumentAsync: async options => { pickerCalls.push({ source: 'file', options }); return pickerResult; } },
     'expo-router': { Stack: { Screen() {} } },
-    'react-native': { Alert: { alert: (...args) => alerts.push(args) }, Platform: { Version: 26 }, StyleSheet: { create: styles => styles }, useColorScheme: () => 'dark', useWindowDimensions: () => ({ width: 375, height: 800 }), View() {} },
+    'react-native': { Alert: { alert: (...args) => alerts.push(args) }, Platform: { Version: 26 }, PlatformColor: (...semantic) => ({ semantic }), StyleSheet: { create: styles => styles }, useColorScheme: () => 'dark', useWindowDimensions: () => ({ width: 375, height: 800 }), View() {} },
     'react-native-reanimated': { useReducedMotion: () => false },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     'react-native-worklets': { scheduleOnUI: fn => fn(), scheduleOnRN: (fn, ...args) => fn(...args) },
@@ -177,6 +177,12 @@ function fixture(pickerResult, cameraAllowed = true) {
   };
   return { screen, render, renderBody, renderBubble, animations, button, menu, choose, tapPlus, ui, selected, pickerCalls, sent, discarded, prepared, alerts, composer, RecentChatPhotosButton, sendResults, mediaCounts, failPreparation: () => { preparationFails = true; }, delayPreparation: ms => { preparationDelay = ms; } };
 }
+
+test('the chat background uses the native system background', () => {
+  const app = fixture({ canceled: true, assets: [] });
+  const root = find(app.screen, node => Array.isArray(node.props?.style) && node.props.style.some(style => style?.backgroundColor?.semantic));
+  assert.deepEqual(root.props.style.find(style => style?.backgroundColor).backgroundColor, { semantic: ['systemBackground'] });
+});
 
 test('the chat itself blurs when a backdrop capture is unavailable', () => {
   const app = fixture({ canceled: true, assets: [] });

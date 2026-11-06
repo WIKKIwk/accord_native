@@ -1,6 +1,6 @@
 import { Button, Host, HStack, Menu, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, PlatformColor, Pressable, StyleSheet, View } from 'react-native';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { preparationWarehouseParent } from './preparationWarehousePresentation';
 import { usePreparationText } from './PreparationUI';
@@ -30,6 +30,6 @@ export function PreparationWarehouseCreateDialog({ warehouses, selected, close, 
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,0.32)' },
+  backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: PlatformColor('systemFill') },
   dialog: { borderRadius: 20, padding: 24 },
 });

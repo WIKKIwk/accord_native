@@ -32,7 +32,7 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onProfile, search
             placeholder={searchPlaceholder}
             placeholderTextColor={colors.muted}
             textAlign="center"
-            textStyle={{ color: colors.text, fontSize: 15 }}
+            textStyle={{ color: typeof colors.text === 'string' ? colors.text : undefined, fontSize: 15 }}
             style={{ width: '100%', paddingHorizontal: 40 }}
             autoCapitalize="none"
             autoCorrect={false}

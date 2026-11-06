@@ -1,7 +1,7 @@
 import { Button, Host, HStack, Image, List, ProgressView, RNHostView, Text, VStack } from '@expo/ui/swift-ui';
 import { background, buttonStyle, contentShape, font, foregroundStyle, frame, lineLimit, listRowBackground, listRowInsets, listRowSeparator, listStyle, padding, refreshable, scrollContentBackground, shapes } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { PlatformColor, StyleSheet } from 'react-native';
 import type { Session } from '../auth';
 import { chatTime, filterChatConversations, type ChatConversation } from '../chatModel';
 import { ChatAvatar } from './ChatAvatar';
@@ -21,10 +21,10 @@ function ConversationRow({ conversation, session, token, onOpen }: { conversatio
       <Text modifiers={[font({ textStyle: 'subheadline' }), secondary, lineLimit(1)]}>{conversation.preview}</Text>
     </VStack>
     <VStack alignment="trailing" spacing={6}>
-      <Text modifiers={[font({ textStyle: 'caption' }), conversation.unreadCount ? foregroundStyle('#007AFF') : secondary]}>{chatTime(conversation.timestamp)}</Text>
+      <Text modifiers={[font({ textStyle: 'caption' }), conversation.unreadCount ? foregroundStyle(PlatformColor('systemBlue')) : secondary]}>{chatTime(conversation.timestamp)}</Text>
       {conversation.unreadCount ? <Text modifiers={[
-        font({ textStyle: 'caption2', weight: 'semibold' }), foregroundStyle('#ffffff'), padding({ horizontal: 7, vertical: 3 }),
-        background('#007AFF', shapes.capsule()),
+        font({ textStyle: 'caption2', weight: 'semibold' }), foregroundStyle('white'), padding({ horizontal: 7, vertical: 3 }),
+        background(PlatformColor('systemBlue'), shapes.capsule()),
       ]}>{conversation.unreadCount > 99 ? '99+' : String(conversation.unreadCount)}</Text> : null}
     </VStack>
   </HStack>

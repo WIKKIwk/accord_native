@@ -1,7 +1,7 @@
 import { Button, Host, NavigationStack, Picker, Text, Toolbar, ToolbarItem, useNativeState } from '@expo/ui/swift-ui';
 import { accessibilityLabel, frame, labelStyle, layoutPriority, lineLimit, navigationBarTitleDisplayMode, navigationTitle, pickerStyle, searchable, tag, textInputAutocapitalization, truncationMode } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, PlatformColor, StyleSheet, View } from 'react-native';
 import { WorkerProfileButton } from '../../components/WorkerProfileButton.ios';
 import { visibleOrdersTabs, type OrdersWorkspaceProps } from './ordersWorkspaceTypes';
 
@@ -20,7 +20,7 @@ export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, 
 
   return <>
     <Stack.Screen options={{ headerShown: false }} />
-    <View style={styles.container} collapsable={false}>
+    <View style={[styles.container, { backgroundColor: PlatformColor('systemBackground') }]} collapsable={false}>
       <Host style={styles.container}>
         {/* Keep search and List in one native container so their content insets animate together. */}
         <NavigationStack>

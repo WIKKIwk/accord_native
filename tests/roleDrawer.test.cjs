@@ -92,7 +92,7 @@ function nativeDrawerHarness(platform, visible = true) {
     '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers,
     'expo-symbols': { SymbolView: 'SymbolView' },
     react: { useState: value => [value, () => {}], useEffect: setup => effects.push(setup) },
-    'react-native': { Platform: { Version: 26 }, StyleSheet: { create: styles => styles }, useColorScheme: () => 'light',
+    'react-native': { Platform: { Version: 26 }, PlatformColor: (...semantic) => ({ semantic }), StyleSheet: { create: styles => styles }, useColorScheme: () => 'light',
       useWindowDimensions: () => ({ width: 400 }), View: 'View', Text: 'NativeText', ScrollView: 'NativeScrollView',
       BackHandler: { addEventListener: (name, handler) => { calls.push({ name, handler }); return { remove: () => removals.push(name) }; } } },
     'react-native-drawer-layout': { Drawer: 'Drawer' },
@@ -116,6 +116,10 @@ for (const platform of ['ios', 'android']) {
     const drawer = nodes(tree, 'Drawer')[0];
     assert.equal(drawer.props.open, true);
     assert.equal(drawer.props.overlayAccessibilityLabel, 'Close this drawer');
+    if (platform === 'ios') {
+      assert.deepEqual(drawer.props.style.backgroundColor, { semantic: ['systemBackground'] });
+      assert.deepEqual(drawer.props.drawerStyle.backgroundColor, { semantic: ['systemBackground'] });
+    }
     drawer.props.onOpen(); drawer.props.onClose();
     assert.deepEqual(h.calls, ['open', 'close']);
     h.calls.length = 0;

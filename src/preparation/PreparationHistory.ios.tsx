@@ -2,7 +2,7 @@ import { Button, Host, HStack, Section, Text, TextField, VStack, useNativeState 
 import { disabled, onLongPressGesture } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, PlatformColor, Pressable, StyleSheet, View } from 'react-native';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
@@ -104,6 +104,6 @@ export function PreparationHistory() {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,0.32)' },
+  backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: PlatformColor('systemFill') },
   dialog: { borderRadius: 20, padding: 24 },
 });

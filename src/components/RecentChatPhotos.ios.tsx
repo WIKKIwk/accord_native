@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState, type ComponentRef, type RefObject } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, useColorScheme, useWindowDimensions, View, type GestureResponderEvent } from 'react-native';
+import { Alert, Linking, PlatformColor, Pressable, StyleSheet, useWindowDimensions, View, type ColorValue, type GestureResponderEvent } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 import { RECENT_BACKDROP_BUDGET_MS, RECENT_FLIGHT_MS, RECENT_HANDOFF_BUDGET_MS, RECENT_HOLD_MS, RECENT_LANDING_HAPTIC_MS, RECENT_NUDGE, RECENT_PRESS_SCALE, RECENT_PREWARM_MS, RECENT_RETRACT_MS, RECENT_RETRACT_STAGGER_MS, RECENT_STAGGER_MS, recentPhotoIndex, recentPhotoLayout, recentSprings, recentTileFrame, recentTileGeometry, type RecentComposerMetrics, type RecentPhotoLayout } from '../chatRecentPhotoMotion';
@@ -47,7 +47,6 @@ async function captureBackdrop(view: ComponentRef<typeof View> | null, root: Bou
 }
 
 export function RecentChatPhotosButton({ enabled, stripOpen, composer, rootRef, onTap, onSelect, onStripChange, onHoldChange }: Props) {
-  const dark = useColorScheme() === 'dark';
   const reduceMotion = useReducedMotion();
   const { width, height } = useWindowDimensions();
   const button = useRef<ComponentRef<typeof View>>(null);
@@ -177,13 +176,13 @@ export function RecentChatPhotosButton({ enabled, stripOpen, composer, rootRef, 
     onResponderTerminationRequest={() => false} style={styles.trigger}>
     {/* The strip draws its own copy of this icon, in the same spot, and turns it into a close mark. */}
     <Animated.View pointerEvents="none" style={[pressStyle, stripOpen ? styles.hidden : null]}>
-      <SymbolView name="plus" size={20} tintColor={dark ? '#ffffff' : '#1c1c1e'} />
+      <SymbolView name="plus" size={20} tintColor={PlatformColor('label')} />
     </Animated.View>
   </View>;
 }
 
 function RecentPhotoTile({ photo, index, strip, reduceMotion, placeholder, onPress }: {
-  photo: RecentChatPhoto; index: number; strip: RecentPhotoStrip; reduceMotion: boolean; placeholder: string; onPress: () => void;
+  photo: RecentChatPhoto; index: number; strip: RecentPhotoStrip; reduceMotion: boolean; placeholder: ColorValue; onPress: () => void;
 }) {
   const { selected, exit } = strip;
   const count = strip.photos.length;
@@ -238,7 +237,6 @@ function RecentPhotoTile({ photo, index, strip, reduceMotion, placeholder, onPre
 export function RecentChatPhotoStrip({ strip, onDismiss, onClose, reduceMotion = false, backdropVisible = true, onBackdropError }: {
   strip: RecentPhotoStrip; onDismiss: (exit: RecentPhotoExit) => void; onClose: () => void; reduceMotion?: boolean; backdropVisible?: boolean; onBackdropError?: () => void;
 }) {
-  const dark = useColorScheme() === 'dark';
   const { exit } = strip;
   const [backdrop, setBackdrop] = useState<Backdrop | null>(null);
   const backdropOpacity = useSharedValue(reduceMotion ? 1 : 0);
@@ -337,11 +335,11 @@ export function RecentChatPhotoStrip({ strip, onDismiss, onClose, reduceMotion =
     </Animated.View> : null}
     <Animated.View pointerEvents="box-none" style={[styles.strip, { left: strip.left, top: strip.top, gap: strip.gap }, rowStyle]}>
       {strip.photos.map((photo, index) => <RecentPhotoTile key={photo.id} photo={photo} index={index} strip={strip} reduceMotion={reduceMotion}
-        placeholder={dark ? '#2c2c2e' : '#e5e5ea'} onPress={() => selectPhoto(photo, index)} />)}
+        placeholder={PlatformColor('systemGray5')} onPress={() => selectPhoto(photo, index)} />)}
     </Animated.View>
     <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="So‘nggi rasmlarni yopish"
       style={[styles.close, { left: strip.triggerLeft, top: strip.triggerTop }]}>
-      <Animated.View style={iconStyle}><SymbolView name="plus" size={20} tintColor={dark ? '#ffffff' : '#1c1c1e'} /></Animated.View>
+      <Animated.View style={iconStyle}><SymbolView name="plus" size={20} tintColor={PlatformColor('label')} /></Animated.View>
     </Pressable>
   </View>;
 }
@@ -352,7 +350,7 @@ const styles = StyleSheet.create({
   strip: { position: 'absolute', flexDirection: 'row', backgroundColor: 'transparent' },
   tile: { borderRadius: 14, shadowColor: '#000000', shadowOpacity: 0.22, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   clip: { flex: 1, overflow: 'hidden' },
-  ring: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: 14, borderWidth: 2.5, borderColor: '#0a84ff' },
+  ring: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: 14, borderWidth: 2.5, borderColor: PlatformColor('systemBlue') },
   blur: { position: 'absolute', left: 0, right: 0 },
   close: { position: 'absolute', width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 });

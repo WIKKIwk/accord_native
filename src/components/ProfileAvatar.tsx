@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { StyleSheet, useColorScheme, View } from 'react-native';
+import { Platform, PlatformColor, StyleSheet, useColorScheme, View } from 'react-native';
 import type { Session } from '../auth';
 import { profileAvatarSource } from '../profileModel';
 
@@ -19,9 +19,10 @@ export function ProfileAvatar({ session, profile, token, size = 72, revision = 0
   const showImage = imageSource && !(failure?.key === cacheKey && failure.token === imageToken);
 
   return <View pointerEvents="none" accessible accessibilityRole="image" accessibilityLabel="Profil rasmi"
-    style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: dark ? '#2c2c2e' : '#e5e5ea' }]}>
+    style={[styles.avatar, { width: size, height: size, borderRadius: size / 2,
+      backgroundColor: Platform.OS === 'ios' ? PlatformColor('systemGray5') : dark ? '#2c2c2e' : '#e5e5ea' }]}>
     <SymbolView name={{ ios: 'person.fill', android: 'person', web: 'person' }} size={Math.round(size * 0.44)}
-      tintColor={dark ? '#aeaeb2' : '#8e8e93'} />
+      tintColor={Platform.OS === 'ios' ? PlatformColor('secondaryLabel') : dark ? '#aeaeb2' : '#8e8e93'} />
     {showImage ? <Image source={imageSource}
       style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory"
       onError={() => setFailure({ key: cacheKey, token: imageToken ?? '' })} /> : null}

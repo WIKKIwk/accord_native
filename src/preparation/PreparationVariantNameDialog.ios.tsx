@@ -1,7 +1,7 @@
 import { Button, Host, HStack, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { disabled } from '@expo/ui/swift-ui/modifiers';
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, PlatformColor, Pressable, StyleSheet, View } from 'react-native';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { usePreparationText } from './PreparationUI';
 import { preparationVariantNameCanSave } from './usePreparationLibrary';
@@ -41,6 +41,6 @@ export function PreparationVariantNameDialog<T>({ initial, orderScoped = false, 
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,0.32)' },
+  backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: PlatformColor('systemFill') },
   dialog: { borderRadius: 20, padding: 24 },
 });

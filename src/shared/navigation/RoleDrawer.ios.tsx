@@ -3,14 +3,14 @@ import { Button, ScrollView, Spacer } from '@expo/ui/swift-ui';
 import { background as swiftBackground, buttonBorderShape, buttonStyle, controlSize, disabled, font, frame, padding, tint } from '@expo/ui/swift-ui/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
-import { Platform, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { Platform, PlatformColor, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Drawer, useDrawerProgress } from 'react-native-drawer-layout';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { selectRoleDrawerItem, type RoleDrawerProps } from './roleDrawerModel';
 import { RoleDrawerContext } from './roleDrawerContext';
 
-function DrawerScreen({ children, dark }: { children: ReactNode; dark: boolean }) {
+function DrawerScreen({ children }: { children: ReactNode }) {
   const progress = useDrawerProgress();
   const rounded = useAnimatedStyle(() => ({
     borderTopLeftRadius: progress.value * 28,
@@ -19,15 +19,14 @@ function DrawerScreen({ children, dark }: { children: ReactNode; dark: boolean }
   const dimmed = useAnimatedStyle(() => ({ opacity: progress.value }));
   return <Animated.View style={[styles.screen, rounded]}>
     {children}
-    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: dark ? 'rgba(36, 36, 38, 0.5)' : 'rgba(0, 0, 0, 0.16)' }, dimmed]} />
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: PlatformColor('systemFill') }, dimmed]} />
   </Animated.View>;
 }
 
 export function RoleDrawer(props: RoleDrawerProps) {
   const { visible, onOpen, onClose, title, items, active, footerAction, closeAccessibilityLabel, children } = props;
-  const dark = useColorScheme() === 'dark';
-  const background = dark ? '#000000' : '#ffffff';
-  const foreground = dark ? '#ffffff' : '#1c1c1e';
+  const background = PlatformColor('systemBackground');
+  const foreground = PlatformColor('label');
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [headingHeight, setHeadingHeight] = useState(48);
@@ -51,11 +50,7 @@ export function RoleDrawer(props: RoleDrawerProps) {
           </Host>
           <View pointerEvents="none" style={styles.headingOverlay} onLayout={event => setHeadingHeight(event.nativeEvent.layout.height)}>
             <Host pointerEvents="none" style={StyleSheet.absoluteFill} ignoreSafeArea="all">
-              <Spacer modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), swiftBackground({
-                type: 'linearGradient',
-                colors: dark ? ['#000000F2', '#00000099', '#00000000'] : ['#FFFFFFF2', '#FFFFFF99', '#FFFFFF00'],
-                startPoint: { x: 0.5, y: 0 }, endPoint: { x: 0.5, y: 1 },
-              })]} />
+              <Spacer modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), swiftBackground({ type: 'material', material: 'regular' })]} />
             </Host>
             <View style={styles.heading}><Host matchContents={{ vertical: true }} style={styles.headingHost}>
               <Text modifiers={[font({ textStyle: 'title2', weight: 'semibold' })]}>{title}</Text>
@@ -65,10 +60,10 @@ export function RoleDrawer(props: RoleDrawerProps) {
         {footerAction && <View style={styles.footer}><Host matchContents>
           <Button label={footerAction.label} systemImage={footerSymbol} onPress={() => selectRoleDrawerItem(footerAction, props)}
             modifiers={[disabled(!!footerAction.disabled), buttonStyle(Number(Platform.Version) >= 26 ? 'glassProminent' : 'borderedProminent'),
-              ...(footerAction.destructive ? [tint('#FF3B30')] : []), buttonBorderShape('capsule'), controlSize('large')]} />
+              ...(footerAction.destructive ? [tint(PlatformColor('systemRed'))] : []), buttonBorderShape('capsule'), controlSize('large')]} />
         </Host></View>}
       </View>}>
-      <DrawerScreen dark={dark}>{children}</DrawerScreen>
+      <DrawerScreen>{children}</DrawerScreen>
     </Drawer>
   </RoleDrawerContext.Provider>;
 }

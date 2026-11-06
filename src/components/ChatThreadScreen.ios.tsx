@@ -4,7 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useId, useRef, useState, type ComponentRef, type RefObject } from 'react';
-import { Alert, Platform, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { Alert, Platform, PlatformColor, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -39,7 +39,6 @@ function MessageBubble({ session, body, attachment, caption, timestamp, mine, st
   session: Session; body: string; attachment?: ChatAttachment; caption?: string; timestamp: number; mine: boolean; status?: string; messageKey: string; animate: boolean;
   reduceMotion: boolean; namespaceId: string; onLanded: (messageKey: string) => void;
 }) {
-  const dark = useColorScheme() === 'dark';
   const { width } = useWindowDimensions();
   const [shown, setShown] = useState(!animate || reduceMotion);
   const [appeared, setAppeared] = useState(false);
@@ -68,11 +67,11 @@ function MessageBubble({ session, body, attachment, caption, timestamp, mine, st
             {showMedia ? <ChatMediaThumbnail session={session} attachment={attachment} /> : null}
           </View></RNHostView>
         </Button>
-        {caption ? <Text modifiers={[font({ textStyle: 'body' }), foregroundStyle(mine ? '#ffffff' : dark ? '#ffffff' : '#000000'),
-          padding({ horizontal: 14, vertical: 10 }), background(mine ? '#007AFF' : dark ? '#2c2c2e' : '#e9e9eb', shapes.roundedRectangle({ cornerRadius: 18 }))]}>{caption}</Text> : null}
+        {caption ? <Text modifiers={[font({ textStyle: 'body' }), foregroundStyle(mine ? 'white' : PlatformColor('label')),
+          padding({ horizontal: 14, vertical: 10 }), background(PlatformColor(mine ? 'systemBlue' : 'systemGray5'), shapes.roundedRectangle({ cornerRadius: 18 }))]}>{caption}</Text> : null}
       </> : <Text modifiers={[
-        font({ textStyle: 'body' }), foregroundStyle(mine ? '#ffffff' : dark ? '#ffffff' : '#000000'),
-        padding({ horizontal: BUBBLE_TEXT_INSET, vertical: 10 }), background(mine ? '#007AFF' : dark ? '#2c2c2e' : '#e9e9eb', shapes.roundedRectangle({ cornerRadius: 18 })),
+        font({ textStyle: 'body' }), foregroundStyle(mine ? 'white' : PlatformColor('label')),
+        padding({ horizontal: BUBBLE_TEXT_INSET, vertical: 10 }), background(PlatformColor(mine ? 'systemBlue' : 'systemGray5'), shapes.roundedRectangle({ cornerRadius: 18 })),
         ...(flies ? [matchedGeometryEffect(SEND_ORIGIN_ID, namespaceId, { properties: 'position', anchor: 'leading', isSource: shown }),
           offset({ x: shown ? 0 : -BUBBLE_TEXT_INSET })] : []),
       ]}>{body}</Text>}
@@ -150,7 +149,6 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
   rootRef: RefObject<ComponentRef<typeof View> | null>; reduceMotion: boolean; namespaceId: string; sendFlying: boolean; recentStripOpen: boolean; onStripChange: (strip: RecentPhotoStrip | null) => void;
   onRecentHoldChange: (holding: boolean) => void; onMediaCountChange: (count: number) => void;
 }) {
-  const dark = useColorScheme() === 'dark';
   const [draft, setDraft] = useState('');
   const [media, setMedia] = useState<ChatMediaDraft[]>([]);
   const [leavingMedia, setLeavingMedia] = useState<string[]>([]);
@@ -200,7 +198,7 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
     ? [glassEffect({ glass: { variant: 'regular' }, shape: 'roundedRectangle', cornerRadius: 23 })]
     : [
         background({ type: 'material', material: 'regular' }, shapes.roundedRectangle({ cornerRadius: 23 })),
-        strokeBorder({ shape: 'roundedRectangle', cornerRadius: 23, content: dark ? '#545456' : '#c7c7cc', style: { lineWidth: 1 } }),
+        strokeBorder({ shape: 'roundedRectangle', cornerRadius: 23, content: PlatformColor('separator'), style: { lineWidth: 1 } }),
       ];
   const clearSentText = (sent: string) => {
     // Animated, so a field holding several lines closes softly as its text leaves.
@@ -357,19 +355,19 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
                 buttonStyle('plain'), accessibilityLabel('Media faylni olib tashlash'), disabled(selecting),
               ]}>
                 {/* The mark stays small in the corner; its tap target covers the whole corner of the photo. */}
-                <Image systemName="xmark" size={11} color="#ffffff" modifiers={[
-                  frame({ width: 24, height: 24 }), background('#000000aa', shapes.circle()), padding({ top: 4, trailing: 4 }),
+                <Image systemName="xmark" size={11} color={PlatformColor('label')} modifiers={[
+                  frame({ width: 24, height: 24 }), background({ type: 'material', material: 'thick' }, shapes.circle()), padding({ top: 4, trailing: 4 }),
                   frame({ width: 56, height: 56, alignment: 'topTrailing' }), contentShape(shapes.rectangle()),
                 ]} />
               </Button> : null}
             </ZStack>;
           })}
-          {pendingSlot ? <Rectangle modifiers={[foregroundStyle('#00000000'), frame({ width: 96, height: 96 }), padding({ trailing: 8 }), id(PENDING_SLOT_ID)]} /> : null}
+          {pendingSlot ? <Rectangle modifiers={[foregroundStyle('clear'), frame({ width: 96, height: 96 }), padding({ trailing: 8 }), id(PENDING_SLOT_ID)]} /> : null}
         </HStack>
       </ScrollView>
       {busyMedia || mediaError ? <VStack alignment="leading" spacing={6} modifiers={[padding({ horizontal: 8, bottom: 4 })]}>
         {busyMedia ? <HStack spacing={6}><ProgressView /><Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{mediaProgress || 'Yuborilmoqda…'}</Text></HStack> : null}
-        {mediaError ? <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('#ff453a'), lineLimit(2)]}>{mediaError}</Text> : null}
+        {mediaError ? <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle(PlatformColor('systemRed')), lineLimit(2)]}>{mediaError}</Text> : null}
       </VStack> : null}
     </VStack> : null}
   <HStack alignment="bottom" spacing={4} modifiers={[frame({ minHeight: 40, maxWidth: Infinity })]}>
@@ -385,8 +383,8 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
             { source: 'file', label: 'Fayllar', icon: 'paperclip' }] as const).map(item =>
             <Button key={item.source} onPress={() => selectSource(item.source)} modifiers={[buttonStyle('plain'), accessibilityLabel(item.label)]}>
               <HStack spacing={12} modifiers={[padding({ horizontal: 8 }), frame({ width: 220, height: 52, alignment: 'leading' }), contentShape(shapes.rectangle())]}>
-                <Image systemName={item.icon} size={18} color={dark ? '#ffffff' : '#1c1c1e'} modifiers={[
-                  frame({ width: 36, height: 36 }), background(dark ? '#38383b' : '#e5e5ea', shapes.circle()),
+                <Image systemName={item.icon} size={18} color={PlatformColor('label')} modifiers={[
+                  frame({ width: 36, height: 36 }), background(PlatformColor('systemGray5'), shapes.circle()),
                 ]} />
                 <Text modifiers={[font({ textStyle: 'body' })]}>{item.label}</Text><Spacer />
               </HStack>
@@ -404,13 +402,13 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
         accessibilityLabel('Xabar matni'), disabled(!ready),
       ]} />
       {/* An invisible marker where the typed words begin: the point a sent bubble starts from. */}
-      <Rectangle modifiers={[foregroundStyle('#00000000'), frame({ width: 2, height: 2 }),
+      <Rectangle modifiers={[foregroundStyle('clear'), frame({ width: 2, height: 2 }),
         matchedGeometryEffect(SEND_ORIGIN_ID, namespaceId, { properties: 'position', anchor: 'leading', isSource: sendFlying })]} />
     </ZStack>
     <Button onPress={() => { void send(); }} modifiers={[buttonStyle('plain'), accessibilityLabel('Xabarni yuborish'), disabled(!canSend)]}>
-      <Image systemName="arrow.up" color="#ffffff" modifiers={[
+      <Image systemName="arrow.up" color="white" modifiers={[
         font({ size: 18, weight: 'semibold' }), frame({ width: 30, height: 30 }),
-        background(canSend ? '#007AFF' : dark ? '#8e8e93' : '#6c6c70', shapes.circle()),
+        background(PlatformColor(canSend ? 'systemBlue' : 'systemGray'), shapes.circle()),
         frame({ width: 40, height: 40 }),
       ]} />
     </Button>
@@ -419,7 +417,6 @@ function Composer({ ready, queueing, mediaSending, mediaProgress, mediaError, cl
 
 export function ChatThreadScreen({ session, conversationId, title, peer }: Props) {
   const thread = useChatThread(session, conversationId);
-  const dark = useColorScheme() === 'dark';
   const reduceMotion = useReducedMotion();
   const inputRef = useRef<TextFieldRef>(null);
   const rootRef = useRef<ComponentRef<typeof View>>(null);
@@ -440,7 +437,7 @@ export function ChatThreadScreen({ session, conversationId, title, peer }: Props
     <Stack.Screen options={{ title: title || 'Suhbat', headerTitle: '', headerBackButtonDisplayMode: 'minimal',
       headerTransparent: true, headerShadowVisible: false, scrollEdgeEffects: { top: 'soft' },
       ...recentBackGesture(recentHolding || !!recentStrip) }} />
-    <View ref={rootRef} collapsable={false} style={[styles.root, { backgroundColor: dark ? '#000000' : '#ffffff' }]}>
+    <View ref={rootRef} collapsable={false} style={[styles.root, { backgroundColor: PlatformColor('systemBackground') }]}>
     <Host style={styles.root}>
       <Namespace id={namespaceId}>
       <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }),
