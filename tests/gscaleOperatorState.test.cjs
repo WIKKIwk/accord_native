@@ -115,3 +115,20 @@ test('changing order discards a late material prefill from the previous order', 
   assert.equal(store.getSnapshot().draft.micron_text, '20'); assert.equal(store.getSnapshot().draft.width_text, '600');
   store.dispose();
 });
+
+test('live printer status updates its mode and displays new completion events', async () => {
+  const { store, deps } = setup();
+  const device = deps.devices.getSnapshot();
+  device.transport = 'wifi'; device.selection = { transport: 'wifi', server: { endpoint: { baseUrl: 'http://scale:39117' }, latencyMs: 1 } };
+  let callbacks;
+  deps.makeLive = (server, value) => { callbacks = value; return { start() {}, stop() {} }; };
+  deps.refreshMonitor = () => new Promise(() => {});
+  store.start(); await flush();
+  const monitor = load('gscale/gscaleMonitor.ts').monitorSnapshotFromJson({ ok: true, state: {
+    printer: { connected: true, kind: 'godex', label: 'ulangan' }, print_request: { status: 'done', epc: 'E1' },
+  } });
+  callbacks.onSnapshot(monitor);
+  assert.equal(store.getSnapshot().draft.printer, 'godex'); assert.equal(store.getSnapshot().draft.print_mode, 'label');
+  assert.equal(store.getSnapshot().notice, 'zebra: print qildi • E1');
+  store.dispose();
+});

@@ -38,7 +38,7 @@ export type GScaleOperatorState = { draft: OperatorControlDraft; device: GScaleD
   monitor: MonitorSnapshot; materialWarehouses: string[]; presetLoading: boolean; presetApplied: boolean; presetItem: Item | null;
   presetError: string; contextEditing: boolean; actionLoading: boolean; manualPrintLoading: boolean; simpleLoading: boolean;
   requestInFlight: boolean; startConflict: boolean; error: string; notice: string; lastReceipt: Receipt | null;
-  archive: ArchiveSession[]; archiveLoading: boolean; archiveError: string; archivePrintingId: string };
+  archive: ArchiveSession[]; archiveLoading: boolean; archiveError: string; archivePrintingId: string; printerStatusOverride: string };
 
 /** Shared dashboard state. Platform views bind to this controller. */
 export class GScaleOperatorStore {
@@ -49,6 +49,7 @@ export class GScaleOperatorStore {
   private deviceKey = '';
   private lastBatch: GScaleBatchSession | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private printerStatusTimer: ReturnType<typeof setTimeout> | null = null;
   private autoPrintKey = '';
   private qtyBackup = '';
   private qtyCleared = false;
@@ -68,7 +69,7 @@ export class GScaleOperatorStore {
       materialWarehouses: [], presetLoading: this.controlOnly && !!args.freshForm, presetApplied: false, presetItem: null,
       presetError: '', contextEditing: false, actionLoading: false, manualPrintLoading: false, simpleLoading: false,
       requestInFlight: false, startConflict: false, error: '', notice: '', lastReceipt: null,
-      archive: [], archiveLoading: false, archiveError: '', archivePrintingId: '' };
+      archive: [], archiveLoading: false, archiveError: '', archivePrintingId: '', printerStatusOverride: '' };
     this.deviceKey = `${this.state.device.transport}|`;
   }
   getSnapshot = () => this.state;
@@ -219,7 +220,20 @@ export class GScaleOperatorStore {
   }
 
   private acceptMonitor(snapshot: MonitorSnapshot) {
-    const monitor = { ...mergeLiveMonitorWithRsBatch(snapshot, this.state.monitor), latencyMs: this.state.monitor.latencyMs };
+    const previous = this.state.monitor;
+    const monitor = { ...mergeLiveMonitorWithRsBatch(snapshot, previous), latencyMs: previous.latencyMs };
+    const kind = monitor.printerKind.trim().toLowerCase(), label = monitor.printerLabel.trim().toLowerCase();
+    const printer = kind === 'zebra' || kind === 'godex' ? kind : label.startsWith('zebra') ? 'zebra' :
+      label.startsWith('godex') || label.startsWith('go-dex') ? 'godex' : '';
+    if (printer && printer !== this.state.draft.printer) {
+      this.setDraft({ ...this.state.draft, printer, ...(printer === 'godex' ? { print_mode: 'label' } : {}) });
+    }
+    if (monitor.printerEventKey && monitor.printerEventKey !== previous.printerEventKey) {
+      if (this.printerStatusTimer) clearTimeout(this.printerStatusTimer);
+      this.update({ printerStatusOverride: monitor.printerEventMessage,
+        ...(['done', 'error'].includes(monitor.printerState) ? { notice: monitor.printerEventMessage } : {}) });
+      this.printerStatusTimer = setTimeout(() => { this.printerStatusTimer = null; this.update({ printerStatusOverride: '' }); }, 4000);
+    }
     this.update({ monitor, ...(!this.state.startConflict ? { error: '' } : {}) });
     this.maybeAutoPrint();
   }
@@ -417,6 +431,7 @@ export class GScaleOperatorStore {
 
   dispose(): void {
     this.alive = false; if (this.saveTimer) clearTimeout(this.saveTimer);
+    if (this.printerStatusTimer) clearTimeout(this.printerStatusTimer);
     this.live?.stop(); for (const unsubscribe of this.subscriptions) unsubscribe(); this.listeners.clear();
     this.deps.devices.dispose(); this.deps.batch.dispose();
   }
