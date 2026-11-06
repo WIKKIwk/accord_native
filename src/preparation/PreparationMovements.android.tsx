@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { WorkerOrderSheet } from '../components/WorkerOrderSheet';
 import { usePreparationContext } from './PreparationContext.android';
+import { PreparationInventoryAssignment } from './PreparationInventoryAssignment.android';
 import { preparationInventoryAssetBarcode, type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventoryLogic';
 import { PreparationButton, PreparationDialogs, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationInventory } from './usePreparationInventory.android';
@@ -82,14 +83,18 @@ export function PreparationInventoryScreen() {
 }
 
 function AssetRow({ asset, open }: { asset: PreparationInventoryAsset; open: () => void }) {
-  return <PreparationRow title={asset.item_name || asset.item_code} subtitle={[asset.identifier, `${asset.qty} ${asset.uom}`,
-    asset.custody_warehouse, asset.order_assignment?.order_label].filter(Boolean).join(' · ')} onPress={open} />;
+  return <PreparationRow title={asset.order_assignment?.order_label || asset.item_name || asset.item_code}
+    subtitle={[asset.order_assignment ? asset.item_name || asset.item_code : asset.identifier, `${asset.qty} ${asset.uom}`,
+      asset.custody_warehouse].filter(Boolean).join(' · ')} onPress={open} />;
 }
 
 function AssetDetail({ asset, inventory, assigned, close }: { asset: PreparationInventoryAsset; inventory: Inventory; assigned: readonly string[]; close: () => void }) {
   const [showQr, setShowQr] = useState(false), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const { session } = usePreparationContext();
   const [finished, setFinished] = useState(false);
   const barcode = preparationInventoryAssetBarcode(asset);
+  const showAssignment = session.capabilities.includes('raw_material.assign') &&
+    assigned.some(name => name.trim().toLowerCase() === asset.custody_warehouse.trim().toLowerCase());
   const image = useMemo(() => { try { const qr = qrFactory(0, 'M'); qr.addData(barcode); qr.make(); return qr.createDataURL(5, 20); } catch { return null; } }, [barcode]);
   const transfer = async () => {
     if (!inventory.canTransfer(asset)) return;
@@ -112,7 +117,9 @@ function AssetDetail({ asset, inventory, assigned, close }: { asset: Preparation
   return <ScrollView nestedScrollEnabled contentContainerStyle={{ padding: 16, gap: 10 }}>
     <PreparationText title>{asset.item_name || asset.item_code}</PreparationText>
     <PreparationRow title={asset.identifier || asset.asset_ref} subtitle={`${asset.qty} ${asset.uom} · ${asset.custody_warehouse} · ${asset.status}`} />
-    {asset.order_assignment ? <PreparationRow title={t('Buyurtma')} subtitle={asset.order_assignment.order_label} /> : null}
+    {showAssignment && barcode ? <PreparationInventoryAssignment session={session} barcode={barcode} allowAssignment={inventory.canTransfer(asset)}
+      changed={() => inventory.assets.refresh()} isCurrent={inventory.current} />
+      : asset.order_assignment ? <PreparationRow title={t('Buyurtma')} subtitle={asset.order_assignment.order_label} /> : null}
     {showQr && image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
     {barcode ? <PreparationButton label="QR kod" onPress={() => setShowQr(!showQr)} /> : null}
     {inventory.canTransfer(asset) ? <PreparationButton label="Transfer" disabled={inventory.busy || finished} onPress={() => void transfer()} /> : null}
