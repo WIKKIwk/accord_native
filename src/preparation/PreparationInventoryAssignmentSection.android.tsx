@@ -5,7 +5,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { adminRawMaterialLookup } from '../rawMaterialLookupApi';
 import { adminUnlinkRawMaterialAssignment } from '../rawMaterialUnlinkApi';
 import { sessionReadScope } from '../sessionReadScope';
-import { preparationAssignMaterial, preparationAssignmentCandidates } from './preparationInventoryAssignments';
+import { preparationAssignMaterial, preparationAssignmentCandidates } from './preparationInventoryAssignment';
 import { PreparationButton, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 type Lookup = Awaited<ReturnType<typeof adminRawMaterialLookup>>;
@@ -41,12 +41,12 @@ export function PreparationInventoryAssignment({ session, barcode, allowAssignme
     const id = await dialogs.choose('Buyurtmani tanlang', state.candidates.map(candidate => ({ label: label(candidate),
       subtitle: candidate.order.map.id, value: candidate.order.map.id })), undefined, true);
     const candidate = state.candidates.find(item => item.order.map.id === id);
-    if (!candidate || !isCurrent() || !candidate.apparatusOptions.length) return;
-    let apparatus = candidate.apparatusOptions[0];
-    if (candidate.apparatusOptions.length > 1) {
+    if (!candidate || !isCurrent() || !candidate.apparatus_options.length) return;
+    let apparatus = candidate.apparatus_options[0];
+    if (candidate.apparatus_options.length > 1) {
       const catalog = await adminApparatus(session, { limit: 10000, retryTransient: true }).catch(() => []);
       if (!isCurrent()) return;
-      const selected = await dialogs.choose('Apparatni tanlang', candidate.apparatusOptions.map(option => ({
+      const selected = await dialogs.choose('Apparatni tanlang', candidate.apparatus_options.map(option => ({
         label: catalog.find(item => item.id === option)?.name || option, value: option })), undefined, true);
       if (!selected || !isCurrent()) return;
       apparatus = selected;
@@ -66,7 +66,9 @@ export function PreparationInventoryAssignment({ session, barcode, allowAssignme
     if (!assignment || saving || !isCurrent() || !await dialogs.confirm('Homashyoni uzish', 'Bu homashyoni buyurtmadan uzasizmi?', 'Uzish') || !isCurrent()) return;
     setSaving(true);
     try {
-      await adminUnlinkRawMaterialAssignment(session, assignment.order_id, assignment.barcode);
+      await adminUnlinkRawMaterialAssignment(session, assignment.order_id, assignment.barcode, () => {
+        if (!isCurrent()) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching');
+      });
       if (isCurrent()) { await changed(); retry(); dialogs.message('Homashyoni uzish', 'Homashyo buyurtmadan uzildi'); }
     } catch (error) { if (isCurrent()) dialogs.message('Xatolik yuz berdi', error instanceof Error ? error.message : String(error)); }
     finally { if (isCurrent()) setSaving(false); }

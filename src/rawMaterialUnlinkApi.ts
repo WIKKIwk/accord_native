@@ -4,9 +4,9 @@ import { productionMapResponseError } from './workerControlsApi';
 import { rawMaterialAssignment } from './workerRawMaterials';
 
 /** @v2 adminUnlinkRawMaterialAssignment */
-export async function adminUnlinkRawMaterialAssignment(session: Session, orderId: string, barcode: string) {
+export async function adminUnlinkRawMaterialAssignment(session: Session, orderId: string, barcode: string, beforeSend?: () => void) {
   const response = await authorizedFetch(session, '/v1/mobile/admin/raw-material-assignments', { method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: orderId.trim(), barcode: barcode.trim() }) });
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: orderId.trim(), barcode: barcode.trim() }) }, beforeSend);
   if (response.status !== 200) {
     let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'raw_material_assignments');

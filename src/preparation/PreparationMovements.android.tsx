@@ -6,7 +6,7 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { WorkerOrderSheet } from '../components/WorkerOrderSheet';
 import { usePreparationContext } from './PreparationContext.android';
 import { PreparationInventoryAssignment } from './PreparationInventoryAssignmentSection.android';
-import { preparationInventoryAssetBarcode, type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventoryLogic';
+import { preparationInventoryAssetBarcode, type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventory';
 import { PreparationButton, PreparationDialogs, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationInventory } from './usePreparationInventory.android';
 
