@@ -65,7 +65,20 @@ export async function pickPreparationPrinter(options: {
   } catch { return null; }
 }
 
-export async function printPreparationJob(job: WorkerPrintJob, printer: Printer): Promise<boolean> {
+/** @v2 _InventoryAssetQrSheetState */
+export async function pickPreparationInventoryPrinter(options: {
+  isCurrent: () => boolean; selectDevice: () => Promise<PreparationDeviceSelection | null>;
+}): Promise<Printer | null> {
+  const cached = await SessionBluetoothPrinter.resolveCached();
+  if (cached) return { transport: 'bluetooth', printer: cached };
+  if (!options.isCurrent()) return null;
+  const selection = await options.selectDevice();
+  if (!selection) return null;
+  if (selection.transport === 'bluetooth') SessionBluetoothPrinter.remember(selection.printer);
+  return selection.transport === 'wifi' ? { ...selection, printer: '', printMode: '' } : selection;
+}
+
+export async function printPreparationJob(job: WorkerPrintJob, printer: Printer, options: { inventory?: boolean } = {}): Promise<boolean> {
   const request = UsbRpsPrintRequest.fromPrintJson(job);
   if (printer.transport === 'offline' || printer.transport === 'bluetooth') {
     const result = await PrintService.printRps(request, printer.transport === 'offline'
@@ -77,8 +90,8 @@ export async function printPreparationJob(job: WorkerPrintJob, printer: Printer)
   const selected: ConnectedWifiPrinter = printer;
   const { response, payload } = await fetchJsonWithTimeout(`${selected.serverBaseUrl}/v1/mobile/driver/print`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...request.toJson(), ...(selected.printer ? { printer: selected.printer } : {}),
-      ...(selected.printMode ? { print_mode: selected.printMode } : {}) }),
+    body: JSON.stringify({ ...request.toJson(), ...(!options.inventory && selected.printer ? { printer: selected.printer } : {}),
+      ...(!options.inventory && selected.printMode ? { print_mode: selected.printMode } : {}) }),
   }, 15000);
   const body = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : null;
   if (!response.ok || body?.ok !== true) throw new Error(text(body?.detail ?? body?.error, 'Printer QR kodini chop etmadi'));

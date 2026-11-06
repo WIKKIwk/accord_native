@@ -96,6 +96,7 @@ function SequenceRow({ session, row }: { session: Session; row: PreparationOrder
   </HStack>;
 }
 
+// @v2 AdminProductionMapOrdersScreen
 // @v2 _PreparationOrdersListState
 export function PreparationSequence({ session, controller, selectApparatus, renderDetail }: Props) {
   const t = usePreparationText(), sheet = useNativeSheet();

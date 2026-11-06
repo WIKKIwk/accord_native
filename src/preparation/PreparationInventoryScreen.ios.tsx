@@ -15,6 +15,10 @@ import { lookupPreparationInventoryQr, preparationInventoryCanTransfer, preparat
   requestPreparationInventoryTransfer, type PreparationInventoryAsset as Asset, type PreparationInventoryLocation as Location } from './preparationInventory';
 import { usePreparationInventory } from './usePreparationInventory';
 import { PreparationInventoryAssignment } from './PreparationInventoryAssignmentSection';
+import { PreparationPrinterPicker } from './PreparationPrinterPicker';
+import { reprintPreparationInventoryAsset } from './preparationInventoryReprint';
+import { PreparationReprintCancelled } from './preparationReprint';
+import type { PreparationDeviceSelection } from './preparationPrinter';
 
 function AssetSheet({ session, asset, warehouses, store }: { session: Session; asset: Asset; warehouses: Location[]; store: InventoryViewStore }) {
   const t = usePreparationText(), [showQr, setShowQr] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
@@ -22,6 +26,29 @@ function AssetSheet({ session, asset, warehouses, store }: { session: Session; a
   const owns = assigned.some(name => name.trim().toLowerCase() === asset.custody_warehouse.trim().toLowerCase());
   const showAssignment = session.capabilities.includes('raw_material.assign') && owns;
   const barcode = asset.identifier.trim() || asset.asset_ref.replace(/^[^:]*:/, '').trim();
+  const picker = useNativeSheet(), valid = useRef(true), pending = useRef<((value: PreparationDeviceSelection | null) => void) | null>(null);
+  useEffect(() => {
+    valid.current = true;
+    const unregister = registerSessionResetHook(async () => { valid.current = false; pending.current?.(null); });
+    return () => { valid.current = false; pending.current?.(null); unregister(); };
+  }, []);
+  const selectDevice = () => new Promise<PreparationDeviceSelection | null>(resolve => {
+    let settled = false;
+    const finish = (value: PreparationDeviceSelection | null) => { if (!settled) { settled = true; pending.current = null; resolve(value); } };
+    pending.current = finish;
+    picker.open(<PreparationPrinterPicker select={value => { finish(value); picker.close(); }} />,
+      { dismissible: true, onDismiss: () => finish(null) });
+  });
+  const reprint = async () => {
+    if (busy) return;
+    setBusy(true); setError('');
+    try {
+      const warning = await reprintPreparationInventoryAsset(session, barcode,
+        { isCurrent: () => valid.current && !!activeSessionToken(session), selectDevice });
+      if (valid.current) Alert.alert(t(warning ?? 'Mavjud QR qayta chop etildi'));
+    } catch (reason) { if (valid.current && !(reason instanceof PreparationReprintCancelled)) setError(reason instanceof Error ? reason.message : String(reason)); }
+    finally { if (valid.current) setBusy(false); }
+  };
   const qr = useMemo(() => { try { const value = qrFactory(0, 'M'); value.addData(barcode); value.make(); return value.createDataURL(5, 20); } catch { return ''; } }, [barcode]);
   const transfer = (destination: Location) => {
     const internal = preparationInventoryIsInternalTransfer(asset, destination, assigned);
@@ -44,6 +71,7 @@ function AssetSheet({ session, asset, warehouses, store }: { session: Session; a
       {!showAssignment && !!asset.order_assignment?.order_label && <Text>{t('Buyurtma')}: {asset.order_assignment.order_label}</Text>}
       {!!barcode && <Button label={t('QR kodni ko‘rish')} onPress={() => setShowQr(!showQr)} />}
       {showQr && !!qr && <RNHostView matchContents><Image source={{ uri: qr }} style={{ width: 200, height: 200, backgroundColor: 'white' }} contentFit="contain" /></RNHostView>}
+      {showQr && <Button label={t('Qayta chop etish')} modifiers={[disabled(busy)]} onPress={() => { void reprint(); }} />}
     </Section>
     {showAssignment && !!barcode && <PreparationInventoryAssignment session={session} barcode={barcode}
       allow={preparationInventoryCanTransfer(asset, assigned)} changed={() => store.reconcileAfterWrite()} />}

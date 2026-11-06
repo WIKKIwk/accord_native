@@ -60,3 +60,14 @@ test('manual printer address uses the V2 default port and rejects loopback', () 
   assert.throws(() => preparationPrinterServerUrl('localhost'), /Localhost/);
   assert.throws(() => preparationPrinterServerUrl(''), /formati/);
 });
+test('inventory Wi-Fi reprint uses the selected server without the production monitor override', async () => {
+  const x = setup(), oldFetch = global.fetch, requests = [];
+  global.fetch = async (url, init) => { requests.push([url, init]); return { ok: true, json: async () => ({ ok: true }) }; };
+  try {
+    const printer = await x.api.pickPreparationInventoryPrinter({ isCurrent: () => true,
+      selectDevice: async () => ({ transport: 'wifi', serverBaseUrl: 'http://printer:39117' }) });
+    assert.equal(await x.api.printPreparationJob({ epc: 'E' }, printer, { inventory: true }), true);
+    assert.equal(requests.length, 1); assert.equal(requests[0][0], 'http://printer:39117/v1/mobile/driver/print');
+    assert.deepEqual(JSON.parse(requests[0][1].body), { epc: 'E' });
+  } finally { global.fetch = oldFetch; }
+});
