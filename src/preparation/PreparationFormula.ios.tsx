@@ -1,4 +1,4 @@
-import { Button, Host, HStack, List, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { Button, HStack, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { disabled, keyboardType } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useFocusEffect, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -7,6 +7,7 @@ import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
 import { PreparationNotice } from './PreparationNotice';
+import { PreparationFormulaDetails } from './PreparationFormulaDetails';
 import { PreparationSharesDialog } from './PreparationSharesDialog';
 import { PreparationSeriyoPicker } from './PreparationSeriyoPicker';
 import { preparationNextFormulaName, type FormulaEditorRow } from './preparationLogic';
@@ -29,18 +30,6 @@ function FormulaLine({ row, index, busy, change, pick, remove, canRemove }: { ro
       onTextChange={percent => change({ ...row, percent })} />}
   </Section>;
 }
-function FormulaDetails({ formula, formulas, materialName, estimatedKg, select }: {
-  formula: Formula; formulas: Formula[]; materialName: string; estimatedKg: string | null; select: (action: 'shares' | 'edit' | 'delete') => void;
-}) {
-  const t = usePreparationText(), card = preparationFormulaCard(formula, formulas, estimatedKg);
-  return <Host style={{ minHeight: 300 }}><VStack><Text>{t('Formula ma’lumotlari')}</Text>
-    <Text>{materialName ? `${materialName} • ${formula.name}` : formula.name}</Text><Text>{card.count}</Text><Text>{card.share}</Text><List>
-    {card.lines.map((line, index) => <Text key={index}>{line}</Text>)}
-  </List><Button label={t('Tahrirlash')} onPress={() => select('edit')} />
-    <Button label={t('O‘chirish')} role="destructive" onPress={() => select('delete')} />
-    <Button label={t('Shnek ulushlarini belgilash')} onPress={() => select('shares')} /></VStack></Host>;
-}
-
 // @v2 PreparationOrderFormulaScreen
 export function PreparationFormula() {
   const params = useLocalSearchParams<Record<string, string | undefined>>();
@@ -81,7 +70,7 @@ export function PreparationFormula() {
   ]);
   const openDetails = (formula: Formula) => {
     let selected: 'shares' | 'edit' | 'delete' | null = null;
-    sheet.open(<FormulaDetails formula={formula} formulas={state.formulas} materialName={options.materialName} estimatedKg={state.estimatedMaterialKg}
+    sheet.open(<PreparationFormulaDetails formula={formula} formulas={state.formulas} materialName={options.materialName} estimatedKg={state.estimatedMaterialKg}
       select={action => { selected = action; sheet.close(); }} />,
       { compact: true, dismissible: true, onDismiss: () => {
         if (selected === 'shares') setSharing(true);

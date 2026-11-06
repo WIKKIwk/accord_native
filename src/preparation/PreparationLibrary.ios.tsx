@@ -1,4 +1,4 @@
-import { Button, ContextMenu, Host, List, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
+import { Button, Host, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
 import { disabled, onLongPressGesture } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -7,14 +7,15 @@ import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationInputDialog } from './PreparationInputDialog';
 import { PreparationNotice } from './PreparationNotice';
-import { PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
-import { PreparationVariantNameSheet } from './PreparationFormulaSheets';
+import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
+import { PreparationFormulaDetails } from './PreparationFormulaDetails';
 import { PreparationVariantNameDialog } from './PreparationVariantNameDialog';
 import { PreparationSharesDialog } from './PreparationSharesDialog';
-import { preparationCatalogSubtitle, preparationSetSubtitle } from './preparationLibraryPresentation';
+import { preparationCatalogSubtitle, preparationLegacyFormulaSubtitle, preparationLegacyFormulaTitle, preparationSavedFormulaDeleteMessage,
+  preparationSetRecipeSubtitle, preparationSetSubtitle, preparationSharedFormulaWarning } from './preparationLibraryPresentation';
 import { openPreparationFormula, openPreparationRoute } from './PreparationRoutes';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
-import { preparationVariantName, usePreparationLibrary } from './usePreparationLibrary';
+import { usePreparationLibrary } from './usePreparationLibrary';
 import { usePreparationNotice } from './usePreparationNotice';
 import { usePreparationSetDetail } from './usePreparationSetDetail';
 
@@ -90,59 +91,51 @@ export function PreparationFormulaSets() {
   </View>;
 }
 
-function LegacyFormulaSheet({ entry, select }: {
-  entry: FormulaSet['formulas'][number]; select: (action: 'shares' | 'edit' | 'delete') => void;
-}) {
-  const t = usePreparationText();
-  return <Host style={{ minHeight: 280 }}><VStack><Text>{t('Formula ma’lumotlari')}</Text><Text>{entry.formula.name}</Text><Text>{entry.material_name}</Text><List>
-    {entry.formula.lines.map(line => <Text key={line.item_code}>{line.name} · {line.percent}%</Text>)}
-  </List><Button label={t('Tahrirlash')} onPress={() => select('edit')} />
-    <Button label={t('O‘chirish')} role="destructive" onPress={() => select('delete')} />
-    <Button label={t('Shnek ulushlarini belgilash')} onPress={() => select('shares')} /></VStack></Host>;
-}
-
 function SetDetailsContent({ set, recipes }: { set: FormulaSet; recipes: Recipe[] }) {
-  const { session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet();
+  const { session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet(), notice = usePreparationNotice();
   const state = usePreparationSetDetail(session, set, recipes), { controller } = state;
   const [shareEntry, setShareEntry] = useState<FormulaSet['formulas'][number] | null>(null);
+  const [renameTarget, setRenameTarget] = useState<Recipe | null>(null), afterSheet = useRef<(() => void) | null>(null);
   const reload = useCallback(() => controller.reload(), [controller]); useReloadOnReturn(reload);
-  const rename = (recipe: Recipe) => sheet.open(<PreparationVariantNameSheet initial={recipe.name} close={sheet.close} save={async name => {
-    const { preparationRenameFormulaVariant } = await import('./preparationFormulaApi');
-    await preparationRenameFormulaVariant(session, { productCode: recipe.product_code, materialId: recipe.material_id, variantId: recipe.id, name: preparationVariantName(name) });
-    await reload();
-  }} />, { compact: true, dismissible: false });
-  const remove = (entry: typeof state.legacyFormulas[number]) => Alert.alert(t('Formulani o‘chirish'), `«${entry.formula.name}» formulasi o‘chirilsinmi?`, [
-    { text: t('Bekor qilish'), style: 'cancel' }, { text: t('O‘chirish'), style: 'destructive', onPress: () => { void controller.remove(entry).catch(preparationAlert); } },
+  const rename = (recipe: Recipe) => sheet.open(<RenameAction title={recipe.name} subtitle={recipe.formula_code} choose={() => {
+    afterSheet.current = () => setRenameTarget(recipe); sheet.close();
+  }} />, { compact: true, dismissible: true, onDismiss: () => { const next = afterSheet.current; afterSheet.current = null; next?.(); } });
+  const remove = (entry: typeof state.legacyFormulas[number]) => Alert.alert(t('Formulani o‘chirish'), preparationSavedFormulaDeleteMessage(entry.formula.name), [
+    { text: t('Bekor qilish'), style: 'cancel' }, { text: t('O‘chirish'), style: 'destructive', onPress: () => {
+      void controller.remove(entry).then(removed => { if (removed) notice.show(t('Formula o‘chirildi')); })
+        .catch(error => notice.show(preparationFormulaErrorMessage(error)));
+    } },
   ]);
   const edit = (entry: typeof state.legacyFormulas[number]) => openPreparationFormula({ orderId: set.set_id, orderCode: set.set_id,
     productCode: set.product_code, productTitle: set.name, materialId: entry.material_id, materialName: entry.material_name,
     initialFormulaName: entry.formula.name, variantId: entry.variant_id, variantName: entry.variant_name, manageSavedFormula: true });
   const details = (entry: typeof state.legacyFormulas[number]) => {
     let selected: 'shares' | 'edit' | 'delete' | null = null;
-    sheet.open(<LegacyFormulaSheet entry={entry} select={action => { selected = action; sheet.close(); }} />,
+    sheet.open(<PreparationFormulaDetails formula={entry.formula} formulas={controller.formulasFor(entry)} materialName={entry.material_name} estimatedKg={null}
+      select={action => { selected = action; sheet.close(); }} />,
       { compact: true, dismissible: true, onDismiss: () => {
         if (selected === 'shares') setShareEntry(entry);
         else if (selected === 'edit') edit(entry);
         else if (selected === 'delete') remove(entry);
       } });
   };
-  const shares = (entry: typeof state.legacyFormulas[number]) => setShareEntry(entry);
-  return <><Stack.Screen options={{ title: set.name }} /><PreparationList refresh={reload}>
-    <Section><Text>{t('Katalogdagi o‘zgarishlar formula keyingi safar buyurtmaga biriktirilganda olinadi.')}</Text></Section>
+  return <View style={{ flex: 1 }}><Stack.Screen options={{ title: set.name }} /><PreparationList refresh={reload}>
+    <Section><Text>{set.set_id}</Text><Text>{t(preparationSharedFormulaWarning)}</Text></Section>
     <PreparationStatus loading={state.busy} error={state.error} retry={() => { void reload(); }} />
     <Section>{!state.recipes.length && !state.legacyFormulas.length && <Text>{t('Bu komplektda formula qolmadi.')}</Text>}
-      {state.recipes.map(recipe => <ContextMenu key={recipe.id}><ContextMenu.Trigger><Button modifiers={[disabled(state.busy)]} onPress={() => openRecipe(recipe)}>
-        <VStack alignment="leading"><Text>{recipe.name}</Text><Text>{recipe.material_name} · {recipe.formula_code}</Text></VStack>
-      </Button></ContextMenu.Trigger><ContextMenu.Items><Button label={t('Nomini o‘zgartirish')} modifiers={[disabled(state.busy)]} onPress={() => rename(recipe)} />
-      </ContextMenu.Items></ContextMenu>)}
-      {state.legacyFormulas.map(entry => <ContextMenu key={`${entry.material_id}:${entry.formula.name}`}><ContextMenu.Trigger>
-        <Button modifiers={[disabled(state.busy)]} onPress={() => details(entry)}><VStack alignment="leading"><Text>{entry.formula.name}</Text><Text>{entry.material_name}</Text></VStack></Button>
-      </ContextMenu.Trigger><ContextMenu.Items><Button label={t('Tahrirlash')} onPress={() => edit(entry)} />
-        <Button label={t('Shnek ulushlarini belgilash')} onPress={() => shares(entry)} />
-        <Button label={t('O‘chirish')} role="destructive" onPress={() => remove(entry)} /></ContextMenu.Items></ContextMenu>)}
+      {state.recipes.map(recipe => <LibraryRow key={recipe.id} title={recipe.name} subtitle={preparationSetRecipeSubtitle(recipe)}
+        busy={state.busy} open={() => openRecipe(recipe)} actions={() => rename(recipe)} />)}
+      {state.legacyFormulas.map(entry => <Button key={`${entry.material_id}:${entry.formula.name}`} modifiers={[disabled(state.busy)]} onPress={() => details(entry)}>
+        <VStack alignment="leading"><Text>{preparationLegacyFormulaTitle(entry)}</Text><Text>{preparationLegacyFormulaSubtitle(entry)}</Text></VStack></Button>)}
     </Section>
-  </PreparationList>{shareEntry && <PreparationSharesDialog formulas={controller.formulasFor(shareEntry)} materialName={shareEntry.material_name}
-    close={() => setShareEntry(null)} save={values => controller.saveShares(shareEntry, values)} />}</>;
+  </PreparationList><PreparationNotice message={notice.message} />
+    {shareEntry && <PreparationSharesDialog formulas={controller.formulasFor(shareEntry)} materialName={shareEntry.material_name}
+      close={() => setShareEntry(null)} save={values => controller.saveShares(shareEntry, values)} />}
+    {renameTarget && <PreparationVariantNameDialog initial={renameTarget.name} save={async name => {
+      try { if (!await controller.renameRecipe(renameTarget, name)) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching'); return true; }
+      catch (error) { throw new Error(preparationFormulaErrorMessage(error)); }
+    }} finish={() => setRenameTarget(null)} />}
+  </View>;
 }
 export function PreparationFormulaSetDetail() {
   const { id } = useLocalSearchParams<{ id: string }>(), { session } = usePreparationContext();

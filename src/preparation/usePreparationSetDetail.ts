@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import type { Session } from '../auth';
+import { registerSessionResetHook } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
-import { preparationDeleteFormula, preparationFormulaCatalog, preparationFormulaSets, preparationUpdateFormulaShares } from './preparationFormulaApi';
+import { preparationDeleteFormula, preparationFormulaCatalog, preparationFormulaSets, preparationRenameFormulaVariant, preparationUpdateFormulaShares } from './preparationFormulaApi';
 import { preparationFormulaShareInputs } from './preparationLogic';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
+import { preparationVariantName, preparationVariantNameCanSave } from './usePreparationLibrary';
 
 type SetItem = Awaited<ReturnType<typeof preparationFormulaSets>>[number];
 type Recipe = Awaited<ReturnType<typeof preparationFormulaCatalog>>[number];
@@ -42,24 +44,39 @@ export class PreparationSetDetailState {
     try { await open(); } finally { if (this.current) await this.reload(); else this.update({ busy: false }); }
   }
   async remove(entry: Scoped) {
-    if (this.state.busy || !this.current) return;
+    if (this.state.busy || !this.current) return false;
+    const generation = this.generation;
     this.update({ busy: true });
     try {
       await preparationDeleteFormula(this.session, this.formulaSet.product_code, entry.formula.name,
         { materialId: entry.material_id, variantId: entry.variant_id, savedOnly: true });
-      if (this.current) this.update({ formulas: this.state.formulas.filter(item => item.material_id !== entry.material_id ||
+      if (!this.current || generation !== this.generation) return false;
+      this.update({ formulas: this.state.formulas.filter(item => item.material_id !== entry.material_id ||
         item.variant_id !== entry.variant_id || item.formula.name !== entry.formula.name) });
-    } finally { this.update({ busy: false }); }
+      return true;
+    } finally { if (generation === this.generation) this.update({ busy: false }); }
+  }
+  async renameRecipe(recipe: Recipe, name: string) {
+    if (this.state.busy || !this.current || !preparationVariantNameCanSave(name, recipe.name)) return false;
+    const generation = this.generation;
+    this.update({ busy: true });
+    try { await preparationRenameFormulaVariant(this.session, { productCode: recipe.product_code, materialId: recipe.material_id,
+      variantId: recipe.id, name: preparationVariantName(name) }); }
+    finally { if (generation === this.generation) this.update({ busy: false }); }
+    if (!this.current || generation !== this.generation) return false;
+    await this.reload(); return this.current && generation === this.generation;
   }
   async saveShares(entry: Scoped, values: string[]) {
-    if (this.state.busy || !this.current) return;
+    if (this.state.busy || !this.current) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching');
+    const generation = this.generation;
     const formulas = this.formulasFor(entry);
     this.update({ busy: true });
     try {
       await preparationUpdateFormulaShares(this.session, { productCode: this.formulaSet.product_code, materialId: entry.material_id,
         variantId: entry.variant_id, savedOnly: true, shares: preparationFormulaShareInputs(formulas.map(formula => formula.name), values) });
-      if (this.current) await this.reload();
-    } finally { this.update({ busy: false }); }
+      if (!this.current || generation !== this.generation) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching');
+      await this.reload();
+    } finally { if (generation === this.generation) this.update({ busy: false }); }
   }
   invalidate() {
     if (!this.active) return;
@@ -72,6 +89,9 @@ export function usePreparationSetDetail(session: Session, formulaSet: SetItem, r
   const controller = useMemo(() => { const input = JSON.parse(key) as { formulaSet: SetItem; recipes: Recipe[] };
     return new PreparationSetDetailState(session, input.formulaSet, input.recipes); }, [session, key]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  useEffect(() => { controller.activate(); return () => controller.dispose(); }, [controller]);
+  useEffect(() => {
+    controller.activate(); const unregister = registerSessionResetHook(async () => { controller.invalidate(); });
+    return () => { unregister(); controller.dispose(); };
+  }, [controller]);
   return { ...state, legacyFormulas: controller.legacyFormulas, controller };
 }
