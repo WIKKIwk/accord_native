@@ -4,8 +4,8 @@ import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import qrFactory from 'qrcode-generator';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
-import { registerSessionResetHook } from '../auth';
+import { Alert, AppState } from 'react-native';
+import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
@@ -15,6 +15,9 @@ import { PreparationJournal, type JournalState } from './preparationJournal';
 import { createPreparationProductionBatchJournal, createPreparationProductionOrderJournal, createPreparationProductionOrdersJournal } from './preparationJournalFactory';
 import { preparationDisplay } from './preparationModel';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
+import { reprintPreparationRollWithPrinter, type PreparationDeviceSelection } from './preparationPrinter';
+import { PreparationReprintCancelled } from './preparationReprint';
+import { PreparationPrinterPicker } from './PreparationPrinterPicker';
 
 type Order = ReturnType<typeof preparationProductionOrderFromJson>;
 type Batch = ReturnType<typeof preparationProductionBatchFromJson>;
@@ -60,8 +63,36 @@ function Recipe({ recipe }: { recipe: Readonly<Record<string, unknown>> | null }
 }
 
 // @v2 RpsQrReprintSheet
-function RollSheet({ roll }: { roll: Roll }) {
-  const t = usePreparationText();
+function RollSheet({ roll, session, orderId }: { roll: Roll; session: Session; orderId: string }) {
+  const t = usePreparationText(), picker = useNativeSheet();
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const valid = useRef(true), pending = useRef<((value: PreparationDeviceSelection | null) => void) | null>(null);
+  useEffect(() => {
+    valid.current = true;
+    const unregister = registerSessionResetHook(async () => { valid.current = false; pending.current?.(null); });
+    return () => { unregister(); valid.current = false; pending.current?.(null); };
+  }, []);
+  const selectDevice = () => new Promise<PreparationDeviceSelection | null>(resolve => {
+    let settled = false;
+    const finish = (value: PreparationDeviceSelection | null) => {
+      if (settled) return;
+      settled = true; pending.current = null; resolve(value);
+    };
+    pending.current = finish;
+    picker.open(<PreparationPrinterPicker select={value => { finish(value); picker.close(); }} />,
+      { dismissible: true, onDismiss: () => finish(null) });
+  });
+  const reprint = async () => {
+    if (busy) return;
+    setBusy(true); setError('');
+    try {
+      const warning = await reprintPreparationRollWithPrinter(session, roll, orderId,
+        { isCurrent: () => valid.current && !!activeSessionToken(session), selectDevice });
+      if (valid.current) Alert.alert(t(warning ?? 'Mavjud QR qayta chop etildi'));
+    } catch (reason) {
+      if (valid.current && !(reason instanceof PreparationReprintCancelled)) setError(reason instanceof Error ? reason.message : String(reason));
+    } finally { if (valid.current) setBusy(false); }
+  };
   const image = useMemo(() => {
     try { const qr = qrFactory(0, 'M'); qr.addData(roll.epc); qr.make(); return qr.createDataURL(5, 20); }
     catch { return ''; }
@@ -71,7 +102,8 @@ function RollSheet({ roll }: { roll: Roll }) {
     {!!image && <RNHostView matchContents><Image source={{ uri: image }} style={{ width: 200, height: 200, backgroundColor: 'white' }}
       contentFit="contain" accessibilityLabel={t('Chop etilgan QR')} /></RNHostView>}
     <Text>{roll.epc}</Text><List><Recipe recipe={roll.preparation_formula} /></List>
-    <Button label={t('Qayta chop etish')} modifiers={[disabled(true)]} />
+    {!!error && <Text>{error}</Text>}
+    <Button label={t('Qayta chop etish')} modifiers={[disabled(busy)]} onPress={() => { void reprint(); }} />
   </VStack></Host>;
 }
 
@@ -136,7 +168,8 @@ export function PreparationProductionBatch() {
         <Text>{state.summary.roll_count} ta rulon · {preparationDisplay(state.summary.total_net_kg)} kg · {preparationDisplay(state.summary.total_length_m)} m</Text>
         <Recipe recipe={state.summary.preparation_formula} /></Section>}
       <JournalFooter state={state} empty="Hali rulon kirim qilinmagan." more={() => { void current.current?.load({ append: true }); }} reload={() => { void current.current?.load(); }} />
-      <Section>{state.items.map(roll => <Button key={roll.epc} onPress={() => sheet.open(<RollSheet roll={roll} />, { compact: true, dismissible: true })}>
+      <Section>{state.items.map(roll => <Button key={roll.epc} onPress={() => sheet.open(<RollSheet roll={roll} session={session}
+        orderId={state.summary?.order_id ?? ''} />, { compact: true, dismissible: true })}>
         <VStack alignment="leading"><Text>{roll.epc}</Text><Text>{preparationJournalDate(roll.printed_at)} · {roll.warehouse}</Text>
           <Text>{preparationDisplay(roll.net_kg)} kg{roll.length_m ? ` · ${preparationDisplay(roll.length_m)} m` : ''}{roll.width_mm ? ` · ${preparationDisplay(roll.width_mm)} mm` : ''}{roll.micron ? ` · ${preparationDisplay(roll.micron)} mkm` : ''}</Text></VStack>
       </Button>)}</Section>
