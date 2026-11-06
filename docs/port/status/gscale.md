@@ -8,15 +8,15 @@ Stopped at: finish role-specific order selection and the remaining operator stat
 | Where | V2 reference | What is needed |
 |---|---|---|
 | `modules/accord-gscale` | `SceneDelegate.swift`, `MainActivity.kt`, `network_candidates_io.dart`, `_connectLiveStreamOnce` | Build the native module and verify Bonjour/NSD, UDP discovery, monitor streaming, permissions and local HTTP on physical iOS and Android devices with a real scale/server. The Swift SSE parser was exercised against a local HTTP server; Android native code has not been compiled here. |
-| `src/gscale/**` | `gscale_mobile_app*.dart` | Connect saved discovery/device selection and port the operator dashboard, catalog UI, weighing, printing and receipt behaviour. Discovery probing and catalog warehouse-scope rules are implemented. |
+| `src/gscale/**` | `gscale_mobile_app*.dart` | Complete the operator dashboard and picker views, compare every remaining state and action against V2, and connect the runtime to the platform routes. |
 | `src/gscale/gscaleDiscovery.ts` | `gscale_mobile_app_helpers_part_10.dart` | V2 iOS additionally runs a Dart UDP fallback after its native UDP pass. Verify whether a second native pass is needed for equivalent results on physical devices. |
-| `src/gscale/gscaleBatchApi.ts` | `mobile_api_gscale_declarations_part_01.dart` | Batch requests and response models have source-derived tests; connect them to the operator flow. No direct V2 HTTP recording was found for these methods. |
-| `src/gscale/gscaleControlLogic.ts` | `gscale_mobile_app_helpers_part_07.dart`, `gscale_mobile_app_declarations_part_06.dart` | Quantity/weight gates and receipt-label conversion are ported; connect them to the operator flow and port its remaining actions. |
+| `src/gscale/gscaleBatchApi.ts` | `mobile_api_gscale_declarations_part_01.dart` | Batch requests and response models have source-derived tests and are connected to operator state. No direct V2 HTTP recording was found for these methods; verify the complete flow against the baseline. |
+| `src/gscale/gscaleControlLogic.ts` | `gscale_mobile_app_helpers_part_07.dart`, `gscale_mobile_app_declarations_part_06.dart` | Quantity/weight gates and receipt-label conversion are connected to operator state; compare remaining actions and states with V2. |
 | `src/gscale/gscaleBatchPrint.ts` | `_printActiveRsBatch` | Local preparation, physical printing and confirmation, including one EPC per label, are implemented and need operator UI wiring and real-printer verification. |
-| `src/gscale/gscaleBatchStart.ts` | `_startRsBatchFromSelection` | Order, warehouse, dimensions and apparatus are checked before batch start; wire the dependencies to the operator state and platform picker. |
-| `src/gscale/gscaleBatchState.ts` | `_refreshRsBatchState`, `_applyRsBatchSession` | Stale batch reads, stopping and late ERP error handling are implemented; wire the store to the operator state and preserve the preparation conflict message when explicitly refreshing. |
-| `src/gscale/gscalePreparation.ts` | `gscale_mobile_app_preparation_receipt.dart`, `_submitSimpleReceipt` | Formula preset matching, conflict guards and simple-receipt checks are implemented; connect them to the operator state and preparation entry. |
-| `src/gscale/gscaleDraft.ts` | `OperatorControlDraft`, `_loadControlDraftPreferences` | Draft persistence and restoration rules are implemented; wire them to operator state, including V2's debounce and preset loading. |
+| `src/gscale/gscaleBatchStart.ts` | `_startRsBatchFromSelection` | Order, warehouse, dimensions and apparatus are checked before batch start; connect the platform apparatus picker. |
+| `src/gscale/gscaleBatchState.ts` | `_refreshRsBatchState`, `_applyRsBatchSession` | Stale batch reads, stopping and late ERP error handling are connected; preserve the preparation conflict message when explicitly refreshing. |
+| `src/gscale/gscalePreparation.ts` | `gscale_mobile_app_preparation_receipt.dart`, `_submitSimpleReceipt` | Formula preset matching, conflict guards and simple-receipt checks are connected; connect preparation entry to the platform route. |
+| `src/gscale/gscaleDraft.ts` | `OperatorControlDraft`, `_loadControlDraftPreferences` | Draft persistence, restoration, debounce and preset loading are connected; verify account/order transitions in the full UI. |
 | `src/gscale/gscaleDeviceState.ts` | `ServerPickerPage`, `_GScaleMobileAppState` | Device restoration, discovery and manual server validation are implemented; wire the store to both platform pickers and native printer lists. |
 | `src/gscale/gscaleControlViewModel.ts` | `_buildControlSection` | Control visibility and action-enable rules are extracted; connect them to platform controls and remaining operator state. |
 | `src/gscale/gscaleMaterialPicker.ts` | `_openItemPicker`, `_loadMaterialOrderChoices` | Order-scoped paging, micron choices and cache invalidation are implemented; connect the picker and its prefill guards to operator state. |
@@ -44,3 +44,14 @@ The shared `adminItemsPage` and `adminWarehouses` API methods used by `gscale_ca
 The shared `adminRawMaterialAssignmentOrders` method is also absent; the material supplier's GScale order picker requires it. Preparation orders can use the existing `preparationSnapshot` reader.
 
 The role ledger does not recognize `gscale`, so `port_ledger.mjs role gscale 1` cannot generate a reading list or satisfy the role gate. Add GScale session support to the ledger.
+
+The iOS and Android screen skills require `docs/port/roles/gscale.md` before screen work. That path is not in the GScale session's write fence; supply the GScale UI contract through the integrator.
+
+## Verification at stop
+
+- `node --test tests/*.test.cjs`: 923 passed, including 80 GScale tests. A pre-change full-suite count was not recorded.
+- iOS TypeScript and Expo lint passed. Android TypeScript reported the same 10 baseline errors listed in `PORT.md`.
+- `port_ledger.mjs check` passed tag resolution with seven existing non-GScale endpoint warnings. `role gscale 1` failed because the ledger does not recognize this session.
+- Expo autolinking found the module on both platforms. Swift UDP and monitor sources type-checked; the Swift monitor parser passed a local HTTP streaming check. Android native code has not been compiled here.
+- No simulator, emulator, phone, scale or printer was used. Real-device validation remains open.
+- Tokens read were not measured. V2 is pinned to baseline `7c87a54e`.
