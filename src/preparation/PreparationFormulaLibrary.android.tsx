@@ -1,9 +1,10 @@
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext.android';
 import { PreparationFormulaDetails, type FormulaDetailAction } from './PreparationFormulaDetails.android';
+import { PreparationNotice } from './PreparationNotice';
 import { PreparationSharesDialog } from './PreparationFormulaEditor.android';
 import { VariantNameDialog } from './PreparationVariants.android';
 import { openPreparationFormula, readPreparationRouteData } from './preparationNavigation.android';
@@ -11,6 +12,8 @@ import { PreparationButton, PreparationField, PreparationPage, PreparationRow, P
 import { usePreparationLibraryView, usePreparationReset } from './usePreparationAndroidView.android';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
 import { usePreparationSetDetail } from './usePreparationSetDetail';
+import { usePreparationNotice } from './usePreparationNotice';
+import { preparationCatalogSubtitle, preparationSetSubtitle } from './preparationLibraryPresentation';
 import type { preparationFormulaCatalogEntryFromJson, preparationFormulaSetFromJson } from './preparationModel';
 
 type Recipe = ReturnType<typeof preparationFormulaCatalogEntryFromJson>;
@@ -21,6 +24,7 @@ const recipeOptions = (recipe: Recipe) => ({ orderId: '', orderCode: '', product
 
 function Library({ mode }: { mode: 'sets' | 'catalog' }) {
   const { session } = usePreparationContext(), state = usePreparationLibraryView(session, mode), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const sheet = useNativeSheet(), notice = usePreparationNotice(), afterSheet = useRef<(() => void) | null>(null);
   const [renameTarget, setRenameTarget] = useState<Recipe | null>(null), [renaming, setRenaming] = useState(false), [renameError, setRenameError] = useState<string | null>(null);
   const renameInFlight = useRef(false);
   const focused = useRef(false);
@@ -28,36 +32,44 @@ function Library({ mode }: { mode: 'sets' | 'catalog' }) {
   const renameRecipe = async (name: string) => {
     if (!renameTarget || renameInFlight.current) return;
     renameInFlight.current = true; setRenaming(true); setRenameError(null);
-    try { await state.controller.renameRecipe(renameTarget, name); setRenameTarget(null); }
+    try {
+      if (!await state.controller.renameRecipe(renameTarget, name)) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching');
+      setRenameTarget(null);
+    }
     catch (error) { setRenameError(preparationFormulaErrorMessage(error)); }
     finally { renameInFlight.current = false; setRenaming(false); }
   };
   const renameSet = async (set: FormulaSet) => {
-    const name = await dialogs.input({ title: 'Nomini o‘zgartirish', label: 'Komplekt nomi', initial: set.name });
+    const name = await dialogs.input({ title: 'Komplekt nomini o‘zgartirish', label: 'Komplekt nomi', initial: set.name });
     if (name === null) return;
-    try { await state.controller.renameSet(set, name); } catch (error) { dialogs.message('Xatolik yuz berdi', String(error)); }
+    try { if (await state.controller.renameSet(set, name)) notice.show(t('Komplekt nomi o‘zgartirildi')); }
+    catch (error) { notice.show(preparationFormulaErrorMessage(error)); }
   };
+  const actions = (title: string, subtitle: string | undefined, choose: () => void) => sheet.open(
+    <View style={{ padding: 16, gap: 10 }}><PreparationText title>{title}</PreparationText>{!!subtitle && <PreparationText>{subtitle}</PreparationText>}
+      <PreparationRow title={t('Nomini o‘zgartirish')} onPress={() => { afterSheet.current = choose; sheet.close(); }} /></View>,
+    { compact: true, dismissible: true, onDismiss: () => { const next = afterSheet.current; afterSheet.current = null; next?.(); } });
   const disabled = state.actionsBlocked;
-  return <><PreparationPage title={mode === 'catalog' ? 'Formulalar' : 'Mahsulot formulasi'} drawer={mode === 'catalog'} refreshing={state.loading}
+  return <><View style={{ flex: 1 }}><PreparationPage title="Formulalar" drawer={mode === 'catalog'} refreshing={state.loading}
     onRefresh={() => void state.controller.load()}>
     <PreparationField label={mode === 'catalog' ? 'Formula nomi, kodi yoki buyurtmani qidirish' : 'Kod, nom yoki buyurtmani qidirish'}
       onChange={value => state.controller.setQuery(value)} />
     {state.loading && !state.recipes.length && !state.sets.length ? <ActivityIndicator /> : null}
     {state.error ? <><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => void state.controller.load()} /></> : null}
     {mode === 'catalog' ? <>
-      <PreparationText title>{`${t('Barcha buyurtmalarning formulalari')}: ${state.recipes.length} ta`}</PreparationText>
-      {!state.loading && !state.filteredRecipes.length ? <PreparationText>{t(state.recipes.length ? 'Formula topilmadi.' : 'Saqlangan formulalar yo‘q.')}</PreparationText> : null}
+      <PreparationText title>{`${t('Barcha buyurtmalarning formulalari')}: ${state.filteredRecipes.length} ta`}</PreparationText>
+      {!state.loading && !state.error && !state.filteredRecipes.length ? <PreparationText>{t(state.query.trim() ? 'Formula topilmadi.' : 'Saqlangan formulalar yo‘q.')}</PreparationText> : null}
       {state.filteredRecipes.map(recipe => <PreparationRow key={`${recipe.product_code}:${recipe.material_id}:${recipe.id}`} title={recipe.name}
-        subtitle={[recipe.formula_code, recipe.material_name, recipe.product_title, ...recipe.order_codes].filter(Boolean).join(' · ')} disabled={disabled}
-        onPress={() => openPreparationFormula(recipeOptions(recipe))} onLongPress={() => { setRenameError(null); setRenameTarget(recipe); }} />)}
+        subtitle={preparationCatalogSubtitle(recipe)} disabled={disabled}
+        onPress={() => openPreparationFormula(recipeOptions(recipe))} onLongPress={() => actions(recipe.name, recipe.formula_code, () => { setRenameError(null); setRenameTarget(recipe); })} />)}
     </> : <>
-      {!state.loading && !state.filteredSets.length ? <PreparationText>{t(state.sets.length ? 'Formula komplekti topilmadi.' : 'Saqlangan formulalar yo‘q.')}</PreparationText> : null}
+      {!state.loading && !state.error && !state.filteredSets.length ? <PreparationText>{t(state.query.trim() ? 'Formula komplekti topilmadi.' : 'Saqlangan formulalar yo‘q.')}</PreparationText> : null}
       {state.filteredSets.map(set => <PreparationRow key={set.set_id} title={set.name}
-        subtitle={`${set.product_title} · ${state.controller.recipeCount(set)} ta`} disabled={disabled}
+        subtitle={preparationSetSubtitle(set, state.controller.recipeCount(set))} disabled={disabled}
         onPress={() => router.push({ pathname: '/android-preparation/set-detail', params: { data: JSON.stringify({ set, recipes: state.controller.recipesFor(set) }) } } as unknown as Href)}
-        onLongPress={() => void renameSet(set)} />)}
+        onLongPress={() => actions(set.set_id, undefined, () => { void renameSet(set); })} />)}
     </>}
-  </PreparationPage>{renameTarget ? <VariantNameDialog initial={renameTarget.name} busy={renaming} error={renameError}
+  </PreparationPage><PreparationNotice message={notice.message} /></View>{renameTarget ? <VariantNameDialog initial={renameTarget.name} busy={renaming} error={renameError}
     clearError={() => setRenameError(null)} submit={name => void renameRecipe(name)} cancel={() => setRenameTarget(null)} /> : null}</>;
 }
 
