@@ -11,12 +11,16 @@
       "bundleIdentifier": "com.accord.mobilev4",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "The app uses Bluetooth to find and print labels on the XP-P323B printer.",
-        "NSBluetoothPeripheralUsageDescription": "The app uses Bluetooth to connect to the XP-P323B printer."
+        "NSBluetoothPeripheralUsageDescription": "The app uses Bluetooth to connect to the XP-P323B printer.",
+        "NSLocalNetworkUsageDescription": "The app uses the local network to securely connect to your Accord ERP server and find printers, including when the internet is unavailable.",
+        "NSBonjourServices": ["_gscale-mobileapi._tcp", "_rp-scale._tcp"],
+        "NSAppTransportSecurity": { "NSAllowsLocalNetworking": true }
       },
       "icon": "./assets/expo.icon"
     },
     "android": {
       "package": "com.accord.mobilev4",
+      "permissions": ["android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_MULTICAST_STATE"],
       "softwareKeyboardLayoutMode": "pan",
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
