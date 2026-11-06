@@ -36,12 +36,13 @@ for (const basePath of ['/ios-preparation/chat', '/ios-worker/chat']) {
     const { createChatNavigation } = load('shared/chat/chatNavigation.ts');
     const navigation = createChatNavigation(basePath, navigator);
     const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
-    const ui = new Proxy({}, { get: (_, name) => name });
+    const toolbar = function Toolbar() {}; toolbar.Content = 'Toolbar.Content';
+    const ui = new Proxy({ Toolbar: toolbar, useNativeState: value => ({ value }) }, { get: (target, name) => target[name] ?? name });
     const modifiers = new Proxy({ shapes: { rectangle: () => ({}), capsule: () => ({}) } }, { get: (target, name) => target[name] ?? (() => ({})) });
     const stackToolbar = function Toolbar() {}; stackToolbar.Button = 'Toolbar.Button';
     const sharedMocks = {
       'react/jsx-runtime': jsx, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
-      'expo-router': { Stack: { Screen: 'Stack.Screen', Toolbar: stackToolbar } },
+      'expo-router': { Stack: { Screen: 'Stack.Screen', Toolbar: stackToolbar }, router: { back() {} } },
       'expo-symbols': { SymbolView: 'SymbolView' },
       'react-native': { PlatformColor: name => name, Pressable: 'Pressable', StyleSheet: { create: styles => styles } },
       '../chatModel': { filterChatConversations: items => items, chatTime: () => '' },

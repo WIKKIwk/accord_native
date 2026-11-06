@@ -1,4 +1,4 @@
-import { Redirect, Stack, router, useFocusEffect, useLocalSearchParams, usePathname } from 'expo-router';
+import { Redirect, Stack, router, useFocusEffect, useLocalSearchParams, usePathname, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { activeSessionToken, loadSession, logout, registerSessionResetHook, type Session } from '../../auth';
@@ -29,8 +29,9 @@ export function ChatListPage() {
   return <ChatConversationsScreen key={session.imageCacheScope} session={session} navigation={navigation} onOpenDrawer={onOpenDrawer} onBack={onBack} />;
 }
 export function ChatDirectoryPage() {
-  const { session, navigation } = useChatRoute();
-  return <ChatDirectoryScreen key={session.imageCacheScope} session={session} onOpenConversation={navigation.replaceConversation} />;
+  const { session, navigation, basePath } = useChatRoute();
+  return <ChatDirectoryScreen key={session.imageCacheScope} session={session} onOpenConversation={navigation.replaceConversation}
+    onClose={() => { if (router.canGoBack()) router.back(); else router.replace(basePath as Href); }} />;
 }
 export function ChatThreadPage() {
   const { session } = useChatRoute();

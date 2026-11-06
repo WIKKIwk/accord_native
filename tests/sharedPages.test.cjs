@@ -54,11 +54,14 @@ test('preparation provides its real machine tabs without inheriting worker compl
 
 for (const platform of ['ios', 'android']) {
   test(`${platform}: chat pages consume arbitrary role sessions and scoped conversation metadata`, () => {
+    const closes = [];
+    let canGoBack = true;
     const session = { imageCacheScope: 'preparation-account', token: 'example' };
     const peer = { role: 'customer', ref: 'customer-id', displayName: 'Customer' };
     const nav = { openDirectory() {}, openConversation() {}, replaceConversation() {} };
     const api = load(`shared/chat/ChatPages.${platform}.tsx`, {
-      'expo-router': { useLocalSearchParams: () => ({ conversationId: 'conversation', title: 'Fallback title' }), useFocusEffect: () => {} },
+      'expo-router': { useLocalSearchParams: () => ({ conversationId: 'conversation', title: 'Fallback title' }), useFocusEffect: () => {},
+        router: { canGoBack: () => canGoBack, back: () => closes.push('back'), replace: value => closes.push(value) } },
       react: { useCallback: callback => callback },
       'react-native': {}, '../../auth': {}, '../../appLock': {}, '../../chatApi': {},
       '../../components/ChatConversationsScreen': { ChatConversationsScreen: 'Conversations' },
@@ -71,6 +74,12 @@ for (const platform of ['ios', 'android']) {
     assert.equal(api.ChatListPage().props.session, session);
     assert.equal(api.ChatListPage().props.navigation, nav);
     assert.equal(api.ChatDirectoryPage().props.onOpenConversation, nav.replaceConversation);
+    if (platform === 'ios') {
+      api.ChatDirectoryPage().props.onClose();
+      canGoBack = false;
+      api.ChatDirectoryPage().props.onClose();
+      assert.deepEqual(closes, ['back', '/any-role/chat']);
+    }
     const thread = api.ChatThreadPage();
     assert.equal(thread.props.session, session);
     assert.equal(thread.props.peer, peer);

@@ -65,6 +65,8 @@ export function useChatDirectory(session: Session, onOpenConversation: (conversa
 
   useFocusEffect(useCallback(() => {
     focused.current = true;
+    setOpeningKey('');
+    setLoadingMore(false);
     lastAutoPage.current = '';
     void load(queryRef.current, 0);
     return () => {
@@ -78,7 +80,7 @@ export function useChatDirectory(session: Session, onOpenConversation: (conversa
     };
   }, [load]));
 
-  const search = (value: string) => {
+  const search = useCallback((value: string) => {
     queryRef.current = value;
     lastAutoPage.current = '';
     setQuery(value);
@@ -91,9 +93,9 @@ export function useChatDirectory(session: Session, onOpenConversation: (conversa
     setLoadingMore(false);
     setError(null);
     debounce.current = setTimeout(() => { void load(value, 0); }, value.trim() ? 300 : 0);
-  };
+  }, [load]);
 
-  const open = async (peer: ChatPeer) => {
+  const open = useCallback(async (peer: ChatPeer) => {
     if (!focused.current || openingRequest.current) return;
     const controller = new AbortController();
     openingRequest.current = controller;
@@ -113,7 +115,7 @@ export function useChatDirectory(session: Session, onOpenConversation: (conversa
         if (focused.current) setOpeningKey('');
       }
     }
-  };
+  }, [onOpenConversation, remember, session]);
 
   return { items, query, queryRef, error, hasMore, nextOffset, loadingMore, openingKey, avatarToken, load, loadNextPage, search, open };
 }

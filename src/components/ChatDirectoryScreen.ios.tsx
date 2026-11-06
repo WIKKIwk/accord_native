@@ -1,6 +1,6 @@
-import { Button, Host, HStack, Image, List, ProgressView, RNHostView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
-import { buttonStyle, contentShape, disabled, font, foregroundStyle, frame, lineLimit, listRowBackground, listRowInsets, listRowSeparator, listStyle, onAppear, padding, scrollContentBackground, shapes } from '@expo/ui/swift-ui/modifiers';
-import { Stack } from 'expo-router';
+import { Button, Host, HStack, Image, List, NavigationStack, ProgressView, RNHostView, Spacer, Text, Toolbar, ToolbarItem, useNativeState, VStack } from '@expo/ui/swift-ui';
+import { accessibilityLabel, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, labelStyle, lineLimit, listRowBackground, listRowInsets, listRowSeparator, listStyle, navigationBarTitleDisplayMode, navigationTitle, onAppear, padding, scrollContentBackground, searchable, shapes, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
+import { router, Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import type { Session } from '../auth';
 import type { ChatPeer } from '../chatModel';
@@ -14,6 +14,7 @@ import { useChatDirectory } from '../shared/chat/useChatDirectory';
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 const transparentRow = listRowBackground('transparent');
 const peerKey = (peer: ChatPeer) => JSON.stringify([peer.role, peer.ref]);
+const screenOptions = { title: 'Yangi suhbat', headerShown: false, headerSearchBarOptions: undefined, gestureEnabled: true };
 
 function DirectoryRow({ peer, session, token, opening, busy, onOpen }: {
   peer: ChatPeer; session: Session; token: string | null; opening: boolean; busy: boolean; onOpen: (peer: ChatPeer) => void;
@@ -36,19 +37,20 @@ function DirectoryPageFooter({ onVisible }: { onVisible: () => void }) {
   </HStack>;
 }
 
-export function ChatDirectoryScreen({ session, onOpenConversation }: ChatDirectoryProps) {
+export function ChatDirectoryScreen({ session, onOpenConversation, onClose = router.back }: ChatDirectoryProps & { onClose?: () => void }) {
   const colors = useWorkerColors();
   const { items, query, queryRef, error, hasMore, nextOffset, loadingMore, openingKey, avatarToken, load, loadNextPage, search, open } = useChatDirectory(session, onOpenConversation);
+  const nativeQuery = useNativeState(query);
   return <>
-    <Stack.Screen options={{
-      title: 'Yangi suhbat', headerLargeTitle: true, headerBackButtonDisplayMode: 'minimal',
-      headerLargeTitleShadowVisible: false, headerShadowVisible: false, headerTransparent: true, scrollEdgeEffects: { top: 'soft' },
-      headerSearchBarOptions: {
-        placeholder: 'Foydalanuvchi qidirish', autoCapitalize: 'none', hideWhenScrolling: false, obscureBackground: false,
-        onChangeText: event => search(event.nativeEvent.text), onCancelButtonPress: () => search(''),
-      },
-    }} />
+    <Stack.Screen options={screenOptions} />
     <Host style={[styles.root, { backgroundColor: colors.background }]}>
+      {/* Search keeps its native binding while the contact list reloads or filters. */}
+      <NavigationStack>
+      <Toolbar modifiers={[
+        navigationTitle('Yangi suhbat'), navigationBarTitleDisplayMode('large'),
+        searchable(nativeQuery, { placement: 'navigationBarDrawer', prompt: 'Foydalanuvchi qidirish', onChange: search }),
+        textInputAutocapitalization('never'),
+      ]}>
       <List modifiers={[listStyle('plain'), scrollContentBackground('hidden')]}>
         {items === null && !error ? <HStack spacing={10} modifiers={[transparentRow, padding({ vertical: 14 }), listRowSeparator('hidden')]}>
           <ProgressView /><Text modifiers={[secondary]}>Foydalanuvchilar yuklanmoqda…</Text>
@@ -73,6 +75,12 @@ export function ChatDirectoryScreen({ session, onOpenConversation }: ChatDirecto
         {hasMore && nextOffset > 0 && !error
           ? <DirectoryPageFooter key={`${query}:${nextOffset}`} onVisible={loadNextPage} /> : null}
       </List>
+      <Toolbar.Content><ToolbarItem placement="topBarLeading">
+        <Button label="Yopish" systemImage="xmark" modifiers={[labelStyle('iconOnly'), accessibilityLabel('Yopish')]}
+          onPress={onClose} />
+      </ToolbarItem></Toolbar.Content>
+      </Toolbar>
+      </NavigationStack>
     </Host>
   </>;
 }
