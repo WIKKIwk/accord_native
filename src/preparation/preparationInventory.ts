@@ -54,6 +54,25 @@ export function preparationInventoryAssetBarcode(asset: PreparationInventoryAsse
   return separator < 0 ? ref : ref.slice(separator + 1).trim();
 }
 
+/** @v2 _statusLabel */
+export function preparationInventoryStatus(status: string): string {
+  const labels: Record<string, string> = { available: 'Mavjud', requested: 'So‘ralgan', approved: 'Tasdiqlangan',
+    in_transit: 'Yo‘lda', received: 'Qabul qilingan', rejected: 'Rad etilgan', cancelled: 'Bekor qilingan',
+    reserved: 'Band', transfer_reserved: 'Band' };
+  return Object.hasOwn(labels, status) ? labels[status] : status || '—';
+}
+
+/** @v2 _qty */
+export function preparationInventoryQuantity(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/** @v2 _transferTimestamp */
+export function preparationInventoryTransferTimestamp(transfer: PreparationInventoryTransfer): string {
+  const date = new Date(transfer.created_at_unix * 1000), two = (value: number) => String(value).padStart(2, '0');
+  return `${two(date.getDate())}.${two(date.getMonth() + 1)}.${date.getFullYear()} ${two(date.getHours())}:${two(date.getMinutes())}`;
+}
+
 export async function lookupPreparationInventoryQr(session: Session, raw: string) {
   const barcode = preparationInventoryBarcode(raw);
   if (!barcode || !activeSessionToken(session)) return [];

@@ -5,15 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, ScrollView, View } from 'react-native';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
-import { NativeBluetoothPrinter } from '../printing/nativePrinter';
-import { PrintService } from '../printing/printService';
 import { sessionReadScope } from '../sessionReadScope';
 import { usePreparationContext } from './PreparationContext.android';
 import { type JournalState, PreparationJournal } from './preparationJournal';
 import { createPreparationProductionBatchJournal, createPreparationProductionOrderJournal, createPreparationProductionOrdersJournal } from './preparationJournalFactory';
 import { preparationJournalDate, preparationRecipeLines } from './preparationNavigation.android';
 import { preparationDisplay } from './preparationModel';
-import { preparationManualPrinterServer, reprintPreparationRollWithPrinter, type PreparationDeviceSelection } from './preparationPrinter';
+import { selectPreparationDevice } from './preparationDevicePicker.android';
+import { reprintPreparationRollWithPrinter } from './preparationPrinter';
 import { PreparationReprintCancelled } from './preparationReprint';
 import { PreparationButton, PreparationDialogs, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
@@ -116,22 +115,7 @@ function RollPreview({ roll, session, orderId }: { roll: Roll; session: Session;
     return () => { active.current = false; unregister(); };
   }, []);
   const current = () => active.current && !!activeSessionToken(session) && scope.current === sessionReadScope(session);
-  const selectDevice = async (): Promise<PreparationDeviceSelection | null> => {
-    const mode = await dialogs.choose('Printer tanlang', [{ label: 'USB printer', value: 'usb' },
-      { label: 'Bluetooth printer', value: 'bluetooth' }, { label: 'Wi-Fi qurilma', value: 'wifi' }]);
-    if (!mode || !current()) return null;
-    if (mode === 'usb') return { transport: 'offline', printer: await PrintService.detectOfflinePrinter() };
-    if (mode === 'wifi') {
-      const address = await dialogs.input({ title: 'Server qo‘shish', label: 'Server manzili', initial: 'http://gscale.local:39117' });
-      return address && current() ? preparationManualPrinterServer(address) : null;
-    }
-    const devices = await NativeBluetoothPrinter.pairedPrinters();
-    if (!current()) return null;
-    if (!devices.length) { dialogs.message('Printer topilmadi', 'Bluetooth printer topilmadi.'); return null; }
-    const address = await dialogs.choose('Bluetooth printer', devices.map(device => ({ label: device.displayName, subtitle: device.address, value: device.address })));
-    const printer = devices.find(device => device.address === address);
-    return printer ? { transport: 'bluetooth', printer } : null;
-  };
+  const selectDevice = () => selectPreparationDevice(dialogs, current);
   const reprint = async () => {
     if (busy.current || !current()) return;
     busy.current = true; setPrinting(true); setNotice(null);

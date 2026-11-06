@@ -1,7 +1,8 @@
-import { AlertDialog, Host, RNHostView, Text, TextButton } from '@expo/ui/jetpack-compose';
+import { Host, ModalBottomSheet, RNHostView } from '@expo/ui/jetpack-compose';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, BackHandler, ScrollView, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { usePreparationContext } from './PreparationContext.android';
@@ -19,7 +20,12 @@ export function PreparationSharesDialog({ formulas, onSave, onClose }: {
   const [values, setValues] = useState(() => formulas.map(formula => formula.share_percent ? preparationDisplay(formula.share_percent) : ''));
   const [saving, setSaving] = useState(false), [error, setError] = useState<string | null>(null);
   const savingRef = useRef(false);
-  const { width, height } = useWindowDimensions(), t = usePreparationText(), status = preparationShareDisplay(values);
+  const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), t = usePreparationText(), status = preparationShareDisplay(values);
+  useEffect(() => {
+    if (!saving) return;
+    const listener = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => listener.remove();
+  }, [saving]);
   const close = () => { if (!savingRef.current) onClose(); };
   const save = async () => {
     if (!status.valid || savingRef.current) return;
@@ -29,17 +35,19 @@ export function PreparationSharesDialog({ formulas, onSave, onClose }: {
     finally { savingRef.current = false; setSaving(false); }
   };
   return <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
-    <AlertDialog onDismissRequest={close} properties={{ dismissOnBackPress: !saving, dismissOnClickOutside: !saving }}>
-      <AlertDialog.Title><Text>{t('Shnek ulushlari')}</Text></AlertDialog.Title>
-      <AlertDialog.Text><RNHostView matchContents><ScrollView style={{ maxHeight: height * 0.55, width: width * 0.7 }} contentContainerStyle={{ gap: 8 }}>
+    <ModalBottomSheet onDismissRequest={close} skipPartiallyExpanded sheetGesturesEnabled={!saving} showDragHandle
+      properties={{ shouldDismissOnBackPress: !saving, shouldDismissOnClickOutside: !saving }}>
+      <RNHostView matchContents><ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: height * 0.8, width }}
+        contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 20, gap: 12 }}>
+        <PreparationText title>{t('Shnek ulushlari')}</PreparationText>
         {formulas.map((formula, index) => <PreparationField key={`${index}:${formula.name}`} label={`${formula.name} shnek ulushi`}
           initial={values[index]} decimal enabled={!saving} onChange={value => { setError(null); setValues(old => old.map((entry, i) => i === index ? value : entry)); }} />)}
         <PreparationText>{status.total === null ? t('Har bir shnek uchun 0 dan katta, 100 gacha foiz kiriting') : `${t('Jami')}: ${status.total}% / 100%`}</PreparationText>
         {error ? <PreparationText>{error}</PreparationText> : null}
-      </ScrollView></RNHostView></AlertDialog.Text>
-      <AlertDialog.DismissButton><TextButton enabled={!saving} onClick={close}><Text>{t('Bekor qilish')}</Text></TextButton></AlertDialog.DismissButton>
-      <AlertDialog.ConfirmButton><TextButton enabled={status.valid && !saving} onClick={() => void save()}><Text>{t('Saqlash')}</Text></TextButton></AlertDialog.ConfirmButton>
-    </AlertDialog>
+        <PreparationButton label={saving ? 'Saqlanmoqda…' : 'Saqlash'} id="preparation-screw-shares-save" disabled={!status.valid || saving} onPress={() => void save()} />
+        <PreparationButton label="Bekor qilish" disabled={saving} onPress={close} />
+      </ScrollView></RNHostView>
+    </ModalBottomSheet>
   </Host>;
 }
 

@@ -1,15 +1,13 @@
 # preparation-android
 
 Status: in progress
-Stopped at: complete remaining Android details and device verification.
+Stopped at: wire the preparation profile entry and complete device verification.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Home and warehouse | `preparation_screen.dart`, `preparation_screen_forms.dart` | Sequence, inventory and scale actions are connected. Chat and profile destinations remain for their owning sessions. |
-| Inventory | `inventory_movements_screen.dart` | Android has scoped warehouse, asset and transfer windows, QR lookup, asset details, transfer requests and the order-assignment editor. Complete the remaining V2 detail presentation and device verification. |
-| Formula shares | `_FormulaSharesSheet` | The share editor currently uses a native alert dialog so saving can block dismissal. Move it to the native sheet host once that host can also block hardware back while saving. |
-| Roll QR | `RpsQrReprintSheet`, `preparation_production_screen.dart` `_reprintRoll` | Reprint offers paired Bluetooth, USB (Zebra only, D13) and manual Wi-Fi selection. Android V2 also uses paired Bluetooth devices. Wi-Fi server discovery and physical-printer verification remain open. |
+| Roll QR | `RpsQrReprintSheet`, `preparation_production_screen.dart` `_reprintRoll` | Reprint supports paired Bluetooth, USB (Zebra only, D13), discovered Wi-Fi servers and manual Wi-Fi selection. Physical-printer verification remains open. |
 | Platform parity | `docs/port/roles/preparation.md` | Compare all implemented screen states, localization, input behavior, navigation and accessibility against the V2 contract on a real Android device. No simulator or device was used. |
 | V2 drift | `preparation_screen.dart`, `preparation_screen_forms.dart`; baseline `7c87a54e` | Drift reports removal of the old consumption editor in V2 HEAD. Shared logic remains owned by the preparation/integrator session; this screen session follows the pinned baseline. |
 
@@ -23,7 +21,7 @@ The preparation logic session owns the deferred test-mode branches.
 
 ## Needs from the integrator
 
-- Supply Wi-Fi printer discovery, the Android chat destination and a role-appropriate profile destination.
+- Supply the Android chat destination and a role-appropriate profile destination.
 - Complete the contract's dynamic localization inventory.
 
 ## Verification

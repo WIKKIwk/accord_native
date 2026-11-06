@@ -1,12 +1,16 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 import qrFactory from 'qrcode-generator';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { WorkerOrderSheet } from '../components/WorkerOrderSheet';
 import { usePreparationContext } from './PreparationContext.android';
 import { PreparationInventoryAssignment } from './PreparationInventoryAssignmentSection.android';
-import { preparationInventoryAssetBarcode, type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventory';
+import { selectPreparationInventoryDevice } from './preparationDevicePicker.android';
+import { preparationInventoryAssetBarcode, preparationInventoryQuantity, preparationInventoryStatus, preparationInventoryTransferTimestamp,
+  type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventory';
+import { reprintPreparationInventoryAsset } from './preparationInventoryReprint';
+import { PreparationReprintCancelled } from './preparationReprint';
 import { PreparationButton, PreparationDialogs, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationInventory } from './usePreparationInventory.android';
 
@@ -63,7 +67,7 @@ export function PreparationInventoryScreen() {
         </> : <>
           {!window.loading && !window.error && !inventory.visibleTransfers.length ? <PreparationText>{t(inventory.tab === 'incoming' ? 'Kiruvchi transfer yo‘q' : 'Chiquvchi transfer yo‘q')}</PreparationText> : null}
           {inventory.visibleTransfers.map(item => <PreparationRow key={String(item.id)} title={`${String(item.source_warehouse)} → ${String(item.destination_warehouse)}`}
-            subtitle={`${String(item.status)} · ${item.lines.map((line: Record<string, unknown>) => String(line.item_name || line.item_code || '')).join(', ')}`}
+            subtitle={`${t(preparationInventoryStatus(item.status))} · ${item.lines.map((line: Record<string, unknown>) => String(line.item_name || line.item_code || '')).join(', ')}`}
             onPress={() => setTransfer(item)} />)}
         </>}
       </>}
@@ -73,10 +77,12 @@ export function PreparationInventoryScreen() {
     </WorkerOrderSheet> : null}
     {transfer ? <WorkerOrderSheet onClose={() => setTransfer(null)} dismissible compact>
       <PreparationText title>{`${String(transfer.source_warehouse)} → ${String(transfer.destination_warehouse)}`}</PreparationText>
-      <PreparationText>{String(transfer.status)}</PreparationText>
+      <PreparationText>{t(preparationInventoryStatus(transfer.status))}</PreparationText>
       {transfer.lines.map((line: Record<string, unknown>, index: number) => <PreparationRow key={index} title={String(line.item_name || line.item_code || '')}
-        subtitle={`${String(line.identifier ?? '')} · ${String(line.qty ?? '')} ${String(line.uom ?? '')}`} />)}
-      {transfer.note ? <PreparationText>{String(transfer.note)}</PreparationText> : null}
+        subtitle={`${preparationInventoryQuantity(line.qty as number)} ${String(line.uom ?? '')}`} />)}
+      {!transfer.lines.length ? <PreparationRow title={t('Mahsulot')} subtitle="—" /> : null}
+      <PreparationRow title={t('Sana')} subtitle={preparationInventoryTransferTimestamp(transfer)} />
+      {transfer.note ? <PreparationRow title={t('Izoh')} subtitle={String(transfer.note)} /> : null}
       <PreparationButton label="Yopish" onPress={() => setTransfer(null)} />
     </WorkerOrderSheet> : null}
   </>;
@@ -84,17 +90,20 @@ export function PreparationInventoryScreen() {
 
 function AssetRow({ asset, open }: { asset: PreparationInventoryAsset; open: () => void }) {
   return <PreparationRow title={asset.order_assignment?.order_label || asset.item_name || asset.item_code}
-    subtitle={[asset.order_assignment ? asset.item_name || asset.item_code : asset.identifier, `${asset.qty} ${asset.uom}`,
+    subtitle={[asset.order_assignment ? asset.item_name || asset.item_code : asset.identifier, `${preparationInventoryQuantity(asset.qty)} ${asset.uom}`,
       asset.custody_warehouse].filter(Boolean).join(' · ')} onPress={open} />;
 }
 
 function AssetDetail({ asset, inventory, assigned, close }: { asset: PreparationInventoryAsset; inventory: Inventory; assigned: readonly string[]; close: () => void }) {
   const [showQr, setShowQr] = useState(false), dialogs = usePreparationDialogs(), t = usePreparationText();
   const { session } = usePreparationContext();
-  const [finished, setFinished] = useState(false);
+  const [finished, setFinished] = useState(false), [printing, setPrinting] = useState(false), [notice, setNotice] = useState<string | null>(null);
+  const mounted = useRef(true), printBusy = useRef(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const current = () => mounted.current && inventory.current();
   const barcode = preparationInventoryAssetBarcode(asset);
-  const showAssignment = session.capabilities.includes('raw_material.assign') &&
-    assigned.some(name => name.trim().toLowerCase() === asset.custody_warehouse.trim().toLowerCase());
+  const owns = assigned.some(name => name.trim().toLowerCase() === asset.custody_warehouse.trim().toLowerCase());
+  const showAssignment = session.capabilities.includes('raw_material.assign') && owns;
   const image = useMemo(() => { try { const qr = qrFactory(0, 'M'); qr.addData(barcode); qr.make(); return qr.createDataURL(5, 20); } catch { return null; } }, [barcode]);
   const transfer = async () => {
     if (!inventory.canTransfer(asset)) return;
@@ -114,15 +123,41 @@ function AssetDetail({ asset, inventory, assigned, close }: { asset: Preparation
       if (result && inventory.current()) { setFinished(true); dialogs.message(title, result.status === 'received' ? `${asset.item_name} — ${destination.name} omboriga ko‘chirildi` : 'Transfer so‘rovi yuborildi'); }
     } catch (error) { if (inventory.current()) dialogs.message('Xatolik yuz berdi', error instanceof Error ? error.message : String(error)); }
   };
+  const reprint = async () => {
+    if (printBusy.current || !current()) return;
+    printBusy.current = true; setPrinting(true); setNotice(null);
+    try {
+      const warning = await reprintPreparationInventoryAsset(session, barcode,
+        { isCurrent: current, selectDevice: () => selectPreparationInventoryDevice(dialogs, current) });
+      if (current()) setNotice(warning ?? 'Mavjud QR qayta chop etildi');
+    } catch (error) {
+      if (current() && !(error instanceof PreparationReprintCancelled)) setNotice(error instanceof Error ? error.message : 'QR kodini qayta chop etib bo‘lmadi');
+    } finally { printBusy.current = false; if (current()) setPrinting(false); }
+  };
+  if (showQr) return <ScrollView nestedScrollEnabled contentContainerStyle={{ padding: 16, gap: 10 }}>
+    <PreparationText title>{t('Homashyo QR')}</PreparationText><PreparationText>{asset.item_name || asset.item_code}</PreparationText>
+    {image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
+    {asset.item_code ? <PreparationRow title={t('Mahsulot kodi')} subtitle={asset.item_code} /> : null}
+    <PreparationRow title={t('Identifikator')} subtitle={barcode} /><PreparationRow title={t('Miqdor')} subtitle={`${preparationInventoryQuantity(asset.qty)} ${asset.uom}`} />
+    {asset.custody_warehouse ? <PreparationRow title={t('Ombor')} subtitle={asset.custody_warehouse} /> : null}
+    {asset.physical_location.name ? <PreparationRow title={t('Fizik joy')} subtitle={asset.physical_location.name} /> : null}
+    <PreparationRow title={t('Holati')} subtitle={t(preparationInventoryStatus(asset.status))} />
+    {notice ? <PreparationText>{t(notice)}</PreparationText> : null}
+    <PreparationButton label="Qayta chop etish" disabled={printing} id="preparation-inventory-qr-reprint" onPress={() => void reprint()} />
+    <PreparationButton label="Yopish" disabled={printing} onPress={close} />
+  </ScrollView>;
   return <ScrollView nestedScrollEnabled contentContainerStyle={{ padding: 16, gap: 10 }}>
     <PreparationText title>{asset.item_name || asset.item_code}</PreparationText>
-    <PreparationRow title={asset.identifier || asset.asset_ref} subtitle={`${asset.qty} ${asset.uom} · ${asset.custody_warehouse} · ${asset.status}`} />
+    {asset.item_code && asset.item_name !== asset.item_code ? <PreparationText>{asset.item_code}</PreparationText> : null}
+    <PreparationRow title={t('Identifikator')} subtitle={asset.identifier} />
+    <PreparationRow title={t('Miqdor')} subtitle={`${preparationInventoryQuantity(asset.qty)} ${asset.uom}`} />
+    <PreparationRow title={t('Fizik joy')} subtitle={asset.physical_location.name} />
+    <PreparationRow title={t('Holati')} subtitle={t(preparationInventoryStatus(asset.status))} />
     {showAssignment && barcode ? <PreparationInventoryAssignment session={session} barcode={barcode} allowAssignment={inventory.canTransfer(asset)}
       changed={() => inventory.assets.refresh()} isCurrent={inventory.current} />
       : asset.order_assignment ? <PreparationRow title={t('Buyurtma')} subtitle={asset.order_assignment.order_label} /> : null}
-    {showQr && image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
-    {barcode ? <PreparationButton label="QR kod" onPress={() => setShowQr(!showQr)} /> : null}
-    {inventory.canTransfer(asset) ? <PreparationButton label="Transfer" disabled={inventory.busy || finished} onPress={() => void transfer()} /> : null}
+    {barcode ? <PreparationButton label="QR kodni ko‘rish" onPress={() => setShowQr(true)} /> : null}
+    {owns ? <PreparationButton label="Transfer" disabled={!inventory.canTransfer(asset) || inventory.busy || finished} onPress={() => void transfer()} /> : null}
     <PreparationButton label="Yopish" onPress={close} />
   </ScrollView>;
 }

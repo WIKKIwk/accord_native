@@ -40,3 +40,11 @@ test('transfer windows apply warehouse and line search independently', () => {
   assert.deepEqual(logic.preparationInventoryTransfersFor([row], 'Other', 'outgoing', ''), []);
   assert.deepEqual(logic.preparationInventoryTransfersFor([row], '', 'outgoing', 'missing'), []);
 });
+
+test('inventory detail uses V2 status and quantity presentation', () => {
+  assert.equal(logic.preparationInventoryStatus('available'), 'Mavjud');
+  assert.equal(logic.preparationInventoryStatus('transfer_reserved'), 'Band');
+  assert.equal(logic.preparationInventoryStatus(''), '—');
+  assert.equal(logic.preparationInventoryQuantity(3), '3');
+  assert.equal(logic.preparationInventoryQuantity(3.1254), '3.125');
+});
