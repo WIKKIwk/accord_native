@@ -10,7 +10,7 @@ function setup() {
   const candidate = { order: { map: { id: 'order-1' } }, apparatus_options: ['apparatus:default:one'] };
   const deps = {
     '../apparatusApi': { readApparatus: async (_, url, retry) => { calls.push({ url, retry }); return { response: { status: 200 }, body: JSON.stringify([candidate]) }; } },
-    '../authorizedFetch': { authorizedFetch: async (_, url, init) => { calls.push({ url, init }); return { status: 200, json: async () => ({ order_id: 'order-1' }) }; } },
+    '../authorizedFetch': { authorizedFetch: async (_, url, init, beforeSend) => { beforeSend?.(); calls.push({ url, init }); return { status: 200, json: async () => ({ order_id: 'order-1' }) }; } },
     '../workerControlsApi': { isCanonicalApparatusId: id => id.startsWith('apparatus:'), productionMapResponseError: () => Error('server') },
     '../workerProductionMapSaved': { productionMapSavedFromJson: value => value },
     '../workerRawMaterials': { rawMaterialAssignment: value => value },
@@ -32,4 +32,6 @@ test('inventory assignment uses V2 candidate and order-link requests', async () 
   assert.equal(x.calls[1].init.method, 'POST');
   assert.deepEqual(JSON.parse(x.calls[1].init.body), { order_id: 'order-1', barcode: 'QR-1', apparatus: 'apparatus:default:one' });
   await assert.rejects(x.api.preparationAssignMaterial({}, 'order-1', 'QR-1', 'invalid'), /apparatus/);
+  await assert.rejects(x.api.preparationAssignMaterial({}, 'order-1', 'QR-1', 'apparatus:default:one', () => { throw Error('scope changed'); }), /scope changed/);
+  assert.equal(x.calls.length, 2);
 });

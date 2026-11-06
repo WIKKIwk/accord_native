@@ -54,7 +54,9 @@ export function PreparationInventoryAssignment({ session, barcode, allowAssignme
     if (!await dialogs.confirm('Buyurtmaga ulash', `${label(candidate)} buyurtmasiga ulansinmi?`, 'Ulash') || !isCurrent()) return;
     setSaving(true);
     try {
-      await preparationAssignMaterial(session, candidate.order.map.id, barcode, apparatus);
+      await preparationAssignMaterial(session, candidate.order.map.id, barcode, apparatus, () => {
+        if (!isCurrent()) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching');
+      });
       if (isCurrent()) { await changed(); retry(); dialogs.message('Buyurtmaga ulash', 'Homashyo buyurtmaga ulandi'); }
     } catch (error) { if (isCurrent()) dialogs.message('Xatolik yuz berdi', error instanceof Error ? error.message : String(error)); }
     finally { if (isCurrent()) setSaving(false); }

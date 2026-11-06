@@ -24,6 +24,7 @@ import { PreparationButton, PreparationDialogs, PreparationField, PreparationRow
 
 type Props = { session: Session; controller: PreparationOrdersState;
   selectApparatus: (id: string) => Promise<void>; openOrder: (row: PreparationOrderListRow) => void };
+type VariantOptions = { orderId: string; orderCode: string; productCode: string; productTitle: string; materialId: string; materialName: string };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 function sequenceLifecycle(controller: PreparationOrdersState) {
@@ -35,6 +36,7 @@ function sequenceLifecycle(controller: PreparationOrdersState) {
   } };
 }
 
+// @v2 AdminProductionMapOrdersScreen
 // @v2 _PreparationOrdersListState
 export function PreparationSequenceList({ session, controller, selectApparatus, openOrder }: Props) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
@@ -96,18 +98,28 @@ function createSequenceBinding(session: Session) {
 export function PreparationSequenceScreen() {
   const { session } = usePreparationContext();
   const [selected, setSelected] = useState<{ row: PreparationOrderListRow; scope: string } | null>(null);
+  const returnDetail = useRef<typeof selected>(null);
   const binding = useMemo(() => createSequenceBinding(session), [session]);
-  useEffect(() => registerSessionResetHook(async () => { binding.invalidate(); setSelected(null); }), [binding]);
+  useEffect(() => registerSessionResetHook(async () => { binding.invalidate(); returnDetail.current = null; setSelected(null); }), [binding]);
+  useFocusEffect(useCallback(() => {
+    const previous = returnDetail.current;
+    if (previous && binding.current()) { returnDetail.current = null; setSelected(previous); }
+  }, [binding]));
   const selectApparatus = async (id: string) => {
     const item = binding.controller.getSnapshot().window?.apparatus.find(value => value.id === id);
     if (item && binding.current()) await adminSequenceApparatusStore.saveApparatus(item);
+  };
+  const openVariants = (options: VariantOptions) => {
+    returnDetail.current = selected;
+    setSelected(null);
+    requestAnimationFrame(() => router.push({ pathname: '/android-preparation/variants', params: { data: JSON.stringify(options) } } as unknown as Href));
   };
   return <View style={{ flex: 1 }}>
     <PreparationSequenceList session={session} controller={binding.controller} selectApparatus={selectApparatus}
       openOrder={row => { const scope = binding.controller.getSnapshot().window?.scope; if (scope) setSelected({ row, scope }); }} />
     {selected ? <PreparationDetailSheet>
       <PreparationDialogs><PreparationSequenceDetail session={session} controller={binding.controller} selected={selected}
-        isCurrent={binding.current} close={() => setSelected(null)} /></PreparationDialogs>
+        isCurrent={binding.current} close={() => setSelected(null)} openVariants={openVariants} /></PreparationDialogs>
     </PreparationDetailSheet> : null}
   </View>;
 }
@@ -122,9 +134,9 @@ function PreparationDetailSheet({ children }: { children: ReactNode }) {
   </Host>;
 }
 
-function PreparationSequenceDetail({ session, controller, selected, isCurrent, close }: {
+function PreparationSequenceDetail({ session, controller, selected, isCurrent, close, openVariants }: {
   session: Session; controller: PreparationOrdersState; selected: { row: PreparationOrderListRow; scope: string };
-  isCurrent: () => boolean; close: () => void;
+  isCurrent: () => boolean; close: () => void; openVariants: (options: VariantOptions) => void;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const [result, setResult] = useState<{ retry: number; value: Awaited<ReturnType<typeof preparationOrderDetail>> | null;
@@ -139,6 +151,7 @@ function PreparationSequenceDetail({ session, controller, selected, isCurrent, c
   useEffect(() => {
     let mounted = true;
     void preparationOrderDetail(session, selected.row.id).then(async value => {
+      if (!mounted || !current()) return;
       const map = value.maps[0].map as ReturnType<typeof productionMapDefinitionFromJson>;
       const templates = Object.values(value.calculation_templates ?? {}) as ReturnType<typeof calculateOrderTemplateFromJson>[];
       const metrics = await preparationOrderMetrics(session, map, templates);
@@ -167,8 +180,7 @@ function PreparationSequenceDetail({ session, controller, selected, isCurrent, c
       const options = { orderId: selected.row.id, orderCode: code,
         productCode: String(detail.map.product_code ?? ''), productTitle: title,
         materialId: material.material_id, materialName: material.material_name || material.material_id };
-      close();
-      requestAnimationFrame(() => router.push({ pathname: '/android-preparation/variants', params: { data: JSON.stringify(options) } } as unknown as Href));
+      openVariants(options);
     } catch (failure) { if (current()) dialogs.message('Xatolik yuz berdi', failure instanceof Error ? failure.message : String(failure)); }
     finally { setLoadingMaterials(false); }
   };

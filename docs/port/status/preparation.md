@@ -6,7 +6,7 @@ Stopped at: platform routes, inventory/device-picker screens and the shared read
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android sessions must implement the four routes and all listed views, sheets and dialogs using the UI contract; this logic session cannot write platform views. |
+| Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | Android preparation routes exist with the remaining parity gaps recorded in `preparation-android.md`; iOS routes and the missing shared GScale destination still need their owning sessions. |
 | Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity and the borrowed native read-only sheet are not complete. Compare their applicable fields and connect the sheet in the platform/integrator sessions. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
 | QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Android connects paired Bluetooth, USB and manual Wi-Fi selection. Wi-Fi discovery, the GoDEX USB renderer, the iOS picker and real-printer checks remain open. |
@@ -40,7 +40,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 ## Needs from the integrator
 
 - The Android inventory route now uses the shared live store and transfer mutations, with raw-material assignment editing. Full detail presentation remains open; the iOS inventory route and picker/detail UI still need their platform session.
-- Connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet. The preparation home targets are configured, but those platform routes do not exist in this branch yet.
+- Android preparation routes and the scoped read-only order detail are connected. Finish the optional queue-control decoder and remaining platform parity, including the corresponding iOS routes and detail.
 
 ## Verification
 

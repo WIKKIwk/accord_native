@@ -82,7 +82,9 @@ export function usePreparationInventory(session: Session, assignedWarehouses: re
     busyRef.current = true; setBusy(true);
     try {
       const result = await inventoryCreateTransfer(session, { sourceWarehouseId: asset.custody_warehouse_id, destinationWarehouseId: destination.warehouse_id,
-        assets: [asset], idempotencyKey: `mobile:transfer:${Date.now() * 1000}` });
+        assets: [asset], idempotencyKey: `mobile:transfer:${Date.now() * 1000}` }, () => {
+        if (!current()) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching');
+      });
       if (current()) await store.reconcileAfterWrite();
       return result;
     } finally { busyRef.current = false; if (current()) setBusy(false); }
