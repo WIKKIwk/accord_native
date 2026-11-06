@@ -24,6 +24,7 @@ export function PreparationDrawer({ children }: { children: ReactNode }) {
     else router.dismissTo(target.path as Href);
   };
   return <RoleDrawer {...state} title={t('Tayyorlov bo‘limlari')} items={items} active={preparationDrawerActive(pathname)}
+    swipeEnabled={state.visible || pathname !== '/ios-preparation/sequence'}
     onSelect={select} closeAccessibilityLabel={t('Menyuni yopish')}
     footerAction={{ id: 'logout', label: t('Chiqish'), symbol: 'rectangle.portrait.and.arrow.right', destructive: true }}>
     {children}

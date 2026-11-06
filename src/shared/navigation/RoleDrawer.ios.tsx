@@ -23,8 +23,8 @@ function DrawerScreen({ children }: { children: ReactNode }) {
   </Animated.View>;
 }
 
-export function RoleDrawer(props: RoleDrawerProps) {
-  const { visible, onOpen, onClose, title, items, active, footerAction, closeAccessibilityLabel, children } = props;
+export function RoleDrawer(props: RoleDrawerProps & { swipeEnabled?: boolean }) {
+  const { visible, onOpen, onClose, title, items, active, footerAction, closeAccessibilityLabel, children, swipeEnabled = true } = props;
   const background = PlatformColor('systemBackground');
   const foreground = PlatformColor('label');
   const insets = useSafeAreaInsets();
@@ -33,7 +33,7 @@ export function RoleDrawer(props: RoleDrawerProps) {
   const footerSymbol = typeof footerAction?.symbol === 'string' ? footerAction.symbol : footerAction?.symbol?.ios;
 
   return <RoleDrawerContext.Provider value={{ open: onOpen, close: onClose }}>
-    <Drawer open={visible} onOpen={onOpen} onClose={onClose} drawerType="back" style={{ backgroundColor: background }}
+    <Drawer open={visible} onOpen={onOpen} onClose={onClose} swipeEnabled={swipeEnabled} drawerType="back" style={{ backgroundColor: background }}
       drawerStyle={{ width: Math.min(360, width * 0.82), backgroundColor: background }}
       overlayStyle={{ backgroundColor: 'transparent' }} overlayAccessibilityLabel={closeAccessibilityLabel}
       renderDrawerContent={() => <View style={[styles.drawer, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 12) }]}>

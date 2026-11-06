@@ -5,7 +5,7 @@ import { ActivityIndicator, PlatformColor, StyleSheet, View } from 'react-native
 import { WorkerProfileButton } from '../../components/WorkerProfileButton.ios';
 import { visibleOrdersTabs, type OrdersWorkspaceProps } from './ordersWorkspaceTypes';
 
-export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, loading, search, onSearchChange, onMenu, onProfile, children, title = 'Buyurtmalar', searchPlaceholder = 'Buyurtmani izlash' }: OrdersWorkspaceProps) {
+export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, loading, search, onSearchChange, onMenu, onBack, onProfile, children, title = 'Buyurtmalar', searchPlaceholder = 'Buyurtmani izlash' }: OrdersWorkspaceProps & { onBack?: () => void }) {
   const query = useNativeState(search ?? '');
   const tabs = visibleOrdersTabs(tabsInput);
   const selectedTab = tabs.find(tab => tab.id === selected) ?? tabs[0];
@@ -19,7 +19,7 @@ export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, 
   </Picker>;
 
   return <>
-    <Stack.Screen options={{ headerShown: false }} />
+    <Stack.Screen options={{ headerShown: false, ...(onBack ? { gestureEnabled: true } : {}) }} />
     <View style={[styles.container, { backgroundColor: PlatformColor('systemBackground') }]} collapsable={false}>
       <Host style={styles.container}>
         {/* Keep search and List in one native container so their content insets animate together. */}
@@ -32,8 +32,11 @@ export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, 
             {children(selectedTab.id, undefined, machinePicker)}
             <Toolbar.Content>
               <ToolbarItem placement="topBarLeading">
-                <Button systemImage="line.3.horizontal" label="Bo‘limlar" modifiers={[labelStyle('iconOnly')]} onPress={onMenu} />
+                <Button systemImage={onBack ? 'chevron.left' : 'line.3.horizontal'} label={onBack ? 'Orqaga' : 'Bo‘limlar'} modifiers={[labelStyle('iconOnly')]} onPress={onBack ?? onMenu} />
               </ToolbarItem>
+              {onBack && onMenu ? <ToolbarItem placement="topBarLeading">
+                <Button systemImage="line.3.horizontal" label="Bo‘limlar" modifiers={[labelStyle('iconOnly')]} onPress={onMenu} />
+              </ToolbarItem> : null}
               <ToolbarItem placement="topBarTrailing">
                 <WorkerProfileButton key={session.imageCacheScope} session={session} onPress={onProfile} />
               </ToolbarItem>

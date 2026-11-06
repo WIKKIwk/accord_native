@@ -105,7 +105,9 @@ export function PreparationSequence({ session, controller, selectApparatus, rend
   };
   return <OrdersWorkspace session={session} tabs={state.window?.apparatus ?? []} selected={state.apparatus}
     onSelect={id => { void select(id); }} search={query} onSearchChange={value => { setQuery(value); controller.searchChanged(value); }}
-    loading={state.loading && !state.window} onMenu={drawer.open} onProfile={() => router.navigate('/ios-preparation/profile' as Href)}>
+    loading={state.loading && !state.window} onMenu={drawer.open}
+    onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/ios-preparation' as Href); }}
+    onProfile={() => router.navigate('/ios-preparation/profile' as Href)}>
     {(tabId, pagerGesture, machinePicker) => <OrdersList active={tabId === state.apparatus} pagerGesture={pagerGesture}
       headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} onRefresh={() => controller.reload(true)}>
       <Row spacing={8} style={{ paddingVertical: 4 }}>{machinePicker}</Row>

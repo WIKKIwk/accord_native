@@ -119,6 +119,8 @@ for (const platform of ['ios', 'android']) {
     if (platform === 'ios') {
       assert.deepEqual(drawer.props.style.backgroundColor, { semantic: ['systemBackground'] });
       assert.deepEqual(drawer.props.drawerStyle.backgroundColor, { semantic: ['systemBackground'] });
+      assert.equal(drawer.props.swipeEnabled, true);
+      assert.equal(nodes(h.render({ swipeEnabled: false }), 'Drawer')[0].props.swipeEnabled, false);
     }
     drawer.props.onOpen(); drawer.props.onClose();
     assert.deepEqual(h.calls, ['open', 'close']);
@@ -177,16 +179,17 @@ test('drawer logout waits for the V2 confirmation instead of ending the session 
 for (const platform of ['ios', 'android']) {
   test(`${platform}: preparation connects the shared shell to its real navigation and scale context`, () => {
     const calls = [];
+    let pathname = `/${platform}-preparation`, visible = false;
     const session = { capabilities: ['gscale'] };
     const api = load(`preparation/PreparationDrawer.${platform}.tsx`, {
-      'expo-router': { usePathname: () => `/${platform}-preparation`, router: {
+      'expo-router': { usePathname: () => pathname, router: {
         push: path => calls.push(['push', path]), navigate: path => calls.push(['tab', path]),
         dismissTo: path => calls.push(['root', path]), replace: path => calls.push(['root', path]),
       } },
       '../shared/appRoutes': { appRoutes: { gscaleMode: 'gscale', inventoryMovements: 'inventory' },
         canOpenRoute: (current, capability) => current.capabilities.includes(capability) },
       '../shared/navigation/RoleDrawer': { RoleDrawer: 'SharedRoleDrawer' },
-      '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({ visible: false, onOpen() {}, onClose() {} }) },
+      '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({ visible, onOpen() {}, onClose() {} }) },
       '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: onLogout => calls.push(['confirm', onLogout]) },
       [platform === 'ios' ? './PreparationContext' : './PreparationContext.android']: {
         usePreparationContext: () => ({ session, home: { warehouse: 'Assigned' }, onLogout: () => calls.push(['logout']) }),
@@ -201,6 +204,13 @@ for (const platform of ['ios', 'android']) {
     assert.equal(tree.props.title, 'Tayyorlov bo‘limlari');
     assert.equal(tree.props.children, 'role screens');
     assert.equal(tree.props.items.some(item => item.id === 'inventory'), false);
+    if (platform === 'ios') {
+      assert.equal(tree.props.swipeEnabled, true);
+      pathname = '/ios-preparation/sequence';
+      assert.equal(api.PreparationDrawer({ children: null }).props.swipeEnabled, false);
+      visible = true;
+      assert.equal(api.PreparationDrawer({ children: null }).props.swipeEnabled, true);
+    }
     tree.props.onSelect('sequence');
     tree.props.onSelect('formulas');
     tree.props.onSelect('profile');

@@ -56,7 +56,7 @@ export function PreparationHome() {
       {!!snapshot?.assigned_warehouses.length && <Button label={`${t('Ombor')}${warehouse ? `: ${warehouse}` : ''}`} systemImage="building.2" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/warehouse' as Href)} />}
       <Button label={t('Homashyolar')} systemImage="shippingbox" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/materials' as Href)} />
       <Button label={t('Mahsulot formulasi')} systemImage="list.bullet.rectangle" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/sets' as Href)} />
-      <Button label={t('Buyurtmalar')} systemImage="list.number" onPress={() => router.replace('/ios-preparation/sequence' as Href)} />
+      <Button label={t('Buyurtmalar')} systemImage="list.number" onPress={() => router.push('/ios-preparation/sequence' as Href)} />
       <Button label={t('Ishlab chiqarish')} systemImage="chart.bar" onPress={() => router.replace('/ios-preparation/production' as Href)} />
       <Button label={t('Ishlab chiqarilgan homashyolar')} systemImage="shippingbox" onPress={() => router.push('/ios-preparation/inventory' as Href)} />
       <Button label={t('Tarix')} systemImage="clock.arrow.circlepath" onPress={() => router.push('/ios-preparation/history' as Href)} />
@@ -67,7 +67,7 @@ export function PreparationHome() {
       <Button label={t('Ombor')} onPress={() => router.push('/ios-preparation/warehouse' as Href)} />
       {canOpenRoute(session, appRoutes.gscaleMode) && <Button label={t('Tarozi kirimi')} onPress={() => openPreparationScale({ warehouse })} />}
       {mode !== 'scale' && <Button label={t('Kirim')} onPress={startReceipt} />}
-      <Button label={t('Buyurtmalar')} onPress={() => router.replace('/ios-preparation/sequence' as Href)} />
+      <Button label={t('Buyurtmalar')} onPress={() => router.push('/ios-preparation/sequence' as Href)} />
       <Button label={t('Tarix')} onPress={() => router.push('/ios-preparation/history' as Href)} />
     </Menu></Section>}
   </PreparationList><PreparationNotice message={notice.message} />
