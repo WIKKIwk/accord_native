@@ -106,12 +106,13 @@ export class PreparationVariantsState {
     } finally { this.update({ creating: false }); }
   }
   async remove(variant: Variant) {
-    if (!this.current || this.state.removing) return;
-    this.update({ removing: true });
+    if (!this.current || this.state.removing) return false;
+    const generation = this.generation; this.update({ removing: true });
     try {
       await preparationRemoveFormulaVariantFromOrder(this.session, { ...this.options, variantId: variant.id });
-      if (this.current) this.update({ variants: this.state.variants.filter(item => item.id !== variant.id) });
-    } finally { this.update({ removing: false }); }
+      if (!this.current || generation !== this.generation) return false;
+      this.update({ variants: this.state.variants.filter(item => item.id !== variant.id) }); return true;
+    } finally { if (generation === this.generation) this.update({ removing: false }); }
   }
   invalidate() {
     if (!this.active) return;

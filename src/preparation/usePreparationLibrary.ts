@@ -54,19 +54,23 @@ export class PreparationLibraryState {
     finally { if (this.active && generation === this.generation) this.update({ loading: false }); }
   }
   async renameSet(set: SetItem, name: string) {
-    if (this.state.loading || this.state.busy || !this.current || name === set.name) return;
+    if (this.state.loading || this.state.busy || !this.current || name === set.name) return false;
+    const generation = this.generation;
     this.update({ busy: true });
     try { const saved = await preparationRenameFormulaSet(this.session, set.set_id, name);
-      if (this.current) this.update({ sets: this.state.sets.map(item => item.set_id === set.set_id ? { ...item, name: saved } : item) }); }
-    finally { this.update({ busy: false }); }
+      if (!this.current || generation !== this.generation) return false;
+      this.update({ sets: this.state.sets.map(item => item.set_id === set.set_id ? { ...item, name: saved } : item) }); return true; }
+    finally { if (generation === this.generation) this.update({ busy: false }); }
   }
   async renameRecipe(recipe: Recipe, name: string) {
-    if (this.state.loading || this.state.busy || !this.current || !preparationVariantNameCanSave(name, recipe.name)) return;
+    if (this.state.loading || this.state.busy || !this.current || !preparationVariantNameCanSave(name, recipe.name)) return false;
+    const generation = this.generation;
     this.update({ busy: true });
     try { await preparationRenameFormulaVariant(this.session, { productCode: recipe.product_code, materialId: recipe.material_id,
       variantId: recipe.id, name: preparationVariantName(name) }); }
-    finally { this.update({ busy: false }); }
-    if (this.current) await this.load();
+    finally { if (generation === this.generation) this.update({ busy: false }); }
+    if (!this.current || generation !== this.generation) return false;
+    await this.load(); return this.current && generation === this.generation;
   }
   async open(open: () => Promise<void>) {
     if (this.state.loading || this.state.busy || !this.current) return;

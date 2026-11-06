@@ -7,8 +7,8 @@ import { Pressable, RefreshControl, ScrollView, View, useWindowDimensions } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
-import { preparationInputError } from './preparationLogic';
 import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
+import { preparationInputError, preparationQuantityInput } from './preparationLogic';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const locale = () => localeController.locale;
@@ -29,14 +29,15 @@ export function PreparationButton({ label, onPress, disabled, id }: { label: str
     modifiers={[fillMaxWidth(), ...(id ? [testID(id)] : [])]}><Text>{t(label)}</Text></Button></Host>;
 }
 
-export function PreparationField({ label, initial = '', onChange, enabled = true, decimal = false }: {
-  label: string; initial?: string; onChange: (value: string) => void; enabled?: boolean; decimal?: boolean;
+export function PreparationField({ label, initial = '', onChange, enabled = true, decimal = false, suffix }: {
+  label: string; initial?: string; onChange: (value: string) => void; enabled?: boolean; decimal?: boolean; suffix?: string;
 }) {
   const t = usePreparationText();
   const value = useNativeState(initial);
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={value} singleLine enabled={enabled}
     onValueChange={onChange} keyboardOptions={{ keyboardType: decimal ? 'decimal' : 'text' }} modifiers={[fillMaxWidth()]}>
     <OutlinedTextField.Label><Text>{t(label)}</Text></OutlinedTextField.Label>
+    {suffix ? <OutlinedTextField.Suffix><Text>{suffix}</Text></OutlinedTextField.Suffix> : null}
   </OutlinedTextField></Host>;
 }
 
@@ -72,8 +73,8 @@ export function PreparationDock({ root = false, profile = false, actions }: { ro
   </View>;
 }
 
-export function PreparationPage({ title, children, refreshing, onRefresh, root = false, drawer = false, actions }: {
-  title: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean; actions?: () => void;
+export function PreparationPage({ title, subtitle, children, refreshing, onRefresh, root = false, drawer = false, actions }: {
+  title: string; subtitle?: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean; actions?: () => void;
 }) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = usePreparationText();
   const roleDrawer = useRoleDrawer();
@@ -84,7 +85,7 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
       {!root && <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')}
         onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }} style={{ padding: 8 }}>
         <PreparationText>‹</PreparationText></Pressable>}
-      <View style={{ flex: 1 }}><PreparationText title>{t(title)}</PreparationText></View>
+      <View style={{ flex: 1 }}><PreparationText title>{t(title)}</PreparationText>{subtitle && <PreparationText>{t(subtitle)}</PreparationText>}</View>
     </View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 10, paddingBottom: insets.bottom + 24 }}
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}>
@@ -94,16 +95,16 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
   </View>;
 }
 
-type Choice = { label: string; subtitle?: string; value: string; disabled?: boolean };
+type Choice = { label: string; subtitle?: string; searchText?: string; value: string; disabled?: boolean };
 type Dialog = { kind: 'input'; title: string; label: string; initial?: string; quantity?: boolean; maxLength?: number; emptyError?: string;
   validate?: (value: string) => string | null; resolve: (value: string | null) => void }
   | { kind: 'choice'; title: string; choices: Choice[]; message?: string; searchable?: boolean; resolve: (value: string | null) => void }
-  | { kind: 'confirm'; title: string; message: string; confirm: string; resolve: (value: boolean) => void }
+  | { kind: 'confirm'; title: string; message: string; confirm: string; cancel: string; resolve: (value: boolean) => void }
   | { kind: 'message'; title: string; message: string; resolve: () => void };
 type Dialogs = {
   input: (options: Omit<Extract<Dialog, { kind: 'input' }>, 'kind' | 'resolve'>) => Promise<string | null>;
   choose: (title: string, choices: Choice[], message?: string, searchable?: boolean) => Promise<string | null>;
-  confirm: (title: string, message: string, confirm?: string) => Promise<boolean>;
+  confirm: (title: string, message: string, confirm?: string, cancel?: string) => Promise<boolean>;
   message: (title: string, message: string) => void;
 };
 const DialogContext = createContext<Dialogs | null>(null);
@@ -129,7 +130,10 @@ function DialogContent({ dialog, close }: { dialog: Dialog; close: () => void })
     <AlertDialog onDismissRequest={cancel}>
       <AlertDialog.Title><Text>{t(dialog.title)}</Text></AlertDialog.Title>
       <AlertDialog.Text>{dialog.kind === 'input' ? <Column verticalArrangement={{ spacedBy: 8 }}>
-        <OutlinedTextField value={nativeValue} singleLine onValueChange={setValue} maxLength={dialog.maxLength}
+        <OutlinedTextField value={nativeValue} singleLine onValueChange={text => {
+          const next = dialog.quantity ? preparationQuantityInput(text) : text;
+          if (next !== text) nativeValue.set(next); setValue(next);
+        }}
           keyboardOptions={{ keyboardType: dialog.quantity ? 'decimal' : 'text' }} modifiers={[fillMaxWidth()]}>
           <OutlinedTextField.Label><Text>{t(dialog.label)}</Text></OutlinedTextField.Label>
         </OutlinedTextField>{error ? <Text>{t(error)}</Text> : null}</Column>
@@ -137,10 +141,10 @@ function DialogContent({ dialog, close }: { dialog: Dialog; close: () => void })
           {dialog.searchable ? <OutlinedTextField value={searchValue} singleLine onValueChange={setSearch} modifiers={[fillMaxWidth()]}>
             <OutlinedTextField.Label><Text>{t('Qidirish')}</Text></OutlinedTextField.Label></OutlinedTextField> : null}
           <RNHostView matchContents><ScrollView style={{ maxHeight: height * 0.45, width: width * 0.7 }}>
-          {dialog.choices.filter(item => `${item.label} ${item.subtitle ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())).map(item => <PreparationRow key={item.value} title={t(item.label)} subtitle={item.subtitle}
+          {dialog.choices.filter(item => `${item.label} ${item.subtitle ?? ''} ${item.searchText ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())).map(item => <PreparationRow key={item.value} title={t(item.label)} subtitle={item.subtitle}
             disabled={item.disabled} onPress={() => { close(); dialog.resolve(item.value); }} />)}
         </ScrollView></RNHostView></Column> : <Text>{dialog.message}</Text>}</AlertDialog.Text>
-      {dialog.kind !== 'message' && <AlertDialog.DismissButton><TextButton onClick={cancel}><Text>{t('Bekor qilish')}</Text></TextButton></AlertDialog.DismissButton>}
+      {dialog.kind !== 'message' && <AlertDialog.DismissButton><TextButton onClick={cancel}><Text>{t(dialog.kind === 'confirm' ? dialog.cancel : 'Bekor qilish')}</Text></TextButton></AlertDialog.DismissButton>}
       {dialog.kind !== 'choice' && <AlertDialog.ConfirmButton><TextButton onClick={accept}><Text>{t(dialog.kind === 'confirm' ? dialog.confirm : dialog.kind === 'message' ? 'OK' : 'Saqlash')}</Text></TextButton></AlertDialog.ConfirmButton>}
     </AlertDialog>
   </Host>;
@@ -161,7 +165,7 @@ export function PreparationDialogs({ children }: { children: ReactNode }) {
   const value: Dialogs = {
     input: options => new Promise(resolve => show({ ...options, kind: 'input', resolve })),
     choose: (title, choices, message, searchable) => new Promise(resolve => show({ kind: 'choice', title, choices, message, searchable, resolve })),
-    confirm: (title, message, confirm = 'Saqlash') => new Promise(resolve => show({ kind: 'confirm', title, message, confirm, resolve })),
+    confirm: (title, message, confirm = 'Saqlash', cancel = 'Bekor qilish') => new Promise(resolve => show({ kind: 'confirm', title, message, confirm, cancel, resolve })),
     message: (title, message) => show({ kind: 'message', title, message, resolve: () => {} }),
   };
   return <DialogContext.Provider value={value}>{children}{dialog && <DialogContent key={dialog.kind + dialog.title} dialog={dialog} close={close} />}</DialogContext.Provider>;

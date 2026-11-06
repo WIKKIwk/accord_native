@@ -5,13 +5,6 @@ import { usePreparationFormula, type PreparationFormulaOptions } from './usePrep
 import { usePreparationLibrary } from './usePreparationLibrary';
 import { usePreparationMaterials } from './usePreparationMaterials';
 import { usePreparationVariants, type PreparationVariantsOptions } from './usePreparationVariants';
-import type { preparationPendingCommand } from './preparationCommandApi';
-
-export function preparationPendingLabel(pending: NonNullable<Awaited<ReturnType<typeof preparationPendingCommand>>>) {
-  if (pending.kind === 'receipts') return `Kirim: ${String(pending.payload.kg ?? '')} kg`;
-  if (pending.kind === 'materials') return `Homashyo: ${String(pending.payload.name ?? '')}`;
-  return `Order: ${String(pending.payload.order_id ?? '')}`;
-}
 
 export function usePreparationReset(controller: { invalidate: () => void }) {
   useEffect(() => registerSessionResetHook(async () => { controller.invalidate(); }), [controller]);

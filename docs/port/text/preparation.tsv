@@ -1,0 +1,63 @@
+# platform	text	reason
+both	Vazifalar oqimi uzildi.	mobile_api_supply_tasks.dart is used by _SupplyTasksScreenState; admin_production_map_orders_screen_widgets.dart selects _PreparationOrdersListState for the real preparation role.
+both	Tayyorlov ombori uchun haqiqiy akkaunt kerak	This literal occurs in the V2 TestModeController branch; test mode is deferred by docs/port/PORT.md D3 and remains open in preparation status.
+both	Saqlash kaliti qurilmada saqlanmadi	V2 uses this only when SharedPreferences.setString returns false; expo-sqlite Storage.d.ts setItem returns Promise<void> and reports storage failure by rejection.
+both	Vazifalar holatini qayta yuklang.	mobile_api_supply_tasks.dart is used by _SupplyTasksScreenState; admin_production_map_orders_screen_widgets.dart selects _PreparationOrdersListState for the real preparation role.
+both	Homashyoni boshqarish uchun haqiqiy akkaunt kerak	This literal occurs in the V2 TestModeController branch; test mode is deferred by docs/port/PORT.md D3 and remains open in preparation status.
+both	Kirim raqami	preparation_production_screen.dart:_showRoll passes detailsContent; rps_qr_reprint_sheet.dart renders that instead of the details list.
+both	Eni	preparation_production_screen.dart:_showRoll passes detailsContent; rps_qr_reprint_sheet.dart renders that instead of the details list.
+both	Mikron	preparation_production_screen.dart:_showRoll passes detailsContent; rps_qr_reprint_sheet.dart renders that instead of the details list.
+both	Nusxalash	preparation_production_screen.dart:_showRoll leaves onPayloadTap null; rps_qr_reprint_sheet.dart shows this tooltip only when it is supplied.
+both	QRni o‘chirish	preparation_production_screen.dart:_showRoll supplies neither onDelete nor onEdit; rps_qr_reprint_sheet.dart shows these only for those callbacks.
+both	Batch QRni o‘chirish	preparation_production_screen.dart:_showRoll supplies neither onDelete nor onEdit; rps_qr_reprint_sheet.dart shows these only for those callbacks.
+both	Bu QR Laminatsiya ishini boshlash uchun ishlatilmaydi. Keyin yana generatsiya qilish mumkin.	preparation_production_screen.dart:_showRoll supplies neither onDelete nor onEdit; rps_qr_reprint_sheet.dart shows these only for those callbacks.
+both	WIPni o‘zgartirish	preparation_production_screen.dart:_showRoll supplies neither onDelete nor onEdit; rps_qr_reprint_sheet.dart shows these only for those callbacks.
+both	O‘chirilmoqda…	preparation_production_screen.dart:_showRoll supplies neither onDelete nor onEdit; rps_qr_reprint_sheet.dart shows these only for those callbacks.
+both	Mac print bridge failed	print_service.dart:133-176 calls the Mac bridge only for kIsWeb; this port targets iOS and Android (PORT.md D1).
+both	Mac print bridge returned an invalid response	print_service.dart:133-176 calls the Mac bridge only for kIsWeb; this port targets iOS and Android (PORT.md D1).
+both	Mac USB printer not found	print_service.dart:133-176 calls the Mac bridge only for kIsWeb; this port targets iOS and Android (PORT.md D1).
+both	Mac print bridge returned an invalid printer profile	print_service.dart:133-176 calls the Mac bridge only for kIsWeb; this port targets iOS and Android (PORT.md D1).
+both	Band qilingan homashyo QR kodini qayta chop etib bo‘lmaydi	This literal occurs in the V2 TestModeController branch; test mode is deferred by docs/port/PORT.md D3 and remains open in preparation status.
+both	qr payload is empty	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	^XSET,BUZZER,0	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	~MDELG,${graphicNames.text}	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	~EB,${graphicNames.text},${textGraphic.length}	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	~MDELG,${graphicNames.qr}	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	~EB,${graphicNames.qr},${qrGraphic.length}	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	~S,STATUS	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	~S,ESG	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	^AD	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	^XSET,UNICODE,1	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	^XSET,IMMEDIATE,1	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	^XSET,ACTIVERESPONSE,1	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	^XSET,CODEPAGE,16	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	AB,16,72,1,1,0,0,COMPANY: ${content.companyName}	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	AB,16,${112 + i * 40},1,1,0,0,${lines[i]}	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	AB,16,264,1,1,0,0,NETTO: ${content.kgText} KG	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	AB,16,304,1,1,0,0,BRUTTO: ${content.bruttoText} KG	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	BA,0,24,1,2,42,0,0,${content.epc}	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	AB,16,264,1,1,0,0,${netIncludesBobina ? 'NETTO' : 'KG'}: ${GodexRpsRenderer._normalizeKgValue(grossQty.toString())}${netIncludesBobina ? ' KG' : ''}	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	AB,16,304,1,1,0,0,METRAJ: $qtyText	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	qr data too long	GoDEX renderer is excluded by docs/port/PORT.md D13; the literal is a renderer command or renderer error.
+both	7 TA RANGLI BOSMA	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	7 TA RANGLI BOSMA APARAT	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	7TALIK BOSMA	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	8 TA RANGLI BOSMA	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	8 TA RANGLI BOSMA APARAT	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	8TALIK BOSMA	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	9 TA RANGLI BOSMA	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	9 TA RANGLI BOSMA APARAT	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	9TALIK BOSMA	src/printing/bluetoothLayout.ts:67 performs the same 7/8/9 apparatus mapping with a regex and interpolation; tests/printingBluetoothLayout.test.cjs verifies it.
+both	Ikkala ombor ham sizga biriktirilgan. Mahsulot darhol qabul qiluvchi omborga ko‘chiriladi.	V2 inventory_movements_screen__InventoryMovementsScreenState_methods_02.dart:217 uses adjacent Dart literals for the same sentence.
+both	Qabul qiluvchi tasdiqlamaguncha mahsulot manba omborda band holatda qoladi.	V2 inventory_movements_screen__InventoryMovementsScreenState_methods_02.dart:219 uses adjacent Dart literals for the same sentence.
+both	Formula tarkibi noto‘g‘ri	Defensive invariant in preparationLogic.ts; usePreparationFormula.ts checks canSave before constructing lines and maps unexpected errors through preparationFormulaErrorMessage.
+both	Shnek ulushlari noto‘g‘ri	Defensive invariant in preparationLogic.ts; the share sheets validate first and preparationShareErrorMessage maps unexpected errors to V2 feedback.
+both	Shnek ulushlari jami 100% bo‘lishi kerak	Defensive invariant in preparationLogic.ts; the share sheets validate first and preparationShareErrorMessage maps unexpected errors to V2 feedback.
+both	Omborda yetarli homashyo yo‘q	preparationConsumptionLineError has no active V4 screen call; the corresponding legacy V2 home consumption helpers are unused.
+ios	Tayyorlov sessiyasi mavjud emas	PreparationContext.ios.tsx throws this developer diagnostic only when a screen is mounted without its provider.
+ios	Buyurtma rasmini ochish	PreparationSequence.ios.tsx uses this as an accessibility label for the image button, not as visible V2 copy.
+android	Preparation session unavailable	PreparationContext.android.tsx throws this developer diagnostic only when mounted without its provider.
+android	Preparation dialogs unavailable	PreparationUI.android.tsx throws this developer diagnostic only when mounted without its dialog provider.
+android	#fff	PreparationMovements.android.tsx uses this as a color value, not as displayed text.
+android	Menyu	PreparationUI.android.tsx uses this only as the accessibility label of the drawer button.
+both	Menyuni yopish	PreparationDrawer.ios.tsx and PreparationDrawer.android.tsx use this only as the drawer overlay accessibility label.

@@ -11,7 +11,7 @@ import { preparationDecimal, preparationDecimalText, preparationDisplay, type Pr
 
 type Material = Awaited<ReturnType<typeof preparationSnapshot>>['materials'][number];
 export type PreparationFormulaOptions = { orderId: string; orderCode: string; productCode: string; productTitle: string;
-  materialId: string; materialName: string; variantId?: string; variantName?: string; manageSavedFormula?: boolean;
+  materialId: string; materialName: string; customerName?: string; variantId?: string; variantName?: string; variantCode?: string; manageSavedFormula?: boolean;
   allowAddingFormula?: boolean; initialFormulaName?: string | null; openEditorOnLoad?: boolean };
 type FormulaState = { materials: Material[]; formulas: PreparationFormula[]; variantName: string; recipeKey: string | null;
   estimatedMaterialKg: string | null; error: string | null; notice: string | null; loading: boolean; saving: boolean; deleting: boolean;
@@ -100,25 +100,31 @@ export class PreparationFormulaState {
   closeEditor() { this.update({ editing: false, editingName: null, rows: [] }); }
   setRows(rows: FormulaEditorRow[]) { this.update({ rows }); }
   async save() {
-    if (!this.canSave || !this.sameScope) return;
+    if (!this.canSave || !this.sameScope) return false;
+    const generation = this.generation;
     this.update({ saving: true });
     try {
       await preparationUpsertFormula(this.session, this.options.productCode, preparationFormulaEditorLines(this.state.rows), {
         ...this.query, name: this.state.editingName ?? preparationNextFormulaName(this.state.formulas.map(item => item.name)),
         savedOnly: !!this.options.manageSavedFormula && (this.state.editingName !== null || !this.options.allowAddingFormula) });
-      if (!this.sameScope) return;
+      if (!this.sameScope || generation !== this.generation) return false;
       this.update({ saving: false }); this.closeEditor(); await this.refreshFormulas();
-    } finally { this.update({ saving: false }); }
+      return this.sameScope && generation === this.generation;
+    } finally { if (generation === this.generation) this.update({ saving: false }); }
   }
   async remove(name: string) {
-    if (this.state.deleting || !this.sameScope) return;
+    if (this.state.deleting || !this.sameScope) return false;
+    const generation = this.generation;
     this.update({ deleting: true });
     try { await preparationDeleteFormula(this.session, this.options.productCode, name, this.query);
-      if (this.sameScope) { this.update({ deleting: false }); await this.refreshFormulas(); }
-    } finally { this.update({ deleting: false }); }
+      if (!this.sameScope || generation !== this.generation) return false;
+      this.update({ deleting: false }); await this.refreshFormulas();
+      return this.sameScope && generation === this.generation;
+    } finally { if (generation === this.generation) this.update({ deleting: false }); }
   }
   async saveShares(values: string[]) {
-    if (this.state.loading || this.state.saving || this.state.deleting || !this.sameScope || !this.state.formulas.length) return;
+    if (!this.sameScope) throw new WorkerControlException('account_changed', 'Akkaunt o‘zgargan. Sahifani qayta oching');
+    if (this.state.loading || this.state.saving || this.state.deleting || !this.state.formulas.length) return;
     this.update({ saving: true });
     try {
       const formulas = await preparationUpdateFormulaShares(this.session, { ...this.query, productCode: this.options.productCode,

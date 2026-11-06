@@ -49,4 +49,5 @@ test('material detail and reversal keep only matching warehouse and item history
   assert.equal(m.preparationReceiptMode('Other', ['Own']), 'scale');
   assert.equal(m.preparationInputError(' ', {}), 'Nom kiriting');
   assert.ok(m.preparationInputError('0', { quantity: true }));
+  assert.equal(m.preparationQuantityInput(' -1a2,3.4 kg'), '12,3.4');
 });

@@ -16,12 +16,20 @@ export async function selectPreparationDevice(dialogs: Dialogs, isCurrent: () =>
     return isCurrent() ? { transport: 'offline', printer } : null;
   }
   if (mode === 'bluetooth') {
-    const devices = await NativeBluetoothPrinter.pairedPrinters();
-    if (!isCurrent()) return null;
-    if (!devices.length) { dialogs.message('Printer topilmadi', 'Bluetooth printer topilmadi.'); return null; }
-    const address = await dialogs.choose('Bluetooth printer', devices.map(device => ({ label: device.displayName, subtitle: device.address, value: device.address })));
-    const printer = devices.find(device => device.address === address);
-    return printer && isCurrent() ? { transport: 'bluetooth', printer } : null;
+    while (isCurrent()) {
+      const devices = await NativeBluetoothPrinter.pairedPrinters();
+      if (!isCurrent()) return null;
+      if (!devices.length) {
+        const retry = await dialogs.choose('Bluetooth printer topilmadi', [{ label: 'Qayta qidirish', value: 'retry' }],
+          'Printerni Android Bluetooth sozlamalarida avval bog‘lang (pair).');
+        if (retry === 'retry') continue;
+        return null;
+      }
+      const address = await dialogs.choose('Bluetooth printer', devices.map(device => ({ label: device.displayName, subtitle: device.address, value: device.address })));
+      const printer = devices.find(device => device.address === address);
+      return printer && isCurrent() ? { transport: 'bluetooth', printer } : null;
+    }
+    return null;
   }
   if (mode !== 'wifi') return null;
   while (isCurrent()) {

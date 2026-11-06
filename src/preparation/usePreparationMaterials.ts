@@ -7,6 +7,12 @@ import { preparationWarehouseChoices } from './preparationLogic';
 
 type Material = Awaited<ReturnType<typeof preparationOwnedMaterials>>[number];
 type State = { items: Material[]; query: string; error: string | null; loading: boolean; refreshing: boolean; saving: boolean };
+export function preparationMaterialDeleteMessage(name: string) {
+  return `«${name}» o‘chirilsinmi? Faqat ishlatilmagan homashyo o‘chiriladi. Qoldiq, kirim yoki formula bo‘lsa, o‘chirish rad etiladi.`;
+}
+export function preparationMaterialsEmptyMessage(query: string) {
+  return query.trim() ? 'Homashyo topilmadi.' : 'Hali homashyo yaratmagansiz.';
+}
 export function preparationMaterialsErrorMessage(error: unknown) {
   if (error instanceof WorkerControlException) return error.code === 'preparation_request_failed'
     ? 'Omborlar ro‘yxatini olib bo‘lmadi. Qayta urinib ko‘ring' : error.message;
@@ -37,34 +43,38 @@ export class PreparationMaterialsState {
     finally { if (this.active && generation === this.generation) this.update({ loading: false, refreshing: false }); }
   }
   async rename(material: Material, name: string) {
-    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return;
-    this.update({ saving: true });
+    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return false;
+    const generation = this.generation; this.update({ saving: true });
     try {
       const saved = await preparationRenameMaterial(this.session, material.item_code, name);
+      if (!this.active || generation !== this.generation) return false;
       this.update({ items: this.state.items.map(item => item.item_code === material.item_code ? { ...item, name: saved } : item)
         .sort((a, b) => a.name.toLowerCase() < b.name.toLowerCase() ? -1 : a.name.toLowerCase() > b.name.toLowerCase() ? 1 : 0) });
-    } finally { this.update({ saving: false }); }
+      return true;
+    } finally { if (generation === this.generation) this.update({ saving: false }); }
   }
   async remove(material: Material) {
-    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return;
-    this.update({ saving: true });
+    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return false;
+    const generation = this.generation; this.update({ saving: true });
     try { await preparationDeleteMaterial(this.session, material.item_code);
-      this.update({ items: this.state.items.filter(item => item.item_code !== material.item_code) }); }
-    finally { this.update({ saving: false }); }
+      if (!this.active || generation !== this.generation) return false;
+      this.update({ items: this.state.items.filter(item => item.item_code !== material.item_code) }); return true; }
+    finally { if (generation === this.generation) this.update({ saving: false }); }
   }
   async warehouseChoices(material: Material) {
     if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return null;
-    this.update({ saving: true });
+    const generation = this.generation; this.update({ saving: true });
     try { const snapshot = await preparationSnapshot(this.session);
-      return this.active ? preparationWarehouseChoices(snapshot.material_warehouses, material.warehouses) : null; }
-    finally { this.update({ saving: false }); }
+      return this.active && generation === this.generation ? preparationWarehouseChoices(snapshot.material_warehouses, material.warehouses) : null; }
+    finally { if (generation === this.generation) this.update({ saving: false }); }
   }
   async setWarehouses(material: Material, warehouses: string[]) {
-    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return;
-    this.update({ saving: true });
+    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return false;
+    const generation = this.generation; this.update({ saving: true });
     try { const updated = await preparationSetMaterialWarehouses(this.session, material.item_code, warehouses);
-      this.update({ items: this.state.items.map(item => item.item_code === updated.item_code ? updated : item) }); }
-    finally { this.update({ saving: false }); }
+      if (!this.active || generation !== this.generation) return false;
+      this.update({ items: this.state.items.map(item => item.item_code === updated.item_code ? updated : item) }); return true; }
+    finally { if (generation === this.generation) this.update({ saving: false }); }
   }
   invalidate() {
     if (!this.active) return;

@@ -112,6 +112,10 @@ export function preparationInputError(value: string, options: { quantity?: boole
   try { preparationDecimal(value); return null; }
   catch (error) { return error instanceof Error ? error.message : String(error); }
 }
+
+export function preparationQuantityInput(value: string) {
+  return value.replace(/[^0-9.,]/g, '');
+}
 export function preparationReceiptMode(warehouse: string | null, materialWarehouses: readonly string[]) {
   return warehouse == null ? 'warehouse' : materialWarehouses.includes(warehouse) ? 'manual' : 'scale';
 }

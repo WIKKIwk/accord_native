@@ -1,59 +1,80 @@
 import type { Href } from 'expo-router';
-import { Button, ContextMenu, Menu, Section, Text, TextField } from '@expo/ui/swift-ui';
-import { disabled } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
+import { disabled, onLongPressGesture } from '@expo/ui/swift-ui/modifiers';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, View } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
-import { PreparationInputSheet, PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
+import { PreparationInputDialog } from './PreparationInputDialog';
+import { PreparationNotice } from './PreparationNotice';
+import { PreparationSeriyoPicker } from './PreparationSeriyoPicker';
+import { PreparationWarehouseCreateDialog } from './PreparationWarehouseCreateDialog';
+import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
 import { preparationDisplay } from './preparationModel';
-import { preparationJournalDate } from './PreparationDate';
+import { preparationMaterialConsumptionCard, preparationMaterialReceiptCard } from './preparationHistoryModel';
 import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRenameWarehouse } from './preparationManagementApi';
 import { preparationMaterialAvailable, preparationMaterialHistory, preparationReceiptMode, preparationReceiptPayload, preparationVisibleMaterials } from './preparationLogic';
 import { openPreparationScale } from './PreparationRoutes';
+import { preparationWarehouseDeleteMessage, preparationWarehouseErrorMessage } from './preparationWarehousePresentation';
+import { usePreparationNotice } from './usePreparationNotice';
 
 type Material = NonNullable<ReturnType<typeof usePreparationContext>['home']['snapshot']>['materials'][number];
+type StockInput = { title: string; label: string; quantity?: boolean; save: (value: string) => void };
+
+function WarehouseOption({ name, select, actions }: { name: string; select: () => void; actions?: () => void }) {
+  return <Button label={name} modifiers={actions ? [onLongPressGesture(actions)] : []} onPress={select} />;
+}
 
 // @v2 PreparationWarehouseScreen
 export function PreparationWarehouse() {
   const { home, session } = usePreparationContext();
-  const t = usePreparationText(), sheet = useNativeSheet();
-  const [query, setQuery] = useState(''), [managing, setManaging] = useState(false);
+  const t = usePreparationText(), sheet = useNativeSheet(), actions = useNativeSheet(), notice = usePreparationNotice();
+  const [query, setQuery] = useState(''), [managing, setManaging] = useState(false), [expanded, setExpanded] = useState(false);
+  const [showCreate, setShowCreate] = useState(false), [renameTarget, setRenameTarget] = useState<string | null>(null);
+  const [input, setInput] = useState<StockInput | null>(null);
+  const afterAction = useRef<(() => void) | null>(null);
   const { snapshot, warehouse, controller } = home;
   const firstFocus = useRef(true);
   useFocusEffect(useCallback(() => { if (firstFocus.current) firstFocus.current = false; else void controller.reload(); }, [controller]));
   const mode = preparationReceiptMode(warehouse, snapshot?.material_warehouses ?? []);
   const items = preparationVisibleMaterials(snapshot?.materials ?? [], warehouse, query);
   const blocked = home.locked || managing;
-  const prompt = (title: string, label: string, save: (value: string) => Promise<void>, initial = '', quantity = false) => {
-    sheet.open(<PreparationInputSheet title={title} label={label} initial={initial} quantity={quantity} close={sheet.close} save={save} />,
-      { compact: true, dismissible: false });
+  const submit = (kind: string, payload: Record<string, unknown>) => {
+    void controller.submit(kind, payload).then(() => notice.show(t('Saqlandi'))).catch(error => notice.show(String(error)));
   };
   const receive = (material: Material) => {
     if (!warehouse) return;
-    prompt(`${material.name} — kirim`, 'Kirim (kg)', async kg => {
-      await controller.submit('receipts', preparationReceiptPayload(material, warehouse, kg)); Alert.alert(t('Saqlandi'));
-    }, '', true);
+    setInput({ title: `${material.name} — kirim`, label: 'Kirim (kg)', quantity: true,
+      save: kg => submit('receipts', preparationReceiptPayload(material, warehouse, kg)) });
   };
   const createMaterial = () => {
     if (!warehouse) return;
-    prompt('Yangi homashyo', 'Homashyo nomi', async name => {
-      await controller.submit('materials', { name, warehouse }); Alert.alert(t('Saqlandi'));
-    });
+    setInput({ title: 'Yangi homashyo', label: 'Homashyo nomi', save: name => submit('materials', { name, warehouse }) });
+  };
+  const pickReceipt = () => {
+    let selected: Material | null = null;
+    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={items}
+      subtitle={item => `Mavjud: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`}
+      choose={material => { selected = material; sheet.close(); }} />, { dismissible: true, onDismiss: () => { if (selected) receive(selected); } });
   };
   const manage = async (operation: () => Promise<void>) => {
     setManaging(true); try { await operation(); } finally { setManaging(false); }
   };
-  const createWarehouse = (parent: string) => prompt('Bola ombor ochish', 'Ombor nomi', name => manage(async () => {
-    const saved = await preparationCreateWarehouse(session, name, parent); await controller.reload(); controller.selectWarehouse(saved);
-  }));
-  const rename = (name: string) => prompt('Ombor nomini o‘zgartirish', 'Ombor nomi', value => manage(async () => {
+  const failure = (error: unknown) => notice.show(t(preparationWarehouseErrorMessage(error)));
+  const createWarehouse = (name: string, parent: string) => { setShowCreate(false); void manage(async () => {
+    const saved = await preparationCreateWarehouse(session, name, parent);
+    if (!saved) return;
+    await controller.reload(); controller.selectWarehouse(saved); setExpanded(false);
+    notice.show(t(`Ombor ochildi: ${saved}`));
+  }).catch(failure); };
+  const rename = (name: string, value: string) => { void manage(async () => {
     const wasSelected = controller.getSnapshot().warehouse === name;
     const saved = await preparationRenameWarehouse(session, name, value); await controller.reload();
     if (wasSelected) controller.selectWarehouse(saved);
-  }), name);
-  const remove = (name: string) => Alert.alert(t('Omborni o‘chirish'), name, [
+    notice.show(t('Ombor nomi o‘zgartirildi'));
+  }).catch(failure); };
+  const remove = (name: string) => Alert.alert(t('Omborni o‘chirish'), t(preparationWarehouseDeleteMessage(name)), [
     { text: t('Bekor qilish'), style: 'cancel' },
     { text: t('O‘chirish'), style: 'destructive', onPress: () => { void manage(async () => {
       const wasSelected = controller.getSnapshot().warehouse === name;
@@ -62,44 +83,57 @@ export function PreparationWarehouse() {
         const remaining = controller.getSnapshot().snapshot?.assigned_warehouses ?? [];
         if (remaining[0]) controller.selectWarehouse(remaining[0]);
       }
-    }).catch(preparationAlert); } },
+      notice.show(t('Ombor o‘chirildi'));
+    }).catch(failure); } },
   ]);
-  return <><Stack.Screen options={{ title: t('Ombor') }} /><PreparationList refresh={controller.reload.bind(controller)}>
+  const openActions = (name: string) => {
+    if (blocked || !snapshot?.managed_warehouses.includes(name)) return;
+    actions.open(<Host matchContents={{ vertical: true }}><VStack spacing={12}>
+      <Text>{name}</Text>
+      <Button label={t('Nomini o‘zgartirish')} onPress={() => { afterAction.current = () => setRenameTarget(name); actions.close(); }} />
+      <Button label={t('O‘chirish')} role="destructive" onPress={() => { afterAction.current = () => remove(name); actions.close(); }} />
+    </VStack></Host>, { compact: true, dismissible: true, onDismiss: () => {
+      const next = afterAction.current; afterAction.current = null; next?.();
+    } });
+  };
+  return <View style={{ flex: 1 }}><Stack.Screen options={{ title: t('Ombor') }} /><PreparationList refresh={controller.reload.bind(controller)}>
     <PreparationStatus loading={home.loading} error={home.error} retry={() => { void controller.reload(); }} />
-    <Section><Menu label={`${t('Ombor')}: ${warehouse ?? t('Tanlanmagan')}`}>
-      {(snapshot?.assigned_warehouses ?? []).map(name => <Button key={name} label={name} modifiers={[disabled(blocked)]} onPress={() => controller.selectWarehouse(name)} />)}
-    </Menu><TextField placeholder={t('Qidirish')} onTextChange={setQuery} /></Section>
+    <Section>{!!snapshot?.assigned_warehouses.length && <Button label={`${t('Ombor')}: ${warehouse ?? t('Tanlanmagan')}`} onPress={() => setExpanded(value => !value)} />}
+      {expanded && (snapshot?.assigned_warehouses ?? []).map(name => <WarehouseOption key={name} name={name}
+        actions={snapshot?.managed_warehouses.includes(name) && !blocked ? () => openActions(name) : undefined}
+        select={() => { controller.selectWarehouse(name); setExpanded(false); }} />)}
+      <TextField placeholder={t('Qidirish')} onTextChange={setQuery} /></Section>
     {snapshot?.assigned_warehouses.length === 0 && <Section><Text>{t('Sizga ombor biriktirilmagan.')}</Text></Section>}
     {snapshot && snapshot.assigned_warehouses.length > 0 && !warehouse && <Section><Text>{t('Yuqoridagi filtrdan ombor tanlang.')}</Text></Section>}
     {warehouse && <Section>
       {items.length === 0 && <Text>{t('Bu omborda hali kirim yo‘q.')}</Text>}
-      {items.map(material => <Button key={material.code} onPress={() => router.push(`/ios-preparation/material-detail?code=${encodeURIComponent(material.code)}` as Href)}>
-        <Text>{material.name} · {t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
+      {items.map(material => <Button key={material.code} onPress={() => router.push(`/ios-preparation/material-detail?code=${encodeURIComponent(material.code)}&warehouse=${encodeURIComponent(warehouse)}` as Href)}>
+        <Text>{material.name.trim() || material.code} · {t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
       </Button>)}
     </Section>}
     <Section title={t('Amallar')}>
-      {mode === 'manual' && <Menu label={t('Kirim')} modifiers={[disabled(blocked)]}>
-        {items.filter(item => item.can_receive).map(item => <Button key={item.code} label={item.name} onPress={() => receive(item)} />)}
-      </Menu>}
+      {mode === 'manual' && <Button label={t('Kirim')} modifiers={[disabled(blocked)]} onPress={pickReceipt} />}
       {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(blocked)]} onPress={() => openPreparationScale({ warehouse })} />}
       {mode === 'manual' && <Button label={t('Homashyo qo‘shish')} modifiers={[disabled(blocked)]} onPress={createMaterial} />}
-      {!!snapshot?.material_warehouses.length && <Menu label={t('Ombor qo‘shish')} modifiers={[disabled(blocked)]}>
-        {snapshot.material_warehouses.map(name => <Button key={name} label={name} onPress={() => createWarehouse(name)} />)}
-      </Menu>}
-      {(snapshot?.managed_warehouses ?? []).filter(name => snapshot?.assigned_warehouses.includes(name)).map(name => <ContextMenu key={name}>
-        <ContextMenu.Trigger><Text>{name}</Text></ContextMenu.Trigger><ContextMenu.Items>
-          <Button label={t('Nomini o‘zgartirish')} modifiers={[disabled(blocked)]} onPress={() => rename(name)} />
-          <Button label={t('O‘chirish')} role="destructive" modifiers={[disabled(blocked)]} onPress={() => remove(name)} />
-        </ContextMenu.Items></ContextMenu>)}
+      {!!snapshot?.assigned_warehouses.length && !!snapshot?.material_warehouses.length && <Button label={t('Ombor qo‘shish')}
+        modifiers={[disabled(blocked)]} onPress={() => setShowCreate(true)} />}
     </Section>
-  </PreparationList></>;
+  </PreparationList><PreparationNotice message={notice.message} />
+    {showCreate && snapshot && <PreparationWarehouseCreateDialog warehouses={snapshot.material_warehouses} selected={warehouse}
+      close={() => setShowCreate(false)} create={createWarehouse} />}
+    {renameTarget && <PreparationInputDialog key={renameTarget} title="Ombor nomini o‘zgartirish" label="Ombor nomi" initial={renameTarget}
+      close={() => setRenameTarget(null)} save={value => { const target = renameTarget; setRenameTarget(null); rename(target, value); }} />}
+    {input && <PreparationInputDialog title={input.title} label={input.label} quantity={input.quantity}
+      close={() => setInput(null)} save={value => { const action = input.save; setInput(null); action(value); }} />}
+  </View>;
 }
 
 // @v2 PreparationMaterialDetailScreen
 export function PreparationMaterialDetail() {
-  const { code } = useLocalSearchParams<{ code: string }>();
-  const { home } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet();
-  const { warehouse, snapshot, controller } = home;
+  const params = useLocalSearchParams<{ code: string; warehouse?: string }>(), code = params.code;
+  const { home } = usePreparationContext(), t = usePreparationText(), notice = usePreparationNotice();
+  const [input, setInput] = useState<StockInput | null>(null);
+  const { snapshot, controller } = home, warehouse = params.warehouse ?? home.warehouse;
   const firstFocus = useRef(true);
   useFocusEffect(useCallback(() => { if (firstFocus.current) firstFocus.current = false; else void controller.reload(); }, [controller]));
   const material = snapshot?.materials.find(item => item.code === code);
@@ -107,21 +141,27 @@ export function PreparationMaterialDetail() {
   const mode = preparationReceiptMode(warehouse, snapshot?.material_warehouses ?? []);
   const receive = () => {
     if (!warehouse || !material) return;
-    sheet.open(<PreparationInputSheet title={`${material.name} — kirim`} label="Kirim (kg)" quantity close={sheet.close} save={async kg => {
-      await controller.submit('receipts', preparationReceiptPayload(material, warehouse, kg)); Alert.alert(t('Saqlandi'));
-    }} />, { compact: true, dismissible: false });
+    setInput({ title: `${material.name} — kirim`, label: 'Kirim (kg)', quantity: true, save: kg => {
+      void controller.submit('receipts', preparationReceiptPayload(material, warehouse, kg))
+        .then(() => notice.show(t('Saqlandi'))).catch(error => notice.show(String(error)));
+    } });
   };
-  return <><Stack.Screen options={{ title: material?.name ?? t('Homashyo') }} /><PreparationList refresh={controller.reload.bind(controller)}>
+  return <View style={{ flex: 1 }}><Stack.Screen options={{ title: material?.name ?? t('Homashyo') }} /><PreparationList refresh={controller.reload.bind(controller)}>
     <PreparationStatus loading={home.loading} error={home.error} retry={() => { void controller.reload(); }} />
-    {material && <Section><Text>{material.name}</Text><Text>{t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
-      {mode === 'manual' && <Button label={t('Kirim qilish')} modifiers={[disabled(home.locked || !material.can_receive)]} onPress={receive} />}
-      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(home.locked)]} onPress={() => openPreparationScale({ warehouse })} />}</Section>}
-    {history.receipts.length > 0 && <Section title={t('Kirimlar')}>{history.receipts.map((item, index) => <Text key={index}>
-      {item.kind === 'receipt_reversal' ? '−' : '+'}{preparationDisplay(String(item.kg ?? '0'))} kg · {String(item.warehouse ?? '')} · {preparationJournalDate(String(item.created_at ?? ''))} {item.reversed === true ? t('Bekor qilingan') : ''} {item.reason ? `${t('Sabab')}: ${String(item.reason)}` : ''}
-    </Text>)}</Section>}
-    {history.consumptions.length > 0 && <Section title={t('Chiqimlar')}>{history.consumptions.map(({ doc, line }, index) => <Text key={index}>
-      −{preparationDisplay(String(line.kg ?? '0'))} kg · {String(doc.order_code ?? '')} {String(doc.order_title ?? '')} · {preparationDisplay(String(line.percent ?? '0'))}% · {preparationJournalDate(String(doc.created_at ?? ''))}
-    </Text>)}</Section>}
+    <Section>{!!warehouse && <Text>{warehouse}</Text>}{material && <><Text>{material.name}</Text><Text>{material.code}</Text>
+      <Text>{preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text></>}
+      {mode === 'manual' && <Button label={t('Kirim qilish')} modifiers={[disabled(home.locked || !material || !material.can_receive)]} onPress={receive} />}
+      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(home.locked || !material)]} onPress={() => openPreparationScale({ warehouse })} />}</Section>
+    {history.receipts.length > 0 && <Section title={t('Kirimlar')}>{history.receipts.map((item, index) => {
+      const card = preparationMaterialReceiptCard(item, material?.name); return <VStack key={index} alignment="leading">
+        <Text>{card.title}</Text><Text>{card.subtitle}</Text>{!!card.value && <Text>{card.value}</Text>}</VStack>;
+    })}</Section>}
+    {history.consumptions.length > 0 && <Section title={t('Chiqimlar')}>{history.consumptions.map(({ doc, line }, index) => {
+      const card = preparationMaterialConsumptionCard(doc, line); return <VStack key={index} alignment="leading"><Text>{card.title}</Text><Text>{card.subtitle}</Text></VStack>;
+    })}</Section>}
     {!history.receipts.length && !history.consumptions.length && <Section><Text>{t('Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.')}</Text></Section>}
-  </PreparationList></>;
+  </PreparationList><PreparationNotice message={notice.message} />
+    {input && <PreparationInputDialog title={input.title} label={input.label} quantity={input.quantity}
+      close={() => setInput(null)} save={value => { const action = input.save; setInput(null); action(value); }} />}
+  </View>;
 }

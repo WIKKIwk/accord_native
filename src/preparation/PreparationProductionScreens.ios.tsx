@@ -1,4 +1,4 @@
-import { Button, Host, List, Menu, RNHostView, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
+import { Button, Host, List, ProgressView, RNHostView, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
 import { disabled } from '@expo/ui/swift-ui/modifiers';
 import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -8,12 +8,12 @@ import { Alert, AppState } from 'react-native';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
-import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
-import { preparationJournalDate } from './PreparationDate';
+import { PreparationList, usePreparationText } from './PreparationUI';
 import { openPreparationRoute } from './PreparationRoutes';
 import { PreparationJournal, type JournalState } from './preparationJournal';
 import { createPreparationProductionBatchJournal, createPreparationProductionOrderJournal, createPreparationProductionOrdersJournal } from './preparationJournalFactory';
-import { preparationDisplay } from './preparationModel';
+import { preparationProductionBatchCard, preparationProductionDate, preparationProductionMetrics, preparationProductionOrderCard,
+  preparationProductionRecipeLines, preparationProductionRollCard } from './preparationProductionPresentation';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
 import { reprintPreparationRollWithPrinter, type PreparationDeviceSelection } from './preparationPrinter';
 import { PreparationReprintCancelled } from './preparationReprint';
@@ -22,6 +22,10 @@ import { PreparationPrinterPicker } from './PreparationPrinterPicker';
 type Order = ReturnType<typeof preparationProductionOrderFromJson>;
 type Batch = ReturnType<typeof preparationProductionBatchFromJson>;
 type Roll = ReturnType<typeof preparationProductionRollFromJson>;
+function ProductionStatusOptions({ labels, choose }: { labels: Record<string, string>; choose: (value: string) => void }) {
+  const t = usePreparationText();
+  return <>{Object.entries(labels).map(([key, label]) => <Button key={key} label={t(label)} onPress={() => choose(key)} />)}</>;
+}
 function useJournal<T, S>(make: (changed: (state: JournalState<T, S>) => void) => PreparationJournal<T, S>) {
   const [state, setState] = useState<JournalState<T, S>>({ items: [], loading: true, error: null, has_more: false, next_offset: null, summary: null });
   const current = useRef<PreparationJournal<T, S> | null>(null), visible = useRef(false);
@@ -36,30 +40,20 @@ function useJournal<T, S>(make: (changed: (state: JournalState<T, S>) => void) =
     return () => { visible.current = false; current.current?.setVisible(false); }; }, []));
   return { state, current };
 }
-function JournalFooter<T, S>({ state, more, reload, empty }: { state: JournalState<T, S>; more: () => void; reload: () => void; empty: string }) {
+function JournalHeader<T, S>({ state, reload }: { state: JournalState<T, S>; reload: () => void }) {
   const t = usePreparationText();
-  return <><PreparationStatus loading={state.loading} error={state.error} retry={reload} />
+  return <>{state.loading && <ProgressView />}{!!state.error && <Section><Text>{state.error}</Text>
+    {state.error !== 'Akkaunt o‘zgargan. Sahifani qayta oching' && <Button label={t('Qayta urinish')} onPress={reload} />}</Section>}</>;
+}
+function JournalFooter<T, S>({ state, more, empty }: { state: JournalState<T, S>; more: () => void; empty: string }) {
+  const t = usePreparationText();
+  return <>
     {!state.loading && !state.error && !state.items.length && <Section><Text>{t(empty)}</Text></Section>}
-    {state.has_more && <Section><Button label={t('Yana yuklash')} modifiers={[disabled(state.loading)]} onPress={more} /></Section>}</>;
+    {state.has_more && state.error !== 'Akkaunt o‘zgargan. Sahifani qayta oching' && <Section><Button label={t('Yana yuklash')} modifiers={[disabled(state.loading)]} onPress={more} /></Section>}</>;
 }
 function Recipe({ recipe }: { recipe: Readonly<Record<string, unknown>> | null }) {
   const t = usePreparationText();
-  if (!recipe || !Object.keys(recipe).length) return <Text>{t('Formula qayd etilmagan')}</Text>;
-  const formulas = Array.isArray(recipe.formulas) ? recipe.formulas : [];
-  return <VStack alignment="leading"><Text>{t(`Shnek formulasi: ${String(recipe.variant_name ?? '—')}`)}</Text>
-    {recipe.variant_code != null && <Text>{t(`Formula kodi: ${String(recipe.variant_code)}`)}</Text>}
-    <Text>{t(`Saqlangan tarkib • ${preparationJournalDate(String(recipe.captured_at ?? ''))}`)}</Text>
-    {formulas.map((value, index) => {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-      const item = value as Record<string, unknown>, lines = Array.isArray(item.lines) ? item.lines : [];
-      return <VStack key={index} alignment="leading"><Text>{t(`Shnek ${String(item.name ?? '')} • ${String(item.share_percent ?? '—')}%`)}</Text>
-        {lines.map((raw, i) => {
-          if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-          const line = raw as Record<string, unknown>;
-          return <Text key={i}>{String(line.name ?? line.item_code ?? '')} — {String(line.percent ?? '—')}%</Text>;
-        })}</VStack>;
-    })}
-  </VStack>;
+  return <VStack alignment="leading">{preparationProductionRecipeLines(recipe).map((line, index) => <Text key={index}>{t(line)}</Text>)}</VStack>;
 }
 
 // @v2 RpsQrReprintSheet
@@ -111,7 +105,7 @@ function RollSheet({ roll, session, orderId }: { roll: Roll; session: Session; o
 export function PreparationProduction() {
   const { session } = usePreparationContext(), t = usePreparationText();
   const filters = useRef({ query: '', status: 'all' }), searchText = useRef(''), timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [status, setStatus] = useState('all');
+  const [status, setStatus] = useState('all'), [expanded, setExpanded] = useState(false);
   const make = useCallback((changed: (state: JournalState<Order>) => void) => createPreparationProductionOrdersJournal(session, () => filters.current, changed), [session]);
   const { state, current } = useJournal(make);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -122,19 +116,19 @@ export function PreparationProduction() {
   };
   const changeStatus = (value: string) => {
     if (timer.current) clearTimeout(timer.current);
-    setStatus(value); filters.current.status = value; filters.current.query = searchText.current.trim(); void current.current?.load();
+    setStatus(value); setExpanded(false); filters.current.status = value; filters.current.query = searchText.current.trim(); void current.current?.load();
   };
   const labels: Record<string, string> = { all: 'Barchasi', active: 'Davom etmoqda', completed: 'Yakunlangan' };
+  const accountChanged = state.error === 'Akkaunt o‘zgargan. Sahifani qayta oching';
   return <><Stack.Screen options={{ title: t('Ishlab chiqarish') }} /><PreparationList refresh={async () => { await current.current?.load(); }}>
-    <Section><TextField placeholder={t('Buyurtma, homashyo yoki formula')} onTextChange={search} />
-      <Menu label={`${t('Holat')}: ${t(labels[status])}`}>{Object.entries(labels).map(([key, label]) =>
-        <Button key={key} label={t(label)} onPress={() => changeStatus(key)} />)}</Menu></Section>
-    <JournalFooter state={state} empty="Hali ishlab chiqarish yozuvlari yo‘q." more={() => { void current.current?.load({ append: true }); }} reload={() => { void current.current?.load(); }} />
-    <Section>{state.items.map(order => <Button key={order.order_id} onPress={() => openPreparationRoute('production-order', { id: order.order_id })}>
-      <VStack alignment="leading"><Text>{order.order_code || order.order_id} · {order.order_title}</Text>
-        <Text>{order.customer_name} · {order.batch_count} ta ishlab chiqarish{order.active_batch_count > 0 ? ` · ${order.active_batch_count} ta davom etmoqda` : ''} · {preparationJournalDate(order.last_activity_at)}</Text>
-        <Text>{order.roll_count} ta rulon · {preparationDisplay(order.total_net_kg)} kg · {preparationDisplay(order.total_length_m)} m</Text></VStack>
-    </Button>)}</Section>
+    <Section><TextField placeholder={t('Buyurtma, homashyo yoki formula')} modifiers={[disabled(accountChanged)]} onTextChange={search} />
+      <Button label={`${t('Holat')}: ${t(labels[status])}`} modifiers={[disabled(accountChanged)]} onPress={() => setExpanded(value => !value)} />
+      {expanded && !accountChanged && <ProductionStatusOptions labels={labels} choose={changeStatus} />}</Section>
+    <JournalHeader state={state} reload={() => { void current.current?.load(); }} />
+    <Section>{state.items.map(order => { const card = preparationProductionOrderCard(order); return <Button key={order.order_id} onPress={() => openPreparationRoute('production-order', { id: order.order_id })}>
+      <VStack alignment="leading"><Text>{card.title}</Text><Text>{card.subtitle}</Text><Text>{card.metrics}</Text></VStack>
+    </Button>; })}</Section>
+    <JournalFooter state={state} empty="Hali ishlab chiqarish yozuvlari yo‘q." more={() => { void current.current?.load({ append: true }); }} />
   </PreparationList></>;
 }
 
@@ -145,13 +139,13 @@ export function PreparationProductionOrder() {
   const { state, current } = useJournal(make);
   return <><Stack.Screen options={{ title: state.summary ? `${t('Buyurtma')}: ${state.summary.order_code || state.summary.order_id}` : t('Buyurtma ishlab chiqarishi') }} />
     <PreparationList refresh={async () => { await current.current?.load(); }}>
+      <JournalHeader state={state} reload={() => { void current.current?.load(); }} />
       {state.summary && <Section><Text>{state.summary.order_title}</Text><Text>{state.summary.customer_name}</Text>
-        <Text>{state.summary.roll_count} ta rulon · {preparationDisplay(state.summary.total_net_kg)} kg · {preparationDisplay(state.summary.total_length_m)} m</Text></Section>}
-      <JournalFooter state={state} empty="Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q." more={() => { void current.current?.load({ append: true }); }} reload={() => { void current.current?.load(); }} />
-      <Section>{state.items.map(batch => <Button key={batch.batch_id} onPress={() => openPreparationRoute('production-batch', { id: batch.batch_id })}>
-        <VStack alignment="leading"><Text>{batch.item_name || batch.item_code}</Text><Text>{String(batch.preparation_formula?.variant_name ?? '')} · {t(batch.active ? 'Davom etmoqda' : 'Yakunlangan')} · {batch.warehouse} · {preparationJournalDate(batch.last_activity_at)}</Text>
-          <Text>{batch.roll_count} ta rulon · {preparationDisplay(batch.total_net_kg)} kg · {preparationDisplay(batch.total_length_m)} m</Text></VStack>
-      </Button>)}</Section>
+        <Text>{preparationProductionMetrics(state.summary.roll_count, state.summary.total_net_kg, state.summary.total_length_m)}</Text></Section>}
+      <Section>{state.items.map(batch => { const card = preparationProductionBatchCard(batch); return <Button key={batch.batch_id} onPress={() => openPreparationRoute('production-batch', { id: batch.batch_id })}>
+        <VStack alignment="leading"><Text>{card.title}</Text><Text>{card.subtitle}</Text><Text>{card.metrics}</Text></VStack>
+      </Button>; })}</Section>
+      <JournalFooter state={state} empty="Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q." more={() => { void current.current?.load({ append: true }); }} />
     </PreparationList></>;
 }
 
@@ -160,18 +154,18 @@ export function PreparationProductionBatch() {
   const { id = '' } = useLocalSearchParams<{ id: string }>(), { session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet();
   const make = useCallback((changed: (state: JournalState<Roll, Batch>) => void) => createPreparationProductionBatchJournal(session, id, changed), [session, id]);
   const { state, current } = useJournal(make);
-  return <><Stack.Screen options={{ title: state.summary?.item_name || t('Ishlab chiqarish') }} />
+  return <><Stack.Screen options={{ title: state.summary ? state.summary.item_name || state.summary.item_code : t('Ishlab chiqarish') }} />
     <PreparationList refresh={async () => { await current.current?.load(); }}>
+      <JournalHeader state={state} reload={() => { void current.current?.load(); }} />
       {state.summary && <Section><Text>{t(state.summary.active ? 'Davom etmoqda' : 'Yakunlangan')}</Text>
-        <Text>{state.summary.warehouse} · {t('Boshlangan')}: {preparationJournalDate(state.summary.started_at)}</Text>
-        {!!state.summary.ended_at && <Text>{t('Tugagan')}: {preparationJournalDate(state.summary.ended_at)}</Text>}
-        <Text>{state.summary.roll_count} ta rulon · {preparationDisplay(state.summary.total_net_kg)} kg · {preparationDisplay(state.summary.total_length_m)} m</Text>
+        <Text>{state.summary.warehouse}</Text><Text>{t('Boshlangan')}: {preparationProductionDate(state.summary.started_at)}</Text>
+        {!!state.summary.ended_at && <Text>{t('Tugagan')}: {preparationProductionDate(state.summary.ended_at)}</Text>}
+        <Text>{preparationProductionMetrics(state.summary.roll_count, state.summary.total_net_kg, state.summary.total_length_m)}</Text>
         <Recipe recipe={state.summary.preparation_formula} /></Section>}
-      <JournalFooter state={state} empty="Hali rulon kirim qilinmagan." more={() => { void current.current?.load({ append: true }); }} reload={() => { void current.current?.load(); }} />
-      <Section>{state.items.map(roll => <Button key={roll.epc} onPress={() => sheet.open(<RollSheet roll={roll} session={session}
+      <Section>{state.items.map(roll => { const card = preparationProductionRollCard(roll); return <Button key={roll.epc} onPress={() => sheet.open(<RollSheet roll={roll} session={session}
         orderId={state.summary?.order_id ?? ''} />, { compact: true, dismissible: true })}>
-        <VStack alignment="leading"><Text>{roll.epc}</Text><Text>{preparationJournalDate(roll.printed_at)} · {roll.warehouse}</Text>
-          <Text>{preparationDisplay(roll.net_kg)} kg{roll.length_m ? ` · ${preparationDisplay(roll.length_m)} m` : ''}{roll.width_mm ? ` · ${preparationDisplay(roll.width_mm)} mm` : ''}{roll.micron ? ` · ${preparationDisplay(roll.micron)} mkm` : ''}</Text></VStack>
-      </Button>)}</Section>
+        <VStack alignment="leading"><Text>{card.title}</Text><Text>{card.subtitle}</Text><Text>{card.metrics}</Text></VStack>
+      </Button>; })}</Section>
+      <JournalFooter state={state} empty="Hali rulon kirim qilinmagan." more={() => { void current.current?.load({ append: true }); }} />
     </PreparationList></>;
 }

@@ -18,11 +18,20 @@ function amount(row: ObjectValue, key: string): string {
 }
 function recipe(row: ObjectValue) {
   if (row.preparation_formula == null) return null;
-  return Object.freeze({ ...jsonObject(row.preparation_formula) });
+  if (typeof row.preparation_formula !== 'object' || Array.isArray(row.preparation_formula)) throw new Error('Formula ma’lumoti noto‘g‘ri');
+  return Object.freeze({ ...row.preparation_formula as ObjectValue });
 }
 function items<T>(row: ObjectValue, key: string, decode: (value: unknown) => T): readonly T[] {
   if (!Array.isArray(row[key])) throw new Error('Ishlab chiqarish ro‘yxati noto‘g‘ri');
-  return Object.freeze((row[key] as unknown[]).map(decode));
+  return Object.freeze((row[key] as unknown[]).map(entry => {
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) throw new Error('Ishlab chiqarish yozuvi noto‘g‘ri');
+    return decode(entry);
+  }));
+}
+function object(row: ObjectValue, key: string) {
+  const value = row[key];
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('Ishlab chiqarish yozuvi topilmadi');
+  return value;
 }
 /** @v2 PreparationProductionOrder */
 export function preparationProductionOrderFromJson(value: unknown) {
@@ -61,9 +70,9 @@ export function preparationProductionOrdersPageFromJson(value: unknown) {
 }
 /** @v2 PreparationProductionOrderPage */
 export function preparationProductionOrderPageFromJson(value: unknown) {
-  const row = jsonObject(value); return { ...page(row), order: preparationProductionOrderFromJson(row.order), batches: items(row, 'batches', preparationProductionBatchFromJson) };
+  const row = jsonObject(value); return { ...page(row), order: preparationProductionOrderFromJson(object(row, 'order')), batches: items(row, 'batches', preparationProductionBatchFromJson) };
 }
 /** @v2 PreparationProductionBatchPage */
 export function preparationProductionBatchPageFromJson(value: unknown) {
-  const row = jsonObject(value); return { ...page(row), batch: preparationProductionBatchFromJson(row.batch), rolls: items(row, 'rolls', preparationProductionRollFromJson) };
+  const row = jsonObject(value); return { ...page(row), batch: preparationProductionBatchFromJson(object(row, 'batch')), rolls: items(row, 'rolls', preparationProductionRollFromJson) };
 }
