@@ -38,7 +38,8 @@ function setup() {
     loadPreparationPreset: async () => null, loadMaterialWarehouses: async () => [], prefillMaterialOrder: async () => null, warehouseAllowed: async () => true,
     startBatch: async context => { calls.push(['start', context]); return { batch: active }; },
     printBatch: async context => { calls.push(['print', context]); return materialReceiptPrintResponseFromJson({ ok: true, epc: 'EPC' }); },
-    submitSimple: async () => {}, refreshMonitor: async () => { throw new Error('unexpected'); },
+    submitSimple: async () => {}, loadArchive: async () => [], printArchive: async () => '', reprintArchiveReceipt: async () => null,
+    refreshMonitor: async () => { throw new Error('unexpected'); },
     makeLive: () => { throw new Error('unexpected'); } };
   const store = new GScaleOperatorStore('material_taminotchi', { order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } }, deps);
   return { store, calls, active, batch, deps };
@@ -86,4 +87,16 @@ test('a single order material is prefilled unless the picker was opened', async 
   second.store.openMaterialPicker(); second.store.start(); await flush();
   assert.equal(second.store.getSnapshot().draft.item_code, '');
   second.store.dispose();
+});
+
+test('archive loading and printing expose the selected device and result', async () => {
+  const { store, deps } = setup();
+  const session = { session_id: 'b1' };
+  deps.loadArchive = async context => { assert.equal(context.transport, 'bluetooth'); return [session]; };
+  deps.printArchive = async (context, value) => { assert.equal(value, session); return 'Chop etildi'; };
+  store.start(); await flush(); await store.refreshArchive();
+  assert.deepEqual(store.getSnapshot().archive, [session]);
+  await store.printArchive(session);
+  assert.equal(store.getSnapshot().notice, 'Chop etildi'); assert.equal(store.getSnapshot().archivePrintingId, '');
+  store.dispose();
 });

@@ -1,7 +1,7 @@
 # gscale
 
 Status: in progress
-Stopped at: finish operator archive and role-specific order selection, then implement the platform views and routes.
+Stopped at: finish role-specific order selection and the remaining operator states, then implement the platform views and routes.
 
 ## Open items
 
@@ -20,14 +20,15 @@ Stopped at: finish operator archive and role-specific order selection, then impl
 | `src/gscale/gscaleDeviceState.ts` | `ServerPickerPage`, `_GScaleMobileAppState` | Device restoration, discovery and manual server validation are implemented; wire the store to both platform pickers and native printer lists. |
 | `src/gscale/gscaleControlViewModel.ts` | `_buildControlSection` | Control visibility and action-enable rules are extracted; connect them to platform controls and remaining operator state. |
 | `src/gscale/gscaleMaterialPicker.ts` | `_openItemPicker`, `_loadMaterialOrderChoices` | Order-scoped paging, micron choices and cache invalidation are implemented; connect the picker and its prefill guards to operator state. |
-| `src/gscale/gscaleOperatorState.ts`, `gscaleOperatorRuntime.ts` | `_OperatorDashboardPageState` | Device and batch subscriptions, draft editing, material prefill, weight printing and simple receipt actions have a runtime adapter. Complete order changes, archive, printer-status and UI notification behaviour before using the full dashboard. |
-| `src/gscale/gscaleArchive.ts` | `MobileArchiveSession`, `_reprintArchiveReceipt`, `buildMaterialBatchPrintPlan` | Batch aggregation, QR plans and receipt reprint identity checks are implemented; connect archive loading, UI and both print transports, then verify with a real printer. |
+| `src/gscale/gscaleOperatorState.ts`, `gscaleOperatorRuntime.ts` | `_OperatorDashboardPageState` | Device and batch subscriptions, draft editing, material prefill, archive loading/printing, weight printing and simple receipt actions have a runtime adapter. Complete order changes, printer-status and UI notification behaviour before using the full dashboard. |
+| `src/gscale/gscaleArchive.ts`, `gscaleArchiveRuntime.ts` | `MobileArchiveSession`, `_reprintArchiveReceipt`, `buildMaterialBatchPrintPlan` | Batch aggregation, QR plans and receipt reprint identity checks are connected to both print transports; connect the archive UI and verify with a real printer. |
 | `src/gscale/gscaleMonitor.ts` | `MonitorSnapshot.fromJson` | JavaScript JSON parsing does not retain whether a scale value was encoded as an integer or a decimal such as `2.0`; preserve that distinction if the exact displayed text must match V2. Connect the snapshot and live stream to the operator view. |
 | `src/app/ios-gscale/**`, `src/app/android-gscale/**` | `gscale_mode_screen.dart` | Implement both route trees and platform screens using `serializeGScaleModeArgs` / `parseGScaleModeArgs`. |
 
 ## Deviations candidates
 
 - `buildGScaleRpsBatchStartRequest` normalizes the Bluetooth printer value `xp-p323b` to `zebra` while retaining label mode. V4 preserves this V2 behaviour.
+- `_printArchiveSession` treats a non-throwing local print response as success without inspecting its `ok` flag. V4 preserves this V2 behaviour.
 
 ## Test mode pending
 

@@ -12,6 +12,8 @@ import type { GScaleStartContext } from './gscaleBatchStart';
 import type { GScalePrintContext } from './gscaleBatchPrint';
 import type { DiscoveredServer } from './gscaleDiscovery';
 import { MobileApiException } from '../shared/mobileApiException';
+import type { ArchivePrintEntry, ArchiveSession } from './gscaleArchive';
+import type { GScaleArchiveContext } from './gscaleArchiveRuntime';
 
 type Receipt = ReturnType<typeof materialReceiptPrintResponseFromJson>;
 type Item = { code: string; name: string; requiresDimensions: boolean };
@@ -28,11 +30,15 @@ export type GScaleOperatorDependencies = {
   refreshMonitor(baseUrl: string): Promise<MonitorSnapshot>;
   makeLive(server: DiscoveredServer, callbacks: { onSnapshot(snapshot: MonitorSnapshot): void; onError(message: string): void;
     onLatency(milliseconds: number): void; onUnavailable(message: string): void }): GScaleLiveMonitor;
+  loadArchive(context: GScaleArchiveContext): Promise<ArchiveSession[]>;
+  printArchive(context: GScaleArchiveContext, session: ArchiveSession): Promise<string>;
+  reprintArchiveReceipt(context: GScaleArchiveContext, entry: ArchivePrintEntry): Promise<string | null>;
 };
 export type GScaleOperatorState = { draft: OperatorControlDraft; device: GScaleDeviceState; batch: GScaleBatchState;
   monitor: MonitorSnapshot; materialWarehouses: string[]; presetLoading: boolean; presetApplied: boolean; presetItem: Item | null;
   presetError: string; contextEditing: boolean; actionLoading: boolean; manualPrintLoading: boolean; simpleLoading: boolean;
-  requestInFlight: boolean; startConflict: boolean; error: string; notice: string; lastReceipt: Receipt | null };
+  requestInFlight: boolean; startConflict: boolean; error: string; notice: string; lastReceipt: Receipt | null;
+  archive: ArchiveSession[]; archiveLoading: boolean; archiveError: string; archivePrintingId: string };
 
 /** Shared dashboard state. Platform views bind to this controller. */
 export class GScaleOperatorStore {
@@ -58,7 +64,8 @@ export class GScaleOperatorStore {
     this.state = { draft, device: deps.devices.getSnapshot(), batch: deps.batch.getSnapshot(), monitor: emptyMonitorSnapshot(),
       materialWarehouses: [], presetLoading: this.controlOnly && !!args.freshForm, presetApplied: false, presetItem: null,
       presetError: '', contextEditing: false, actionLoading: false, manualPrintLoading: false, simpleLoading: false,
-      requestInFlight: false, startConflict: false, error: '', notice: '', lastReceipt: null };
+      requestInFlight: false, startConflict: false, error: '', notice: '', lastReceipt: null,
+      archive: [], archiveLoading: false, archiveError: '', archivePrintingId: '' };
     this.deviceKey = `${this.state.device.transport}|`;
   }
   getSnapshot = () => this.state;
@@ -337,6 +344,30 @@ export class GScaleOperatorStore {
       this.update({ notice: 'Sodda kirim saqlandi' });
     } catch (error) { this.update({ error: error instanceof Error ? error.message : String(error) }); }
     finally { this.update({ simpleLoading: false }); }
+  }
+
+  private archiveContext(): GScaleArchiveContext {
+    return { controlOnly: this.controlOnly, transport: this.state.device.transport, selection: this.state.device.selection,
+      server: this.selectedServer, monitor: this.state.monitor, batchPrinter: this.state.draft.printer };
+  }
+
+  async refreshArchive(): Promise<void> {
+    if (this.state.archiveLoading || !this.alive) return;
+    this.update({ archiveLoading: true, archiveError: '' });
+    try { this.update({ archive: await this.deps.loadArchive(this.archiveContext()), archiveLoading: false }); }
+    catch (error) { this.update({ archiveLoading: false, archiveError: String(error) }); }
+  }
+
+  async printArchive(session: ArchiveSession): Promise<void> {
+    if (this.state.archivePrintingId || !this.alive) return;
+    this.update({ archivePrintingId: session.session_id, archiveError: '', notice: '' });
+    try { this.update({ notice: await this.deps.printArchive(this.archiveContext(), session), archivePrintingId: '' }); }
+    catch (error) { this.update({ archivePrintingId: '', archiveError: String(error) }); }
+  }
+
+  async reprintArchiveReceipt(entry: ArchivePrintEntry): Promise<string | null> {
+    if (!entry.epc.trim()) throw new Error('Receipt EPC kodi topilmadi');
+    return this.deps.reprintArchiveReceipt(this.archiveContext(), entry);
   }
 
   private maybeAutoPrint(): void {

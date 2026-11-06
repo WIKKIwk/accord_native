@@ -16,6 +16,7 @@ import { createGScaleLiveMonitor } from './gscaleLiveRuntime';
 import { loadPreparationReceiptPreset, submitSimpleGScaleReceipt } from './gscalePreparation';
 import { GScaleOperatorStore } from './gscaleOperatorState';
 import { GScaleMaterialPicker } from './gscaleMaterialPicker';
+import { loadGScaleArchive, printGScaleArchiveSession, reprintGScaleArchiveReceipt } from './gscaleArchiveRuntime';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
 
 async function timed<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
@@ -73,6 +74,8 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
       refreshMaterialWarehouses: materialWarehouses, submit: payload => gscaleSimpleMaterialReceipt(session, payload) }),
     refreshMonitor: baseUrl => refreshGScaleMonitor(fetch, baseUrl),
     makeLive: (server, callbacks) => createGScaleLiveMonitor(server.endpoint.baseUrl, callbacks),
+    loadArchive: context => loadGScaleArchive(session, context), printArchive: printGScaleArchiveSession,
+    reprintArchiveReceipt: (context, entry) => reprintGScaleArchiveReceipt(session, context, entry),
   });
   return store;
 }

@@ -11,6 +11,48 @@ export type ArchiveSession = { session_id: string; batch_code: string; active: b
   warehouse: string; started_at: string; ended_at: string; total_qty: number; gross_qty: number; net_qty: number; unit: string;
   tare_enabled: boolean; tare_kg: number; print_count: number; prints: ArchivePrintEntry[]; preparation_formula: Record<string, unknown> };
 
+const text = (value: unknown, fallback = '') => value == null || !String(value).trim() ? fallback : String(value).trim();
+function numeric(value: unknown, fallback = 0): number {
+  if (value == null) return fallback;
+  if (typeof value !== 'number') throw new TypeError('Invalid archive number');
+  return value;
+}
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid archive object');
+  return value as Record<string, unknown>;
+}
+
+/** @v2 MobileArchivePrintEntry */
+export function archivePrintEntryFromJson(value: unknown): ArchivePrintEntry {
+  const row = object(value), qty = numeric(row.qty), net = numeric(row.net_qty, qty), gross = numeric(row.gross_qty, net);
+  return { item_code: text(row.item_code), item_name: text(row.item_name), qty, net_qty: net, gross_qty: gross,
+    unit: text(row.unit, 'kg'), printed_at: text(row.printed_at), draft_name: text(row.draft_name), epc: text(row.epc),
+    status: text(row.status), printer: text(row.printer), print_mode: text(row.print_mode) };
+}
+
+/** @v2 MobileArchiveSession */
+export function archiveSessionFromJson(value: unknown): ArchiveSession {
+  const row = object(value);
+  if (row.prints != null && !Array.isArray(row.prints)) throw new TypeError('Invalid archive prints');
+  const prints = ((row.prints ?? []) as unknown[]).map(archivePrintEntryFromJson);
+  return { session_id: text(row.session_id), batch_code: text(row.batch_code), active: row.active === true,
+    item_code: text(row.item_code), item_name: text(row.item_name), warehouse: text(row.warehouse),
+    started_at: text(row.started_at), ended_at: text(row.ended_at), total_qty: numeric(row.total_qty),
+    gross_qty: numeric(row.gross_qty), net_qty: numeric(row.net_qty), unit: text(row.unit, 'kg'),
+    tare_enabled: row.tare_enabled === true, tare_kg: numeric(row.tare_kg),
+    print_count: Math.trunc(numeric(row.print_count, prints.length)), prints, preparation_formula: {} };
+}
+
+/** @v2 formatArchiveTimestamp */
+export function formatArchiveTimestamp(raw: string): string {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  const parsed = dateOnly ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3])) : new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const two = (value: number) => String(value).padStart(2, '0');
+  return `${two(parsed.getDate())} ${months[parsed.getMonth()]} ${two(parsed.getHours())}:${two(parsed.getMinutes())}`;
+}
+
 /** @v2 MobileArchiveSession.fromRpsBatch */
 export function archiveSessionFromBatch(batch: GScaleBatchSession): ArchiveSession {
   const prints = batch.prints.map(value => ({ ...value, item_code: batch.item_code, item_name: batch.item_name }));
