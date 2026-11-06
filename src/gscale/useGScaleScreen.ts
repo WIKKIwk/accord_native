@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Platform } from 'react-native';
 import { appPreferences } from '../appPreferences';
 import { loadSession, logout, type Session } from '../auth';
 import { clearAppLock } from '../appLock';
@@ -8,6 +9,7 @@ import { localizedGetter, localizedMethod, uiText } from '../shared/localization
 import { localeController } from '../shared/localization/runtime';
 import { MobileApiException } from '../shared/mobileApiException';
 import { createGScaleCatalogRuntime } from './gscaleCatalogRuntime';
+import { watchGScaleBluetoothDevices } from './gscaleBluetoothDevices';
 import { gscaleControlViewModel } from './gscaleControlViewModel';
 import type { DiscoveredServer } from './gscaleDiscovery';
 import { formatCompactKg } from './gscalePreparation';
@@ -74,7 +76,7 @@ export function useGScaleScreen(session: Session, args: GScaleModeArgs) {
   const draftWarehouseChecked = useRef(false);
   const preferenceKey = JSON.stringify([session.baseUrl, role, session.profile.ref]);
   useEffect(() => {
-    if (preferredAttempted.current || role !== 'material_taminotchi' || !session.profile.ref || !state.draftRestored || !state.batch.resolved ||
+    if (preferredAttempted.current || role !== 'material_taminotchi' || !session.profile.ref || !state.draftRestored ||
         state.batch.batch?.active || state.draft.warehouse || args.warehouse) return;
     preferredAttempted.current = true;
     let active = true;
@@ -219,10 +221,12 @@ export function useGScaleDevicePicker(operator: GScaleOperatorStore, close: () =
   useEffect(() => {
     if (device.connection !== 'bluetooth') return;
     let active = true, stop: (() => void) | undefined;
-    void NativeBluetoothPrinter.discoverPrinters(event => {
+    void watchGScaleBluetoothDevices(Platform.OS, NativeBluetoothPrinter, event => {
       if (!active) return;
-      if (event.completed) setScanning(false);
-      if (event.printer) { const printer = event.printer; setPrinters(old => old.some(value => value.address === printer.address) ? old : [...old, printer]); }
+      if (event.complete) setScanning(false);
+      if (event.paired) setPrinters(event.paired);
+      if (event.printer) { const printer = event.printer; setPrinters(old => old.some(value => value.address === printer.address)
+        ? old.map(value => value.address === printer.address ? printer : value) : [...old, printer]); }
     }).then(dispose => { if (active) stop = dispose; else dispose(); })
       .catch(reason => { if (active) { setScanning(false); setError(reason instanceof Error ? reason.message : String(reason)); } });
     return () => { active = false; stop?.(); };
