@@ -15,7 +15,7 @@ export function ProfileAvatar({ session, profile, token, size = 72, revision = 0
   const [failure, setFailure] = useState<{ key: string; token: string } | null>(null);
   const imageToken = localUri ? '' : token;
   const imageSource = localUri ? { uri: localUri, cacheKey } : source && token
-    ? { ...source, cacheKey, headers: { Authorization: `Bearer ${token}` } } : null;
+    ? { ...source, cacheKey } : null;
   const showImage = imageSource && !(failure?.key === cacheKey && failure.token === imageToken);
 
   return <View pointerEvents="none" accessible accessibilityRole="image" accessibilityLabel="Profil rasmi"

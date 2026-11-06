@@ -40,7 +40,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
   const [page, setPage] = useState<'welcome' | 'accounts' | 'login' | 'languages' | 'themes'>('welcome');
   const [headlineIndex, setHeadlineIndex] = useState(0);
   const [target, setTarget] = useState<SavedAccount | null>(null);
-  const [pin, setPin] = useState('');
+  const pin = useRef('');
   const pinField = useNativeState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -70,7 +70,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
   const back = () => {
     if (pending.current) return;
     setError('');
-    if (target) { setTarget(null); setPin(''); pinField.set(''); }
+    if (target) { setTarget(null); pin.current = ''; pinField.set(''); }
     else if (page === 'login') { setHeadlineIndex(0); setPage(accounts?.length ? 'accounts' : 'welcome'); }
     else if (page === 'languages' || page === 'themes') setPage('welcome');
   };
@@ -92,7 +92,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
     pending.current = true; setBusy(true); setError('');
     try {
       if (await switchPinStore.has({ baseUrl: account.base_url, profile: account.profile })) {
-        setTarget(account); setPin(''); pinField.set('');
+        setTarget(account); pin.current = ''; pinField.set('');
       } else await runSwitch(account);
     } catch { setError(text('accountSwitchFailed')); }
     finally { pending.current = false; setBusy(false); }
@@ -101,8 +101,8 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
     if (!target || pending.current) return;
     pending.current = true; setBusy(true); setError('');
     try {
-      if (!await switchPinStore.verify({ baseUrl: target.base_url, profile: target.profile }, pin)) {
-        setPin(''); pinField.set(''); setError(text('pinWrong')); return;
+      if (!await switchPinStore.verify({ baseUrl: target.base_url, profile: target.profile }, pin.current)) {
+        pin.current = ''; pinField.set(''); setError(text('pinWrong')); return;
       }
       await runSwitch(target);
     } catch { setError(text('accountSwitchFailed')); }
@@ -116,7 +116,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
       {target ? <>
         <Text>{localizedMethod('accountPinPrompt', locale, { name: accountName(target) })}</Text>
         <TextInput value={pinField} accessibilityLabel="PIN" placeholder="PIN" keyboardType="number-pad" secureTextEntry
-          editable={!busy} onChangeText={value => { const next = value.replace(/\D/g, '').slice(0, 4); setPin(next); if (next !== value) pinField.set(next); }}
+          editable={!busy} onChangeText={value => { const next = value.replace(/\D/g, '').slice(0, 4); pin.current = next; if (next !== value) pinField.set(next); }}
           onSubmitEditing={() => { void verify(); }} />
         <Button label={text(busy ? 'checking' : 'unlock')} disabled={busy} onPress={() => { void verify(); }} />
         <Button label={text('closeAction')} disabled={busy} onPress={back} />

@@ -1,7 +1,7 @@
 # base-wire
 
 Status: in progress
-Stopped at: finish security lifecycle and final verification.
+Stopped at: final verification and integrator handoff.
 
 ## Open items
 
@@ -22,6 +22,11 @@ Stopped at: finish security lifecycle and final verification.
 ## Test mode pending
 
 Login test mode remains deferred under D3.
+
+## Test coverage notes
+
+- Existing login, PIN settings, nickname and avatar tests were updated where they expected untrimmed login input, an old-PIN challenge, implicit removal by Done, extra response/size validation or an invented avatar endpoint; V2 does not have those behaviors.
+- V2 has no recorded HTTP tests for `updateNickname` or `uploadAvatar`; their shared request tests and the avatar URL/cache tests follow the baseline source.
 
 ## Needs from the integrator
 

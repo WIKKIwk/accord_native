@@ -1,5 +1,4 @@
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
-import { authorizedFetch } from '../authorizedFetch';
 import { profileAvatarSource } from '../profileModel';
 import { ProfileAvatarCache } from './profileAvatarCache';
 
@@ -10,12 +9,15 @@ const account = (session: Session, profile: Record<string, unknown>) => ({ baseU
 const download = async (session: Session, profile: Record<string, unknown>) => {
   const source = profileAvatarSource(session, profile);
   if (!source || !activeSessionToken(session)) return null;
-  const url = new URL(source.uri);
-  const response = await authorizedFetch(session, `${url.pathname}${url.search}`, {}, undefined, 8000);
-  if (response.status !== 200) return null;
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (!activeSessionToken(session) || !bytes.length) return null;
-  return { bytes, mime: response.headers.get('content-type')?.split(';')[0] };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(source.uri, { method: 'GET', signal: controller.signal, credentials: 'omit' });
+    if (response.status !== 200) return null;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (!activeSessionToken(session) || !bytes.length) return null;
+    return { bytes, mime: response.headers.get('content-type')?.split(';')[0] };
+  } finally { clearTimeout(timer); }
 };
 
 export function cachedProfileAvatar(session: Session, profile: Record<string, unknown>): string | null {

@@ -18,7 +18,7 @@ export function ProfileAvatarPreview({ visible, onClose, session, profile, token
   const source = profileAvatarSource(session, profile);
   const cacheKey = source ? `${source.cacheKey}:${revision}` : '';
   const imageSource = cachedUri ? { uri: cachedUri } : source && token && failed !== cacheKey
-    ? { ...source, cacheKey, headers: { Authorization: `Bearer ${token}` } } : null;
+    ? { ...source, cacheKey } : null;
   const previewWidth = Math.min(Math.max(width - 32, 260), 420);
   const previewHeight = Math.min(Math.max(previewWidth * 1.25, 280), height * 0.72);
 

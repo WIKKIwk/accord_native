@@ -63,7 +63,7 @@ export function ProfileAvatarPreview({ session, profile, token, revision, name, 
           <GestureDetector gesture={gestures}>
             <Animated.View style={[styles.preview, { width: previewWidth, height: previewHeight, backgroundColor: colors.surfaceContainerHighest }, motion]}>
               <Text style={[styles.initial, { color: colors.onSurface }]}>{(name || 'U').charAt(0).toUpperCase()}</Text>
-              {cachedUri || (source && token && !failed) ? <Image source={cachedUri ? { uri: cachedUri } : { ...source!, cacheKey: `${source!.cacheKey}:${revision}`, headers: { Authorization: `Bearer ${token}` } }}
+              {cachedUri || (source && token && !failed) ? <Image source={cachedUri ? { uri: cachedUri } : { ...source!, cacheKey: `${source!.cacheKey}:${revision}` }}
                 style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" onError={() => setFailed(true)} /> : null}
             </Animated.View>
           </GestureDetector>

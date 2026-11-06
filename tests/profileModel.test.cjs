@@ -48,11 +48,11 @@ test('werka profile names are normalized as in V2', () => {
   assert.equal(other.name, 'Werka');
 });
 
-test('avatar requests stay on the session server and omit tokens from the URL and cache key', () => {
+test('avatar uses the URL returned by the profile and omits its query from the cache key', () => {
   const current = session({ avatar_url: 'https://elsewhere.example/avatar?token=secret&v=42' });
   const source = profileAvatarSource(current, current.profile);
-  assert.equal(source.uri, 'https://mes.example.com/v1/mobile/profile/avatar/view?v=42');
+  assert.equal(source.uri, 'https://elsewhere.example/avatar?token=secret&v=42');
   assert.ok(!source.cacheKey.includes('secret'));
   assert.notEqual(source.cacheKey, profileAvatarSource({ ...current, imageCacheScope: 'second-login' }, current.profile).cacheKey);
-  assert.equal(profileAvatarSource({ ...current, baseUrl: 'http://mes.example.com' }, current.profile), null);
+  assert.equal(profileAvatarSource(current, { avatar_url: '/relative-avatar' }), null);
 });
