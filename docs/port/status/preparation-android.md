@@ -1,17 +1,19 @@
 # preparation-android
 
 Status: in progress
-Stopped at: integrate the shared sequence/detail, scale, printer and other role destinations; complete device verification and remaining UI parity.
+Stopped at: complete Wi-Fi printer discovery, the missing GScale destination, remaining detail parity and device verification.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Home and warehouse | `preparation_screen.dart`, `preparation_screen_forms.dart` | Connect scale receipt, inventory movements, sequence, chat and profile destinations. The shared destination implementations are not available to this screen session. Restore the full drawer and dock destinations when they exist. |
-| Sequence | `_PreparationOrdersListState`, `AdminProductionMapOrdersScreen` | The native list component accepts an injected `PreparationOrdersState`, apparatus selector and read-only detail opener. Shared apparatus selection, warm-store startup and the borrowed detail view are not available yet, so the component has no route and the home action is omitted. Wire the real store, detail host, order material picker and variants route. |
+| Home and warehouse | `preparation_screen.dart`, `preparation_screen_forms.dart` | Sequence, inventory and scale actions are connected; `/android-gscale` itself is still absent. Chat and profile destinations remain for their owning sessions. |
+| Inventory | `inventory_movements_screen.dart` | Android has scoped warehouse, asset and transfer windows, QR lookup, asset details, transfer requests and the order-assignment editor. Complete the remaining V2 detail presentation and device verification. |
+| Account switch | `raw_material_order_assignment_section.dart`, `adminUnlinkRawMaterialAssignment` | Preparation state, dialogs, caches and late reads are cleared. The existing shared unlink request has no scope callback for a 401 retry after an in-place identity refresh; its owning session must add that guard. |
+| Sequence | `_PreparationOrdersListState`, `AdminProductionMapOrdersScreen` | The Android route connects the warm store, apparatus selection, scoped detail, calculation-template-derived summary and order-material picker, restoring the detail after variants. Complete optional queue-control decoder parity and device verification. |
 | Formula variants | `preparation_formula_variants_screen.dart` `_reuse` | Add searchable reuse with the shared V2 `searchMatches` implementation once the integrator supplies it. |
-| Formula editor | `preparation_order_formula_screen.dart` `_startProduction` | Connect the scale receipt route and retain the opening guard until that route returns. |
+| Scale destination | `gscale_mode_screen.dart` `GScaleModeArgs` | Home, warehouse, material and formula actions now push `/android-gscale` with serialized arguments; the GScale session must supply that route and consume its `data` parameter. The formula opening guard remains active until return. |
 | Formula shares | `_FormulaSharesSheet` | The share editor currently uses a native alert dialog so saving can block dismissal. Move it to the native sheet host once that host can also block hardware back while saving. |
-| Roll QR | `RpsQrReprintSheet`, `preparation_production_screen.dart` `_reprintRoll` | The QR and captured recipe preview are present; printer selection and transport are not connected, so reprint is omitted. Integrate `reprintPreparationRoll` and verify with a physical printer. |
+| Roll QR | `RpsQrReprintSheet`, `preparation_production_screen.dart` `_reprintRoll` | Reprint offers paired Bluetooth, USB (Zebra only, D13) and manual Wi-Fi selection. Android V2 also uses paired Bluetooth devices. Wi-Fi server discovery and physical-printer verification remain open. |
 | Platform parity | `docs/port/roles/preparation.md` | Compare all implemented screen states, localization, input behavior, navigation and accessibility against the V2 contract on a real Android device. No simulator or device was used. |
 | V2 drift | `preparation_screen.dart`, `preparation_screen_forms.dart`; baseline `7c87a54e` | Drift reports removal of the old consumption editor in V2 HEAD. Shared logic remains owned by the preparation/integrator session; this screen session follows the pinned baseline. |
 
@@ -25,17 +27,17 @@ The preparation logic session owns the deferred test-mode branches.
 
 ## Needs from the integrator
 
-- Add `/android-preparation` to the shared role home-target table and connect the native route tree.
-- Supply `AdminSequenceApparatusStore`, start `PreparationOrdersWarmStore` with the active session, and provide the read-only order detail host and its preparation formula action.
-- Supply shared `searchMatches`, the scale receipt and inventory-movement routes, the Android chat destination, a role-appropriate profile destination, and printer selection/transport.
-- Review the existing shared controllers' account-scope invalidation and complete the contract's dynamic localization inventory.
+- Complete the optional queue-control decoder.
+- Add a scope guard to the shared `adminUnlinkRawMaterialAssignment` retry and pass the preparation screen's active-scope callback.
+- Supply `/android-gscale`, Wi-Fi printer discovery, the Android chat destination and a role-appropriate profile destination.
+- Complete the contract's dynamic localization inventory.
 
 ## Verification
 
-- The role ledger estimates 112k V2 tokens; actual tokens read were not measured. Shared API methods were reused; no API methods or test files were added in this session.
-- Full existing suite: 813 passed. Preparation-focused suite: 74 passed. Android Expo export succeeded. iOS TypeScript and Expo lint passed. Android TypeScript reported the same 10 pre-existing worker errors recorded in `PORT.md`.
-- Ledger check passed with the six previously recorded dynamic/other-role endpoint warnings. Android tags cover 14 of 16 listed surfaces; the QR reprint and sequence screen remain open, and the tagged screens still have the gaps above.
-- No simulator or device was used. On a real Android phone, check light/dark mode, hardware back, short-list refresh, save and error states, account switching, and the connected printer/scale flows after integration.
+- The role ledger estimates 112k V2 tokens; actual tokens read were not measured. Inventory assignment candidate and link requests, order metrics and their tests were added to the existing shared logic.
+- Full suite: 852 passed. Android Expo export, iOS TypeScript and Expo lint passed. Android TypeScript still reports the same 10 worker errors recorded in `PORT.md`.
+- Ledger check passed with seven previously recorded dynamic/other-role endpoint warnings. All 16 listed Android surfaces are tagged, with the gaps above still open.
+- No simulator or device was used. On a real Android phone, check light/dark mode, hardware back, short-list refresh, save and error states, account switching, and printer and scale flows after integration.
 
 ## Checkpoints
 
@@ -44,3 +46,11 @@ The preparation logic session owns the deferred test-mode branches.
 - `a798ead` port(preparation/android): home and warehouse screens
 - `999797f` port(preparation/android): formula variants
 - `a03d395` port(preparation/android): sequence list view
+- `341e8d0` port(preparation/android): connect scale actions
+- `03088ad` port(preparation/android): sequence and scoped detail
+- `e8afe19` port(preparation/android): roll reprint picker
+- `e7f62a8` port(preparation/android): inventory movements
+- `05f01ef` port(preparation/android): clear account scoped state
+- `bb53af1` port(preparation/android): manual wifi printer selection
+- `597da25` port(preparation/android): inventory order assignment
+- `b408f92` port(preparation/android): order detail summary

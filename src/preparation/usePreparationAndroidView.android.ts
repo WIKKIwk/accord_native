@@ -1,4 +1,6 @@
 import type { Session } from '../auth';
+import { registerSessionResetHook } from '../auth';
+import { useEffect } from 'react';
 import { usePreparationFormula, type PreparationFormulaOptions } from './usePreparationFormula';
 import { usePreparationLibrary } from './usePreparationLibrary';
 import { usePreparationMaterials } from './usePreparationMaterials';
@@ -11,19 +13,27 @@ export function preparationPendingLabel(pending: NonNullable<Awaited<ReturnType<
   return `Order: ${String(pending.payload.order_id ?? '')}`;
 }
 
+export function usePreparationReset(controller: { invalidate: () => void }) {
+  useEffect(() => registerSessionResetHook(async () => { controller.invalidate(); }), [controller]);
+}
+
 export function usePreparationMaterialsView(session: Session) {
   const state = usePreparationMaterials(session);
+  usePreparationReset(state.controller);
   return { ...state, actionsBlocked: state.loading || state.refreshing || state.saving };
 }
 export function usePreparationLibraryView(session: Session, mode: 'sets' | 'catalog') {
   const state = usePreparationLibrary(session, mode);
+  usePreparationReset(state.controller);
   return { ...state, actionsBlocked: state.loading || state.busy };
 }
 export function usePreparationFormulaView(session: Session, options: PreparationFormulaOptions) {
   const state = usePreparationFormula(session, options);
+  usePreparationReset(state.controller);
   return { ...state, actionsBlocked: state.loading || state.saving || state.deleting || state.openingReceipt };
 }
 export function usePreparationVariantsView(session: Session, options: PreparationVariantsOptions) {
   const state = usePreparationVariants(session, options);
+  usePreparationReset(state.controller);
   return { ...state, actionsBlocked: state.loading || state.creating || state.opening || state.removing || state.copying };
 }

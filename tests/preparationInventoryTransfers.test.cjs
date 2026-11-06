@@ -7,7 +7,7 @@ const ts = require('typescript');
 
 function setup() {
   const calls = [], deps = {
-    '../authorizedFetch': { authorizedFetch: async (session, url, init) => { calls.push({ url, init }); return { status: 200, json: async () => ({ id: 'transfer' }) }; } },
+    '../authorizedFetch': { authorizedFetch: async (session, url, init, beforeSend) => { beforeSend?.(); calls.push({ url, init }); return { status: 200, json: async () => ({ id: 'transfer' }) }; } },
     '../inventoryModels': { inventoryTransferFromJson: value => value },
     '../inventoryReadApi': { inventoryResponseError: async () => Error('server') },
     '../workerControlsApi': { WorkerControlException: class extends Error { constructor(code, message) { super(message); this.code = code; } } },
@@ -33,6 +33,8 @@ test('invalid inventory transfers are rejected before any request', async () => 
   const x = setup();
   await assert.rejects(x.api.inventoryCreateTransfer({}, { sourceWarehouseId: 'a', destinationWarehouseId: 'a', assets: [{}], idempotencyKey: 'k' }), e => e.code === 'inventory_transfer_invalid');
   await assert.rejects(x.api.inventoryTransferAction({}, { transferId: 'a', action: 'invalid', idempotencyKey: 'k' }), e => e.code === 'inventory_transfer_action_invalid');
+  await assert.rejects(x.api.inventoryCreateTransfer({}, { sourceWarehouseId: 'a', destinationWarehouseId: 'b',
+    assets: [{ kind: 'raw_material', asset_ref: 'x' }], idempotencyKey: 'k' }, () => { throw Error('scope changed'); }), /scope changed/);
   assert.equal(x.calls.length, 0);
 });
 test('preparation inventory reuses the shared store with raw-material assignment scope', () => {

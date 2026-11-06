@@ -35,7 +35,11 @@ export class PreparationJournal<T, S = unknown> {
     if (wasPaused && resumed && this.current && this.visible && !this.busy) void this.load({ silent: true });
   }
   sessionChanged(force = false): void {
-    if ((!force && this.current) || this.disposed) return;
+    if (!force && this.current) return;
+    this.invalidate();
+  }
+  invalidate(): void {
+    if (!this.valid || this.disposed) return;
     this.valid = false; this.epoch++; this.queued = false;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;

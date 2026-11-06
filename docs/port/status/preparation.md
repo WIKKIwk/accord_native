@@ -6,10 +6,10 @@ Stopped at: integrate missing GScale routes and network discovery, reconcile opt
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS preparation screens and sequence/inventory entry points exist; the ledger's shared route tags, missing GScale route and Android platform work remain open. |
-| Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity and the borrowed native read-only sheet are not complete. Compare their applicable fields and connect the sheet in the platform/integrator sessions. |
+| Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android preparation routes, sequence and inventory entry points exist; remaining parity gaps are in `preparation-ios.md` and `preparation-android.md`. The GScale destination is still missing. |
+| Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity is not complete. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
-| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | The iOS picker supplies Bluetooth and manually entered Wi-Fi devices for production and inventory reprints; automatic Wi-Fi discovery awaits the GScale module. Android still needs its picker. USB, Bluetooth and driver transports require real-printer checks. |
+| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Both platforms offer Bluetooth and manual Wi-Fi; Android also offers USB (Zebra only, D13). Automatic Wi-Fi discovery awaits the GScale screens. The iOS picker uses `preparationPrinterServerUrl` without the V2 `probeServer` handshake that Android's `preparationManualPrinterServer` runs; use the probing function on iOS too. Real-printer checks remain open. |
 
 ## V2 test triage
 
@@ -39,8 +39,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Needs from the integrator
 
-- The iOS inventory route now connects the shared store, scoped assets, QR lookup, transfer and conditional raw-material order-assignment editor. Android still needs its inventory route and detail UI. The candidate-order and assignment requests have source-derived tests; V2 did not record them in this role's fixtures.
-- Integrate the shared route tags and Android screens. The iOS sequence detail is connected for preparation's summary and formula flow; optional snapshot-control decoder parity remains open above.
+- Both platforms now connect inventory, sequence and scoped order detail. Optional queue-control decoder parity remains open above. The candidate-order and assignment requests have source-derived tests; V2 did not record them in this role's fixtures.
 
 ## Verification
 

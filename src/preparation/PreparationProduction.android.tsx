@@ -3,13 +3,19 @@ import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-ro
 import qrFactory from 'qrcode-generator';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, ScrollView, View } from 'react-native';
+import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
+import { NativeBluetoothPrinter } from '../printing/nativePrinter';
+import { PrintService } from '../printing/printService';
+import { sessionReadScope } from '../sessionReadScope';
 import { usePreparationContext } from './PreparationContext.android';
 import { type JournalState, PreparationJournal } from './preparationJournal';
 import { createPreparationProductionBatchJournal, createPreparationProductionOrderJournal, createPreparationProductionOrdersJournal } from './preparationJournalFactory';
 import { preparationJournalDate, preparationRecipeLines } from './preparationNavigation.android';
 import { preparationDisplay } from './preparationModel';
-import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { preparationManualPrinterServer, reprintPreparationRollWithPrinter, type PreparationDeviceSelection } from './preparationPrinter';
+import { PreparationReprintCancelled } from './preparationReprint';
+import { PreparationButton, PreparationDialogs, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
 
 type Order = ReturnType<typeof preparationProductionOrderFromJson>;
@@ -29,6 +35,7 @@ function useJournal<T, S>(factory: (change: (state: JournalState<T, S>) => void)
   }, [factory]);
   const journal = group.journal;
   useEffect(() => group.mount(), [group]);
+  useEffect(() => registerSessionResetHook(async () => { journal.invalidate(); }), [journal]);
   useFocusEffect(useCallback(() => { journal.setVisible(true); return () => journal.setVisible(false); }, [journal]));
   useEffect(() => {
     journal.setResumed(AppState.currentState === 'active');
@@ -98,14 +105,51 @@ export function PreparationProductionOrderScreen() {
   </PreparationPage>;
 }
 
-function RollPreview({ roll }: { roll: Roll }) {
-  const t = usePreparationText();
+// @v2 RpsQrReprintSheet
+function RollPreview({ roll, session, orderId }: { roll: Roll; session: Session; orderId: string }) {
+  const t = usePreparationText(), dialogs = usePreparationDialogs();
+  const [printing, setPrinting] = useState(false), [notice, setNotice] = useState<string | null>(null);
+  const active = useRef(true), busy = useRef(false), scope = useRef(sessionReadScope(session));
+  useEffect(() => {
+    active.current = true;
+    const unregister = registerSessionResetHook(async () => { active.current = false; });
+    return () => { active.current = false; unregister(); };
+  }, []);
+  const current = () => active.current && !!activeSessionToken(session) && scope.current === sessionReadScope(session);
+  const selectDevice = async (): Promise<PreparationDeviceSelection | null> => {
+    const mode = await dialogs.choose('Printer tanlang', [{ label: 'USB printer', value: 'usb' },
+      { label: 'Bluetooth printer', value: 'bluetooth' }, { label: 'Wi-Fi qurilma', value: 'wifi' }]);
+    if (!mode || !current()) return null;
+    if (mode === 'usb') return { transport: 'offline', printer: await PrintService.detectOfflinePrinter() };
+    if (mode === 'wifi') {
+      const address = await dialogs.input({ title: 'Server qo‘shish', label: 'Server manzili', initial: 'http://gscale.local:39117' });
+      return address && current() ? preparationManualPrinterServer(address) : null;
+    }
+    const devices = await NativeBluetoothPrinter.pairedPrinters();
+    if (!current()) return null;
+    if (!devices.length) { dialogs.message('Printer topilmadi', 'Bluetooth printer topilmadi.'); return null; }
+    const address = await dialogs.choose('Bluetooth printer', devices.map(device => ({ label: device.displayName, subtitle: device.address, value: device.address })));
+    const printer = devices.find(device => device.address === address);
+    return printer ? { transport: 'bluetooth', printer } : null;
+  };
+  const reprint = async () => {
+    if (busy.current || !current()) return;
+    busy.current = true; setPrinting(true); setNotice(null);
+    try {
+      const warning = await reprintPreparationRollWithPrinter(session, roll, orderId, { isCurrent: current, selectDevice });
+      if (active.current) setNotice(warning ?? 'Mavjud QR qayta chop etildi');
+    } catch (error) {
+      if (active.current && !(error instanceof PreparationReprintCancelled)) setNotice(error instanceof Error ? error.message : String(error));
+    } finally { busy.current = false; if (active.current) setPrinting(false); }
+  };
   const image = useMemo(() => { try { const qr = qrFactory(0, 'M'); qr.addData(roll.epc); qr.make(); return qr.createDataURL(5, 20); } catch { return null; } }, [roll.epc]);
   return <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
     <PreparationText title>{t('Chop etilgan QR')}</PreparationText><PreparationText>{roll.item_name || roll.item_code}</PreparationText>
     {image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
     <PreparationText>{roll.epc}</PreparationText>
     {preparationRecipeLines(roll.preparation_formula).map((line, index) => <PreparationText key={index}>{t(line)}</PreparationText>)}
+    {notice ? <PreparationText>{t(notice)}</PreparationText> : null}
+    <PreparationButton label="Qayta chop etish" disabled={printing || !orderId} onPress={() => void reprint()} id="preparation-roll-reprint" />
   </ScrollView>;
 }
 
@@ -124,7 +168,7 @@ export function PreparationProductionBatchScreen() {
     </> : null}
     {state.items.map(roll => <PreparationRow key={roll.epc} title={roll.epc}
       subtitle={`${preparationJournalDate(roll.printed_at)} · ${roll.warehouse}\n${preparationDisplay(roll.net_kg)} kg${roll.length_m === null ? '' : ` · ${preparationDisplay(roll.length_m)} m`}`}
-      onPress={() => sheet.open(<RollPreview roll={roll} />, { dismissible: true })} />)}
+      onPress={() => sheet.open(<PreparationDialogs><RollPreview roll={roll} session={session} orderId={batch?.order_id ?? ''} /></PreparationDialogs>, { dismissible: true })} />)}
     <JournalStatus state={state} journal={journal} emptyText="Hali rulon kirim qilinmagan." />
   </PreparationPage>;
 }

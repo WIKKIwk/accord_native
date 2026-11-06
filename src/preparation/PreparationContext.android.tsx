@@ -1,5 +1,5 @@
 import { Redirect, Stack, router } from 'expo-router';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { loadSession, logout, registerSessionResetHook, type Session } from '../auth';
 import { clearAppLock } from '../appLock';
@@ -12,17 +12,20 @@ const PreparationContext = createContext<Context | null>(null);
 
 function Provider({ session, onLogout, children }: { session: Session; onLogout: () => void; children: ReactNode }) {
   const home = usePreparationHome(session);
+  useEffect(() => registerSessionResetHook(async () => { home.controller.invalidate(); }), [home.controller]);
   return <PreparationContext.Provider value={{ session, home, onLogout }}><PreparationDialogs>{children}</PreparationDialogs></PreparationContext.Provider>;
 }
 
 export function PreparationLayout() {
   const [session, setSession] = useState<Session | null | undefined>();
+  const generation = useRef(0);
   useEffect(() => {
-    let mounted = true;
-    void loadSession().then(value => { if (mounted) setSession(value); }).catch(() => { if (mounted) setSession(null); });
+    let mounted = true; const request = generation.current;
+    void loadSession().then(value => { if (mounted && request === generation.current) setSession(value); })
+      .catch(() => { if (mounted && request === generation.current) setSession(null); });
     return () => { mounted = false; };
   }, []);
-  useEffect(() => registerSessionResetHook(async () => { setSession(null); }), []);
+  useEffect(() => registerSessionResetHook(async () => { generation.current++; setSession(null); }), []);
   if (Platform.OS !== 'android' || session === null || (session && (session.profile.role !== 'tayyorlov_masteri' || !session.capabilities.includes('preparation.access')))) return <Redirect href="/" />;
   if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   const onLogout = () => {

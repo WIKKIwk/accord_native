@@ -34,7 +34,7 @@ AppState.addEventListener('change', state => {
   if (state === 'active') { foreground = true; synchronize(); }
   else if (state === 'background') { foreground = false; synchronize(); }
 });
-registerSessionResetHook(async () => { preparationOrdersWarmStore.reset(); });
+registerSessionResetHook(async () => { preparationOrdersWarmStore.reset(); adminSequenceApparatusStore.clearCache(); });
 
 // The entry screen receives both restored and newly authenticated sessions.
 export function usePreparationRuntime(session: Session | null): void {

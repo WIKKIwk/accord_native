@@ -8,7 +8,7 @@ import { PreparationSharesDialog } from './PreparationFormulaEditor.android';
 import { VariantNameDialog } from './PreparationVariants.android';
 import { openPreparationFormula, readPreparationRouteData } from './preparationNavigation.android';
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
-import { usePreparationLibraryView } from './usePreparationAndroidView.android';
+import { usePreparationLibraryView, usePreparationReset } from './usePreparationAndroidView.android';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
 import { usePreparationSetDetail } from './usePreparationSetDetail';
 import type { preparationFormulaCatalogEntryFromJson, preparationFormulaSetFromJson } from './preparationModel';
@@ -74,6 +74,7 @@ export function PreparationFormulaSetDetailScreen() {
 
 function SetDetail({ set, recipes }: { set: FormulaSet; recipes: Recipe[] }) {
   const { session } = usePreparationContext(), state = usePreparationSetDetail(session, set, recipes);
+  usePreparationReset(state.controller);
   const library = usePreparationLibraryView(session, 'catalog'), dialogs = usePreparationDialogs(), t = usePreparationText();
   const [shares, setShares] = useState<FormulaSet['formulas'][number] | null>(null), sheet = useNativeSheet();
   const [renameTarget, setRenameTarget] = useState<Recipe | null>(null), [renaming, setRenaming] = useState(false), [renameError, setRenameError] = useState<string | null>(null);

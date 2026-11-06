@@ -2,7 +2,7 @@ import { AlertDialog, Button, Column, Host, NavigationBar, NavigationBarItem, Ou
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { BackHandler, Pressable, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
 import { Drawer } from 'react-native-drawer-layout';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -99,6 +99,8 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
       <PreparationRow title={t('Tayyorlov')} onPress={() => navigate('/android-preparation')} />
       <PreparationRow title={t('Formulalar')} onPress={() => navigate('/android-preparation/formulas')} />
       <PreparationRow title={t('Ishlab chiqarish')} onPress={() => navigate('/android-preparation/production')} />
+      <PreparationRow title={t('Ketma-ketlik')} onPress={() => { setDrawerOpen(false); router.push('/android-preparation/sequence' as Href); }} />
+      <PreparationRow title={t('Ishlab chiqarilgan homashyolar')} onPress={() => { setDrawerOpen(false); router.push('/android-preparation/inventory' as Href); }} />
     </View>}>{content}</Drawer></GestureHandlerRootView>;
 }
 
@@ -156,13 +158,23 @@ function DialogContent({ dialog, close }: { dialog: Dialog; close: () => void })
 
 export function PreparationDialogs({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  const pending = useRef<Dialog | null>(null);
+  useEffect(() => () => {
+    const current = pending.current; pending.current = null;
+    if (!current) return;
+    if (current.kind === 'confirm') current.resolve(false);
+    else if (current.kind === 'message') current.resolve();
+    else current.resolve(null);
+  }, []);
+  const show = (next: Dialog) => { pending.current = next; setDialog(next); };
+  const close = () => { pending.current = null; setDialog(null); };
   const value: Dialogs = {
-    input: options => new Promise(resolve => setDialog({ ...options, kind: 'input', resolve })),
-    choose: (title, choices, message, searchable) => new Promise(resolve => setDialog({ kind: 'choice', title, choices, message, searchable, resolve })),
-    confirm: (title, message, confirm = 'Saqlash') => new Promise(resolve => setDialog({ kind: 'confirm', title, message, confirm, resolve })),
-    message: (title, message) => setDialog({ kind: 'message', title, message, resolve: () => {} }),
+    input: options => new Promise(resolve => show({ ...options, kind: 'input', resolve })),
+    choose: (title, choices, message, searchable) => new Promise(resolve => show({ kind: 'choice', title, choices, message, searchable, resolve })),
+    confirm: (title, message, confirm = 'Saqlash') => new Promise(resolve => show({ kind: 'confirm', title, message, confirm, resolve })),
+    message: (title, message) => show({ kind: 'message', title, message, resolve: () => {} }),
   };
-  return <DialogContext.Provider value={value}>{children}{dialog && <DialogContent key={dialog.kind + dialog.title} dialog={dialog} close={() => setDialog(null)} />}</DialogContext.Provider>;
+  return <DialogContext.Provider value={value}>{children}{dialog && <DialogContent key={dialog.kind + dialog.title} dialog={dialog} close={close} />}</DialogContext.Provider>;
 }
 export function usePreparationDialogs() {
   const value = useContext(DialogContext);

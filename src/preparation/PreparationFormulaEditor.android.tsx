@@ -1,12 +1,13 @@
 import { AlertDialog, Host, RNHostView, Text, TextButton } from '@expo/ui/jetpack-compose';
-import { useLocalSearchParams } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
+import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { usePreparationContext } from './PreparationContext.android';
 import { PreparationFormulaDetails, type FormulaDetailAction } from './PreparationFormulaDetails.android';
 import { preparationEstimatedKgDisplay, preparationDisplay, type PreparationFormula } from './preparationModel';
-import { preparationFormulaPresentation, preparationShareDisplay, readPreparationRouteData } from './preparationNavigation.android';
+import { openPreparationScale, preparationFormulaPresentation, preparationShareDisplay, readPreparationRouteData } from './preparationNavigation.android';
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationFormulaView } from './usePreparationAndroidView.android';
 import type { PreparationFormulaOptions } from './usePreparationFormula';
@@ -52,7 +53,11 @@ export function PreparationOrderFormulaScreen() {
 function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
   const { session } = usePreparationContext(), state = usePreparationFormulaView(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
   const [shares, setShares] = useState(false), sheet = useNativeSheet();
+  const scaleReturn = useRef<(() => void) | null>(null);
+  useFocusEffect(useCallback(() => { scaleReturn.current?.(); scaleReturn.current = null; }, []));
+  useEffect(() => () => { scaleReturn.current?.(); scaleReturn.current = null; }, []);
   const blocked = state.actionsBlocked;
+  const canOpenScale = canOpenRoute(session, appRoutes.gscaleMode);
   const showError = (error: unknown) => dialogs.message('Xatolik yuz berdi', error instanceof Error ? error.message : String(error));
   const formulaAction = async (formula: PreparationFormula, action: FormulaDetailAction) => {
     if (action === 'shares') setShares(true);
@@ -97,6 +102,11 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
       {(!options.manageSavedFormula || options.allowAddingFormula) && !state.editing ? <PreparationButton
         label={options.manageSavedFormula ? 'Ichki formula qo‘shish' : 'Shnek formula qo‘shish'} disabled={blocked}
         onPress={() => state.controller.openEditor()} /> : null}
+      {!options.manageSavedFormula && canOpenScale ? <PreparationButton label="Ishlab chiqarishni boshlash" disabled={blocked}
+        onPress={() => { void state.controller.startProduction(canOpenScale, args => new Promise<void>((resolve, reject) => {
+          scaleReturn.current = resolve;
+          try { openPreparationScale(args); } catch (error) { scaleReturn.current = null; reject(error); }
+        })).catch(showError); }} /> : null}
     </PreparationPage>
     {shares ? <PreparationSharesDialog formulas={state.formulas} onSave={values => state.controller.saveShares(values)} onClose={() => setShares(false)} /> : null}
   </>;

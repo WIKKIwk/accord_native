@@ -6,6 +6,9 @@ import { preparationDecimal, preparationDecimalText, preparationDisplay, prepara
 export function openPreparationFormula(options: PreparationFormulaOptions) {
   router.push({ pathname: '/android-preparation/formula', params: { data: JSON.stringify(options) } } as unknown as Href);
 }
+export function openPreparationScale(args: Record<string, unknown> = {}) {
+  router.push({ pathname: '/android-gscale', params: { data: JSON.stringify(args) } } as unknown as Href);
+}
 export function readPreparationRouteData<T>(data: string | string[] | undefined): T | null {
   try { return typeof data === 'string' ? JSON.parse(data) as T : null; } catch { return null; }
 }

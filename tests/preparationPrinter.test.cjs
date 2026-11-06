@@ -72,3 +72,14 @@ test('inventory Wi-Fi reprint uses the selected server without the production mo
     assert.deepEqual(JSON.parse(requests[0][1].body), { epc: 'E' });
   } finally { global.fetch = oldFetch; }
 });
+
+test('manual Wi-Fi selection normalizes and probes a server before choosing its printer', async () => {
+  const x = setup(), oldFetch = global.fetch, requests = [];
+  global.fetch = async url => { requests.push(url); return { ok: true, json: async () => ({ service: 'mobileapi', server_ref: '5070' }) }; };
+  try {
+    const selected = await x.api.preparationManualPrinterServer('192.168.1.12');
+    assert.deepEqual(selected, { transport: 'wifi', serverBaseUrl: 'http://192.168.1.12:39117', driverBaseUrl: 'http://100.117.62.18:39117' });
+    assert.deepEqual(requests, ['http://192.168.1.12:39117/v1/mobile/handshake']);
+    assert.throws(() => x.api.preparationPrinterServerAddress('localhost:39117'), /Localhost/);
+  } finally { global.fetch = oldFetch; }
+});

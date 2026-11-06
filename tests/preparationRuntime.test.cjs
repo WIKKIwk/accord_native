@@ -17,7 +17,7 @@ function setup() {
     'react-native': { AppState: { currentState: 'active', addEventListener: (event, fn) => { listener = fn; } } },
     '../auth': { currentSession: () => session, activeSessionToken: value => value === session ? value.token : null,
       registerSessionResetHook: fn => { reset = fn; } },
-    '../shared/adminSequenceApparatusStore': { adminSequenceApparatusStore: { loadSavedApparatusId: async () => 'apparatus' } },
+    '../shared/adminSequenceApparatusStore': { adminSequenceApparatusStore: { loadSavedApparatusId: async () => 'apparatus', clearCache: () => {} } },
     '../shared/productionSnapshotRuntime': { productionSnapshotStore: {} },
     './preparationOrdersApi': { preparationOrders: async (value, opts) => ({ value, opts }) },
     './preparationOrdersWarmStore': { PreparationOrdersWarmStore: WarmStore },

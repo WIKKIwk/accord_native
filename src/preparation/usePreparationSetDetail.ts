@@ -61,6 +61,10 @@ export class PreparationSetDetailState {
       if (this.current) await this.reload();
     } finally { this.update({ busy: false }); }
   }
+  invalidate() {
+    if (!this.active) return;
+    this.generation++; this.update({ formulas: [], recipes: [], busy: false, error: 'Akkaunt o‘zgargan. Sahifani qayta oching' }); this.active = false;
+  }
   dispose() { this.active = false; this.generation++; this.listeners.clear(); }
 }
 export function usePreparationSetDetail(session: Session, formulaSet: SetItem, recipes: Recipe[]) {

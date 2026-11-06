@@ -8,8 +8,8 @@ import type { preparationProductionRollFromJson } from './preparationProductionM
 import { reprintPreparationRoll } from './preparationReprint';
 
 export type PreparationDeviceSelection = { transport: 'offline'; printer: UsbPrinterProfile } |
-  { transport: 'bluetooth'; printer: BluetoothPrinterProfile } | { transport: 'wifi'; serverBaseUrl: string };
-type Printer = PreparationDeviceSelection | { transport: 'wifi'; serverBaseUrl: string; printer: string; printMode: string };
+  { transport: 'bluetooth'; printer: BluetoothPrinterProfile } | { transport: 'wifi'; serverBaseUrl: string; driverBaseUrl?: string };
+type Printer = PreparationDeviceSelection | { transport: 'wifi'; serverBaseUrl: string; driverBaseUrl?: string; printer: string; printMode: string };
 type ConnectedWifiPrinter = Extract<Printer, { printer: string }>;
 const text = (value: unknown, fallback = '') => value == null ? fallback : String(value).trim() || fallback;
 const truthy = (value: unknown) => value === true || (typeof value === 'number' && value !== 0) ||
@@ -39,6 +39,46 @@ async function fetchJsonWithTimeout(url: string, init: RequestInit, timeout: num
   finally { clearTimeout(timer); }
 }
 
+/** @v2 parseServerEndpoint */
+export function preparationPrinterServerAddress(raw: string): string {
+  const value = raw.trim();
+  if (!value) throw new Error('Manzil formati noto‘g‘ri');
+  let url: URL;
+  try { url = new URL(value.includes('://') ? value : `http://${value}`); }
+  catch { throw new Error('Manzil formati noto‘g‘ri'); }
+  if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) throw new Error('Manzil formati noto‘g‘ri');
+  if (['localhost', '127.0.0.1', '::1', '[::1]', '10.0.2.2'].includes(url.hostname.toLowerCase())) {
+    throw new Error('Localhost emas, Wi‑Fi server manzilini kiriting');
+  }
+  return `${url.protocol}//${url.hostname}:${url.port || '39117'}`;
+}
+
+/** @v2 probeServer */
+export async function preparationManualPrinterServer(raw: string): Promise<Extract<PreparationDeviceSelection, { transport: 'wifi' }>> {
+  const serverBaseUrl = preparationPrinterServerAddress(raw);
+  let handshake: Record<string, unknown> | null = null;
+  try {
+    const result = await fetchJsonWithTimeout(`${serverBaseUrl}/v1/mobile/handshake`, {}, 2000);
+    if (result.response.ok) {
+      if (!result.payload || typeof result.payload !== 'object' || Array.isArray(result.payload)) throw new Error('Invalid handshake');
+      handshake = result.payload as Record<string, unknown>;
+      if (text(handshake.service) !== 'mobileapi') throw new Error('Invalid service');
+    }
+  } catch (error) { if (error instanceof Error && error.message === 'Invalid service') throw new Error('Bu server bilan qo‘shilish muvaffaqiyatsiz'); }
+  if (!handshake) {
+    try {
+      const result = await fetchJsonWithTimeout(`${serverBaseUrl}/healthz`, {}, 2000);
+      if (!result.response.ok || !result.payload || typeof result.payload !== 'object' || Array.isArray(result.payload) ||
+          text((result.payload as Record<string, unknown>).service) !== 'mobileapi') throw new Error('Invalid health');
+    } catch { throw new Error('Bu server bilan qo‘shilish muvaffaqiyatsiz'); }
+  }
+  const ref = text(handshake?.server_ref).toLowerCase(), name = text(handshake?.server_name).toLowerCase();
+  const port = new URL(serverBaseUrl).port;
+  const driverBaseUrl = ref === '5070' || name === 'rp-scale-5070' ? 'http://100.117.62.18:39117'
+    : ref === 'rp-scale-godex-2' || name === 'rp-scale-godex-2' ? `http://100.117.62.18:${port}` : serverBaseUrl;
+  return { transport: 'wifi', serverBaseUrl, driverBaseUrl };
+}
+
 /** @v2 pickProgressPrinter */
 export async function pickPreparationPrinter(options: {
   isCurrent: () => boolean; selectDevice: () => Promise<PreparationDeviceSelection | null>;
@@ -62,7 +102,7 @@ export async function pickPreparationPrinter(options: {
     const value = printer as Record<string, unknown>;
     if (!truthy(value.connected) && !truthy(value.ok)) return null;
     const kind = text(value.kind, 'printer');
-    return { transport: 'wifi', serverBaseUrl: baseUrl, printer: kind,
+    return { transport: 'wifi', serverBaseUrl: baseUrl, driverBaseUrl: selection.driverBaseUrl, printer: kind,
       printMode: kind.toLowerCase() === 'godex' ? 'label' : 'rfid' };
   } catch { return null; }
 }
@@ -89,7 +129,7 @@ export async function printPreparationJob(job: WorkerPrintJob, printer: Printer,
   }
   if (!('printer' in printer)) throw new Error('Printer serveri tanlanmadi');
   const selected: ConnectedWifiPrinter = printer;
-  const { response, payload } = await fetchJsonWithTimeout(`${selected.serverBaseUrl}/v1/mobile/driver/print`, {
+  const { response, payload } = await fetchJsonWithTimeout(`${selected.driverBaseUrl ?? selected.serverBaseUrl}/v1/mobile/driver/print`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...request.toJson(), ...(!options.inventory && selected.printer ? { printer: selected.printer } : {}),
       ...(!options.inventory && selected.printMode ? { print_mode: selected.printMode } : {}) }),
