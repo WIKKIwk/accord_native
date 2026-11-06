@@ -35,7 +35,9 @@ export function preparationPrinterServerAddress(raw: string): string {
   if (['localhost', '127.0.0.1', '::1', '[::1]', '10.0.2.2'].includes(url.hostname.toLowerCase())) {
     throw new Error('Localhost emas, Wi‑Fi server manzilini kiriting');
   }
-  return `${url.protocol}//${url.hostname}:${url.port || '39117'}`;
+  // URL drops a scheme's default port, so an explicit :80 or :443 has to be read from the text.
+  const explicitPort = value.match(/^(?:[a-z][a-z0-9+.-]*:\/\/)?[^/?#]*:(\d+)(?:[/?#]|$)/i)?.[1];
+  return `${url.protocol}//${url.hostname}:${explicitPort || url.port || '39117'}`;
 }
 
 /** @v2 probeServer */

@@ -6,7 +6,7 @@ Stopped at: the separate GScale route and shared order-detail decoder, the share
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Scale entry | `preparation_screen.dart`, `preparation_order_formula_screen.dart` | Actions now navigate to `/ios-gscale` with warehouse or production arguments; that route is not present in this checkout. Its receiving parameter contract and return behaviour require integration with the GScale session. |
+| Scale entry | `preparation_screen.dart`, `preparation_order_formula_screen.dart` | Actions open `/ios-gscale`, which now parses their arguments. Check the entry and its return on a real iPhone. |
 | QR reprint | `preparation_production_screen.dart` `_reprintRoll`, `inventory_movements_screen_declarations_part_02.dart`, `gscale_mobile_app_widgets_part_02.dart` | The picker offers Bluetooth and automatic Wi-Fi discovery using the existing native discovery runtime; manual Wi-Fi entry probes the server before selection. Both production and inventory flows require a real-device and printer check. |
 | Sequence detail | `admin_production_map_orders_preparation_list.dart`, `admin_production_map_orders_detail_widgets.dart` | The scoped summary, image viewer and order-material-to-variants flow are connected. Native sheet-to-variants back navigation needs real-device verification; optional snapshot-control decoder parity remains open in `preparation.md`. |
 | Navigation | `preparation_navigation.dart` | Inventory is connected and scale links target `/ios-gscale`. Shared chat screens still hard-code worker routes and were outside this task. Verify native root-replacement behaviour. |
@@ -17,10 +17,7 @@ Stopped at: the separate GScale route and shared order-detail decoder, the share
 
 ## Needs from the integrator
 
-- Supply the `/ios-gscale` screen and confirm its parameter encoding. Verify native detail-sheet navigation on a physical iPhone.
 - Reconcile the optional order-detail snapshot controls in the shared decoder, as recorded in `preparation.md`.
-- The shared `preparationPrinterServerAddress` normalizes explicitly supplied `http` port 80 and `https` port 443 to 39117 because `URL.port` drops the scheme's default port. Preserve those explicit ports in the shared helper; it was not changed in this iOS task.
-- The QR-printing row in `preparation.md` describes the earlier iOS picker; this file records the current wiring.
 
 ## Drift
 

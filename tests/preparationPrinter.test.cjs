@@ -65,6 +65,13 @@ test('inventory Wi-Fi reprint uses the selected server without the production mo
   } finally { global.fetch = oldFetch; }
 });
 
+test('manual printer address keeps an explicit default port', () => {
+  const { preparationPrinterServerAddress } = setup().api;
+  assert.equal(preparationPrinterServerAddress('192.168.1.12'), 'http://192.168.1.12:39117');
+  assert.equal(preparationPrinterServerAddress('http://192.168.1.12:80'), 'http://192.168.1.12:80');
+  assert.equal(preparationPrinterServerAddress('https://192.168.1.12:443/path'), 'https://192.168.1.12:443');
+  assert.equal(preparationPrinterServerAddress('http://192.168.1.12:4000/path'), 'http://192.168.1.12:4000');
+});
 test('manual Wi-Fi selection normalizes and probes a server before choosing its printer', async () => {
   const x = setup(), oldFetch = global.fetch, requests = [];
   global.fetch = async url => { requests.push(url); return { ok: true, json: async () => ({ service: 'mobileapi', server_ref: '5070' }) }; };

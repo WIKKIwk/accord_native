@@ -6,10 +6,10 @@ Stopped at: integrate missing GScale routes and network discovery, reconcile opt
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android preparation routes, sequence and inventory entry points exist; remaining parity gaps are in `preparation-ios.md` and `preparation-android.md`. The GScale destination is still missing. |
+| Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android preparation routes, sequence, inventory and the GScale destination exist; remaining parity gaps are in `preparation-ios.md`, `preparation-android.md` and `gscale.md`. |
 | Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity is not complete. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
-| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Both platforms offer Bluetooth and manual Wi-Fi; Android also offers USB (Zebra only, D13). Automatic Wi-Fi discovery awaits the GScale screens. The iOS picker uses `preparationPrinterServerUrl` without the V2 `probeServer` handshake that Android's `preparationManualPrinterServer` runs; use the probing function on iOS too. Real-printer checks remain open. |
+| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Both platforms offer Bluetooth, discovered and manual Wi-Fi with the V2 probe; Android also offers USB (Zebra only, D13). Discovery and printing need a native build and real-printer checks. |
 
 ## V2 test triage
 
