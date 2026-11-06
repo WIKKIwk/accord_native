@@ -142,7 +142,17 @@ export class GScaleOperatorStore {
   scanDevices(): Promise<void> { return this.deps.devices.scan(); }
   checkDeviceAddress(raw: string) { return this.deps.devices.checkAddress(raw); }
   selectDevice(selection: PrintDeviceSelection): Promise<void> { return this.deps.devices.select(selection); }
-  retryBatchState(): Promise<void> { return this.deps.batch.refresh(true); }
+  async retryBatchState(): Promise<void> {
+    if (this.state.actionLoading || this.state.manualPrintLoading || this.state.requestInFlight) return;
+    this.update({ actionLoading: true });
+    try {
+      await this.deps.batch.refresh(true);
+      const state = this.deps.batch.getSnapshot();
+      if (state.resolved && !state.error && !this.state.startConflict && !this.preparationConflict() && !state.batch?.last_error.trim()) {
+        this.update({ error: '' });
+      }
+    } finally { this.update({ actionLoading: false }); }
+  }
 
   /** @v2 _persistWarehouseSetup */
   setWarehouseSetup(mode: 'manual' | 'default', warehouse: string): void {
@@ -371,6 +381,10 @@ export class GScaleOperatorStore {
     return preparationPresetConflict({ freshForm: !!this.args.freshForm, controlOnly: this.controlOnly, orderId: this.linkedOrderId,
       materialId: this.args.materialId ?? '', variantId: this.args.formulaVariantId ?? '', itemCode: this.state.presetItem?.code ?? null,
       applied: this.state.presetApplied, batch: this.state.batch.batch });
+  }
+
+  preparationProblem(): string {
+    return this.preparationConflict() || (this.controlOnly && this.args.freshForm && !this.state.presetApplied ? this.state.presetError : '');
   }
 
   private async print(gross: number, count: number, auto: boolean): Promise<void> {

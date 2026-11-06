@@ -54,8 +54,8 @@ export function gscaleDashboardSections(screen: Screen, section: 'control' | 'hi
   if (control.hasScaleDevice) deviceRows.push(text(`Joriy kg: ${state.monitor.scaleValue} · ${state.monitor.scaleConnectionLabel}`));
   if (!state.batch.resolved && control.hasPrintDevice) deviceRows.push(text('Batch holati tekshirilmoqda…'),
     button('Holatni qayta tekshirish', () => void operator.retryBatchState(), state.actionLoading || state.manualPrintLoading || state.requestInFlight));
-  if (state.error) deviceRows.push(text(state.error));
-  if (state.presetError) deviceRows.push(text(state.presetError));
+  const controlError = operator.preparationProblem() || state.error;
+  if (controlError) deviceRows.push(text(controlError));
   if (state.presetLoading) deviceRows.push(text('Yuklanmoqda…'));
   if (state.notice) deviceRows.push(text(state.notice));
   sections.push({ rows: deviceRows });

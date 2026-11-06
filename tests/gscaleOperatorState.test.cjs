@@ -23,7 +23,7 @@ const { GScaleBatchStateStore } = load('gscale/gscaleBatchState.ts');
 const { batchSessionFromJson, materialReceiptPrintResponseFromJson } = load('gscale/gscaleBatchModel.ts');
 const { emptyOperatorControlDraft } = load('gscale/gscaleDraft.ts');
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function setup() {
+function setup(role = 'material_taminotchi', args = { order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } }) {
   const listeners = new Set();
   const deviceState = { selection: { transport: 'bluetooth', bluetoothPrinter: { name: 'XP', address: 'AA', printer: 'xp-p323b', printMode: 'label' } },
     transport: 'bluetooth', needsAttention: false, connection: null, scanning: false, scanResult: null, checkingAddress: false, addressError: '' };
@@ -41,7 +41,7 @@ function setup() {
     submitSimple: async () => {}, loadArchive: async () => [], printArchive: async () => '', reprintArchiveReceipt: async () => null,
     refreshMonitor: async () => { throw new Error('unexpected'); },
     makeLive: () => { throw new Error('unexpected'); } };
-  const store = new GScaleOperatorStore('material_taminotchi', { order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } }, deps);
+  const store = new GScaleOperatorStore(role, args, deps);
   return { store, calls, active, batch, deps };
 }
 
@@ -57,6 +57,19 @@ test('operator saves valid context, starts a batch and can edit manual weight wh
   await store.manualPrint();
   assert.equal(calls[1][0], 'print'); assert.equal(calls[1][1].grossQtyKg, 5);
   store.dispose();
+});
+
+test('preparation conflict remains visible after a batch refresh until the conflict ends', async () => {
+  const fixture = setup('tayyorlov_masteri', { freshForm: true, materialId: 'm1', formulaVariantId: 'v1',
+    order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } });
+  fixture.deps.loadPreparationPreset = async () => ({ code: 'PET', name: 'PET', requiresDimensions: true });
+  fixture.store.start(); await flush();
+  fixture.batch.apply(batchSessionFromJson({ id: 'other', active: true, item_code: 'OTHER',
+    order_assignment: { order_id: 'o2', preparation_formula: { material_id: 'm2' } } }));
+  assert.match(fixture.store.preparationProblem(), /Boshqa homashyo yoki order/);
+  await fixture.store.retryBatchState();
+  assert.equal(fixture.store.preparationProblem(), '');
+  fixture.store.dispose();
 });
 
 test('operator refuses to save an unassigned warehouse', async () => {

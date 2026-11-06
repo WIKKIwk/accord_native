@@ -15,7 +15,7 @@ function fixture() {
     editDraft: patch => calls.push(['draft', patch]), saveContext: () => calls.push(['save']),
     startBatch: () => calls.push(['start']), stopBatch: () => calls.push(['stop']), manualPrint: () => calls.push(['print']),
     submitSimpleReceipt: () => calls.push(['receipt']), retryBatchState: () => {}, refreshArchive: () => {}, refresh: () => {},
-    setWarehouseSetup: (mode, value) => calls.push(['warehouse', mode, value]), beginContextEdit: () => {},
+    setWarehouseSetup: (mode, value) => calls.push(['warehouse', mode, value]), beginContextEdit: () => {}, preparationProblem: () => '',
   };
   const state = { draft: { item_code: 'PET', item_name: 'PET', warehouse: 'W', default_warehouse: '', warehouse_mode: 'manual',
     width_text: '500', micron_text: '12', length_text: '125', manual_qty_text: '5', manual_duplicate_text: '1',

@@ -40,8 +40,8 @@ export async function adminItemsPage(session: Session, options: { query?: string
   if (options.group?.trim()) query.set('group', options.group.trim());
   if (limit > 0) query.set('limit', String(limit));
   if (offset > 0) query.set('offset', String(offset));
-  const suffix = query.toString();
-  const response = await authorizedFetch(session, `/v1/mobile/admin/items${suffix ? `?${suffix}` : ''}`);
+  const path = '/v1/mobile/admin/items', suffix = query.toString();
+  const response = await authorizedFetch(session, suffix ? `${path}?${suffix}` : path);
   if (response.status !== 200) throw new Error('Admin items failed');
   return (await responseList(response)).map(supplierItem);
 }
@@ -53,8 +53,8 @@ export async function adminWarehouses(session: Session, options: { query?: strin
   if (options.query?.trim()) query.set('q', options.query.trim());
   if (options.parent?.trim()) query.set('parent', options.parent.trim());
   if (limit > 0) query.set('limit', String(limit));
-  const suffix = query.toString();
-  const response = await authorizedFetch(session, `/v1/mobile/admin/warehouses${suffix ? `?${suffix}` : ''}`);
+  const path = '/v1/mobile/admin/warehouses', suffix = query.toString();
+  const response = await authorizedFetch(session, suffix ? `${path}?${suffix}` : path);
   if (response.status !== 200) throw new Error('Admin warehouses failed');
   return (await responseList(response)).map(value => {
     const row = object(value);
