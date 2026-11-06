@@ -8,6 +8,7 @@ import { AppState } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
+import { preparationJournalDate } from './PreparationDate';
 import { openPreparationRoute } from './PreparationRoutes';
 import { PreparationJournal, type JournalState } from './preparationJournal';
 import { createPreparationProductionBatchJournal, createPreparationProductionOrderJournal, createPreparationProductionOrdersJournal } from './preparationJournalFactory';
@@ -42,7 +43,7 @@ function Recipe({ recipe }: { recipe: Readonly<Record<string, unknown>> | null }
   const formulas = Array.isArray(recipe.formulas) ? recipe.formulas : [];
   return <VStack alignment="leading"><Text>{t(`Shnek formulasi: ${String(recipe.variant_name ?? '—')}`)}</Text>
     {recipe.variant_code != null && <Text>{t(`Formula kodi: ${String(recipe.variant_code)}`)}</Text>}
-    <Text>{t(`Saqlangan tarkib • ${String(recipe.captured_at ?? '')}`)}</Text>
+    <Text>{t(`Saqlangan tarkib • ${preparationJournalDate(String(recipe.captured_at ?? ''))}`)}</Text>
     {formulas.map((value, index) => {
       if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
       const item = value as Record<string, unknown>, lines = Array.isArray(item.lines) ? item.lines : [];
@@ -97,7 +98,7 @@ export function PreparationProduction() {
     <JournalFooter state={state} empty="Hali ishlab chiqarish yozuvlari yo‘q." more={() => { void current.current?.load({ append: true }); }} reload={() => { void current.current?.load(); }} />
     <Section>{state.items.map(order => <Button key={order.order_id} onPress={() => openPreparationRoute('production-order', { id: order.order_id })}>
       <VStack alignment="leading"><Text>{order.order_code || order.order_id} · {order.order_title}</Text>
-        <Text>{order.customer_name} · {order.batch_count} ta ishlab chiqarish · {order.active_batch_count} ta davom etmoqda</Text>
+        <Text>{order.customer_name} · {order.batch_count} ta ishlab chiqarish{order.active_batch_count > 0 ? ` · ${order.active_batch_count} ta davom etmoqda` : ''} · {preparationJournalDate(order.last_activity_at)}</Text>
         <Text>{order.roll_count} ta rulon · {preparationDisplay(order.total_net_kg)} kg · {preparationDisplay(order.total_length_m)} m</Text></VStack>
     </Button>)}</Section>
   </PreparationList></>;
@@ -114,7 +115,7 @@ export function PreparationProductionOrder() {
         <Text>{state.summary.roll_count} ta rulon · {preparationDisplay(state.summary.total_net_kg)} kg · {preparationDisplay(state.summary.total_length_m)} m</Text></Section>}
       <JournalFooter state={state} empty="Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q." more={() => { void current.current?.load({ append: true }); }} reload={() => { void current.current?.load(); }} />
       <Section>{state.items.map(batch => <Button key={batch.batch_id} onPress={() => openPreparationRoute('production-batch', { id: batch.batch_id })}>
-        <VStack alignment="leading"><Text>{batch.item_name || batch.item_code}</Text><Text>{String(batch.preparation_formula?.variant_name ?? '')} · {t(batch.active ? 'Davom etmoqda' : 'Yakunlangan')} · {batch.warehouse} · {batch.last_activity_at}</Text>
+        <VStack alignment="leading"><Text>{batch.item_name || batch.item_code}</Text><Text>{String(batch.preparation_formula?.variant_name ?? '')} · {t(batch.active ? 'Davom etmoqda' : 'Yakunlangan')} · {batch.warehouse} · {preparationJournalDate(batch.last_activity_at)}</Text>
           <Text>{batch.roll_count} ta rulon · {preparationDisplay(batch.total_net_kg)} kg · {preparationDisplay(batch.total_length_m)} m</Text></VStack>
       </Button>)}</Section>
     </PreparationList></>;
@@ -128,14 +129,14 @@ export function PreparationProductionBatch() {
   return <><Stack.Screen options={{ title: state.summary?.item_name || t('Ishlab chiqarish') }} />
     <PreparationList refresh={async () => { await current.current?.load(); }}>
       {state.summary && <Section><Text>{t(state.summary.active ? 'Davom etmoqda' : 'Yakunlangan')}</Text>
-        <Text>{state.summary.warehouse} · {t('Boshlangan')}: {state.summary.started_at}</Text>
-        {!!state.summary.ended_at && <Text>{t('Tugagan')}: {state.summary.ended_at}</Text>}
+        <Text>{state.summary.warehouse} · {t('Boshlangan')}: {preparationJournalDate(state.summary.started_at)}</Text>
+        {!!state.summary.ended_at && <Text>{t('Tugagan')}: {preparationJournalDate(state.summary.ended_at)}</Text>}
         <Text>{state.summary.roll_count} ta rulon · {preparationDisplay(state.summary.total_net_kg)} kg · {preparationDisplay(state.summary.total_length_m)} m</Text>
         <Recipe recipe={state.summary.preparation_formula} /></Section>}
       <JournalFooter state={state} empty="Hali rulon kirim qilinmagan." more={() => { void current.current?.load({ append: true }); }} reload={() => { void current.current?.load(); }} />
       <Section>{state.items.map(roll => <Button key={roll.epc} onPress={() => sheet.open(<RollSheet roll={roll} />, { compact: true, dismissible: true })}>
-        <VStack alignment="leading"><Text>{roll.epc}</Text><Text>{roll.printed_at} · {roll.warehouse}</Text>
-          <Text>{preparationDisplay(roll.net_kg)} kg{roll.length_m ? ` · ${preparationDisplay(roll.length_m)} m` : ''}</Text></VStack>
+        <VStack alignment="leading"><Text>{roll.epc}</Text><Text>{preparationJournalDate(roll.printed_at)} · {roll.warehouse}</Text>
+          <Text>{preparationDisplay(roll.net_kg)} kg{roll.length_m ? ` · ${preparationDisplay(roll.length_m)} m` : ''}{roll.width_mm ? ` · ${preparationDisplay(roll.width_mm)} mm` : ''}{roll.micron ? ` · ${preparationDisplay(roll.micron)} mkm` : ''}</Text></VStack>
       </Button>)}</Section>
     </PreparationList></>;
 }

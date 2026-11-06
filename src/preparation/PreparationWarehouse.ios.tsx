@@ -7,6 +7,8 @@ import { Alert } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationInputSheet, PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
+import { preparationDisplay } from './preparationModel';
+import { preparationJournalDate } from './PreparationDate';
 import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRenameWarehouse } from './preparationManagementApi';
 import { preparationMaterialAvailable, preparationMaterialHistory, preparationReceiptMode, preparationReceiptPayload, preparationVisibleMaterials } from './preparationLogic';
 
@@ -69,13 +71,14 @@ export function PreparationWarehouse() {
     {warehouse && <Section>
       {items.length === 0 && <Text>{t('Bu omborda hali kirim yo‘q.')}</Text>}
       {items.map(material => <Button key={material.code} onPress={() => router.push(`/ios-preparation/material-detail?code=${encodeURIComponent(material.code)}` as Href)}>
-        <Text>{material.name} · {t('Mavjud qoldiq')}: {preparationMaterialAvailable(material, warehouse)} kg</Text>
+        <Text>{material.name} · {t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
       </Button>)}
     </Section>}
     <Section title={t('Amallar')}>
       {mode === 'manual' && <Menu label={t('Kirim')} modifiers={[disabled(blocked)]}>
         {items.filter(item => item.can_receive).map(item => <Button key={item.code} label={item.name} onPress={() => receive(item)} />)}
       </Menu>}
+      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(true)]} />}
       {mode === 'manual' && <Button label={t('Homashyo qo‘shish')} modifiers={[disabled(blocked)]} onPress={createMaterial} />}
       {!!snapshot?.material_warehouses.length && <Menu label={t('Ombor qo‘shish')} modifiers={[disabled(blocked)]}>
         {snapshot.material_warehouses.map(name => <Button key={name} label={name} onPress={() => createWarehouse(name)} />)}
@@ -105,13 +108,14 @@ export function PreparationMaterialDetail() {
   };
   return <><Stack.Screen options={{ title: material?.name ?? t('Homashyo') }} /><PreparationList refresh={controller.reload.bind(controller)}>
     <PreparationStatus loading={home.loading} error={home.error} retry={() => { void controller.reload(); }} />
-    {material && <Section><Text>{material.name}</Text><Text>{t('Mavjud qoldiq')}: {preparationMaterialAvailable(material, warehouse)} kg</Text>
-      {mode === 'manual' && <Button label={t('Kirim qilish')} modifiers={[disabled(home.locked || !material.can_receive)]} onPress={receive} />}</Section>}
+    {material && <Section><Text>{material.name}</Text><Text>{t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
+      {mode === 'manual' && <Button label={t('Kirim qilish')} modifiers={[disabled(home.locked || !material.can_receive)]} onPress={receive} />}
+      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(true)]} />}</Section>}
     {history.receipts.length > 0 && <Section title={t('Kirimlar')}>{history.receipts.map((item, index) => <Text key={index}>
-      {String(item.kg ?? '')} kg · {String(item.created_at ?? '')} {item.reversed === true ? t('Bekor qilingan') : ''} {String(item.reason ?? '')}
+      {item.kind === 'receipt_reversal' ? '−' : '+'}{preparationDisplay(String(item.kg ?? '0'))} kg · {String(item.warehouse ?? '')} · {preparationJournalDate(String(item.created_at ?? ''))} {item.reversed === true ? t('Bekor qilingan') : ''} {item.reason ? `${t('Sabab')}: ${String(item.reason)}` : ''}
     </Text>)}</Section>}
     {history.consumptions.length > 0 && <Section title={t('Chiqimlar')}>{history.consumptions.map(({ doc, line }, index) => <Text key={index}>
-      {String(line.kg ?? '')} kg · {String(doc.created_at ?? '')} · {String(doc.order_id ?? '')}
+      −{preparationDisplay(String(line.kg ?? '0'))} kg · {String(doc.order_code ?? '')} {String(doc.order_title ?? '')} · {preparationDisplay(String(line.percent ?? '0'))}% · {preparationJournalDate(String(doc.created_at ?? ''))}
     </Text>)}</Section>}
     {!history.receipts.length && !history.consumptions.length && <Section><Text>{t('Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.')}</Text></Section>}
   </PreparationList></>;

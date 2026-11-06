@@ -5,6 +5,7 @@ import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
+import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { PreparationInputSheet, PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
 import { usePreparationContext } from './PreparationContext';
 import { preparationReceiptMode, preparationReceiptPayload, preparationVisibleMaterials } from './preparationLogic';
@@ -49,18 +50,22 @@ export function PreparationHome() {
       <Button label={t('Homashyolar')} systemImage="shippingbox" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/materials' as Href)} />
       <Button label={t('Mahsulot formulasi')} systemImage="list.bullet.rectangle" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/sets' as Href)} />
       <Button label={t('Buyurtmalar')} systemImage="list.number" modifiers={[disabled(true)]} />
-      <Button label={t('Ishlab chiqarish')} systemImage="chart.bar" onPress={() => router.push('/ios-preparation/production' as Href)} />
+      <Button label={t('Ishlab chiqarish')} systemImage="chart.bar" onPress={() => router.replace('/ios-preparation/production' as Href)} />
+      {canOpenRoute(session, appRoutes.inventoryMovements) && <Button label={t('Ishlab chiqarilgan homashyolar')} systemImage="shippingbox" modifiers={[disabled(true)]} />}
       <Button label={t('Tarix')} systemImage="clock.arrow.circlepath" onPress={() => router.push('/ios-preparation/history' as Href)} />
     </Section>
-    <Section title={t('Amallar')}>
-      {mode === 'manual' && <Menu label={t('Kirim')} systemImage="plus.circle" modifiers={[stockLocked]}>
+    <Section><Menu label={t('Amallar')} systemImage="plus.circle">
+      <Button label={t('Ombor')} modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/warehouse' as Href)} />
+      <Button label={t('Homashyolar')} modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/materials' as Href)} />
+      <Button label={t('Mahsulot formulasi')} modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/sets' as Href)} />
+      <Button label={t('Buyurtmalar')} modifiers={[disabled(true)]} />
+      <Button label={t('Tarix')} onPress={() => router.push('/ios-preparation/history' as Href)} />
+      {canOpenRoute(session, appRoutes.gscaleMode) && <Button label={t('Tarozi kirimi')} modifiers={[disabled(true)]} />}
+      {mode === 'manual' && <Menu label={t('Kirim')} modifiers={[stockLocked]}>
         {receivable.map(material => <Button key={material.code} label={material.name} onPress={() => receive(material)} />)}
       </Menu>}
       {mode === 'warehouse' && <Button label={t('Kirim')} modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/warehouse' as Href)} />}
       {mode === 'manual' && <Button label={t('Homashyo qo‘shish')} modifiers={[stockLocked]} onPress={createMaterial} />}
-      <Button label={t('Formulalar')} onPress={() => router.push('/ios-preparation/catalog' as Href)} />
-      <Button label={t('Profil')} onPress={() => router.navigate('/ios-preparation/profile' as Href)} />
-      <Text>{String(session.profile.display_name ?? '')}</Text>
-    </Section>
+    </Menu></Section>
   </PreparationList></>;
 }

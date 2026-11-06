@@ -8,13 +8,13 @@ import { usePreparationContext } from './PreparationContext';
 import { PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
 import { PreparationSharesSheet } from './PreparationFormulaSheets';
 import type { FormulaEditorRow } from './preparationLogic';
-import type { PreparationFormula } from './preparationModel';
+import { preparationEstimatedKgDisplay, preparationFormulaSharesComplete, preparationScrewLineKg, type PreparationFormula as Formula } from './preparationModel';
 import { usePreparationFormula, type PreparationFormulaOptions } from './usePreparationFormula';
 
 type FormulaController = ReturnType<typeof usePreparationFormula>['controller'];
 type Material = ReturnType<typeof usePreparationFormula>['materials'][number];
-function FormulaLine({ row, index, materials, busy, change, remove }: { row: FormulaEditorRow; index: number; materials: Material[];
-  busy: boolean; change: (row: FormulaEditorRow) => void; remove: () => void }) {
+function FormulaLine({ row, index, materials, busy, change, remove, canRemove }: { row: FormulaEditorRow; index: number; materials: Material[];
+  busy: boolean; change: (row: FormulaEditorRow) => void; remove: () => void; canRemove: boolean }) {
   const nativePercent = useNativeState(row.percent), t = usePreparationText();
   return <Section title={`${index + 1}. ${row.material?.name ?? t('Seriyo tanlang')}`}>
     <Menu label={row.material?.name ?? t('Seriyo tanlang')} modifiers={[disabled(busy)]}>
@@ -22,11 +22,11 @@ function FormulaLine({ row, index, materials, busy, change, remove }: { row: For
     </Menu>
     <TextField text={nativePercent} placeholder={t('Foiz (%)')} modifiers={[keyboardType('decimal-pad'), disabled(busy)]}
       onTextChange={percent => change({ ...row, percent })} />
-    <Button label={t('Olib tashlash')} role="destructive" modifiers={[disabled(busy)]} onPress={remove} />
+    <Button label={t('Olib tashlash')} role="destructive" modifiers={[disabled(busy || !canRemove)]} onPress={remove} />
   </Section>;
 }
 function FormulaDetails({ formula, formulas, controller, close }: {
-  formula: PreparationFormula; formulas: PreparationFormula[]; controller: FormulaController; close: () => void;
+  formula: Formula; formulas: Formula[]; controller: FormulaController; close: () => void;
 }) {
   const t = usePreparationText(), [sharing, setSharing] = useState(false);
   if (sharing) return <PreparationSharesSheet formulas={formulas} close={close} save={values => controller.saveShares(values)} />;
@@ -58,7 +58,12 @@ export function PreparationFormula() {
   const busy = state.loading || state.saving || state.deleting || state.openingReceipt;
   usePreventRemove(state.saving || state.deleting, () => {});
   const updateRow = (index: number, row: FormulaEditorRow) => controller.setRows(state.rows.map((old, i) => i === index ? row : old));
-  const openDetails = (formula: PreparationFormula) => sheet.open(<FormulaDetails formula={formula} formulas={state.formulas}
+  const lineEstimate = (formula: Formula, percent: string) => {
+    if (!state.estimatedMaterialKg || !formula.share_percent || !preparationFormulaSharesComplete(state.formulas)) return '';
+    try { return ` · ≈ ${preparationEstimatedKgDisplay(preparationScrewLineKg(state.estimatedMaterialKg, formula.share_percent, percent))} kg`; }
+    catch { return ''; }
+  };
+  const openDetails = (formula: Formula) => sheet.open(<FormulaDetails formula={formula} formulas={state.formulas}
     controller={controller} close={sheet.close} />, { compact: true, dismissible: false });
   return <><Stack.Screen options={{ title: options.variantName || t('Formula'), gestureEnabled: !state.saving && !state.deleting }} />
     <PreparationList refresh={() => controller.reload()}>
@@ -69,15 +74,19 @@ export function PreparationFormula() {
         {state.estimatedMaterialKg && <Text>{t('Taxminiy kg')}: {state.estimatedMaterialKg}</Text>}
       </Section>
       {state.editing ? <>
-        {state.rows.map((row, index) => <FormulaLine key={`${state.editingName ?? 'new'}:${index}`} row={row} index={index} materials={state.materials}
-          busy={busy} change={value => updateRow(index, value)} remove={() => controller.setRows(state.rows.filter((_, i) => i !== index))} />)}
+        {state.rows.map((row, index) => <FormulaLine key={`${state.editingName ?? 'new'}:${index}:${row.material?.code ?? ''}`} row={row} index={index} materials={state.materials}
+          busy={busy} canRemove={state.rows.length > 1} change={value => updateRow(index, value)} remove={() => controller.setRows(state.rows.filter((_, i) => i !== index))} />)}
         <Section><Button label={t('Seriyo qo‘shish')} modifiers={[disabled(busy)]} onPress={() => controller.setRows([...state.rows, { material: null, percent: '' }])} />
           {!!state.editorError && <Text>{state.editorError}</Text>}
           <Button label={t('Saqlash')} modifiers={[disabled(!state.canSave || busy)]} onPress={() => { void controller.save().catch(preparationAlert); }} />
           <Button label={t('Bekor qilish')} modifiers={[disabled(busy)]} onPress={() => controller.closeEditor()} /></Section>
       </> : <Section>
+        {!state.formulas.length && <Text>{t(options.manageSavedFormula && !options.allowAddingFormula ? 'Bu formulada ichki tarkib yo‘q.' : 'Hali formula yo‘q. FAB orqali formula qo‘shing.')}</Text>}
+        {state.formulas.length > 0 && <Button label={t('Shnek ulushlari')} modifiers={[disabled(busy)]} onPress={() => sheet.open(
+          <PreparationSharesSheet formulas={state.formulas} close={sheet.close} save={values => controller.saveShares(values)} />,
+          { compact: true, dismissible: false })} />}
         {state.formulas.map(formula => <Button key={formula.name} modifiers={[disabled(busy)]} onPress={() => openDetails(formula)}>
-          <VStack alignment="leading"><Text>{formula.name}</Text><Text>{formula.lines.map(line => `${line.name} ${line.percent}%`).join(' · ')}</Text></VStack>
+          <VStack alignment="leading"><Text>{formula.name}</Text><Text>{formula.lines.map(line => `${line.name} ${line.percent}%${lineEstimate(formula, line.percent)}`).join(' · ')}</Text></VStack>
         </Button>)}
         {(!options.manageSavedFormula || options.allowAddingFormula) && <Button label={t('Formula qo‘shish')} modifiers={[disabled(busy)]} onPress={() => controller.openEditor()} />}
       </Section>}

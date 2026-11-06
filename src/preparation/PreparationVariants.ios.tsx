@@ -23,7 +23,13 @@ function ReuseSheet({ session, options, close, choose }: { session: Session; opt
     void preparationFormulaCatalog(session, options).then(setItems).catch(e => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, [session, options]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    void preparationFormulaCatalog(session, options).then(value => { if (active) setItems(value); })
+      .catch(e => { if (active) setError(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [session, options]);
   return <Host style={{ minHeight: 400 }}><VStack><Text>{t('Shnek formulasini tanlang')}</Text><List>
     {loading && <ProgressView />}{!!error && <Section><Text>{error}</Text><Button label={t('Qayta urinish')} onPress={load} /></Section>}
     {items.map(item => <Button key={item.id} modifiers={[disabled(busy)]} onPress={() => {
@@ -64,7 +70,10 @@ export function PreparationVariants() {
   const reuse = () => {
     if (!controller.beginReuse()) return;
     sheet.open(<ReuseSheet session={session} options={options} close={sheet.close} choose={async id => {
-      const result = await controller.reuse(id); if (result) pending.current = result;
+      if (!controller.getSnapshot().creating) controller.beginReuse();
+      const result = await controller.reuse(id);
+      if (!result) throw new Error('Variant saqlanmadi');
+      pending.current = result;
     }} />, { compact: true, dismissible: false, onDismiss: afterSheet });
   };
   const rename = (variant: Variant) => sheet.open(<PreparationVariantNameSheet initial={variant.name} close={sheet.close} save={async name => {
@@ -74,17 +83,17 @@ export function PreparationVariants() {
     { text: t('Bekor qilish'), style: 'cancel' }, { text: t('O‘chirish'), style: 'destructive', onPress: () => { void controller.remove(variant).catch(preparationAlert); } },
   ]);
   const busy = state.loading || state.creating || state.opening || state.removing || state.copying || opening;
-  return <><Stack.Screen options={{ title: t('Shnek variantlari') }} /><PreparationList refresh={() => controller.load()}>
+  return <><Stack.Screen options={{ title: t('Shnek formulalar') }} /><PreparationList refresh={() => controller.load()}>
     <PreparationStatus loading={busy} error={state.error} retry={() => { void controller.load(); }} />
-    {!state.loading && !state.error && <Section>{!state.variants.length && <Text>{t('Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.')}</Text>}
+    <Section>{!state.loading && !state.error && !state.variants.length && <Text>{t('Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.')}</Text>}
       {state.variants.map(variant => <ContextMenu key={variant.id}><ContextMenu.Trigger>
         <Button modifiers={[disabled(busy)]} onPress={() => open(variant)}><VStack alignment="leading"><Text>{variant.name}</Text>
-          <Text>{variant.formula_code} · {variant.formula_count ? `${variant.formula_count} ta` : t('Tarkib hali kiritilmagan')}</Text></VStack></Button>
+          <Text>{variant.formula_code} · {variant.formula_count ? `${variant.formula_count} ta ichki formula · ${t(variant.shares_complete ? 'jami 100%' : 'ulushlar belgilanmagan')}` : t('Tarkib hali kiritilmagan')}</Text></VStack></Button>
       </ContextMenu.Trigger><ContextMenu.Items><Button label={t('Tahrirlash')} modifiers={[disabled(busy)]} onPress={() => open(variant, true)} />
         <Button label={t('Nomini o‘zgartirish')} modifiers={[disabled(busy)]} onPress={() => rename(variant)} />
         <Button label={t('O‘chirish')} role="destructive" modifiers={[disabled(busy)]} onPress={() => remove(variant)} />
       </ContextMenu.Items></ContextMenu>)}
-    </Section>}
+    </Section>
     <Section title={t('Amallar')}><Button label={t('Variant qo‘shish')} modifiers={[disabled(busy)]} onPress={() => { void create(); }} />
       <Button label={t('Qidirib variant qo‘shish')} modifiers={[disabled(busy)]} onPress={reuse} /></Section>
   </PreparationList></>;

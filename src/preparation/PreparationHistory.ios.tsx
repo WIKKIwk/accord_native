@@ -12,6 +12,7 @@ import { preparationReverseHistory } from './preparationLogic';
 // @v2 PreparationHistoryScreen
 export function PreparationHistory() {
   const { home, session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet();
+  const [busy, setBusy] = useState(false);
   const [localHistory, setLocalHistory] = useState<Record<string, unknown>[] | null>(null);
   const history = localHistory ?? home.snapshot?.history ?? [];
   const reverse = (doc: Record<string, unknown>) => sheet.open(<PreparationInputSheet title="Kirimni bekor qilish" label="Sabab"
@@ -19,10 +20,11 @@ export function PreparationHistory() {
       sheet.close();
       Alert.alert(t('Kirimni bekor qilish'), `${String(doc.kg ?? '0')} kg kirim bekor qilinsinmi? Bu amal tarixda saqlanadi.`, [
         { text: t('Qaytish'), style: 'cancel' }, { text: t('Bekor qilish'), style: 'destructive', onPress: () => {
+          setBusy(true);
           void preparationReverseReceipt(session, String(doc.id ?? ''), reason).then(async result => {
             setLocalHistory(preparationReverseHistory(history, doc.id == null ? null : String(doc.id), result, new Date().toISOString()));
             await home.controller.reload(); Alert.alert(t('Kirim bekor qilindi'));
-          }).catch(preparationAlert);
+          }).catch(preparationAlert).finally(() => setBusy(false));
         } },
       ]);
     }} />, { compact: true, dismissible: false });
@@ -37,7 +39,7 @@ export function PreparationHistory() {
           {doc.reversed === true && <Text>{t('Bekor qilingan')}</Text>}</VStack>;
         return doc.kind === 'receipt' && doc.reversed !== true ? <ContextMenu key={String(doc.id ?? index)}>
           <ContextMenu.Trigger>{content}</ContextMenu.Trigger><ContextMenu.Items>
-            <Button label={t('Kirimni bekor qilish')} role="destructive" modifiers={[disabled(doc.can_reverse !== true || home.locked)]}
+            <Button label={t('Kirimni bekor qilish')} role="destructive" modifiers={[disabled(doc.can_reverse !== true || home.locked || busy)]}
               onPress={() => reverse(doc)} />
           </ContextMenu.Items></ContextMenu> : <VStack key={String(doc.id ?? index)}>{content}</VStack>;
       })}

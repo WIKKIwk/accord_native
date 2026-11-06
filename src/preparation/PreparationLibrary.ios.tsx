@@ -1,7 +1,7 @@
-import { Button, ContextMenu, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
+import { Button, ContextMenu, Host, List, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
 import { disabled } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
@@ -35,15 +35,15 @@ export function PreparationFormulaCatalog() {
     <Section><TextField placeholder={t('Formula nomi, kodi yoki buyurtmani qidirish')} onTextChange={value => controller.setQuery(value)} />
       <Text>{t(`Barcha buyurtmalarning formulalari: ${state.filteredRecipes.length} ta`)}</Text></Section>
     <PreparationStatus loading={state.loading || state.busy} error={state.error} retry={() => { void reload(); }} />
-    {!state.loading && !state.error && <Section>
-      {!state.filteredRecipes.length && <Text>{t(state.query.trim() ? 'Formula topilmadi.' : 'Saqlangan formulalar yo‘q.')}</Text>}
+    <Section>
+      {!state.loading && !state.error && !state.filteredRecipes.length && <Text>{t(state.query.trim() ? 'Formula topilmadi.' : 'Saqlangan formulalar yo‘q.')}</Text>}
       {state.filteredRecipes.map(recipe => <ContextMenu key={recipe.id}><ContextMenu.Trigger>
         <Button modifiers={[disabled(state.busy)]} onPress={() => openRecipe(recipe)}><VStack alignment="leading">
           <Text>{recipe.name}</Text><Text>{[recipe.formula_code, recipe.product_title, recipe.material_name, recipe.order_codes.join(', ')].filter(Boolean).join(' · ')}</Text>
         </VStack></Button></ContextMenu.Trigger><ContextMenu.Items>
           <Button label={t('Nomini o‘zgartirish')} modifiers={[disabled(state.busy || state.loading)]} onPress={() => rename(recipe)} />
         </ContextMenu.Items></ContextMenu>)}
-    </Section>}
+    </Section>
   </PreparationList></>;
 }
 
@@ -57,16 +57,30 @@ export function PreparationFormulaSets() {
   return <><Stack.Screen options={{ title: t('Formulalar') }} /><PreparationList refresh={reload}>
     <Section><TextField placeholder={t('Kod, nom yoki buyurtmani qidirish')} onTextChange={value => controller.setQuery(value)} /></Section>
     <PreparationStatus loading={state.loading || state.busy} error={state.error} retry={() => { void reload(); }} />
-    {!state.loading && !state.error && <Section>
-      {!state.filteredSets.length && <Text>{t(state.query.trim() ? 'Formula komplekti topilmadi.' : 'Saqlangan formulalar yo‘q.')}</Text>}
+    <Section>
+      {!state.loading && !state.error && !state.filteredSets.length && <Text>{t(state.query.trim() ? 'Formula komplekti topilmadi.' : 'Saqlangan formulalar yo‘q.')}</Text>}
       {state.filteredSets.map(set => <ContextMenu key={set.set_id}><ContextMenu.Trigger>
         <Button modifiers={[disabled(state.busy)]} onPress={() => openPreparationRoute('set-detail', { id: set.set_id })}>
           <VStack alignment="leading"><Text>{set.name}</Text><Text>{set.set_id} · {controller.recipeCount(set)} ta formula</Text></VStack>
         </Button></ContextMenu.Trigger><ContextMenu.Items>
           <Button label={t('Nomini o‘zgartirish')} modifiers={[disabled(state.loading || state.busy)]} onPress={() => rename(set)} />
         </ContextMenu.Items></ContextMenu>)}
-    </Section>}
+    </Section>
   </PreparationList></>;
+}
+
+function LegacyFormulaSheet({ entry, formulas, close, edit, remove, saveShares }: {
+  entry: FormulaSet['formulas'][number]; formulas: FormulaSet['formulas'][number]['formula'][];
+  close: () => void; edit: () => void; remove: () => void; saveShares: (values: string[]) => Promise<void>;
+}) {
+  const t = usePreparationText(), [sharing, setSharing] = useState(false);
+  if (sharing) return <PreparationSharesSheet formulas={formulas} close={close} save={saveShares} />;
+  return <Host style={{ minHeight: 280 }}><VStack><Text>{entry.formula.name}</Text><Text>{entry.material_name}</Text><List>
+    {entry.formula.lines.map(line => <Text key={line.item_code}>{line.name} · {line.percent}%</Text>)}
+  </List><Button label={t('Shnek ulushlarini belgilash')} onPress={() => setSharing(true)} />
+    <Button label={t('Tahrirlash')} onPress={() => { close(); edit(); }} />
+    <Button label={t('O‘chirish')} role="destructive" onPress={() => { close(); remove(); }} />
+    <Button label={t('Yopish')} onPress={close} /></VStack></Host>;
 }
 
 function SetDetailsContent({ set, recipes }: { set: FormulaSet; recipes: Recipe[] }) {
@@ -84,6 +98,9 @@ function SetDetailsContent({ set, recipes }: { set: FormulaSet; recipes: Recipe[
   const edit = (entry: typeof state.legacyFormulas[number]) => openPreparationFormula({ orderId: set.set_id, orderCode: set.set_id,
     productCode: set.product_code, productTitle: set.name, materialId: entry.material_id, materialName: entry.material_name,
     initialFormulaName: entry.formula.name, variantId: entry.variant_id, variantName: entry.variant_name, manageSavedFormula: true });
+  const details = (entry: typeof state.legacyFormulas[number]) => sheet.open(<LegacyFormulaSheet entry={entry}
+    formulas={controller.formulasFor(entry)} close={sheet.close} edit={() => edit(entry)} remove={() => remove(entry)}
+    saveShares={values => controller.saveShares(entry, values)} />, { compact: true, dismissible: false });
   const shares = (entry: typeof state.legacyFormulas[number]) => sheet.open(<PreparationSharesSheet formulas={controller.formulasFor(entry)}
     close={sheet.close} save={values => controller.saveShares(entry, values)} />, { compact: true, dismissible: false });
   return <><Stack.Screen options={{ title: set.name }} /><PreparationList refresh={reload}>
@@ -95,7 +112,7 @@ function SetDetailsContent({ set, recipes }: { set: FormulaSet; recipes: Recipe[
       </Button></ContextMenu.Trigger><ContextMenu.Items><Button label={t('Nomini o‘zgartirish')} modifiers={[disabled(state.busy)]} onPress={() => rename(recipe)} />
       </ContextMenu.Items></ContextMenu>)}
       {state.legacyFormulas.map(entry => <ContextMenu key={`${entry.material_id}:${entry.formula.name}`}><ContextMenu.Trigger>
-        <Button modifiers={[disabled(state.busy)]} onPress={() => edit(entry)}><VStack alignment="leading"><Text>{entry.formula.name}</Text><Text>{entry.material_name}</Text></VStack></Button>
+        <Button modifiers={[disabled(state.busy)]} onPress={() => details(entry)}><VStack alignment="leading"><Text>{entry.formula.name}</Text><Text>{entry.material_name}</Text></VStack></Button>
       </ContextMenu.Trigger><ContextMenu.Items><Button label={t('Tahrirlash')} onPress={() => edit(entry)} />
         <Button label={t('Shnek ulushlarini belgilash')} onPress={() => shares(entry)} />
         <Button label={t('O‘chirish')} role="destructive" onPress={() => remove(entry)} /></ContextMenu.Items></ContextMenu>)}

@@ -2,7 +2,7 @@ import { Button, Host, List, Section, Text, TextField, VStack, useNativeState } 
 import { disabled, keyboardType } from '@expo/ui/swift-ui/modifiers';
 import { useState } from 'react';
 import { preparationFormulaShareInputs } from './preparationLogic';
-import type { PreparationFormula } from './preparationModel';
+import { preparationDecimalText, preparationDisplay, preparationFormulaShareTotal, type PreparationFormula } from './preparationModel';
 import { preparationVariantNameCanSave } from './usePreparationLibrary';
 import { usePreparationText } from './PreparationUI';
 
@@ -39,6 +39,7 @@ export function PreparationSharesSheet({ formulas, close, save }: {
   const t = usePreparationText();
   const [values, setValues] = useState(formulas.map(formula => formula.share_percent ?? ''));
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const total = preparationFormulaShareTotal(formulas.map((formula, index) => ({ ...formula, share_percent: values[index] })));
   let valid = false;
   try { preparationFormulaShareInputs(formulas.map(formula => formula.name), values); valid = true; } catch { /* Shared validation gives the exact 100% rule. */ }
   const submit = async () => {
@@ -50,7 +51,7 @@ export function PreparationSharesSheet({ formulas, close, save }: {
   return <Host style={{ minHeight: 360 }}><VStack><Text>{t('Shnek ulushlarini belgilash')}</Text><List>
     {formulas.map((formula, index) => <ShareField key={formula.name} formula={formula} busy={busy} change={value =>
       setValues(current => current.map((old, i) => i === index ? value : old))} />)}
-    {!valid && <Text>{t('Har bir shnek uchun 0 dan katta, 100 gacha foiz kiriting')}</Text>}
+    <Text>{total === null ? t('Har bir shnek uchun 0 dan katta, 100 gacha foiz kiriting') : t(`Jami: ${preparationDisplay(preparationDecimalText(total))}% / 100%`)}</Text>
     {!!error && <Text>{error}</Text>}
   </List><Button label={t('Saqlash')} modifiers={[disabled(!valid || busy)]} onPress={() => { void submit(); }} />
     <Button label={t('Bekor qilish')} modifiers={[disabled(busy)]} onPress={close} /></VStack></Host>;

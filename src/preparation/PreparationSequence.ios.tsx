@@ -28,7 +28,14 @@ function OrderDetail({ session, controller, row, close, renderDetail }: Props & 
     void preparationOrderDetail(session, row.id).then(setDetail).catch(e => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, [session, row.id, exists]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!exists) return;
+    let active = true;
+    void preparationOrderDetail(session, row.id).then(value => { if (active) setDetail(value); })
+      .catch(e => { if (active) setError(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [session, row.id, exists]);
   useEffect(() => { if (!exists) close(); }, [exists, close]);
   return <Host style={{ flex: 1 }}><VStack><Text>{row.code || row.order_number || row.id}</Text><List>
     {loading && <ProgressView />}{!!error && <Section><Text>{error}</Text><Button label={t('Qayta urinish')} onPress={load} /></Section>}

@@ -55,8 +55,8 @@ export function PreparationMaterials() {
   return <><Stack.Screen options={{ title: t('Homashyolar') }} /><PreparationList refresh={() => controller.load(true)}>
     <Section><TextField placeholder={t('Homashyoni qidirish')} onTextChange={value => controller.setQuery(value)} /></Section>
     <PreparationStatus loading={state.loading || state.saving} error={state.error} retry={() => { void controller.load(); }} />
-    {!state.loading && !state.error && <Section>
-      {state.filtered.length === 0 && <Text>{t(state.items.length ? 'Homashyo topilmadi.' : 'Hali homashyo yaratmagansiz.')}</Text>}
+    <Section>
+      {!state.loading && !state.error && state.filtered.length === 0 && <Text>{t(state.items.length ? 'Homashyo topilmadi.' : 'Hali homashyo yaratmagansiz.')}</Text>}
       {state.filtered.map(item => <ContextMenu key={item.item_code}><ContextMenu.Trigger><VStack alignment="leading">
         <Text>{item.name}</Text><Text>{item.item_code} · {item.warehouses.length ? item.warehouses.join(', ') : t('Ombor biriktirilmagan')}</Text>
       </VStack></ContextMenu.Trigger><ContextMenu.Items>
@@ -64,6 +64,6 @@ export function PreparationMaterials() {
         <Button label={t('Omborga biriktirish')} modifiers={[disabled(blocked)]} onPress={() => { void assign(item); }} />
         <Button label={t('O‘chirish')} role="destructive" modifiers={[disabled(blocked)]} onPress={() => remove(item)} />
       </ContextMenu.Items></ContextMenu>)}
-    </Section>}
+    </Section>
   </PreparationList></>;
 }
