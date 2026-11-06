@@ -1,9 +1,9 @@
 import { ListItem, Text } from '@expo/ui';
-import { HStack, VStack } from '@expo/ui/swift-ui';
-import { accessibilityHidden, alignmentGuide, background, font, foregroundStyle, listRowBackground, listRowInsets, onLongPressGesture } from '@expo/ui/swift-ui/modifiers';
-import { PlatformColor, useColorScheme, View, type ColorValue } from 'react-native';
+import { Background, HStack, Rectangle, VStack } from '@expo/ui/swift-ui';
+import { accessibilityHidden, alignmentGuide, font, foregroundStyle, listRowInsets, onLongPressGesture, opacity, type ShapeStyle } from '@expo/ui/swift-ui/modifiers';
+import { PlatformColor, View, type ColorValue } from 'react-native';
 import type { Session } from '../../auth';
-import { orderCardAppearance, type OrderCardTone } from '../../workerOrderAppearance';
+import type { OrderCardTone } from '../../workerOrderAppearance';
 import { useWorkerColors } from '../../components/useWorkerColors';
 import { WorkerOrderThumbnail } from '../../components/WorkerOrderThumbnail';
 
@@ -16,18 +16,26 @@ const statusColors: Partial<Record<OrderCardTone, ColorValue>> = {
   completed: PlatformColor('systemGreen'),
 };
 
+const fallbackBackgrounds: Partial<Record<OrderCardTone, ShapeStyle>> = {
+  ...statusColors,
+  print_preflight: { type: 'linearGradient', colors: [PlatformColor('systemIndigo'), PlatformColor('systemPink'), PlatformColor('systemGray5')],
+    startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
+  print_preflight_passed: { type: 'linearGradient', colors: [PlatformColor('systemGreen'), PlatformColor('systemMint'), PlatformColor('systemBackground')],
+    startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
+};
+
 export function OrderListItem({ headline, supportingText, statusText, statusDetail, onPress, onLongPress, session, orderId, imageId, imageActive, cardTone = 'neutral', fontFamily, headlineFontFamily }: Props) {
   const colors = useWorkerColors();
-  const dark = useColorScheme() === 'dark';
   const queueStatus = statusText !== undefined;
   const status = cardTone === 'history_completed' ? { label: 'Tugallangan', color: statusColors.completed! }
     : cardTone === 'history_partial' ? { label: 'Qisman', color: statusColors.paused! }
     : queueStatus && statusText ? { label: statusText, color: statusColors[cardTone] ?? PlatformColor('secondaryLabel') } : null;
-  const appearance = orderCardAppearance(status || queueStatus ? 'neutral' : cardTone, dark ? '#101410' : '#FFFFFF', dark);
-  const modifiers = [alignmentGuide('listRowSeparatorLeading', 56), listRowInsets({ top: 8, bottom: 8, leading: 16, trailing: 16 }), ...(appearance.gradientColors ? [background({ type: 'linearGradient', colors: appearance.gradientColors, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } })] : appearance.color ? [listRowBackground(appearance.color)] : []), ...(onLongPress ? [onLongPressGesture(onLongPress)] : [])];
+  const fallbackBackground = !status && !queueStatus ? fallbackBackgrounds[cardTone] : undefined;
+  const rowModifiers = [alignmentGuide('listRowSeparatorLeading', 56), listRowInsets({ top: 8, bottom: 8, leading: 16, trailing: 16 })];
+  const modifiers = [...(fallbackBackground ? [] : rowModifiers), ...(onLongPress ? [onLongPressGesture(onLongPress)] : [])];
   const detailsText = queueStatus ? statusDetail ?? '' : supportingText;
-  const details = detailsText ? <Text modifiers={[font({ textStyle: 'subheadline', ...(fontFamily ? { family: fontFamily } : {}) }), foregroundStyle(appearance.secondary ?? PlatformColor('secondaryLabel'))]}>{detailsText}</Text> : null;
-  return <ListItem onPress={onPress} modifiers={modifiers} leading={<View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}>
+  const details = detailsText ? <Text modifiers={[font({ textStyle: 'subheadline', ...(fontFamily ? { family: fontFamily } : {}) }), foregroundStyle(PlatformColor('secondaryLabel'))]}>{detailsText}</Text> : null;
+  const row = <ListItem onPress={onPress} modifiers={modifiers} leading={<View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}>
     <WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active={imageActive} size={44} backgroundColor={colors.field} iconColor={colors.muted} />
   </View>} supportingText={status ? <VStack alignment="leading" spacing={2}>
     {details}
@@ -36,6 +44,10 @@ export function OrderListItem({ headline, supportingText, statusText, statusDeta
       <Text modifiers={[font({ textStyle: 'caption', weight: 'medium' }), foregroundStyle(PlatformColor('secondaryLabel'))]}>{status.label}</Text>
     </HStack>
   </VStack> : details ?? undefined}>
-    <Text modifiers={[font({ textStyle: 'body', weight: 'medium', ...(headlineFontFamily ? { family: headlineFontFamily } : {}) }), ...(appearance.text ? [foregroundStyle(appearance.text)] : [])]}>{headline}</Text>
+    <Text modifiers={[font({ textStyle: 'body', weight: 'medium', ...(headlineFontFamily ? { family: headlineFontFamily } : {}) })]}>{headline}</Text>
   </ListItem>;
+  if (!fallbackBackground) return row;
+  return <Background modifiers={rowModifiers}>{row}<Background.Content>
+    <Rectangle modifiers={[foregroundStyle(fallbackBackground), opacity(0.16), accessibilityHidden(true)]} />
+  </Background.Content></Background>;
 }
