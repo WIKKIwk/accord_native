@@ -44,7 +44,6 @@ export function PreparationHome() {
   };
   const stockLocked = disabled(locked || !snapshot);
   return <View style={{ flex: 1 }}><Stack.Screen options={{ title: t('Tayyorlov masteri') }} /><PreparationList refresh={controller.reload.bind(controller)}>
-    <Section><Text>{t('Ichki homashyo ta’minoti')}</Text></Section>
     <PreparationStatus loading={home.loading} error={home.error} retry={() => { void controller.reload(); }} />
     {home.pending && <Section title={t('Tasdiqlanmagan operatsiya')}>
       <Text>{preparationPendingLabel(home.pending)}</Text>
