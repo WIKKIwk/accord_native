@@ -3,13 +3,12 @@ import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { BackHandler, Pressable, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
-import { Drawer } from 'react-native-drawer-layout';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Pressable, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { preparationInputError } from './preparationLogic';
+import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const locale = () => localeController.locale;
@@ -77,15 +76,10 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
   title: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean; actions?: () => void;
 }) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = usePreparationText();
-  const { width } = useWindowDimensions(), [drawerOpen, setDrawerOpen] = useState(false);
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const listener = BackHandler.addEventListener('hardwareBackPress', () => { setDrawerOpen(false); return true; });
-    return () => listener.remove();
-  }, [drawerOpen]);
-  const content = <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
+  const roleDrawer = useRoleDrawer();
+  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
     <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      {drawer && <Pressable accessibilityRole="button" accessibilityLabel={t('Menyu')} testID="preparation-menu" onPress={() => setDrawerOpen(true)} style={{ padding: 8, width: 40 }}>
+      {drawer && <Pressable accessibilityRole="button" accessibilityLabel={t('Menyu')} testID="preparation-menu" onPress={roleDrawer.open} style={{ padding: 8, width: 40 }}>
         <PreparationText>☰</PreparationText></Pressable>}
       {!root && <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')}
         onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }} style={{ padding: 8 }}>
@@ -98,20 +92,6 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
     </ScrollView>
     <PreparationDock root={root} actions={actions} />
   </View>;
-  if (!drawer) return content;
-  const navigate = (route: string) => { setDrawerOpen(false); router.replace(route as Href); };
-  return <GestureHandlerRootView style={{ flex: 1 }}><Drawer open={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)}
-    drawerType="front" overlayAccessibilityLabel={t('Menyuni yopish')}
-    drawerStyle={{ width: Math.min(320, width - 56), backgroundColor: colors.surfaceContainerLow, borderTopRightRadius: 16, borderBottomRightRadius: 16 }}
-    renderDrawerContent={() => <View style={{ flex: 1, paddingTop: insets.top + 12, paddingHorizontal: 12, gap: 8 }}>
-      <PreparationText title>{t('Tayyorlov masteri')}</PreparationText>
-      <PreparationRow title={t('Tayyorlov')} onPress={() => navigate('/android-preparation')} />
-      <PreparationRow title={t('Formulalar')} onPress={() => navigate('/android-preparation/formulas')} />
-      <PreparationRow title={t('Ishlab chiqarish')} onPress={() => navigate('/android-preparation/production')} />
-      <PreparationRow title={t('Ketma-ketlik')} onPress={() => { setDrawerOpen(false); router.push('/android-preparation/sequence' as Href); }} />
-      <PreparationRow title={t('Ishlab chiqarilgan homashyolar')} onPress={() => { setDrawerOpen(false); router.push('/android-preparation/inventory' as Href); }} />
-      <PreparationRow title={t('Profil')} onPress={() => { setDrawerOpen(false); router.navigate('/android-preparation/profile' as Href); }} />
-    </View>}>{content}</Drawer></GestureHandlerRootView>;
 }
 
 type Choice = { label: string; subtitle?: string; value: string; disabled?: boolean };
