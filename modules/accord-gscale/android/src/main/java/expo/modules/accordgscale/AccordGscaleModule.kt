@@ -8,9 +8,11 @@ import expo.modules.kotlin.modules.ModuleDefinition
 
 class AccordGscaleModule : Module() {
     private var nsd: GScaleNsdDiscovery? = null
+    private val streams = GScaleMonitorStreams { event -> sendEvent("onMonitorStream", event) }
 
     override fun definition() = ModuleDefinition {
         Name("AccordGscale")
+        Events("onMonitorStream")
 
         // @v2 gscale_nsd
         AsyncFunction("discoverServices") { args: Map<String, Any?>, promise: Promise ->
@@ -36,7 +38,11 @@ class AccordGscaleModule : Module() {
             }.start()
         }
 
+        AsyncFunction("startMonitorStream") { session: Int, baseUrl: String -> streams.start(session, baseUrl) }
+        AsyncFunction("stopMonitorStream") { session: Int -> streams.stop(session) }
+
         OnDestroy {
+            streams.stopAll()
             nsd?.finish()
             nsd = null
         }
