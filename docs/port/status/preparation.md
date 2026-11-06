@@ -12,7 +12,7 @@ Stopped at: complete the UI text inventory and classify remaining V2 tests; plat
 | Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android sessions must implement the four routes and all listed views, sheets and dialogs using the UI contract; this logic session cannot write platform views. |
 | Preparation order detail decoder | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `productionMapSnapshot.ts` | The recorded preparation detail successfully decodes through the shared snapshot parser. Its broader optional-branch parity remains an existing shared open item; integrate those fixes for the read-only sheet. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
-| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Connect printer selection and the printer session’s local and driver transports to `reprintPreparationRoll`, then verify on a real printer. |
+| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Platform sessions must supply the device-picker UI to `reprintPreparationRollWithPrinter`; USB, Bluetooth and driver transport adapters are connected but require real-printer checks. |
 
 ## V2 test triage
 
