@@ -39,9 +39,11 @@ The updated GScale skill uses its own reading list in place of a role-ledger gat
 
 ## Verification at stop
 
-- `node --test tests/*.test.cjs`: 923 passed, including 80 GScale tests. A pre-change full-suite count was not recorded.
-- iOS TypeScript and Expo lint passed. Android TypeScript reported the same 10 baseline errors listed in `PORT.md`.
-- `port_ledger.mjs check` passed tag resolution with seven existing non-GScale endpoint warnings. `role gscale 1` failed because the ledger does not recognize this session.
+- `node --test tests/*.test.cjs`: 957 passed, zero failed. The focused GScale suite has 94 passing tests; the previous stop recorded 923 total passes, including 80 GScale tests.
+- iOS TypeScript and Expo lint passed. Android TypeScript reported the same 10 baseline errors listed in `PORT.md`, with no GScale errors.
+- `port_ledger.mjs check` resolved 529 `@v2` and 62 `@v2-test` tags; seven endpoint warnings belong to other domains. The updated skill replaces the nonexistent `role gscale` gate with the GScale reading list.
+- The three admin reads and photo inference request have focused source-derived tests; no direct V2 HTTP recordings were found. Route tests cover both flattened and wrapped preparation arguments.
+- Drift reports V2 changes after baseline `7c87a54e`; this work continues to use the pinned baseline, which only the integrator may move.
 - Expo autolinking found the module on both platforms. Swift UDP and monitor sources type-checked; the Swift monitor parser passed a local HTTP streaming check. Android native code has not been compiled here.
 - No simulator, emulator, phone, scale or printer was used. Real-device validation remains open.
 - Tokens read were not measured. V2 is pinned to baseline `7c87a54e`.
@@ -74,3 +76,11 @@ The updated GScale skill uses its own reading list in place of a role-ledger gat
 - `5acc147` port(gscale/1): order selection, 2 methods
 - `16d81b1` port(gscale/1): printer status state, 1 method
 - `2fac828` port(gscale/1): record verification and handoff
+- `217bd0d` port(gscale/1): add UI contract
+- `2e49b62` port(gscale/1): admin catalog and orders, 3 methods
+- `264608f` port(gscale/1): connect catalog and order loaders
+- `c751e0f` port(gscale/ios): dashboard and device pickers
+- `1270f62` port(gscale/android): dashboard and device pickers
+- `2da385a` port(gscale/1): photo search in item picker
+- `3ab643d` port(gscale/1): platform Bluetooth discovery
+- `a0bca5d` port(gscale/1): preserve batch conflict on refresh

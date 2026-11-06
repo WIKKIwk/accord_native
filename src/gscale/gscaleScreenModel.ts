@@ -47,10 +47,13 @@ export function gscaleDashboardSections(screen: Screen, section: 'control' | 'hi
         draft.default_warehouse ? `${draft.warehouse_mode === 'default' ? 'Standart ombor' : 'Saqlangan standart'}: ${draft.default_warehouse}` : undefined),
       ...(state.error ? [text(state.error)] : []), button('Yangilash', () => void operator.refresh(), state.requestInFlight)] }];
   }
-  const sections: GScaleSection[] = [], deviceLabel = selected?.transport === 'wifi' ? selected.server.handshake.serverName
+  const sections: GScaleSection[] = [], deviceLabel = selected?.transport === 'wifi'
+    ? state.printerStatusOverride || (state.monitor.hasPrinterState ? state.monitor.printerLabel
+      : state.error ? 'Printer holati olinmadi' : 'Printer holati olinmoqda')
     : selected?.transport === 'bluetooth' ? `${selected.bluetoothPrinter.displayName} · Bluetooth`
       : selected?.transport === 'offline' ? 'USB printer · Offline' : 'Printer yoki tarozi tanlash';
   const deviceRows: GScaleRow[] = [button(deviceLabel, actions.devices, false, state.device.needsAttention ? 'Qurilmani qayta tanlang' : undefined)];
+  if (!controlOnly && selected?.transport === 'wifi') deviceRows.push(text(state.monitor.latencyMs > 0 ? `${state.monitor.latencyMs} ms` : '—'));
   if (control.hasScaleDevice) deviceRows.push(text(`Joriy kg: ${state.monitor.scaleValue} · ${state.monitor.scaleConnectionLabel}`));
   if (!state.batch.resolved && control.hasPrintDevice) deviceRows.push(text('Batch holati tekshirilmoqda…'),
     button('Holatni qayta tekshirish', () => void operator.retryBatchState(), state.actionLoading || state.manualPrintLoading || state.requestInFlight));
@@ -121,7 +124,7 @@ export function gscaleDashboardSections(screen: Screen, section: 'control' | 'hi
       select: () => operator.editDraft({ material_supplier: value }) })) }), state.actionLoading || state.manualPrintLoading, draft.material_supplier || 'Tanlanmagan'));
   if (control.quantitySource === 'manual') {
     if (control.simpleReceiptMode) rows.push(button('Kirim qilish', () => void operator.submitSimpleReceipt(), !control.simpleReady, undefined, 'gscale-receive'));
-    else if (active) rows.push(button('Chop etish', () => void operator.manualPrint(), !control.manualPrintEnabled, undefined, 'gscale-print'),
+    else if (state.monitor.batchActive) rows.push(button('Chop etish', () => void operator.manualPrint(), !control.manualPrintEnabled, undefined, 'gscale-print'),
       button('To‘xtatish', () => void operator.stopBatch(), !control.manualStopEnabled, undefined, 'gscale-stop'));
     else rows.push(button('Boshlash', () => void operator.startBatch(actions.chooseApparatus, false), !control.manualStartEnabled, undefined, 'gscale-start'));
   } else if (!control.simpleReceiptMode) {

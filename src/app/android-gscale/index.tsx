@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { GScaleScreen } from '../../gscale/GScaleScreen';
@@ -10,6 +10,6 @@ export default function GScaleRoute() {
   const args = useMemo(() => {
     try { return parseGScaleModeArgs(JSON.parse(key)); } catch { return null; }
   }, [key]);
-  if (!args) return <View><Text>GScale parametrlari noto‘g‘ri</Text></View>;
+  if (!args) return <><Stack.Screen options={{ headerShown: true, title: 'GScale' }} /><View><Text>GScale parametrlari noto‘g‘ri</Text></View></>;
   return <GScaleScreen args={args} />;
 }

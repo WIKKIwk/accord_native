@@ -148,7 +148,9 @@ function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType
   });
   const exit = () => Alert.alert(t('Chiqish'), t('Hisobdan chiqasizmi?'), [{ text: t('Bekor qilish'), style: 'cancel' },
     { text: t('Chiqish'), onPress: signOut }]);
-  return <><Stack.Screen options={{ headerShown: true, title: t(screen.controlOnly ? 'Homashyo kirimi' : 'Tarozilar rejimi'),
+  const title = screen.controlOnly ? t('Homashyo kirimi') : screen.state.device.selection?.transport === 'wifi'
+    ? screen.state.device.selection.server.handshake.serverName : t('Tarozilar rejimi');
+  return <><Stack.Screen options={{ headerShown: true, title,
     ...(!router.canGoBack() ? { headerLeft: () => <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')} onPress={exit}>
       <SymbolView name={{ android: 'arrow_back' }} size={24} tintColor={colors.onSurface} /></Pressable> } : {}) }} />
     <View style={{ flex: 1, backgroundColor: colors.surface, paddingBottom: insets.bottom }}>

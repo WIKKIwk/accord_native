@@ -53,6 +53,7 @@ test('simple receipt and active batch expose their separate actions', () => {
   assert.ok(!items.some(row => row.label === 'Boshlash'));
   screen.control.simpleReceiptMode = false;
   screen.control.activeBatch = { order_id: 'o1', width_mm: 500, micron: 12, length_m: 125 };
+  screen.state.monitor.batchActive = true;
   items = rows(gscaleDashboardSections(screen, 'control', actions));
   assert.ok(items.some(row => row.label === 'Chop etish'));
   assert.ok(items.some(row => row.label === 'To‘xtatish'));
