@@ -88,5 +88,12 @@ export class GScaleBatchStateStore {
     this.update({ loading: false, error: message });
   }
 
+  reset(): void {
+    this.generation++;
+    this.requestId++;
+    this.lastErrorKey = '';
+    this.update({ resolved: false, batch: null, loading: false, error: '', startConflict: false });
+  }
+
   dispose(): void { this.alive = false; this.generation++; this.requestId++; this.listeners.clear(); }
 }
