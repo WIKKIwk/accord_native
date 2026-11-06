@@ -44,7 +44,6 @@ The theme controller tests are source-derived; V2 has no direct tests for its pe
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| `src/LoginScreen.tsx` | `loginCodeUsesNumericKeyboard`, `loginFailureMessage`, `LoginScreen.submitLogin` | Use the shared prefix rule and error mapper with localized messages, and connect V2 login/back behavior in the platform-owned login views. |
 | `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing UI helpers impose additional validation and do not call the shared V2 API functions; reconcile them when profile UI is ported. |
 | `src/workerControlsApi.ts` | `MobileApiException` | Reconcile the existing worker exception with `src/shared/mobileApiException.ts`, including V2 diagnostic fields and message formatting. |
 | `src/workerRawMaterials.ts` | `resilientApiRead` | Route the V2 opt-in raw-material GETs through the shared retry helper, retaining their session guards. |

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { ActivityIndicator, Alert, AppState, Modal, Pressable, StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
 import type { Session } from '../auth';
 import { biometricAvailable, clearAppLock, loadAppLock, saveAppPin, setAppBiometric, unlockAppWithBiometric, verifyAppPin } from '../appLock';
+import { consumeLoginUnlock } from '../shared/securityUnlockRuntime';
 
 type Security = {
   hasPin: boolean;
@@ -46,7 +47,7 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
       pinPresent.current = state.hasPin;
       setHasPin(state.hasPin);
       setBiometric(state.biometric);
-      setLocked(state.hasPin);
+      setLocked(state.hasPin && !(AppState.currentState === 'active' && consumeLoginUnlock(session)));
       setLoadError('');
     } catch {
       if (mounted.current) setLoadError('Qulf ma’lumotini yuklab bo‘lmadi.');
@@ -61,7 +62,7 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
       pinPresent.current = state.hasPin;
       setHasPin(state.hasPin);
       setBiometric(state.biometric);
-      setLocked(state.hasPin);
+      setLocked(state.hasPin && !(AppState.currentState === 'active' && consumeLoginUnlock(session)));
       setLoadError('');
     }, () => { if (active) setLoadError('Qulf ma’lumotini yuklab bo‘lmadi.'); })
       .finally(() => { if (active) setLoaded(true); });

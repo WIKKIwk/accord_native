@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { login, type Session } from './auth';
 import { MobileApi } from './mobileApi';
 
-type Props = { onLogin: (session: Session) => void };
+type Props = { onLogin: (session: Session) => void; onBack?: () => void; addAccountMode?: boolean };
 
 export function LoginScreen({ onLogin }: Props) {
   const [server, setServer] = useState(MobileApi.instance.baseUrl);
