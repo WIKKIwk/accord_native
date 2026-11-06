@@ -13,7 +13,7 @@ import { type JournalState, PreparationJournal } from './preparationJournal';
 import { createPreparationProductionBatchJournal, createPreparationProductionOrderJournal, createPreparationProductionOrdersJournal } from './preparationJournalFactory';
 import { preparationJournalDate, preparationRecipeLines } from './preparationNavigation.android';
 import { preparationDisplay } from './preparationModel';
-import { reprintPreparationRollWithPrinter, type PreparationDeviceSelection } from './preparationPrinter';
+import { preparationManualPrinterServer, reprintPreparationRollWithPrinter, type PreparationDeviceSelection } from './preparationPrinter';
 import { PreparationReprintCancelled } from './preparationReprint';
 import { PreparationButton, PreparationDialogs, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
@@ -117,9 +117,14 @@ function RollPreview({ roll, session, orderId }: { roll: Roll; session: Session;
   }, []);
   const current = () => active.current && !!activeSessionToken(session) && scope.current === sessionReadScope(session);
   const selectDevice = async (): Promise<PreparationDeviceSelection | null> => {
-    const mode = await dialogs.choose('Printer tanlang', [{ label: 'USB printer', value: 'usb' }, { label: 'Bluetooth printer', value: 'bluetooth' }]);
+    const mode = await dialogs.choose('Printer tanlang', [{ label: 'USB printer', value: 'usb' },
+      { label: 'Bluetooth printer', value: 'bluetooth' }, { label: 'Wi-Fi qurilma', value: 'wifi' }]);
     if (!mode || !current()) return null;
     if (mode === 'usb') return { transport: 'offline', printer: await PrintService.detectOfflinePrinter() };
+    if (mode === 'wifi') {
+      const address = await dialogs.input({ title: 'Server qo‘shish', label: 'Server manzili', initial: 'http://gscale.local:39117' });
+      return address && current() ? preparationManualPrinterServer(address) : null;
+    }
     const devices = await NativeBluetoothPrinter.pairedPrinters();
     if (!current()) return null;
     if (!devices.length) { dialogs.message('Printer topilmadi', 'Bluetooth printer topilmadi.'); return null; }

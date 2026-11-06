@@ -53,3 +53,14 @@ test('Wi-Fi selection checks the driver then posts the V2 payload and propagates
     await assert.rejects(x.api.printPreparationJob({ epc: 'E' }, selected), /Qog‘oz tugadi/);
   } finally { global.fetch = oldFetch; }
 });
+
+test('manual Wi-Fi selection normalizes and probes a server before choosing its printer', async () => {
+  const x = setup(), oldFetch = global.fetch, requests = [];
+  global.fetch = async url => { requests.push(url); return { ok: true, json: async () => ({ service: 'mobileapi', server_ref: '5070' }) }; };
+  try {
+    const selected = await x.api.preparationManualPrinterServer('192.168.1.12');
+    assert.deepEqual(selected, { transport: 'wifi', serverBaseUrl: 'http://192.168.1.12:39117', driverBaseUrl: 'http://100.117.62.18:39117' });
+    assert.deepEqual(requests, ['http://192.168.1.12:39117/v1/mobile/handshake']);
+    assert.throws(() => x.api.preparationPrinterServerAddress('localhost:39117'), /Localhost/);
+  } finally { global.fetch = oldFetch; }
+});
