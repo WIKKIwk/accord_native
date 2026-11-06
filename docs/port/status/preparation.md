@@ -40,8 +40,7 @@ No V2 HTTP recordings were found for warehouse creation or deletion; source-deri
 
 - Audit/connect the shared inventory-movements route and its existing base stores for preparation access; its UI and shared logic are outside this role’s file fence.
 - Add the preparation role home target and connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet.
-- Provide `AdminSequenceApparatusStore` selection logic for the preparation order list.
-- Instantiate `PreparationOrdersWarmStore` with `productionSnapshotStore`, the active session and shared `AdminSequenceApparatusStore` selection; start/reset it with the app session. The shared apparatus selection store and startup wiring are outside this role’s write scope.
+- Instantiate `PreparationOrdersWarmStore` with `productionSnapshotStore`, the active session and shared `AdminSequenceApparatusStore` selection; start/reset it with the app session.
 
 ## Verification
 
