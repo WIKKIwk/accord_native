@@ -10,6 +10,8 @@ import { preparationMaterialAvailable, preparationMaterialHistory, preparationRe
 import { preparationDisplay } from './preparationModel';
 import { preparationHistoryCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
 import { PreparationNotice } from './PreparationNotice';
+import { PreparationWarehouseCreateDialog } from './PreparationWarehouseCreateDialog';
+import { preparationWarehouseDeleteMessage, preparationWarehouseErrorMessage } from './preparationWarehousePresentation';
 import { usePreparationNotice } from './usePreparationNotice';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { openPreparationScale } from './preparationNavigation.android';
@@ -43,48 +45,59 @@ function useStockReturnReload(controller: ReturnType<typeof usePreparationContex
 // @v2 PreparationWarehouseScreen
 export function PreparationWarehouseScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const sheet = useNativeSheet(), notice = usePreparationNotice(), afterAction = useRef<(() => void) | null>(null);
   useStockReturnReload(home.controller);
   const { receive, createMaterial } = useStockActions();
-  const [query, setQuery] = useState(''), [managing, setManaging] = useState(false);
+  const [query, setQuery] = useState(''), [managing, setManaging] = useState(false), [expanded, setExpanded] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const data = home.snapshot, warehouse = home.warehouse;
   const materials = preparationVisibleMaterials(data?.materials ?? [], warehouse, query);
   const manual = preparationReceiptMode(warehouse, data?.material_warehouses ?? []) === 'manual';
-  const manage = async (kind: 'create' | 'rename' | 'delete') => {
+  const createWarehouse = (name: string, parent: string) => {
+    setShowCreate(false);
+    void (async () => {
+      setManaging(true);
+      try {
+        const created = await preparationCreateWarehouse(session, name, parent);
+        if (!created) return;
+        await home.controller.reload(); home.controller.selectWarehouse(created); setExpanded(false);
+        notice.show(t(`Ombor ochildi: ${created}`));
+      } catch (error) { notice.show(t(preparationWarehouseErrorMessage(error))); }
+      finally { setManaging(false); }
+    })();
+  };
+  const manage = async (kind: 'rename' | 'delete', target: string) => {
     if (!data || managing || home.locked) return;
     try {
-      if (kind === 'create') {
-        const parent = await dialogs.choose('Ombor tanlang', data.material_warehouses.map(name => ({ label: name, value: name })), undefined, true);
-        if (!parent) return;
-        const name = await dialogs.input({ title: 'Ombor qo‘shish', label: 'Ombor nomi' });
+      if (kind === 'rename') {
+        const name = await dialogs.input({ title: 'Ombor nomini o‘zgartirish', label: 'Ombor nomi', initial: target });
         if (name === null) return;
         setManaging(true);
-        const created = await preparationCreateWarehouse(session, name, parent);
-        await home.controller.reload(); home.controller.selectWarehouse(created);
-      } else if (warehouse && kind === 'rename') {
-        const name = await dialogs.input({ title: 'Ombor nomini o‘zgartirish', label: 'Ombor nomi', initial: warehouse });
-        if (name === null) return;
+        const wasSelected = home.controller.getSnapshot().warehouse === target;
+        const renamed = await preparationRenameWarehouse(session, target, name);
+        await home.controller.reload(); if (wasSelected) home.controller.selectWarehouse(renamed);
+        notice.show(t('Ombor nomi o‘zgartirildi'));
+      } else {
+        if (!(await dialogs.confirm('Omborni o‘chirish', preparationWarehouseDeleteMessage(target), 'O‘chirish'))) return;
         setManaging(true);
-        const renamed = await preparationRenameWarehouse(session, warehouse, name);
-        await home.controller.reload(); home.controller.selectWarehouse(renamed);
-      } else if (warehouse && kind === 'delete') {
-        if (!(await dialogs.confirm('Omborni o‘chirish', `${warehouse} — ${t('O‘chirilsinmi?')}`, 'O‘chirish'))) return;
-        setManaging(true);
-        await preparationDeleteWarehouse(session, warehouse);
+        const wasSelected = home.controller.getSnapshot().warehouse === target;
+        await preparationDeleteWarehouse(session, target);
         await home.controller.reload();
         const first = home.controller.getSnapshot().snapshot?.assigned_warehouses[0];
-        if (first) home.controller.selectWarehouse(first);
+        if (wasSelected && first) home.controller.selectWarehouse(first);
+        notice.show(t('Ombor o‘chirildi'));
       }
-    } catch (error) { dialogs.message('Xatolik yuz berdi', String(error)); }
+    } catch (error) { notice.show(t(preparationWarehouseErrorMessage(error))); }
     finally { setManaging(false); }
   };
-  const selectWarehouse = async () => {
-    const selected = await dialogs.choose('Ombor', (data?.assigned_warehouses ?? []).map(name => ({ label: name, value: name })), undefined, true);
-    if (selected !== null) home.controller.selectWarehouse(selected);
-  };
-  const warehouseMenu = async () => {
-    if (!warehouse || !data?.managed_warehouses.includes(warehouse) || home.locked || managing) return;
-    const action = await dialogs.choose(warehouse, [{ label: 'Nomini o‘zgartirish', value: 'rename' }, { label: 'O‘chirish', value: 'delete' }]);
-    if (action === 'rename' || action === 'delete') void manage(action);
+  const warehouseMenu = (target: string) => {
+    if (!data?.managed_warehouses.includes(target) || home.locked || managing) return;
+    sheet.open(<View style={{ padding: 16, gap: 10 }}><PreparationText title>{target}</PreparationText>
+      <PreparationRow title={t('Nomini o‘zgartirish')} onPress={() => { afterAction.current = () => { void manage('rename', target); }; sheet.close(); }} />
+      <PreparationRow title={t('O‘chirish')} onPress={() => { afterAction.current = () => { void manage('delete', target); }; sheet.close(); }} />
+    </View>, { compact: true, dismissible: true, onDismiss: () => {
+      const next = afterAction.current; afterAction.current = null; next?.();
+    } });
   };
   const pickReceipt = async () => {
     const receivable = preparationVisibleMaterials(data?.materials ?? [], warehouse).filter(item => item.can_receive);
@@ -92,10 +105,12 @@ export function PreparationWarehouseScreen() {
     const material = receivable.find(item => item.code === code);
     if (material) await receive(material);
   };
-  return <PreparationPage title="Ombor" refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
+  return <View style={{ flex: 1 }}><PreparationPage title="Ombor" refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
     {!data?.assigned_warehouses.length ? <PreparationText>{t('Sizga ombor biriktirilmagan.')}</PreparationText> : null}
-    <PreparationRow title={t('Ombor')} subtitle={warehouse ?? t('Tanlanmagan')} onPress={() => void selectWarehouse()}
-      onLongPress={() => void warehouseMenu()} disabled={home.locked || managing} />
+    {!!data?.assigned_warehouses.length && <PreparationRow title={t('Ombor')} subtitle={warehouse ?? t('Tanlanmagan')} onPress={() => setExpanded(value => !value)} />}
+    {expanded && (data?.assigned_warehouses ?? []).map(name => <PreparationRow key={name} title={name}
+      onPress={() => { home.controller.selectWarehouse(name); setExpanded(false); }}
+      onLongPress={data?.managed_warehouses.includes(name) && !home.locked && !managing ? () => warehouseMenu(name) : undefined} />)}
     <PreparationField label="Qidirish" onChange={setQuery} />
     {!warehouse ? <PreparationText>{t('Yuqoridagi filtrdan ombor tanlang.')}</PreparationText>
       : !materials.length ? <PreparationText>{t('Bu omborda hali kirim yo‘q.')}</PreparationText> : null}
@@ -108,8 +123,11 @@ export function PreparationWarehouseScreen() {
     </> : null}
     {warehouse && !manual && canOpenRoute(session, appRoutes.gscaleMode) ? <PreparationButton label="Tarozi kirimi"
       disabled={home.locked || managing} onPress={() => openPreparationScale({ warehouse })} /> : null}
-    {data?.material_warehouses.length ? <PreparationButton label="Ombor qo‘shish" disabled={home.locked || managing} onPress={() => void manage('create')} /> : null}
-  </PreparationPage>;
+    {data?.assigned_warehouses.length && data.material_warehouses.length ? <PreparationButton label="Ombor qo‘shish" disabled={home.locked || managing} onPress={() => setShowCreate(true)} /> : null}
+  </PreparationPage><PreparationNotice message={notice.message} />
+    {showCreate && data && <PreparationWarehouseCreateDialog warehouses={data.material_warehouses} selected={warehouse}
+      close={() => setShowCreate(false)} create={createWarehouse} />}
+  </View>;
 }
 
 function historyTitle(doc: Record<string, unknown>) {
