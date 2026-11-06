@@ -1,5 +1,7 @@
 import { Stack } from 'expo-router';
-import { PreparationMenu } from '../../../preparation/PreparationMenu';
+import { RoleDrawerButton } from '../../../shared/navigation/RoleDrawerButton';
+import { usePreparationText } from '../../../preparation/PreparationUI';
 export default function PreparationHomeLayout() {
-  return <Stack screenOptions={{ headerRight: () => <PreparationMenu /> }} />;
+  const t = usePreparationText();
+  return <Stack screenOptions={{ headerLeft: () => <RoleDrawerButton label={t('Tayyorlov bo‘limlari')} />, headerBackVisible: true }} />;
 }

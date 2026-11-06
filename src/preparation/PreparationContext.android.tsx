@@ -6,6 +6,7 @@ import { clearAppLock } from '../appLock';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { PreparationDialogs } from './PreparationUI.android';
 import { usePreparationHome } from './usePreparationHome';
+import { PreparationDrawer } from './PreparationDrawer.android';
 
 type Context = { session: Session; home: ReturnType<typeof usePreparationHome>; onLogout: () => void };
 const PreparationContext = createContext<Context | null>(null);
@@ -13,7 +14,9 @@ const PreparationContext = createContext<Context | null>(null);
 function Provider({ session, onLogout, children }: { session: Session; onLogout: () => void; children: ReactNode }) {
   const home = usePreparationHome(session);
   useEffect(() => registerSessionResetHook(async () => { home.controller.invalidate(); }), [home.controller]);
-  return <PreparationContext.Provider value={{ session, home, onLogout }}><PreparationDialogs>{children}</PreparationDialogs></PreparationContext.Provider>;
+  return <PreparationContext.Provider value={{ session, home, onLogout }}><PreparationDialogs>
+    <PreparationDrawer>{children}</PreparationDrawer>
+  </PreparationDialogs></PreparationContext.Provider>;
 }
 
 export function PreparationLayout() {
