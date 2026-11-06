@@ -8,16 +8,16 @@ import { profileAvatarSource } from '../profileModel';
 import { useBaseLocale } from './useBaseLocale.ios';
 
 type Props = { visible: boolean; onClose: () => void; session: Session; profile: Record<string, unknown>;
-  token: string | null; revision: number; displayName: string };
+  token: string | null; revision: number; displayName: string; cachedUri?: string | null };
 
-export function ProfileAvatarPreview({ visible, onClose, session, profile, token, revision, displayName }: Props) {
+export function ProfileAvatarPreview({ visible, onClose, session, profile, token, revision, displayName, cachedUri }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { text } = useBaseLocale();
   const [failed, setFailed] = useState('');
   const source = profileAvatarSource(session, profile);
   const cacheKey = source ? `${source.cacheKey}:${revision}` : '';
-  const imageSource = source && token && failed !== cacheKey
+  const imageSource = cachedUri ? { uri: cachedUri } : source && token && failed !== cacheKey
     ? { ...source, cacheKey, headers: { Authorization: `Bearer ${token}` } } : null;
   const previewWidth = Math.min(Math.max(width - 32, 260), 420);
   const previewHeight = Math.min(Math.max(previewWidth * 1.25, 280), height * 0.72);

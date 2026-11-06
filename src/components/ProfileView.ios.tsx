@@ -56,7 +56,7 @@ function ApparatusRow({ labels }: { labels: string[] }) {
   </DisclosureGroup>;
 }
 
-function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftName, draftPhoto, busy, saving,
+function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,
   onChangeName, onChoosePhoto, onSave, onCloseEditor }: ProfileViewProps) {
   const dark = useColorScheme() === 'dark';
   const { text } = useBaseLocale();
@@ -72,7 +72,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
         <Menu label={
           <ZStack alignment="bottomTrailing" modifiers={[contentShape(shapes.rectangle(), ['interaction', 'contextMenuPreview'])]}>
             <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken}
-              size={108} revision={avatarRevision} previewUri={draftPhoto} /></RNHostView>
+              size={108} revision={avatarRevision} previewUri={draftPhoto} cachedUri={cachedAvatar} /></RNHostView>
             <Image systemName="camera" size={17} color="#ffffff" modifiers={[
               frame({ width: 34, height: 34 }), background('#000000', shapes.circle()),
             ]} />
@@ -119,7 +119,7 @@ export function ProfileView(props: ProfileViewProps) {
         <VStack alignment="center" spacing={6}>
           <ZStack alignment="bottomTrailing">
             <Button onPress={() => setAvatarOpen(true)} modifiers={[buttonStyle('plain'), accessibilityLabel(text('profileAvatarZoomLabel'))]}>
-              <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} size={80} revision={avatarRevision} /></RNHostView>
+              <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} size={80} revision={avatarRevision} cachedUri={props.cachedAvatar} /></RNHostView>
             </Button>
             <BottomSheet isPresented={editing} onIsPresentedChange={(isPresented) => { if (!isPresented) onCloseEditor(); }}
               anchor={<Button onPress={onOpenEditor} modifiers={[
@@ -160,6 +160,6 @@ export function ProfileView(props: ProfileViewProps) {
     </List>
   </Host>
   <ProfileAvatarPreview visible={avatarOpen} onClose={() => setAvatarOpen(false)} session={session} profile={snapshot.profile}
-    token={avatarToken} revision={avatarRevision} displayName={details.name} />
+    token={avatarToken} revision={avatarRevision} displayName={details.name} cachedUri={props.cachedAvatar} />
   </>;
 }

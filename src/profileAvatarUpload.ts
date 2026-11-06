@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { initialProfileSnapshot, type ProfileSnapshot } from './profileModel';
 import { uploadAvatar } from './shared/profileApi';
+import { cacheProfileAvatarBytes } from './shared/profileAvatarRuntime';
 
 export class AvatarUploadError extends Error {}
 
@@ -32,6 +33,7 @@ export async function uploadProfileAvatar(session: Session, uri: string, signal:
     stage = 'upload';
     await uploadAvatar(session, bytes, filename || new File(uri).name || 'avatar.jpg', signal);
     if (!activeSessionToken(session) || signal.aborted) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
+    cacheProfileAvatarBytes(session, session.profile, bytes);
     return initialProfileSnapshot(session);
   } catch (error) {
     if (error instanceof AvatarUploadError) throw error;

@@ -42,6 +42,7 @@ function fixture(options = {}) {
       if (options.networkThrows) throw new Error('offline');
       target.profile = { role: 'aparatchi', ref: 'worker-1', avatar_url: '' };
     } },
+    './shared/profileAvatarRuntime': { cacheProfileAvatarBytes: (target, profile, bytes) => { calls.cached = [...bytes]; } },
     './profileModel': loadTs('profileModel.ts'),
   });
   return { calls, session, uploadProfileAvatar };
@@ -55,6 +56,7 @@ test('photo preparation uses V2 bounds and quality before the shared multipart A
   assert.deepEqual(calls.save, { format: 'jpeg', compress: 0.82 });
   assert.deepEqual(calls.uploads, [{ target: session, bytes: [255, 216, 255, 217], filename: 'photo.heic', signal }]);
   assert.equal(result.profile.avatar_url, '');
+  assert.deepEqual(calls.cached, [255, 216, 255, 217]);
   assert.equal(calls.released, 2);
   assert.deepEqual(calls.deleted, ['file:///cache/avatar.jpg']);
 });

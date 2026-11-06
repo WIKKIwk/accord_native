@@ -9,6 +9,7 @@ import { initialProfileSnapshot, profileDisplay, profileSnapshotFromResponse } f
 import { updateProfileName } from '../profileNameUpdate';
 import { profile } from '../profileApi';
 import { profileNickname, saveProfileChanges } from '../shared/profileEditing';
+import { cachedProfileAvatar, ensureProfileAvatar, refreshProfileAvatar } from '../shared/profileAvatarRuntime';
 import { ProfileView } from './ProfileView';
 import type { AvatarSource } from './profileViewTypes';
 
@@ -27,6 +28,7 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
   const [snapshot, setSnapshot] = useState(() => initialProfileSnapshot(session));
   const [avatarToken, setAvatarToken] = useState(() => activeSessionToken(session));
   const [avatarRevision, setAvatarRevision] = useState(0);
+  const [cachedAvatar, setCachedAvatar] = useState(() => cachedProfileAvatar(session, session.profile));
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [draftPhoto, setDraftPhoto] = useState<{ uri: string; filename?: string } | null>(null);
@@ -44,8 +46,12 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
 
   useEffect(() => {
     mounted.current = true;
+    const initialProfile = session.profile;
+    void ensureProfileAvatar(session, initialProfile).then(uri => {
+      if (mounted.current && activeSessionToken(session) && session.profile.avatar_url === initialProfile.avatar_url) setCachedAvatar(uri);
+    });
     return () => { mounted.current = false; operationController.current?.abort(); };
-  }, []);
+  }, [session]);
 
   const refresh = useCallback(async () => {
     if (busy.current || refreshingRef.current || !activeSessionToken(session)) return;
@@ -55,7 +61,10 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
     try {
       const next = profileSnapshotFromResponse(session, await profile(session));
       if (!mounted.current || generation !== readGeneration.current || !activeSessionToken(session) || !next) return;
+      const avatar = await refreshProfileAvatar(session, next.profile);
+      if (!mounted.current || generation !== readGeneration.current || !activeSessionToken(session)) return;
       setSnapshot(next);
+      setCachedAvatar(avatar);
       setAvatarToken(activeSessionToken(session));
     } catch { /* Keep the last known profile when refresh fails. */ }
     finally { refreshingRef.current = false; if (mounted.current) setRefreshing(false); }
@@ -139,7 +148,10 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
       } : null, draftPhoto ? async () => {
         const next = await uploadProfileAvatar(session, draftPhoto.uri, controller.signal, draftPhoto.filename);
         if (active()) {
+          const avatar = await refreshProfileAvatar(session, next.profile);
+          if (!active()) return;
           setSnapshot(next); setAvatarToken(activeSessionToken(session));
+          setCachedAvatar(avatar ?? cachedProfileAvatar(session, next.profile));
           setAvatarRevision(revision => revision + 1); setPendingPhoto(null); setDraftPhoto(null);
         }
       } : null, active);
@@ -152,7 +164,7 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
     }
   }, [closeEditor, draftName, draftPhoto, session, snapshot]);
 
-  return <ProfileView session={session} snapshot={snapshot} avatarToken={avatarToken} avatarRevision={avatarRevision}
+  return <ProfileView session={session} snapshot={snapshot} avatarToken={avatarToken} avatarRevision={avatarRevision} cachedAvatar={cachedAvatar}
     editing={editing} busy={isBusy} saving={saving} refreshing={refreshing} onRefresh={refresh} draftName={draftName} draftPhoto={draftPhoto?.uri ?? null}
     onOpenEditor={openEditor} onCloseEditor={closeEditor} onChangeName={setDraftName}
     onChoosePhoto={choosePhoto} onSave={save} onDailyWork={onDailyWork} onLogout={onLogout} />;

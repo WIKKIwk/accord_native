@@ -8,6 +8,7 @@ export type ProfileViewProps = {
   snapshot: ProfileSnapshot;
   avatarToken: string | null;
   avatarRevision: number;
+  cachedAvatar: string | null;
   editing: boolean;
   busy: boolean;
   saving: boolean;

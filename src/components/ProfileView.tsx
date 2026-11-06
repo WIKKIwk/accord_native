@@ -6,13 +6,13 @@ import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileSettings } from './ProfileSettings';
 import type { ProfileViewProps } from './profileViewTypes';
 
-function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftName, draftPhoto, busy, saving,
+function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,
   onChangeName, onChoosePhoto, onSave, onCloseEditor }: ProfileViewProps) {
   const name = useNativeState(draftName);
   return <Column spacing={12}>
     <Text textStyle={{ fontSize: 20, fontWeight: '600' }}>Profilni tahrirlash</Text>
     <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken}
-      size={90} revision={avatarRevision} previewUri={draftPhoto} /></RNHostView>
+      size={90} revision={avatarRevision} previewUri={draftPhoto} cachedUri={cachedAvatar} /></RNHostView>
     <Button label="Rasmlar" variant="text" disabled={busy} onPress={() => onChoosePhoto('library')} />
     <Button label="Suratga olish" variant="text" disabled={busy} onPress={() => onChoosePhoto('camera')} />
     <Button label="Fayl tanlash" variant="text" disabled={busy} onPress={() => onChoosePhoto('file')} />
@@ -34,7 +34,7 @@ export function ProfileView(props: ProfileViewProps) {
       <FieldGroup>
         <FieldGroup.Section title="Profil">
           <Row spacing={16} alignment="center" style={{ paddingVertical: 8 }}>
-            <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} revision={avatarRevision} /></RNHostView>
+            <RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken} revision={avatarRevision} cachedUri={props.cachedAvatar} /></RNHostView>
             <Column spacing={4}>
               <Text textStyle={{ fontSize: 20, fontWeight: '600' }}>{details.name}</Text>
               <Text textStyle={{ fontSize: 15, color: muted }}>{details.role}</Text>

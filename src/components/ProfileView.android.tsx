@@ -14,7 +14,7 @@ import type { ProfileViewProps } from './profileViewTypes';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 
-function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftName, draftPhoto, busy, saving,
+function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,
   onChangeName, onChoosePhoto, onSave }: ProfileViewProps) {
   const name = useNativeState(draftName);
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
@@ -29,7 +29,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, draftNa
     <ListItem supportingText={t(draftPhoto ? 'changeImage' : 'chooseImage')}
       onPress={busy ? undefined : () => onChoosePhoto('library')}
       leading={<RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken}
-        size={48} revision={avatarRevision} previewUri={draftPhoto} /></RNHostView>}>
+        size={48} revision={avatarRevision} previewUri={draftPhoto} cachedUri={cachedAvatar} /></RNHostView>}>
       {t('profilePhotoTitle')}
     </ListItem>
     {draftPhoto ? <Text>{t('selectedImageNotice')}</Text> : null}
@@ -87,7 +87,7 @@ export function ProfileView(props: ProfileViewProps) {
         <Row spacing={16} alignment="center" style={{ paddingVertical: 8 }}>
           <RNHostView matchContents><ProfileAvatarPreview session={session} profile={snapshot.profile} token={avatarToken}
             revision={avatarRevision} name={details.name} zoomLabel={localizedGetter('profileAvatarZoomLabel', locale)}
-            closeLabel={localizedGetter('closeAction', locale)} /></RNHostView>
+            closeLabel={localizedGetter('closeAction', locale)} cachedUri={props.cachedAvatar} /></RNHostView>
           <Column spacing={4}>
             <Text textStyle={{ fontSize: 20, fontWeight: '600' }}>{details.name}</Text>
             <Text textStyle={{ fontSize: 15, color: muted }}>{details.role}</Text>

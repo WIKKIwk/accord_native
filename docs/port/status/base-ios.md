@@ -7,7 +7,6 @@ Stopped at: reconcile the remaining profile surfaces and integrator-owned behavi
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Profile avatar cache | `ProfileAvatarCache`, `ProfileScreen._refreshProfile` | Implement cached-byte fallback when an avatar refresh or post-upload download fails; validate picker compression and image behavior on a device. |
 | Profile-switch PIN | `PinSetupEntryScreen`, `PinSetupConfirmScreen`, `AccountSwitcherSheet` | Entry, confirmation and removal are connected to the distinct switch-PIN store in settings. The saved-account entry verifies it; the in-session chooser launcher and standalone PIN routes remain unconnected. |
 | Settings updates | `_AppUpdateCheckDialog`, `AppUpdateCoordinator` | The manual update-check dialog needs the shared update service, installed-version adapter and presenter; an unsupported response cannot be shown without the V2 check. |
 | Theme and locale integration | `ThemeController`, `LocaleController` | App-wide native rendering and RTL still need the shared root/provider integration. |
