@@ -9,7 +9,7 @@ Stopped at: platform routes, inventory/device-picker screens and the shared read
 | Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android sessions must implement the four routes and all listed views, sheets and dialogs using the UI contract; this logic session cannot write platform views. |
 | Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity and the borrowed native read-only sheet are not complete. Compare their applicable fields and connect the sheet in the platform/integrator sessions. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
-| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Platform sessions must supply the device-picker UI to `reprintPreparationRollWithPrinter`; USB, Bluetooth and driver transport adapters are connected but require real-printer checks. |
+| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Android now connects USB and paired-Bluetooth selection. Nearby Bluetooth and Wi-Fi discovery, the iOS picker, and real-printer checks remain open. |
 
 ## V2 test triage
 
