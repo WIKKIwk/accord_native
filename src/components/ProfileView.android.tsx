@@ -1,4 +1,5 @@
 import { Button, Column, FieldGroup, Host, ListItem, RNHostView, Row, ScrollView, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
+import { PullToRefreshBox } from '@expo/ui/jetpack-compose';
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
@@ -81,7 +82,7 @@ export function ProfileView(props: ProfileViewProps) {
   </Host>, { dismissible: true, onDismiss: settingsDismissed });
   const details = profileDisplay(snapshot);
   return <Host style={{ flex: 1 }}>
-    <FieldGroup>
+    <PullToRefreshBox isRefreshing={props.refreshing} onRefresh={() => { void props.onRefresh(); }}><FieldGroup>
       <FieldGroup.Section title={localizedGetter('profileTitle', locale)}>
         <Row spacing={16} alignment="center" style={{ paddingVertical: 8 }}>
           <RNHostView matchContents><ProfileAvatarPreview session={session} profile={snapshot.profile} token={avatarToken}
@@ -119,6 +120,6 @@ export function ProfileView(props: ProfileViewProps) {
       <FieldGroup.Section>
         <Button label="Hisobdan chiqish" variant="outlined" onPress={onLogout} />
       </FieldGroup.Section>
-    </FieldGroup>
+    </FieldGroup></PullToRefreshBox>
   </Host>;
 }

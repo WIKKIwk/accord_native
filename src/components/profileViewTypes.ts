@@ -11,6 +11,8 @@ export type ProfileViewProps = {
   editing: boolean;
   busy: boolean;
   saving: boolean;
+  refreshing: boolean;
+  onRefresh: () => Promise<void>;
   draftName: string;
   draftPhoto: string | null;
   onOpenEditor: () => void;

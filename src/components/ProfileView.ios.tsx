@@ -1,5 +1,5 @@
 import { BottomSheet, Button, DisclosureGroup, Group, Host, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, refreshable, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
 import { useState, type ComponentProps } from 'react';
 import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
@@ -113,7 +113,7 @@ export function ProfileView(props: ProfileViewProps) {
   const switchPin = useSwitchPinSetup(session);
   const closeSettings = () => { if (!switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
   return <><Host style={{ flex: 1 }}>
-    <List modifiers={[listStyle('insetGrouped')]}>
+    <List modifiers={[listStyle('insetGrouped'), refreshable(props.onRefresh)]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), padding({ vertical: 14 })]}>
         <Spacer />
         <VStack alignment="center" spacing={6}>

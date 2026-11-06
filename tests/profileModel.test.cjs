@@ -40,6 +40,14 @@ test('profile display follows the role and tolerates missing values', () => {
   assert.equal(profileDisplay(initialProfileSnapshot(session({ role: 'customer' }))).role, 'Mijoz');
 });
 
+test('werka profile names are normalized as in V2', () => {
+  const details = profileDisplay(initialProfileSnapshot(session({ role: 'werka', display_name: ' Werka ', legal_name: 'WERKA' })));
+  assert.equal(details.name, 'Wmanager');
+  assert.equal(details.legalName, '');
+  const other = profileDisplay(initialProfileSnapshot(session({ role: 'customer', display_name: 'Werka' })));
+  assert.equal(other.name, 'Werka');
+});
+
 test('avatar requests stay on the session server and omit tokens from the URL and cache key', () => {
   const current = session({ avatar_url: 'https://elsewhere.example/avatar?token=secret&v=42' });
   const source = profileAvatarSource(current, current.profile);

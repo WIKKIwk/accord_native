@@ -33,6 +33,12 @@ function labels(value: unknown): string[] {
   return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
 }
 
+/** @v2 ProfileScreen._normalizeWerkaLabel */
+function normalizeWerkaLabel(value: unknown, role: string): string {
+  const name = text(value);
+  return role === 'werka' && name.toLowerCase() === 'werka' ? 'Wmanager' : name;
+}
+
 export function initialProfileSnapshot(session: Session): ProfileSnapshot {
   return { profile: session.profile, apparatusLabels: labels(session.assigned_apparatus_labels) };
 }
@@ -55,8 +61,8 @@ export function profileSnapshotFromResponse(session: Session, value: unknown): P
 export function profileDisplay(snapshot: ProfileSnapshot) {
   const profile = snapshot.profile;
   const role = text(profile.role).toLowerCase();
-  const name = text(profile.display_name) || text(profile.legal_name) || 'Foydalanuvchi';
-  const legalName = text(profile.legal_name);
+  const name = normalizeWerkaLabel(profile.display_name, role) || normalizeWerkaLabel(profile.legal_name, role) || 'Foydalanuvchi';
+  const legalName = normalizeWerkaLabel(profile.legal_name, role);
   return {
     name,
     role: profileRoleLabel(role),

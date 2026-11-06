@@ -44,11 +44,10 @@ The theme controller tests are source-derived; V2 has no direct tests for its pe
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| `src/profileNameUpdate.ts`, `src/profileAvatarUpload.ts` | `updateNickname`, `uploadAvatar` | Existing UI helpers impose additional validation and do not call the shared V2 API functions; reconcile them when profile UI is ported. |
 | `src/workerControlsApi.ts` | `MobileApiException` | Reconcile the existing worker exception with `src/shared/mobileApiException.ts`, including V2 diagnostic fields and message formatting. |
 | `src/workerRawMaterials.ts` | `resilientApiRead` | Route the V2 opt-in raw-material GETs through the shared retry helper, retaining their session guards. |
 | `src/workerQueueLimit.ts` | `WorkerQueueLimitStore` | Compare the existing queue limit store's storage/account identity with V2 and tag the matching rules; this file belongs to the worker role. |
-| `src/profileAvatarUpload.ts` and streamed uploads | `_sendMultipartAuthorized`, `_sendStreamedAuthorized` | Opt streamed/multipart calls out of the shared request timer where V2 has no per-request deadline. |
+| Other role-owned streamed uploads | `_sendMultipartAuthorized`, `_sendStreamedAuthorized` | Opt the remaining role-owned streamed/multipart calls out of the shared request timer where V2 has no per-request deadline. Profile avatar upload now uses the shared untimed multipart request. |
 | `src/app/ios-worker/_layout.tsx` | `SecurityController.clearForLogout` | Clear the separate shared profile-switch PIN along with the app-lock PIN during iOS logout. |
 | `src/app/android-worker/` | `AppSession.homeRoute` | Add the Android worker Expo Router route. Until then the existing Android worker screen renders at the root; base cannot create route files outside its scope. |
 

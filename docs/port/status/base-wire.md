@@ -1,7 +1,7 @@
 # base-wire
 
 Status: in progress
-Stopped at: wire in-session account switching, profile, security, appearance and updates.
+Stopped at: finish avatar cache, security lifecycle, appearance and updates.
 
 ## Open items
 
@@ -12,6 +12,7 @@ Stopped at: wire in-session account switching, profile, security, appearance and
 | Login and account entry | `LoginScreen`, `AppEntryScreen`, `AccountSwitcherSheet` | Verify keyboard, login back swipe, saved-account PIN and unlock-after-login on real iOS and Android devices. |
 | In-session account switch launcher | `showAccountSwitcherSheet`, `app_shell_helpers_part_01.dart` | The V2 launcher is on the worker-owned profile button; connect it in the aparatchi session. |
 | Standalone PIN routes | `PinSetupEntryScreen`, `PinSetupConfirmScreen` | Settings now use the entry and confirmation flows for both PIN purposes, but other callers need Expo Router route files. The wire session may edit only `src/app/index.tsx` and `src/app/_layout.tsx`. |
+| Avatar cache | `ProfileAvatarCache`, `ProfileScreen._refreshProfile` | Preserve cached bytes for failed refreshes and post-upload download failures. Verify image picking and rendering on a real phone. |
 
 ## Deviations candidates
 
