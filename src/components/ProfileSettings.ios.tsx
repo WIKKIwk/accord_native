@@ -48,7 +48,6 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
               if (isAppearancePreference(value)) void Promise.all([setAppearance(value), onAppearanceChange?.(value)])
                 .catch(() => Alert.alert('Saqlab bo‘lmadi', 'Sozlamani qayta saqlab ko‘ring.'));
             }} modifiers={[pickerStyle('menu')]}>
-              <Text modifiers={[tag('system')]}>Tizim</Text>
               <Text modifiers={[tag('light')]}>Yorug‘</Text>
               <Text modifiers={[tag('dark')]}>Qorong‘i</Text>
             </Picker>

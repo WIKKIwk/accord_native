@@ -1,4 +1,4 @@
-import { Button, FieldGroup, Host, Text, TextInput, useNativeState } from '@expo/ui';
+import { Button, FieldGroup, Text, TextInput, useNativeState } from '@expo/ui';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, BackHandler, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { localeController } from '../shared/localization/runtime';
 import { switchPinStore } from '../shared/switchPinRuntime';
 import type { AppThemeVariant } from '../shared/themeController';
 import { themeController } from '../shared/themeRuntime';
+import { BaseHost as Host } from './BaseHost';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeSnapshot = () => localeController.locale;
@@ -37,12 +38,22 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
   const [accounts, setAccounts] = useState<SavedAccount[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [page, setPage] = useState<'welcome' | 'accounts' | 'login' | 'languages' | 'themes'>('welcome');
+  const [headlineIndex, setHeadlineIndex] = useState(0);
   const [target, setTarget] = useState<SavedAccount | null>(null);
   const [pin, setPin] = useState('');
   const pinField = useNativeState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const pending = useRef(false);
+  const explicitLocale = localeController.hasExplicitSelection;
+
+  useEffect(() => {
+    if (page !== 'welcome' || explicitLocale) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const advance = () => { setHeadlineIndex(index => (index + 1) % 4); timer = setTimeout(advance, 5790); };
+    timer = setTimeout(advance, 5300);
+    return () => clearTimeout(timer);
+  }, [page, explicitLocale]);
 
   useEffect(() => {
     let active = true;
@@ -60,7 +71,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
     if (pending.current) return;
     setError('');
     if (target) { setTarget(null); setPin(''); pinField.set(''); }
-    else if (page === 'login') setPage(accounts?.length ? 'accounts' : 'welcome');
+    else if (page === 'login') { setHeadlineIndex(0); setPage(accounts?.length ? 'accounts' : 'welcome'); }
     else if (page === 'languages' || page === 'themes') setPage('welcome');
   };
   useEffect(() => {
@@ -117,7 +128,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
       {error ? <Text textStyle={{ color: '#b3261e' }}>{error}</Text> : null}
     </FieldGroup.Section> : null}
     {page === 'welcome' ? <FieldGroup.Section title="Accord">
-      <Text>{text('welcomeToAccord')}</Text>
+      <Text>{localizedGetter('welcomeToAccord', explicitLocale ? locale : ['uz', 'en', 'ru', 'ur-PK'][headlineIndex])}</Text>
       <Button label={text('getStarted')} onPress={() => setPage('login')} />
       <Button label={text('languageTitle')} onPress={() => setPage('languages')} />
       <Button label={text('themeTitle')} onPress={() => setPage('themes')} />

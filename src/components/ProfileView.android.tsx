@@ -1,4 +1,4 @@
-import { Button, Column, FieldGroup, Host, ListItem, RNHostView, Row, ScrollView, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
+import { Button, Column, FieldGroup, ListItem, RNHostView, Row, ScrollView, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
 import { PullToRefreshBox } from '@expo/ui/jetpack-compose';
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, useColorScheme } from 'react-native';
@@ -9,6 +9,8 @@ import { localeController } from '../shared/localization/runtime';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileAvatarPreview } from './ProfileAvatarPreview.android';
 import { ProfileSettings } from './ProfileSettings';
+import { BaseHost as Host } from './BaseHost';
+import { useBaseTheme } from './useBaseTheme';
 import type { ProfileViewProps } from './profileViewTypes';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -41,7 +43,9 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
 export function ProfileView(props: ProfileViewProps) {
   const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const muted = useColorScheme() === 'dark' ? '#aeaeb2' : '#6d6d72';
+  const dark = useColorScheme() === 'dark';
+  const theme = useBaseTheme();
+  const muted = theme.colors.onSurfaceVariant ?? (dark ? '#aeaeb2' : '#6d6d72');
   const [apparatusExpanded, setApparatusExpanded] = useState(false);
   const editorSheet = useNativeSheet();
   const settingsSheet = useNativeSheet();
@@ -76,7 +80,7 @@ export function ProfileView(props: ProfileViewProps) {
         <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
       </Host>, { dismissible: true, onDismiss: settingsDismissed });
     }
-  }, [editing, busy, props, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet]);
+  }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet]);
   const openSettings = () => settingsSheet.open(<Host style={{ flex: 1 }}>
     <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
   </Host>, { dismissible: true, onDismiss: settingsDismissed });
@@ -95,10 +99,10 @@ export function ProfileView(props: ProfileViewProps) {
         </Row>
         <Button label={localizedGetter('profileEditTitle', locale)} disabled={busy} onPress={onOpenEditor} testID="profile-edit" />
         {details.legalName ? <Row spacing={12} style={{ width: '100%' }}>
-          <Text>To‘liq ism</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.legalName}</Text>
+          <Text>{localizedGetter('legalNameLabel', locale)}</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.legalName}</Text>
         </Row> : null}
         {details.phone ? <Row spacing={12} style={{ width: '100%' }}>
-          <Text>Telefon</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.phone}</Text>
+          <Text>{localizedGetter('phoneLabel', locale)}</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.phone}</Text>
         </Row> : null}
         {details.apparatusLabels.length === 1 ? <Row spacing={12} style={{ width: '100%' }}>
           <Text>Apparat</Text><Spacer flexible /><Text textStyle={{ color: muted }}>{details.apparatusLabels[0]}</Text>
@@ -118,7 +122,7 @@ export function ProfileView(props: ProfileViewProps) {
         <Button label={localizedGetter('profileSettingsTitle', locale)} variant="text" onPress={openSettings} testID="profile-settings" />
       </FieldGroup.Section>
       <FieldGroup.Section>
-        <Button label="Hisobdan chiqish" variant="outlined" onPress={onLogout} />
+        <Button label={localizedGetter('logoutTitle', locale)} variant="outlined" onPress={onLogout} />
       </FieldGroup.Section>
     </FieldGroup></PullToRefreshBox>
   </Host>;

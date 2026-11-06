@@ -1,9 +1,10 @@
-import { Button, Column, FieldGroup, Host, Text as ExpoText, TextInput } from '@expo/ui';
+import { Button, Column, FieldGroup, Text as ExpoText, TextInput } from '@expo/ui';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, PlatformColor, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { login, type Session } from './auth';
 import { MobileApi } from './mobileApi';
+import { BaseHost as Host } from './components/BaseHost';
 
 type Props = { onLogin: (session: Session) => void; onBack?: () => void; addAccountMode?: boolean };
 

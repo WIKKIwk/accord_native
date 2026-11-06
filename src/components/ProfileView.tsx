@@ -1,9 +1,10 @@
-import { BottomSheet, Button, Column, FieldGroup, Host, RNHostView, Row, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
+import { BottomSheet, Button, Column, FieldGroup, RNHostView, Row, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
 import { useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileSettings } from './ProfileSettings';
+import { BaseHost as Host } from './BaseHost';
 import type { ProfileViewProps } from './profileViewTypes';
 
 function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,

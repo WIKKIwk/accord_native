@@ -1,9 +1,10 @@
-import { Button, FieldGroup, Host, Text as ExpoText, TextInput } from '@expo/ui';
+import { Button, FieldGroup, Text as ExpoText, TextInput } from '@expo/ui';
 import { ActivityIndicator, PlatformColor, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from './auth';
 import { useLoginBackGesture } from './components/useLoginBackGesture';
 import { useLoginScreen } from './components/useLoginScreen.ios';
+import { BaseHost as Host } from './components/BaseHost';
 
 type Props = { onLogin: (session: Session) => void; onBack?: () => void; addAccountMode?: boolean };
 

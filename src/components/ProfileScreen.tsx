@@ -1,7 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, AppState, Platform } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
 import { AvatarUploadError, uploadProfileAvatar } from '../profileAvatarUpload';
@@ -10,10 +10,14 @@ import { updateProfileName } from '../profileNameUpdate';
 import { profile } from '../profileApi';
 import { profileNickname, saveProfileChanges } from '../shared/profileEditing';
 import { cachedProfileAvatar, ensureProfileAvatar, refreshProfileAvatar } from '../shared/profileAvatarRuntime';
+import { localizedGetter } from '../shared/localization';
+import { localeController } from '../shared/localization/runtime';
 import { ProfileView } from './ProfileView';
 import type { AvatarSource } from './profileViewTypes';
 
 type Props = { session: Session; onLogout: () => void; onDailyWork: () => void };
+const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
+const currentLocale = () => localeController.locale;
 
 function showError(title: string, message: string) {
   if (Platform.OS === 'web') globalThis.alert(`${title}. ${message}`);
@@ -25,6 +29,7 @@ export function ProfileScreen(props: Props) {
 }
 
 function ProfileContent({ session, onLogout, onDailyWork }: Props) {
+  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const [snapshot, setSnapshot] = useState(() => initialProfileSnapshot(session));
   const [avatarToken, setAvatarToken] = useState(() => activeSessionToken(session));
   const [avatarRevision, setAvatarRevision] = useState(0);
@@ -118,12 +123,12 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
       if (uri && mounted.current && generation === editorGeneration.current && activeSessionToken(session)) setDraftPhoto({ uri, filename });
     } catch (error) {
       if (mounted.current && generation === editorGeneration.current && activeSessionToken(session)) {
-        showError('Rasm tanlanmadi', error instanceof AvatarUploadError ? error.message : 'Boshqa rasm tanlab, qayta urinib ko‘ring.');
+        showError(localizedGetter('imagePickFailed', locale), error instanceof AvatarUploadError ? error.message : localizedGetter('retry', locale));
       }
     } finally {
       busy.current = false;
     }
-  }, [session]);
+  }, [locale, session]);
 
   const save = useCallback(async () => {
     if (busy.current || !activeSessionToken(session)) return;
@@ -155,14 +160,14 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
           setAvatarRevision(revision => revision + 1); setPendingPhoto(null); setDraftPhoto(null);
         }
       } : null, active);
-      if (error && active()) showError('Saqlab bo‘lmadi', error === 'nickname' ? 'Ismni saqlab bo‘lmadi.' : 'Rasmni saqlab bo‘lmadi.');
+      if (error && active()) showError(localizedGetter(error === 'nickname' ? 'nicknameSaveFailed' : 'imageSaveFailed', locale), localizedGetter('retry', locale));
     } finally {
       if (operationController.current === controller) operationController.current = null;
       busy.current = false;
       savingRef.current = false;
       if (mounted.current) { setIsBusy(false); setSaving(false); }
     }
-  }, [closeEditor, draftName, draftPhoto, session, snapshot]);
+  }, [closeEditor, draftName, draftPhoto, locale, session, snapshot]);
 
   return <ProfileView session={session} snapshot={snapshot} avatarToken={avatarToken} avatarRevision={avatarRevision} cachedAvatar={cachedAvatar}
     editing={editing} busy={isBusy} saving={saving} refreshing={refreshing} onRefresh={refresh} draftName={draftName} draftPhoto={draftPhoto?.uri ?? null}

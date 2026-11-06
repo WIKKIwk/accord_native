@@ -1,4 +1,4 @@
-import { BottomSheet, Button, DisclosureGroup, Group, Host, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
+import { BottomSheet, Button, DisclosureGroup, Group, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
 import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, refreshable, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
 import { useState, type ComponentProps } from 'react';
 import { useColorScheme } from 'react-native';
@@ -8,6 +8,7 @@ import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileAvatarPreview } from './ProfileAvatarPreview.ios';
 import { ProfileSettings } from './ProfileSettings.ios';
 import { ProfileSettingsPreferences } from './ProfileSettingsPreferences.ios';
+import { BaseHost as Host } from './BaseHost';
 import { ProfileSwitchPin } from './ProfileSwitchPin.ios';
 import { useBaseLocale } from './useBaseLocale.ios';
 import { useSwitchPinSetup } from './useSwitchPinSetup.ios';
@@ -127,7 +128,7 @@ export function ProfileView(props: ProfileViewProps) {
                 background(dark ? '#2c2c2e' : '#e5e5ea', shapes.circle()),
                 strokeBorder({ shape: 'circle', content: dark ? '#000000' : '#f2f2f7', style: { lineWidth: 2 } }),
                 padding({ all: 6 }), contentShape(shapes.rectangle()), offset({ x: 9, y: 9 }),
-                accessibilityLabel('Profilni tahrirlash'), disabled(busy),
+                accessibilityLabel(text('profileEditTitle')), disabled(busy),
               ]}><Image systemName="pencil" size={15} color={dark ? '#ffffff' : '#1c1c1e'} /></Button>}>
               <ProfileEditor {...props} />
             </BottomSheet>
@@ -140,21 +141,21 @@ export function ProfileView(props: ProfileViewProps) {
         <Spacer />
       </HStack>
       <Section title="Hisob">
-        {details.legalName ? <ProfileRow icon="person.text.rectangle" title="To‘liq ism" value={details.legalName} /> : null}
-        {details.phone ? <ProfileRow icon="phone" title="Telefon" value={details.phone} /> : null}
+        {details.legalName ? <ProfileRow icon="person.text.rectangle" title={text('legalNameLabel')} value={details.legalName} /> : null}
+        {details.phone ? <ProfileRow icon="phone" title={text('phoneLabel')} value={details.phone} /> : null}
         <ApparatusRow labels={details.apparatusLabels} />
       </Section>
       <Section>
         <NavigationRow icon="calendar" title="Kunlik ish" onPress={onDailyWork} />
         <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) setSettingsOpen(true); else closeSettings(); }}
-          anchor={<NavigationRow icon="gearshape" title="Sozlamalar" onPress={() => setSettingsOpen(true)} />}>
+          anchor={<NavigationRow icon="gearshape" title={text('profileSettingsTitle')} onPress={() => setSettingsOpen(true)} />}>
           <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text}
             preferences={<ProfileSettingsPreferences />} switchPin={<ProfileSwitchPin pin={switchPin} />} switchPinBusy={switchPin.busy}
             onAppearanceChange={value => value === 'system' ? Promise.resolve() : themeController.setThemeMode(value)} />
         </BottomSheet>
       </Section>
       <Section>
-        <Button role="destructive" label="Hisobdan chiqish" systemImage="rectangle.portrait.and.arrow.right"
+        <Button role="destructive" label={text('logoutTitle')} systemImage="rectangle.portrait.and.arrow.right"
           onPress={onLogout} modifiers={[buttonStyle('plain')]} />
       </Section>
     </List>

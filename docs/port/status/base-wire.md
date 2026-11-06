@@ -1,7 +1,7 @@
 # base-wire
 
 Status: in progress
-Stopped at: finish security lifecycle, appearance and updates.
+Stopped at: finish security lifecycle and update checks.
 
 ## Open items
 
@@ -13,6 +13,7 @@ Stopped at: finish security lifecycle, appearance and updates.
 | In-session account switch launcher | `showAccountSwitcherSheet`, `app_shell_helpers_part_01.dart` | The V2 launcher is on the worker-owned profile button; connect it in the aparatchi session. |
 | Standalone PIN routes | `PinSetupEntryScreen`, `PinSetupConfirmScreen` | Settings now use the entry and confirmation flows for both PIN purposes, but other callers need Expo Router route files. The wire session may edit only `src/app/index.tsx` and `src/app/_layout.tsx`. |
 | Avatar device behavior | `ProfileAvatarCache`, `ProfileScreen._pickAvatar` | Validate image picking, compression and cached image rendering on a real phone. |
+| Role-owned theme and locale surfaces | `ThemeController`, `LocaleController` | Base native hosts use the persisted theme and RTL, but worker and other role-owned hosts still need to adopt the shared palette/direction and translate their own hard-coded text. Verify the base surfaces on devices. |
 
 ## Deviations candidates
 

@@ -1,4 +1,4 @@
-import { Button, Column, Host, OutlinedTextField, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
+import { Button, Column, OutlinedTextField, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { useEffect } from 'react';
 import { ActivityIndicator, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from './auth';
 import { useLoginForm } from './components/useLoginForm';
 import { useLoginBackGesture } from './components/useLoginBackGesture';
+import { BaseHost as Host } from './components/BaseHost';
+import { useBaseTheme } from './components/useBaseTheme';
 
 type Props = { onLogin: (session: Session) => void; onBack?: () => void; addAccountMode?: boolean };
 
@@ -13,7 +15,8 @@ type Props = { onLogin: (session: Session) => void; onBack?: () => void; addAcco
 export function LoginScreen({ onLogin, onBack, addAccountMode = false }: Props) {
   const form = useLoginForm(onLogin, addAccountMode);
   const { text: t, busy, error } = form;
-  const colors = useMaterialColors();
+  const theme = useBaseTheme();
+  const colors = { ...useMaterialColors({ seedColor: theme.seed, colorScheme: theme.mode }), ...theme.colors };
   const serverField = useNativeState(form.server);
   const codeField = useNativeState('');
   const backGesture = useLoginBackGesture(onBack);

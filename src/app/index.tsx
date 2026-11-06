@@ -11,8 +11,7 @@ import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { homeTarget } from '../shared/appRoutes';
 import { switchPinStore } from '../shared/switchPinRuntime';
 import { notificationUnreadStore } from '../shared/notificationStoresRuntime';
-import { localeController } from '../shared/localization/runtime';
-import { themeController } from '../shared/themeRuntime';
+import { initializeBasePreferences } from '../shared/basePreferences';
 import { unlockAfterLogin } from '../shared/securityUnlockRuntime';
 import '../shared/productionSnapshotRuntime';
 
@@ -22,7 +21,7 @@ export default function Index() {
   useEffect(() => {
     let active = true;
     bootstrapSession(() => loadBaseStartup(loadSession, [() => notificationUnreadStore.load(),
-      () => themeController.load(), () => localeController.load()]), profile, value => !!activeSessionToken(value))
+      initializeBasePreferences]), profile, value => !!activeSessionToken(value))
       .then(value => { if (active) setSession(value); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };

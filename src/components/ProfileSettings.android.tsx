@@ -1,4 +1,4 @@
-import { Button, Column, Host, OutlinedButton, OutlinedTextField, Row, Switch, Text, TextButton } from '@expo/ui/jetpack-compose';
+import { Button, Column, OutlinedButton, OutlinedTextField, Row, Switch, Text, TextButton } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, padding, semantics, testID, verticalScroll, weight } from '@expo/ui/jetpack-compose/modifiers';
 import Constants from 'expo-constants';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -12,6 +12,7 @@ import { themeController } from '../shared/themeRuntime';
 import { useAppSettings } from './AppSettings';
 import { usePinSetup } from './usePinSetup.android';
 import { useSwitchPinSetup } from './useSwitchPinSetup.android';
+import { BaseHost as Host } from './BaseHost';
 
 type Props = { session: Session; onClose: () => void; onLogout: () => void };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
