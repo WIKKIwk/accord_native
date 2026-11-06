@@ -67,6 +67,9 @@ deb ayting. U branch'ni `main` ga qo'shadi, testlarni yuritadi va keyingi qadamn
 | 5 | `preparation-flow-ios` | `$accord-port-ios docs/port/status/preparation-ios.md va preparation.md dagi ochiq qatorlarni yop: ketma-ketlik va detali, inventar, QR printer tanlash, akkaunt almashganda tozalash. Tarozi tugmalari /ios-gscale ga ulansin, chatga tegma` | Birinchi merge'dan keyin |
 | 5 | `preparation-flow-android` | `$accord-port-android docs/port/status/preparation-android.md va preparation.md dagi ochiq qatorlarni yop: ketma-ketlik va detali, inventar, QR printer tanlash, akkaunt almashganda tozalash. Tarozi tugmalari /android-gscale ga ulansin, chatga tegma` | Birinchi merge'dan keyin |
 | 5 | `gscale` | `$accord-port "GScale session" bo'limi bo'yicha ishla` | Birinchi merge'dan keyin |
+| 5 | `preparation-flow-android` (o'sha papka va chat) | README dagi 6-bosqich matni emas: `$accord-port-android` bilan takroriy mantiqni birlashtir, qidiruvli picker, `adminUnlinkRawMaterialAssignment` himoyasi, queue-control dekoderi. GoDEX yo'q (D13) | Flow merge'dan keyin |
+| 5 | `preparation-flow-ios` (o'sha papka va chat) | `$accord-port-ios` bilan qidiruvli picker va `preparationManualPrinterServer` ga o'tish | Flow merge'dan keyin |
+| 5 | `gscale` (o'sha papka va chat) | `$accord-port "GScale session" bo'limi bo'yicha davom et` | Flow merge'dan keyin |
 | 6 | `preparation-audit` | `$accord-port preparation rolini audit qil: V2 bilan solishtir, kodni o'zgartirma` | Ekranlar qo'shilgach |
 | 7 | | Tayyorlov masterini to'liq sinash va buglarni tuzatish | Audit tugagach |
 

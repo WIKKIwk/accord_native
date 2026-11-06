@@ -71,7 +71,7 @@ branch mergeable.
   | `<id>-android`, `<id>-ios` | What the screen skill's scope fence says |
   | `<id>-audit` | Only its status file. No code |
   | `base-wire`, `preparation` in its wiring turn | What "Wire session" below says |
-  | `gscale` | `src/gscale/**`, `modules/accord-gscale/**`, `src/app/ios-gscale/**`, `src/app/android-gscale/**`, `tests/gscale*.test.cjs`, the `ios.infoPlist` and `android.permissions` keys of `app.json` |
+  | `gscale` | `src/gscale/**`, `modules/accord-gscale/**`, `src/app/ios-gscale/**`, `src/app/android-gscale/**`, `tests/gscale*.test.cjs`, `docs/port/roles/gscale.md`, the `ios.infoPlist` and `android.permissions` keys of `app.json` |
   | `build` | `app.json`, `eas.json`, `package.json`, `package-lock.json`, `docs/port/BUILD.md` |
   | `printer` | `modules/accord-printer/**`, `src/printing/**`, `tests/printing*.test.cjs`, the `android.permissions` and `ios.infoPlist` keys of `app.json` |
 
@@ -123,6 +123,11 @@ real local-network scale discovery through a local module. Read `gscale_mode_scr
 and the `gscale/*` rows of `references/native-bridges.md`. This session writes the logic, the module and both
 platforms' views. The routes are `/ios-gscale` and `/android-gscale`, and they take V2's `GScaleModeArgs` as params,
 because the preparation screen sessions link to them. Add no stubs. Hardware checks stay as open items.
+
+`port_ledger.mjs role gscale` does not exist: GScale is not a role, so the reading list above replaces that gate. This
+session writes its own UI contract to `docs/port/roles/gscale.md` before its views, and the platform skills read it
+there. Missing API methods its catalog and order picker need (`adminItemsPage`, `adminWarehouses`,
+`adminRawMaterialAssignmentOrders`) go in `src/gscale/gscaleAdminApi.ts`, ported from V2 with `@v2` tags and tests.
 
 ## Build session
 

@@ -37,7 +37,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 | Role | Logic | Android | iOS | Audit | Notes |
 |---|---|---|---|---|---|
 | base | 2/2 | partial | partial | | Shared API done except the push-token part of `logout`. Open rows are in `status/base.md`; most belong to the role and screen sessions that use them |
-| preparation | 1/1 | partial | partial | | Home, warehouse, materials, formulas, variants and journal have screens. Sequence, inventory, QR printing, scale and chat are open: `status/preparation*.md`. Not yet in `DONE_ROLES.txt` |
+| preparation | 1/1 | partial | partial | | Home, warehouse, materials, formulas, variants, journal, sequence, inventory and QR printer selection have screens, not yet checked on a phone. The scale route and chat are open: `status/preparation*.md`, `status/gscale.md`. Not yet in `DONE_ROLES.txt` |
 | boyoqchi | | | | | V2 has almost no tests for this role |
 | customer | | | | | V2 has no tests for this role's API |
 | supplier | | | | | V2 has no tests for this role's API |
@@ -53,7 +53,7 @@ Parts, order and reading sizes come from `port_ledger.mjs plan`. Mark logic with
 
 ## Open items
 
-The merged sessions keep their own rows in `docs/port/status/`: `base`, `base-ios`, `base-android`, `base-wire`, `build`, `printer`, `preparation`, `preparation-ios` and `preparation-android`.
+The merged sessions keep their own rows in `docs/port/status/`: `base`, `base-ios`, `base-android`, `base-wire`, `build`, `printer`, `preparation`, `preparation-ios`, `preparation-android` and `gscale`.
 
 | Where | V2 reference | What is needed |
 |---|---|---|
@@ -61,6 +61,7 @@ The merged sessions keep their own rows in `docs/port/status/`: `base`, `base-io
 | This Mac | Android | No Android SDK is installed, so `expo run:android` fails. A real Android phone needs that SDK or an EAS build |
 | `tsconfig.android.json` | | 10 existing errors. `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx` import prop types from themselves once the platform suffix applies, so move those types to a shared file. `WorkerScreen.tsx:347` passes `statusText`, which the Android `WorkerOrderListItem` does not declare; confirm whether Android should show it |
 | `src/` | See `port_ledger.mjs check` | 5 V4 endpoints lack a literal V2 reference: `chat/conversations/{}`, `chat/media/{}`, `profile/avatar/view`, `push-config`, `rezka-master/print-side`. V2 constructs the last two dynamically in `mobile_api_push_config.dart` and `mobile_api_rezka_master.dart`; returned-paint image URLs are supplied by the server and appear in `test/returned_paint_models_test.dart` |
+| `src/preparation/` | `rawMaterialBarcodeFromQr`, `_qrAssetMatchesBarcode`, `parseServerEndpoint`, `adminRawMaterialAssignmentCandidateOrders`, `adminAssignRawMaterialToOrder` | The two flow sessions each ported these once, in `preparationInventory.ts` and `preparationInventoryLogic.ts`, in `preparationInventoryAssignment.ts` and `preparationInventoryAssignments.ts`, and twice in `preparationPrinter.ts`. Keep one of each |
 | `src/authorizedFetch.ts` | `core/network/mobile_http_client.dart` | Confirm how RN `fetch` handles redirects compared with V2's manual policy |
 | `test/raw_material_split_test.dart` | V2 baseline `7c87a54e` | 3 of its 19 tests fail at the baseline, with or without the recorder. Check whether V2 or the test is out of date before homashyo relies on them |
 | `app.json` | `record` in `pubspec.yaml` | Android blocks `RECORD_AUDIO`, but V2 chat uses recording. Resolve in the chat role |
