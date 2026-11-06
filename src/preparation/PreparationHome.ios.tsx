@@ -52,7 +52,7 @@ export function PreparationHome() {
       <Button label={t('Mahsulot formulasi')} systemImage="list.bullet.rectangle" modifiers={[stockLocked]} onPress={() => router.push('/ios-preparation/sets' as Href)} />
       <Button label={t('Buyurtmalar')} systemImage="list.number" onPress={() => router.replace('/ios-preparation/sequence' as Href)} />
       <Button label={t('Ishlab chiqarish')} systemImage="chart.bar" onPress={() => router.replace('/ios-preparation/production' as Href)} />
-      {canOpenRoute(session, appRoutes.inventoryMovements) && <Button label={t('Ishlab chiqarilgan homashyolar')} systemImage="shippingbox" modifiers={[disabled(true)]} />}
+      {canOpenRoute(session, appRoutes.inventoryMovements) && <Button label={t('Ishlab chiqarilgan homashyolar')} systemImage="shippingbox" onPress={() => router.push('/ios-preparation/inventory' as Href)} />}
       <Button label={t('Tarix')} systemImage="clock.arrow.circlepath" onPress={() => router.push('/ios-preparation/history' as Href)} />
     </Section>
     <Section><Menu label={t('Amallar')} systemImage="plus.circle">

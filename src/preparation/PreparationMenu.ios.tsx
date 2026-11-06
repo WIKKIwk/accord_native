@@ -16,7 +16,7 @@ export function PreparationMenu() {
     <Button label={t('Ketma-ketlik')} onPress={() => router.push('/ios-preparation/sequence' as Href)} />
     {canOpenRoute(session, appRoutes.gscaleMode) && <Button label={t('Kirim')} onPress={() => openPreparationScale({ warehouse: home.warehouse })} />}
     <Button label={t('Chat')} modifiers={[disabled(true)]} />
-    {canOpenRoute(session, appRoutes.inventoryMovements) && <Button label={t('Ishlab chiqarilgan homashyolar')} modifiers={[disabled(true)]} />}
+    {canOpenRoute(session, appRoutes.inventoryMovements) && <Button label={t('Ishlab chiqarilgan homashyolar')} onPress={() => router.push('/ios-preparation/inventory' as Href)} />}
     <Button label={t('Profil')} onPress={() => router.navigate('/ios-preparation/profile' as Href)} />
   </Menu></Host>;
 }
