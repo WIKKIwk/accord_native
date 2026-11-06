@@ -1,11 +1,13 @@
 # preparation
 
-Status: part 1 of 1, wiring in progress
-Stopped at: integrate missing GScale routes and network discovery, reconcile optional order-detail controls, complete Android platform work, and verify printers and native WebSocket pings.
+Status: part 1 of 1, parity audit in progress
+Stopped at: complete the remaining V2 text and surface comparisons on both platforms, reconcile optional order-detail controls, and verify printers and native WebSocket pings.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
+| Role-wide surface and text audit | `.port/role-preparation.md`, `.port/text-preparation.md` | The text gate reports missing or extra strings on both platforms. Compare the remaining screens, sheets, messages and back guards with V2; the ledger tags alone do not establish parity. |
+| Material management on iOS and Android | `preparation_materials_screen.dart`, `_PreparationInputDialog` | Material actions, confirmation, warehouse selection and feedback were aligned with the V2 source; verify native dismissal, input and notice behavior on both phones. |
 | Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android preparation routes, sequence, inventory and the GScale destination exist; remaining parity gaps are in `preparation-ios.md`, `preparation-android.md` and `gscale.md`. |
 | Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity is not complete. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
@@ -43,6 +45,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Verification
 
+- Material checkpoint: 3 focused tests passed, iOS TypeScript passed and Expo lint passed. Android TypeScript still reports the 10 existing worker errors listed in `PORT.md`; none is in the preparation files.
 - Preparation iOS wiring: 854 tests passed; iOS and default TypeScript checks and Expo lint passed. Android retains the 10 known baseline TypeScript errors. Real device and printer checks remain open.
 - The ledger estimates 112k V2 tokens for this role; actual tokens read were not measured. The prior logic session tagged 26/26 listed APIs; this wiring turn additionally implemented the two inventory transfer mutation methods and added preparation-scoped access to the existing inventory store.
 - `node --test tests/*.test.cjs`: 826 passed, 0 failed, up from 813 before wiring. The 13 added tests cover search, apparatus preferences, startup, targets, printer adapters and inventory transfer/access. An existing variant test loader gained mocks for the new dependencies; no existing assertion was changed.
@@ -52,6 +55,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Checkpoints
 
+- This session: aligned material action and warehouse-assignment flows on both platforms, including scoped mutation completion and V2 confirmation text.
 - `f191451` port(preparation/1): record contracts, 0 methods
 - `9a4ff48` port(preparation/1): formula models and precision, 0 methods
 - `051788d` port(preparation/1): formula API, 14 methods
