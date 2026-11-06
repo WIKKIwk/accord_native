@@ -29,9 +29,10 @@ function relevance(query: string, name: string) {
   return 0;
 }
 
-export function preparationSeriyoSearch(materials: readonly PreparationMaterial[], query: string, limit: number) {
+export function preparationSeriyoSearch(materials: readonly PreparationMaterial[], query: string, limit: number,
+  searchText?: (material: PreparationMaterial) => string) {
   const needle = query.trim().toLowerCase();
-  const matches = materials.filter(item => item.can_receive && `${item.name} ${item.code}`.toLowerCase().includes(needle));
+  const matches = materials.filter(item => item.can_receive && (searchText?.(item) ?? `${item.name} ${item.code}`).toLowerCase().includes(needle));
   const items = matches.slice(0, limit).map((item, index) => ({ item, index, score: relevance(query, item.name) }));
   if (needle) items.sort((a, b) => b.score - a.score || a.index - b.index);
   return { items: items.map(entry => entry.item), hasMore: matches.length > limit };

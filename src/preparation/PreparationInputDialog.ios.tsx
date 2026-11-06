@@ -1,18 +1,19 @@
 import { Button, Host, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { keyboardType } from '@expo/ui/swift-ui/modifiers';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useWorkerColors } from '../components/useWorkerColors';
-import { preparationInputError } from './preparationLogic';
+import { preparationInputError, preparationQuantityInput } from './preparationLogic';
 import { usePreparationText } from './PreparationUI';
 
-export function PreparationInputDialog({ title, label, initial = '', emptyError, maxLength, close, save }: {
-  title: string; label: string; initial?: string; emptyError?: string; maxLength?: number;
+export function PreparationInputDialog({ title, label, initial = '', emptyError, maxLength, quantity = false, close, save }: {
+  title: string; label: string; initial?: string; emptyError?: string; maxLength?: number; quantity?: boolean;
   close: () => void; save: (value: string) => void;
 }) {
   const t = usePreparationText(), colors = useWorkerColors(), nativeValue = useNativeState(initial);
   const [value, setValue] = useState(initial), [error, setError] = useState<string | null>(null);
   const submit = () => {
-    const issue = preparationInputError(value, { emptyError, maxLength });
+    const issue = preparationInputError(value, { emptyError, maxLength, quantity });
     if (issue) { setError(issue); return; }
     save(value.trim());
   };
@@ -22,7 +23,8 @@ export function PreparationInputDialog({ title, label, initial = '', emptyError,
       <View accessibilityViewIsModal style={[styles.dialog, { backgroundColor: colors.surface }]}>
         <Host matchContents={{ vertical: true }}><VStack spacing={14}>
           <Text>{t(title)}</Text>
-          <TextField text={nativeValue} autoFocus placeholder={t(label)} onTextChange={setValue} />
+          <TextField text={nativeValue} autoFocus placeholder={t(label)} modifiers={quantity ? [keyboardType('decimal-pad')] : []}
+            onTextChange={text => { const next = quantity ? preparationQuantityInput(text) : text; if (next !== text) nativeValue.set(next); setValue(next); }} />
           {!!error && <Text>{t(error)}</Text>}
           <Button label={t('Saqlash')} onPress={submit} />
           <Button label={t('Bekor qilish')} role="cancel" onPress={close} />

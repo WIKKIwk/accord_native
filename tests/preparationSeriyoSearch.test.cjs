@@ -34,3 +34,10 @@ test('seriyo picker pages before applying V2 relevance order', () => {
   assert.deepEqual(first.items.slice(0, 2).map(item => item.name), ['Kley', 'Kley rangli']);
   assert.equal(preparationSeriyoSearch(values, 'kley', 100).hasMore, false);
 });
+
+test('home receipt picker can search its visible stock subtitle instead of a hidden code', () => {
+  const values = [material('PREP-1', 'Kley'), material('PREP-2', 'Un')];
+  const searchText = item => `${item.name} Mavjud: ${item.code === 'PREP-1' ? '12' : '3'} kg`;
+  assert.deepEqual(preparationSeriyoSearch(values, '12 kg', 50, searchText).items.map(item => item.name), ['Kley']);
+  assert.deepEqual(preparationSeriyoSearch(values, 'PREP-1', 50, searchText).items, []);
+});

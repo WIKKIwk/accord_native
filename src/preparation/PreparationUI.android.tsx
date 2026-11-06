@@ -9,7 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
-import { preparationInputError } from './preparationLogic';
+import { preparationInputError, preparationQuantityInput } from './preparationLogic';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const locale = () => localeController.locale;
@@ -150,7 +150,10 @@ function DialogContent({ dialog, close }: { dialog: Dialog; close: () => void })
     <AlertDialog onDismissRequest={cancel}>
       <AlertDialog.Title><Text>{t(dialog.title)}</Text></AlertDialog.Title>
       <AlertDialog.Text>{dialog.kind === 'input' ? <Column verticalArrangement={{ spacedBy: 8 }}>
-        <OutlinedTextField value={nativeValue} singleLine onValueChange={setValue}
+        <OutlinedTextField value={nativeValue} singleLine onValueChange={text => {
+          const next = dialog.quantity ? preparationQuantityInput(text) : text;
+          if (next !== text) nativeValue.set(next); setValue(next);
+        }}
           keyboardOptions={{ keyboardType: dialog.quantity ? 'decimal' : 'text' }} modifiers={[fillMaxWidth()]}>
           <OutlinedTextField.Label><Text>{t(dialog.label)}</Text></OutlinedTextField.Label>
         </OutlinedTextField>{error ? <Text>{t(error)}</Text> : null}</Column>

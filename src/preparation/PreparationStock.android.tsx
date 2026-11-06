@@ -10,6 +10,7 @@ import { preparationMaterialAvailable, preparationMaterialHistory, preparationRe
 import { preparationDisplay } from './preparationModel';
 import { preparationHistoryCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
 import { PreparationNotice } from './PreparationNotice';
+import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
 import { PreparationWarehouseCreateDialog } from './PreparationWarehouseCreateDialog';
 import { preparationWarehouseDeleteMessage, preparationWarehouseErrorMessage } from './preparationWarehousePresentation';
 import { usePreparationNotice } from './usePreparationNotice';
@@ -17,22 +18,22 @@ import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { openPreparationScale } from './preparationNavigation.android';
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
-function useStockActions() {
+function useStockActions(notice: ReturnType<typeof usePreparationNotice>) {
   const { home } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
   const receive = async (material: PreparationMaterial) => {
     if (!home.warehouse || !home.snapshot || home.locked) return;
     if (preparationReceiptMode(home.warehouse, home.snapshot.material_warehouses) !== 'manual') return;
     const kg = await dialogs.input({ title: `${material.name} — kirim`, label: 'Kirim (kg)', quantity: true });
     if (kg === null) return;
-    try { await home.controller.submit('receipts', preparationReceiptPayload(material, home.warehouse, kg)); dialogs.message('Saqlandi', t('Saqlandi')); }
-    catch (error) { dialogs.message('Xatolik yuz berdi', String(error)); }
+    try { await home.controller.submit('receipts', preparationReceiptPayload(material, home.warehouse, kg)); notice.show(t('Saqlandi')); }
+    catch (error) { notice.show(String(error)); }
   };
   const createMaterial = async () => {
     if (!home.warehouse || home.locked) return;
     const name = await dialogs.input({ title: 'Yangi homashyo', label: 'Homashyo nomi' });
     if (name === null) return;
-    try { await home.controller.submit('materials', { name, warehouse: home.warehouse }); dialogs.message('Saqlandi', t('Saqlandi')); }
-    catch (error) { dialogs.message('Xatolik yuz berdi', String(error)); }
+    try { await home.controller.submit('materials', { name, warehouse: home.warehouse }); notice.show(t('Saqlandi')); }
+    catch (error) { notice.show(String(error)); }
   };
   return { receive, createMaterial };
 }
@@ -47,7 +48,7 @@ export function PreparationWarehouseScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
   const sheet = useNativeSheet(), notice = usePreparationNotice(), afterAction = useRef<(() => void) | null>(null);
   useStockReturnReload(home.controller);
-  const { receive, createMaterial } = useStockActions();
+  const { receive, createMaterial } = useStockActions(notice);
   const [query, setQuery] = useState(''), [managing, setManaging] = useState(false), [expanded, setExpanded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const data = home.snapshot, warehouse = home.warehouse;
@@ -99,11 +100,12 @@ export function PreparationWarehouseScreen() {
       const next = afterAction.current; afterAction.current = null; next?.();
     } });
   };
-  const pickReceipt = async () => {
-    const receivable = preparationVisibleMaterials(data?.materials ?? [], warehouse).filter(item => item.can_receive);
-    const code = await dialogs.choose('Homashyo tanlang', receivable.map(item => ({ label: item.name, subtitle: item.code, value: item.code })), undefined, true);
-    const material = receivable.find(item => item.code === code);
-    if (material) await receive(material);
+  const pickReceipt = () => {
+    let selected: PreparationMaterial | null = null;
+    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={materials}
+      subtitle={item => `Mavjud: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`}
+      choose={material => { selected = material; sheet.close(); }} />,
+    { dismissible: true, onDismiss: () => { if (selected) void receive(selected); } });
   };
   return <View style={{ flex: 1 }}><PreparationPage title="Ombor" refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
     {!data?.assigned_warehouses.length ? <PreparationText>{t('Sizga ombor biriktirilmagan.')}</PreparationText> : null}
@@ -118,7 +120,7 @@ export function PreparationWarehouseScreen() {
       subtitle={`${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`}
       onPress={() => router.push({ pathname: '/android-preparation/material', params: { code: item.code } } as unknown as Href)} />)}
     {warehouse && manual ? <>
-      <PreparationButton label="Kirim" disabled={home.locked || managing} onPress={() => void pickReceipt()} id="preparation-receipt" />
+      <PreparationButton label="Kirim" disabled={home.locked || managing} onPress={pickReceipt} id="preparation-receipt" />
       <PreparationButton label="Homashyo qo‘shish" disabled={home.locked || managing} onPress={() => void createMaterial()} />
     </> : null}
     {warehouse && !manual && canOpenRoute(session, appRoutes.gscaleMode) ? <PreparationButton label="Tarozi kirimi"
@@ -144,13 +146,14 @@ function historySubtitle(doc: Record<string, unknown>) {
 // @v2 PreparationMaterialDetailScreen
 export function PreparationMaterialDetailScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
-  const { home, session } = usePreparationContext(), { receive } = useStockActions(), t = usePreparationText();
+  const { home, session } = usePreparationContext(), notice = usePreparationNotice(), t = usePreparationText();
+  const { receive } = useStockActions(notice);
   useStockReturnReload(home.controller);
   const item = home.snapshot?.materials.find(material => material.code === code);
   const warehouse = home.warehouse;
   const history = preparationMaterialHistory(home.snapshot?.history ?? [], warehouse ?? '', code ?? '');
   const manual = preparationReceiptMode(warehouse, home.snapshot?.material_warehouses ?? []) === 'manual';
-  return <PreparationPage title={item?.name ?? 'Homashyo'} refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
+  return <View style={{ flex: 1 }}><PreparationPage title={item?.name ?? 'Homashyo'} refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
     {item ? <PreparationRow title={item.name} subtitle={`${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`} /> : null}
     {item && manual && item.can_receive ? <PreparationButton label="Kirim qilish" disabled={home.locked} onPress={() => void receive(item)} /> : null}
     {item && !manual && canOpenRoute(session, appRoutes.gscaleMode) ? <PreparationButton label="Tarozi kirimi"
@@ -161,7 +164,7 @@ export function PreparationMaterialDetailScreen() {
     {history.consumptions.length ? <PreparationText title>{t('Chiqimlar')}</PreparationText> : null}
     {history.consumptions.map(({ doc, line }, index) => <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={historyTitle(doc)}
       subtitle={`${historySubtitle(doc)} · ${String(line.kg ?? '')} kg`} />)}
-  </PreparationPage>;
+  </PreparationPage><PreparationNotice message={notice.message} /></View>;
 }
 
 // @v2 PreparationHistoryScreen
