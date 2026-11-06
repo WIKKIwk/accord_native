@@ -25,10 +25,10 @@ None for the requested Android implementation. The contract's complete source li
 
 ## Verification
 
-- The role ledger estimates 112k V2 tokens; actual tokens read were not measured. Inventory assignment candidate and link requests, order metrics and their tests were added to the existing shared logic.
-- Full suite: 852 passed. Android Expo export, iOS TypeScript and Expo lint passed. Android TypeScript still reports the same 10 worker errors recorded in `PORT.md`.
-- Ledger check passed with seven previously recorded dynamic/other-role endpoint warnings. All 16 listed Android surfaces are tagged, with the gaps above still open.
-- No simulator or device was used. On a real Android phone, check light/dark mode, hardware back, short-list refresh, save and error states, account switching, and printer and scale flows after integration.
+- The role ledger estimates 112k V2 tokens; actual tokens read were not measured.
+- Full suite: 952 passed. Android Expo export, iOS TypeScript and Expo lint passed. Android TypeScript still reports the same 10 worker errors recorded in `PORT.md`, with no preparation errors.
+- Ledger check passed with seven previously recorded dynamic/other-role endpoint warnings. All 16 listed Android surfaces are tagged.
+- No simulator or device was used. On a real Android phone, check light/dark mode, hardware back, short-list refresh, variant search, share saving, account switching, inventory and QR printing, and scale navigation.
 
 ## Checkpoints
 
@@ -45,3 +45,8 @@ None for the requested Android implementation. The contract's complete source li
 - `bb53af1` port(preparation/android): manual wifi printer selection
 - `597da25` port(preparation/android): inventory order assignment
 - `b408f92` port(preparation/android): order detail summary
+- `0f136d0` port(preparation/android): unify inventory and scope actions
+- `a5ecb6b` port(preparation/android): search reusable variants
+- `c820503` port(preparation/android): complete queue control decoding
+- `2bea85c` port(preparation/android): finish inventory and printer sheets
+- `d6975ca` port(preparation/android): connect profile and picker state
