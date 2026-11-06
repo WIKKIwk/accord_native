@@ -34,7 +34,7 @@ function setup() {
     quantity_source: 'manual', length_m: 125, order_assignment: { order_id: 'o1' } });
   const batch = new GScaleBatchStateStore({ state: async () => ({ ok: true, batch: stopped }), stop: async () => ({ ok: true, batch: stopped }) });
   const calls = [];
-  const deps = { devices, batch, loadDraft: async () => emptyOperatorControlDraft(), saveDraft: async () => {},
+  const deps = { devices, batch, refreshProfileScope: async () => {}, loadDraft: async () => emptyOperatorControlDraft(), saveDraft: async () => {},
     loadPreparationPreset: async () => null, loadMaterialWarehouses: async () => [], warehouseAllowed: async () => true,
     startBatch: async context => { calls.push(['start', context]); return { batch: active }; },
     printBatch: async context => { calls.push(['print', context]); return materialReceiptPrintResponseFromJson({ ok: true, epc: 'EPC' }); },

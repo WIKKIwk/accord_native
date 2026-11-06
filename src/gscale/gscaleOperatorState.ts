@@ -17,6 +17,7 @@ type Receipt = ReturnType<typeof materialReceiptPrintResponseFromJson>;
 type Item = { code: string; name: string; requiresDimensions: boolean };
 export type GScaleOperatorDependencies = {
   devices: GScaleDeviceStore; batch: GScaleBatchStateStore;
+  refreshProfileScope(): Promise<void>;
   loadDraft(): Promise<OperatorControlDraft>; saveDraft(draft: OperatorControlDraft): Promise<void>;
   loadPreparationPreset(): Promise<Item | null>; loadMaterialWarehouses(): Promise<string[]>;
   warehouseAllowed(warehouse: string): Promise<boolean>;
@@ -59,6 +60,7 @@ export class GScaleOperatorStore {
     this.deviceKey = `${this.state.device.transport}|`;
   }
   getSnapshot = () => this.state;
+  isActive = () => this.alive;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private update(patch: Partial<GScaleOperatorState>) {
     if (!this.alive) return;
@@ -80,7 +82,7 @@ export class GScaleOperatorStore {
     this.subscriptions.push(this.deps.devices.subscribe(() => this.deviceChanged()), this.deps.batch.subscribe(() => this.batchChanged()));
     void this.restoreDraft();
     void this.deps.devices.restore();
-    if (this.controlOnly) { void this.deps.batch.refresh(); void this.refreshMaterialWarehouses(); }
+    if (this.controlOnly) { void this.deps.batch.refresh(); void this.refreshMaterialWarehouses(); void this.deps.refreshProfileScope().catch(() => {}); }
     this.deviceChanged();
   }
 
