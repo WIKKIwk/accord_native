@@ -39,7 +39,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Needs from the integrator
 
-- The inventory-movements native route and picker/detail UI must be supplied by the preparation platform sessions. `preparationInventoryStore` connects its preparation guard and shared live store, and `preparationInventoryAssets` applies V2's raw-material and assignment scope; transfer mutations are in `preparationInventoryTransfers.ts`.
+- The Android inventory route now uses the shared live store and transfer mutations; its raw-material order-assignment editor and full detail presentation remain open. The iOS inventory route and picker/detail UI still need their platform session.
 - Connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet. The preparation home targets are configured, but those platform routes do not exist in this branch yet.
 
 ## Verification

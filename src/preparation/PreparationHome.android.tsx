@@ -71,6 +71,7 @@ export function PreparationHomeScreen() {
       <PreparationRow title={t('Mahsulot formulasi')} disabled={home.locked} onPress={() => router.push('/android-preparation/sets' as Href)} />
       <PreparationRow title={t('Buyurtmalar')} onPress={() => router.push('/android-preparation/sequence' as Href)} />
       <PreparationRow title={t('Ishlab chiqarish')} onPress={() => router.replace('/android-preparation/production' as Href)} />
+      <PreparationRow title={t('Ishlab chiqarilgan homashyolar')} onPress={() => router.push('/android-preparation/inventory' as Href)} />
       <PreparationRow title={t('Tarix')} onPress={() => router.push('/android-preparation/history' as Href)} />
     </> : null}
   </PreparationPage>;

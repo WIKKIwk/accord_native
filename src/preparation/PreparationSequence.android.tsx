@@ -82,18 +82,20 @@ export function PreparationSequenceList({ session, controller, selectApparatus, 
   </View>;
 }
 
+function createSequenceBinding(session: Session) {
+  let valid = true;
+  const scope = sessionReadScope(session);
+  const current = () => valid && !!activeSessionToken(session) && scope === sessionReadScope(session);
+  const controller = new PreparationOrdersState(preparationOrdersWarmStore, current,
+    (window, search, length, message, error, done) => subscribePreparationOrdersLive(session, window, { search, length }, message, error, done),
+    () => adminSequenceApparatusStore.loadSavedApparatusId());
+  return { controller, current, invalidate() { valid = false; controller.sessionChanged(); } };
+}
+
 export function PreparationSequenceScreen() {
   const { session } = usePreparationContext();
   const [selected, setSelected] = useState<{ row: PreparationOrderListRow; scope: string } | null>(null);
-  const binding = useMemo(() => {
-    let valid = true;
-    const scope = sessionReadScope(session);
-    const current = () => valid && !!activeSessionToken(session) && scope === sessionReadScope(session);
-    const controller = new PreparationOrdersState(preparationOrdersWarmStore, current,
-      (window, search, length, message, error, done) => subscribePreparationOrdersLive(session, window, { search, length }, message, error, done),
-      () => adminSequenceApparatusStore.loadSavedApparatusId());
-    return { controller, current, invalidate() { valid = false; controller.sessionChanged(); } };
-  }, [session]);
+  const binding = useMemo(() => createSequenceBinding(session), [session]);
   useEffect(() => registerSessionResetHook(async () => { binding.invalidate(); setSelected(null); }), [binding]);
   const selectApparatus = async (id: string) => {
     const item = binding.controller.getSnapshot().window?.apparatus.find(value => value.id === id);
@@ -114,8 +116,8 @@ function PreparationSequenceDetail({ session, controller, selected, isCurrent, c
   isCurrent: () => boolean; close: () => void;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const [result, setResult] = useState<Awaited<ReturnType<typeof preparationOrderDetail>> | null>(null);
-  const [error, setError] = useState<string | null>(null), [retry, setRetry] = useState(0), [loadingMaterials, setLoadingMaterials] = useState(false);
+  const [result, setResult] = useState<{ retry: number; value: Awaited<ReturnType<typeof preparationOrderDetail>> | null; error: string | null } | null>(null);
+  const [retry, setRetry] = useState(0), [loadingMaterials, setLoadingMaterials] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
   const dialogs = usePreparationDialogs(), t = usePreparationText();
   const current = () => isCurrent() && controller.getSnapshot().window?.scope === selected.scope &&
@@ -123,15 +125,16 @@ function PreparationSequenceDetail({ session, controller, selected, isCurrent, c
   const valid = isCurrent() && state.window?.scope === selected.scope && state.rows.some(row => row.id === selected.row.id);
   useEffect(() => {
     let mounted = true;
-    setResult(null); setError(null);
     void preparationOrderDetail(session, selected.row.id).then(value => {
-      if (mounted && current()) setResult(value);
-    }, failure => { if (mounted && current()) setError(failure instanceof Error ? failure.message : String(failure)); });
+      if (mounted && current()) setResult({ retry, value, error: null });
+    }, failure => { if (mounted && current()) setResult({ retry, value: null, error: failure instanceof Error ? failure.message : String(failure) }); });
     return () => { mounted = false; };
     // The selected row and controller identify the detail request.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, controller, selected, retry]);
-  const detail = result ? workerOrderDetailFromSnapshot(result, selected.row.id) : null;
+  const latest = result?.retry === retry ? result : null;
+  const detail = latest?.value ? workerOrderDetailFromSnapshot(latest.value, selected.row.id) : null;
+  const error = latest?.error ?? null;
   const openFormulas = async () => {
     if (!detail || !current() || loadingMaterials) return;
     setLoadingMaterials(true);
