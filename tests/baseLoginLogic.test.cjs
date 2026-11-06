@@ -7,7 +7,7 @@ const ts = require('typescript');
 const filename = path.resolve(__dirname, '../src/shared/loginLogic.ts');
 const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
 mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
-const { loginFailureMessage, loginCodeUsesNumericKeyboard, loadBaseStartup, bootstrapSession } = mod.exports;
+const { loginFailureMessage, loginCodeUsesNumericKeyboard, filterLoginCode, loadBaseStartup, bootstrapSession } = mod.exports;
 
 // @v2-test test/login_failure_message_test.dart
 test('login distinguishes connection failures from rejected credentials', () => {
@@ -26,6 +26,13 @@ test('login distinguishes connection failures from rejected credentials', () => 
 test('login code keyboard follows V2 prefixes', () => {
   for (const input of ['', ' ', ' 4 ', '40ABC', ' 50x', '80', '92']) assert.equal(loginCodeUsesNumericKeyboard(input), true, input);
   for (const input of ['41', '70ABCDEF', 'abc', '1x']) assert.equal(loginCodeUsesNumericKeyboard(input), false, input);
+});
+
+test('numeric role prefixes filter later code input as V2 does', () => {
+  assert.equal(filterLoginCode('4', '4a'), '4a');
+  assert.equal(filterLoginCode('40', '40a2'), '402');
+  assert.equal(filterLoginCode('92', '92-12'), '9212');
+  assert.equal(filterLoginCode('41', '41a2'), '41a2');
 });
 
 test('startup loads each preference after the session and continues after a failure', async () => {

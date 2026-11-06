@@ -276,7 +276,7 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
   await endpoints.setBaseUrl(server);
   if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
-  const session = await authenticate(server, phone, code);
+  const session = await authenticate(server, normalizedPhone, trimmedCode);
   const account = identity(session);
   if (!account.ref || !account.role) throw new Error('Server noto‘g‘ri hisob ma’lumotlarini qaytardi.');
   return inStorageOrder(async () => {
@@ -319,7 +319,7 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
       const previousId = store.activeAccountId;
       try {
         const saved = await store.upsertAuthenticated({ baseUrl: server, profile: savedProfile(session), token: session.token,
-          phone, code, makeActive: false });
+          phone: normalizedPhone, code: trimmedCode, makeActive: false });
         if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
         await store.activate(saved.id);
         if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');

@@ -79,7 +79,7 @@ test('login uses V2 account parsing and keeps assigned machines in the session',
   try {
     const api = auth({});
     const session = await api.login('https://example.test', ' 123 ', ' 456 ');
-    assert.deepEqual(sent, { phone: ' 123 ', code: ' 456 ' });
+    assert.deepEqual(sent, { phone: '123', code: '456' });
     assert.equal(api.testEndpoints.baseUrl, 'https://example.test');
     assert.equal(session.token, 'token');
     assert.deepEqual(session.assigned_apparatus, ['apparatus:default:press']);
