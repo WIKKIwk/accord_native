@@ -55,3 +55,32 @@ The iOS and Android screen skills require `docs/port/roles/gscale.md` before scr
 - Expo autolinking found the module on both platforms. Swift UDP and monitor sources type-checked; the Swift monitor parser passed a local HTTP streaming check. Android native code has not been compiled here.
 - No simulator, emulator, phone, scale or printer was used. Real-device validation remains open.
 - Tokens read were not measured. V2 is pinned to baseline `7c87a54e`.
+
+## Checkpoint commits
+
+- `dadc8e0` port(gscale/1): native discovery, 3 channels
+- `950e483` port(gscale/1): server discovery, 10 methods
+- `7eadf01` port(gscale/1): catalog warehouse rules, 12 methods
+- `bd075cf` port(gscale/1): RPS batch API, 9 methods
+- `d47e97d` port(gscale/1): weighing and label rules, 16 methods
+- `1374105` port(gscale/1): device and warehouse preferences, 9 methods
+- `51dfbd6` port(gscale/1): monitor snapshot rules, 8 methods
+- `d8ef17e` port(gscale/1): live scale monitor, 3 methods
+- `fd57008` port(gscale/1): batch label execution, 1 method
+- `b62480a` port(gscale/1): preparation receipt rules, 5 methods
+- `94244d4` port(gscale/1): batch start validation, 1 method
+- `713c40c` port(gscale/1): operator draft persistence, 3 methods
+- `d6887a6` port(gscale/1): archive QR and reprints, 4 methods
+- `db1d18f` port(gscale/1): batch authority state, 3 methods
+- `1ce7655` port(gscale/1): route argument encoding, 1 method
+- `5f9b4e4` port(gscale/1): device selection state, 5 methods
+- `7c785f3` port(gscale/1): control enable rules, 1 method
+- `e514a85` port(gscale/1): restore operator drafts, 1 method
+- `e1a9bbf` port(gscale/1): order material picker, 2 methods
+- `5d56cd4` port(gscale/1): operator state integration, 6 methods
+- `248c4e0` port(gscale/1): operator runtime, 2 methods
+- `ec924e0` port(gscale/1): order material prefill, 1 method
+- `2ef5562` port(gscale/1): archive runtime, 5 methods
+- `5acc147` port(gscale/1): order selection, 2 methods
+- `16d81b1` port(gscale/1): printer status state, 1 method
+- `2fac828` port(gscale/1): record verification and handoff
