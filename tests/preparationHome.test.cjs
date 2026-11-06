@@ -52,3 +52,14 @@ test('account reset clears home state and rejects a late snapshot', async () => 
   assert.equal(state.getSnapshot().warehouse, null);
   assert.match(state.getSnapshot().error, /Akkaunt/);
 });
+
+test('pending command descriptions preserve the V2 labels', () => {
+  const filename = path.resolve(__dirname, '../src/preparation/preparationHomePresentation.ts'), mod = new Module(filename, module);
+  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ESNext },
+  }).outputText, filename);
+  const label = mod.exports.preparationPendingLabel;
+  assert.equal(label({ kind: 'receipts', payload: { kg: '2.5' } }), 'Kirim: 2.5 kg');
+  assert.equal(label({ kind: 'materials', payload: { name: 'Kley' } }), 'Homashyo: Kley');
+  assert.equal(label({ kind: 'consumptions', payload: { order_id: 'O-1' } }), 'Order: O-1');
+});

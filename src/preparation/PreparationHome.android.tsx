@@ -1,16 +1,22 @@
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useRef } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { usePreparationContext } from './PreparationContext.android';
+import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { openPreparationScale } from './preparationNavigation.android';
 import { PreparationButton, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
-import { preparationReceiptMode, preparationReceiptPayload, preparationVisibleMaterials } from './preparationLogic';
-import { preparationPendingLabel } from './usePreparationAndroidView.android';
+import { PreparationNotice } from './PreparationNotice';
+import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
+import { preparationMaterialAvailable, preparationReceiptMode, preparationReceiptPayload, preparationVisibleMaterials, type PreparationMaterial } from './preparationLogic';
+import { preparationDisplay } from './preparationModel';
+import { preparationPendingLabel } from './preparationHomePresentation';
+import { usePreparationNotice } from './usePreparationNotice';
 
 // @v2 PreparationScreen
 export function PreparationHomeScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const sheet = useNativeSheet(), notice = usePreparationNotice();
   const hadFocus = useRef(false), submitting = useRef(false);
   useFocusEffect(useCallback(() => {
     if (hadFocus.current) void home.controller.reload();
@@ -18,44 +24,52 @@ export function PreparationHomeScreen() {
   }, [home.controller]));
   const data = home.snapshot;
   const submit = async (kind: string, payload: Record<string, unknown>) => {
-    if (submitting.current) return;
+    if (submitting.current || home.controller.getSnapshot().saving) return;
     submitting.current = true;
-    try { await home.controller.submit(kind, payload); dialogs.message('Saqlandi', t('Saqlandi')); }
-    catch (error) { dialogs.message('Xatolik yuz berdi', String(error)); }
+    try { await home.controller.submit(kind, payload); notice.show(t('Saqlandi')); }
+    catch (error) { notice.show(String(error)); }
     finally { submitting.current = false; }
   };
-  const receive = async () => {
+  const receive = () => {
     if (!data) return;
     const mode = preparationReceiptMode(home.warehouse, data.material_warehouses);
     if (mode === 'warehouse') { router.push('/android-preparation/warehouse' as Href); return; }
     if (mode === 'scale') { openPreparationScale({ warehouse: home.warehouse }); return; }
     const materials = preparationVisibleMaterials(data.materials, home.warehouse).filter(item => item.can_receive);
-    const code = await dialogs.choose('Homashyo tanlang', materials.map(item => ({ label: item.name, subtitle: item.code, value: item.code })), undefined, true);
-    const material = materials.find(item => item.code === code);
-    if (!material || !home.warehouse) return;
-    const kg = await dialogs.input({ title: `${material.name} — kirim`, label: 'Kirim (kg)', quantity: true });
-    if (kg !== null) await submit('receipts', preparationReceiptPayload(material, home.warehouse, kg));
+    const warehouse = home.warehouse;
+    if (!warehouse) return;
+    let selected: PreparationMaterial | null = null;
+    const subtitle = (item: PreparationMaterial) => `Mavjud: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`;
+    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={materials} subtitle={subtitle}
+      searchText={item => `${item.name} ${subtitle(item)}`} choose={material => { selected = material; sheet.close(); }} />,
+    { dismissible: true, onDismiss: () => {
+      const material = selected;
+      if (!material) return;
+      void (async () => {
+        const kg = await dialogs.input({ title: `${material.name} — kirim`, label: 'Kirim (kg)', quantity: true });
+        if (kg !== null) await submit('receipts', preparationReceiptPayload(material, warehouse, kg));
+      })();
+    } });
   };
   const actions = async () => {
     if (!data) return;
     const chosen = await dialogs.choose('Amallar', [
-      { label: 'Ombor', value: 'warehouse', disabled: home.locked },
-      { label: 'Homashyolar', value: 'materials', disabled: home.locked },
-      { label: 'Mahsulot formulasi', value: 'sets', disabled: home.locked },
+      ...(!home.locked ? [{ label: 'Mahsulot formulasi', value: 'sets' }, { label: 'Homashyolar', value: 'materials' }] : []),
+      { label: 'Ombor', value: 'warehouse' },
+      ...(canOpenRoute(session, appRoutes.gscaleMode) ? [{ label: 'Tarozi kirimi', value: 'scale' }] : []),
+      ...(preparationReceiptMode(home.warehouse, data.material_warehouses) !== 'scale' ? [{ label: 'Kirim', value: 'receive' }] : []),
       { label: 'Buyurtmalar', value: 'sequence' },
-      ...(canOpenRoute(session, appRoutes.gscaleMode) ? [{ label: 'Tarozi kirimi', value: 'scale', disabled: home.locked }] : []),
-      ...(preparationReceiptMode(home.warehouse, data.material_warehouses) !== 'scale' ? [{ label: 'Kirim', value: 'receive', disabled: home.locked }] : []),
       { label: 'Tarix', value: 'history' },
     ]);
-    if (chosen === 'receive') void receive();
+    if (chosen === 'receive') receive();
     else if (chosen === 'scale') openPreparationScale({ warehouse: home.warehouse });
     else if (chosen === 'warehouse') router.push('/android-preparation/warehouse' as Href);
     else if (chosen === 'materials') router.push('/android-preparation/materials' as Href);
     else if (chosen === 'sets') router.push('/android-preparation/sets' as Href);
-    else if (chosen === 'sequence') router.push('/android-preparation/sequence' as Href);
+    else if (chosen === 'sequence') router.replace('/android-preparation/sequence' as Href);
     else if (chosen === 'history') router.push('/android-preparation/history' as Href);
   };
-  return <PreparationPage title="Tayyorlov masteri" root drawer actions={data ? () => void actions() : undefined} refreshing={home.loading && !!data}
+  return <View style={{ flex: 1 }}><PreparationPage title="Tayyorlov masteri" subtitle="Ichki homashyo ta’minoti" root drawer actions={data ? () => void actions() : undefined} refreshing={home.loading && !!data}
     onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
     {home.loading && !data ? <ActivityIndicator /> : null}
     {home.error ? <PreparationRow title={t('Xatolik yuz berdi')} subtitle={home.error} /> : null}
@@ -66,13 +80,13 @@ export function PreparationHomeScreen() {
       if (home.pending) void submit(home.pending.kind, home.pending.payload);
     }} /> : null}
     {data ? <>
-      <PreparationRow title={t('Ombor')} subtitle={home.warehouse ?? t('Tanlanmagan')} disabled={home.locked} onPress={() => router.push('/android-preparation/warehouse' as Href)} />
+      {!!data.assigned_warehouses.length && <PreparationRow title={t('Ombor')} subtitle={home.warehouse ?? undefined} disabled={home.locked} onPress={() => router.push('/android-preparation/warehouse' as Href)} />}
       <PreparationRow title={t('Homashyolar')} disabled={home.locked} onPress={() => router.push('/android-preparation/materials' as Href)} />
       <PreparationRow title={t('Mahsulot formulasi')} disabled={home.locked} onPress={() => router.push('/android-preparation/sets' as Href)} />
-      <PreparationRow title={t('Buyurtmalar')} onPress={() => router.push('/android-preparation/sequence' as Href)} />
+      <PreparationRow title={t('Buyurtmalar')} onPress={() => router.replace('/android-preparation/sequence' as Href)} />
       <PreparationRow title={t('Ishlab chiqarish')} onPress={() => router.replace('/android-preparation/production' as Href)} />
       <PreparationRow title={t('Ishlab chiqarilgan homashyolar')} onPress={() => router.push('/android-preparation/inventory' as Href)} />
       <PreparationRow title={t('Tarix')} onPress={() => router.push('/android-preparation/history' as Href)} />
     </> : null}
-  </PreparationPage>;
+  </PreparationPage><PreparationNotice message={notice.message} /></View>;
 }

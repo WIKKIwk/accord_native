@@ -74,8 +74,8 @@ export function PreparationDock({ root = false, profile = false, actions }: { ro
   </View>;
 }
 
-export function PreparationPage({ title, children, refreshing, onRefresh, root = false, drawer = false, actions }: {
-  title: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean; actions?: () => void;
+export function PreparationPage({ title, subtitle, children, refreshing, onRefresh, root = false, drawer = false, actions }: {
+  title: string; subtitle?: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean; actions?: () => void;
 }) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = usePreparationText();
   const { width } = useWindowDimensions(), [drawerOpen, setDrawerOpen] = useState(false);
@@ -91,7 +91,7 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
       {!root && <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')}
         onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }} style={{ padding: 8 }}>
         <PreparationText>‹</PreparationText></Pressable>}
-      <View style={{ flex: 1 }}><PreparationText title>{t(title)}</PreparationText></View>
+      <View style={{ flex: 1 }}><PreparationText title>{t(title)}</PreparationText>{subtitle && <PreparationText>{t(subtitle)}</PreparationText>}</View>
     </View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 10, paddingBottom: insets.bottom + 24 }}
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}>
