@@ -14,10 +14,12 @@ import { notificationUnreadStore } from '../shared/notificationStoresRuntime';
 import { localeController } from '../shared/localization/runtime';
 import { themeController } from '../shared/themeRuntime';
 import '../shared/productionSnapshotRuntime';
+import { usePreparationRuntime } from '../preparation/preparationRuntime';
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  usePreparationRuntime(session);
   useEffect(() => {
     let active = true;
     bootstrapSession(() => loadBaseStartup(loadSession, [() => notificationUnreadStore.load(),

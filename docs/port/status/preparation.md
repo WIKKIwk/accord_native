@@ -39,8 +39,7 @@ No V2 HTTP recordings were found for warehouse creation or deletion; source-deri
 ## Needs from the integrator
 
 - Audit/connect the shared inventory-movements route and its existing base stores for preparation access; its UI and shared logic are outside this role’s file fence.
-- Add the preparation role home target and connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet.
-- Instantiate `PreparationOrdersWarmStore` with `productionSnapshotStore`, the active session and shared `AdminSequenceApparatusStore` selection; start/reset it with the app session.
+- Connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet. The preparation home targets are configured, but those platform routes do not exist in this branch yet.
 
 ## Verification
 
