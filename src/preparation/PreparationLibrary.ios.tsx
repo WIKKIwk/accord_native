@@ -17,7 +17,7 @@ type Recipe = Library['recipes'][number];
 type FormulaSet = Library['sets'][number];
 function openRecipe(recipe: Recipe) {
   openPreparationFormula({ orderId: '', orderCode: '', productCode: recipe.product_code, productTitle: recipe.product_title,
-    materialId: recipe.material_id, materialName: recipe.material_name, variantId: recipe.id, variantName: recipe.name,
+    materialId: recipe.material_id, materialName: recipe.material_name, variantId: recipe.id, variantName: recipe.name, variantCode: recipe.formula_code,
     manageSavedFormula: true, allowAddingFormula: recipe.can_create });
 }
 function useReloadOnReturn(load: () => Promise<void>) {

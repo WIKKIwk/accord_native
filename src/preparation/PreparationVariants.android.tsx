@@ -17,7 +17,7 @@ import { usePreparationReusePicker } from './usePreparationReusePicker.android';
 import { preparationVariantRemoveMessage, preparationVariantRemovedMessage, preparationVariantSubtitle } from './preparationVariantPresentation';
 import { usePreparationNotice } from './usePreparationNotice';
 
-type Options = PreparationVariantsOptions & { orderCode: string; productTitle: string; materialName: string };
+type Options = PreparationVariantsOptions & { orderCode: string; productTitle: string; materialName: string; customerName?: string };
 type Variant = ReturnType<typeof usePreparationVariantsView>['variants'][number];
 
 function VariantActions({ variant, choose }: { variant: Variant; choose: (action: 'edit' | 'delete' | 'rename') => void }) {
@@ -93,7 +93,7 @@ function Variants({ options }: { options: Options }) {
   const blocked = state.actionsBlocked || opening;
   const open = (variant: Variant, edit = false) => {
     setOpening(true);
-    openPreparationFormula({ ...options, variantId: variant.id, variantName: variant.name, openEditorOnLoad: edit });
+    openPreparationFormula({ ...options, variantId: variant.id, variantName: variant.name, variantCode: variant.formula_code, openEditorOnLoad: edit });
   };
   const perform = async (variant: Variant, action: 'edit' | 'delete' | 'rename') => {
     if (action === 'edit') open(variant, true);

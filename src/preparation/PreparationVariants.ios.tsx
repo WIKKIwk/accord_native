@@ -77,7 +77,7 @@ function ReuseSheet({ controller, choose }: { controller: PreparationVariantsSta
 
 // @v2 PreparationFormulaVariantsScreen
 export function PreparationVariants() {
-  const params = useLocalSearchParams<{ orderId: string; orderCode: string; productCode: string; productTitle: string; materialId: string; materialName: string }>();
+  const params = useLocalSearchParams<{ orderId: string; orderCode: string; productCode: string; productTitle: string; materialId: string; materialName: string; customerName?: string }>();
   const { session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet(), actionSheet = useNativeSheet(), notice = usePreparationNotice();
   const options = { orderId: params.orderId ?? '', productCode: params.productCode ?? '', materialId: params.materialId ?? '' };
   const state = usePreparationVariants(session, options), { controller } = state;
@@ -90,7 +90,7 @@ export function PreparationVariants() {
   const open = (variant: Variant, edit = false) => {
     setOpening(true);
     openPreparationFormula({ ...options, orderCode: params.orderCode ?? '', productTitle: params.productTitle ?? '', materialName: params.materialName ?? '',
-      variantId: variant.id, variantName: variant.name, openEditorOnLoad: edit });
+      customerName: params.customerName, variantId: variant.id, variantName: variant.name, variantCode: variant.formula_code, openEditorOnLoad: edit });
   };
   const create = async () => {
     if (!(await controller.beginCreate())) return;

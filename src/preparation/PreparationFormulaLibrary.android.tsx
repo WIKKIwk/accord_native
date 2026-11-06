@@ -16,7 +16,7 @@ import type { preparationFormulaCatalogEntryFromJson, preparationFormulaSetFromJ
 type Recipe = ReturnType<typeof preparationFormulaCatalogEntryFromJson>;
 type FormulaSet = ReturnType<typeof preparationFormulaSetFromJson>;
 const recipeOptions = (recipe: Recipe) => ({ orderId: '', orderCode: '', productCode: recipe.product_code, productTitle: recipe.product_title,
-  materialId: recipe.material_id, materialName: recipe.material_name, variantId: recipe.id, variantName: recipe.name,
+  materialId: recipe.material_id, materialName: recipe.material_name, variantId: recipe.id, variantName: recipe.name, variantCode: recipe.formula_code,
   manageSavedFormula: true, allowAddingFormula: recipe.can_create });
 
 function Library({ mode }: { mode: 'sets' | 'catalog' }) {

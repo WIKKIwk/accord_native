@@ -115,7 +115,7 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
     </View>}>{content}</Drawer></GestureHandlerRootView>;
 }
 
-type Choice = { label: string; subtitle?: string; value: string; disabled?: boolean };
+type Choice = { label: string; subtitle?: string; searchText?: string; value: string; disabled?: boolean };
 type Dialog = { kind: 'input'; title: string; label: string; initial?: string; quantity?: boolean; maxLength?: number; emptyError?: string;
   validate?: (value: string) => string | null; resolve: (value: string | null) => void }
   | { kind: 'choice'; title: string; choices: Choice[]; message?: string; searchable?: boolean; resolve: (value: string | null) => void }
@@ -158,7 +158,7 @@ function DialogContent({ dialog, close }: { dialog: Dialog; close: () => void })
           {dialog.searchable ? <OutlinedTextField value={searchValue} singleLine onValueChange={setSearch} modifiers={[fillMaxWidth()]}>
             <OutlinedTextField.Label><Text>{t('Qidirish')}</Text></OutlinedTextField.Label></OutlinedTextField> : null}
           <RNHostView matchContents><ScrollView style={{ maxHeight: height * 0.45, width: width * 0.7 }}>
-          {dialog.choices.filter(item => `${item.label} ${item.subtitle ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())).map(item => <PreparationRow key={item.value} title={t(item.label)} subtitle={item.subtitle}
+          {dialog.choices.filter(item => `${item.label} ${item.subtitle ?? ''} ${item.searchText ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())).map(item => <PreparationRow key={item.value} title={t(item.label)} subtitle={item.subtitle}
             disabled={item.disabled} onPress={() => { close(); dialog.resolve(item.value); }} />)}
         </ScrollView></RNHostView></Column> : <Text>{dialog.message}</Text>}</AlertDialog.Text>
       {dialog.kind !== 'message' && <AlertDialog.DismissButton><TextButton onClick={cancel}><Text>{t(dialog.kind === 'confirm' ? dialog.cancel : 'Bekor qilish')}</Text></TextButton></AlertDialog.DismissButton>}

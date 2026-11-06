@@ -30,7 +30,7 @@ function setup(settings = {}) {
     return mod.exports;
   }
   const session = { ref: 'prep-1' }, options = { orderId: 'order-1', orderCode: '0278', productCode: 'P', productTitle: 'Product',
-    materialId: 'pe-pr', materialName: 'PE PR', variantId: 'v1' };
+    materialId: 'pe-pr', materialName: 'PE PR', variantId: 'v1', ...settings.options };
   const controller = new (load('usePreparationFormula').PreparationFormulaState)(session, options);
   return { controller, session, sent, formulas };
 }
@@ -45,7 +45,7 @@ test('formula load uses order-specific estimate and scope', async () => {
 test('editor saves a normalized new formula and refreshes it', async () => {
   const x = setup(); await x.controller.reload(); x.controller.openEditor();
   x.controller.setRows([{ material: { code: 'C1', name: 'Kley' }, percent: '100' }]);
-  assert.equal(x.controller.canSave, true); await x.controller.save();
+  assert.equal(x.controller.canSave, true); assert.equal(await x.controller.save(), true);
   const save = x.sent.find(item => item.action === 'save');
   assert.equal(save.opts.name, 'B'); assert.deepEqual(save.lines, [{ item_code: 'C1', percent: '100.000000' }]);
   assert.equal(x.controller.getSnapshot().editing, false);
@@ -62,8 +62,9 @@ test('production selects the scoped variant and holds the opening lock through n
 test('an account change prevents editing operations from being sent', async () => {
   const x = setup(); await x.controller.reload(); x.controller.openEditor();
   x.controller.setRows([{ material: { code: 'C1', name: 'Kley' }, percent: '100' }]);
-  x.session.ref = 'prep-2'; await x.controller.save();
+  x.session.ref = 'prep-2'; assert.equal(await x.controller.save(), false);
   assert.equal(x.sent.some(item => item.action === 'save'), false);
+  await assert.rejects(x.controller.saveShares(['100']), /Akkaunt o‘zgargan/);
 });
 
 test('a successful save remains closed when its follow-up refresh fails', async () => {
@@ -72,4 +73,12 @@ test('a successful save remains closed when its follow-up refresh fails', async 
   await x.controller.save();
   assert.equal(x.controller.getSnapshot().editing, false);
   assert.match(x.controller.getSnapshot().notice, /Internet aloqasini/);
+});
+
+test('variant edit opens the first saved formula on load', async () => {
+  const x = setup({ options: { openEditorOnLoad: true } });
+  await x.controller.reload();
+  assert.equal(x.controller.getSnapshot().editing, true);
+  assert.equal(x.controller.getSnapshot().editingName, 'A');
+  assert.equal(x.controller.getSnapshot().rows[0].percent, '100');
 });
