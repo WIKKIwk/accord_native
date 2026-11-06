@@ -100,3 +100,18 @@ test('archive loading and printing expose the selected device and result', async
   assert.equal(store.getSnapshot().notice, 'Chop etildi'); assert.equal(store.getSnapshot().archivePrintingId, '');
   store.dispose();
 });
+
+test('changing order discards a late material prefill from the previous order', async () => {
+  const { store, deps } = setup();
+  let finishOld;
+  deps.prefillMaterialOrder = order => order === 'o1' ? new Promise(resolve => { finishOld = resolve; })
+    : Promise.resolve({ item: { code: 'NEW', name: 'New', requiresDimensions: true }, micron: 20 });
+  store.start(); await flush();
+  store.setOrder({ id: 'o2', code: '', title: '', order_kg: '0', saved: false, width_mm: 600 });
+  await flush();
+  finishOld({ item: { code: 'OLD', name: 'Old', requiresDimensions: true }, micron: 12 });
+  await flush();
+  assert.equal(store.getSnapshot().draft.order_id, 'o2'); assert.equal(store.getSnapshot().draft.item_code, 'NEW');
+  assert.equal(store.getSnapshot().draft.micron_text, '20'); assert.equal(store.getSnapshot().draft.width_text, '600');
+  store.dispose();
+});

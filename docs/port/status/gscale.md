@@ -20,7 +20,8 @@ Stopped at: finish role-specific order selection and the remaining operator stat
 | `src/gscale/gscaleDeviceState.ts` | `ServerPickerPage`, `_GScaleMobileAppState` | Device restoration, discovery and manual server validation are implemented; wire the store to both platform pickers and native printer lists. |
 | `src/gscale/gscaleControlViewModel.ts` | `_buildControlSection` | Control visibility and action-enable rules are extracted; connect them to platform controls and remaining operator state. |
 | `src/gscale/gscaleMaterialPicker.ts` | `_openItemPicker`, `_loadMaterialOrderChoices` | Order-scoped paging, micron choices and cache invalidation are implemented; connect the picker and its prefill guards to operator state. |
-| `src/gscale/gscaleOperatorState.ts`, `gscaleOperatorRuntime.ts` | `_OperatorDashboardPageState` | Device and batch subscriptions, draft editing, material prefill, archive loading/printing, weight printing and simple receipt actions have a runtime adapter. Complete order changes, printer-status and UI notification behaviour before using the full dashboard. |
+| `src/gscale/gscaleOperatorState.ts`, `gscaleOperatorRuntime.ts` | `_OperatorDashboardPageState` | Device and batch subscriptions, draft editing, order changes, material prefill, archive loading/printing, weight printing and simple receipt actions have a runtime adapter. Complete printer-status and UI notification behaviour before using the full dashboard. |
+| `src/gscale/gscaleOrderSelection.ts` | `PreparationKirimOrderSection` | Order filtering and deferred publication while locked are implemented; connect the platform picker and role-specific order loaders. |
 | `src/gscale/gscaleArchive.ts`, `gscaleArchiveRuntime.ts` | `MobileArchiveSession`, `_reprintArchiveReceipt`, `buildMaterialBatchPrintPlan` | Batch aggregation, QR plans and receipt reprint identity checks are connected to both print transports; connect the archive UI and verify with a real printer. |
 | `src/gscale/gscaleMonitor.ts` | `MonitorSnapshot.fromJson` | JavaScript JSON parsing does not retain whether a scale value was encoded as an integer or a decimal such as `2.0`; preserve that distinction if the exact displayed text must match V2. Connect the snapshot and live stream to the operator view. |
 | `src/app/ios-gscale/**`, `src/app/android-gscale/**` | `gscale_mode_screen.dart` | Implement both route trees and platform screens using `serializeGScaleModeArgs` / `parseGScaleModeArgs`. |
@@ -39,5 +40,7 @@ GScale test-mode branches remain for the shared test-mode pass.
 Preparation screens currently disable scale entry; connect their entry actions to the new platform routes once the GScale routes and arguments are available. Role routing for GScale-only users also belongs to the shared route owner.
 
 The shared `adminItemsPage` and `adminWarehouses` API methods used by `gscale_catalog.dart` are absent in this checkout. Supply those shared methods so the GScale catalog adapter can use the same API for admin and other eligible roles.
+
+The shared `adminRawMaterialAssignmentOrders` method is also absent; the material supplier's GScale order picker requires it. Preparation orders can use the existing `preparationSnapshot` reader.
 
 The role ledger does not recognize `gscale`, so `port_ledger.mjs role gscale 1` cannot generate a reading list or satisfy the role gate. Add GScale session support to the ledger.

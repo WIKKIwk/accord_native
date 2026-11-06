@@ -21,7 +21,7 @@ export type GScaleOperatorDependencies = {
   devices: GScaleDeviceStore; batch: GScaleBatchStateStore;
   refreshProfileScope(): Promise<void>;
   loadDraft(): Promise<OperatorControlDraft>; saveDraft(draft: OperatorControlDraft): Promise<void>;
-  loadPreparationPreset(): Promise<Item | null>; loadMaterialWarehouses(): Promise<string[]>;
+  loadPreparationPreset(args: GScaleModeArgs): Promise<Item | null>; loadMaterialWarehouses(): Promise<string[]>;
   prefillMaterialOrder(orderId: string): Promise<{ item: Item; micron: number | null } | null>;
   warehouseAllowed(warehouse: string): Promise<boolean>;
   startBatch(context: GScaleStartContext, choose: (options: Record<string, string>) => Promise<string | null>): Promise<{ batch: GScaleBatchSession }>;
@@ -53,11 +53,14 @@ export class GScaleOperatorStore {
   private qtyBackup = '';
   private qtyCleared = false;
   private materialPickerOpened = false;
+  private presetGeneration = 0;
   private alive = true;
   private readonly controlOnly: boolean;
-  private readonly linkedOrderId: string;
+  private linkedOrderId: string;
+  private args: GScaleModeArgs;
 
-  constructor(private readonly role: string, private readonly args: GScaleModeArgs, private readonly deps: GScaleOperatorDependencies) {
+  constructor(private readonly role: string, args: GScaleModeArgs, private readonly deps: GScaleOperatorDependencies) {
+    this.args = { ...args, order: args.order ? { ...args.order } : null };
     this.controlOnly = role === 'material_taminotchi' || role === 'tayyorlov_masteri';
     this.linkedOrderId = args.order?.id.trim() ?? '';
     const draft = { ...emptyOperatorControlDraft(), order_id: this.linkedOrderId, printer: 'zebra', print_mode: 'rfid', quantity_source: 'scale' };
@@ -70,6 +73,7 @@ export class GScaleOperatorStore {
   }
   getSnapshot = () => this.state;
   isActive = () => this.alive;
+  currentArgs = () => this.args;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private update(patch: Partial<GScaleOperatorState>) {
     if (!this.alive) return;
@@ -104,13 +108,14 @@ export class GScaleOperatorStore {
       initialWarehouse: this.args.warehouse ?? null, activeBatch: active, freshForm: this.controlOnly && !!this.args.freshForm });
     this.setDraft(draft, false);
     if (this.controlOnly && this.args.freshForm) {
+      const generation = ++this.presetGeneration;
       try {
-        const item = await this.deps.loadPreparationPreset();
-        if (!this.alive) return;
+        const item = await this.deps.loadPreparationPreset(this.args);
+        if (!this.alive || generation !== this.presetGeneration) return;
         this.update({ presetLoading: false, presetItem: item });
         this.tryApplyPreset();
         if (this.state.batch.batch?.active) this.update({ error: this.preparationConflict() });
-      } catch (error) { this.update({ presetLoading: false, presetError: error instanceof Error ? error.message : String(error) }); }
+      } catch (error) { if (generation === this.presetGeneration) this.update({ presetLoading: false, presetError: error instanceof Error ? error.message : String(error) }); }
     } else if (this.controlOnly && this.role === 'material_taminotchi' && this.linkedOrderId) {
       void this.prefillMaterialOrder();
     }
@@ -118,9 +123,10 @@ export class GScaleOperatorStore {
 
   private async prefillMaterialOrder() {
     if (this.state.batch.batch?.active) return;
+    const orderId = this.linkedOrderId;
     try {
-      const choice = await this.deps.prefillMaterialOrder(this.linkedOrderId);
-      if (!this.alive || this.state.batch.batch?.active || this.materialPickerOpened || this.state.draft.item_code || !choice) return;
+      const choice = await this.deps.prefillMaterialOrder(orderId);
+      if (!this.alive || this.linkedOrderId !== orderId || this.state.batch.batch?.active || this.materialPickerOpened || this.state.draft.item_code || !choice) return;
       this.setDraft({ ...this.state.draft, item_code: choice.item.code, item_name: choice.item.name || choice.item.code,
         item_requires_dimensions: choice.item.requiresDimensions, context_saved: false, length_text: '',
         micron_text: choice.micron == null ? '' : formatCompactKg(choice.micron) });
@@ -128,6 +134,32 @@ export class GScaleOperatorStore {
   }
 
   openMaterialPicker(): void { this.materialPickerOpened = true; }
+
+  setOrder(order: GScaleModeArgs['order']): void {
+    if (!this.alive || !this.state.batch.resolved || this.state.presetLoading || this.state.batch.batch?.active ||
+        this.state.actionLoading || this.state.batch.loading || this.state.manualPrintLoading || this.state.simpleLoading || this.state.requestInFlight) return;
+    const previousId = this.linkedOrderId, previousWidth = this.args.order?.width_mm;
+    this.args = { ...this.args, order: order ? { ...order } : null };
+    this.linkedOrderId = order?.id.trim() ?? '';
+    if (previousId !== this.linkedOrderId) {
+      this.materialPickerOpened = false;
+      const draft = this.state.draft;
+      const width = order?.width_mm;
+      this.setDraft({ ...draft, order_id: this.linkedOrderId, item_code: '', item_name: '', item_requires_dimensions: false,
+        context_saved: false, ...(this.usesOrder ? { width_text: !this.args.freshForm && width != null && Number.isFinite(width) && width > 0
+          ? formatCompactKg(width) : '', micron_text: '', length_text: '' } : { warehouse: '' }) });
+      this.update({ contextEditing: false, startConflict: false, error: '' });
+      if (this.controlOnly && this.args.freshForm) {
+        this.presetGeneration++;
+        this.update({ presetLoading: false, presetApplied: !!this.linkedOrderId, presetError: '' });
+      }
+      if (this.controlOnly && this.role === 'material_taminotchi' && this.linkedOrderId) void this.prefillMaterialOrder();
+    } else if (this.controlOnly && this.role === 'material_taminotchi' && previousWidth !== order?.width_mm &&
+               (!this.state.draft.width_text.trim() || this.state.draft.width_text === formatCompactKg(previousWidth ?? 0))) {
+      const width = order?.width_mm;
+      this.setDraft({ ...this.state.draft, width_text: width != null && Number.isFinite(width) && width > 0 ? formatCompactKg(width) : '' });
+    }
+  }
 
   private tryApplyPreset() {
     if (!this.controlOnly || !this.args.freshForm || this.state.presetApplied || this.state.presetLoading ||

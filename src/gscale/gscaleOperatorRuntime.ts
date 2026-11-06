@@ -53,9 +53,10 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
       return choice ? { item: { code: choice.item.code, name: choice.item.name || choice.item.code,
         requiresDimensions: choice.item.requires_dimensions }, micron: choice.micron } : null;
     },
-    loadPreparationPreset: async () => {
-      const item = await loadPreparationReceiptPreset({ orderId: args.order?.id ?? '', materialId: args.materialId ?? '',
-        materialName: args.materialName ?? '', current: () => store.isActive(),
+    loadPreparationPreset: async presetArgs => {
+      const orderId = presetArgs.order?.id ?? '';
+      const item = await loadPreparationReceiptPreset({ orderId, materialId: presetArgs.materialId ?? '',
+        materialName: presetArgs.materialName ?? '', current: () => store.isActive() && (store.currentArgs().order?.id ?? '') === orderId,
         loadPage: (query, orderId, offset, limit) => gscaleItemsPage(session, { query, orderId, offset, limit, useBackend: true }) });
       return item ? { code: item.code, name: item.name || item.code, requiresDimensions: item.requires_dimensions } : null;
     },
@@ -64,7 +65,7 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
       warehouseAllowed, detectOfflinePrinter: () => PrintService.detectOfflinePrinter(),
       itemPage: (query, orderId, useBackend) => gscaleItemsPage(session, { query, orderId, offset: 0, limit: 200, useBackend }),
       chooseApparatus: choose,
-      current: () => { const state = store.getSnapshot(); return { mounted: store.isActive(), linkedOrderId: args.order?.id ?? '',
+      current: () => { const state = store.getSnapshot(); return { mounted: store.isActive(), linkedOrderId: store.currentArgs().order?.id ?? '',
         draftOrderId: state.draft.order_id, batchResolved: state.batch.resolved, batchActive: state.batch.batch?.active === true }; },
       start: request => gscaleRpsBatchStart(session, request),
     }),
