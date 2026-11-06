@@ -1,7 +1,7 @@
 # gscale
 
 Status: in progress
-Stopped at: finish role-specific order selection and the remaining operator states, then implement the platform views and routes.
+Stopped at: connect the catalog and role-specific order loaders, then implement the platform views and routes.
 
 ## Open items
 
@@ -11,6 +11,7 @@ Stopped at: finish role-specific order selection and the remaining operator stat
 | `src/gscale/**` | `gscale_mobile_app*.dart` | Complete the operator dashboard and picker views, compare every remaining state and action against V2, and connect the runtime to the platform routes. |
 | `src/gscale/gscaleDiscovery.ts` | `gscale_mobile_app_helpers_part_10.dart` | V2 iOS additionally runs a Dart UDP fallback after its native UDP pass. Verify whether a second native pass is needed for equivalent results on physical devices. |
 | `src/gscale/gscaleBatchApi.ts` | `mobile_api_gscale_declarations_part_01.dart` | Batch requests and response models have source-derived tests and are connected to operator state. No direct V2 HTTP recording was found for these methods; verify the complete flow against the baseline. |
+| `src/gscale/gscaleAdminApi.ts` | `mobile_api_admin_items_MobileApiAdminItems_methods_01.dart`, `mobile_api_admin_raw_materials_MobileApiAdminRawMaterials_methods_01.dart` | The three catalog/order reads have source-derived tests; no direct V2 HTTP recordings were found. Wire them to the picker and verify the complete flow. |
 | `src/gscale/gscaleControlLogic.ts` | `gscale_mobile_app_helpers_part_07.dart`, `gscale_mobile_app_declarations_part_06.dart` | Quantity/weight gates and receipt-label conversion are connected to operator state; compare remaining actions and states with V2. |
 | `src/gscale/gscaleBatchPrint.ts` | `_printActiveRsBatch` | Local preparation, physical printing and confirmation, including one EPC per label, are implemented and need operator UI wiring and real-printer verification. |
 | `src/gscale/gscaleBatchStart.ts` | `_startRsBatchFromSelection` | Order, warehouse, dimensions and apparatus are checked before batch start; connect the platform apparatus picker. |
@@ -39,13 +40,7 @@ GScale test-mode branches remain for the shared test-mode pass.
 
 Preparation screens currently disable scale entry; connect their entry actions to the new platform routes once the GScale routes and arguments are available. Role routing for GScale-only users also belongs to the shared route owner.
 
-The shared `adminItemsPage` and `adminWarehouses` API methods used by `gscale_catalog.dart` are absent in this checkout. Supply those shared methods so the GScale catalog adapter can use the same API for admin and other eligible roles.
-
-The shared `adminRawMaterialAssignmentOrders` method is also absent; the material supplier's GScale order picker requires it. Preparation orders can use the existing `preparationSnapshot` reader.
-
-The role ledger does not recognize `gscale`, so `port_ledger.mjs role gscale 1` cannot generate a reading list or satisfy the role gate. Add GScale session support to the ledger.
-
-The iOS and Android screen skills require `docs/port/roles/gscale.md` before screen work. That path is not in the GScale session's write fence; supply the GScale UI contract through the integrator.
+The updated GScale skill uses its own reading list in place of a role-ledger gate; GScale is not a role.
 
 ## Verification at stop
 
