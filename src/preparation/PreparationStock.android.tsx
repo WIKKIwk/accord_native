@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { preparationReverseReceipt } from './preparationCommandApi';
 import { usePreparationContext } from './PreparationContext.android';
 import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRenameWarehouse } from './preparationManagementApi';
@@ -30,9 +30,15 @@ function useStockActions() {
   return { receive, createMaterial };
 }
 
+function useStockReturnReload(controller: ReturnType<typeof usePreparationContext>['home']['controller']) {
+  const focused = useRef(false);
+  useFocusEffect(useCallback(() => { if (focused.current) void controller.reload(); focused.current = true; }, [controller]));
+}
+
 // @v2 PreparationWarehouseScreen
 export function PreparationWarehouseScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
+  useStockReturnReload(home.controller);
   const { receive, createMaterial } = useStockActions();
   const [query, setQuery] = useState(''), [managing, setManaging] = useState(false);
   const data = home.snapshot, warehouse = home.warehouse;
@@ -116,6 +122,7 @@ function historySubtitle(doc: Record<string, unknown>) {
 export function PreparationMaterialDetailScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const { home, session } = usePreparationContext(), { receive } = useStockActions(), t = usePreparationText();
+  useStockReturnReload(home.controller);
   const item = home.snapshot?.materials.find(material => material.code === code);
   const warehouse = home.warehouse;
   const history = preparationMaterialHistory(home.snapshot?.history ?? [], warehouse ?? '', code ?? '');
