@@ -38,7 +38,7 @@ No V2 HTTP recordings were found for warehouse creation or deletion; source-deri
 
 ## Needs from the integrator
 
-- Audit/connect the shared inventory-movements route and its existing base stores for preparation access; its UI and shared logic are outside this role’s file fence.
+- The inventory-movements native route and picker/detail UI must be supplied by the preparation platform sessions. `preparationInventoryStore` connects its preparation guard and shared live store, and `preparationInventoryAssets` applies V2's raw-material and assignment scope; transfer mutations are in `preparationInventoryTransfers.ts`.
 - Connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet. The preparation home targets are configured, but those platform routes do not exist in this branch yet.
 
 ## Verification
