@@ -147,6 +147,12 @@ export class PreparationFormulaState {
       throw error;
     } finally { this.update({ openingReceipt: false }); }
   }
+  invalidate() {
+    if (!this.active) return;
+    this.generation++; this.update({ materials: [], formulas: [], variantName: '', recipeKey: null, estimatedMaterialKg: null,
+      loading: false, saving: false, deleting: false, openingReceipt: false, editing: false, editingName: null, rows: [], notice: null,
+      error: 'Akkaunt o‘zgargan. Sahifani qayta oching' }); this.active = false;
+  }
   dispose() { this.active = false; this.generation++; this.listeners.clear(); }
 }
 export function usePreparationFormula(session: Session, options: PreparationFormulaOptions) {

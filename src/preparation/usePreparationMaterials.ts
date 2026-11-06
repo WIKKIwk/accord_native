@@ -28,7 +28,7 @@ export class PreparationMaterialsState {
   activate() { if (!this.active) { this.active = true; this.update({ loading: true, refreshing: false, saving: false }); } }
   setQuery(query: string) { this.update({ query }); }
   async load(refresh = false) {
-    if (this.state.saving || this.state.refreshing) return;
+    if (!this.active || this.state.saving || this.state.refreshing) return;
     const generation = this.generation; this.update({ loading: !refresh, refreshing: true, error: null });
     try {
       const items = await preparationOwnedMaterials(this.session);
@@ -37,7 +37,7 @@ export class PreparationMaterialsState {
     finally { if (this.active && generation === this.generation) this.update({ loading: false, refreshing: false }); }
   }
   async rename(material: Material, name: string) {
-    if (this.state.saving || this.state.loading || this.state.refreshing) return;
+    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return;
     this.update({ saving: true });
     try {
       const saved = await preparationRenameMaterial(this.session, material.item_code, name);
@@ -46,24 +46,30 @@ export class PreparationMaterialsState {
     } finally { this.update({ saving: false }); }
   }
   async remove(material: Material) {
-    if (this.state.saving || this.state.loading || this.state.refreshing) return;
+    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return;
     this.update({ saving: true });
     try { await preparationDeleteMaterial(this.session, material.item_code);
       this.update({ items: this.state.items.filter(item => item.item_code !== material.item_code) }); }
     finally { this.update({ saving: false }); }
   }
   async warehouseChoices(material: Material) {
-    if (this.state.saving || this.state.loading || this.state.refreshing) return null;
+    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return null;
     this.update({ saving: true });
-    try { const snapshot = await preparationSnapshot(this.session); return preparationWarehouseChoices(snapshot.material_warehouses, material.warehouses); }
+    try { const snapshot = await preparationSnapshot(this.session);
+      return this.active ? preparationWarehouseChoices(snapshot.material_warehouses, material.warehouses) : null; }
     finally { this.update({ saving: false }); }
   }
   async setWarehouses(material: Material, warehouses: string[]) {
-    if (this.state.saving || this.state.loading || this.state.refreshing) return;
+    if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return;
     this.update({ saving: true });
     try { const updated = await preparationSetMaterialWarehouses(this.session, material.item_code, warehouses);
       this.update({ items: this.state.items.map(item => item.item_code === updated.item_code ? updated : item) }); }
     finally { this.update({ saving: false }); }
+  }
+  invalidate() {
+    if (!this.active) return;
+    this.generation++; this.update({ items: [], query: '', loading: false, refreshing: false, saving: false,
+      error: 'Akkaunt o‘zgargan. Sahifani qayta oching' }); this.active = false;
   }
   dispose() { this.active = false; this.generation++; this.listeners.clear(); }
 }

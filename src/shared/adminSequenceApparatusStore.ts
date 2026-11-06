@@ -8,6 +8,7 @@ type Apparatus = { id: string; name: string };
 export class AdminSequenceApparatusStore {
   private id: string | null = null;
   private name: string | null = null;
+  private generation = 0;
   constructor(private readonly preferences: Preferences = appPreferences,
     private readonly profileRef: () => string | null = () => String(currentSession()?.profile.ref ?? '')) {}
   get cachedApparatusId() { return this.id; }
@@ -18,17 +19,20 @@ export class AdminSequenceApparatusStore {
   }
   preferenceNameKey(profileRef?: string | null) { return `${this.preferenceKey(profileRef)}_name`; }
   async loadSavedApparatusId(profileRef?: string | null): Promise<string | null> {
+    const generation = this.generation;
+    const ref = profileRef ?? this.profileRef();
     try {
-      let id = (await this.preferences.getItem(this.preferenceKey(profileRef)))?.trim();
-      let name = (await this.preferences.getItem(this.preferenceNameKey(profileRef)))?.trim();
-      if (!id && (profileRef ?? this.profileRef() ?? '').trim()) {
+      let id = (await this.preferences.getItem(this.preferenceKey(ref)))?.trim();
+      let name = (await this.preferences.getItem(this.preferenceNameKey(ref)))?.trim();
+      if (!id && (ref ?? '').trim()) {
         id = (await this.preferences.getItem(this.preferenceKey('default')))?.trim();
         name = (await this.preferences.getItem(this.preferenceNameKey('default')))?.trim();
       }
+      if (generation !== this.generation) return null;
       if (id) this.id = id;
       if (name) this.name = name;
     } catch { /* Preferences are optional, as in V2. */ }
-    return this.id;
+    return generation === this.generation ? this.id : null;
   }
   async saveApparatus(apparatus: Apparatus, profileRef?: string | null): Promise<void> {
     const id = apparatus.id.trim(), name = apparatus.name.trim();
@@ -51,7 +55,7 @@ export class AdminSequenceApparatusStore {
     return (targetId ? values.find(item => item.id.trim() === targetId) : undefined) ??
       (targetName ? values.find(item => item.name.trim().toLowerCase() === targetName.toLowerCase()) : undefined) ?? null;
   }
-  clearCache() { this.id = null; this.name = null; }
+  clearCache() { this.generation++; this.id = null; this.name = null; }
 }
 
 export const adminSequenceApparatusStore = new AdminSequenceApparatusStore();

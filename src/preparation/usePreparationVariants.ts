@@ -113,6 +113,12 @@ export class PreparationVariantsState {
       if (this.current) this.update({ variants: this.state.variants.filter(item => item.id !== variant.id) });
     } finally { this.update({ removing: false }); }
   }
+  invalidate() {
+    if (!this.active) return;
+    this.generation++; this.catalogRequest = null; this.update({ variants: [], loading: false, creating: false, opening: false,
+      copying: false, removing: false, savingName: false, requestId: null, nameError: null,
+      error: 'Akkaunt o‘zgargan. Sahifani qayta oching' }); this.active = false;
+  }
   dispose() { this.active = false; this.generation++; this.listeners.clear(); }
 }
 export function usePreparationVariants(session: Session, options: PreparationVariantsOptions) {

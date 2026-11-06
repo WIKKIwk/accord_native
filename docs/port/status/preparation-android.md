@@ -29,7 +29,7 @@ The preparation logic session owns the deferred test-mode branches.
 - Add `/android-preparation` to the shared role home-target table and connect the native route tree.
 - Complete the borrowed read-only admin order detail sections and calculation-template-derived values.
 - Supply shared `searchMatches`, the scale receipt and inventory-movement routes, the Android chat destination, a role-appropriate profile destination, and printer selection/transport.
-- Review the existing shared controllers' account-scope invalidation and complete the contract's dynamic localization inventory.
+- Complete the contract's dynamic localization inventory.
 
 ## Verification
 

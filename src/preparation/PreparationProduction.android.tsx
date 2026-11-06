@@ -35,6 +35,7 @@ function useJournal<T, S>(factory: (change: (state: JournalState<T, S>) => void)
   }, [factory]);
   const journal = group.journal;
   useEffect(() => group.mount(), [group]);
+  useEffect(() => registerSessionResetHook(async () => { journal.invalidate(); }), [journal]);
   useFocusEffect(useCallback(() => { journal.setVisible(true); return () => journal.setVisible(false); }, [journal]));
   useEffect(() => {
     journal.setResumed(AppState.currentState === 'active');

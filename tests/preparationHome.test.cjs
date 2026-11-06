@@ -31,3 +31,15 @@ test('home locks uncertain operations and refreshes after a failed submission', 
   await state.reload(); await assert.rejects(state.submit('receipts', {}));
   assert.equal(count, 2); assert.equal(state.getSnapshot().pending.kind, 'receipts'); assert.equal(state.locked, true);
 });
+
+test('account reset clears home state and rejects a late snapshot', async () => {
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  const state = setup({ snapshot: () => pending, pending: async () => null, submit: async () => ({}) });
+  const read = state.reload();
+  await Promise.resolve();
+  state.invalidate(); release(snapshot()); await read;
+  assert.equal(state.getSnapshot().snapshot, null);
+  assert.equal(state.getSnapshot().warehouse, null);
+  assert.match(state.getSnapshot().error, /Akkaunt/);
+});

@@ -30,3 +30,14 @@ test('apparatus selection keeps in-memory values if preference access fails', as
   store.clearCache();
   assert.equal(await store.loadSavedApparatusId(), null);
 });
+
+test('an account reset prevents an old preference read from restoring the previous cache', async () => {
+  let resolve;
+  const first = new Promise(done => { resolve = done; });
+  const store = new AdminSequenceApparatusStore({ getItem: async () => first, setItem: async () => {} }, () => 'old');
+  const pending = store.loadSavedApparatusId();
+  store.clearCache(); resolve('old-apparatus');
+  assert.equal(await pending, null);
+  assert.equal(store.cachedApparatusId, null);
+  assert.equal(store.cachedApparatusName, null);
+});

@@ -36,6 +36,10 @@ export class PreparationJournal<T, S = unknown> {
   }
   sessionChanged(): void {
     if (this.current || this.disposed) return;
+    this.invalidate();
+  }
+  invalidate(): void {
+    if (!this.valid || this.disposed) return;
     this.valid = false; this.epoch++; this.queued = false;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;

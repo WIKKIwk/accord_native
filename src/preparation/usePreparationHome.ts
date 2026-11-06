@@ -24,6 +24,7 @@ export class PreparationHomeState {
   get locked() { return this.state.loading || this.state.saving || this.state.pending !== null; }
   activate() { this.active = true; }
   async reload() {
+    if (!this.active) return;
     const revision = this.revision;
     const current = () => this.active && revision === this.revision;
     this.update({ loading: true, error: null });
@@ -49,7 +50,7 @@ export class PreparationHomeState {
     const percentages = { ...this.state.percentages }; delete percentages[code]; this.update({ percentages });
   }
   async submit(kind: string, payload: Record<string, unknown>) {
-    if (this.state.saving) return;
+    if (!this.active || this.state.saving) return;
     const revision = this.revision;
     this.update({ saving: true });
     try {
@@ -59,6 +60,13 @@ export class PreparationHomeState {
     } finally {
       if (this.active && revision === this.revision) { this.update({ saving: false }); await this.reload(); }
     }
+  }
+  invalidate() {
+    if (!this.active) return;
+    this.revision++;
+    this.update({ snapshot: null, pending: null, warehouse: null, orderId: null, percentages: {}, loading: false, saving: false,
+      error: 'Akkaunt o‘zgargan. Sahifani qayta oching' });
+    this.active = false;
   }
   dispose() { this.active = false; this.revision++; this.listeners.clear(); }
 }

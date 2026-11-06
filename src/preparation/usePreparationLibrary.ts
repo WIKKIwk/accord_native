@@ -70,6 +70,11 @@ export class PreparationLibraryState {
     this.update({ busy: true });
     try { await open(); } finally { this.update({ busy: false }); if (this.current) await this.load(); }
   }
+  invalidate() {
+    if (!this.active) return;
+    this.generation++; this.update({ sets: [], recipes: [], query: '', loading: false, busy: false,
+      error: 'Akkaunt o‘zgargan. Sahifani qayta oching' }); this.active = false;
+  }
   dispose() { this.active = false; this.generation++; this.listeners.clear(); }
 }
 export function usePreparationLibrary(session: Session, mode: 'sets' | 'catalog') {

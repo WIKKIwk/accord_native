@@ -12,6 +12,7 @@ const PreparationContext = createContext<Context | null>(null);
 
 function Provider({ session, onLogout, children }: { session: Session; onLogout: () => void; children: ReactNode }) {
   const home = usePreparationHome(session);
+  useEffect(() => registerSessionResetHook(async () => { home.controller.invalidate(); }), [home.controller]);
   return <PreparationContext.Provider value={{ session, home, onLogout }}><PreparationDialogs>{children}</PreparationDialogs></PreparationContext.Provider>;
 }
 
