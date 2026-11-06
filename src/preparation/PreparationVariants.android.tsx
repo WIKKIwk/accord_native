@@ -1,5 +1,5 @@
-import { AlertDialog, Host, OutlinedTextField, Text, TextButton, useNativeState } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
+import { AlertDialog, Column, Host, OutlinedTextField, Text, TextButton, useNativeState } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, useWindowDimensions } from 'react-native';
@@ -7,25 +7,30 @@ import { usePreparationContext } from './PreparationContext.android';
 import { openPreparationFormula, readPreparationRouteData } from './preparationNavigation.android';
 import { PreparationButton, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { preparationVariantNameCanSave } from './usePreparationLibrary';
-import { usePreparationVariants, type PreparationVariantsOptions } from './usePreparationVariants';
+import { usePreparationVariantsView } from './usePreparationAndroidView.android';
+import { preparationFormulaErrorMessage } from './usePreparationFormula';
+import type { PreparationVariantsOptions } from './usePreparationVariants';
 
 type Options = PreparationVariantsOptions & { orderCode: string; productTitle: string; materialName: string };
-type Variant = ReturnType<typeof usePreparationVariants>['variants'][number];
+type Variant = ReturnType<typeof usePreparationVariantsView>['variants'][number];
 
 // @v2 _VariantNameDialog
-function VariantNameDialog({ initial, busy, error, submit, cancel }: { initial?: string; busy: boolean; error: string | null;
-  submit: (name: string) => void; cancel: () => void }) {
+export function VariantNameDialog({ initial, busy, error, submit, cancel, orderScoped = false, clearError }: { initial?: string; busy: boolean; error: string | null;
+  submit: (name: string) => void; cancel: () => void; orderScoped?: boolean; clearError?: () => void }) {
   const { width, height } = useWindowDimensions(), t = usePreparationText();
   const nativeValue = useNativeState(initial ?? ''), [value, setValue] = useState(initial ?? '');
   const close = () => { if (!busy) cancel(); };
   return <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
     <AlertDialog onDismissRequest={close} properties={{ dismissOnBackPress: !busy, dismissOnClickOutside: !busy }}>
-      <AlertDialog.Title><Text>{t(initial ? 'Nomini o‘zgartirish' : 'Variant qo‘shish')}</Text></AlertDialog.Title>
-      <AlertDialog.Text><OutlinedTextField value={nativeValue} enabled={!busy} singleLine onValueChange={setValue} modifiers={[fillMaxWidth()]}>
+      <AlertDialog.Title><Text>{t(initial ? 'Nomini o‘zgartirish' : 'Shnek variantiga nom bering')}</Text></AlertDialog.Title>
+      <AlertDialog.Text><Column verticalArrangement={{ spacedBy: 8 }}><OutlinedTextField value={nativeValue} enabled={!busy} singleLine autoFocus
+        onValueChange={next => { setValue(next); clearError?.(); }} modifiers={[fillMaxWidth(), testID('preparation-variant-name')]}>
         <OutlinedTextField.Label><Text>{t('Variant nomi')}</Text></OutlinedTextField.Label>
-      </OutlinedTextField>{error ? <Text>{error}</Text> : null}</AlertDialog.Text>
+      </OutlinedTextField>{initial ? <Text>{t(orderScoped ? 'Bu nom faqat shu buyurtma uchun saqlanadi.' : 'Yangi nom keyingi buyurtmalarga biriktirishda olinadi.')}</Text> : null}
+      {error ? <Text>{error}</Text> : null}</Column></AlertDialog.Text>
       <AlertDialog.DismissButton><TextButton enabled={!busy} onClick={close}><Text>{t('Bekor qilish')}</Text></TextButton></AlertDialog.DismissButton>
-      <AlertDialog.ConfirmButton><TextButton enabled={!busy && preparationVariantNameCanSave(value, initial)} onClick={() => submit(value)}>
+      <AlertDialog.ConfirmButton><TextButton enabled={!busy && preparationVariantNameCanSave(value, initial)} onClick={() => submit(value)}
+        modifiers={[testID(initial ? 'preparation-variant-rename' : 'preparation-variant-create')]}>
         <Text>{t('Saqlash')}</Text></TextButton></AlertDialog.ConfirmButton>
     </AlertDialog>
   </Host>;
@@ -39,11 +44,13 @@ export function PreparationFormulaVariantsScreen() {
 }
 
 function Variants({ options }: { options: Options }) {
-  const { session } = usePreparationContext(), state = usePreparationVariants(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const { session } = usePreparationContext(), state = usePreparationVariantsView(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
   const [nameDialog, setNameDialog] = useState<'create' | Variant | null>(null), [renaming, setRenaming] = useState(false), [renameError, setRenameError] = useState<string | null>(null);
+  const [hideCreateError, setHideCreateError] = useState(false);
+  const renameInFlight = useRef(false);
   const focused = useRef(false);
   useFocusEffect(useCallback(() => { if (focused.current) void state.controller.load(); focused.current = true; }, [state.controller]));
-  const blocked = state.loading || state.creating || state.opening || state.removing || state.copying;
+  const blocked = state.actionsBlocked;
   const open = (variant: Variant) => openPreparationFormula({ ...options, variantId: variant.id, variantName: variant.name });
   const menu = async (variant: Variant) => {
     const action = await dialogs.choose(variant.name, [{ label: 'Tahrirlash', value: 'edit' }, { label: 'O‘chirish', value: 'delete' },
@@ -56,13 +63,15 @@ function Variants({ options }: { options: Options }) {
   };
   const submit = async (name: string) => {
     if (nameDialog === 'create') {
+      setHideCreateError(false);
       const variant = await state.controller.create(name);
       if (variant) { setNameDialog(null); open(variant); }
     } else if (nameDialog) {
-      setRenaming(true); setRenameError(null);
+      if (renameInFlight.current) return;
+      renameInFlight.current = true; setRenaming(true); setRenameError(null);
       try { const variant = await state.controller.rename(nameDialog, name); if (variant) setNameDialog(null); }
-      catch (error) { setRenameError(error instanceof Error ? error.message : String(error)); }
-      finally { setRenaming(false); }
+      catch (error) { setRenameError(preparationFormulaErrorMessage(error)); }
+      finally { renameInFlight.current = false; setRenaming(false); }
     }
   };
   return <>
@@ -79,7 +88,8 @@ function Variants({ options }: { options: Options }) {
       }} />
     </PreparationPage>
     {nameDialog ? <VariantNameDialog initial={nameDialog === 'create' ? undefined : nameDialog.name} busy={state.savingName || renaming}
-      error={nameDialog === 'create' ? state.nameError : renameError} submit={name => void submit(name)}
+      error={nameDialog === 'create' ? (hideCreateError ? null : state.nameError) : renameError} submit={name => void submit(name)} orderScoped
+      clearError={() => { setRenameError(null); setHideCreateError(true); }}
       cancel={() => { if (nameDialog === 'create') state.controller.cancelCreate(); setNameDialog(null); }} /> : null}
   </>;
 }

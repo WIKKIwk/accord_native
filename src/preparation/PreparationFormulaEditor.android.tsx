@@ -1,12 +1,15 @@
 import { AlertDialog, Host, RNHostView, Text, TextButton } from '@expo/ui/jetpack-compose';
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
+import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext.android';
+import { PreparationFormulaDetails, type FormulaDetailAction } from './PreparationFormulaDetails.android';
 import { preparationEstimatedKgDisplay, preparationDisplay, type PreparationFormula } from './preparationModel';
 import { preparationFormulaPresentation, preparationShareDisplay, readPreparationRouteData } from './preparationNavigation.android';
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
-import { usePreparationFormula, type PreparationFormulaOptions } from './usePreparationFormula';
+import { usePreparationFormulaView } from './usePreparationAndroidView.android';
+import type { PreparationFormulaOptions } from './usePreparationFormula';
 
 // @v2 _FormulaSharesSheet
 export function PreparationSharesDialog({ formulas, onSave, onClose }: {
@@ -14,14 +17,15 @@ export function PreparationSharesDialog({ formulas, onSave, onClose }: {
 }) {
   const [values, setValues] = useState(() => formulas.map(formula => formula.share_percent ? preparationDisplay(formula.share_percent) : ''));
   const [saving, setSaving] = useState(false), [error, setError] = useState<string | null>(null);
+  const savingRef = useRef(false);
   const { width, height } = useWindowDimensions(), t = usePreparationText(), status = preparationShareDisplay(values);
-  const close = () => { if (!saving) onClose(); };
+  const close = () => { if (!savingRef.current) onClose(); };
   const save = async () => {
-    if (!status.valid || saving) return;
-    setSaving(true); setError(null);
+    if (!status.valid || savingRef.current) return;
+    savingRef.current = true; setSaving(true); setError(null);
     try { await onSave(values); onClose(); }
     catch (failure) { setError(failure instanceof Error ? failure.message : t('Shnek ulushlari saqlanmadi. Qayta urinib ko‘ring')); }
-    finally { setSaving(false); }
+    finally { savingRef.current = false; setSaving(false); }
   };
   return <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
     <AlertDialog onDismissRequest={close} properties={{ dismissOnBackPress: !saving, dismissOnClickOutside: !saving }}>
@@ -46,22 +50,25 @@ export function PreparationOrderFormulaScreen() {
 }
 
 function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
-  const { session } = usePreparationContext(), state = usePreparationFormula(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
-  const [shares, setShares] = useState(false);
-  const blocked = state.loading || state.saving || state.deleting || state.openingReceipt;
+  const { session } = usePreparationContext(), state = usePreparationFormulaView(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const [shares, setShares] = useState(false), sheet = useNativeSheet();
+  const blocked = state.actionsBlocked;
   const showError = (error: unknown) => dialogs.message('Xatolik yuz berdi', error instanceof Error ? error.message : String(error));
-  const openFormula = async (formula: PreparationFormula) => {
-    const action = await dialogs.choose(formula.name, [
-      { label: 'Shnek ulushlarini belgilash', value: 'shares' }, { label: 'Tahrirlash', value: 'edit' }, { label: 'O‘chirish', value: 'delete' },
-    ], `${options.materialName} · ${formula.name}\n${preparationFormulaPresentation(formula, state.formulas, state.estimatedMaterialKg)}`);
+  const formulaAction = async (formula: PreparationFormula, action: FormulaDetailAction) => {
     if (action === 'shares') setShares(true);
     else if (action === 'edit') state.controller.openEditor(formula);
     else if (action === 'delete' && await dialogs.confirm('Formulani o‘chirish', `«${formula.name}» formulasi o‘chirilsinmi?`, 'O‘chirish')) {
       try { await state.controller.remove(formula.name); } catch (error) { showError(error); }
     }
   };
+  const openFormula = (formula: PreparationFormula) => {
+    let selected: FormulaDetailAction | null = null;
+    sheet.open(<PreparationFormulaDetails formula={formula} formulas={state.formulas} materialName={options.materialName}
+      estimatedKg={state.estimatedMaterialKg} onSelect={action => { selected = action; sheet.close(); }} />,
+    { dismissible: true, compact: true, onDismiss: () => { if (selected) void formulaAction(formula, selected); } });
+  };
   const chooseMaterial = async (index: number) => {
-    const code = await dialogs.choose('Homashyo tanlang', state.materials.map(item => ({ label: item.name, subtitle: item.code, value: item.code })));
+    const code = await dialogs.choose('Homashyo tanlang', state.materials.map(item => ({ label: item.name, subtitle: item.code, value: item.code })), undefined, true);
     const material = state.materials.find(item => item.code === code);
     if (material) state.controller.setRows(state.rows.map((row, i) => i === index ? { ...row, material } : row));
   };
@@ -86,7 +93,7 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
       </> : null}
       {state.formulas.map(formula => <PreparationRow key={formula.name} title={formula.name}
         subtitle={preparationFormulaPresentation(formula, state.formulas, state.estimatedMaterialKg)} disabled={blocked}
-        onPress={() => void openFormula(formula)} />)}
+        onPress={() => openFormula(formula)} />)}
       {(!options.manageSavedFormula || options.allowAddingFormula) && !state.editing ? <PreparationButton
         label={options.manageSavedFormula ? 'Ichki formula qo‘shish' : 'Shnek formula qo‘shish'} disabled={blocked}
         onPress={() => state.controller.openEditor()} /> : null}

@@ -29,11 +29,13 @@ export function PreparationSequenceList({ session, controller, selectApparatus, 
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const [query, setQuery] = useState(''), dialogs = usePreparationDialogs(), t = usePreparationText();
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const colors = useMaterialColors(), insets = useSafeAreaInsets(), visible = useRef(false);
+  const colors = useMaterialColors(), insets = useSafeAreaInsets(), visible = useRef(false), focusedOnce = useRef(false);
   const lifecycle = useMemo(() => sequenceLifecycle(controller), [controller]);
   useEffect(() => lifecycle.mount(), [lifecycle]);
   useFocusEffect(useCallback(() => {
-    visible.current = true; controller.setForeground(AppState.currentState === 'active');
+    visible.current = true;
+    if (focusedOnce.current || AppState.currentState !== 'active') controller.setForeground(AppState.currentState === 'active');
+    focusedOnce.current = true;
     return () => { visible.current = false; controller.setForeground(false); };
   }, [controller]));
   useEffect(() => {

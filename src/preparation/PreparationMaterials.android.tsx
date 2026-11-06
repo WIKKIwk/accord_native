@@ -1,12 +1,12 @@
 import { ActivityIndicator } from 'react-native';
 import { usePreparationContext } from './PreparationContext.android';
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
-import { usePreparationMaterials } from './usePreparationMaterials';
+import { usePreparationMaterialsView } from './usePreparationAndroidView.android';
 
 // @v2 PreparationMaterialsScreen
 export function PreparationMaterialsScreen() {
-  const { session } = usePreparationContext(), state = usePreparationMaterials(session), dialogs = usePreparationDialogs(), t = usePreparationText();
-  const blocked = state.loading || state.refreshing || state.saving;
+  const { session } = usePreparationContext(), state = usePreparationMaterialsView(session), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const blocked = state.actionsBlocked;
   const showError = (error: unknown) => dialogs.message('Xatolik yuz berdi', error instanceof Error ? error.message : String(error));
   const menu = async (item: typeof state.items[number]) => {
     if (blocked) return;

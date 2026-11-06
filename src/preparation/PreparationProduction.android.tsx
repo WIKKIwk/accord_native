@@ -60,15 +60,15 @@ export function PreparationProductionScreen() {
   const firstFilter = useRef(true);
   useEffect(() => {
     if (firstFilter.current) { firstFilter.current = false; return; }
-    const timer = setTimeout(() => { filters.current = { query: query.trim(), status }; void journal.load(); }, 350);
+    const timer = setTimeout(() => { filters.current = { ...filters.current, query: query.trim() }; void journal.load(); }, 350);
     return () => clearTimeout(timer);
-  }, [query, status, journal]);
+  }, [query, journal]);
   const chooseStatus = async () => {
     const value = await dialogs.choose('Holat', [{ label: 'Barchasi', value: 'all' },
       { label: 'Davom etmoqda', value: 'active' }, { label: 'Yakunlangan', value: 'completed' }]);
-    if (value) setStatus(value);
+    if (value) { setStatus(value); filters.current = { query: query.trim(), status: value }; void journal.load(); }
   };
-  return <PreparationPage title="Ishlab chiqarish" refreshing={state.loading && !!state.items.length} onRefresh={() => void journal.load()}>
+  return <PreparationPage title="Ishlab chiqarish" drawer refreshing={state.loading && !!state.items.length} onRefresh={() => void journal.load()}>
     <PreparationField label="Buyurtma, homashyo yoki formula" onChange={setQuery} />
     <PreparationRow title={t('Holat')} subtitle={t(status === 'active' ? 'Davom etmoqda' : status === 'completed' ? 'Yakunlangan' : 'Barchasi')}
       onPress={() => void chooseStatus()} />

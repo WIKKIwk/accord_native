@@ -40,7 +40,7 @@ export function PreparationWarehouseScreen() {
     if (!data || managing || home.locked) return;
     try {
       if (kind === 'create') {
-        const parent = await dialogs.choose('Ombor tanlang', data.material_warehouses.map(name => ({ label: name, value: name })));
+        const parent = await dialogs.choose('Ombor tanlang', data.material_warehouses.map(name => ({ label: name, value: name })), undefined, true);
         if (!parent) return;
         const name = await dialogs.input({ title: 'Ombor qo‘shish', label: 'Ombor nomi' });
         if (name === null) return;
@@ -65,7 +65,7 @@ export function PreparationWarehouseScreen() {
     finally { setManaging(false); }
   };
   const selectWarehouse = async () => {
-    const selected = await dialogs.choose('Ombor', (data?.assigned_warehouses ?? []).map(name => ({ label: name, value: name })));
+    const selected = await dialogs.choose('Ombor', (data?.assigned_warehouses ?? []).map(name => ({ label: name, value: name })), undefined, true);
     if (selected !== null) home.controller.selectWarehouse(selected);
   };
   const warehouseMenu = async () => {
@@ -75,11 +75,11 @@ export function PreparationWarehouseScreen() {
   };
   const pickReceipt = async () => {
     const receivable = preparationVisibleMaterials(data?.materials ?? [], warehouse).filter(item => item.can_receive);
-    const code = await dialogs.choose('Homashyo tanlang', receivable.map(item => ({ label: item.name, value: item.code })));
+    const code = await dialogs.choose('Homashyo tanlang', receivable.map(item => ({ label: item.name, subtitle: item.code, value: item.code })), undefined, true);
     const material = receivable.find(item => item.code === code);
     if (material) await receive(material);
   };
-  return <PreparationPage title="Ombor" refreshing={home.loading} onRefresh={() => void home.controller.reload()}>
+  return <PreparationPage title="Ombor" refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
     {!data?.assigned_warehouses.length ? <PreparationText>{t('Sizga ombor biriktirilmagan.')}</PreparationText> : null}
     <PreparationRow title={t('Ombor')} subtitle={warehouse ?? t('Tanlanmagan')} onPress={() => void selectWarehouse()}
       onLongPress={() => void warehouseMenu()} disabled={home.locked || managing} />
@@ -116,7 +116,7 @@ export function PreparationMaterialDetailScreen() {
   const warehouse = home.warehouse;
   const history = preparationMaterialHistory(home.snapshot?.history ?? [], warehouse ?? '', code ?? '');
   const manual = preparationReceiptMode(warehouse, home.snapshot?.material_warehouses ?? []) === 'manual';
-  return <PreparationPage title={item?.name ?? 'Homashyo'} refreshing={home.loading} onRefresh={() => void home.controller.reload()}>
+  return <PreparationPage title={item?.name ?? 'Homashyo'} refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
     {item ? <PreparationRow title={item.name} subtitle={`${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`} /> : null}
     {item && manual && item.can_receive ? <PreparationButton label="Kirim qilish" disabled={home.locked} onPress={() => void receive(item)} /> : null}
     {!history.receipts.length && !history.consumptions.length ? <PreparationText>{t('Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.')}</PreparationText> : null}
