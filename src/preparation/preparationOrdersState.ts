@@ -28,6 +28,7 @@ export class PreparationOrdersState {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.state;
   private get current() { return this.active && !this.invalidated && this.isCurrent(); }
+  activate() { this.active = true; }
   private update(patch: Partial<State>) { if (!this.active) return; this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()); }
   private apply(window: PreparationOrderListWindow, persist = true, loading = false) {
     this.update({ window, apparatus: window.apparatus_id, rows: window.rows, loading, error: null });

@@ -1,13 +1,22 @@
 import { Button, Host, HStack, List, Menu, ProgressView, RNHostView, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
 import { disabled, onAppear } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import type { Session } from '../auth';
+import { activeSessionToken, registerSessionResetHook } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { WorkerOrderThumbnail } from '../components/WorkerOrderThumbnail';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { productionText } from '../shared/localization';
+import { sessionReadScope } from '../sessionReadScope';
+import { WorkerOrderOverview } from '../components/WorkerOrderOverview';
+import { workerOrderDetailFromSnapshot } from '../workerApi';
+import { adminSequenceApparatusStore } from '../shared/adminSequenceApparatusStore';
+import { preparationOrdersWarmStore } from './preparationRuntime';
+import { subscribePreparationOrdersLive } from './preparationOrdersLive';
+import { PreparationOrdersState as OrdersState } from './preparationOrdersState';
+import { usePreparationContext } from './PreparationContext';
 import { localeController } from '../shared/localization/runtime';
 import { PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
 import { preparationOrderDetail, type PreparationOrderListRow } from './preparationOrdersApi';
@@ -29,6 +38,7 @@ function OrderDetail({ session, controller, row, close, renderDetail }: Props & 
       .finally(() => setLoading(false));
   }, [session, row.id, exists]);
   useEffect(() => {
+    controller.activate();
     if (!exists) return;
     let active = true;
     void preparationOrderDetail(session, row.id).then(value => { if (active) setDetail(value); })
@@ -56,8 +66,7 @@ function SequenceRow({ session, row }: { session: Session; row: PreparationOrder
   </HStack>;
 }
 
-// V2 _PreparationOrdersListState. The integrator supplies its shared warm store,
-// persisted apparatus selection and the existing read-only detail presentation.
+// @v2 _PreparationOrdersListState
 export function PreparationSequence({ session, controller, selectApparatus, renderDetail }: Props) {
   const t = usePreparationText(), sheet = useNativeSheet();
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
@@ -85,4 +94,26 @@ export function PreparationSequence({ session, controller, selectApparatus, rend
     {state.window?.next_cursor != null && <Section><Button label={t('Yana yuklash')} modifiers={[disabled(state.loading)]}
       onPress={() => { void controller.loadMore(); }} /></Section>}
   </PreparationList></>;
+}
+
+export function PreparationSequenceRoute() {
+  const { session } = usePreparationContext();
+  const controller = useMemo(() => {
+    const scope = sessionReadScope(session);
+    return new OrdersState(preparationOrdersWarmStore, () => !!activeSessionToken(session) && sessionReadScope(session) === scope,
+      (window, search, length, onEvent, onError, onDone) => subscribePreparationOrdersLive(session, window,
+        { search, length }, onEvent, onError, onDone), () => adminSequenceApparatusStore.loadSavedApparatusId());
+  }, [session]);
+  useEffect(() => {
+    const unregister = registerSessionResetHook(async () => { controller.sessionChanged(true); });
+    void controller.start();
+    return () => { unregister(); controller.dispose(); };
+  }, [controller]);
+  const selectApparatus = useCallback(async (id: string) => {
+    const apparatus = controller.getSnapshot().window?.apparatus.find(item => item.id === id);
+    if (apparatus) await adminSequenceApparatusStore.saveApparatus(apparatus);
+  }, [controller]);
+  return <PreparationSequence session={session} controller={controller} selectApparatus={selectApparatus}
+    renderDetail={(detail, row) => <RNHostView matchContents><WorkerOrderOverview session={session} orderId={row.id}
+      code={row.code} title={row.title} imageId={row.image_id} detail={workerOrderDetailFromSnapshot(detail, row.id)} /></RNHostView>} />;
 }

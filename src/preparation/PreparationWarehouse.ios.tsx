@@ -1,8 +1,8 @@
 import type { Href } from 'expo-router';
 import { Button, ContextMenu, Menu, Section, Text, TextField } from '@expo/ui/swift-ui';
 import { disabled } from '@expo/ui/swift-ui/modifiers';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
@@ -11,6 +11,7 @@ import { preparationDisplay } from './preparationModel';
 import { preparationJournalDate } from './PreparationDate';
 import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRenameWarehouse } from './preparationManagementApi';
 import { preparationMaterialAvailable, preparationMaterialHistory, preparationReceiptMode, preparationReceiptPayload, preparationVisibleMaterials } from './preparationLogic';
+import { openPreparationScale } from './PreparationRoutes';
 
 type Material = NonNullable<ReturnType<typeof usePreparationContext>['home']['snapshot']>['materials'][number];
 
@@ -20,6 +21,8 @@ export function PreparationWarehouse() {
   const t = usePreparationText(), sheet = useNativeSheet();
   const [query, setQuery] = useState(''), [managing, setManaging] = useState(false);
   const { snapshot, warehouse, controller } = home;
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => { if (firstFocus.current) firstFocus.current = false; else void controller.reload(); }, [controller]));
   const mode = preparationReceiptMode(warehouse, snapshot?.material_warehouses ?? []);
   const items = preparationVisibleMaterials(snapshot?.materials ?? [], warehouse, query);
   const blocked = home.locked || managing;
@@ -78,7 +81,7 @@ export function PreparationWarehouse() {
       {mode === 'manual' && <Menu label={t('Kirim')} modifiers={[disabled(blocked)]}>
         {items.filter(item => item.can_receive).map(item => <Button key={item.code} label={item.name} onPress={() => receive(item)} />)}
       </Menu>}
-      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(true)]} />}
+      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(blocked)]} onPress={() => openPreparationScale({ warehouse })} />}
       {mode === 'manual' && <Button label={t('Homashyo qo‘shish')} modifiers={[disabled(blocked)]} onPress={createMaterial} />}
       {!!snapshot?.material_warehouses.length && <Menu label={t('Ombor qo‘shish')} modifiers={[disabled(blocked)]}>
         {snapshot.material_warehouses.map(name => <Button key={name} label={name} onPress={() => createWarehouse(name)} />)}
@@ -97,6 +100,8 @@ export function PreparationMaterialDetail() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const { home } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet();
   const { warehouse, snapshot, controller } = home;
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => { if (firstFocus.current) firstFocus.current = false; else void controller.reload(); }, [controller]));
   const material = snapshot?.materials.find(item => item.code === code);
   const history = preparationMaterialHistory(snapshot?.history ?? [], warehouse ?? '', code ?? '');
   const mode = preparationReceiptMode(warehouse, snapshot?.material_warehouses ?? []);
@@ -110,7 +115,7 @@ export function PreparationMaterialDetail() {
     <PreparationStatus loading={home.loading} error={home.error} retry={() => { void controller.reload(); }} />
     {material && <Section><Text>{material.name}</Text><Text>{t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
       {mode === 'manual' && <Button label={t('Kirim qilish')} modifiers={[disabled(home.locked || !material.can_receive)]} onPress={receive} />}
-      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(true)]} />}</Section>}
+      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(home.locked)]} onPress={() => openPreparationScale({ warehouse })} />}</Section>}
     {history.receipts.length > 0 && <Section title={t('Kirimlar')}>{history.receipts.map((item, index) => <Text key={index}>
       {item.kind === 'receipt_reversal' ? '−' : '+'}{preparationDisplay(String(item.kg ?? '0'))} kg · {String(item.warehouse ?? '')} · {preparationJournalDate(String(item.created_at ?? ''))} {item.reversed === true ? t('Bekor qilingan') : ''} {item.reason ? `${t('Sabab')}: ${String(item.reason)}` : ''}
     </Text>)}</Section>}
