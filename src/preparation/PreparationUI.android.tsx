@@ -52,6 +52,27 @@ export function PreparationRow({ title, subtitle, onPress, onLongPress, disabled
   </Pressable>;
 }
 
+export function PreparationDock({ root = false, profile = false, actions }: { root?: boolean; profile?: boolean; actions?: () => void }) {
+  const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = usePreparationText();
+  return <View style={{ paddingBottom: insets.bottom, backgroundColor: colors.surfaceContainerLow }}>
+    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><NavigationBar containerColor={colors.surfaceContainerLow}
+      tonalElevation={0} modifiers={[fillMaxWidth()]}>
+      <NavigationBarItem selected={root} onClick={() => router.replace('/android-preparation' as Href)} modifiers={[testID('preparation-home')]}>
+        <NavigationBarItem.Icon><RNHostView matchContents><SymbolView name={{ android: 'home' }} size={24} tintColor={colors.onSurface} /></RNHostView></NavigationBarItem.Icon>
+        <NavigationBarItem.Label><Text>{t('Tayyorlov')}</Text></NavigationBarItem.Label>
+      </NavigationBarItem>
+      {actions ? <NavigationBarItem selected={false} onClick={actions} modifiers={[testID('preparation-actions')]}>
+        <NavigationBarItem.Icon><RNHostView matchContents><SymbolView name={{ android: 'add' }} size={24} tintColor={colors.onSurface} /></RNHostView></NavigationBarItem.Icon>
+        <NavigationBarItem.Label><Text>{t('Amallar')}</Text></NavigationBarItem.Label>
+      </NavigationBarItem> : null}
+      <NavigationBarItem selected={profile} onClick={() => router.navigate('/android-preparation/profile' as Href)} modifiers={[testID('preparation-profile')]}>
+        <NavigationBarItem.Icon><RNHostView matchContents><SymbolView name={{ android: 'person' }} size={24} tintColor={colors.onSurface} /></RNHostView></NavigationBarItem.Icon>
+        <NavigationBarItem.Label><Text>{t('Profil')}</Text></NavigationBarItem.Label>
+      </NavigationBarItem>
+    </NavigationBar></Host>
+  </View>;
+}
+
 export function PreparationPage({ title, children, refreshing, onRefresh, root = false, drawer = false, actions }: {
   title: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean; actions?: () => void;
 }) {
@@ -75,19 +96,7 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}>
       {children}
     </ScrollView>
-    <View style={{ paddingBottom: insets.bottom, backgroundColor: colors.surfaceContainerLow }}>
-      <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><NavigationBar containerColor={colors.surfaceContainerLow}
-        tonalElevation={0} modifiers={[fillMaxWidth()]}>
-        <NavigationBarItem selected={root} onClick={() => router.replace('/android-preparation' as Href)} modifiers={[testID('preparation-home')]}>
-          <NavigationBarItem.Icon><RNHostView matchContents><SymbolView name={{ android: 'home' }} size={24} tintColor={colors.onSurface} /></RNHostView></NavigationBarItem.Icon>
-          <NavigationBarItem.Label><Text>{t('Tayyorlov')}</Text></NavigationBarItem.Label>
-        </NavigationBarItem>
-        {actions ? <NavigationBarItem selected={false} onClick={actions} modifiers={[testID('preparation-actions')]}>
-          <NavigationBarItem.Icon><RNHostView matchContents><SymbolView name={{ android: 'add' }} size={24} tintColor={colors.onSurface} /></RNHostView></NavigationBarItem.Icon>
-          <NavigationBarItem.Label><Text>{t('Amallar')}</Text></NavigationBarItem.Label>
-        </NavigationBarItem> : null}
-      </NavigationBar></Host>
-    </View>
+    <PreparationDock root={root} actions={actions} />
   </View>;
   if (!drawer) return content;
   const navigate = (route: string) => { setDrawerOpen(false); router.replace(route as Href); };
@@ -101,6 +110,7 @@ export function PreparationPage({ title, children, refreshing, onRefresh, root =
       <PreparationRow title={t('Ishlab chiqarish')} onPress={() => navigate('/android-preparation/production')} />
       <PreparationRow title={t('Ketma-ketlik')} onPress={() => { setDrawerOpen(false); router.push('/android-preparation/sequence' as Href); }} />
       <PreparationRow title={t('Ishlab chiqarilgan homashyolar')} onPress={() => { setDrawerOpen(false); router.push('/android-preparation/inventory' as Href); }} />
+      <PreparationRow title={t('Profil')} onPress={() => { setDrawerOpen(false); router.navigate('/android-preparation/profile' as Href); }} />
     </View>}>{content}</Drawer></GestureHandlerRootView>;
 }
 

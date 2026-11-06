@@ -1,15 +1,15 @@
 # preparation-android
 
-Status: in progress
-Stopped at: wire the preparation profile entry and complete device verification.
+Status: implementation complete; device verification pending
+Stopped at: real Android phone and printer verification.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Home and warehouse | `preparation_screen.dart`, `preparation_screen_forms.dart` | Sequence, inventory and scale actions are connected. Chat and profile destinations remain for their owning sessions. |
 | Roll QR | `RpsQrReprintSheet`, `preparation_production_screen.dart` `_reprintRoll` | Reprint supports paired Bluetooth, USB (Zebra only, D13), discovered Wi-Fi servers and manual Wi-Fi selection. Physical-printer verification remains open. |
 | Platform parity | `docs/port/roles/preparation.md` | Compare all implemented screen states, localization, input behavior, navigation and accessibility against the V2 contract on a real Android device. No simulator or device was used. |
-| V2 drift | `preparation_screen.dart`, `preparation_screen_forms.dart`; baseline `7c87a54e` | Drift reports removal of the old consumption editor in V2 HEAD. Shared logic remains owned by the preparation/integrator session; this screen session follows the pinned baseline. |
+
+The pinned V2 baseline remains `7c87a54e`; later removal of unused legacy consumption helpers is not applied. Chat and GScale implementation are outside this request, and GoDEX is excluded by D13.
 
 ## Deviations candidates
 
@@ -21,8 +21,7 @@ The preparation logic session owns the deferred test-mode branches.
 
 ## Needs from the integrator
 
-- Supply the Android chat destination and a role-appropriate profile destination.
-- Complete the contract's dynamic localization inventory.
+None for the requested Android implementation. The contract's complete source literal index is in `docs/port/roles/preparation.md`.
 
 ## Verification
 

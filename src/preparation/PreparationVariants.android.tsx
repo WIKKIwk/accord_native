@@ -1,7 +1,7 @@
 import { AlertDialog, Column, Host, OutlinedTextField, Text, TextButton, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, View, useWindowDimensions } from 'react-native';
 import { WorkerOrderSheet } from '../components/WorkerOrderSheet';
 import { usePreparationContext } from './PreparationContext.android';
@@ -75,7 +75,6 @@ function Variants({ options }: { options: Options }) {
   const renameInFlight = useRef(false);
   const focused = useRef(false);
   useFocusEffect(useCallback(() => { if (focused.current) void state.controller.load(); focused.current = true; }, [state.controller]));
-  useEffect(() => { if (reusePicker && !state.creating && !state.copying) setReusePicker(false); }, [reusePicker, state.creating, state.copying]);
   const blocked = state.actionsBlocked;
   const open = (variant: Variant) => openPreparationFormula({ ...options, variantId: variant.id, variantName: variant.name });
   const menu = async (variant: Variant) => {
@@ -125,7 +124,7 @@ function Variants({ options }: { options: Options }) {
       error={nameDialog === 'create' ? (hideCreateError ? null : state.nameError) : renameError} submit={name => void submit(name)} orderScoped
       clearError={() => { setRenameError(null); setHideCreateError(true); }}
       cancel={() => { if (nameDialog === 'create') state.controller.cancelCreate(); setNameDialog(null); }} /> : null}
-    {reusePicker ? <ReusePicker controller={state.controller} choose={id => void chooseReuse(id)} close={() => {
+    {reusePicker && state.creating ? <ReusePicker controller={state.controller} choose={id => void chooseReuse(id)} close={() => {
       state.controller.cancelReuse(); setReusePicker(false);
     }} /> : null}
   </>;
