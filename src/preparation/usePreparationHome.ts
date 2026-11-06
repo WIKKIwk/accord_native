@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import type { Session } from '../auth';
+import { registerSessionResetHook, type Session } from '../auth';
 import { preparationSnapshot } from '../preparationReadApi';
 import { preparationPendingCommand, preparationSubmit } from './preparationCommandApi';
 
@@ -12,6 +12,7 @@ export class PreparationHomeState {
   private state: HomeState = { snapshot: null, pending: null, warehouse: null, orderId: null,
     percentages: {}, loading: true, saving: false, error: null };
   private active = true;
+  private invalidated = false;
   private revision = 0;
   private listeners = new Set<() => void>();
   constructor(private readonly session: Session) {}
@@ -21,9 +22,15 @@ export class PreparationHomeState {
     if (!this.active) return;
     this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener());
   }
-  get locked() { return this.state.loading || this.state.saving || this.state.pending !== null; }
+  get locked() { return this.invalidated || this.state.loading || this.state.saving || this.state.pending !== null; }
   activate() { this.active = true; }
+  sessionChanged() {
+    this.invalidated = true; this.revision++;
+    this.update({ snapshot: null, pending: null, warehouse: null, orderId: null, percentages: {},
+      loading: false, saving: false, error: 'Akkaunt o‘zgargan. Sahifani qayta oching' });
+  }
   async reload() {
+    if (this.invalidated) return;
     const revision = this.revision;
     const current = () => this.active && revision === this.revision;
     this.update({ loading: true, error: null });
@@ -49,7 +56,7 @@ export class PreparationHomeState {
     const percentages = { ...this.state.percentages }; delete percentages[code]; this.update({ percentages });
   }
   async submit(kind: string, payload: Record<string, unknown>) {
-    if (this.state.saving) return;
+    if (this.invalidated || this.state.saving) return;
     const revision = this.revision;
     this.update({ saving: true });
     try {
@@ -66,6 +73,11 @@ export class PreparationHomeState {
 export function usePreparationHome(session: Session) {
   const controller = useMemo(() => new PreparationHomeState(session), [session]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  useEffect(() => { controller.activate(); void controller.reload(); return () => controller.dispose(); }, [controller]);
-  return { ...state, locked: state.loading || state.saving || state.pending !== null, controller };
+  useEffect(() => {
+    controller.activate();
+    const unregister = registerSessionResetHook(async () => { controller.sessionChanged(); });
+    void controller.reload();
+    return () => { unregister(); controller.dispose(); };
+  }, [controller]);
+  return { ...state, locked: controller.locked, controller };
 }

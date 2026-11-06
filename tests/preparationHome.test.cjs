@@ -8,6 +8,7 @@ function setup(api) {
   const filename = path.resolve(__dirname, '../src/preparation/usePreparationHome.ts'), mod = new Module(filename, module);
   mod.require = id => {
     if (id === 'react') return {};
+    if (id === '../auth') return { registerSessionResetHook: () => () => {} };
     if (id === '../preparationReadApi') return { preparationSnapshot: api.snapshot };
     if (id === './preparationCommandApi') return { preparationPendingCommand: api.pending, preparationSubmit: api.submit };
     return require(id);
@@ -23,6 +24,14 @@ test('home reload selects the sole warehouse and invalidates a saved order', asy
   state.selectOrder('o'); state.setPercent('P1', '20');
   current = snapshot([{ id: 'o', saved: true }]); await state.reload();
   assert.equal(state.getSnapshot().orderId, null); assert.deepEqual(state.getSnapshot().percentages, {});
+});
+test('account reset clears the home snapshot and rejects an in-flight result', async () => {
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  const state = setup({ snapshot: () => pending, pending: async () => null, submit: async () => ({}) });
+  const request = state.reload(); await Promise.resolve(); state.sessionChanged(); release(snapshot()); await request;
+  assert.equal(state.getSnapshot().snapshot, null); assert.equal(state.locked, true);
+  assert.match(state.getSnapshot().error, /Akkaunt/);
 });
 test('home locks uncertain operations and refreshes after a failed submission', async () => {
   let count = 0, pending = null;

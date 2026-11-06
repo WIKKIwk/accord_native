@@ -15,6 +15,21 @@ const text = (value: unknown, fallback = '') => value == null ? fallback : Strin
 const truthy = (value: unknown) => value === true || (typeof value === 'number' && value !== 0) ||
   (typeof value === 'string' && ['true', '1', 'yes'].includes(value.trim().toLowerCase()));
 
+/** @v2 parseServerEndpoint */
+export function preparationPrinterServerUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error('Manzil formati noto‘g‘ri');
+  const source = trimmed.includes('://') ? trimmed : `http://${trimmed}`;
+  let url: URL;
+  try { url = new URL(source); }
+  catch { throw new Error('Manzil formati noto‘g‘ri'); }
+  if (!url.hostname || !['http:', 'https:'].includes(url.protocol)) throw new Error('Manzil formati noto‘g‘ri');
+  if (['localhost', '127.0.0.1', '::1', '[::1]', '10.0.2.2'].includes(url.hostname.toLowerCase()))
+    throw new Error('Localhost emas, Wi‑Fi server manzilini kiriting');
+  const explicitPort = source.match(/^[a-z][a-z\d+.-]*:\/\/(?:[^@/?#]*@)?(?:\[[^\]]+\]|[^:/?#]+)(?::(\d+))?(?:[/?#]|$)/i)?.[1];
+  return `${url.protocol}//${url.hostname}:${explicitPort || url.port || '39117'}`;
+}
+
 async function fetchJsonWithTimeout(url: string, init: RequestInit, timeout: number): Promise<{ response: Response; payload: unknown }> {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout);
   try {
@@ -52,7 +67,19 @@ export async function pickPreparationPrinter(options: {
   } catch { return null; }
 }
 
-export async function printPreparationJob(job: WorkerPrintJob, printer: Printer): Promise<boolean> {
+export async function pickPreparationInventoryPrinter(options: {
+  isCurrent: () => boolean; selectDevice: () => Promise<PreparationDeviceSelection | null>;
+}): Promise<Printer | null> {
+  const cached = await SessionBluetoothPrinter.resolveCached();
+  if (cached) return { transport: 'bluetooth', printer: cached };
+  if (!options.isCurrent()) return null;
+  const selection = await options.selectDevice();
+  if (!selection) return null;
+  if (selection.transport === 'bluetooth') SessionBluetoothPrinter.remember(selection.printer);
+  return selection.transport === 'wifi' ? { ...selection, printer: '', printMode: '' } : selection;
+}
+
+export async function printPreparationJob(job: WorkerPrintJob, printer: Printer, options: { inventory?: boolean } = {}): Promise<boolean> {
   const request = UsbRpsPrintRequest.fromPrintJson(job);
   if (printer.transport === 'offline' || printer.transport === 'bluetooth') {
     const result = await PrintService.printRps(request, printer.transport === 'offline'
@@ -64,8 +91,8 @@ export async function printPreparationJob(job: WorkerPrintJob, printer: Printer)
   const selected: ConnectedWifiPrinter = printer;
   const { response, payload } = await fetchJsonWithTimeout(`${selected.serverBaseUrl}/v1/mobile/driver/print`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...request.toJson(), ...(selected.printer ? { printer: selected.printer } : {}),
-      ...(selected.printMode ? { print_mode: selected.printMode } : {}) }),
+    body: JSON.stringify({ ...request.toJson(), ...(!options.inventory && selected.printer ? { printer: selected.printer } : {}),
+      ...(!options.inventory && selected.printMode ? { print_mode: selected.printMode } : {}) }),
   }, 15000);
   const body = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : null;
   if (!response.ok || body?.ok !== true) throw new Error(text(body?.detail ?? body?.error, 'Printer QR kodini chop etmadi'));

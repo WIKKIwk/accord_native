@@ -1,5 +1,6 @@
-import { createContext, useContext, type ReactNode } from 'react';
-import type { Session } from '../auth';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { Text, View } from 'react-native';
+import { registerSessionResetHook, type Session } from '../auth';
 import { usePreparationHome } from './usePreparationHome';
 
 type Home = ReturnType<typeof usePreparationHome>;
@@ -8,6 +9,10 @@ const PreparationContext = createContext<Context | null>(null);
 
 export function PreparationProvider({ session, onLogout, children }: { session: Session; onLogout: () => void; children: ReactNode }) {
   const home = usePreparationHome(session);
+  const [invalidated, setInvalidated] = useState(false);
+  useEffect(() => registerSessionResetHook(async () => { setInvalidated(true); }), []);
+  if (invalidated) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+    <Text>Akkaunt o‘zgargan. Sahifani qayta oching</Text></View>;
   return <PreparationContext.Provider value={{ session, home, onLogout }}>{children}</PreparationContext.Provider>;
 }
 export function usePreparationContext() {

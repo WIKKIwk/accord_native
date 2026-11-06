@@ -39,7 +39,9 @@ test('preparation inventory reuses the shared store with raw-material assignment
   const calls = [], store = { assets: input => { calls.push(input); return 'lease'; } };
   const filename = path.resolve(__dirname, '../src/preparation/preparationInventory.ts'), loaded = new Module(filename, module);
   const deps = { '../shared/appRoutes': { appRoutes: { inventoryMovements: '/inventory-movements' }, canOpenRoute: session => session.allowed },
-    '../shared/inventoryViewRuntime': { inventoryViewRuntimeFor: () => store } };
+    '../shared/inventoryViewRuntime': { inventoryViewRuntimeFor: () => store },
+    '../auth': { activeSessionToken: () => 'token' }, '../inventoryReadApi': { inventoryAssets: async () => [] },
+    './preparationInventoryTransfers': { inventoryCreateTransfer: async () => ({}) } };
   loaded.require = id => id in deps ? deps[id] : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   const session = { profile: { role: 'tayyorlov_masteri' }, allowed: true };
@@ -47,4 +49,15 @@ test('preparation inventory reuses the shared store with raw-material assignment
   assert.equal(loaded.exports.preparationInventoryAssets(store, 'w', 'search'), 'lease');
   assert.deepEqual(calls, [{ warehouseId: 'w', query: 'search', assetKind: 'raw_material', includeOrderAssignment: true }]);
   assert.throws(() => loaded.exports.preparationInventoryStore({ ...session, allowed: false }), /Inventar ruxsatlari/);
+  const asset = { kind: 'raw_material', asset_ref: 'A', identifier: 'QR', item_code: 'M', status: 'available',
+    custody_warehouse: 'Ombor A', physical_location: { kind: 'warehouse' } };
+  assert.equal(loaded.exports.preparationInventoryCanTransfer(asset, ['ombor a']), true);
+  assert.equal(loaded.exports.preparationInventoryCanTransfer({ ...asset, status: 'transfer_reserved' }, ['Ombor A']), false);
+  assert.equal(loaded.exports.preparationInventoryCanTransfer({ ...asset, physical_location: { kind: 'state' } }, ['Ombor A']), false);
+  assert.equal(loaded.exports.preparationInventoryBarcode('https://example.test/path?epc=EPC123'), 'EPC123');
+  assert.equal(loaded.exports.preparationInventoryBarcode('Milano Premium 30/40'), 'Milano Premium 30/40');
+  const other = { ...asset, asset_ref: 'B', identifier: 'OTHER', item_code: 'N' };
+  assert.deepEqual(loaded.exports.preparationInventoryQrMatches([asset, other], 'qr'), [asset]);
+  assert.deepEqual(loaded.exports.preparationInventoryQrMatches([other], 'unmatched'), [other]);
+  assert.deepEqual(loaded.exports.preparationInventoryQrMatches([asset, other], 'unmatched'), []);
 });

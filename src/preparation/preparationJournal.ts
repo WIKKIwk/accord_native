@@ -34,8 +34,8 @@ export class PreparationJournal<T, S = unknown> {
     const wasPaused = !this.resumed; this.resumed = resumed;
     if (wasPaused && resumed && this.current && this.visible && !this.busy) void this.load({ silent: true });
   }
-  sessionChanged(): void {
-    if (this.current || this.disposed) return;
+  sessionChanged(force = false): void {
+    if ((!force && this.current) || this.disposed) return;
     this.valid = false; this.epoch++; this.queued = false;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;

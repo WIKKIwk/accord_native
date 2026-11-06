@@ -1,13 +1,24 @@
 import { Button, Host, HStack, List, Menu, ProgressView, RNHostView, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
-import { disabled, onAppear } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, disabled, onAppear } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import type { Session } from '../auth';
+import { activeSessionToken, registerSessionResetHook } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { WorkerOrderThumbnail } from '../components/WorkerOrderThumbnail';
+import { WorkerOrderImage } from '../components/WorkerOrderHeader';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { productionText } from '../shared/localization';
+import { sessionReadScope } from '../sessionReadScope';
+import { workerOrderDetailFromSnapshot } from '../workerApi';
+import { adminSequenceApparatusStore } from '../shared/adminSequenceApparatusStore';
+import { preparationOrdersWarmStore } from './preparationRuntime';
+import { subscribePreparationOrdersLive } from './preparationOrdersLive';
+import { PreparationOrdersState as OrdersState } from './preparationOrdersState';
+import { usePreparationContext } from './PreparationContext';
+import { usePreparationOrderMaterials } from './usePreparationOrderMaterials';
+import { openPreparationRoute } from './PreparationRoutes';
 import { localeController } from '../shared/localization/runtime';
 import { PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
 import { preparationOrderDetail, type PreparationOrderListRow } from './preparationOrdersApi';
@@ -18,6 +29,35 @@ type Props = { session: Session; controller: PreparationOrdersState; selectAppar
   renderDetail: (detail: Detail, row: PreparationOrderListRow) => ReactNode };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
+function PreparationOrderSummary({ session, detail, row }: { session: Session; detail: Detail; row: PreparationOrderListRow }) {
+  const t = usePreparationText(), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+  const [expanded, setExpanded] = useState(true), materials = usePreparationOrderMaterials(session, row.id), colors = useWorkerColors();
+  const image = useNativeSheet();
+  const order = workerOrderDetailFromSnapshot(detail, row.id), map = order.map;
+  const positive = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+  const meters = positive(map.base_length), weight = positive(map.order_kg), rolls = positive(map.roll_count), width = positive(map.width_mm);
+  return <>
+    <Section><HStack><Button modifiers={[accessibilityLabel(t('Buyurtma rasmini ochish'))]} onPress={() => image.open(<WorkerOrderImage session={session} orderId={row.id} imageId={row.image_id}
+      onClose={image.close} />, { dismissible: true })}><RNHostView matchContents><WorkerOrderThumbnail session={session} orderId={row.id} imageId={row.image_id}
+      active backgroundColor={colors.surface} iconColor={colors.icon} /></RNHostView></Button><VStack alignment="leading">
+      <Text>{row.code || row.order_number || row.id}</Text><Text>{[order.customer || row.customer_name, row.title].filter(Boolean).join(' · ')}</Text>
+    </VStack></HStack></Section>
+    <Section><Button label={productionText('worker.summary.expected.title', locale)} onPress={() => setExpanded(value => !value)} />
+      {expanded && <>
+        {meters !== null && <Text>{productionText('worker.summary.length', locale)}: {Math.ceil(meters / 500) * 500} m</Text>}
+        {weight !== null && <Text>{productionText('worker.summary.weight', locale)}: {weight} kg</Text>}
+        {rolls !== null && <Text>{productionText('worker.summary.shafts', locale)}: {rolls} · {width ?? '—'} mm</Text>}
+        <Text>{productionText('order.print_side', locale)}: {productionText(map.standard_print_side === false ? 'order.print_side.nonstandard' : 'order.print_side.standard', locale)}</Text>
+      </>}</Section>
+    <Section><Button label={t('Shnek formulalar')} modifiers={[disabled(materials.loading)]} onPress={() => { void materials.load(); }} />
+      {materials.loading && <ProgressView />}{!!materials.error && <Text>{materials.error}</Text>}
+      {materials.materials?.map(material => <Button key={material.material_id} label={material.material_name || material.material_id} onPress={() => {
+        openPreparationRoute('variants', { orderId: row.id, orderCode: row.code || row.order_number,
+          productCode: String(map.product_code ?? ''), productTitle: row.title, materialId: material.material_id,
+          materialName: material.material_name || material.material_id, customerName: order.customer || row.customer_name });
+      }} />)}</Section>
+  </>;
+}
 function OrderDetail({ session, controller, row, close, renderDetail }: Props & { row: PreparationOrderListRow; close: () => void }) {
   const t = usePreparationText(), state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const [detail, setDetail] = useState<Detail | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true);
@@ -56,8 +96,8 @@ function SequenceRow({ session, row }: { session: Session; row: PreparationOrder
   </HStack>;
 }
 
-// V2 _PreparationOrdersListState. The integrator supplies its shared warm store,
-// persisted apparatus selection and the existing read-only detail presentation.
+// @v2 AdminProductionMapOrdersScreen
+// @v2 _PreparationOrdersListState
 export function PreparationSequence({ session, controller, selectApparatus, renderDetail }: Props) {
   const t = usePreparationText(), sheet = useNativeSheet();
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
@@ -85,4 +125,26 @@ export function PreparationSequence({ session, controller, selectApparatus, rend
     {state.window?.next_cursor != null && <Section><Button label={t('Yana yuklash')} modifiers={[disabled(state.loading)]}
       onPress={() => { void controller.loadMore(); }} /></Section>}
   </PreparationList></>;
+}
+
+export function PreparationSequenceRoute() {
+  const { session } = usePreparationContext();
+  const controller = useMemo(() => {
+    const scope = sessionReadScope(session);
+    return new OrdersState(preparationOrdersWarmStore, () => !!activeSessionToken(session) && sessionReadScope(session) === scope,
+      (window, search, length, onEvent, onError, onDone) => subscribePreparationOrdersLive(session, window,
+        { search, length }, onEvent, onError, onDone), () => adminSequenceApparatusStore.loadSavedApparatusId());
+  }, [session]);
+  useEffect(() => {
+    controller.activate();
+    const unregister = registerSessionResetHook(async () => { controller.sessionChanged(true); });
+    void controller.start();
+    return () => { unregister(); controller.dispose(); };
+  }, [controller]);
+  const selectApparatus = useCallback(async (id: string) => {
+    const apparatus = controller.getSnapshot().window?.apparatus.find(item => item.id === id);
+    if (apparatus) await adminSequenceApparatusStore.saveApparatus(apparatus);
+  }, [controller]);
+  return <PreparationSequence session={session} controller={controller} selectApparatus={selectApparatus}
+    renderDetail={(detail, row) => <PreparationOrderSummary session={session} detail={detail} row={row} />} />;
 }

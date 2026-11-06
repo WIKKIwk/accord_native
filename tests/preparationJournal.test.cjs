@@ -36,3 +36,10 @@ test('journal rejects a non-advancing next page', async () => {
   const journal = new PreparationJournal(async () => page([{ id: 'a' }], true, 0), x => x.id, () => 'scope', () => {});
   await journal.load(); assert.equal(journal.state.items.length, 0); assert.match(journal.state.error, /Qayta urinib/); journal.dispose();
 });
+test('session reset clears the journal before the active session changes', async () => {
+  let release; const pending = new Promise(resolve => { release = resolve; });
+  const journal = new PreparationJournal(() => pending, x => x.id, () => 'same-scope', () => {});
+  const request = journal.load(); journal.sessionChanged(true);
+  release(page([{ id: 'old' }], false, null)); await request;
+  assert.deepEqual(journal.state.items, []); assert.match(journal.state.error, /Akkaunt/); journal.dispose();
+});

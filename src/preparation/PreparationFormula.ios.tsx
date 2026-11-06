@@ -1,7 +1,7 @@
 import { Button, Host, List, Menu, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { disabled, keyboardType } from '@expo/ui/swift-ui/modifiers';
-import { Stack, useLocalSearchParams, usePreventRemove } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams, usePreventRemove } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
@@ -10,6 +10,8 @@ import { PreparationSharesSheet } from './PreparationFormulaSheets';
 import type { FormulaEditorRow } from './preparationLogic';
 import { preparationEstimatedKgDisplay, preparationFormulaSharesComplete, preparationScrewLineKg, type PreparationFormula as Formula } from './preparationModel';
 import { usePreparationFormula, type PreparationFormulaOptions } from './usePreparationFormula';
+import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { openPreparationScale } from './PreparationRoutes';
 
 type FormulaController = ReturnType<typeof usePreparationFormula>['controller'];
 type Material = ReturnType<typeof usePreparationFormula>['materials'][number];
@@ -55,6 +57,9 @@ export function PreparationFormula() {
       params.allowAddingFormula, params.openEditorOnLoad]);
   const { session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet();
   const state = usePreparationFormula(session, options), { controller } = state;
+  const scaleReturn = useRef<(() => void) | null>(null);
+  useFocusEffect(useCallback(() => { scaleReturn.current?.(); scaleReturn.current = null; }, []));
+  useEffect(() => () => { scaleReturn.current?.(); scaleReturn.current = null; }, []);
   const busy = state.loading || state.saving || state.deleting || state.openingReceipt;
   usePreventRemove(state.saving || state.deleting, () => {});
   const updateRow = (index: number, row: FormulaEditorRow) => controller.setRows(state.rows.map((old, i) => i === index ? row : old));
@@ -81,6 +86,11 @@ export function PreparationFormula() {
           <Button label={t('Saqlash')} modifiers={[disabled(!state.canSave || busy)]} onPress={() => { void controller.save().catch(preparationAlert); }} />
           <Button label={t('Bekor qilish')} modifiers={[disabled(busy)]} onPress={() => controller.closeEditor()} /></Section>
       </> : <Section>
+        {!options.manageSavedFormula && canOpenRoute(session, appRoutes.gscaleMode) && <Button label={t('Ishlab chiqarishni boshlash')}
+          modifiers={[disabled(busy)]} onPress={() => { void controller.startProduction(true, args => new Promise<void>((resolve, reject) => {
+            scaleReturn.current = resolve;
+            try { openPreparationScale(args); } catch (error) { scaleReturn.current = null; reject(error); }
+          })).catch(preparationAlert); }} />}
         {!state.formulas.length && <Text>{t(options.manageSavedFormula && !options.allowAddingFormula ? 'Bu formulada ichki tarkib yo‘q.' : 'Hali formula yo‘q. FAB orqali formula qo‘shing.')}</Text>}
         {state.formulas.length > 0 && <Button label={t('Shnek ulushlari')} modifiers={[disabled(busy)]} onPress={() => sheet.open(
           <PreparationSharesSheet formulas={state.formulas} close={sheet.close} save={values => controller.saveShares(values)} />,

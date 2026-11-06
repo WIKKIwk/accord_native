@@ -10,6 +10,7 @@ function setup(mode) {
   const recipe = { id: 'v1', name: 'LG', formula_code: 'F1', material_name: 'PE', material_id: 'm', set_name: 'Set', product_title: 'Product', product_code: 'P', order_codes: ['0278'] };
   mod.require = id => {
     if (id === 'react') return {};
+    if (id === '../auth') return { registerSessionResetHook: () => () => {} };
     if (id === '../sessionReadScope') return { sessionReadScope: s => s.scope };
     if (id === './usePreparationFormula') return { preparationFormulaErrorMessage: e => String(e) };
     if (id === './preparationFormulaApi') return { preparationFormulaSets: async () => { calls.push('sets'); return [set]; },
@@ -25,6 +26,13 @@ test('set library reads sets before recipes, searches and preserves set identity
   const x = setup('sets'); await x.state.load(); assert.deepEqual(x.calls, ['sets', 'catalog']);
   x.state.setQuery('0278'); assert.equal(x.state.filteredSets.length, 1); assert.equal(x.state.recipeCount(x.set), 2);
   await x.state.renameSet(x.set, ' New '); assert.equal(x.state.getSnapshot().sets[0].name, 'New');
+});
+test('session reset clears catalog before the session object changes and prevents reload', async () => {
+  const x = setup('catalog'); await x.state.load();
+  x.state.sessionChanged(true);
+  assert.deepEqual(x.state.getSnapshot().recipes, []);
+  await x.state.load(); assert.deepEqual(x.calls, ['catalog']);
+  assert.match(x.state.getSnapshot().error, /Akkaunt/);
 });
 test('catalog clears on account change and normalizes variant names', async () => {
   const x = setup('catalog'); await x.state.load(); x.state.setQuery(' f1 '); assert.equal(x.state.filteredRecipes[0].id, 'v1');

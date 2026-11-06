@@ -1,15 +1,15 @@
 # preparation
 
 Status: part 1 of 1, wiring in progress
-Stopped at: platform routes, inventory/device-picker screens and the shared read-only order detail must be supplied by their owning sessions; real-printer and native WebSocket-ping checks remain open.
+Stopped at: integrate missing GScale routes and network discovery, reconcile optional order-detail controls, complete Android platform work, and verify printers and native WebSocket pings.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS and Android sessions must implement the four routes and all listed views, sheets and dialogs using the UI contract; this logic session cannot write platform views. |
+| Platform routes and screens | `.port/role-preparation-1.md` Routes and Screens | iOS preparation screens and sequence/inventory entry points exist; the ledger's shared route tags, missing GScale route and Android platform work remain open. |
 | Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity and the borrowed native read-only sheet are not complete. Compare their applicable fields and connect the sheet in the platform/integrator sessions. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
-| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Platform sessions must supply the device-picker UI to `reprintPreparationRollWithPrinter`; USB, Bluetooth and driver transport adapters are connected but require real-printer checks. |
+| QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | The iOS picker supplies Bluetooth and manually entered Wi-Fi devices for production and inventory reprints; automatic Wi-Fi discovery awaits the GScale module. Android still needs its picker. USB, Bluetooth and driver transports require real-printer checks. |
 
 ## V2 test triage
 
@@ -39,11 +39,12 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Needs from the integrator
 
-- The inventory-movements native route and picker/detail UI must be supplied by the preparation platform sessions. `preparationInventoryStore` connects its preparation guard and shared live store, and `preparationInventoryAssets` applies V2's raw-material and assignment scope; transfer mutations are in `preparationInventoryTransfers.ts`.
-- Connect the four native routes once platform views exist; connect the borrowed read-only admin order detail sheet. The preparation home targets are configured, but those platform routes do not exist in this branch yet.
+- The iOS inventory route now connects the shared store, scoped assets, QR lookup, transfer and conditional raw-material order-assignment editor. Android still needs its inventory route and detail UI. The candidate-order and assignment requests have source-derived tests; V2 did not record them in this role's fixtures.
+- Integrate the shared route tags and Android screens. The iOS sequence detail is connected for preparation's summary and formula flow; optional snapshot-control decoder parity remains open above.
 
 ## Verification
 
+- Preparation iOS wiring: 854 tests passed; iOS and default TypeScript checks and Expo lint passed. Android retains the 10 known baseline TypeScript errors. Real device and printer checks remain open.
 - The ledger estimates 112k V2 tokens for this role; actual tokens read were not measured. The prior logic session tagged 26/26 listed APIs; this wiring turn additionally implemented the two inventory transfer mutation methods and added preparation-scoped access to the existing inventory store.
 - `node --test tests/*.test.cjs`: 826 passed, 0 failed, up from 813 before wiring. The 13 added tests cover search, apparatus preferences, startup, targets, printer adapters and inventory transfer/access. An existing variant test loader gained mocks for the new dependencies; no existing assertion was changed.
 - iOS TypeScript: passed. Android TypeScript: the 10 known baseline errors in `WorkerOutputProgress.android.tsx`, `WorkerPaintPalette.android.tsx`, and `WorkerScreen.tsx`; no preparation errors. Expo lint: passed.
