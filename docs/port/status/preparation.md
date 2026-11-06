@@ -7,7 +7,7 @@ Stopped at: complete the remaining V2 text and surface comparisons on both platf
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Role-wide surface and text audit | `.port/role-preparation.md`, `.port/text-preparation.md` | The text gate reports missing or extra strings on both platforms. Compare the remaining screens, sheets, messages and back guards with V2; the ledger tags alone do not establish parity. |
-| Material management on iOS and Android | `preparation_materials_screen.dart`, `_PreparationInputDialog` | Material actions, confirmation, warehouse selection and feedback were aligned with the V2 source; verify native dismissal, input and notice behavior on both phones. |
+| Material management on iOS and Android | `preparation_materials_screen.dart`, `_PreparationInputDialog` | Material actions, the trailing action button, confirmation, warehouse selection and feedback were aligned with the V2 source; verify native dismissal, input and notice behavior on both phones. |
 | Warehouse management on iOS and Android | `preparation_screen_forms.dart`, `preparation_warehouse_management.dart` | Creation, parent defaults, managed warehouse actions, receipt picker, input validation and feedback were compared with V2. Verify filter long-press, dropdown, picker paging, dismissal and mutation feedback on both phones; the FAB requires further comparison. |
 | Material detail on iOS and Android | `preparation_screen_forms.dart` `PreparationMaterialDetailScreen` | Warehouse-scoped receipt and consumption rows, material code, actions and fixed warehouse navigation were compared. Verify the scale return and native presentation on phones. |
 | Preparation home on iOS and Android | `preparation_screen.dart`, `_pick` | Home cards, pending labels, action order, receipt picker and feedback were compared with V2. The current action menus still differ from V2's floating action menu, and picker/dialog transitions need phone verification. |
@@ -65,6 +65,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Checkpoints
 
+- This session: added the material row action button and aligned the preparation navigation label.
 - This session: aligned production journal rows, filters, pagination and nested model errors on both platforms.
 - This session: aligned warehouse-scoped material detail and receipt/consumption rows on both platforms.
 - This session: aligned formula-set detail rows and shared formula actions on both platforms.
@@ -118,7 +119,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
-| `PreparationMaterialsScreen`, `preparation_materials_screen.dart` | `PreparationMaterials.ios.tsx`, `PreparationMaterials.android.tsx` | qisman | qisman | Action and assignment flows were compared with V2. The separate trailing action icon and native gesture/dismissal behavior still need comparison on a device. |
+| `PreparationMaterialsScreen`, `preparation_materials_screen.dart` | `PreparationMaterials.ios.tsx`, `PreparationMaterials.android.tsx` | qisman | qisman | Action and assignment flows and the trailing action icon were compared with V2. Native gesture and dismissal behavior still need verification on a device. |
 | `PreparationWarehouseScreen`, `_warehouseActions` | `PreparationWarehouse.ios.tsx`, `PreparationStock.android.tsx` | qisman | qisman | Creation, managed actions, receipt picker and feedback were compared. The FAB and native interactions still need verification. |
 | `PreparationMaterialDetailScreen` | `PreparationWarehouse.ios.tsx`, `PreparationStock.android.tsx` | qisman | qisman | Warehouse-scoped summary, receipt/consumption rows and actions were compared. Scale return and native presentation need verification. |
 | `PreparationScreen`, `_pick` | `PreparationHome.ios.tsx`, `PreparationHome.android.tsx` | qisman | qisman | Home action contents, pending labels, receipt picker and feedback were compared. The floating menu and native interaction remain open. |

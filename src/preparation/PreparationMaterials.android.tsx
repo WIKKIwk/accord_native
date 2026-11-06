@@ -1,5 +1,6 @@
-import { Checkbox, Column, Host, Row, Text } from '@expo/ui/jetpack-compose';
-import { clickable, fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
+import { Checkbox, Column, Host, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { clickable, fillMaxWidth, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
+import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
@@ -12,6 +13,17 @@ import { usePreparationNotice } from './usePreparationNotice';
 
 type Choices = { name: string; editable: boolean; selected: boolean }[];
 type MaterialAction = 'rename' | 'warehouses' | 'delete';
+
+function MaterialRow({ name, subtitle, blocked, open }: { name: string; subtitle: string; blocked: boolean; open: () => void }) {
+  const colors = useMaterialColors(), t = usePreparationText();
+  return <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16 }}>
+    <View style={{ flex: 1 }}><PreparationRow title={name} subtitle={subtitle} disabled={blocked} onPress={open} /></View>
+    <Host matchContents style={{ width: 48, height: 48 }}><IconButton enabled={!blocked} onClick={open}
+      modifiers={[size(48, 48), semantics({ contentDescription: t('Homashyo amallari') })]}>
+      <RNHostView matchContents><SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView>
+    </IconButton></Host>
+  </View>;
+}
 
 function MaterialActions({ name, choose }: { name: string; choose: (action: MaterialAction) => void }) {
   const t = usePreparationText();
@@ -86,8 +98,8 @@ export function PreparationMaterialsScreen() {
     {(state.loading && !state.items.length) || state.saving ? <ActivityIndicator /> : null}
     {state.error ? <><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => void state.controller.load()} /></> : null}
     {!state.loading && !state.filtered.length && !state.error ? <PreparationText>{t(preparationMaterialsEmptyMessage(state.query))}</PreparationText> : null}
-    {state.filtered.map(item => <PreparationRow key={item.item_code} title={item.name}
+    {state.filtered.map(item => <MaterialRow key={item.item_code} name={item.name}
       subtitle={item.warehouses.length ? item.warehouses.join(', ') : t('Ombor biriktirilmagan')}
-      disabled={blocked} onPress={() => openActions(item)} />)}
+      blocked={blocked} open={() => openActions(item)} />)}
   </PreparationPage><PreparationNotice message={notice.message} /></View>;
 }

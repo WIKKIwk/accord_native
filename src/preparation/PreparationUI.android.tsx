@@ -105,7 +105,7 @@ export function PreparationPage({ title, subtitle, children, refreshing, onRefre
     drawerType="front" overlayAccessibilityLabel={t('Menyuni yopish')}
     drawerStyle={{ width: Math.min(320, width - 56), backgroundColor: colors.surfaceContainerLow, borderTopRightRadius: 16, borderBottomRightRadius: 16 }}
     renderDrawerContent={() => <View style={{ flex: 1, paddingTop: insets.top + 12, paddingHorizontal: 12, gap: 8 }}>
-      <PreparationText title>{t('Tayyorlov masteri')}</PreparationText>
+      <PreparationText title>{t('Tayyorlov bo‘limlari')}</PreparationText>
       <PreparationRow title={t('Tayyorlov')} onPress={() => navigate('/android-preparation')} />
       <PreparationRow title={t('Formulalar')} onPress={() => navigate('/android-preparation/formulas')} />
       <PreparationRow title={t('Ishlab chiqarish')} onPress={() => navigate('/android-preparation/production')} />

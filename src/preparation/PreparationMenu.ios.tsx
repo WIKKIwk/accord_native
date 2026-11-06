@@ -9,7 +9,7 @@ import { openPreparationScale } from './PreparationRoutes';
 export function PreparationMenu() {
   const { session, home } = usePreparationContext(), t = usePreparationText();
   const root = (route: string) => router.dismissTo(route as Href);
-  return <Host matchContents><Menu label={t('Bo‘limlar')} systemImage="line.3.horizontal">
+  return <Host matchContents><Menu label={t('Tayyorlov bo‘limlari')} systemImage="line.3.horizontal">
     <Button label={t('Tayyorlov')} onPress={() => root('/ios-preparation')} />
     <Button label={t('Formulalar')} onPress={() => root('/ios-preparation/catalog')} />
     <Button label={t('Ishlab chiqarish')} onPress={() => root('/ios-preparation/production')} />

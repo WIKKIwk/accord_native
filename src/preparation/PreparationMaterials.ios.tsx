@@ -1,5 +1,5 @@
-import { Button, Host, List, Section, Text, TextField, Toggle, VStack } from '@expo/ui/swift-ui';
-import { disabled } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, HStack, List, Section, Spacer, Text, TextField, Toggle, VStack } from '@expo/ui/swift-ui';
+import { accessibilityLabel, buttonStyle, disabled, labelStyle } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
@@ -88,11 +88,14 @@ export function PreparationMaterials() {
     <PreparationStatus loading={state.loading || state.saving} error={state.error} retry={() => { void controller.load(); }} />
     <Section>
       {!state.loading && !state.error && state.filtered.length === 0 && <Text>{t(preparationMaterialsEmptyMessage(state.query))}</Text>}
-      {state.filtered.map(item => <Button key={item.item_code} modifiers={[disabled(blocked)]} onPress={() => openActions(item)}>
-        <VStack alignment="leading"><Text>{item.name}</Text>
-          <Text>{item.warehouses.length ? item.warehouses.join(', ') : t('Ombor biriktirilmagan')}</Text>
-        </VStack>
-      </Button>)}
+      {state.filtered.map(item => <HStack key={item.item_code}>
+        <Button modifiers={[disabled(blocked), buttonStyle('plain')]} onPress={() => openActions(item)}>
+          <VStack alignment="leading"><Text>{item.name}</Text>
+            <Text>{item.warehouses.length ? item.warehouses.join(', ') : t('Ombor biriktirilmagan')}</Text></VStack>
+        </Button><Spacer />
+        <Button label={t('Homashyo amallari')} systemImage="ellipsis" modifiers={[disabled(blocked), labelStyle('iconOnly'), accessibilityLabel(t('Homashyo amallari'))]}
+          onPress={() => openActions(item)} />
+      </HStack>)}
     </Section>
   </PreparationList><PreparationNotice message={notice.message} />
     {renameItem && <PreparationInputDialog key={renameItem.item_code} title="Homashyo nomini o‘zgartirish" label="Homashyo nomi"
