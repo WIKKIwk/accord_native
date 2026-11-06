@@ -1,8 +1,14 @@
-import { Button, Host, HStack, List, Menu, ProgressView, RNHostView, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
+import { Button, Host, HStack, List, ProgressView, RNHostView, Section, Text, VStack } from '@expo/ui/swift-ui';
 import { accessibilityLabel, disabled, onAppear } from '@expo/ui/swift-ui/modifiers';
-import { Stack, useFocusEffect } from 'expo-router';
+import { router, type Href, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AppState } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
+import { ListItem, Row } from '@expo/ui';
+import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
+import { OrdersList } from '../shared/orders/OrdersList';
+import { OrderListItem } from '../shared/orders/OrderListItem';
+import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import type { Session } from '../auth';
 import { activeSessionToken, registerSessionResetHook } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
@@ -20,7 +26,7 @@ import { usePreparationContext } from './PreparationContext';
 import { usePreparationOrderMaterials } from './usePreparationOrderMaterials';
 import { openPreparationRoute } from './PreparationRoutes';
 import { localeController } from '../shared/localization/runtime';
-import { PreparationList, PreparationStatus, preparationAlert, usePreparationText } from './PreparationUI';
+import { preparationAlert, usePreparationText } from './PreparationUI';
 import { preparationOrderDetail, type PreparationOrderListRow } from './preparationOrdersApi';
 import type { PreparationOrdersState } from './preparationOrdersState';
 
@@ -83,24 +89,12 @@ function OrderDetail({ session, controller, row, close, renderDetail }: Props & 
   </List><Button label={t('Yopish')} onPress={close} /></VStack></Host>;
 }
 
-function SequenceRow({ session, row }: { session: Session; row: PreparationOrderListRow }) {
-  const [showImage, setShowImage] = useState(false), colors = useWorkerColors();
-  useEffect(() => {
-    let second = 0; const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => setShowImage(true)); });
-    return () => { cancelAnimationFrame(first); if (second) cancelAnimationFrame(second); };
-  }, []);
-  return <HStack spacing={10}>
-    {showImage && <RNHostView matchContents><WorkerOrderThumbnail session={session} orderId={row.id} imageId={row.image_id}
-      active backgroundColor={colors.surface} iconColor={colors.icon} /></RNHostView>}
-    <VStack alignment="leading"><Text>{row.position}. {row.code || row.order_number || row.id}</Text><Text>{row.title} · {row.customer_name}</Text></VStack>
-  </HStack>;
-}
-
 // @v2 AdminProductionMapOrdersScreen
 // @v2 _PreparationOrdersListState
 export function PreparationSequence({ session, controller, selectApparatus, renderDetail }: Props) {
-  const t = usePreparationText(), sheet = useNativeSheet();
-  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+  const t = usePreparationText(), sheet = useNativeSheet(), drawer = useRoleDrawer();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(70);
+  const [query, setQuery] = useState('');
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useFocusEffect(useCallback(() => { controller.setForeground(AppState.currentState === 'active');
     const subscription = AppState.addEventListener('change', value => controller.setForeground(value === 'active'));
@@ -109,22 +103,23 @@ export function PreparationSequence({ session, controller, selectApparatus, rend
     try { await selectApparatus(id); await controller.changeQuery({ apparatus: id }); }
     catch (error) { preparationAlert(error); }
   };
-  return <><Stack.Screen options={{ title: t('Ketma-ketlik') }} /><PreparationList refresh={() => controller.reload(true)}>
-    <Section><TextField placeholder={productionText('worker.queue.search.sequence', locale)} onTextChange={value => controller.searchChanged(value)} />
-      {!!state.window?.apparatus.length && <Menu label={state.window.apparatus.find(item => item.id === state.apparatus)?.name ?? t('Apparat')}>
-        {state.window.apparatus.map(item => <Button key={item.id} label={item.name} onPress={() => { void select(item.id); }} />)}
-      </Menu>}</Section>
-    <PreparationStatus loading={state.loading} error={state.error} retry={() => { void controller.reload(); }} />
-    {!state.loading && !state.error && !state.rows.length && <Section><Text>{t('Mos buyurtma topilmadi.')}</Text></Section>}
-    <Section>{state.rows.map((row, index) => <Button key={row.id} modifiers={[onAppear(() => {
-      if (index >= state.rows.length - 5 && state.window?.next_cursor) void controller.loadMore();
-    })]} onPress={() => sheet.open(<OrderDetail session={session} controller={controller}
-      row={row} close={sheet.close} selectApparatus={selectApparatus} renderDetail={renderDetail} />, { dismissible: false })}>
-      <SequenceRow session={session} row={row} />
-    </Button>)}</Section>
-    {state.window?.next_cursor != null && <Section><Button label={t('Yana yuklash')} modifiers={[disabled(state.loading)]}
-      onPress={() => { void controller.loadMore(); }} /></Section>}
-  </PreparationList></>;
+  return <OrdersWorkspace session={session} tabs={state.window?.apparatus ?? []} selected={state.apparatus}
+    onSelect={id => { void select(id); }} search={query} onSearchChange={value => { setQuery(value); controller.searchChanged(value); }}
+    loading={state.loading && !state.window} onMenu={drawer.open} onProfile={() => router.navigate('/ios-preparation/profile' as Href)}>
+    {(tabId, pagerGesture, machinePicker) => <OrdersList active={tabId === state.apparatus} pagerGesture={pagerGesture}
+      headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} onRefresh={() => controller.reload(true)}>
+      <Row spacing={8} style={{ paddingVertical: 4 }}>{machinePicker}</Row>
+      {!!state.error && <ListItem supportingText={state.error} onPress={() => { void controller.reload(); }}>{t('Qayta urinish')}</ListItem>}
+      {!state.loading && !state.error && !state.rows.length && <ListItem>{t('Mos buyurtma topilmadi.')}</ListItem>}
+      {state.rows.map((row, index) => <OrderListItem key={row.id} session={session} orderId={row.id} imageId={row.image_id}
+        imageActive={tabId === state.apparatus} last={index === state.rows.length - 1}
+        headline={`${row.position}. ${row.code || row.order_number || row.id} · ${row.title}`} supportingText={row.customer_name}
+        onPress={() => sheet.open(<OrderDetail session={session} controller={controller} row={row} close={sheet.close}
+          selectApparatus={selectApparatus} renderDetail={renderDetail} />, { dismissible: false })} />)}
+      {state.window?.next_cursor != null && <Button label={t('Yana yuklash')} modifiers={[disabled(state.loading), onAppear(() => { void controller.loadMore(); })]}
+        onPress={() => { void controller.loadMore(); }} />}
+    </OrdersList>}
+  </OrdersWorkspace>;
 }
 
 export function PreparationSequenceRoute() {

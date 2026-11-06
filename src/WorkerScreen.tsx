@@ -1,6 +1,7 @@
 import { ListItem, Spacer } from '@expo/ui';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { router, type Href } from 'expo-router';
 import { Modal, Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
@@ -198,7 +199,11 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (id === 'home' || id === 'queue') { setSection('home'); return; }
     if (id === 'profile') { if (nativeNavigation) onNavigate?.('profile'); else setSection('profile'); return; }
     if (id === 'daily') { if (nativeNavigation) onNavigate?.('daily'); else setSection('daily'); return; }
-    if (id === 'chat' && nativeNavigation) { onNavigate?.('chat'); return; }
+    if (id === 'chat') {
+      if (nativeNavigation) onNavigate?.('chat');
+      else router.push((Platform.OS === 'ios' ? '/ios-chat' : '/android-chat') as Href);
+      return;
+    }
     if (id === 'logout') { onLogout(); return; }
     const labels: Record<string, string> = { chat: 'Chat', paddons: 'Paddonlar', instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
     setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });

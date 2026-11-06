@@ -488,7 +488,7 @@ test('the row spans the composer and keeps its place above the plus however tall
 test('an image preview has no opaque layer behind a landing photo and reports when it has loaded', () => {
   function View() {}
   function Image() {}
-  const preview = load('components/ChatMediaPreview.ios.tsx', {
+  const preview = load('components/chatMediaPreviewShared.tsx', {
     react: { useEffect() {}, useState() {} },
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     'expo-image': { Image }, 'expo-symbols': { SymbolView() {} }, 'expo-web-browser': {},

@@ -55,7 +55,7 @@ test('worker configuration keeps its order, transfer permission and account-spec
 test('preparation keeps the V2 destination order and capability-dependent entries on both platforms', () => {
   const items = preparation.preparationDrawerItems({ scale: true, inventory: true }, text => text);
   assert.deepEqual(items.map(item => item.label), ['Tayyorlov', 'Formulalar', 'Ishlab chiqarish', 'Ketma-ketlik', 'Kirim', 'Chat', 'Ishlab chiqarilgan homashyolar', 'Profil']);
-  assert.equal(items.find(item => item.id === 'chat').disabled, true);
+  assert.equal(items.find(item => item.id === 'chat').disabled, undefined);
   assert.ok(items.every(item => item.symbol.ios && item.symbol.android));
   const limited = preparation.preparationDrawerItems({ scale: false, inventory: false }, text => `translated:${text}`);
   assert.deepEqual(limited.map(item => item.id), ['home', 'formulas', 'production', 'sequence', 'chat', 'profile']);
@@ -71,7 +71,8 @@ for (const platform of ['ios', 'android']) {
       assert.deepEqual(preparation.preparationDrawerRoute(id, platform), { path: `${base}/${id}`, kind: 'push' });
     }
     assert.deepEqual(preparation.preparationDrawerRoute('profile', platform), { path: `${base}/profile`, kind: 'tab' });
-    for (const id of ['chat', 'scale', 'logout', 'unknown']) assert.equal(preparation.preparationDrawerRoute(id, platform), null);
+    assert.deepEqual(preparation.preparationDrawerRoute('chat', platform), { path: platform === 'ios' ? `${base}/chat` : '/android-chat', kind: platform === 'ios' ? 'tab' : 'push' });
+    for (const id of ['scale', 'logout', 'unknown']) assert.equal(preparation.preparationDrawerRoute(id, platform), null);
     assert.equal(preparation.preparationDrawerActive(base), 'home');
     assert.equal(preparation.preparationDrawerActive(`${base}/profile`), 'profile');
     assert.equal(preparation.preparationDrawerActive(`${base}/production-batch`), 'production');
@@ -205,6 +206,7 @@ for (const platform of ['ios', 'android']) {
       ['push', `/${platform}-preparation/sequence`],
       ['root', `/${platform}-preparation/${platform === 'ios' ? 'catalog' : 'formulas'}`],
       ['tab', `/${platform}-preparation/profile`], ['scale', { warehouse: 'Assigned' }],
+      [platform === 'ios' ? 'tab' : 'push', platform === 'ios' ? '/ios-preparation/chat' : '/android-chat'],
     ]);
     tree.props.onSelect('logout');
     assert.equal(calls.at(-1)[0], 'confirm');

@@ -31,7 +31,7 @@ The user requested a reusable drawer for every role, following investigation of 
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
 | `RoleNavigationDrawer`, `core/widgets/navigation/role_navigation_drawer.dart:23` | `shared/navigation/RoleDrawer.*.tsx` | Code compared | Code compared | Existing platform-native worker shell retained; destinations and title are caller data. Selecting a destination requests close before dispatch, retaining the V4 worker's timing rather than V2's fixed 220 ms delay. Native transition timing needs phone validation. |
-| `PreparationDrawer`, `features/preparation/presentation/preparation_navigation.dart:70` | `preparation/PreparationDrawer.*.tsx`, `preparationDrawerModel.ts` | Code compared | Code compared | V2 title/order and conditional entries supplied. Chat remains disabled because its preparation destination is not connected. |
+| `PreparationDrawer`, `features/preparation/presentation/preparation_navigation.dart:70` | `preparation/PreparationDrawer.*.tsx`, `preparationDrawerModel.ts` | Code compared | Code compared | V2 title/order and conditional entries supplied. Chat was subsequently enabled through the shared pages; see `role-pages.md`. |
 | `showLogoutPrompt`, `core/widgets/feedback/logout_prompt.dart:6` | `shared/navigation/roleDrawerLogout.ts` | Code compared | Code compared | Native alert preserves title/body, No/Yes order and cancel/outside-dismiss behavior. Device presentation not checked. |
 
 ## Open items
@@ -39,8 +39,7 @@ The user requested a reusable drawer for every role, following investigation of 
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Native devices | Drawer/AppShell gestures | Check worker and preparation in light/dark mode: hamburger/edge swipe, outside tap, long labels with large text, back navigation and Android hardware Back. Confirm the preparation header's back button coexists with its drawer button and both native tabs move with the drawer. |
-| Preparation Chat (existing) | `PreparationDrawer` Chat destination | Preparation Chat is still disabled; this component extraction does not connect the chat role. |
-| Android full-project typecheck (existing) | N/A | Resolve the 10 unrelated worker baseline errors in their owning task. |
+| Android full-project typecheck (existing) | N/A | The shared row API subsequently removed one error; the 9 remaining worker errors are tracked in `role-pages.md`. |
 
 ## Deviations candidates
 

@@ -1,11 +1,17 @@
 import { Host, ModalBottomSheet, RNHostView, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { ActivityIndicator, AppState, FlatList, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, AppState, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { WorkerOrderHeader, WorkerOrderImage } from '../components/WorkerOrderHeader';
-import { WorkerOrderThumbnail } from '../components/WorkerOrderThumbnail';
+import { Button as ListButton, ListItem } from '@expo/ui';
+import { useSharedValue } from 'react-native-reanimated';
+import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
+import { OrdersList } from '../shared/orders/OrdersList';
+import { OrderListItem } from '../shared/orders/OrderListItem';
+import { OrdersHeader } from '../shared/orders/OrdersHeader';
+import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { preparationOrderMaterials } from '../preparationReadApi';
 import { sessionReadScope } from '../sessionReadScope';
 import { adminSequenceApparatusStore } from '../shared/adminSequenceApparatusStore';
@@ -20,7 +26,7 @@ import { preparationOrderDisplayCode, preparationOrderMetrics, preparationOrderP
 import { subscribePreparationOrdersLive } from './preparationOrdersLive';
 import { PreparationOrdersState } from './preparationOrdersState';
 import { preparationOrdersWarmStore } from './preparationRuntime';
-import { PreparationButton, PreparationDialogs, PreparationField, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDialogs, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 type Props = { session: Session; controller: PreparationOrdersState;
   selectApparatus: (id: string) => Promise<void>; openOrder: (row: PreparationOrderListRow) => void };
@@ -41,12 +47,11 @@ function sequenceLifecycle(controller: PreparationOrdersState) {
 export function PreparationSequenceList({ session, controller, selectApparatus, openOrder }: Props) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const [query, setQuery] = useState(''), dialogs = usePreparationDialogs(), t = usePreparationText();
-  const [imagesEnabled, setImagesEnabled] = useState(false);
-  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+  const drawer = useRoleDrawer(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(70);
+  const [headerSize, setHeaderSize] = useState(70);
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), visible = useRef(false), focusedOnce = useRef(false);
   const lifecycle = useMemo(() => sequenceLifecycle(controller), [controller]);
   useEffect(() => lifecycle.mount(), [lifecycle]);
-  useEffect(() => { const frame = requestAnimationFrame(() => setImagesEnabled(true)); return () => cancelAnimationFrame(frame); }, []);
   useFocusEffect(useCallback(() => {
     visible.current = true;
     if (focusedOnce.current || AppState.currentState !== 'active') controller.setForeground(AppState.currentState === 'active');
@@ -57,31 +62,31 @@ export function PreparationSequenceList({ session, controller, selectApparatus, 
     const sub = AppState.addEventListener('change', value => controller.setForeground(visible.current && value === 'active'));
     return () => sub.remove();
   }, [controller]);
-  const choose = async () => {
-    const selection = await dialogs.choose('Apparat', (state.window?.apparatus ?? []).map(item => ({ label: item.name, value: item.id })));
-    if (selection === null || selection === state.apparatus) return;
-    try { await selectApparatus(selection); await controller.changeQuery({ apparatus: selection }); }
+  const select = async (id: string) => {
+    if (id === state.apparatus) return;
+    try { await selectApparatus(id); await controller.changeQuery({ apparatus: id }); }
     catch (error) { dialogs.message('Xatolik yuz berdi', String(error)); }
   };
+  const header = <View onLayout={event => {
+    const height = event.nativeEvent.layout.height;
+    if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
+  }}><OrdersHeader search={query} onSearchChange={value => { setQuery(value); controller.searchChanged(value); }}
+    onMenu={drawer.open} onProfile={() => router.navigate('/android-preparation/profile' as Href)} /></View>;
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
-    <View style={{ padding: 16 }}><PreparationText title>{t('Ketma-ketlik')}</PreparationText>
-      <PreparationButton label="Orqaga" onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }} /></View>
-    <FlatList data={state.rows} keyExtractor={item => item.id} contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 8, paddingBottom: insets.bottom + 20 }}
-      refreshControl={<RefreshControl refreshing={state.loading && !!state.rows.length} onRefresh={() => void controller.reload(true)} />}
-      onEndReached={() => void controller.loadMore()} onEndReachedThreshold={0.5}
-      ListHeaderComponent={<View style={{ gap: 8, marginBottom: 8 }}>
-        <PreparationField label={productionText('worker.queue.search.sequence', locale)} initial={query} onChange={value => { setQuery(value); controller.searchChanged(value); }} />
-        <PreparationRow title={t('Apparat')} subtitle={state.window?.apparatus.find(item => item.id === state.apparatus)?.name ?? ''} onPress={() => void choose()} />
-        {state.error ? <><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => void controller.reload(true)} /></> : null}
-        {state.loading && !state.rows.length ? <ActivityIndicator /> : null}
-        {!state.loading && !state.error && !state.rows.length ? <PreparationText>{t('Mos buyurtma topilmadi.')}</PreparationText> : null}
-      </View>}
-      renderItem={({ item }) => <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-        <WorkerOrderThumbnail session={session} orderId={item.id} imageId={item.image_id} active={imagesEnabled} backgroundColor={colors.surface} iconColor={colors.onSurfaceVariant} />
-        <View style={{ flex: 1 }}><PreparationRow title={`${item.position}. ${item.code || item.order_number || item.id} · ${item.title}`}
-          subtitle={item.customer_name} onPress={() => openOrder(item)} /></View>
-      </View>}
-      ListFooterComponent={state.window?.next_cursor ? <PreparationButton label="Yana yuklash" disabled={state.loading} onPress={() => void controller.loadMore()} /> : undefined} />
+    <OrdersWorkspace session={session} tabs={state.window?.apparatus ?? []} selected={state.apparatus}
+      onSelect={id => { void select(id); }} loading={state.loading && !state.window} header={header} headerOffset={headerOffset}>
+      {(tabId, pagerGesture) => <OrdersList active={tabId === state.apparatus} pagerGesture={pagerGesture}
+        headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48}
+        onRefresh={() => controller.reload(true)} onEndReached={() => { if (tabId === state.apparatus) void controller.loadMore(); }}>
+        {!!state.error && <ListItem supportingText={state.error} onPress={() => void controller.reload(true)}>{t('Qayta urinish')}</ListItem>}
+        {!state.loading && !state.error && !state.rows.length && <ListItem>{t('Mos buyurtma topilmadi.')}</ListItem>}
+        {tabId === state.apparatus && state.rows.map((row, index) => <OrderListItem key={row.id}
+          session={session} orderId={row.id} imageId={row.image_id} imageActive last={index === state.rows.length - 1}
+          headline={`${row.position}. ${row.code || row.order_number || row.id} · ${row.title}`} supportingText={row.customer_name}
+          onPress={() => openOrder(row)} />)}
+        {state.window?.next_cursor && <ListButton label={t('Yana yuklash')} disabled={state.loading} onPress={() => void controller.loadMore()} />}
+      </OrdersList>}
+    </OrdersWorkspace>
   </View>;
 }
 
@@ -138,13 +143,13 @@ function PreparationSequenceDetail({ session, controller, selected, isCurrent, c
   session: Session; controller: PreparationOrdersState; selected: { row: PreparationOrderListRow; scope: string };
   isCurrent: () => boolean; close: () => void; openVariants: (options: VariantOptions) => void;
 }) {
+  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const [result, setResult] = useState<{ retry: number; value: Awaited<ReturnType<typeof preparationOrderDetail>> | null;
     metrics: { kg: number | null; length: number | null } | null; error: string | null } | null>(null);
   const [retry, setRetry] = useState(0), [loadingMaterials, setLoadingMaterials] = useState(false);
   const [imageOpen, setImageOpen] = useState(false), [expanded, setExpanded] = useState(true);
   const dialogs = usePreparationDialogs(), t = usePreparationText();
-  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const current = () => isCurrent() && controller.getSnapshot().window?.scope === selected.scope &&
     controller.getSnapshot().rows.some(row => row.id === selected.row.id);
   const valid = isCurrent() && state.window?.scope === selected.scope && state.rows.some(row => row.id === selected.row.id);

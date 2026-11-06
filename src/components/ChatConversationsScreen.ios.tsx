@@ -1,17 +1,14 @@
 import { Button, Host, HStack, Image, List, ProgressView, RNHostView, Text, VStack } from '@expo/ui/swift-ui';
 import { background, buttonStyle, contentShape, font, foregroundStyle, frame, lineLimit, listRowBackground, listRowInsets, listRowSeparator, listStyle, padding, refreshable, scrollContentBackground, shapes } from '@expo/ui/swift-ui/modifiers';
-import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { AppState, StyleSheet } from 'react-native';
-import { activeSessionToken, type Session } from '../auth';
-import { loadChatConversations } from '../chatApi';
-import { subscribeChatLive } from '../chatLive';
+import { Stack } from 'expo-router';
+import { StyleSheet } from 'react-native';
+import type { Session } from '../auth';
 import { chatTime, filterChatConversations, type ChatConversation } from '../chatModel';
 import { ChatAvatar } from './ChatAvatar';
-import { useChatMetadata } from './ChatMetadata';
 import { useWorkerColors } from './useWorkerColors';
 
-type Props = { session: Session; onOpenDrawer?: () => void };
+import type { ChatConversationsProps as Props } from '../shared/chat/chatPageTypes';
+import { useChatConversations } from '../shared/chat/useChatConversations';
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 const transparentRow = listRowBackground('transparent');
 
@@ -60,58 +57,8 @@ function ChatList({ items, error, query, session, avatarToken, onRefresh, onOpen
   </Host>;
 }
 
-export function ChatConversationsScreen({ session, onOpenDrawer }: Props) {
-  const router = useRouter();
-  const { remember } = useChatMetadata();
-  const [items, setItems] = useState<ChatConversation[] | null>(null);
-  const [error, setError] = useState('');
-  const [query, setQuery] = useState('');
-  const [avatarToken, setAvatarToken] = useState(() => activeSessionToken(session));
-  const focused = useRef(false);
-  const generation = useRef(0);
-  const request = useRef<AbortController | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!focused.current || (AppState.currentState != null && AppState.currentState !== 'active')) return;
-    request.current?.abort();
-    const controller = new AbortController();
-    request.current = controller;
-    const current = ++generation.current;
-    try {
-      const page = await loadChatConversations(session, controller.signal);
-      if (!focused.current || controller.signal.aborted || current !== generation.current || !activeSessionToken(session)) return;
-      setItems(page.items);
-      remember(page.items);
-      setAvatarToken(activeSessionToken(session));
-      setError('');
-    } catch (reason) {
-      if (!focused.current || controller.signal.aborted || current !== generation.current || !activeSessionToken(session)) return;
-      setError(reason instanceof Error && reason.name !== 'TypeError' ? reason.message : 'Internetni tekshirib, qayta urinib ko‘ring.');
-    } finally {
-      if (request.current === controller) request.current = null;
-    }
-  }, [remember, session]);
-
-  useFocusEffect(useCallback(() => {
-    focused.current = true;
-    void refresh();
-    const stopLive = subscribeChatLive(session, () => { void refresh(); });
-    const timer = setInterval(() => { void refresh(); }, 30000);
-    const appState = AppState.addEventListener('change', state => {
-      if (state === 'active') void refresh();
-      else { generation.current++; request.current?.abort(); request.current = null; }
-    });
-    return () => {
-      focused.current = false;
-      generation.current++;
-      request.current?.abort();
-      request.current = null;
-      clearInterval(timer);
-      appState.remove();
-      stopLive();
-    };
-  }, [refresh, session]));
-
+export function ChatConversationsScreen({ session, onOpenDrawer, onBack, navigation }: Props) {
+  const { items, error, query, setQuery, avatarToken, refresh } = useChatConversations(session);
   return <>
     <Stack.Screen options={{
       title: 'Chatlar', headerLargeTitle: true, headerLargeTitleShadowVisible: false,
@@ -121,10 +68,11 @@ export function ChatConversationsScreen({ session, onOpenDrawer }: Props) {
         onChangeText: event => setQuery(event.nativeEvent.text), onCancelButtonPress: () => setQuery(''),
       },
     }} />
+    {onBack ? <Stack.Toolbar placement="left"><Stack.Toolbar.Button icon="chevron.left" accessibilityLabel="Orqaga" onPress={onBack} /></Stack.Toolbar> : null}
     {onOpenDrawer ? <Stack.Toolbar placement="left"><Stack.Toolbar.Button icon="line.3.horizontal" accessibilityLabel="Bo‘limlar" onPress={onOpenDrawer} /></Stack.Toolbar> : null}
-    <Stack.Toolbar placement="right"><Stack.Toolbar.Button icon="square.and.pencil" accessibilityLabel="Yangi suhbat" onPress={() => router.push('/ios-worker/chat/new')} /></Stack.Toolbar>
+    <Stack.Toolbar placement="right"><Stack.Toolbar.Button icon="square.and.pencil" accessibilityLabel="Yangi suhbat" onPress={navigation.openDirectory} /></Stack.Toolbar>
     <ChatList items={items} error={error} query={query} session={session} avatarToken={avatarToken} onRefresh={refresh}
-      onOpen={conversation => router.push({ pathname: '/ios-worker/chat/[conversationId]', params: { conversationId: conversation.id, title: conversation.title } })} />
+      onOpen={navigation.openConversation} />
   </>;
 }
 
