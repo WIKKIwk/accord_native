@@ -12,7 +12,7 @@ import { PreparationSeriyoPicker } from './PreparationSeriyoPicker';
 import { PreparationWarehouseCreateDialog } from './PreparationWarehouseCreateDialog';
 import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
 import { preparationDisplay } from './preparationModel';
-import { preparationJournalDate } from './PreparationDate';
+import { preparationMaterialConsumptionCard, preparationMaterialReceiptCard } from './preparationHistoryModel';
 import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRenameWarehouse } from './preparationManagementApi';
 import { preparationMaterialAvailable, preparationMaterialHistory, preparationReceiptMode, preparationReceiptPayload, preparationVisibleMaterials } from './preparationLogic';
 import { openPreparationScale } from './PreparationRoutes';
@@ -107,8 +107,8 @@ export function PreparationWarehouse() {
     {snapshot && snapshot.assigned_warehouses.length > 0 && !warehouse && <Section><Text>{t('Yuqoridagi filtrdan ombor tanlang.')}</Text></Section>}
     {warehouse && <Section>
       {items.length === 0 && <Text>{t('Bu omborda hali kirim yo‘q.')}</Text>}
-      {items.map(material => <Button key={material.code} onPress={() => router.push(`/ios-preparation/material-detail?code=${encodeURIComponent(material.code)}` as Href)}>
-        <Text>{material.name} · {t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
+      {items.map(material => <Button key={material.code} onPress={() => router.push(`/ios-preparation/material-detail?code=${encodeURIComponent(material.code)}&warehouse=${encodeURIComponent(warehouse)}` as Href)}>
+        <Text>{material.name.trim() || material.code} · {t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
       </Button>)}
     </Section>}
     <Section title={t('Amallar')}>
@@ -130,10 +130,10 @@ export function PreparationWarehouse() {
 
 // @v2 PreparationMaterialDetailScreen
 export function PreparationMaterialDetail() {
-  const { code } = useLocalSearchParams<{ code: string }>();
+  const params = useLocalSearchParams<{ code: string; warehouse?: string }>(), code = params.code;
   const { home } = usePreparationContext(), t = usePreparationText(), notice = usePreparationNotice();
   const [input, setInput] = useState<StockInput | null>(null);
-  const { warehouse, snapshot, controller } = home;
+  const { snapshot, controller } = home, warehouse = params.warehouse ?? home.warehouse;
   const firstFocus = useRef(true);
   useFocusEffect(useCallback(() => { if (firstFocus.current) firstFocus.current = false; else void controller.reload(); }, [controller]));
   const material = snapshot?.materials.find(item => item.code === code);
@@ -148,15 +148,17 @@ export function PreparationMaterialDetail() {
   };
   return <View style={{ flex: 1 }}><Stack.Screen options={{ title: material?.name ?? t('Homashyo') }} /><PreparationList refresh={controller.reload.bind(controller)}>
     <PreparationStatus loading={home.loading} error={home.error} retry={() => { void controller.reload(); }} />
-    {material && <Section><Text>{material.name}</Text><Text>{t('Mavjud qoldiq')}: {preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text>
-      {mode === 'manual' && <Button label={t('Kirim qilish')} modifiers={[disabled(home.locked || !material.can_receive)]} onPress={receive} />}
-      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(home.locked)]} onPress={() => openPreparationScale({ warehouse })} />}</Section>}
-    {history.receipts.length > 0 && <Section title={t('Kirimlar')}>{history.receipts.map((item, index) => <Text key={index}>
-      {item.kind === 'receipt_reversal' ? '−' : '+'}{preparationDisplay(String(item.kg ?? '0'))} kg · {String(item.warehouse ?? '')} · {preparationJournalDate(String(item.created_at ?? ''))} {item.reversed === true ? t('Bekor qilingan') : ''} {item.reason ? `${t('Sabab')}: ${String(item.reason)}` : ''}
-    </Text>)}</Section>}
-    {history.consumptions.length > 0 && <Section title={t('Chiqimlar')}>{history.consumptions.map(({ doc, line }, index) => <Text key={index}>
-      −{preparationDisplay(String(line.kg ?? '0'))} kg · {String(doc.order_code ?? '')} {String(doc.order_title ?? '')} · {preparationDisplay(String(line.percent ?? '0'))}% · {preparationJournalDate(String(doc.created_at ?? ''))}
-    </Text>)}</Section>}
+    <Section>{!!warehouse && <Text>{warehouse}</Text>}{material && <><Text>{material.name}</Text><Text>{material.code}</Text>
+      <Text>{preparationDisplay(preparationMaterialAvailable(material, warehouse))} kg</Text></>}
+      {mode === 'manual' && <Button label={t('Kirim qilish')} modifiers={[disabled(home.locked || !material || !material.can_receive)]} onPress={receive} />}
+      {mode === 'scale' && <Button label={t('Tarozi kirimi')} modifiers={[disabled(home.locked || !material)]} onPress={() => openPreparationScale({ warehouse })} />}</Section>
+    {history.receipts.length > 0 && <Section title={t('Kirimlar')}>{history.receipts.map((item, index) => {
+      const card = preparationMaterialReceiptCard(item, material?.name); return <VStack key={index} alignment="leading">
+        <Text>{card.title}</Text><Text>{card.subtitle}</Text>{!!card.value && <Text>{card.value}</Text>}</VStack>;
+    })}</Section>}
+    {history.consumptions.length > 0 && <Section title={t('Chiqimlar')}>{history.consumptions.map(({ doc, line }, index) => {
+      const card = preparationMaterialConsumptionCard(doc, line); return <VStack key={index} alignment="leading"><Text>{card.title}</Text><Text>{card.subtitle}</Text></VStack>;
+    })}</Section>}
     {!history.receipts.length && !history.consumptions.length && <Section><Text>{t('Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.')}</Text></Section>}
   </PreparationList><PreparationNotice message={notice.message} />
     {input && <PreparationInputDialog title={input.title} label={input.label} quantity={input.quantity}

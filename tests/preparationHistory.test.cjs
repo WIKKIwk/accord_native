@@ -32,3 +32,14 @@ test('history formats receipt, reversal, and consumption records as V2', () => {
   assert.equal(history.preparationReceiptReverseMessage(receipt), '12.5 kg kirim bekor qilinsinmi? Bu amal tarixda saqlanadi.');
   assert.equal(history.preparationHistoryDate(null), '');
 });
+test('material detail shows the warehouse receipt, reversal and consumption cards', () => {
+  const receipt = { kind: 'receipt', warehouse: 'A', kg: '12.5', reversed: true, created_at: '2026-10-12T08:25:16' };
+  assert.deepEqual(history.preparationMaterialReceiptCard(receipt, 'Kley'), {
+    title: '+12.5 kg', subtitle: 'A • 2026-10-12 08:25:16\nBekor qilingan', value: '',
+  });
+  assert.deepEqual(history.preparationMaterialReceiptCard({ ...receipt, kind: 'receipt_reversal', reason: ' Xato ' }, 'Kley'), {
+    title: 'Kirimni bekor qilish — Kley', subtitle: 'A • 2026-10-12 08:25:16\nSabab: Xato', value: '-12.5 kg',
+  });
+  assert.deepEqual(history.preparationMaterialConsumptionCard({ order_code: 'B1', order_title: 'Paket', created_at: 'bad' },
+    { kg: '4.000000', percent: '10.000000' }), { title: '-4 kg', subtitle: 'B1 Paket • 10% • bad' });
+});

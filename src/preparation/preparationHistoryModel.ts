@@ -51,3 +51,17 @@ export function preparationReceiptActionSubtitle(doc: HistoryEntry) {
 export function preparationReceiptReverseMessage(doc: HistoryEntry) {
   return `${decimal(doc.kg)} kg kirim bekor qilinsinmi? Bu amal tarixda saqlanadi.`;
 }
+
+export function preparationMaterialReceiptCard(doc: HistoryEntry, materialName = '') {
+  const reversal = doc.kind === 'receipt_reversal', reason = String(doc.reason ?? '').trim();
+  const subtitle = [`${text(doc.warehouse)} • ${preparationHistoryDate(doc.created_at)}`,
+    ...(reversal && reason ? [`Sabab: ${reason}`] : []),
+    ...(!reversal && doc.reversed === true ? ['Bekor qilingan'] : [])].join('\n');
+  return { title: reversal ? `Kirimni bekor qilish — ${doc.name ?? materialName}` : `+${decimal(doc.kg)} kg`,
+    subtitle, value: reversal ? `-${decimal(doc.kg)} kg` : '' };
+}
+
+export function preparationMaterialConsumptionCard(doc: HistoryEntry, line: HistoryEntry) {
+  return { title: `-${decimal(line.kg)} kg`,
+    subtitle: `${text(doc.order_code)} ${text(doc.order_title)} • ${decimal(line.percent)}% • ${preparationHistoryDate(doc.created_at)}` };
+}

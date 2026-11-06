@@ -8,24 +8,23 @@ import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRena
 import { preparationMaterialAvailable, preparationMaterialHistory, preparationReceiptMode, preparationReceiptPayload,
   preparationReverseHistory, preparationVisibleMaterials, type PreparationMaterial } from './preparationLogic';
 import { preparationDisplay } from './preparationModel';
-import { preparationHistoryCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
+import { preparationHistoryCard, preparationMaterialConsumptionCard, preparationMaterialReceiptCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
 import { PreparationNotice } from './PreparationNotice';
 import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
 import { PreparationWarehouseCreateDialog } from './PreparationWarehouseCreateDialog';
 import { preparationWarehouseDeleteMessage, preparationWarehouseErrorMessage } from './preparationWarehousePresentation';
 import { usePreparationNotice } from './usePreparationNotice';
-import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { openPreparationScale } from './preparationNavigation.android';
 import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 function useStockActions(notice: ReturnType<typeof usePreparationNotice>) {
   const { home } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
-  const receive = async (material: PreparationMaterial) => {
-    if (!home.warehouse || !home.snapshot || home.locked) return;
-    if (preparationReceiptMode(home.warehouse, home.snapshot.material_warehouses) !== 'manual') return;
+  const receive = async (material: PreparationMaterial, selectedWarehouse = home.warehouse) => {
+    if (!selectedWarehouse || !home.snapshot || home.locked) return;
+    if (preparationReceiptMode(selectedWarehouse, home.snapshot.material_warehouses) !== 'manual') return;
     const kg = await dialogs.input({ title: `${material.name} — kirim`, label: 'Kirim (kg)', quantity: true });
     if (kg === null) return;
-    try { await home.controller.submit('receipts', preparationReceiptPayload(material, home.warehouse, kg)); notice.show(t('Saqlandi')); }
+    try { await home.controller.submit('receipts', preparationReceiptPayload(material, selectedWarehouse, kg)); notice.show(t('Saqlandi')); }
     catch (error) { notice.show(String(error)); }
   };
   const createMaterial = async () => {
@@ -118,12 +117,12 @@ export function PreparationWarehouseScreen() {
       : !materials.length ? <PreparationText>{t('Bu omborda hali kirim yo‘q.')}</PreparationText> : null}
     {materials.map(item => <PreparationRow key={item.code} title={item.name}
       subtitle={`${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`}
-      onPress={() => router.push({ pathname: '/android-preparation/material', params: { code: item.code } } as unknown as Href)} />)}
+      onPress={() => router.push({ pathname: '/android-preparation/material', params: { code: item.code, warehouse } } as unknown as Href)} />)}
     {warehouse && manual ? <>
       <PreparationButton label="Kirim" disabled={home.locked || managing} onPress={pickReceipt} id="preparation-receipt" />
       <PreparationButton label="Homashyo qo‘shish" disabled={home.locked || managing} onPress={() => void createMaterial()} />
     </> : null}
-    {warehouse && !manual && canOpenRoute(session, appRoutes.gscaleMode) ? <PreparationButton label="Tarozi kirimi"
+    {warehouse && !manual ? <PreparationButton label="Tarozi kirimi"
       disabled={home.locked || managing} onPress={() => openPreparationScale({ warehouse })} /> : null}
     {data?.assigned_warehouses.length && data.material_warehouses.length ? <PreparationButton label="Ombor qo‘shish" disabled={home.locked || managing} onPress={() => setShowCreate(true)} /> : null}
   </PreparationPage><PreparationNotice message={notice.message} />
@@ -132,38 +131,27 @@ export function PreparationWarehouseScreen() {
   </View>;
 }
 
-function historyTitle(doc: Record<string, unknown>) {
-  if (doc.kind === 'receipt') return `Kirim — ${String(doc.name ?? '')}`;
-  if (doc.kind === 'receipt_reversal') return `Kirimni bekor qilish — ${String(doc.name ?? '')}`;
-  return `Sarf — ${String(doc.order_code ?? '')} ${String(doc.order_title ?? '')}`;
-}
-function historySubtitle(doc: Record<string, unknown>) {
-  const text = [doc.warehouse, doc.created_at, doc.kg != null ? `${preparationDisplay(String(doc.kg))} kg` : null,
-    doc.reversed === true ? 'Bekor qilingan' : null, doc.reason].filter(Boolean);
-  return text.join(' · ');
-}
-
 // @v2 PreparationMaterialDetailScreen
 export function PreparationMaterialDetailScreen() {
-  const { code } = useLocalSearchParams<{ code: string }>();
-  const { home, session } = usePreparationContext(), notice = usePreparationNotice(), t = usePreparationText();
+  const params = useLocalSearchParams<{ code: string; warehouse?: string }>(), code = params.code;
+  const { home } = usePreparationContext(), notice = usePreparationNotice(), t = usePreparationText();
   const { receive } = useStockActions(notice);
   useStockReturnReload(home.controller);
   const item = home.snapshot?.materials.find(material => material.code === code);
-  const warehouse = home.warehouse;
+  const warehouse = params.warehouse ?? home.warehouse;
   const history = preparationMaterialHistory(home.snapshot?.history ?? [], warehouse ?? '', code ?? '');
   const manual = preparationReceiptMode(warehouse, home.snapshot?.material_warehouses ?? []) === 'manual';
-  return <View style={{ flex: 1 }}><PreparationPage title={item?.name ?? 'Homashyo'} refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
-    {item ? <PreparationRow title={item.name} subtitle={`${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`} /> : null}
-    {item && manual && item.can_receive ? <PreparationButton label="Kirim qilish" disabled={home.locked} onPress={() => void receive(item)} /> : null}
-    {item && !manual && canOpenRoute(session, appRoutes.gscaleMode) ? <PreparationButton label="Tarozi kirimi"
-      disabled={home.locked} onPress={() => openPreparationScale({ warehouse })} /> : null}
+  return <View style={{ flex: 1 }}><PreparationPage title={item?.name ?? 'Homashyo'} subtitle={warehouse ?? undefined} refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
+    {item ? <PreparationRow title={item.name} subtitle={`${item.code}\n${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`} /> : null}
+    {manual ? <PreparationButton label="Kirim qilish" disabled={home.locked || !item || !item.can_receive} onPress={() => { if (item) void receive(item, warehouse); }} />
+      : <PreparationButton label="Tarozi kirimi" disabled={home.locked || !item} onPress={() => openPreparationScale({ warehouse })} />}
     {!history.receipts.length && !history.consumptions.length ? <PreparationText>{t('Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.')}</PreparationText> : null}
     {history.receipts.length ? <PreparationText title>{t('Kirimlar')}</PreparationText> : null}
-    {history.receipts.map((doc, index) => <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={historyTitle(doc)} subtitle={historySubtitle(doc)} />)}
+    {history.receipts.map((doc, index) => { const card = preparationMaterialReceiptCard(doc, item?.name);
+      return <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={card.title} subtitle={[card.subtitle, card.value].filter(Boolean).join('\n')} />; })}
     {history.consumptions.length ? <PreparationText title>{t('Chiqimlar')}</PreparationText> : null}
-    {history.consumptions.map(({ doc, line }, index) => <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={historyTitle(doc)}
-      subtitle={`${historySubtitle(doc)} · ${String(line.kg ?? '')} kg`} />)}
+    {history.consumptions.map(({ doc, line }, index) => { const card = preparationMaterialConsumptionCard(doc, line);
+      return <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={card.title} subtitle={card.subtitle} />; })}
   </PreparationPage><PreparationNotice message={notice.message} /></View>;
 }
 
