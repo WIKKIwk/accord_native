@@ -17,7 +17,7 @@ function ReuseSheet({ controller, close, choose }: { controller: PreparationVari
   const [items, setItems] = useState<Awaited<ReturnType<PreparationVariantsState['loadReusePage']>>>([]);
   const [query, setQuery] = useState(''), [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
-  const generation = useRef(0), loadingRef = useRef(false), choosing = useRef(false), active = useRef(true);
+  const generation = useRef(0), loadingRef = useRef(false), choosing = useRef(false), active = useRef(true), latestQuery = useRef('');
   const requestPage = useCallback((search: string, offset: number, current: number) => {
     void controller.loadReusePage(search, offset, 80).then(page => {
       if (current !== generation.current) return;
@@ -41,8 +41,8 @@ function ReuseSheet({ controller, close, choose }: { controller: PreparationVari
   }, [requestPage]);
   return <Host style={{ minHeight: 400 }}><VStack><Text>{t('Shnek formulasini tanlang')}</Text>
     <TextField placeholder={t('Formula nomi, kodi yoki buyurtmani qidirish')} autoFocus modifiers={[disabled(busy)]} onTextChange={value => {
-      if (value === query) return;
-      setQuery(value); load(0, value);
+      if (value === latestQuery.current) return;
+      latestQuery.current = value; setQuery(value); load(0, value);
     }} /><List>
       {loading && <ProgressView />}{!!error && <Section><Text>{error}</Text>
         <Button label={t('Qayta urinish')} modifiers={[disabled(busy || loading)]} onPress={() => load(items.length)} /></Section>}
