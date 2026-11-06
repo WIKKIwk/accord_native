@@ -57,6 +57,7 @@ function ApparatusRow({ labels }: { labels: string[] }) {
   </DisclosureGroup>;
 }
 
+// @v2 _ProfileSelectionSheet
 function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,
   onChangeName, onChoosePhoto, onSave, onCloseEditor }: ProfileViewProps) {
   const dark = useColorScheme() === 'dark';
@@ -104,6 +105,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
   </Group>;
 }
 
+// @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
   const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
   const details = profileDisplay(snapshot);

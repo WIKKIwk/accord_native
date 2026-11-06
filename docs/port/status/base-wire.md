@@ -34,6 +34,7 @@ Login test mode remains deferred under D3.
 |---|---|---|
 | `package.json`, `package-lock.json` | `NativeAppUpdatePlatform.currentAppInfo` | Install the SDK-compatible `expo-application` with `npx expo install expo-application`, rebuild the app and connect its public API. These files are outside the base-wire fence. |
 | Native Android update module | `accord/app_update` | Supply the V2 download, validation and installation bridge, then connect the automatic update runtime. |
+| `src/chatModel.ts` | `ProfileAvatarCache.refreshFromUrl` | Chat still constructs `/v1/mobile/profile/avatar/view`; profile now uses the URL returned by the server. Review the chat-owned path in the chat session. |
 
 ## Drift
 

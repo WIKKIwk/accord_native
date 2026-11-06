@@ -1,4 +1,4 @@
-import { Button, FieldGroup, Text, TextInput, useNativeState } from '@expo/ui';
+import { BottomSheet, Button, FieldGroup, ListItem, Text, TextInput, useNativeState } from '@expo/ui';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, BackHandler, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { localeController } from '../shared/localization/runtime';
 import { switchPinStore } from '../shared/switchPinRuntime';
 import type { AppThemeVariant } from '../shared/themeController';
 import { themeController } from '../shared/themeRuntime';
+import { savedAccountDisplayName, savedAccountSubtitle } from '../shared/accountEntryLogic';
 import { BaseHost as Host } from './BaseHost';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -24,19 +25,17 @@ const themes: { value: AppThemeVariant; label: string }[] = [
   { value: 'bliss', label: 'themeBlissLabel' }, { value: 'white', label: 'themeWhiteLabel' },
 ];
 
-function accountName(account: SavedAccount): string {
-  return String(account.profile.display_name || account.profile.legal_name || account.profile.ref || '').trim();
-}
-
 // @v2 AppEntryScreen
 // @v2 AccountSwitcherSheet
 // @v2 WelcomeScreen
+// @v2 _SelectionSheet
 export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
   const locale = useSyncExternalStore(subscribeLocale, localeSnapshot, localeSnapshot);
   useSyncExternalStore(subscribeTheme, themeSnapshot, themeSnapshot);
   const text = (key: string) => localizedGetter(key, locale);
   const [accounts, setAccounts] = useState<SavedAccount[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [pinPresence, setPinPresence] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState<'welcome' | 'accounts' | 'login' | 'languages' | 'themes'>('welcome');
   const [headlineIndex, setHeadlineIndex] = useState(0);
   const [target, setTarget] = useState<SavedAccount | null>(null);
@@ -63,6 +62,9 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
       setAccounts(saved);
       setActiveId(store.activeAccountId);
       setPage(saved.length ? 'accounts' : 'welcome');
+      void Promise.all(saved.map(async account => [account.id,
+        await switchPinStore.has({ baseUrl: account.base_url, profile: account.profile }).catch(() => false)] as const))
+        .then(values => { if (active) setPinPresence(Object.fromEntries(values)); });
     }, () => { if (active) setAccounts([]); });
     return () => { active = false; };
   }, []);
@@ -114,25 +116,31 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
   return <SafeAreaView style={{ flex: 1 }}><Host style={{ flex: 1 }}><FieldGroup>
     {page === 'accounts' ? <FieldGroup.Section title={text('accountSwitchTitle')}>
       {target ? <>
-        <Text>{localizedMethod('accountPinPrompt', locale, { name: accountName(target) })}</Text>
+        <Text>{localizedMethod('accountPinPrompt', locale, { name: savedAccountDisplayName(target) })}</Text>
         <TextInput value={pinField} accessibilityLabel="PIN" placeholder="PIN" keyboardType="number-pad" secureTextEntry
           editable={!busy} onChangeText={value => { const next = value.replace(/\D/g, '').slice(0, 4); pin.current = next; if (next !== value) pinField.set(next); }}
           onSubmitEditing={() => { void verify(); }} />
         <Button label={text(busy ? 'checking' : 'unlock')} disabled={busy} onPress={() => { void verify(); }} />
         <Button label={text('closeAction')} disabled={busy} onPress={back} />
       </> : <>
-        {accounts.map(account => <Button key={account.id} label={`${accountName(account)}${account.id === activeId ? ` · ${text('accountCurrent')}` : ''}`}
-          disabled={busy || account.id === activeId} onPress={() => { void select(account); }} />)}
+        {accounts.map(account => <ListItem key={account.id} supportingText={savedAccountSubtitle(account)}
+          leading={<Text>{savedAccountDisplayName(account).charAt(0).toUpperCase() || '?'}</Text>}
+          trailing={<Text>{`${pinPresence[account.id] ? '🔒 ' : ''}${account.id === activeId ? text('accountCurrent') : ''}`}</Text>}
+          onPress={busy || account.id === activeId ? undefined : () => { void select(account); }}>
+          {savedAccountDisplayName(account)}</ListItem>)}
         <Button label={text('accountAdd')} disabled={busy} onPress={() => setPage('login')} />
       </>}
       {error ? <Text textStyle={{ color: '#b3261e' }}>{error}</Text> : null}
     </FieldGroup.Section> : null}
-    {page === 'welcome' ? <FieldGroup.Section title="Accord">
+    {page === 'welcome' || page === 'languages' || page === 'themes' ? <FieldGroup.Section title="Accord">
       <Text>{localizedGetter('welcomeToAccord', explicitLocale ? locale : ['uz', 'en', 'ru', 'ur-PK'][headlineIndex])}</Text>
       <Button label={text('getStarted')} onPress={() => setPage('login')} />
       <Button label={text('languageTitle')} onPress={() => setPage('languages')} />
       <Button label={text('themeTitle')} onPress={() => setPage('themes')} />
     </FieldGroup.Section> : null}
+  </FieldGroup></Host>
+  <BottomSheet isPresented={page === 'languages' || page === 'themes'} onDismiss={() => setPage('welcome')} snapPoints={['half', 'full']}>
+    <Host style={{ height: 420 }}><FieldGroup>
     {page === 'languages' ? <FieldGroup.Section title={text('languageTitle')}>
       {[{ id: 'uz', label: text('uzbek') }, { id: 'en', label: text('english') },
         { id: 'ru', label: text('russian') }, { id: 'ur', label: 'اردو (پاکستان)' }].map(choice =>
@@ -146,5 +154,6 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
       <Button label={text('themeModeTitle')} onPress={() => { void themeController.setThemeMode(themeController.isDark ? 'light' : 'dark'); }} />
       <Button label={text('closeAction')} onPress={back} />
     </FieldGroup.Section> : null}
-  </FieldGroup></Host></SafeAreaView>;
+    </FieldGroup></Host>
+  </BottomSheet></SafeAreaView>;
 }
