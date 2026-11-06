@@ -15,6 +15,7 @@ import { refreshGScaleMonitor } from './gscaleLive';
 import { createGScaleLiveMonitor } from './gscaleLiveRuntime';
 import { loadPreparationReceiptPreset, submitSimpleGScaleReceipt } from './gscalePreparation';
 import { GScaleOperatorStore } from './gscaleOperatorState';
+import { GScaleMaterialPicker } from './gscaleMaterialPicker';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
 
 async function timed<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
@@ -37,6 +38,7 @@ export async function materialAssignedWarehouseNames(session: Session): Promise<
 export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs): GScaleOperatorStore {
   const role = String(session.profile.role ?? ''), controlOnly = role === 'material_taminotchi' || role === 'tayyorlov_masteri';
   const batch = new GScaleBatchStateStore({ state: () => gscaleRpsBatchState(session), stop: (id, rev) => gscaleRpsBatchStop(session, id, rev) });
+  const materialPicker = new GScaleMaterialPicker((query, offset, limit, orderId) => gscaleItemsPage(session, { query, offset, limit, orderId }));
   const materialWarehouses = async () => (await timed(preparationSnapshot(session), 4000)).material_warehouses;
   const warehouseAllowed = async (warehouse: string) => role !== 'material_taminotchi' ||
     (await materialAssignedWarehouseNames(session)).has(warehouse.trim().toLowerCase());
@@ -45,6 +47,11 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
     devices: createGScaleDeviceStore(), batch, refreshProfileScope: async () => { await profile(session); },
     loadDraft: () => loadOperatorControlDraft(appPreferences), saveDraft: draft => saveOperatorControlDraft(appPreferences, draft),
     loadMaterialWarehouses: materialWarehouses,
+    prefillMaterialOrder: async orderId => {
+      const choice = await materialPicker.singleOrderChoice(orderId);
+      return choice ? { item: { code: choice.item.code, name: choice.item.name || choice.item.code,
+        requiresDimensions: choice.item.requires_dimensions }, micron: choice.micron } : null;
+    },
     loadPreparationPreset: async () => {
       const item = await loadPreparationReceiptPreset({ orderId: args.order?.id ?? '', materialId: args.materialId ?? '',
         materialName: args.materialName ?? '', current: () => store.isActive(),

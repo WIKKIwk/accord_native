@@ -35,13 +35,13 @@ function setup() {
   const batch = new GScaleBatchStateStore({ state: async () => ({ ok: true, batch: stopped }), stop: async () => ({ ok: true, batch: stopped }) });
   const calls = [];
   const deps = { devices, batch, refreshProfileScope: async () => {}, loadDraft: async () => emptyOperatorControlDraft(), saveDraft: async () => {},
-    loadPreparationPreset: async () => null, loadMaterialWarehouses: async () => [], warehouseAllowed: async () => true,
+    loadPreparationPreset: async () => null, loadMaterialWarehouses: async () => [], prefillMaterialOrder: async () => null, warehouseAllowed: async () => true,
     startBatch: async context => { calls.push(['start', context]); return { batch: active }; },
     printBatch: async context => { calls.push(['print', context]); return materialReceiptPrintResponseFromJson({ ok: true, epc: 'EPC' }); },
     submitSimple: async () => {}, refreshMonitor: async () => { throw new Error('unexpected'); },
     makeLive: () => { throw new Error('unexpected'); } };
   const store = new GScaleOperatorStore('material_taminotchi', { order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } }, deps);
-  return { store, calls, active, batch };
+  return { store, calls, active, batch, deps };
 }
 
 test('operator saves valid context, starts a batch and can edit manual weight while batch is active', async () => {
@@ -72,4 +72,18 @@ test('manual tap restores the previous weight when nothing new was entered', asy
   store.handleManualQtyTap(); assert.equal(store.getSnapshot().draft.manual_qty_text, '');
   store.restoreManualQtyIfEmpty(); assert.equal(store.getSnapshot().draft.manual_qty_text, '7.25');
   store.dispose();
+});
+
+test('a single order material is prefilled unless the picker was opened', async () => {
+  const first = setup();
+  first.deps.prefillMaterialOrder = async () => ({ item: { code: 'PET', name: 'PET', requiresDimensions: true }, micron: 12 });
+  first.store.start(); await flush();
+  assert.equal(first.store.getSnapshot().draft.item_code, 'PET');
+  assert.equal(first.store.getSnapshot().draft.micron_text, '12');
+  first.store.dispose();
+  const second = setup();
+  second.deps.prefillMaterialOrder = async () => ({ item: { code: 'PET', name: 'PET', requiresDimensions: true }, micron: 12 });
+  second.store.openMaterialPicker(); second.store.start(); await flush();
+  assert.equal(second.store.getSnapshot().draft.item_code, '');
+  second.store.dispose();
 });

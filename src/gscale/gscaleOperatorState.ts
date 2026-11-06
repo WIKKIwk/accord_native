@@ -20,6 +20,7 @@ export type GScaleOperatorDependencies = {
   refreshProfileScope(): Promise<void>;
   loadDraft(): Promise<OperatorControlDraft>; saveDraft(draft: OperatorControlDraft): Promise<void>;
   loadPreparationPreset(): Promise<Item | null>; loadMaterialWarehouses(): Promise<string[]>;
+  prefillMaterialOrder(orderId: string): Promise<{ item: Item; micron: number | null } | null>;
   warehouseAllowed(warehouse: string): Promise<boolean>;
   startBatch(context: GScaleStartContext, choose: (options: Record<string, string>) => Promise<string | null>): Promise<{ batch: GScaleBatchSession }>;
   printBatch(context: GScalePrintContext): Promise<Receipt>;
@@ -45,6 +46,7 @@ export class GScaleOperatorStore {
   private autoPrintKey = '';
   private qtyBackup = '';
   private qtyCleared = false;
+  private materialPickerOpened = false;
   private alive = true;
   private readonly controlOnly: boolean;
   private readonly linkedOrderId: string;
@@ -102,8 +104,23 @@ export class GScaleOperatorStore {
         this.tryApplyPreset();
         if (this.state.batch.batch?.active) this.update({ error: this.preparationConflict() });
       } catch (error) { this.update({ presetLoading: false, presetError: error instanceof Error ? error.message : String(error) }); }
+    } else if (this.controlOnly && this.role === 'material_taminotchi' && this.linkedOrderId) {
+      void this.prefillMaterialOrder();
     }
   }
+
+  private async prefillMaterialOrder() {
+    if (this.state.batch.batch?.active) return;
+    try {
+      const choice = await this.deps.prefillMaterialOrder(this.linkedOrderId);
+      if (!this.alive || this.state.batch.batch?.active || this.materialPickerOpened || this.state.draft.item_code || !choice) return;
+      this.setDraft({ ...this.state.draft, item_code: choice.item.code, item_name: choice.item.name || choice.item.code,
+        item_requires_dimensions: choice.item.requiresDimensions, context_saved: false, length_text: '',
+        micron_text: choice.micron == null ? '' : formatCompactKg(choice.micron) });
+    } catch { /* The material picker remains available if the catalog cannot load. */ }
+  }
+
+  openMaterialPicker(): void { this.materialPickerOpened = true; }
 
   private tryApplyPreset() {
     if (!this.controlOnly || !this.args.freshForm || this.state.presetApplied || this.state.presetLoading ||
