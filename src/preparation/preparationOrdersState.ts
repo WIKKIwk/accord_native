@@ -22,11 +22,12 @@ export class PreparationOrdersState {
   private forceQueued = false;
   private foreground = true;
   private active = true;
+  private invalidated = false;
   constructor(private readonly store: PreparationOrdersWarmStore, private readonly isCurrent: () => boolean,
     private readonly listen: Listen, private readonly selectionLoader: () => Promise<string | null>) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.state;
-  private get current() { return this.active && this.isCurrent(); }
+  private get current() { return this.active && !this.invalidated && this.isCurrent(); }
   private update(patch: Partial<State>) { if (!this.active) return; this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()); }
   private apply(window: PreparationOrderListWindow, persist = true, loading = false) {
     this.update({ window, apparatus: window.apparatus_id, rows: window.rows, loading, error: null });
@@ -56,8 +57,9 @@ export class PreparationOrdersState {
         this.state.window || !this.read || this.state.error || !cached) return;
     this.apply(cached, false, this.read !== null);
   }
-  sessionChanged() {
-    if (this.current) return;
+  sessionChanged(force = false) {
+    if (!force && this.current) return;
+    this.invalidated = true;
     this.generation++; this.stopLive();
     this.update({ window: null, rows: [], loading: false, error: 'Akkaunt o‘zgargan. Sahifani qayta oching.' });
   }

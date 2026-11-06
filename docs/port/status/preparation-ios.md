@@ -10,7 +10,7 @@ Stopped at: connect the preparation sequence to the shared runtime and finish sh
 | Variant picker search | `preparation_formula_variants_screen.dart` `_reuse` | The scoped catalog picker is connected, but fuzzy/transliteration search requires the shared `searchMatches` port. |
 | Roll QR reprint | `preparation_production_screen.dart` `_reprintRoll` | The QR and captured recipe are shown; connect printer selection/transport to `reprintPreparationRoll` and verify with a real printer before enabling reprint. |
 | Sequence | `admin_production_map_orders_preparation_list.dart` | The iOS list and detail host need the shared warm-store runtime, persisted apparatus selection and borrowed read-only detail renderer before a route can be connected. |
-| Account changes | `preparation_formula_catalog_screen.dart`, `preparation_production_screen.dart` | Connect a shared account-revision signal to the screen controllers so a switch clears already rendered rows immediately; the current platform session is loaded once. |
+| Account changes | `preparation_formula_catalog_screen.dart`, `preparation_production_screen.dart`, `admin_production_map_orders_preparation_list.dart` | Catalog and journal now clear on session reset; connect the sequence controller when its route is mounted. |
 | Navigation | `preparation_navigation.dart` | Shared chat screens hard-code worker routes; connect chat, scale and inventory destinations when role-neutral platform routes are available. Verify native root-replacement behaviour. |
 
 ## Deviations candidates

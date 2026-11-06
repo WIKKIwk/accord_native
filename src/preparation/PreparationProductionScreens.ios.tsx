@@ -5,6 +5,7 @@ import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import qrFactory from 'qrcode-generator';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+import { registerSessionResetHook } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
@@ -23,9 +24,10 @@ function useJournal<T, S>(make: (changed: (state: JournalState<T, S>) => void) =
   const current = useRef<PreparationJournal<T, S> | null>(null), visible = useRef(false);
   useEffect(() => {
     const journal = make(setState); current.current = journal;
+    const unregister = registerSessionResetHook(async () => { journal.sessionChanged(true); });
     journal.setVisible(visible.current); journal.setResumed(AppState.currentState === 'active'); journal.start();
     const subscription = AppState.addEventListener('change', value => journal.setResumed(value === 'active'));
-    return () => { subscription.remove(); current.current = null; journal.dispose(); };
+    return () => { unregister(); subscription.remove(); current.current = null; journal.dispose(); };
   }, [make]);
   useFocusEffect(useCallback(() => { visible.current = true; current.current?.setVisible(true);
     return () => { visible.current = false; current.current?.setVisible(false); }; }, []));

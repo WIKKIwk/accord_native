@@ -44,3 +44,9 @@ test('authorization error withdraws rows and account changes reject late respons
   const y = setup(async () => { throw new ApiError('forbidden', 'Ruxsat yo‘q', 403); });
   await y.state.reload(); assert.equal(y.state.getSnapshot().error, 'Ruxsat yo‘q'); assert.ok(y.calls.some(call => call[0] === 'forget')); y.state.dispose();
 });
+test('session reset immediately clears the sequence before session replacement', async () => {
+  const x = setup(async () => window(['a']));
+  await x.state.reload(); x.state.sessionChanged(true);
+  assert.deepEqual(x.state.getSnapshot().rows, []);
+  await x.state.reload(); assert.deepEqual(x.state.getSnapshot().rows, []); x.state.dispose();
+});
