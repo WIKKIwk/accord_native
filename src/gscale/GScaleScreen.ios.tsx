@@ -32,9 +32,16 @@ function Row({ row }: { row: GScaleRow }) {
     <Text>{t(row.label)}</Text>{row.detail ? <Text>{t(row.detail)}</Text> : null}</VStack></Button>;
 }
 
-function ChoiceSheet({ spec, close }: { spec: GScalePickerSpec; close(): void }) {
-  const picker = useGScalePicker(spec), search = useNativeState(''), t = useGScaleText();
+function ChoiceSheet({ spec, close, session }: { spec: GScalePickerSpec; close(): void; session: NonNullable<ReturnType<typeof useGScaleSession>['session']> }) {
+  const picker = useGScalePicker(spec, session), search = useNativeState(''), t = useGScaleText();
+  const photo = (source: 'camera' | 'library') => { void picker.photoSearch(source).then(query => { if (query) search.set(query); }); };
+  const choosePhoto = () => Alert.alert(t('Rasm orqali qidirish'), '', [
+    { text: picker.photoLabels.take, onPress: () => photo('camera') },
+    { text: picker.photoLabels.choose, onPress: () => photo('library') }, { text: t('Bekor qilish'), style: 'cancel' },
+  ]);
   return <Host style={{ minHeight: 420 }}><VStack><Text>{t(spec.title)}</Text><TextField text={search} placeholder={t(spec.hint)} onTextChange={picker.setQuery} />
+    {spec.photoSearch && <Button label={t('Rasm orqali qidirish')} modifiers={[disabled(picker.photoLoading)]} onPress={choosePhoto} />}
+    {picker.photoLoading && <ProgressView />}{!!picker.photoError && <Text>{picker.photoError}</Text>}
     <List>{picker.loading && <ProgressView />}{!!picker.error && <Section><Text>{picker.error}</Text><Button label={t('Qayta urinish')} onPress={picker.retry} /></Section>}
       {!picker.loading && !picker.error && !picker.items.length && <Text>{t('Hech narsa topilmadi')}</Text>}
       {picker.items.map(item => <Button key={item.key} onPress={() => { item.select(); close(); }}><VStack alignment="leading"><Text>{item.title}</Text>
@@ -99,12 +106,12 @@ function ArchiveSheet({ batch, operator, close }: { batch: ArchiveSession; opera
 function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType<typeof useGScaleSession>['session']>; args: GScaleModeArgs; signOut(): void }) {
   const screen = useGScaleScreen(session, args), sheet = useNativeSheet(), t = useGScaleText();
   const [section, setSection] = useState<'control' | 'history' | 'server'>('control');
-  const pick = (spec: GScalePickerSpec) => sheet.open(<ChoiceSheet spec={spec} close={sheet.close} />);
+  const pick = (spec: GScalePickerSpec) => sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />);
   const chooseApparatus = (options: Record<string, string>) => new Promise<string | null>(resolve => {
     const spec: GScalePickerSpec = { title: 'Apparat tanlang', hint: 'Qidirish', pageSize: 50,
       load: async query => Object.entries(options).filter(([key, value]) => `${key} ${value}`.toLowerCase().includes(query.toLowerCase()))
         .map(([key, value]) => ({ key, title: value, select: () => resolve(key) })) };
-    sheet.open(<ChoiceSheet spec={spec} close={sheet.close} />, { onDismiss: () => resolve(null) });
+    sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />, { onDismiss: () => resolve(null) });
   });
   const sections = gscaleDashboardSections(screen, section, {
     pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} />),

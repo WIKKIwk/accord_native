@@ -55,9 +55,10 @@ the item before its item-scoped warehouse. Material roles may pick warehouse fir
 the selected order can restrict materials and expand micron choices. Changing an
 order or item invalidates stale selection results. Initial warehouse and a fresh
 formula preset are honored; preset loading/errors and conflicts are shown.
-The V2 product picker also offers photo-based AI search through the shared
-`WerkaAiSearchService` and `werkaAiSearchSuggestion`; this shared service has not
-yet been ported and is tracked as an open item rather than replaced by a barcode scan.
+The product picker offers photo-based AI search: choose the camera or gallery,
+show permission, inference and no-result errors, and search using the inferred
+display and background queries. `gscalePhotoSearch*` supplies the V2 multipart
+request, query expansion and relevance order.
 
 `Eni (mm)`, `Mikron` and `Metraj (m)` use the controller's dimension requirements
 and validation, including the displayed order-width warning. `Miqdor (kg)` selects

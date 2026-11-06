@@ -4,8 +4,9 @@ import { loadSession, logout, type Session } from '../auth';
 import { clearAppLock } from '../appLock';
 import { NativeBluetoothPrinter, type BluetoothPrinterProfile } from '../printing/nativePrinter';
 import { PrintService } from '../printing/printService';
-import { uiText } from '../shared/localization';
+import { localizedGetter, localizedMethod, uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
+import { MobileApiException } from '../shared/mobileApiException';
 import { createGScaleCatalogRuntime } from './gscaleCatalogRuntime';
 import { gscaleControlViewModel } from './gscaleControlViewModel';
 import type { DiscoveredServer } from './gscaleDiscovery';
@@ -14,10 +15,12 @@ import { GScaleOrderSelectionStore, gscaleOrderLabel } from './gscaleOrderSelect
 import { createGScaleOperatorStore, materialAssignedWarehouseNames } from './gscaleOperatorRuntime';
 import type { GScaleOperatorStore } from './gscaleOperatorState';
 import { MaterialWarehousePreferences } from './gscalePreferences';
+import { gscalePhotoRemoteQueries, gscalePickerRelevance } from './gscalePhotoSearch';
+import { pickGScalePhotoSearch } from './gscalePhotoSearchRuntime';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
 
 export type GScalePickerChoice = { key: string; title: string; subtitle?: string; select(): void };
-export type GScalePickerSpec = { title: string; hint: string; pageSize: number;
+export type GScalePickerSpec = { title: string; hint: string; pageSize: number; photoSearch?: boolean;
   load(query: string, offset: number, limit: number): Promise<GScalePickerChoice[]> };
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -112,7 +115,7 @@ export function useGScaleScreen(session: Session, args: GScaleModeArgs) {
   function itemPicker(): GScalePickerSpec {
     group.operator.openMaterialPicker();
     const orderId = group.operator.currentArgs().order?.id ?? '';
-    return { title: 'Mahsulot tanlang', hint: 'Mahsulot qidiring', pageSize: 50,
+    return { title: 'Mahsulot tanlang', hint: 'Mahsulot qidiring', pageSize: 50, photoSearch: true,
       load: async (query, offset, limit) => (await group.catalog.materialChoices(query, offset, limit, orderId, args.freshForm === true))
         .map(({ item, micron }) => ({ key: `${item.code}:${micron}`, title: `${item.name || item.code}${micron == null ? '' : ` — ${formatCompactKg(micron)} mkm`}`,
           subtitle: item.code, select: () => {
@@ -144,28 +147,67 @@ export function useGScaleScreen(session: Session, args: GScaleModeArgs) {
     orderPicker, itemPicker, warehousePicker, defaultWarehousePicker };
 }
 
-export function useGScalePicker(spec: GScalePickerSpec) {
-  const [query, setQuery] = useState('');
+export function useGScalePicker(spec: GScalePickerSpec, session: Session) {
+  const [search, setSearch] = useState<{ query: string; background: string[] }>({ query: '', background: [] });
+  const [photoLoading, setPhotoLoading] = useState(false), [photoError, setPhotoError] = useState('');
   const [state, setState] = useState<{ items: GScalePickerChoice[]; loading: boolean; error: string; more: boolean }>(
     { items: [], loading: true, error: '', more: false });
-  const request = useRef(0);
-  const load = useCallback(async (search: string, offset: number) => {
+  const request = useRef(0), alive = useRef(true);
+  useEffect(() => { const current = alive; current.current = true; return () => { current.current = false; }; }, []);
+  const load = useCallback(async (offset: number) => {
     const id = ++request.current;
     setState(previous => ({ ...previous, loading: true, error: '', ...(offset ? {} : { items: [] }) }));
     try {
-      const items = await spec.load(search, offset, spec.pageSize);
-      if (id === request.current) setState(previous => ({ items: offset ? [...previous.items, ...items] : items,
-        loading: false, error: '', more: items.length === spec.pageSize }));
+      const effective = search.background.length ? search.background : search.query.trim() ? [search.query.trim()] : [];
+      const remote = gscalePhotoRemoteQueries(effective);
+      const pages = remote.length <= 1 ? [await spec.load(remote[0] ?? '', offset, spec.pageSize)]
+        : await Promise.all(remote.map(query => spec.load(query, 0, spec.pageSize)));
+      const unique = new Map<string, { item: GScalePickerChoice; rank: number; matches: number; index: number }>();
+      for (const [rank, page] of pages.entries()) for (const item of page) {
+        const key = `${item.title}|${item.subtitle ?? ''}`.toLowerCase().trim(), prior = unique.get(key);
+        if (prior) prior.matches++; else unique.set(key, { item, rank, matches: 1, index: unique.size });
+      }
+      const score = (item: GScalePickerChoice) => Math.max(0, ...effective.map(query => gscalePickerRelevance(query, item.title, item.subtitle)));
+      const merged = [...unique.values()].sort((left, right) => {
+        return score(right.item) - score(left.item) || right.matches - left.matches || left.rank - right.rank || left.index - right.index;
+      }).map(value => value.item);
+      const items = remote.length <= 1 ? pages[0] : merged;
+      if (id === request.current) setState(previous => {
+        const combined = offset ? [...previous.items, ...items] : items;
+        return { items: effective.length ? combined.slice().sort((left, right) => score(right) - score(left)) : combined,
+          loading: false, error: '', more: remote.length <= 1 && items.length >= spec.pageSize };
+      });
     } catch (error) {
       if (id === request.current) setState(previous => ({ ...previous, loading: false, error: error instanceof Error ? error.message : String(error), more: false }));
     }
-  }, [spec]);
+  }, [spec, search]);
   useEffect(() => {
-    const currentRequest = request, timer = setTimeout(() => { void load(query, 0); }, 200);
+    const currentRequest = request, timer = setTimeout(() => { void load(0); }, 220);
     return () => { clearTimeout(timer); currentRequest.current++; };
-  }, [query, load]);
-  return { ...state, query, setQuery, retry: () => void load(query, 0),
-    loadMore: () => { if (!state.loading && state.more) void load(query, state.items.length); } };
+  }, [load]);
+  const setQuery = (query: string) => setSearch(previous => previous.query === query ? previous : { query, background: [] });
+  const photoSearch = async (source: 'camera' | 'library') => {
+    if (photoLoading) return null;
+    setPhotoLoading(true); setPhotoError('');
+    try {
+      const suggestion = await pickGScalePhotoSearch(session, source);
+      if (!alive.current) return null;
+      if (suggestion) setSearch({ query: suggestion.displayQuery, background: suggestion.backgroundQueries });
+      return suggestion?.displayQuery ?? null;
+    } catch (error) {
+      const code = error instanceof MobileApiException ? error.code : error instanceof Error ? error.message : '';
+      const locale = localeController.locale;
+      const message = code === 'not_configured' ? localizedGetter('aiSearchNotConfigured', locale)
+        : code === 'no_result' ? localizedGetter('aiSearchNoResult', locale)
+          : code === 'image_pick_failed' || code === 'invalid_image' ? localizedGetter('imagePickFailed', locale)
+            : localizedMethod('aiSearchFailed', locale, { error: error instanceof Error ? error.message : String(error) });
+      if (alive.current) setPhotoError(message); return null;
+    } finally { if (alive.current) setPhotoLoading(false); }
+  };
+  return { ...state, query: search.query, setQuery, photoLoading, photoError, photoSearch, retry: () => void load(0),
+    photoLabels: { take: localizedGetter('aiSearchTakePhoto', localeController.locale),
+      choose: localizedGetter('aiSearchChoosePhoto', localeController.locale) },
+    loadMore: () => { if (!state.loading && state.more) void load(state.items.length); } };
 }
 
 export function useGScaleDevicePicker(operator: GScaleOperatorStore, close: () => void) {

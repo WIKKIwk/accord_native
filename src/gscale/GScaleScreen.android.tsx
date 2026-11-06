@@ -44,11 +44,18 @@ function DashboardRow({ row }: { row: GScaleRow }) {
   return <Action label={row.label} detail={row.detail} disabled={row.disabled} onPress={row.press} id={row.id} />;
 }
 
-function ChoiceSheet({ spec, close }: { spec: GScalePickerSpec; close(): void }) {
-  const picker = useGScalePicker(spec), search = useNativeState(''), t = useGScaleText();
+function ChoiceSheet({ spec, close, session }: { spec: GScalePickerSpec; close(): void; session: NonNullable<ReturnType<typeof useGScaleSession>['session']> }) {
+  const picker = useGScalePicker(spec, session), search = useNativeState(''), t = useGScaleText();
+  const photo = (source: 'camera' | 'library') => { void picker.photoSearch(source).then(query => { if (query) search.set(query); }); };
+  const choosePhoto = () => Alert.alert(t('Rasm orqali qidirish'), '', [
+    { text: picker.photoLabels.take, onPress: () => photo('camera') },
+    { text: picker.photoLabels.choose, onPress: () => photo('library') }, { text: t('Bekor qilish'), style: 'cancel' },
+  ]);
   return <View style={{ minHeight: 400, padding: 16, gap: 10 }}><Label>{t(spec.title)}</Label>
     <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={search} singleLine onValueChange={picker.setQuery} modifiers={[fillMaxWidth()]}>
       <OutlinedTextField.Label><Text>{t(spec.hint)}</Text></OutlinedTextField.Label></OutlinedTextField></Host>
+    {spec.photoSearch && <Action label="Rasm orqali qidirish" disabled={picker.photoLoading} onPress={choosePhoto} />}
+    {picker.photoLoading && <ActivityIndicator />}{!!picker.photoError && <Label>{picker.photoError}</Label>}
     <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
       {picker.loading && <ActivityIndicator />}{!!picker.error && <><Label>{picker.error}</Label><Action label="Qayta urinish" onPress={picker.retry} /></>}
       {!picker.loading && !picker.error && !picker.items.length && <Label>{t('Hech narsa topilmadi')}</Label>}
@@ -125,12 +132,12 @@ function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType
     });
     return () => subscription.remove();
   }, [signOut, t]);
-  const pick = (spec: GScalePickerSpec) => sheet.open(<ChoiceSheet spec={spec} close={sheet.close} />);
+  const pick = (spec: GScalePickerSpec) => sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />);
   const chooseApparatus = (options: Record<string, string>) => new Promise<string | null>(resolve => {
     const spec: GScalePickerSpec = { title: 'Apparat tanlang', hint: 'Qidirish', pageSize: 50,
       load: async query => Object.entries(options).filter(([key, value]) => `${key} ${value}`.toLowerCase().includes(query.toLowerCase()))
         .map(([key, value]) => ({ key, title: value, select: () => resolve(key) })) };
-    sheet.open(<ChoiceSheet spec={spec} close={sheet.close} />, { onDismiss: () => resolve(null) });
+    sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />, { onDismiss: () => resolve(null) });
   });
   const sections = gscaleDashboardSections(screen, section, {
     pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} />),
