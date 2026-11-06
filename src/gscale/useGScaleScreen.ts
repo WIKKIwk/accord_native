@@ -79,26 +79,22 @@ export function useGScaleScreen(session: Session, args: GScaleModeArgs) {
     if (preferredAttempted.current || role !== 'material_taminotchi' || !session.profile.ref || !state.draftRestored ||
         state.batch.batch?.active || state.draft.warehouse || args.warehouse) return;
     preferredAttempted.current = true;
-    let active = true;
     void group.catalog.warehouses('', '', true).then(async warehouses => {
       const name = await new MaterialWarehousePreferences(appPreferences, preferenceKey).preferred(warehouses.map(value => value.warehouse));
       const current = group.operator.getSnapshot();
-      if (active && name && !current.draft.warehouse && !current.batch.batch?.active) group.operator.editDraft({ warehouse: name, warehouse_mode: 'manual' });
+      if (group.operator.isActive() && name && !current.draft.warehouse && !current.batch.batch?.active) group.operator.editDraft({ warehouse: name, warehouse_mode: 'manual' });
     }).catch(() => {});
-    return () => { active = false; };
   }, [args.warehouse, group, preferenceKey, role, session.profile.ref, state.draftRestored, state.batch.resolved, state.batch.batch?.active, state.draft.warehouse]);
   useEffect(() => {
     if (draftWarehouseChecked.current || !state.draftRestored) return;
     draftWarehouseChecked.current = true;
     const item = state.draft.item_code, warehouse = state.draft.warehouse;
     if (!item || !warehouse) return;
-    let active = true;
     void group.catalog.warehouses(controlOnly ? warehouse : '', item, controlOnly).then(values => {
       const current = group.operator.getSnapshot();
-      if (active && values.length && !values.some(value => value.warehouse === warehouse) &&
+      if (group.operator.isActive() && values.length && !values.some(value => value.warehouse === warehouse) &&
           current.draft.item_code === item && current.draft.warehouse === warehouse) group.operator.editDraft({ warehouse: '' });
     }).catch(() => {});
-    return () => { active = false; };
   }, [controlOnly, group, state.draftRestored, state.draft.item_code, state.draft.warehouse]);
   const selected = state.device.selection;
   const control = gscaleControlViewModel({ controlOnly, freshForm: args.freshForm === true, role,
