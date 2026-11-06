@@ -69,7 +69,6 @@ function OrderDetail({ session, controller, row, close, renderDetail }: Props & 
       .finally(() => setLoading(false));
   }, [session, row.id, exists]);
   useEffect(() => {
-    controller.activate();
     if (!exists) return;
     let active = true;
     void preparationOrderDetail(session, row.id).then(value => { if (active) setDetail(value); })
@@ -136,6 +135,7 @@ export function PreparationSequenceRoute() {
         { search, length }, onEvent, onError, onDone), () => adminSequenceApparatusStore.loadSavedApparatusId());
   }, [session]);
   useEffect(() => {
+    controller.activate();
     const unregister = registerSessionResetHook(async () => { controller.sessionChanged(true); });
     void controller.start();
     return () => { unregister(); controller.dispose(); };
