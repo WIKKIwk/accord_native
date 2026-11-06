@@ -1,7 +1,7 @@
 # preparation
 
 Status: part 1 of 1, parity audit in progress
-Stopped at: complete the remaining V2 text and surface comparisons on both platforms, reconcile optional order-detail controls, and verify printers and native WebSocket pings.
+Stopped at: finish the remaining V2 surface comparisons and floating action menus on both platforms, reconcile optional order-detail controls, and verify printers, scale, scanner and native WebSocket pings.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -22,6 +22,7 @@ Stopped at: complete the remaining V2 text and surface comparisons on both platf
 | Preparation order detail decoder and sheet | `mobile_api_preparation_orders.dart` `preparationOrderDetail`, `admin_production_map_orders_preparation_list.dart` `_showDetail`, `productionMapSnapshot.ts` | The recorded preparation detail decodes through the shared snapshot parser, but optional queue-control parity is not complete. |
 | Preparation order live transport | `warehouse_live_client_io.dart` `_connectLive` | Native Dart sends WebSocket protocol pings every 25 seconds. React Native exposes no equivalent here; supply a native transport and verify half-open connection handling. |
 | QR label printing | `preparation_production_screen.dart` `_reprintRoll`, `RpsQrReprintSheet` | Both platforms offer Bluetooth, discovered and manual Wi-Fi with the V2 probe; Android also offers USB (Zebra only, D13). Discovery and printing need a native build and real-printer checks. |
+| GoDEX printer choice | `print_service.dart`, `PORT.md` D13 | V2 supports GoDEX, but D13 excludes it from V4; Android USB currently supports Zebra only. |
 
 ## V2 test triage
 
@@ -49,12 +50,9 @@ No V2 HTTP recordings were found for warehouse creation/deletion or inventory tr
 
 Post-baseline drift removes unused legacy home recipe helpers from `preparation_screen.dart` and `preparation_screen_forms.dart`; no active call site in those files invokes `_pickOrder`, `_addRecipeMaterial` or `_saveRecipe`. The committed baseline is still the specification; baseline movement remains the integrator's decision.
 
-## Needs from the integrator
-
-- Both platforms now connect inventory, sequence and scoped order detail. Optional queue-control decoder parity remains open above. The candidate-order and assignment requests have source-derived tests; V2 did not record them in this role's fixtures.
-
 ## Verification
 
+- Final gates: `node --test tests/*.test.cjs` passed 996 tests; iOS TypeScript and Expo lint passed. Android TypeScript reported the 10 existing worker errors listed in `PORT.md`, with no preparation errors. Ledger `check` passed with seven previously documented dynamic/other-role endpoint warnings; `role preparation 1` still lists four route entries unchecked. No simulator or device was used.
 - Text gate: no unmatched V2 or V4 strings on either platform; 62 rows in `docs/port/text/preparation.tsv` document excluded GoDEX/web code, deferred test mode, non-visible diagnostics, or equivalent dynamic strings. The 57 listed surfaces are not automatically certified by this result.
 - History checkpoint: 7 focused history/material/logic tests passed. Native history gestures and dialog transitions have not been run on a device.
 - Material checkpoint: 3 focused tests passed, iOS TypeScript passed and Expo lint passed. Android TypeScript still reports the 10 existing worker errors listed in `PORT.md`; none is in the preparation files.
@@ -132,3 +130,8 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 | `PreparationFormulaVariantsScreen`, `_VariantNameDialog` | `PreparationVariants.ios.tsx`, `PreparationVariants.android.tsx` | qisman | qisman | Action ordering, edit, naming and delete were compared. The FAB, reuse-picker details and native interaction still need the complete comparison. |
 | `_FormulaSharesSheet`, `preparation_formula_shares_sheet.dart` | `PreparationSharesDialog.ios.tsx`, `PreparationFormulaEditor.android.tsx` | qisman | qisman | Labels, totals and save rules were compared. Native dismissal and keyboard behavior remain unverified. |
 | `PreparationOrderFormulaScreen`, `preparation_order_formula_screen.dart` | `PreparationFormula.ios.tsx`, `PreparationFormulaEditor.android.tsx` | qisman | qisman | Formula content, save/delete feedback and the seriyo picker were compared; picker interaction, FAB and remaining navigation still need parity work. |
+| `_PreparationInputDialog`, `preparation_screen_forms.dart` | `PreparationInputDialog.ios.tsx`, `PreparationUI.android.tsx` | qisman | qisman | Validation and quantity character filtering were compared. Native focus, keyboard and dismissal need device verification. |
+| `AdminProductionMapOrdersScreen`, `_PreparationOrdersListState` | `PreparationSequence.ios.tsx`, `PreparationSequence.android.tsx` | qisman | qisman | Scoped list and detail wiring exist. Complete the detail/optional-control surface comparison and native navigation verification. |
+| `RpsQrReprintSheet`, `rps_qr_reprint_sheet.dart` | `PreparationProductionScreens.ios.tsx`, `PreparationProduction.android.tsx` | qisman | qisman | The production reprint path and device choices exist; native sheet behavior and actual printers need verification, with GoDEX excluded by D13. |
+| `InventoryMovementsScreen`, `ProductionQuickScannerPanel` | `PreparationInventoryScreen.ios.tsx`, `PreparationMovements.android.tsx` | qisman | qisman | Scanner permission and manual entry were compared; the remaining inventory surfaces and camera behavior require a full comparison and phone checks. |
+| `PreparationDock`, `PreparationDrawer` | `PreparationMenu.ios.tsx`, `PreparationUI.android.tsx` | qisman | qisman | Existing platform navigation connects role routes; the V2 floating action menu and shared chat destination still differ. |
