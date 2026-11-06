@@ -8,7 +8,6 @@ Stopped at: reconcile the remaining profile surfaces and integrator-owned behavi
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Profile-switch PIN | `PinSetupEntryScreen`, `PinSetupConfirmScreen`, `AccountSwitcherSheet` | Entry, confirmation and removal are connected to the distinct switch-PIN store in settings. The saved-account entry verifies it; the in-session chooser launcher and standalone PIN routes remain unconnected. |
-| Settings updates | `_AppUpdateCheckDialog`, `AppUpdateCoordinator` | The manual update-check dialog needs the shared update service, installed-version adapter and presenter; an unsupported response cannot be shown without the V2 check. |
 | Theme and locale integration | `ThemeController`, `LocaleController` | Base entry, login and profile hosts apply the selected mode, tint and RTL. Other role-owned hosts and remaining hard-coded strings need integration in their own sessions. Verify the base surfaces on a device. |
 
 ## Deviations candidates
@@ -21,7 +20,6 @@ Login test mode remains deferred under D3.
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Shared update runtime | `AppUpdateCoordinator` | Connect update checks and the installed-version presenter. |
 
 ## Session verification and handoff
 

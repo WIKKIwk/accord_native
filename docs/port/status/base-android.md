@@ -7,7 +7,6 @@ Stopped at: shared profile and security hooks needed for the remaining parity ga
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Android settings | `_ProfileSettingsSheet` | The manual update action and install dialogs need a configured update coordinator, presenter and Android installer adapter. |
 
 ## Deviations candidates
 
@@ -21,7 +20,6 @@ Stopped at: shared profile and security hooks needed for the remaining parity ga
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| `src/shared/appUpdateRuntime.ts` and native installer | `_AppUpdateCheckDialog`, `_AppUpdateDialog` | Expose an initialized coordinator/presenter and Android installation adapter to settings. |
 
 ## Validation
 

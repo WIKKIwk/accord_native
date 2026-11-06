@@ -7,6 +7,7 @@ import { isAppearancePreference, type AppearancePreference } from '../appAppeara
 import type { Session } from '../auth';
 import { useAppSettings } from './AppSettings';
 import { usePinSetup } from './usePinSetup.ios';
+import { useAppUpdate } from './AppUpdateProvider';
 
 type Props = { session?: Session; onClose: () => void; onLogout: () => void; preferences?: ReactNode; switchPin?: ReactNode;
   switchPinBusy?: boolean; onAppearanceChange?: (value: AppearancePreference) => Promise<void>;
@@ -17,6 +18,7 @@ const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 export function ProfileSettings({ onClose, onLogout, preferences, switchPin, switchPinBusy = false, onAppearanceChange, translate }: Props) {
   const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
+  const openUpdate = useAppUpdate();
   const [biometricBusy, setBiometricBusy] = useState(false);
   const label = (key: string, fallback: string) => translate ? translate(key) : fallback;
   const setBiometric = (enabled: boolean) => {
@@ -71,6 +73,7 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
           </Section>
           {switchPin}
           <Section title="Ilova">
+            <Button label={label('appUpdateSettingsTitle', 'Ilovani yangilash')} systemImage="arrow.triangle.2.circlepath" onPress={openUpdate} />
             <HStack spacing={12}>
               <Image systemName="info.circle" size={18} modifiers={[frame({ width: 22 }), secondary]} />
               <Text>Versiya</Text><Spacer />

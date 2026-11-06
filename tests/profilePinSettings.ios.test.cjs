@@ -70,6 +70,7 @@ function fixture() {
     'expo-constants': { __esModule: true, default: { expoConfig: { version: '1' } } },
     '../appAppearance': { isAppearancePreference: () => true },
     './AppSettings': { useAppSettings: () => ({ appearance: 'system', setAppearance: async () => {} }) },
+    './AppUpdateProvider': { useAppUpdate: () => () => {} },
     './usePinSetup.ios': { usePinSetup: () => usePinSetupCore(field, field, field) },
   });
   const render = () => {

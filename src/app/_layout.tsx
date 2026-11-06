@@ -4,10 +4,11 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { Platform, View } from 'react-native';
 import { AppSettingsProvider } from '../components/AppSettings';
+import { AppUpdateProvider } from '../components/AppUpdateProvider';
 import { useBaseTheme } from '../components/useBaseTheme';
 
 export default function RootLayout() {
-  return <AppSettingsProvider><AppNavigation /></AppSettingsProvider>;
+  return <AppSettingsProvider><AppUpdateProvider><AppNavigation /></AppUpdateProvider></AppSettingsProvider>;
 }
 
 function AppNavigation() {

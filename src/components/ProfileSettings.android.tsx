@@ -13,6 +13,7 @@ import { useAppSettings } from './AppSettings';
 import { usePinSetup } from './usePinSetup.android';
 import { useSwitchPinSetup } from './useSwitchPinSetup.android';
 import { BaseHost as Host } from './BaseHost';
+import { useAppUpdate } from './AppUpdateProvider';
 
 type Props = { session: Session; onClose: () => void; onLogout: () => void };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -31,6 +32,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   const { setAppearance } = useAppSettings();
   const pin = usePinSetup();
   const switchPin = useSwitchPinSetup(session);
+  const openUpdate = useAppUpdate();
   const [biometricBusy, setBiometricBusy] = useState(false);
   const biometricPending = useRef(false);
   const selectionSheet = useNativeSheet();
@@ -150,6 +152,8 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
         <Text>{t(switchPin.stage === 'entry' ? 'nextItemAction' : 'save')}</Text></Button>
       <TextButton enabled={!switchPin.busy} onClick={switchPin.back}><Text>{t('no')}</Text></TextButton>
     </>}
+    <TextButton onClick={openUpdate} modifiers={[fillMaxWidth()]}><Text>{t('appUpdateSettingsTitle')}</Text></TextButton>
+    <Text>{t('appUpdateSettingsBody')}</Text>
     <Text>{`Versiya: ${Constants.expoConfig?.version ?? '—'}`}</Text>
     <TextButton onClick={onLogout} modifiers={[fillMaxWidth(), testID('profile-disconnect')]}><Text>{t('disconnectSessionTitle')}</Text></TextButton>
     <Text>{t('disconnectSessionBody')}</Text>

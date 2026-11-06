@@ -1,14 +1,15 @@
 # base-wire
 
 Status: in progress
-Stopped at: finish security lifecycle and update checks.
+Stopped at: finish security lifecycle and final verification.
 
 ## Open items
 
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Push token reader | `FirebaseClientBootstrap`, `PushMessagingService` | Firebase configuration and a native FCM token reader remain outside this wire session. |
-| Native APK installer | `NativeAppUpdatePlatform` | The native Android installer remains outside this wire session. |
+| Native APK installer | `NativeAppUpdatePlatform` | Android download, signature validation and install adapters are not present. Automatic preparation and installation remain disabled until the real bridge is integrated. |
+| Native application metadata | `NativeAppUpdatePlatform.currentAppInfo` | The check reads the real `ExpoApplication` native module when present and otherwise reports that app information is unavailable. This worktree does not include `expo-application`; its dependency and a rebuilt app are needed for reliable manual checks. |
 | Login and account entry | `LoginScreen`, `AppEntryScreen`, `AccountSwitcherSheet` | Verify keyboard, login back swipe, saved-account PIN and unlock-after-login on real iOS and Android devices. |
 | In-session account switch launcher | `showAccountSwitcherSheet`, `app_shell_helpers_part_01.dart` | The V2 launcher is on the worker-owned profile button; connect it in the aparatchi session. |
 | Standalone PIN routes | `PinSetupEntryScreen`, `PinSetupConfirmScreen` | Settings now use the entry and confirmation flows for both PIN purposes, but other callers need Expo Router route files. The wire session may edit only `src/app/index.tsx` and `src/app/_layout.tsx`. |
@@ -22,6 +23,11 @@ Stopped at: finish security lifecycle and update checks.
 Login test mode remains deferred under D3.
 
 ## Needs from the integrator
+
+| Where | V2 reference | What is needed |
+|---|---|---|
+| `package.json`, `package-lock.json` | `NativeAppUpdatePlatform.currentAppInfo` | Install the SDK-compatible `expo-application` with `npx expo install expo-application`, rebuild the app and connect its public API. These files are outside the base-wire fence. |
+| Native Android update module | `accord/app_update` | Supply the V2 download, validation and installation bridge, then connect the automatic update runtime. |
 
 ## Drift
 
