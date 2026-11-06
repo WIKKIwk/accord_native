@@ -1,14 +1,15 @@
 # gscale
 
 Status: in progress
-Stopped at: connect discovery results to the GScale model and port the operator and receipt flows.
+Stopped at: finish saved discovery/device selection and port the operator and receipt flows.
 
 ## Open items
 
 | Where | V2 reference | What is needed |
 |---|---|---|
 | `modules/accord-gscale` | `SceneDelegate.swift`, `MainActivity.kt`, `network_candidates_io.dart` | Build the native module and verify Bonjour/NSD, UDP discovery, permissions and local HTTP on physical iOS and Android devices with a real scale/server. |
-| `src/gscale/**` | `gscale_mobile_app*.dart` | Port discovery probing, the operator dashboard, catalog, weighing, printing and receipt behaviour. |
+| `src/gscale/**` | `gscale_mobile_app*.dart` | Port saved discovery/device selection, the operator dashboard, catalog, weighing, printing and receipt behaviour. The discovery model now probes the V2 ports and merges native results. |
+| `src/gscale/gscaleDiscovery.ts` | `gscale_mobile_app_helpers_part_10.dart` | V2 iOS additionally runs a Dart UDP fallback after its native UDP pass. Verify whether a second native pass is needed for equivalent results on physical devices. |
 | `src/app/ios-gscale/**`, `src/app/android-gscale/**` | `gscale_mode_screen.dart` | Implement both route trees, GScaleModeArgs and the platform screens. |
 
 ## Deviations candidates
