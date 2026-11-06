@@ -6,7 +6,7 @@ This document is the hand-off to the iOS and Android sessions. The route and vie
 
 - The home route is `AppRoutes.preparation`, guarded by `preparation.access` for `tayyorlov_masteri`. `preparationFormulas` and `preparationProduction` use that capability; production additionally requires the master role. `supplySequence` is permitted to `qolip.manage`, `raw_material.assign` or `preparation.access`; for the real preparation session it opens the specialized read-only preparation order list. The guards and platform home targets are configured in `src/shared/appRoutes.ts`; native routes remain platform work.
 - Common dock: `Tayyorlov` replaces the root with home; `Profil` replaces it with profile. `Amallar` is present only when actions are supplied and opens those actions. Drawer: `Tayyorlov`, `Formulalar`, `Ishlab chiqarish`, `Ketma-ketlik`, conditional `Kirim` (scale capability), `Chat`, conditional `Ishlab chiqarilgan homashyolar` and `Profil`. `Ketma-ketlik`, `Kirim` and inventory movements are pushed; the other root destinations replace the root. Source: `features/preparation/presentation/preparation_navigation.dart`.
-- Most of these V2 texts are literal Uzbek passed to `UrduAwareText` or `uiText`, so the literal itself is the lookup key in the generated `src/shared/localization/catalog.json`; `profileTitle` is an `AppLocalizations` getter and `worker.queue.search.sequence` is a `productionText` key. Keep interpolation values and fallback literals as in V2. The source sections below identify the complete literal and dynamic text for each view; the exact per-literal inventory is still an open item.
+- Most of these V2 texts are literal Uzbek passed to `UrduAwareText` or `uiText`, so the literal itself is the lookup key in the generated `src/shared/localization/catalog.json`; `profileTitle` is an `AppLocalizations` getter and `worker.queue.search.sequence` is a `productionText` key. Keep interpolation values and fallback literals as in V2. The source literal index below includes dynamic and nested literals from all twelve preparation presentation files.
 - Loading, empty and retry/error states must be visible as specified below. A network failure uses the relevant API error and retry behaviour, not fabricated empty data. No preparation view defines a separate offline, frozen or permission-denied panel: failures surface through the existing error text, and actions are disabled where noted. A session scope change discards scoped results; the sequence and catalog explicitly clear visible rows. No direct haptic call is defined in the preparation source files; preserve any behaviour of shared controls separately.
 - Back closes a pushed screen/sheet and returns to its caller; root dock/drawer transitions above replace the root. The two formula dialogs below cannot be popped while saving. After returning from home child screens, home reloads. Pull-to-refresh must work even with short or empty lists.
 
@@ -86,263 +86,888 @@ Entry: home `Buyurtmalar` or drawer `Ketma-ketlik`. Logic: `PreparationOrdersSta
 
 Tap a row opens a non-dismissible detail host immediately, then reads only that order using `preparationOrderDetail`; loading/error/retry belong inside the sheet. It remains valid only while the same scoped row exists. Display is read-only: no reorder, write or WIP QR reprint. This borrowed admin view and its route/native navigation are outside this logic session; the integrator and platform sessions must connect the domain controller and existing shared detail presentation.
 
+## Inventory movements — `InventoryMovementsScreen`
+
+Entry: home or drawer `Ishlab chiqarilgan homashyolar`; the route is allowed for a preparation user with `preparation.access`. Native screens obtain the shared live store through `preparationInventoryStore` and acquire scoped raw-material windows with `preparationInventoryAssets`. Configure its foreground state when the app pauses/resumes and dispose leases on exit. Sources: `features/inventory/presentation/inventory_movements_screen.dart` and its three `_InventoryMovementsScreenState_methods` parts.
+
+Show `Mahsulotlar`, `Kiruvchi`, `Chiquvchi`; preparation does not show the material-worker state tab. The warehouse filter offers every active warehouse and `Barcha omborlar`; restore the selected warehouse per profile, falling back to all warehouses if it is no longer present. Asset reads include raw materials and order-assignment summaries, with search `Mahsulot, kod yoki QR qidirish`. Show loading and retry/error states, `Sizga biriktirilgan ombor topilmadi`, `Omborda harakatlantiriladigan mahsulot yo‘q`, `Kiruvchi transfer yo‘q` and `Chiquvchi transfer yo‘q` as applicable. Refresh reloads the relevant shared window.
+
+An asset opens its detail and QR sheet. Preparation may request a transfer only for an available asset physically in a warehouse assigned to the user; relocation and delete are hidden. A raw-material assignment editor is offered only with `raw_material.assign` for an assigned custody warehouse, otherwise display its order label. For a transfer, choose another active warehouse, confirm the internal-move or request explanation, and call `inventoryCreateTransfer`; update the shared view only after the server result. The baseline transfer list passes no available actions to its detail sheet. QR lookup is available from the FAB: search raw materials, prefer exact identifier/reference/item-code matches, and use a single warehouse result as fallback. Show `Bu QR bo‘yicha mahsulot topilmadi` otherwise. Back returns to preparation home or the preceding route.
+
 ## History and input — `PreparationHistoryScreen`, `_PreparationInputDialog`, `preparation_screen_forms.dart:1117,1335`
 
 History shows the last 100 receipt/consumption records or `Hali kirim yoki sarf yo‘q.` A non-reversed receipt long press offers `Kirimni bekor qilish`; it is enabled only when `can_reverse` is true. Require a nonempty reason up to 500 characters and destructive confirmation; after success prepend the reversal, mark the matching receipt reversed/non-reversible, reload parent, and show `Kirim bekor qilindi`. Failure retains history. Pull refresh delegates to the parent.
 
 Input dialog trims values, rejects an empty name (`Nom kiriting` or supplied error) and text beyond the supplied maximum (`Matn juda uzun`); default max is 160. Quantity input accepts digits, comma and period and validates the six-place positive decimal rule. `Saqlash` returns the trimmed value; `Bekor qilish` returns no value. Dialog back/cancel leaves data unchanged.
 
-## Static literal lookup inventory
 
-Generated from V2 baseline presentation sources. Each literal below is its `uiText`/`UrduAwareText` lookup input or a directly displayed literal; the source line is the authority for conditional usage. Dynamic interpolation and literals nested inside expressions remain subject to the open text-inventory item.
+## Complete source literal index
 
-### preparation_screen.dart
+All Dart string literals from the baseline preparation presentation sources, including nested literals inside interpolations, are indexed below with source line numbers. This is a deliberately inclusive source index: it also contains non-display identifiers, imports, and JSON keys, so consult the screen descriptions and source context for actual display use. Dynamic values are the original Dart templates.
 
-- `Saqlandi` — line 153
-- `Homashyo tanlang` — line 208
-- `Mahsulot formulasi` — line 224
-- `Homashyolar` — line 230
-- `Ombor` — line 235
-- `Tarozi kirimi` — line 241
-- `Kirim` — line 250
-- `Buyurtmalar` — line 255
-- `Tarix` — line 260
-- `Tayyorlov masteri` — line 287
-- `Ichki homashyo ta’minoti` — line 288
-- `Xatolik yuz berdi` — line 319
-- `Tasdiqlanmagan operatsiya` — line 343
-- `Sizga ombor biriktirilmagan. Admin foydalanuvchi kartasidan ombor biriktirishi kerak.` — line 390
-- `Ishlab chiqarish` — line 472
-- `Ishlab chiqarilgan homashyolar` — line 486
-
-### preparation_screen_forms.dart
-
-- `Qidirish` — line 17
-- `Yangi homashyo` — line 40
-- `Homashyo nomi` — line 40
-- `Kirim (kg)` — line 54
-- `Order tanlang` — line 66
-- `Homashyo tanlang` — line 81
-- `Sarfni saqlash` — line 110
-- `Hisoblangan homashyolar ombordan sarflansinmi?` — line 111
-- `Bekor qilish` — line 112
-- `Saqlash va sarflash` — line 113
-- `Bola ombor ochish` — line 297
-- `Saqlash` — line 339
-- `Homashyo qo‘shish` — line 441
-- `Ombor qo‘shish` — line 450
-- `Ombor` — line 461
-- `Tanlanmagan` — line 462
-- `Sizga ombor biriktirilmagan.` — line 504
-- `Yuqoridagi filtrdan ombor tanlang.` — line 514
-- `Bu omborda hali kirim yo‘q.` — line 524
-- `Mavjud qoldiq` — line 600
-- `Kirimlar` — line 802
-- `Chiqimlar` — line 864
-- `Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.` — line 906
-- `Buyurtmalar` — line 992
-- `Sarf (kg) = Order KG × foiz ÷ 100. Har bir homashyo foizi alohida hisoblanadi.` — line 1035
-- `Olib tashlash` — line 1072
-- `Foiz (%)` — line 1103
-- `Sarf: —` — line 1124
-- `Homashyo tanlash` — line 1142
-- `Saqlash bosilganda ko‘rsatilgan miqdor ombordan sarflanadi. Bu orderning saqlangan retsepti qayta sarflanmaydi.` — line 1148
-- `Kirimni bekor qilish` — line 1215
-- `Yopish` — line 1225
-- `Sabab` — line 1242
-- `Sabab kiriting` — line 1243
-- `Qaytish` — line 1253
-- `Kirim bekor qilindi` — line 1285
-- `Tarix` — line 1304
-- `Oxirgi 100 ta kirim va sarf` — line 1305
-- `Hali kirim yoki sarf yo‘q.` — line 1321
-
-### preparation_materials_screen.dart
-
-- `Homashyolar bilan amal bajarilmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring` — line 35
-- `Nomini o‘zgartirish` — line 68
-- `Omborga biriktirish` — line 73
-- `O‘chirish` — line 78
-- `Homashyo nomini o‘zgartirish` — line 96
-- `Homashyo nomi` — line 97
-- `Homashyoni o‘chirish` — line 103
-- `Bekor qilish` — line 106
-- `Sizga exclusive ombor biriktirilmagan.` — line 185
-- `Bu biriktirishni faqat administrator o‘zgartira oladi` — line 199
-- `Bu amal ombordagi qoldiqni ko‘chirmaydi.` — line 218
-- `Saqlash` — line 226
-- `Ombor biriktirish yangilandi` — line 244
-- `Homashyolar` — line 264
-- `Homashyoni qidirish` — line 274
-- `Qayta urinish` — line 304
-- `Homashyo amallari` — line 348
+<details>
+<summary>Show source literals</summary>
 
 ### preparation_formula_catalog_screen.dart
 
-- `Formulalar` — line 114
-- `Formula nomi, kodi yoki buyurtmani qidirish` — line 125
-- `Qayta urinish` — line 150
-- `Nomini o‘zgartirish` — line 198
+- 1: "'preparation_screen.dart'"
+- 33: "'Akkaunt o‘zgargan. Sahifani qayta oching'"
+- 68: "''"
+- 69: "''"
+- 110: "' '"
+- 114: "'Formulalar'"
+- 115: "''"
+- 125: "'Formula nomi, kodi yoki buyurtmani qidirish'"
+- 145: "'Barcha buyurtmalarning formulalari: ${entries.length} ta'"
+- 150: "'Qayta urinish'"
+- 153: "'Saqlangan formulalar yo‘q.'"
+- 154: "'Formula topilmadi.'"
+- 164: "'preparation-catalog-formula-${entry.id}'"
+- 174: "', '"
+- 174: "'Buyurtmalar: ${entry.orderCodes.join(', ')}'"
+- 175: "' • '"
+- 198: "'Nomini o‘zgartirish'"
 
 ### preparation_formula_orders_screen.dart
 
-- `Nomini o‘zgartirish` — line 86
-- `Komplekt nomini o‘zgartirish` — line 97
-- `Komplekt nomi` — line 98
-- `Komplekt nomi o‘zgartirildi` — line 115
-- `Formulalar` — line 136
-- `Kod, nom yoki buyurtmani qidirish` — line 146
-- `Qayta urinish` — line 175
-- `Formulani o‘chirish` — line 325
-- `Bekor qilish` — line 328
-- `O‘chirish` — line 329
-- `Formula o‘chirildi` — line 345
-- `Bu komplektda formula qolmadi.` — line 384
-
-### preparation_order_formula_screen.dart
-
-- `Formula ma’lumotlari` — line 57
-- `Shnek ulushlarini belgilash` — line 78
-- `Seriyo tanlang` — line 443
-- `Qidirish` — line 444
-- `Formula saqlandi` — line 577
-- `Formulani o‘chirish` — line 593
-- `Bekor qilish` — line 595
-- `O‘chirish` — line 596
-- `Formula o‘chirildi` — line 616
-- `Ishlab chiqarishni boshlash` — line 679
-- `Seriyo qo‘shish` — line 855
-- `Shnek ulushlari` — line 893
-- `Nom avtomatik beriladi` — line 1003
-- `Tahrirlash` — line 1120
-- `100% shart` — line 1217
-- `Olib tashlash` — line 1317
-
-### preparation_formula_variants_screen.dart
-
-- `Shnek formulasini tanlang` — line 149
-- `Formula nomi, kodi yoki buyurtmani qidirish` — line 150
-- `Tahrirlash` — line 217
-- `O‘chirish` — line 218
-- `Nomini o‘zgartirish` — line 221
-- `Shnek formulasini olib tashlash` — line 260
-- `Bekor qilish` — line 262
-- `Shnek formulalar` — line 292
-- `Variant qo‘shish` — line 298
-- `Qidirib variant qo‘shish` — line 303
-- `Qayta urinish` — line 330
-- `Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.` — line 335
-- `Akkaunt o‘zgargan. Sahifani qayta oching` — line 431
-- `Variant nomi` — line 460
+- 1: "'preparation_screen.dart'"
+- 6: "'Katalogdagi o‘zgarishlar formula keyingi safar buyurtmaga biriktirilganda olinadi.'"
+- 21: "''"
+- 86: "'Nomini o‘zgartirish'"
+- 88: "'rename'"
+- 93: "'rename'"
+- 97: "'Komplekt nomini o‘zgartirish'"
+- 98: "'Komplekt nomi'"
+- 115: "'Komplekt nomi o‘zgartirildi'"
+- 131: "' '"
+- 131: "'${item.id} ${item.name} ${item.productTitle} ${item.productCode} ${item.orderCodes.join(' ')}'"
+- 136: "'Formulalar'"
+- 137: "''"
+- 146: "'Kod, nom yoki buyurtmani qidirish'"
+- 150: "''"
+- 175: "'Qayta urinish'"
+- 181: "'Saqlangan formulalar yo‘q.'"
+- 182: "'Formula komplekti topilmadi.'"
+- 187: "'preparation-formula-set-${sets[i].id}'"
+- 193: "'${sets[i].id}\\nMos buyurtma yo‘q'"
+- 197: "'${_recipeCount(sets[i])} ta formula'"
+- 261: "''"
+- 262: "''"
+- 297: "'shares'"
+- 307: "'edit'"
+- 325: "'Formulani o‘chirish'"
+- 327: "'«${entry.formula.name}» formulasi o‘chirilsinmi? $_sharedFormulaWarning'"
+- 328: "'Bekor qilish'"
+- 329: "'O‘chirish'"
+- 345: "'Formula o‘chirildi'"
+- 384: "'Bu komplektda formula qolmadi.'"
+- 388: "'preparation-product-recipe-${entry.id}'"
+- 395: "' • '"
+- 402: "''"
+- 402: "'${entry.variantId}-'"
+- 402: "'preparation-order-formula-${entry.materialId}-${entry.variantId.isEmpty ? '' : '${entry.variantId}-'}${entry.formula.name}'"
+- 407: "' • '"
+- 410: "'Shnek ulushi belgilanmagan'"
+- 411: "'Shnek ulushi: ${preparationDisplay(entry.formula.sharePercent!)}%'"
+- 413: "'Eski formula — homashyo turi belgilanmagan'"
+- 415: "'${line.name} • ${preparationDisplay(line.percent)}%'"
+- 416: "'\\n'"
 
 ### preparation_formula_shares_sheet.dart
 
-- `Akkaunt o‘zgargan. Sahifani qayta oching` — line 92
-- `Shnek ulushlari saqlanmadi. Qayta urinib ko‘ring` — line 116
-- `Shnek ulushlari` — line 140
+- 1: "'package:flutter/material.dart'"
+- 3: "'../../../core/api/mobile_api.dart'"
+- 4: "'../../../core/localization/urdu_aware_text.dart'"
+- 5: "'../../../core/session/session_read_scope.dart'"
+- 6: "'../models/preparation_models.dart'"
+- 15: "''"
+- 16: "''"
+- 54: "''"
+- 91: "'account_changed'"
+- 92: "'Akkaunt o‘zgargan. Sahifani qayta oching'"
+- 104: "'name'"
+- 105: "'percent'"
+- 117: "'Shnek ulushlari saqlanmadi. Qayta urinib ko‘ring'"
+- 133: "'preparation-screw-shares-sheet'"
+- 140: "'Shnek ulushlari'"
+- 144: "'Homashyo'"
+- 144: "'${widget.materialName.isEmpty ? 'Homashyo' : widget.materialName}: shnek ulushlari jami 100% bo‘lsin. Har bir shnek ichidagi seriyolar alohida 100% hisoblanadi.'"
+- 151: "'preparation-screw-share-${widget.formulas[i].name}'"
+- 157: "'${widget.formulas[i].name} shnek ulushi'"
+- 158: "'%'"
+- 164: "'Har bir shnek uchun 0 dan katta, 100 gacha foiz kiriting'"
+- 165: "'Jami: ${preparationDisplay(preparationDecimalText(total))}% / 100%'"
+- 166: "'preparation-screw-share-total'"
+- 177: "'preparation-screw-shares-save'"
+- 179: "'Saqlanmoqda…'"
+- 179: "'Saqlash'"
 
-### preparation_production_screen.dart
+### preparation_formula_variants_screen.dart
 
-- `Ma’lumotlarni yuklab bo‘lmadi. Qayta urinib ko‘ring` — line 178
-- `Qayta urinish` — line 220
-- `Yana yuklash` — line 233
-- `Ishlab chiqarish` — line 286
-- `Buyurtma, homashyo yoki formula` — line 298
-- `Holat` — line 324
-- `Barchasi` — line 325
-- `Davom etmoqda` — line 336
-- `Yakunlangan` — line 340
-- `Hali ishlab chiqarish yozuvlari yo‘q.` — line 356
-- `Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q.` — line 426
-- `Hali rulon kirim qilinmagan.` — line 500
-- `Formula qayd etilmagan` — line 598
-- `Serverdagi QR identifikatori mos kelmadi` — line 709
+- 1: "'package:flutter/material.dart'"
+- 3: "'../../../core/api/mobile_api.dart'"
+- 4: "'../../../core/localization/urdu_aware_text.dart'"
+- 5: "'../../../core/search/search_normalizer.dart'"
+- 6: "'../../../core/session/session_read_scope.dart'"
+- 7: "'../../../core/widgets/feedback/m3_confirm_dialog.dart'"
+- 8: "'../../../core/widgets/feedback/spring_bottom_sheet.dart'"
+- 9: "'../../../core/widgets/lists/m3_segmented_list.dart'"
+- 10: "'../../../core/widgets/scroll/top_refresh_scroll_physics.dart'"
+- 11: "'../../../core/widgets/shell/app_loading_indicator.dart'"
+- 12: "'../../../core/widgets/shell/app_shell.dart'"
+- 13: "'../../admin/presentation/widgets/admin_catalog_list_row.dart'"
+- 14: "'../../admin/presentation/widgets/admin_create_hub_sheet.dart'"
+- 15: "'../../werka/presentation/widgets/m3_picker_sheet.dart'"
+- 16: "'../models/preparation_models.dart'"
+- 17: "'preparation_navigation.dart'"
+- 18: "'preparation_order_formula_screen.dart'"
+- 135: "', '"
+- 135: "'Buyurtmalar: ${entry.orderCodes.join(', ')}'"
+- 136: "' • '"
+- 148: "'preparation-variant-reuse-picker'"
+- 149: "'Shnek formulasini tanlang'"
+- 150: "'Formula nomi, kodi yoki buyurtmani qidirish'"
+- 154: "'Akkaunt o‘zgargan'"
+- 162: "'Akkaunt o‘zgargan'"
+- 217: "'Tahrirlash'"
+- 217: "'edit'"
+- 218: "'O‘chirish'"
+- 219: "'delete'"
+- 221: "'Nomini o‘zgartirish'"
+- 223: "'rename'"
+- 231: "'edit'"
+- 232: "'delete'"
+- 233: "'rename'"
+- 260: "'Shnek formulasini olib tashlash'"
+- 261: "'${variant.name} shnek formulasi ${widget.orderCode} buyurtmasidan olib tashlanadi.'"
+- 262: "'Bekor qilish'"
+- 263: "'O‘chirish'"
+- 264: "'preparation-variant-remove-confirm'"
+- 277: "'${variant.name} buyurtmadan olib tashlandi'"
+- 292: "'Shnek formulalar'"
+- 293: "'${widget.materialName} • ${widget.orderCode}'"
+- 298: "'Variant qo‘shish'"
+- 303: "'Qidirib variant qo‘shish'"
+- 321: "'${widget.orderCode} • ${widget.productTitle}'"
+- 330: "'Qayta urinish'"
+- 336: "'Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.'"
+- 341: "'preparation-formula-variant-${_variants[i].id}'"
+- 349: "'Tarkib hali kiritilmagan'"
+- 350: "'jami 100%'"
+- 350: "'ulushlar belgilanmagan'"
+- 350: "'${_variants[i].formulaCount} ta ichki formula • ${_variants[i].sharesComplete ? 'jami 100%' : 'ulushlar belgilanmagan'}'"
+- 351: "' • '"
+- 372: "''"
+- 411: "'\\s+'"
+- 411: "' '"
+- 430: "'account_changed'"
+- 431: "'Akkaunt o‘zgargan. Sahifani qayta oching'"
+- 450: "'Shnek variantiga nom bering'"
+- 451: "'Nomini o‘zgartirish'"
+- 455: "'preparation-variant-name'"
+- 460: "'Variant nomi'"
+- 465: "'Bu nom faqat shu buyurtma uchun saqlanadi.'"
+- 466: "'Yangi nom keyingi buyurtmalarga biriktirishda olinadi.'"
+- 474: "'Bekor qilish'"
+- 477: "'preparation-variant-create'"
+- 478: "'preparation-variant-rename'"
+- 480: "'Saqlanmoqda…'"
+- 480: "'Saqlash'"
+
+### preparation_materials_screen.dart
+
+- 1: "'preparation_screen.dart'"
+- 17: "''"
+- 33: "'preparation_request_failed'"
+- 34: "'Omborlar ro‘yxatini olib bo‘lmadi. Qayta urinib ko‘ring'"
+- 36: "'Homashyolar bilan amal bajarilmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring'"
+- 68: "'Nomini o‘zgartirish'"
+- 70: "'rename'"
+- 73: "'Omborga biriktirish'"
+- 75: "'warehouses'"
+- 78: "'O‘chirish'"
+- 80: "'delete'"
+- 87: "'warehouses'"
+- 92: "'rename'"
+- 96: "'Homashyo nomini o‘zgartirish'"
+- 97: "'Homashyo nomi'"
+- 103: "'Homashyoni o‘chirish'"
+- 105: "'«${material.name}» o‘chirilsinmi? Faqat ishlatilmagan homashyo o‘chiriladi. Qoldiq, kirim yoki formula bo‘lsa, o‘chirish rad etiladi.'"
+- 106: "'Bekor qilish'"
+- 107: "'O‘chirish'"
+- 114: "'rename'"
+- 137: "'rename'"
+- 138: "'Homashyo nomi o‘zgartirildi'"
+- 139: "'Homashyo o‘chirildi'"
+- 177: "'Omborga biriktirish'"
+- 186: "'Sizga exclusive ombor biriktirilmagan.'"
+- 200: "'Bu biriktirishni faqat administrator o‘zgartira oladi'"
+- 219: "'Bu amal ombordagi qoldiqni ko‘chirmaydi.'"
+- 226: "'Saqlash'"
+- 244: "'Ombor biriktirish yangilandi'"
+- 259: "' '"
+- 259: "'${item.name} ${item.code} ${item.warehouses.join(' ')}'"
+- 264: "'Homashyolar'"
+- 265: "''"
+- 274: "'Homashyoni qidirish'"
+- 278: "''"
+- 304: "'Qayta urinish'"
+- 310: "'Hali homashyo yaratmagansiz.'"
+- 311: "'Homashyo topilmadi.'"
+- 320: "'preparation-material-${items[i].code}'"
+- 330: "'Ombor biriktirilmagan'"
+- 331: "', '"
+- 332: "''"
+- 348: "'Homashyo amallari'"
 
 ### preparation_navigation.dart
 
-- `Tayyorlov` — line 35
-- `Amallar` — line 45
-- `Profil` — line 57
-- `Formulalar` — line 100
-- `Ishlab chiqarish` — line 106
-- `Ketma-ketlik` — line 114
-- `Kirim` — line 122
-- `Chat` — line 129
-- `Ishlab chiqarilgan homashyolar` — line 136
-
-### preparation_warehouse_management.dart
-
-- `Ombor bilan amal bajarilmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring` — line 4
-- `Nomini o‘zgartirish` — line 20
-- `O‘chirish` — line 25
-- `Ombor nomini o‘zgartirish` — line 39
-- `Ombor nomi` — line 40
-- `Omborni o‘chirish` — line 48
-- `Bekor qilish` — line 51
-
-## Interpolated literal lookup inventory
-
-Generated from direct V2 text arguments. The expressions shown are the V2 source templates; values are substituted at runtime. Text nested inside conditional expressions remains an open inventory item.
-
-### preparation_screen_forms.dart
-
-- `${material.name} — kirim` — line 54
-- `Ombor ochildi: $warehouse` — line 361
-- `-${preparationDisplay(line['kg'] as String? ?? '0')} kg` — line 887
-- `${doc['order_code']} ${doc['order_title']} • ${preparationDisplay(line['percent'] as String? ?? '0')}% • ${_formatDateTime(doc['created_at'])}` — line 889
-- `Mavjud: ${preparationDisplay(materials[entry.key]!.available(widget.warehouse))} kg` — line 1083
-- `Sarf: ${preparationDisplay(preparationRequiredKg(_order!.kg, entry.value.text))} kg` — line 1116
-- `Kirim — ${doc['name'] ?? ''}` — line 1210
-- `${doc['warehouse'] ?? ''} • ${preparationDisplay(doc['kg']?.toString() ?? '0')} kg` — line 1211
-- `${preparationDisplay(doc['kg']?.toString() ?? '0')} kg kirim bekor qilinsinmi? Bu amal tarixda saqlanadi.` — line 1251
-
-### preparation_materials_screen.dart
-
-- `«${material.name}» o‘chirilsinmi? Faqat ishlatilmagan homashyo o‘chiriladi. Qoldiq, kirim yoki formula bo‘lsa, o‘chirish rad etiladi.` — line 104
-
-### preparation_formula_catalog_screen.dart
-
-- `Barcha buyurtmalarning formulalari: ${entries.length} ta` — line 144
-
-### preparation_formula_orders_screen.dart
-
-- `«${entry.formula.name}» formulasi o‘chirilsinmi? $_sharedFormulaWarning` — line 326
+- 1: "'package:flutter/material.dart'"
+- 2: "'../../../app/app_router.dart'"
+- 3: "'../../../core/localization/app_localizations.dart'"
+- 4: "'../../../core/navigation/app_root_navigation.dart'"
+- 5: "'../../../core/widgets/navigation/role_dock.dart'"
+- 6: "'../../../core/widgets/navigation/role_navigation_drawer.dart'"
+- 7: "'../../admin/presentation/widgets/admin_create_hub_sheet.dart'"
+- 34: "'preparation-home'"
+- 35: "'Tayyorlov'"
+- 44: "'preparation-primary'"
+- 45: "'Amallar'"
+- 56: "'preparation-profile'"
+- 57: "'Profil'"
+- 89: "'Tayyorlov bo‘limlari'"
+- 94: "'Tayyorlov'"
+- 100: "'Formulalar'"
+- 106: "'Ishlab chiqarish'"
+- 114: "'Ketma-ketlik'"
+- 122: "'Kirim'"
+- 129: "'Chat'"
+- 136: "'Ishlab chiqarilgan homashyolar'"
 
 ### preparation_order_formula_screen.dart
 
-- `«${formula.name}» formulasi o‘chirilsinmi?` — line 594
-- `${widget.variantName.isEmpty ? 'Saqlangan formulalar' : 'Ichki formulalar'} (${_formulas.length})` — line 917
-- `Formula: $name` — line 995
-- `${formula.lines.length} ta seriyo` — line 1102
-- `${i + 1}` — line 1142
-- `${preparationDisplay(formula.lines[i].percent)}%` — line 1154
-- `≈ $kg kg` — line 1162
-- `${index + 1}-seriyo` — line 1308
-
-### preparation_formula_variants_screen.dart
-
-- `${variant.name} shnek formulasi ${widget.orderCode} buyurtmasidan olib tashlanadi.` — line 261
-- `${variant.name} buyurtmadan olib tashlandi` — line 277
-- `${widget.materialName} • ${widget.orderCode}` — line 293
-- `${widget.orderCode} • ${widget.productTitle}` — line 320
-
-### preparation_formula_shares_sheet.dart
-
-- `${widget.materialName.isEmpty ? 'Homashyo' : widget.materialName}: shnek ulushlari jami 100% bo‘lsin. Har bir shnek ichidagi seriyolar alohida 100% hisoblanadi.` — line 143
-- `${widget.formulas[i].name} shnek ulushi` — line 157
+- 1: "'package:flutter/material.dart'"
+- 3: "'../../../app/app_router.dart'"
+- 4: "'../../../core/api/mobile_api.dart'"
+- 5: "'../../../core/session/session_read_scope.dart'"
+- 6: "'../../../core/theme/app_motion.dart'"
+- 7: "'../../../core/theme/app_theme.dart'"
+- 8: "'../../../core/widgets/feedback/m3_confirm_dialog.dart'"
+- 9: "'../../../core/widgets/scroll/top_refresh_scroll_physics.dart'"
+- 10: "'../../../core/widgets/shell/app_shell.dart'"
+- 11: "'../../admin/presentation/widgets/admin_create_hub_sheet.dart'"
+- 12: "'../../gscale/presentation/gscale_mode_screen.dart'"
+- 13: "'../../werka/presentation/widgets/m3_picker_sheet.dart'"
+- 14: "'../models/preparation_models.dart'"
+- 15: "'preparation_navigation.dart'"
+- 16: "'preparation_formula_shares_sheet.dart'"
+- 17: "'../../../core/localization/urdu_aware_text.dart'"
+- 22: "'Bu formulani boshqarish huquqingiz yo‘q'"
+- 23: "'Sessiya tugagan. Qayta kiring'"
+- 26: "'account_changed'"
+- 27: "'preparation_invalid_response'"
+- 31: "'Formulalar bilan amal bajarilmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring'"
+- 37: "''"
+- 49: "'preparation-formula-info-sheet'"
+- 58: "'Formula ma’lumotlari'"
+- 68: "'edit'"
+- 69: "'delete'"
+- 75: "'preparation-formula-share-action'"
+- 76: "'shares'"
+- 78: "'Shnek ulushlarini belgilash'"
+- 105: "''"
+- 106: "''"
+- 107: "''"
+- 135: "''"
+- 136: "''"
+- 137: "''"
+- 168: "''"
+- 181: "''"
+- 250: "'Formula topilmadi. Ro‘yxatni yangilang'"
+- 342: "'id'"
+- 343: "'code'"
+- 344: "'title'"
+- 345: "'order_kg'"
+- 345: "'0'"
+- 346: "'saved'"
+- 382: "''"
+- 414: "'item_code'"
+- 415: "'name'"
+- 416: "'balances'"
+- 443: "'Seriyo tanlang'"
+- 444: "'Qidirish'"
+- 448: "'${m.name} ${m.code}'"
+- 456: "''"
+- 470: "''"
+- 509: "''"
+- 511: "'${i + 1}-seriyoda seriyo tanlanmagan'"
+- 521: "'Bu seriyo'"
+- 521: "'«$name»'"
+- 522: "'$label takrorlangan — har bir seriyo 1 marta bo‘lishi kerak'"
+- 526: "'${i + 1}-seriyo foizini to‘g‘ri kiriting (0–100, masalan 25)'"
+- 534: "'Jami foiz 100 dan oshib ketdi (hozir $display%). Kamaytiring.'"
+- 537: "'Jami foiz 100% bo‘lishi kerak (hozir $display%). Saqlash uchun to‘ldiring.'"
+- 554: "'item_code'"
+- 555: "'percent'"
+- 577: "'Formula saqlandi'"
+- 593: "'Formulani o‘chirish'"
+- 594: "'«${formula.name}» formulasi o‘chirilsinmi?'"
+- 595: "'Bekor qilish'"
+- 596: "'O‘chirish'"
+- 616: "'Formula o‘chirildi'"
+- 638: "'shares'"
+- 640: "'edit'"
+- 642: "'delete'"
+- 651: "''"
+- 656: "'$customer • ${widget.productTitle}'"
+- 665: "' • '"
+- 668: "'Formulalar'"
+- 679: "'Ishlab chiqarishni boshlash'"
+- 686: "'Ichki formula qo‘shish'"
+- 687: "'Shnek formula qo‘shish'"
+- 738: "'Formula kodi: ${widget.variantCode}'"
+- 739: "'Komplekt kodi'"
+- 739: "'Buyurtma kodi'"
+- 739: "'-'"
+- 739: "'${widget.manageSavedFormula ? 'Komplekt kodi' : 'Buyurtma kodi'}: ${widget.orderCode.isEmpty ? '-' : widget.orderCode}'"
+- 758: "'Taxminiy kg hisobi hozir mavjud emas'"
+- 759: "'${widget.materialName}: ≈ ${preparationEstimatedKgDisplay(_estimatedMaterialKg!)} kg (taxminiy)'"
+- 761: "'preparation-material-estimate'"
+- 796: "'Yangi formula'"
+- 797: "'«$_editingName»'"
+- 804: "'Bekor qilish'"
+- 846: "'preparation-formula-add-seriya'"
+- 855: "'Seriyo qo‘shish'"
+- 865: "'preparation-formula-save'"
+- 871: "'Saqlanmoqda…'"
+- 871: "'Saqlash'"
+- 891: "'preparation-screw-shares-action'"
+- 894: "'Shnek ulushlari'"
+- 901: "'Jami: 100% • bitta umumiy tarkib'"
+- 902: "'Jami 100% qilib belgilang — kg shundan keyin hisoblanadi'"
+- 918: "'Saqlangan formulalar'"
+- 918: "'Ichki formulalar'"
+- 918: "'${widget.variantName.isEmpty ? 'Saqlangan formulalar' : 'Ichki formulalar'} (${_formulas.length})'"
+- 936: "'Bu formulada ichki tarkib yo‘q.'"
+- 937: "'Hali formula yo‘q. FAB orqali formula qo‘shing.'"
+- 996: "'Formula: $name'"
+- 1004: "'Nom avtomatik beriladi'"
+- 1029: "''"
+- 1076: "'preparation-formula-card-${formula.name}'"
+- 1097: "'$materialName • ${formula.name}'"
+- 1103: "'${formula.lines.length} ta seriyo'"
+- 1111: "'Shnek ulushi belgilanmagan'"
+- 1112: "''"
+- 1112: "' • ≈ $_screwKg kg'"
+- 1112: "'Shnek ulushi: ${preparationDisplay(formula.sharePercent!)}%${_screwKg == null ? '' : ' • ≈ $_screwKg kg'}'"
+- 1119: "'preparation-formula-edit-${formula.name}'"
+- 1120: "'Tahrirlash'"
+- 1125: "'O‘chirish'"
+- 1140: "'preparation-formula-line-${formula.name}-${formula.lines[i].itemCode}'"
+- 1142: "'${i + 1}'"
+- 1155: "'${preparationDisplay(formula.lines[i].percent)}%'"
+- 1163: "'≈ $kg kg'"
+- 1189: "'Jami: —'"
+- 1190: "'Jami: ${preparationDisplay(preparationDecimalText(total!))}%'"
+- 1218: "'100% shart'"
+- 1241: "'preparation-formula-error'"
+- 1309: "'${index + 1}-seriyo'"
+- 1317: "'Olib tashlash'"
+- 1325: "'preparation-formula-pick-$index'"
+- 1331: "'Seriyo tanlang'"
+- 1340: "'preparation-formula-percent-$index'"
+- 1348: "'Foiz (%)'"
 
 ### preparation_production_screen.dart
 
-- `${order.displayCode} • ${order.title}` — line 366
-- `${batch.formulaName}\n${batch.active ? 'Davom etmoqda' : 'Yakunlangan'} • ${batch.warehouse} • ${_date(batch.lastActivityAt)}` — line 449
-- `${batch.warehouse}\nBoshlangan: ${_date(batch.startedAt)}${batch.endedAt.isEmpty ? '' : '\nTugagan: ${_date(batch.endedAt)}'}` — line 511
-- `${_date(roll.printedAt)} • ${roll.warehouse}` — line 532
-- `Shnek formulasi: ${recipe['variant_name'] ?? '—'}` — line 603
-- `Formula kodi: ${recipe['variant_code']}` — line 610
-- `Saqlangan tarkib • ${_date(recipe['captured_at']?.toString() ?? '')}` — line 611
-- `Shnek ${screw['name']} • ${preparationDisplay(screw['share_percent']?.toString() ?? '—')}%` — line 616
-- `${line['name'] ?? line['item_code']} — ${preparationDisplay(line['percent']?.toString() ?? '—')}%` — line 623
+- 1: "'dart:async'"
+- 2: "'dart:convert'"
+- 4: "'package:flutter/material.dart'"
+- 5: "'package:flutter/services.dart'"
+- 6: "'package:http/http.dart'"
+- 8: "'../../../app/app_router.dart'"
+- 9: "'../../../core/api/mobile_api.dart'"
+- 10: "'../../../core/localization/app_localizations.dart'"
+- 11: "'../../../core/localization/urdu_aware_text.dart'"
+- 12: "'../../../core/print_service.dart'"
+- 13: "'../../../core/session/session.dart'"
+- 14: "'../../../core/session/session_read_scope.dart'"
+- 15: "'../../../core/widgets/feedback/rps_qr_reprint_sheet.dart'"
+- 16: "'../../../core/widgets/lists/m3_segmented_list.dart'"
+- 17: "'../../../core/widgets/scroll/top_refresh_scroll_physics.dart'"
+- 18: "'../../../core/widgets/shell/app_loading_indicator.dart'"
+- 19: "'../../../core/widgets/shell/app_shell.dart'"
+- 20: "'../../admin/presentation/progress_printer_picker.dart'"
+- 21: "'../../admin/presentation/widgets/admin_catalog_search_field.dart'"
+- 22: "'../../admin/presentation/widgets/admin_catalog_list_row.dart'"
+- 23: "'../../admin/presentation/widgets/admin_expandable_filter_chip.dart'"
+- 24: "'../models/preparation_models.dart'"
+- 25: "'preparation_navigation.dart'"
+- 105: "'Akkaunt o‘zgargan. Sahifani qayta oching'"
+- 155: "'Keyingi sahifa ma’lumoti noto‘g‘ri'"
+- 179: "'Ma’lumotlarni yuklab bo‘lmadi. Qayta urinib ko‘ring'"
+- 218: "'production-retry'"
+- 220: "'Qayta urinish'"
+- 231: "'production-load-more'"
+- 233: "'Yana yuklash'"
+- 253: "''"
+- 253: "'all'"
+- 286: "'Ishlab chiqarish'"
+- 287: "''"
+- 295: "'production-search'"
+- 298: "'Buyurtma, homashyo yoki formula'"
+- 323: "'production-status-filter'"
+- 324: "'Holat'"
+- 325: "'Barchasi'"
+- 330: "'production-status-all'"
+- 331: "'all'"
+- 332: "'Barchasi'"
+- 334: "'production-status-active'"
+- 335: "'active'"
+- 336: "'Davom etmoqda'"
+- 338: "'production-status-completed'"
+- 339: "'completed'"
+- 340: "'Yakunlangan'"
+- 356: "'Hali ishlab chiqarish yozuvlari yo‘q.'"
+- 362: "'production-order:${order.id}'"
+- 366: "'${order.displayCode} • ${order.title}'"
+- 369: "'${order.batchCount} ta ishlab chiqarish'"
+- 371: "'${order.activeBatchCount} ta davom etmoqda'"
+- 373: "' • '"
+- 375: "'${order.rollCount} ta rulon • ${preparationDisplay(order.netKg)} kg • ${preparationDisplay(order.lengthM)} m'"
+- 419: "'Buyurtma ishlab chiqarishi'"
+- 420: "'Buyurtma: ${_order!.displayCode}'"
+- 421: "''"
+- 426: "'Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q.'"
+- 432: "'production-order-summary'"
+- 439: "'${order.rollCount} ta rulon • ${preparationDisplay(order.netKg)} kg • ${preparationDisplay(order.lengthM)} m'"
+- 443: "'production-batch:${batch.id}'"
+- 450: "'Davom etmoqda'"
+- 450: "'Yakunlangan'"
+- 450: "'${batch.formulaName}\\n${batch.active ? 'Davom etmoqda' : 'Yakunlangan'} • ${batch.warehouse} • ${_date(batch.lastActivityAt)}'"
+- 452: "'${batch.rollCount} ta rulon • ${preparationDisplay(batch.netKg)} kg • ${preparationDisplay(batch.lengthM)} m'"
+- 494: "'Ishlab chiqarish'"
+- 495: "''"
+- 500: "'Hali rulon kirim qilinmagan.'"
+- 506: "'production-batch-summary'"
+- 510: "'Davom etmoqda'"
+- 510: "'Yakunlangan'"
+- 512: "''"
+- 512: "'\\nTugagan: ${_date(batch.endedAt)}'"
+- 512: "'${batch.warehouse}\\nBoshlangan: ${_date(batch.startedAt)}${batch.endedAt.isEmpty ? '' : '\\nTugagan: ${_date(batch.endedAt)}'}'"
+- 514: "'${batch.rollCount} ta rulon • ${preparationDisplay(batch.netKg)} kg • ${preparationDisplay(batch.lengthM)} m'"
+- 517: "'production-batch-recipe'"
+- 525: "'production-roll:${roll.epc}'"
+- 532: "'${_date(roll.printedAt)} • ${roll.warehouse}'"
+- 534: "''"
+- 534: "' • ${preparationDisplay(roll.lengthM!)} m'"
+- 534: "''"
+- 534: "' • ${preparationDisplay(roll.widthMm!)} mm'"
+- 534: "''"
+- 534: "' • ${preparationDisplay(roll.micron!)} mkm'"
+- 534: "'${preparationDisplay(roll.netKg)} kg${roll.lengthM == null ? '' : ' • ${preparationDisplay(roll.lengthM!)} m'}${roll.widthMm == null ? '' : ' • ${preparationDisplay(roll.widthMm!)} mm'}${roll.micron == null ? '' : ' • ${preparationDisplay(roll.micron!)} mkm'}'"
+- 535: "''"
+- 572: "'\\n'"
+- 591: "'Formula qayd etilmagan'"
+- 592: "''"
+- 598: "'Formula qayd etilmagan'"
+- 603: "'variant_name'"
+- 603: "'—'"
+- 603: "'Shnek formulasi: ${recipe['variant_name'] ?? '—'}'"
+- 609: "'variant_code'"
+- 610: "'variant_code'"
+- 610: "'Formula kodi: ${recipe['variant_code']}'"
+- 612: "'captured_at'"
+- 612: "''"
+- 612: "'Saqlangan tarkib • ${_date(recipe['captured_at']?.toString() ?? '')}'"
+- 613: "'formulas'"
+- 617: "'name'"
+- 617: "'share_percent'"
+- 617: "'—'"
+- 617: "'Shnek ${screw['name']} • ${preparationDisplay(screw['share_percent']?.toString() ?? '—')}%'"
+- 620: "'lines'"
+- 624: "'name'"
+- 624: "'item_code'"
+- 624: "'percent'"
+- 624: "'—'"
+- 624: "'${line['name'] ?? line['item_code']} — ${preparationDisplay(line['percent']?.toString() ?? '—')}%'"
+- 641: "'—'"
+- 642: "'0'"
+- 643: "'${two(value.day)}.${two(value.month)}.${value.year} ${two(value.hour)}:${two(value.minute)}'"
+- 662: "'production-roll-reprint-${roll.epc}'"
+- 668: "'Bad state: '"
+- 668: "''"
+- 671: "'Kirim raqami'"
+- 672: "'Netto'"
+- 672: "'${preparationDisplay(roll.netKg)} kg'"
+- 674: "'Brutto'"
+- 674: "'${preparationDisplay(roll.grossKg!)} kg'"
+- 676: "'Metraj'"
+- 676: "'${preparationDisplay(roll.lengthM!)} m'"
+- 678: "'Eni'"
+- 678: "'${preparationDisplay(roll.widthMm!)} mm'"
+- 680: "'Mikron'"
+- 680: "'${preparationDisplay(roll.micron!)} mkm'"
+- 681: "'Ombor'"
+- 682: "'Chop etilgan'"
+- 708: "'raw_material_stock_reprint_identity_mismatch'"
+- 709: "'Serverdagi QR identifikatori mos kelmadi'"
+- 724: "'Printer QR kodini chop etmadi'"
+- 727: "'Printer serveri tanlanmadi'"
+- 729: "'${server.endpoint.baseUrl}/v1/mobile/driver/print'"
+- 730: "'Content-Type'"
+- 730: "'application/json'"
+- 733: "'printer'"
+- 734: "'print_mode'"
+- 740: "'ok'"
+- 742: "'detail'"
+- 742: "'error'"
+- 742: "''"
+- 743: "''"
+- 745: "'Printer QR kodini chop etmadi'"
+- 749: "'QR chop etildi, lekin server tasdig‘i saqlanmadi'"
+- 758: "'QR chop etildi, lekin server tasdig‘i saqlanmadi'"
+
+### preparation_screen.dart
+
+- 1: "'package:flutter/material.dart'"
+- 2: "'package:flutter/services.dart'"
+- 3: "'../../../app/app_router.dart'"
+- 4: "'../../../core/api/mobile_api.dart'"
+- 5: "'../../../core/navigation/app_root_navigation.dart'"
+- 6: "'../../../core/session/session.dart'"
+- 7: "'../../../core/session/session_read_scope.dart'"
+- 8: "'../../../core/theme/app_theme.dart'"
+- 9: "'../../../core/widgets/feedback/m3_confirm_dialog.dart'"
+- 10: "'../../../core/widgets/feedback/spring_bottom_sheet.dart'"
+- 11: "'../../../core/widgets/lists/m3_segmented_list.dart'"
+- 12: "'../../../core/widgets/scroll/top_refresh_scroll_physics.dart'"
+- 13: "'../../../core/widgets/shell/app_shell.dart'"
+- 14: "'../../../core/widgets/shell/app_loading_indicator.dart'"
+- 15: "'../../admin/presentation/widgets/admin_catalog_search_field.dart'"
+- 16: "'../../admin/presentation/widgets/admin_catalog_list_row.dart'"
+- 17: "'../../admin/presentation/widgets/admin_create_hub_sheet.dart'"
+- 18: "'../../admin/presentation/widgets/admin_expandable_filter_chip.dart'"
+- 19: "'../../admin/presentation/widgets/admin_summary_card.dart'"
+- 20: "'../../werka/presentation/widgets/m3_picker_sheet.dart'"
+- 21: "'../models/preparation_models.dart'"
+- 22: "'preparation_navigation.dart'"
+- 23: "'preparation_order_formula_screen.dart'"
+- 24: "'preparation_formula_variants_screen.dart'"
+- 25: "'preparation_formula_shares_sheet.dart'"
+- 26: "'../../../core/localization/urdu_aware_text.dart'"
+- 28: "'preparation_screen_forms.dart'"
+- 29: "'preparation_warehouse_management.dart'"
+- 30: "'preparation_materials_screen.dart'"
+- 31: "'preparation_formula_orders_screen.dart'"
+- 32: "'preparation_formula_catalog_screen.dart'"
+- 151: "'consumptions'"
+- 153: "'Saqlandi'"
+- 208: "'Homashyo tanlang'"
+- 216: "'Mavjud: ${preparationDisplay(m.available(_warehouse))} kg'"
+- 224: "'Mahsulot formulasi'"
+- 230: "'Homashyolar'"
+- 235: "'Ombor'"
+- 241: "'Tarozi kirimi'"
+- 250: "'Kirim'"
+- 255: "'Buyurtmalar'"
+- 260: "'Tarix'"
+- 287: "'Tayyorlov masteri'"
+- 288: "'Ichki homashyo ta’minoti'"
+- 319: "'Xatolik yuz berdi'"
+- 321: "''"
+- 343: "'Tasdiqlanmagan operatsiya'"
+- 344: "'receipts'"
+- 345: "'kg'"
+- 345: "'Kirim: ${_pending!.payload['kg']} kg'"
+- 346: "'materials'"
+- 347: "'name'"
+- 347: "'Homashyo: ${_pending!.payload['name']}'"
+- 348: "'order_id'"
+- 348: "'Order: ${_pending!.payload['order_id']}'"
+- 349: "'Tekshirish'"
+- 391: "'Sizga ombor biriktirilmagan. Admin foydalanuvchi kartasidan ombor biriktirishi kerak.'"
+- 414: "'Ombor'"
+- 418: "''"
+- 427: "'Homashyolar'"
+- 431: "''"
+- 443: "'Mahsulot formulasi'"
+- 447: "''"
+- 459: "'Buyurtmalar'"
+- 463: "''"
+- 472: "'Ishlab chiqarish'"
+- 476: "''"
+- 486: "'Ishlab chiqarilgan homashyolar'"
+- 490: "''"
+- 500: "'Tarix'"
+- 504: "''"
+
+### preparation_screen_forms.dart
+
+- 1: "'preparation_screen.dart'"
+- 17: "'Qidirish'"
+- 20: "'${label(item)} ${subtitle(item)}'"
+- 40: "'Yangi homashyo'"
+- 40: "'Homashyo nomi'"
+- 42: "'materials'"
+- 42: "'name'"
+- 42: "'warehouse'"
+- 54: "'${material.name} — kirim'"
+- 54: "'Kirim (kg)'"
+- 56: "'receipts'"
+- 57: "'item_code'"
+- 58: "'warehouse'"
+- 59: "'kg'"
+- 66: "'Order tanlang'"
+- 69: "'${preparationDisplay(o.kg)} kg'"
+- 81: "'Homashyo tanlang'"
+- 87: "'Mavjud: ${preparationDisplay(m.available(_warehouse))} kg'"
+- 100: "'Omborda yetarli homashyo yo‘q'"
+- 110: "'Sarfni saqlash'"
+- 111: "'Hisoblangan homashyolar ombordan sarflansinmi?'"
+- 112: "'Bekor qilish'"
+- 113: "'Saqlash va sarflash'"
+- 115: "'consumptions'"
+- 116: "'warehouse'"
+- 117: "'order_id'"
+- 118: "'expected_order_kg'"
+- 119: "'lines'"
+- 122: "'item_code'"
+- 123: "'percent'"
+- 133: "''"
+- 136: "'.'"
+- 140: "''"
+- 142: "'name'"
+- 142: "''"
+- 143: "'percent'"
+- 143: "'0'"
+- 144: "'kg'"
+- 144: "'0'"
+- 145: "'$name: $pct% → $kg kg'"
+- 146: "'\\n'"
+- 198: "''"
+- 230: "'${m.name} ${m.code}'"
+- 254: "'Homashyo tanlang'"
+- 255: "'Qidirish'"
+- 259: "'${m.name} ${m.code}'"
+- 267: "'Mavjud: ${preparationDisplay(m.available(_warehouse))} kg'"
+- 297: "'Bola ombor ochish'"
+- 303: "'preparation-warehouse-parent'"
+- 306: "'Ota ombor'"
+- 318: "'preparation-warehouse-name'"
+- 323: "'Yangi ombor nomi'"
+- 331: "'Bekor qilish'"
+- 339: "'Saqlash'"
+- 361: "'Ombor ochildi: $warehouse'"
+- 407: "''"
+- 408: "''"
+- 417: "'Qidirish'"
+- 421: "''"
+- 433: "'Kirim'"
+- 433: "'Tarozi kirimi'"
+- 441: "'Homashyo qo‘shish'"
+- 450: "'Ombor qo‘shish'"
+- 460: "'preparation-warehouse-filter'"
+- 461: "'Ombor'"
+- 462: "'Tanlanmagan'"
+- 485: "'preparation-warehouse-filter-chip'"
+- 486: "'preparation-warehouse-filter-option'"
+- 505: "'Sizga ombor biriktirilmagan.'"
+- 515: "'Yuqoridagi filtrdan ombor tanlang.'"
+- 525: "'Bu omborda hali kirim yo‘q.'"
+- 582: "'${preparationDisplay(material.available(warehouse))} kg'"
+- 600: "'Mavjud qoldiq'"
+- 659: "'kind'"
+- 659: "'receipt'"
+- 659: "'kind'"
+- 659: "'receipt_reversal'"
+- 660: "'warehouse'"
+- 661: "'item_code'"
+- 661: "''"
+- 668: "'kind'"
+- 668: "'consumption'"
+- 669: "'warehouse'"
+- 672: "'lines'"
+- 676: "'item_code'"
+- 676: "''"
+- 678: "'doc'"
+- 679: "'line'"
+- 722: "'Homashyo'"
+- 754: "'${preparationDisplay(material.available(widget.warehouse))} kg'"
+- 785: "'preparation-detail-kirim'"
+- 795: "'Kirim qilish'"
+- 795: "'Tarozi kirimi'"
+- 803: "'Kirimlar'"
+- 817: "'kind'"
+- 817: "'receipt_reversal'"
+- 818: "'reversed'"
+- 820: "'name'"
+- 820: "''"
+- 821: "'reason'"
+- 821: "''"
+- 823: "'warehouse'"
+- 823: "'created_at'"
+- 823: "'${doc['warehouse']} • ${_formatDateTime(doc['created_at'])}'"
+- 824: "'Sabab: $reason'"
+- 825: "'Bekor qilingan'"
+- 826: "'\\n'"
+- 835: "'Kirimni bekor qilish — $name'"
+- 836: "'kg'"
+- 836: "'0'"
+- 836: "'+${preparationDisplay(doc['kg'] as String? ?? '0')} kg'"
+- 839: "'kg'"
+- 839: "'0'"
+- 839: "'-${preparationDisplay(doc['kg'] as String? ?? '0')} kg'"
+- 840: "''"
+- 865: "'Chiqimlar'"
+- 878: "'doc'"
+- 879: "'line'"
+- 888: "'kg'"
+- 888: "'0'"
+- 888: "'-${preparationDisplay(line['kg'] as String? ?? '0')} kg'"
+- 890: "'order_code'"
+- 890: "'order_title'"
+- 890: "'percent'"
+- 890: "'0'"
+- 890: "'created_at'"
+- 890: "'${doc['order_code']} ${doc['order_title']} • ${preparationDisplay(line['percent'] as String? ?? '0')}% • ${_formatDateTime(doc['created_at'])}'"
+- 891: "''"
+- 907: "'Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.'"
+- 992: "'Buyurtmalar'"
+- 993: "''"
+- 1017: "'Order tanlang'"
+- 1019: "'Faqat KG miqdori bor faol orderlar'"
+- 1020: "'Order: ${preparationDisplay(_order!.kg)} kg'"
+- 1021: "''"
+- 1036: "'Sarf (kg) = Order KG × foiz ÷ 100. Har bir homashyo foizi alohida hisoblanadi.'"
+- 1072: "'Olib tashlash'"
+- 1084: "'Mavjud: ${preparationDisplay(materials[entry.key]!.available(widget.warehouse))} kg'"
+- 1091: "'preparation-percent-${entry.key}'"
+- 1103: "'Foiz (%)'"
+- 1117: "'Sarf: ${preparationDisplay(preparationRequiredKg(_order!.kg, entry.value.text))} kg'"
+- 1124: "'Sarf: —'"
+- 1142: "'Homashyo tanlash'"
+- 1149: "'Saqlash bosilganda ko‘rsatilgan miqdor ombordan sarflanadi. Bu orderning saqlangan retsepti qayta sarflanmaydi.'"
+- 1161: "'preparation-save-recipe'"
+- 1171: "'Saqlanmoqda…'"
+- 1171: "'Saqlash va sarflash'"
+- 1206: "'can_reverse'"
+- 1210: "'name'"
+- 1210: "''"
+- 1210: "'Kirim — ${doc['name'] ?? ''}'"
+- 1212: "'warehouse'"
+- 1212: "''"
+- 1212: "'kg'"
+- 1212: "'0'"
+- 1212: "'${doc['warehouse'] ?? ''} • ${preparationDisplay(doc['kg']?.toString() ?? '0')} kg'"
+- 1215: "'Kirimni bekor qilish'"
+- 1217: "'reverse'"
+- 1219: "'Ishlatilmagan va orderga ulanmagan kirim'"
+- 1220: "'Bu kirim ishlatilgan yoki orderga ulangan'"
+- 1225: "'Yopish'"
+- 1227: "'close'"
+- 1232: "'reverse'"
+- 1241: "'Kirimni bekor qilish'"
+- 1242: "'Sabab'"
+- 1243: "'Sabab kiriting'"
+- 1250: "'Kirimni bekor qilish'"
+- 1252: "'kg'"
+- 1252: "'0'"
+- 1252: "'${preparationDisplay(doc['kg']?.toString() ?? '0')} kg kirim bekor qilinsinmi? Bu amal tarixda saqlanadi.'"
+- 1253: "'Qaytish'"
+- 1254: "'Bekor qilish'"
+- 1260: "'id'"
+- 1260: "''"
+- 1264: "'id'"
+- 1269: "'created_at'"
+- 1272: "'id'"
+- 1275: "'reversed'"
+- 1276: "'can_reverse'"
+- 1285: "'Kirim bekor qilindi'"
+- 1304: "'Tarix'"
+- 1305: "'Oxirgi 100 ta kirim va sarf'"
+- 1322: "'Hali kirim yoki sarf yo‘q.'"
+- 1354: "'kind'"
+- 1354: "'receipt'"
+- 1355: "'kind'"
+- 1355: "'receipt_reversal'"
+- 1356: "'reversed'"
+- 1358: "'name'"
+- 1358: "'Kirim — ${doc['name']}'"
+- 1360: "'name'"
+- 1360: "'Kirimni bekor qilish — ${doc['name']}'"
+- 1361: "'order_code'"
+- 1361: "'order_title'"
+- 1361: "'Sarf — ${doc['order_code']} ${doc['order_title']}'"
+- 1363: "'warehouse'"
+- 1363: "'created_at'"
+- 1363: "'\\nBekor qilingan'"
+- 1363: "''"
+- 1363: "'${doc['warehouse']} • ${_formatDateTime(doc['created_at'])}${reversed ? '\\nBekor qilingan' : ''}'"
+- 1364: "'warehouse'"
+- 1364: "'created_at'"
+- 1364: "'lines'"
+- 1364: "'${doc['warehouse']} • ${_formatDateTime(doc['created_at'])}\\n${_linesSummary(doc['lines'])}'"
+- 1366: "'kg'"
+- 1366: "'0'"
+- 1366: "'+${preparationDisplay(doc['kg'] as String? ?? '0')} kg'"
+- 1368: "'kg'"
+- 1368: "'0'"
+- 1368: "'-${preparationDisplay(doc['kg'] as String? ?? '0')} kg'"
+- 1369: "'order_kg'"
+- 1369: "'0'"
+- 1369: "'Order: ${preparationDisplay(doc['order_kg'] as String? ?? '0')} kg'"
+- 1406: "'Nom kiriting'"
+- 1407: "''"
+- 1469: "'[0-9.,]'"
+- 1476: "''"
+- 1479: "'Matn juda uzun'"
+- 1483: "''"
+- 1494: "'Saqlash'"
+- 1501: "'Bekor qilish'"
 
 ### preparation_warehouse_management.dart
 
-- `«$warehouse» ombori o‘chirilsinmi? Ichida homashyo yoki bog‘langan yozuvlar bo‘lsa, o‘chirilmaydi.` — line 49
+- 1: "'preparation_screen.dart'"
+- 5: "'Ombor bilan amal bajarilmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring'"
+- 20: "'Nomini o‘zgartirish'"
+- 22: "'rename'"
+- 25: "'O‘chirish'"
+- 27: "'delete'"
+- 35: "'rename'"
+- 39: "'Ombor nomini o‘zgartirish'"
+- 40: "'Ombor nomi'"
+- 48: "'Omborni o‘chirish'"
+- 50: "'«$warehouse» ombori o‘chirilsinmi? Ichida homashyo yoki bog‘langan yozuvlar bo‘lsa, o‘chirilmaydi.'"
+- 51: "'Bekor qilish'"
+- 52: "'O‘chirish'"
+- 61: "'rename'"
+- 79: "'rename'"
+- 80: "'Ombor nomi o‘zgartirildi'"
+- 81: "'Ombor o‘chirildi'"
+
+### widgets/preparation_kirim_order_section.dart
+
+- 1: "'package:flutter/material.dart'"
+- 3: "'../../../../core/api/mobile_api.dart'"
+- 4: "'../../../../core/search/search_normalizer.dart'"
+- 5: "'../../../admin/presentation/widgets/admin_picker_field.dart'"
+- 6: "'../../../werka/presentation/widgets/m3_picker_sheet.dart'"
+- 7: "'../../models/preparation_models.dart'"
+- 8: "'../../../../core/localization/urdu_aware_text.dart'"
+- 108: "'$code — $title'"
+- 117: "''"
+- 138: "'${value.round()}'"
+- 138: "'$value'"
+- 139: "'Order eni: ${fmt(width)} mm'"
+- 156: "'Order tanlang'"
+- 157: "'Qidirish'"
+- 174: "'${preparationDisplay(order.kg)} kg'"
+- 207: "'Orderlar yuklanmadi: $_ordersError'"
+- 214: "'Yangilash'"
+- 228: "'preparation-kirim-order-field'"
+- 229: "'Order'"
+- 231: "'Buyurtma topilmadi'"
+- 232: "'Order tanlang'"
+
+</details>
