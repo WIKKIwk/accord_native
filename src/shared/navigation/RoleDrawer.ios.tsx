@@ -3,7 +3,7 @@ import { Button, ScrollView, Spacer } from '@expo/ui/swift-ui';
 import { background as swiftBackground, buttonBorderShape, buttonStyle, controlSize, disabled, font, frame, padding, tint } from '@expo/ui/swift-ui/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
-import { Platform, PlatformColor, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, PlatformColor, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
 import { Drawer, useDrawerProgress } from 'react-native-drawer-layout';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ function DrawerScreen({ children }: { children: ReactNode }) {
 
 export function RoleDrawer(props: RoleDrawerProps & { swipeEnabled?: boolean }) {
   const { visible, onOpen, onClose, title, items, active, footerAction, closeAccessibilityLabel, children, swipeEnabled = true } = props;
+  const dark = useColorScheme() === 'dark';
   const background = PlatformColor('systemBackground');
   const foreground = PlatformColor('label');
   const insets = useSafeAreaInsets();
@@ -50,7 +51,11 @@ export function RoleDrawer(props: RoleDrawerProps & { swipeEnabled?: boolean }) 
           </Host>
           <View pointerEvents="none" style={styles.headingOverlay} onLayout={event => setHeadingHeight(event.nativeEvent.layout.height)}>
             <Host pointerEvents="none" style={StyleSheet.absoluteFill} ignoreSafeArea="all">
-              <Spacer modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), swiftBackground({ type: 'material', material: 'regular' })]} />
+              <Spacer modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), swiftBackground({
+                type: 'linearGradient',
+                colors: dark ? ['#000000F2', '#00000099', '#00000000'] : ['#FFFFFFF2', '#FFFFFF99', '#FFFFFF00'],
+                startPoint: { x: 0.5, y: 0 }, endPoint: { x: 0.5, y: 1 },
+              })]} />
             </Host>
             <View style={styles.heading}><Host matchContents={{ vertical: true }} style={styles.headingHost}>
               <Text modifiers={[font({ textStyle: 'title2', weight: 'semibold' })]}>{title}</Text>

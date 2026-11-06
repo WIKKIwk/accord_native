@@ -54,9 +54,8 @@ for (const basePath of ['/ios-preparation/chat', '/ios-worker/chat']) {
       '../shared/chat/useChatConversations': { useChatConversations: () => ({ items: [], error: '', query: '', setQuery() {}, avatarToken: null, refresh() {} }) },
     }).ChatConversationsScreen({ session, navigation });
     const screen = find(list, node => node.type === 'Stack.Screen');
-    const newChat = screen.props.options.headerRight();
-    assert.equal(newChat.type, 'Pressable');
-    assert.equal(newChat.props.accessibilityLabel, 'Yangi suhbat');
+    assert.equal(screen.props.options.headerRight, undefined, 'a React headerRight view would swallow the search X');
+    const newChat = find(list, node => node.type === 'Toolbar.Button' && node.props.accessibilityLabel === 'Yangi suhbat');
     newChat.props.onPress();
     assert.deepEqual(calls, [['push', `${basePath}/new`]]);
 

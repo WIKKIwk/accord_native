@@ -1,8 +1,7 @@
 import { Button, Host, HStack, Image, List, ProgressView, RNHostView, Text, VStack } from '@expo/ui/swift-ui';
 import { background, buttonStyle, contentShape, font, foregroundStyle, frame, lineLimit, listRowBackground, listRowInsets, listRowSeparator, listStyle, padding, refreshable, scrollContentBackground, shapes } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
-import { PlatformColor, Pressable, StyleSheet } from 'react-native';
+import { PlatformColor, StyleSheet } from 'react-native';
 import type { Session } from '../auth';
 import { chatTime, filterChatConversations, type ChatConversation } from '../chatModel';
 import { ChatAvatar } from './ChatAvatar';
@@ -68,16 +67,14 @@ export function ChatConversationsScreen({ session, onOpenDrawer, onBack, navigat
         placeholder: 'Chatlardan qidirish', autoCapitalize: 'none', hideWhenScrolling: true, obscureBackground: false,
         onChangeText: event => setQuery(event.nativeEvent.text), onCancelButtonPress: () => setQuery(''),
       },
-      headerRight: () => <Pressable accessibilityRole="button" accessibilityLabel="Yangi suhbat"
-        onPress={navigation.openDirectory} style={styles.headerButton} hitSlop={8}>
-        <SymbolView name="square.and.pencil" size={22} tintColor={PlatformColor('systemBlue')} />
-      </Pressable>,
     }} />
     {onBack ? <Stack.Toolbar placement="left"><Stack.Toolbar.Button icon="chevron.left" accessibilityLabel="Orqaga" onPress={onBack} /></Stack.Toolbar> : null}
     {onOpenDrawer ? <Stack.Toolbar placement="left"><Stack.Toolbar.Button icon="line.3.horizontal" accessibilityLabel="Bo‘limlar" onPress={onOpenDrawer} /></Stack.Toolbar> : null}
+    {/* A React view in headerRight is hit-tested before the search bar's native X and would swallow it. */}
+    <Stack.Toolbar placement="right"><Stack.Toolbar.Button icon="square.and.pencil" accessibilityLabel="Yangi suhbat" onPress={navigation.openDirectory} /></Stack.Toolbar>
     <ChatList items={items} error={error} query={query} session={session} avatarToken={avatarToken} onRefresh={refresh}
       onOpen={navigation.openConversation} />
   </>;
 }
 
-const styles = StyleSheet.create({ root: { flex: 1 }, headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' } });
+const styles = StyleSheet.create({ root: { flex: 1 } });
