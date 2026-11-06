@@ -1,7 +1,7 @@
 # preparation
 
-Status: part 1 of 1 in progress
-Stopped at: complete the UI text inventory and classify remaining V2 tests; platform screens and integration remain separate sessions.
+Status: part 1 of 1, wiring in progress
+Stopped at: platform routes, inventory/device-picker screens and the shared read-only order detail must be supplied by their owning sessions; real-printer and native WebSocket-ping checks remain open.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -13,7 +13,7 @@ Stopped at: complete the UI text inventory and classify remaining V2 tests; plat
 
 ## V2 test triage
 
-- `preparation_test.dart`, `preparation_material_management_test.dart`, `preparation_warehouse_management_test.dart`, `preparation_formula_variants_test.dart`, `preparation_formula_estimates_test.dart`, `preparation_screw_shares_test.dart`, `preparation_production_journal_test.dart`, `preparation_orders_list_test.dart` and `preparation_orders_warm_store_test.dart`: relevant logic and selected request cases have preparation tests. Widget assertions belong to the platform screens; the three failing baseline warehouse widgets are recorded above.
+- `preparation_test.dart`, `preparation_material_management_test.dart`, `preparation_warehouse_management_test.dart`, `preparation_formula_variants_test.dart`, `preparation_formula_estimates_test.dart`, `preparation_screw_shares_test.dart`, `preparation_production_journal_test.dart`, `preparation_orders_list_test.dart` and `preparation_orders_warm_store_test.dart`: relevant logic and selected request cases have preparation tests. Widget assertions belong to the platform screens; the three failing baseline warehouse widgets are explained below.
 - `order_scan_bootstrap_api_test.dart` has existing shared replays in `tests/workerScanBootstrap.test.cjs` and related base tests; preparation's real sequence uses the read-only order-detail route, not worker scan actions. `admin_raw_material_api_test.dart` order-scoped assignments are covered by `tests/preparationRawMaterials.test.cjs`; its other queue actions and worker/admin mutations are not preparation actions.
 - `preparation_warehouse_layout_test.dart` logic cases exercise admin assignment of warehouses to another user; they are not actions in the preparation role. `admin_warehouses_screen_test_cases_resplit_part_01.dart` includes the reprint preparation already covered by `tests/basePrintApi.test.cjs`; stock administration and correction remain in the admin role.
 - `qolip_storage_test.dart`, `aparatchi_paddons_test.dart`, `admin_production_map_worker_completed_wip_test_part.dart` and `admin_training_api_test_cases_resplit_part_01.dart` exercise Qolip, worker, or training/test-mode mutations rather than the preparation read-only order list. `admin_production_map_sequence_reorder_test_part.dart` is not reachable through its read-only sequence.
@@ -31,7 +31,7 @@ Stopped at: complete the UI text inventory and classify remaining V2 tests; plat
 
 - Material mutations and preparation stock commands reject test mode; the preparation order live stream closes and the warm store is disabled in test mode. Inventory test-mode transfer and relocation transitions are also deferred. Implement in the shared test-mode pass.
 
-Ledger `check` reports `/v1/mobile/preparation` because `preparationFormulaApi.ts` stores the prefix separately; V2 builds these same formula endpoints dynamically in `mobile_api_preparation.dart`. The other endpoint warnings belong to other sessions. The checker cannot resolve the nullable extension `_lineError`, documented at its V4 definition without an `@v2` tag.
+Ledger `check` reports `/v1/mobile/preparation` because `preparationFormulaApi.ts` stores the prefix separately; V2 builds these same formula endpoints dynamically in `mobile_api_preparation.dart`. It also reports `/v1/mobile/admin/inventory/transfers/{}/{}` because V2 builds the action URL from adjacent string fragments and interpolated encoded ID and action in `mobile_api_inventory_movements_MobileApiInventoryMovements_methods_03.dart`. The other five endpoint warnings belong to other sessions. The checker cannot resolve the nullable extension `_lineError`, documented at its V4 definition without an `@v2` tag.
 
 No V2 HTTP recordings were found for warehouse creation/deletion or inventory transfer mutations; source-derived request tests cover these. `admin_raw_material_api_test.dart` uses `HttpOverrides`, which the MockClient recorder cannot capture; `tests/preparationRawMaterials.test.cjs` replays its relevant order-only request and assertion from source.
 
@@ -44,10 +44,10 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Verification
 
-- The ledger estimates 112k V2 tokens for this role; actual tokens read were not measured. The ledger API list moved from 5/26 previously tagged to 26/26 tagged, with additional preparation order and formula methods implemented.
-- `node --test tests/*.test.cjs`: 813 passed, 0 failed. There were 3 existing preparation read tests at the start; preparation-specific tests now span 22 files, plus existing shared tests.
+- The ledger estimates 112k V2 tokens for this role; actual tokens read were not measured. The prior logic session tagged 26/26 listed APIs; this wiring turn additionally implemented the two inventory transfer mutation methods and added preparation-scoped access to the existing inventory store.
+- `node --test tests/*.test.cjs`: 826 passed, 0 failed, up from 813 before wiring. The 13 added tests cover search, apparatus preferences, startup, targets, printer adapters and inventory transfer/access. An existing variant test loader gained mocks for the new dependencies; no existing assertion was changed.
 - iOS TypeScript: passed. Android TypeScript: the 10 known baseline errors in `WorkerOutputProgress.android.tsx`, `WorkerPaintPalette.android.tsx`, and `WorkerScreen.tsx`; no preparation errors. Expo lint: passed.
-- Ledger `check`: passed with six endpoint warnings; the preparation prefix is dynamic as explained above, the other five belong to other roles. `role preparation 1`: all 26 API entries are tagged; platform routes/screens remain unchecked.
+- Ledger `check`: passed with seven endpoint warnings; the two preparation-related dynamic paths are explained above, the other five belong to other roles. `role preparation 1`: all 26 API entries are tagged; platform routes/screens remain unchecked.
 - V2 oracle: 31 passed and 3 warehouse widget tests failed at the baseline as detailed above; the order-scoped raw-material test passed separately. No simulator or device was used.
 
 ## Checkpoints
@@ -81,3 +81,9 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 - `31b5fe3` port(preparation/1): detail decoder and test triage, 0 methods
 - `7f6dc2c` port(preparation/1): record verification, 0 methods
 - `137e1b9` port(preparation/1): formula refresh recovery, 0 methods
+- `ca6ad4a` port(preparation/wire): formula reuse search, 2 methods
+- `356a5b7` port(preparation/wire): apparatus selection, 4 methods
+- `bf7eedc` port(preparation/wire): warm runtime and home targets, 0 methods
+- `7cfa238` port(preparation/wire): printer transports, 3 methods
+- `aa9a856` port(preparation/wire): inventory access and transfers, 2 methods
+- `add7709` port(preparation/wire): text inventory and test triage, 0 methods
