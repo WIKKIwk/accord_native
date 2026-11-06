@@ -12,6 +12,7 @@ Stopped at: complete the remaining V2 text and surface comparisons on both platf
 | Material detail on iOS and Android | `preparation_screen_forms.dart` `PreparationMaterialDetailScreen` | Warehouse-scoped receipt and consumption rows, material code, actions and fixed warehouse navigation were compared. Verify the scale return and native presentation on phones. |
 | Preparation home on iOS and Android | `preparation_screen.dart`, `_pick` | Home cards, pending labels, action order, receipt picker and feedback were compared with V2. The current action menus still differ from V2's floating action menu, and picker/dialog transitions need phone verification. |
 | Formula sets and catalog on iOS and Android | `preparation_formula_orders_screen.dart`, `preparation_formula_catalog_screen.dart` | List text, set-detail rows, shared warning and rename/delete/share actions were compared. Verify long-press, sheet and dialog transitions on phones. |
+| Production journal on iOS and Android | `preparation_production_screen.dart`, `preparation_production_models.dart` | Order, batch and roll rows, filters, paging placement, captured recipe text and malformed nested responses were compared. Verify timer, focus, native interaction and roll reprinting on phones. |
 | Preparation history on iOS and Android | `preparation_screen_forms.dart` `PreparationHistoryScreen` | Receipt, reversal and consumption rows and the reversal flow were compared with V2. Verify long-press, sheet/dialog dismissal and notices on both phones. |
 | Formula variants on iOS and Android | `preparation_formula_variants_screen.dart` | Variant edit now requests the formula editor, deletion uses V2's confirmation, and creation/rename use a dialog. Verify gestures, modal transitions, reuse picker and navigation on both phones. The FAB and remaining screen details still need a complete surface comparison. |
 | Formula shares on iOS and Android | `preparation_formula_shares_sheet.dart` | Values, text, error mapping and the save/dismiss guards were compared with V2. Verify native keyboard, swipe, back and outside-tap behavior during a save on both phones. |
@@ -64,6 +65,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 
 ## Checkpoints
 
+- This session: aligned production journal rows, filters, pagination and nested model errors on both platforms.
 - This session: aligned warehouse-scoped material detail and receipt/consumption rows on both platforms.
 - This session: aligned formula-set detail rows and shared formula actions on both platforms.
 - This session: aligned formula-set and catalog list text and rename actions on both platforms.
@@ -121,6 +123,7 @@ Post-baseline drift removes unused legacy home recipe helpers from `preparation_
 | `PreparationMaterialDetailScreen` | `PreparationWarehouse.ios.tsx`, `PreparationStock.android.tsx` | qisman | qisman | Warehouse-scoped summary, receipt/consumption rows and actions were compared. Scale return and native presentation need verification. |
 | `PreparationScreen`, `_pick` | `PreparationHome.ios.tsx`, `PreparationHome.android.tsx` | qisman | qisman | Home action contents, pending labels, receipt picker and feedback were compared. The floating menu and native interaction remain open. |
 | `PreparationFormulaOrdersScreen`, `PreparationFormulaCatalogScreen`, `_PreparationFormulaSetDetails` | `PreparationLibrary.ios.tsx`, `PreparationFormulaLibrary.android.tsx` | qisman | qisman | List and detail rows, rename, share and deletion were compared. Native interactions remain unverified. |
+| `PreparationProductionScreen`, `PreparationProductionOrderScreen`, `PreparationProductionBatchScreen` | `PreparationProductionScreens.ios.tsx`, `PreparationProduction.android.tsx` | qisman | qisman | Filters, rows, recipe and paging were compared. Native lifecycle and printer checks remain open. |
 | `PreparationHistoryScreen`, `preparation_screen_forms.dart` | `PreparationHistory.ios.tsx`, `PreparationStock.android.tsx` | qisman | qisman | Row content and reversal steps were compared with V2. Native long-press, dialog transitions and notice presentation still need device verification. |
 | `PreparationFormulaVariantsScreen`, `_VariantNameDialog` | `PreparationVariants.ios.tsx`, `PreparationVariants.android.tsx` | qisman | qisman | Action ordering, edit, naming and delete were compared. The FAB, reuse-picker details and native interaction still need the complete comparison. |
 | `_FormulaSharesSheet`, `preparation_formula_shares_sheet.dart` | `PreparationSharesDialog.ios.tsx`, `PreparationFormulaEditor.android.tsx` | qisman | qisman | Labels, totals and save rules were compared. Native dismissal and keyboard behavior remain unverified. |
