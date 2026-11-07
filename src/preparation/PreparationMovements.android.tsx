@@ -49,7 +49,7 @@ export function PreparationInventoryScreen() {
     try { await inventory.lookup(value); } finally { scanLock.current = false; }
   };
   const setDockHeight = usePreparationFab('inventory', { actions: [{ id: 'scan', label: t(scanning ? 'QR izlashni yopish' : 'QR orqali izlash'), icon: 'qr_code_scanner', width: 230 }],
-    enabled: !transfer, visible: !transfer, onSelect: () => {
+    enabled: true, visible: true, onSelect: () => {
       if (!scanning && !permission?.granted) void requestPermission();
       setScanning(!scanning); setManualOpen(false); lastScan.current = ''; inventory.clearQr();
     }, openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
