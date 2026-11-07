@@ -30,7 +30,7 @@ export function preparationDrawerRoute(id: string, platform: 'ios' | 'android'):
     case 'production': return { path: `${base}/production`, kind: 'root' };
     case 'sequence': return { path: `${base}/sequence`, kind: 'push' };
     case 'inventory': return { path: `${base}/inventory`, kind: 'push' };
-    case 'chat': return { path: platform === 'ios' ? `${base}/chat` : '/android-chat', kind: platform === 'ios' ? 'tab' : 'push' };
+    case 'chat': return { path: `${base}/chat`, kind: 'tab' };
     case 'profile': return { path: `${base}/profile`, kind: 'tab' };
     default: return null;
   }

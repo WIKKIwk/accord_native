@@ -1,13 +1,15 @@
-import { AlertDialog, Button, Column, Host, NavigationBar, NavigationBarItem, OutlinedTextField, RNHostView, Text, TextButton, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
+import { AlertDialog, Button, Column, Host, OutlinedTextField, RNHostView, Text, TextButton, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
+import { RoleBottomBar, type RoleNavigationItem } from '../shared/navigation/RoleBottomBar.android';
+import { RoleFab, type RoleFabAction } from '../shared/navigation/RoleFab.android';
+import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { preparationInputError, preparationQuantityInput } from './preparationLogic';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -52,46 +54,42 @@ export function PreparationRow({ title, subtitle, onPress, onLongPress, disabled
   </Pressable>;
 }
 
-export function PreparationDock({ root = false, profile = false, actions }: { root?: boolean; profile?: boolean; actions?: () => void }) {
-  const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = usePreparationText();
-  return <View style={{ paddingBottom: insets.bottom, backgroundColor: colors.surfaceContainerLow }}>
-    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><NavigationBar containerColor={colors.surfaceContainerLow}
-      tonalElevation={0} modifiers={[fillMaxWidth()]}>
-      <NavigationBarItem selected={root} onClick={() => router.replace('/android-preparation' as Href)} modifiers={[testID('preparation-home')]}>
-        <NavigationBarItem.Icon><RNHostView matchContents><SymbolView name={{ android: 'home' }} size={24} tintColor={colors.onSurface} /></RNHostView></NavigationBarItem.Icon>
-        <NavigationBarItem.Label><Text>{t('Tayyorlov')}</Text></NavigationBarItem.Label>
-      </NavigationBarItem>
-      {actions ? <NavigationBarItem selected={false} onClick={actions} modifiers={[testID('preparation-actions')]}>
-        <NavigationBarItem.Icon><RNHostView matchContents><SymbolView name={{ android: 'add' }} size={24} tintColor={colors.onSurface} /></RNHostView></NavigationBarItem.Icon>
-        <NavigationBarItem.Label><Text>{t('Amallar')}</Text></NavigationBarItem.Label>
-      </NavigationBarItem> : null}
-      <NavigationBarItem selected={profile} onClick={() => router.navigate('/android-preparation/profile' as Href)} modifiers={[testID('preparation-profile')]}>
-        <NavigationBarItem.Icon><RNHostView matchContents><SymbolView name={{ android: 'person' }} size={24} tintColor={colors.onSurface} /></RNHostView></NavigationBarItem.Icon>
-        <NavigationBarItem.Label><Text>{t('Profil')}</Text></NavigationBarItem.Label>
-      </NavigationBarItem>
-    </NavigationBar></Host>
-  </View>;
+export function PreparationDock({ profile = false, chat = false }: { profile?: boolean; chat?: boolean }) {
+  const insets = useSafeAreaInsets(), t = usePreparationText();
+  const active = profile ? 'profile' : chat ? 'chat' : 'home';
+  const items: RoleNavigationItem[] = [
+    { id: 'home', label: t('Tayyorlov'), icon: 'home', testID: 'preparation-home' },
+    { id: 'chat', label: t('Chat'), icon: 'chat_bubble', testID: 'preparation-chat' },
+    { id: 'profile', label: t('Profil'), icon: 'person', testID: 'preparation-profile' },
+  ];
+  return <RoleBottomBar active={active} items={items} bottomInset={insets.bottom} onSelect={id => {
+    if (id === active) return;
+    if (id === 'home') router.replace('/android-preparation' as Href);
+    else if (id === 'chat') router.navigate('/android-preparation/chat' as Href);
+    else if (id === 'profile') router.navigate('/android-preparation/profile' as Href);
+  }} />;
 }
 
-export function PreparationPage({ title, subtitle, children, refreshing, onRefresh, root = false, drawer = false, actions }: {
-  title: string; subtitle?: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean; actions?: () => void;
+export function PreparationPage({ title, subtitle, children, refreshing, onRefresh, root = false, drawer = false, fabActions, onFabSelect }: {
+  title: string; subtitle?: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean;
+  fabActions?: readonly RoleFabAction[]; onFabSelect?: (id: string) => void;
 }) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = usePreparationText();
   const roleDrawer = useRoleDrawer();
+  const [dockHeight, setDockHeight] = useState(80 + insets.bottom);
+  const navigation = root && drawer ? { icon: 'menu' as const, label: t('Menyu'), onPress: roleDrawer.open, testID: 'preparation-menu' }
+    : !root ? { icon: 'back' as const, label: t('Orqaga'), onPress: () => {
+      if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href);
+    } } : undefined;
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
-    <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      {root && drawer && <Pressable accessibilityRole="button" accessibilityLabel={t('Menyu')} testID="preparation-menu" onPress={roleDrawer.open} style={{ padding: 8, width: 40 }}>
-        <PreparationText>☰</PreparationText></Pressable>}
-      {!root && <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')}
-        onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }} style={{ padding: 8 }}>
-        <PreparationText>‹</PreparationText></Pressable>}
-      <View style={{ flex: 1 }}><PreparationText title>{t(title)}</PreparationText>{subtitle && <PreparationText>{t(subtitle)}</PreparationText>}</View>
-    </View>
+    <RoleHeader title={t(title)} subtitle={subtitle ? t(subtitle) : undefined} navigation={navigation} />
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 10, paddingBottom: insets.bottom + 24 }}
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}>
       {children}
     </ScrollView>
-    <PreparationDock root={root} actions={actions} />
+    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+    {fabActions?.length && onFabSelect ? <RoleFab actions={fabActions} onSelect={onFabSelect} bottomOffset={dockHeight + 16}
+      testIDPrefix="preparation-fab" openLabel={t('Amallarni ochish')} closeLabel={t('Amallarni yopish')} /> : null}
   </View>;
 }
 

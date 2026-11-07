@@ -16,7 +16,7 @@ function findAll(node, predicate) {
 
 function setup(platform, options = {}) {
   const calls = [], router = { push: route => calls.push(['push', route]), replace: route => calls.push(['replace', route]) };
-  let focus = () => {}, reads = 0, marked = false, chosen, choices;
+  let focus = () => {}, reads = 0, marked = false;
   const controller = {
     reload() { reads++; }, refresh() { reads++; }, loadForPage() { reads++; }, getSnapshot: () => ({ saving: false }),
     markReloadOnReturn() { marked = true; },
@@ -27,7 +27,7 @@ function setup(platform, options = {}) {
     error: options.error ?? null, pending: options.pending ?? null, locked: !!options.loading };
   const ui = { PreparationList: 'PreparationList', PreparationStatus: 'PreparationStatus', PreparationPage: 'PreparationPage',
     PreparationRow: 'PreparationRow', PreparationText: 'PreparationText', PreparationButton: 'PreparationButton',
-    usePreparationText: () => value => value, usePreparationDialogs: () => ({ choose: async (_title, items) => { choices = items; return chosen; } }) };
+    usePreparationText: () => value => value, usePreparationDialogs: () => ({}) };
   const context = { usePreparationContext: () => ({ home, session: {} }) };
   const mocks = {
     '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'ComposeHost', ListItem: nativeListItem, Text: 'ComposeText',
@@ -40,9 +40,9 @@ function setup(platform, options = {}) {
     'expo-router': { router, Stack: { Screen: 'Stack.Screen' }, useFocusEffect: callback => { focus = callback; } },
     'react-native': { View: 'View', ActivityIndicator: 'ActivityIndicator' },
     '../nativeSheet': { useNativeSheet: () => ({ open() {}, close() {} }) },
-    '../shared/appRoutes': { appRoutes: { gscaleMode: 'gscale' }, canOpenRoute: () => true },
+    '../shared/appRoutes': { appRoutes: { gscaleMode: 'gscale' }, canOpenRoute: () => options.scaleAllowed !== false },
     './PreparationUI': ui, './PreparationUI.android': ui, './PreparationContext': context, './PreparationContext.android': context,
-    './preparationLogic': { preparationReceiptMode: () => 'warehouse', preparationVisibleMaterials: () => [] },
+    './preparationLogic': { preparationReceiptMode: () => options.receiptMode ?? 'warehouse', preparationVisibleMaterials: () => [] },
     './preparationHomePresentation': { preparationPendingLabel: () => 'pending' },
     './PreparationRoutes': { openPreparationScale: () => calls.push(['scale']) },
     './preparationNavigation.android': { openPreparationScale: () => calls.push(['scale']) },
@@ -57,7 +57,7 @@ function setup(platform, options = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
   const render = () => platform === 'ios' ? mod.exports.PreparationHome() : mod.exports.PreparationHomeScreen();
-  return { home, render, focus: () => focus(), calls, reads: () => reads, choose: value => { chosen = value; }, choices: () => choices };
+  return { home, render, focus: () => focus(), calls, reads: () => reads };
 }
 
 const labels = ['Ombor', 'Homashyolar', 'Mahsulot formulasi', 'Buyurtmalar', 'Ishlab chiqarish', 'Ishlab chiqarilgan homashyolar', 'Tarix'];
@@ -101,7 +101,7 @@ for (const platform of ['ios', 'android']) {
       const container = findAll(page, node => node.type === (platform === 'ios' ? 'PreparationList' : 'PreparationPage'))[0];
       assert.equal(container.props.refresh ?? container.props.onRefresh, undefined);
       assert.ok(platform === 'ios' ? findAll(page, node => node.type === 'Menu' && node.props.label === 'Amallar').length
-        : typeof container.props.actions === 'function');
+        : typeof container.props.onFabSelect === 'function' && container.props.fabActions.length > 0);
     }
   });
 
@@ -134,14 +134,31 @@ for (const platform of ['ios', 'android']) {
       assert.deepEqual(view.calls.at(-1), ['push', '/ios-preparation/warehouse']);
       findAll(menu, node => node.type === 'Button' && node.props.label === 'Tarozi kirimi')[0].props.onPress();
     } else {
-      const actions = findAll(page, node => node.type === 'PreparationPage')[0].props.actions;
-      view.choose('receive'); actions(); await new Promise(resolve => setImmediate(resolve));
-      assert.deepEqual(view.choices().map(choice => choice.label), ['Mahsulot formulasi', 'Homashyolar', 'Ombor', 'Tarozi kirimi', 'Kirim', 'Buyurtmalar', 'Tarix']);
+      const { fabActions, onFabSelect } = findAll(page, node => node.type === 'PreparationPage')[0].props;
+      assert.deepEqual(fabActions.map(action => action.label), ['Mahsulot formulasi', 'Homashyolar', 'Ombor', 'Tarozi kirimi', 'Kirim', 'Buyurtmalar', 'Tarix']);
+      assert.ok(fabActions.every(action => action.icon));
+      onFabSelect('receive');
       assert.deepEqual(view.calls.at(-1), ['push', '/android-preparation/warehouse']);
-      view.choose('scale'); actions(); await new Promise(resolve => setImmediate(resolve));
+      onFabSelect('scale');
     }
     assert.deepEqual(view.calls.at(-1), ['scale']);
     view.focus(); view.render();
     assert.equal(view.reads(), 0);
   });
 }
+
+test('android: FAB preserves each action route and capability-dependent choices', () => {
+  const view = setup('android');
+  const { fabActions, onFabSelect } = findAll(view.render(), node => node.type === 'PreparationPage')[0].props;
+  const routes = [
+    ['sets', ['push', '/android-preparation/sets']], ['materials', ['push', '/android-preparation/materials']],
+    ['warehouse', ['push', '/android-preparation/warehouse']], ['scale', ['scale']],
+    ['receive', ['push', '/android-preparation/warehouse']], ['sequence', ['replace', '/android-preparation/sequence']],
+    ['history', ['push', '/android-preparation/history']],
+  ];
+  assert.deepEqual(fabActions.map(action => action.id), routes.map(([id]) => id));
+  for (const [id, expected] of routes) { onFabSelect(id); assert.deepEqual(view.calls.at(-1), expected); }
+  const limited = setup('android', { scaleAllowed: false, receiptMode: 'scale' });
+  const limitedActions = findAll(limited.render(), node => node.type === 'PreparationPage')[0].props.fabActions;
+  assert.ok(limitedActions.every(action => action.id !== 'scale' && action.id !== 'receive'));
+});

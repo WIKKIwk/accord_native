@@ -71,7 +71,7 @@ for (const platform of ['ios', 'android']) {
       assert.deepEqual(preparation.preparationDrawerRoute(id, platform), { path: `${base}/${id}`, kind: 'push' });
     }
     assert.deepEqual(preparation.preparationDrawerRoute('profile', platform), { path: `${base}/profile`, kind: 'tab' });
-    assert.deepEqual(preparation.preparationDrawerRoute('chat', platform), { path: platform === 'ios' ? `${base}/chat` : '/android-chat', kind: platform === 'ios' ? 'tab' : 'push' });
+    assert.deepEqual(preparation.preparationDrawerRoute('chat', platform), { path: `${base}/chat`, kind: 'tab' });
     for (const id of ['scale', 'logout', 'unknown']) assert.equal(preparation.preparationDrawerRoute(id, platform), null);
     assert.equal(preparation.preparationDrawerActive(base), 'home');
     assert.equal(preparation.preparationDrawerActive(`${base}/profile`), 'profile');
@@ -220,7 +220,7 @@ for (const platform of ['ios', 'android']) {
       ['push', `/${platform}-preparation/sequence`],
       ['root', `/${platform}-preparation/${platform === 'ios' ? 'catalog' : 'formulas'}`],
       ['tab', `/${platform}-preparation/profile`], ['scale', { warehouse: 'Assigned' }],
-      [platform === 'ios' ? 'tab' : 'push', platform === 'ios' ? '/ios-preparation/chat' : '/android-chat'],
+      ['tab', `/${platform}-preparation/chat`],
     ]);
     tree.props.onSelect('logout');
     assert.equal(calls.at(-1)[0], 'confirm');

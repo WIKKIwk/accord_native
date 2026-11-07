@@ -20,7 +20,7 @@ function load(file, mocks = {}) {
 }
 
 const navigation = load('shared/chat/chatNavigation.ts');
-for (const base of ['/ios-worker/chat', '/ios-preparation/chat', '/android-chat', '/ios-another-role/chat/']) {
+for (const base of ['/ios-worker/chat', '/ios-preparation/chat', '/android-preparation/chat', '/android-chat', '/ios-another-role/chat/']) {
   test(`chat routes stay in the supplied workspace: ${base}`, () => {
     const calls = [];
     const nav = navigation.createChatNavigation(base, { push: value => calls.push(['push', value]), replace: value => calls.push(['replace', value]) });

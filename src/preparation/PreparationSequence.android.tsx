@@ -26,7 +26,7 @@ import { preparationOrderDisplayCode, preparationOrderMetrics, preparationOrderP
 import { subscribePreparationOrdersLive } from './preparationOrdersLive';
 import { PreparationOrdersState } from './preparationOrdersState';
 import { preparationOrdersWarmStore } from './preparationRuntime';
-import { PreparationButton, PreparationDialogs, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDialogs, PreparationDock, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 type Props = { session: Session; controller: PreparationOrdersState;
   selectApparatus: (id: string) => Promise<void>; openOrder: (row: PreparationOrderListRow) => void };
@@ -122,6 +122,7 @@ export function PreparationSequenceScreen() {
   return <View style={{ flex: 1 }}>
     <PreparationSequenceList session={session} controller={binding.controller} selectApparatus={selectApparatus}
       openOrder={row => { const scope = binding.controller.getSnapshot().window?.scope; if (scope) setSelected({ row, scope }); }} />
+    <PreparationDock />
     {selected ? <PreparationDetailSheet>
       <PreparationDialogs><PreparationSequenceDetail session={session} controller={binding.controller} selected={selected}
         isCurrent={binding.current} close={() => setSelected(null)} openVariants={openVariants} /></PreparationDialogs>

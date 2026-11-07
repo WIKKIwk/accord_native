@@ -45,7 +45,7 @@ test('iOS preparation headers choose a drawer or an icon-only native back button
 test('Android preparation headers show only the drawer at home and only back on child pages', () => {
   const calls = [];
   let canGoBack = true;
-  const router = { canGoBack: () => canGoBack, back: () => calls.push('back'), replace: value => calls.push(value) };
+  const router = { canGoBack: () => canGoBack, back: () => calls.push('back'), replace: value => calls.push(value), navigate: value => calls.push(value) };
   const ui = new Proxy({}, { get: (_, key) => key === 'useMaterialColors' ? () => ({ surfaceContainerLow: 'surface' }) : key });
   const modifiers = new Proxy({}, { get: (_, key) => (...args) => ({ key, args }) });
   const { PreparationPage } = load('preparation/PreparationUI.android.tsx', {
@@ -56,18 +56,57 @@ test('Android preparation headers show only the drawer at home and only back on 
     '../shared/localization': { uiText: value => value },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open: () => calls.push('drawer') }) },
+    '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
+    '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
+    '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
   });
   const root = PreparationPage({ title: 'Tayyorlov', root: true, drawer: true });
-  const rootButtons = findAll(root, node => node.type === 'Pressable');
-  assert.deepEqual(rootButtons.map(node => node.props.accessibilityLabel), ['Menyu']);
-  rootButtons[0].props.onPress();
+  const rootHeader = findAll(root, node => node.type === 'RoleHeader')[0];
+  assert.equal(rootHeader.props.navigation.icon, 'menu');
+  assert.equal(rootHeader.props.navigation.label, 'Menyu');
+  rootHeader.props.navigation.onPress();
   const child = PreparationPage({ title: 'Ombor', drawer: true });
-  const childButtons = findAll(child, node => node.type === 'Pressable');
-  assert.deepEqual(childButtons.map(node => node.props.accessibilityLabel), ['Orqaga']);
-  childButtons[0].props.onPress();
+  const childHeader = findAll(child, node => node.type === 'RoleHeader')[0];
+  assert.equal(childHeader.props.navigation.icon, 'back');
+  assert.equal(childHeader.props.navigation.label, 'Orqaga');
+  childHeader.props.navigation.onPress();
   canGoBack = false;
-  childButtons[0].props.onPress();
+  childHeader.props.navigation.onPress();
   assert.deepEqual(calls, ['drawer', 'back', '/android-preparation']);
+  const actions = [{ id: 'receive', label: 'Kirim', icon: 'add_circle', width: 164 }];
+  const select = () => {};
+  const withFab = PreparationPage({ title: 'Tayyorlov', root: true, drawer: true, fabActions: actions, onFabSelect: select });
+  const fab = findAll(withFab, node => node.type === 'RoleFab')[0];
+  assert.equal(fab.props.actions, actions);
+  assert.equal(fab.props.onSelect, select);
+  assert.equal(fab.props.bottomOffset, 96);
+  assert.equal(fab.props.testIDPrefix, 'preparation-fab');
+});
+
+test('Android preparation dock has home, chat and profile with role-scoped routes', () => {
+  const calls = [];
+  const ui = new Proxy({}, { get: (_, key) => key === 'useMaterialColors' ? () => ({}) : key });
+  const { PreparationDock } = load('preparation/PreparationUI.android.tsx', {
+    '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': {},
+    'expo-router': { router: { replace: route => calls.push(['replace', route]), navigate: route => calls.push(['navigate', route]) } },
+    'react-native': {}, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 24 }) },
+    '../shared/localization': { uiText: value => value },
+    '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
+    '../shared/navigation/roleDrawerContext': {}, '../shared/navigation/RoleHeader.android': {}, '../shared/navigation/RoleFab.android': {},
+    '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
+  });
+  const home = PreparationDock({});
+  assert.equal(home.type, 'RoleBottomBar');
+  assert.equal(home.props.active, 'home');
+  assert.equal(home.props.bottomInset, 24);
+  assert.deepEqual(home.props.items.map(item => item.label), ['Tayyorlov', 'Chat', 'Profil']);
+  home.props.onSelect('home'); home.props.onSelect('chat'); home.props.onSelect('profile');
+  assert.deepEqual(calls, [['navigate', '/android-preparation/chat'], ['navigate', '/android-preparation/profile']]);
+  const chat = PreparationDock({ chat: true });
+  assert.equal(chat.props.active, 'chat');
+  chat.props.onSelect('home');
+  assert.deepEqual(calls.at(-1), ['replace', '/android-preparation']);
+  assert.equal(PreparationDock({ profile: true }).props.active, 'profile');
 });
 
 test('iOS scale uses an icon-only back button for the preparation role', () => {

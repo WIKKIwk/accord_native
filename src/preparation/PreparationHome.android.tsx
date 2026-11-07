@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { usePreparationContext } from './PreparationContext.android';
 import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import type { RoleFabAction } from '../shared/navigation/RoleFab.android';
 import { openPreparationScale } from './preparationNavigation.android';
 import { PreparationButton, PreparationPage, PreparationRow, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { PreparationNotice } from './PreparationNotice';
@@ -51,15 +52,16 @@ export function PreparationHomeScreen() {
       })();
     } });
   };
-  const actions = async () => {
-    const chosen = await dialogs.choose('Amallar', [
-      { label: 'Mahsulot formulasi', value: 'sets' }, { label: 'Homashyolar', value: 'materials' },
-      { label: 'Ombor', value: 'warehouse' },
-      ...(canOpenRoute(session, appRoutes.gscaleMode) ? [{ label: 'Tarozi kirimi', value: 'scale' }] : []),
-      ...(preparationReceiptMode(home.warehouse, data?.material_warehouses ?? []) !== 'scale' ? [{ label: 'Kirim', value: 'receive' }] : []),
-      { label: 'Buyurtmalar', value: 'sequence' },
-      { label: 'Tarix', value: 'history' },
-    ]);
+  const fabActions: RoleFabAction[] = [
+    { id: 'sets', label: t('Mahsulot formulasi'), icon: 'functions', width: 250 },
+    { id: 'materials', label: t('Homashyolar'), icon: 'inventory_2', width: 210 },
+    { id: 'warehouse', label: t('Ombor'), icon: 'warehouse', width: 164 },
+    ...(canOpenRoute(session, appRoutes.gscaleMode) ? [{ id: 'scale', label: t('Tarozi kirimi'), icon: 'scale' as const, width: 210 }] : []),
+    ...(preparationReceiptMode(home.warehouse, data?.material_warehouses ?? []) !== 'scale' ? [{ id: 'receive', label: t('Kirim'), icon: 'add_circle' as const, width: 164 }] : []),
+    { id: 'sequence', label: t('Buyurtmalar'), icon: 'list_alt', width: 200 },
+    { id: 'history', label: t('Tarix'), icon: 'history', width: 164 },
+  ];
+  const selectAction = (chosen: string) => {
     if (chosen === 'receive') receive();
     else if (chosen === 'scale') openScale();
     else if (chosen === 'warehouse') router.push('/android-preparation/warehouse' as Href);
@@ -77,7 +79,7 @@ export function PreparationHomeScreen() {
     { title: 'Ishlab chiqarilgan homashyolar', onPress: () => router.push('/android-preparation/inventory' as Href) },
     { title: 'Tarix', onPress: () => router.push('/android-preparation/history' as Href) },
   ];
-  return <View style={{ flex: 1 }}><PreparationPage title="Tayyorlov masteri" subtitle="Ichki homashyo ta’minoti" root drawer actions={() => void actions()}>
+  return <View style={{ flex: 1 }}><PreparationPage title="Tayyorlov masteri" subtitle="Ichki homashyo ta’minoti" root drawer fabActions={fabActions} onFabSelect={selectAction}>
     <View style={{ marginHorizontal: -8 }}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
       <Column verticalArrangement={{ spacedBy: 2 }} modifiers={[fillMaxWidth()]}>
         {menuItems.map((item, index) => <ListItem key={item.title} colors={{ containerColor: colors.surface }} modifiers={[
