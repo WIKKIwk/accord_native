@@ -87,16 +87,29 @@ test('material stock API validates identity, exact decimal quantities and page b
   assert.throws(() => api.materialStockPageFromJson(page('available', 0, { rows: [row('same'), row('same')] })), /window/);
 });
 
-test('stock rows distinguish QR-less receipts, remaining quantities and signed movements', () => {
+test('stock rows prioritize dimensions, order and amounts while retaining full codes', () => {
   const model = load('preparationModel.ts');
   const history = load('preparationHistoryModel.ts', { './preparationModel': model });
   const { materialStockRowPresentation } = load('preparationMaterialStockPresentation.ts', { './preparationModel': model, './preparationHistoryModel': history });
   const available = materialStockRowPresentation({ ...row('one'), has_qr: false, barcode: 'PREP-INTERNAL', width_mm: '0', micron: '20', length_m: null }, 'available', value => value);
-  assert.equal(available.title, 'QR’siz kirim');
+  assert.equal(available.title, '20 μm');
   assert.equal(available.amount, '10.250001 kg');
   assert.ok(!available.detail.includes('PREP-INTERNAL'));
-  assert.ok(!available.detail.includes('0 mm'));
-  assert.ok(available.detail.includes('20 μm'));
-  assert.equal(materialStockRowPresentation(row('one'), 'receipts', value => value).amount, '+10.250001 kg');
-  assert.equal(materialStockRowPresentation(row('one'), 'issues', value => value).amount, '−10.250001 kg');
+  assert.ok(!available.fullDetails.includes('PREP-INTERNAL'));
+  const lot = { ...row('one'), barcode: '30E08305F2C8B78800A164F5', width_mm: '120', micron: '12', length_m: '125', order_code: '0269' };
+  const stock = materialStockRowPresentation(lot, 'available', value => value);
+  assert.equal(stock.title, '120 mm · 12 μm');
+  assert.match(stock.detail, /^Uzunligi: 125 m\n/);
+  assert.match(stock.detail, /Kod: …00A164F5/);
+  assert.ok(!stock.detail.includes(lot.barcode));
+  assert.ok(stock.fullDetails.includes(lot.barcode));
+  assert.doesNotMatch(stock.detail, /:\d\d:\d\d/);
+  const receipt = materialStockRowPresentation(lot, 'receipts', value => value);
+  assert.equal(receipt.title, 'Buyurtma №0269');
+  assert.equal(receipt.amount, '+10.250001 kg');
+  assert.ok(receipt.fullDetails.includes(lot.barcode));
+  const issue = materialStockRowPresentation({ ...lot, event_type: 'consumption_posted' }, 'issues', value => value);
+  assert.equal(issue.amount, '−10.250001 kg');
+  assert.ok(issue.detail.includes('Sarf'));
+  assert.equal(materialStockRowPresentation({ ...lot, order_code: '' }, 'receipts', value => value).title, 'Kirim');
 });

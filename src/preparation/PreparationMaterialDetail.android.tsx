@@ -12,7 +12,7 @@ import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
 import { usePreparationContext } from './PreparationContext.android';
 import { usePreparationFab } from './PreparationFab.android';
 import { PreparationNotice } from './PreparationNotice';
-import { PreparationButton, PreparationDock, PreparationText, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDock, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { materialStockTabs, type MaterialStockRow, type MaterialStockSummary, type MaterialStockTab } from './preparationMaterialStockApi';
 import { materialStockRowPresentation, materialStockTabLabels } from './preparationMaterialStockPresentation';
 import { preparationReceiptMode } from './preparationLogic';
@@ -44,9 +44,9 @@ function StockSummary({ summary }: { summary: MaterialStockSummary | null }) {
 }
 
 function StockRow({ item, tab, first, last }: { item: MaterialStockRow; tab: MaterialStockTab; first: boolean; last: boolean }) {
-  const colors = useMaterialColors(), t = usePreparationText();
+  const colors = useMaterialColors(), t = usePreparationText(), dialogs = usePreparationDialogs();
   const row = materialStockRowPresentation(item, tab, t);
-  return <WorkerQueueCard first={first} last={last} backgroundColor={colors.surface}>
+  return <WorkerQueueCard first={first} last={last} backgroundColor={colors.surface} onPress={() => dialogs.message(t('Batafsil ma’lumot'), row.fullDetails)}>
     <View style={styles.rowText}>
       <Text style={[styles.headline, { color: colors.onSurface }]} numberOfLines={1}>{row.title}</Text>
       <Text style={[styles.supporting, { color: colors.onSurfaceVariant }]} numberOfLines={3}>{row.detail}</Text>

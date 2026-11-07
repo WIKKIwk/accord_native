@@ -42,7 +42,7 @@ test('material detail reuses the worker pager with Mavjud, Kirim, Chiqim and ind
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     './PreparationContext.android': { usePreparationContext: () => ({ session: {}, home: { locked: false, loading: false, warehouse: 'Own', controller: {},
       snapshot: { material_warehouses: [], materials: [{ code: 'BOPP', name: 'BOPP' }] } } }) },
-    './PreparationUI.android': { usePreparationText: () => value => value, PreparationText: 'PreparationText', PreparationDock: 'PreparationDock', PreparationButton: 'PreparationButton' },
+    './PreparationUI.android': { usePreparationText: () => value => value, usePreparationDialogs: () => ({ message: (...args) => calls.push(['dialog', ...args]) }), PreparationText: 'PreparationText', PreparationDock: 'PreparationDock', PreparationButton: 'PreparationButton' },
     './PreparationFab.android': { usePreparationFab: (scope, options) => { fab = { scope, ...options }; return () => {}; } },
     './usePreparationMaterialStock': { usePreparationMaterialStock: (_session, warehouse, code) => { calls.push(['load', warehouse, code]); return state; } },
     './usePreparationNotice': { usePreparationNotice: () => ({ message: '' }) },
@@ -52,7 +52,7 @@ test('material detail reuses the worker pager with Mavjud, Kirim, Chiqim and ind
     './preparationModel': { preparationDisplay: value => value },
     './preparationMaterialStockApi': { materialStockTabs: tabs },
     './preparationMaterialStockPresentation': { materialStockTabLabels: { available: 'Mavjud', receipts: 'Kirim', issues: 'Chiqim' },
-      materialStockRowPresentation: item => ({ title: item.id, detail: item.barcode, amount: `${item.kg} kg` }) },
+      materialStockRowPresentation: item => ({ title: item.id, detail: item.barcode, amount: `${item.kg} kg`, fullDetails: `Full: ${item.barcode}` }) },
   };
   const { PreparationMaterialDetailScreen } = load('PreparationMaterialDetail.android.tsx', mocks);
   const tree = PreparationMaterialDetailScreen();
@@ -71,6 +71,9 @@ test('material detail reuses the worker pager with Mavjud, Kirim, Chiqim and ind
     assert.equal(list.props.pagerGesture, 'pager');
     const rows = nodes(list, node => typeof node.type === 'function' && node.type.name === 'StockRow');
     assert.deepEqual(rows.map(row => row.props.item.id), [tab]);
+    const card = rows[0].type(rows[0].props);
+    card.props.onPress();
+    assert.deepEqual(calls.at(-1), ['dialog', 'Batafsil ma’lumot', 'Full: QR-1']);
   }
   workspace.props.onSelect('issues'); assert.deepEqual(calls.at(-1), ['tab', 'issues']);
   assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 1);
