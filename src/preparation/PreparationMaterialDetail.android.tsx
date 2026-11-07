@@ -88,14 +88,13 @@ export function PreparationMaterialDetailScreen() {
         const tab = id as MaterialStockTab, page = state.pages[tab];
         return <OrdersList active={state.tab === tab} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight}
           topInset={headerSize + 48} passthrough={passthrough} onRefresh={() => state.controller.reload()}
-          onEndReached={() => { if (state.tab === tab) void state.controller.loadMore(); }}>
+          onEndReached={() => { if (state.tab === tab && !page.error) void state.controller.loadMore(); }}>
           {page.error ? <View style={styles.status}><PreparationText>{page.error}</PreparationText>
-            <PreparationButton label="Qayta urinish" onPress={() => { void state.controller.load(tab); }} /></View> : null}
+            <PreparationButton label="Qayta urinish" onPress={() => { void state.controller.load(tab, page.loaded); }} /></View> : null}
           {!page.error && !page.loaded && !page.rows.length ? <ActivityIndicator style={styles.status} /> : null}
           {page.loaded && !page.loading && !page.error && !page.rows.length ? <View style={styles.status}><PreparationText>{t(emptyLabels[tab])}</PreparationText></View> : null}
           {page.rows.map((row, index) => <StockRow key={row.id} item={row} tab={tab} first={index === 0} last={index === page.rows.length - 1} />)}
-          {page.hasMore ? <View style={styles.status}><PreparationButton label={page.loading ? 'Yuklanmoqda…' : 'Yana yuklash'} disabled={page.loading}
-            onPress={() => { if (state.tab === tab) void state.controller.loadMore(); }} /></View> : null}
+          {page.loaded && page.loading ? <ActivityIndicator style={styles.status} /> : null}
           <View style={styles.fabSpace} />
         </OrdersList>;
       }}

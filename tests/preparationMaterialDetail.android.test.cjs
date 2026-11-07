@@ -25,7 +25,8 @@ test('material detail reuses the worker pager with Mavjud, Kirim, Chiqim and ind
     event_type: 'receipt_posted', actor_name: '', order_code: '', width_mm: null, micron: null, length_m: null };
   const state = { tab: 'available', itemName: 'BOPP', summary: { available_kg: '15.75', receipt_kg: '105', issue_kg: '2.5' },
     pages: Object.fromEntries(tabs.map(tab => [tab, { rows: [{ ...row, id: tab }], loaded: true, loading: false, error: null, hasMore: false }])),
-    controller: { select: tab => { calls.push(['tab', tab]); state.tab = tab; }, reload: async () => {}, loadMore: async () => {} } };
+    controller: { select: tab => { calls.push(['tab', tab]); state.tab = tab; }, reload: async () => {},
+      loadMore: async () => calls.push(['loadMore']), load: async (tab, more) => calls.push(['retry', tab, more]) } };
   let fab;
   const mocks = { 'react/jsx-runtime': jsx,
     react: { useCallback: fn => fn, useState: value => [value, () => {}] },
@@ -75,7 +76,19 @@ test('material detail reuses the worker pager with Mavjud, Kirim, Chiqim and ind
     const card = rows[0].type(rows[0].props);
     card.props.onPress();
     assert.deepEqual(calls.at(-1), ['dialog', 'Batafsil ma’lumot', 'Full: QR-1']);
+    assert.equal(nodes(list, node => node.type === 'PreparationButton' && node.props.label === 'Yana yuklash').length, 0);
   }
+  workspace.props.children('available', 'pager').props.onEndReached();
+  assert.deepEqual(calls.at(-1), ['loadMore']);
+  const count = calls.length;
+  workspace.props.children('receipts', 'pager').props.onEndReached();
+  assert.equal(calls.length, count);
+  state.pages.available.error = 'offline';
+  const failed = workspace.props.children('available', 'pager');
+  failed.props.onEndReached();
+  assert.equal(calls.length, count);
+  nodes(failed, node => node.type === 'PreparationButton' && node.props.label === 'Qayta urinish')[0].props.onPress();
+  assert.deepEqual(calls.at(-1), ['retry', 'available', true]);
   workspace.props.onSelect('issues'); assert.deepEqual(calls.at(-1), ['tab', 'issues']);
   assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 1);
   assert.equal(fab.scope, 'material');
