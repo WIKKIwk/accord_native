@@ -1,24 +1,25 @@
-import { Box, Button, Column, Host, OutlinedButton, Row, Text, TextButton, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { background, clip, defaultMinSize, fillMaxWidth, padding, Shapes, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { Box, Button, Column, Host, IconButton, OutlinedButton, RNHostView, Row, Text, TextButton, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { background, clip, defaultMinSize, fillMaxWidth, padding, semantics, Shapes, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { SymbolView } from 'expo-symbols';
 import { usePreparationText } from './PreparationUI.android';
 
-export function InventorySheetSummary({ title, quantity, status }: {
-  title: string; quantity: string; status: string;
+export function InventorySheetSummary({ title, code, status, onShowQr }: {
+  title: string; code: string; status: string; onShowQr?: () => void;
 }) {
   const colors = useMaterialColors(), t = usePreparationText();
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
-    <Column verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth()]}>
-      <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth()]}>
-        <Text color={colors.onSurface} style={{ typography: 'titleLarge', fontSize: 20 }} modifiers={[weight(1)]}>{title}</Text>
-        <Box modifiers={[clip(Shapes.RoundedCorner(16)), background(colors.secondaryContainer), padding(10, 4, 10, 4)]}>
-          <Text color={colors.onSecondaryContainer} style={{ typography: 'labelMedium' }}>{status}</Text>
-        </Box>
-      </Row>
-      <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth()]}>
-        <Text color={colors.onSurfaceVariant} style={{ typography: 'bodyMedium' }} modifiers={[weight(1)]}>{t('Miqdor')}</Text>
-        <Text color={colors.onSurface} style={{ typography: 'titleMedium' }} modifiers={[weight(2)]}>{quantity}</Text>
-      </Row>
-    </Column>
+    <Row verticalAlignment="top" horizontalArrangement={{ spacedBy: 4 }} modifiers={[fillMaxWidth()]}>
+      <Column verticalArrangement={{ spacedBy: 2 }} modifiers={[weight(1)]}>
+        <Text color={colors.onSurface} style={{ typography: 'titleLarge', fontSize: 20 }}>{title}</Text>
+        {code.trim() && code.trim() !== title.trim() ? <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{code}</Text> : null}
+      </Column>
+      <Box modifiers={[clip(Shapes.RoundedCorner(16)), background(colors.secondaryContainer), padding(10, 4, 10, 4)]}>
+        <Text color={colors.onSecondaryContainer} style={{ typography: 'labelMedium' }}>{status}</Text>
+      </Box>
+      {onShowQr ? <IconButton onClick={onShowQr} modifiers={[size(40, 40), semantics({ contentDescription: t('QR kodni ko‘rish') }), testID('preparation-inventory-qr-open')]}>
+        <RNHostView matchContents><SymbolView name={{ android: 'qr_code_2' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView>
+      </IconButton> : null}
+    </Row>
   </Host>;
 }
 
