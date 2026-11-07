@@ -1,5 +1,6 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Column, Host, Row, Text as ComposeText, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -23,7 +24,7 @@ import { preparationInventoryAssetBarcode, preparationInventoryQuantity, prepara
   type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventory';
 import { reprintPreparationInventoryAsset } from './preparationInventoryReprint';
 import { PreparationReprintCancelled } from './preparationReprint';
-import { PreparationButton, PreparationDialogs, PreparationDock, PreparationField, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDialogs, PreparationDock, PreparationField, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationInventory } from './usePreparationInventory.android';
 
 type Inventory = ReturnType<typeof usePreparationInventory>;
@@ -115,17 +116,39 @@ export function PreparationInventoryScreen() {
     {asset ? <WorkerOrderSheet onClose={() => setAsset(null)} dismissible fitContent>
       <PreparationDialogs><AssetDetail asset={asset} inventory={inventory} assigned={assigned} /></PreparationDialogs>
     </WorkerOrderSheet> : null}
-    {transfer ? <WorkerOrderSheet onClose={() => setTransfer(null)} dismissible compact>
-      <PreparationText title>{`${String(transfer.source_warehouse)} → ${String(transfer.destination_warehouse)}`}</PreparationText>
-      <PreparationText>{t(preparationInventoryStatus(transfer.status))}</PreparationText>
-      {transfer.lines.map((line: Record<string, unknown>, index: number) => <PreparationRow key={index} title={String(line.item_name || line.item_code || '')}
-        subtitle={`${preparationInventoryQuantity(line.qty as number)} ${String(line.uom ?? '')}`} />)}
-      {!transfer.lines.length ? <PreparationRow title={t('Mahsulot')} subtitle="—" /> : null}
-      <PreparationRow title={t('Sana')} subtitle={preparationInventoryTransferTimestamp(transfer)} />
-      {transfer.note ? <PreparationRow title={t('Izoh')} subtitle={String(transfer.note)} /> : null}
-      <PreparationButton label="Yopish" onPress={() => setTransfer(null)} />
+    {transfer ? <WorkerOrderSheet onClose={() => setTransfer(null)} dismissible compact fitContent>
+      <TransferDetail transfer={transfer} />
     </WorkerOrderSheet> : null}
   </>;
+}
+
+function TransferDetail({ transfer }: { transfer: PreparationInventoryTransfer }) {
+  const colors = useMaterialColors(), t = usePreparationText();
+  return <View style={styles.transferDetail}>
+    <InventorySheetSummary title={`${String(transfer.source_warehouse)} → ${String(transfer.destination_warehouse)}`}
+      code="" status={t(preparationInventoryStatus(transfer.status))} />
+    <View style={[styles.transferDivider, { backgroundColor: colors.outlineVariant }]} />
+    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+      <Column verticalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
+        <ComposeText color={colors.onSurfaceVariant} style={{ typography: 'labelLarge' }}>{t('Mahsulotlar')}</ComposeText>
+        {transfer.lines.map((line: Record<string, unknown>, index: number) => <Row key={index} verticalAlignment="center"
+          horizontalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth()]}>
+          <ComposeText color={colors.onSurface} style={{ typography: 'bodyLarge' }} modifiers={[weight(1)]}>
+            {String(line.item_name || line.item_code || '—')}
+          </ComposeText>
+          <ComposeText color={colors.onSurface} style={{ typography: 'titleMedium' }}>
+            {`${preparationInventoryQuantity(line.qty as number)} ${String(line.uom ?? '')}`}
+          </ComposeText>
+        </Row>)}
+        {!transfer.lines.length ? <ComposeText color={colors.onSurface}>{'—'}</ComposeText> : null}
+      </Column>
+    </Host>
+    <View style={[styles.transferDivider, { backgroundColor: colors.outlineVariant }]} />
+    <View>
+      <InventoryDetailRow label="Sana" value={preparationInventoryTransferTimestamp(transfer)} />
+      {transfer.note ? <InventoryDetailRow label="Izoh" value={String(transfer.note)} /> : null}
+    </View>
+  </View>;
 }
 
 function AssetRow({ asset, open, last }: { asset: PreparationInventoryAsset; open: () => void; last?: boolean }) {
@@ -150,6 +173,8 @@ const styles = StyleSheet.create({
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
   scan: { padding: 16, gap: 10 }, status: { padding: 16 }, fabSpace: { height: 112 },
+  transferDetail: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 16 },
+  transferDivider: { height: StyleSheet.hairlineWidth },
   sheet: { flexShrink: 1 },
   sheetContent: { padding: 16, gap: 12 },
   sheetScroll: { flexGrow: 0, flexShrink: 1 },

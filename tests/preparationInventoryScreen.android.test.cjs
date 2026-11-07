@@ -20,7 +20,8 @@ test('inventory uses shared tabs, search and paging and opens QR scanning from t
   const ui = new Proxy({ usePreparationText: () => value => value }, { get: (obj, key) => obj[key] ?? key });
   const mocks = { 'react/jsx-runtime': jsx, react, 'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView',
     useCameraPermissions: () => [{ granted: true }, () => calls.push(['permission'])] }, 'expo-router': { router: {} }, 'expo-symbols': { SymbolView: 'SymbolView' },
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) }, 'react-native': { View: 'View', Text: 'Text', ActivityIndicator: 'ActivityIndicator',
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) }, '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}), weight: () => ({}) },
+    'react-native': { View: 'View', Text: 'Text', ActivityIndicator: 'ActivityIndicator',
       ScrollView: 'ScrollView', StyleSheet: { create: value => value } }, 'react-native-reanimated': { useSharedValue: shared },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
