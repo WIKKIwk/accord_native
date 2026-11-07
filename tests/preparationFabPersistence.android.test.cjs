@@ -86,7 +86,7 @@ test('one FAB stays mounted and visible across home, warehouse loading and back'
   getFab(tree).props.onSelect('scale');
   assert.deepEqual(calls.at(-1), ['newer', 'scale']);
 
-  pathname = '/android-preparation/material';
+  pathname = '/android-preparation/history';
   unregisterNewer();
   tree = render(); context = tree.props.value;
   assert.equal(overlay(tree).props.style[1].opacity, 0);

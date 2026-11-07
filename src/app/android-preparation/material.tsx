@@ -1,1 +1,1 @@
-export { PreparationMaterialDetailScreen as default } from '../../preparation/PreparationStock.android';
+export { PreparationMaterialDetailScreen as default } from '../../preparation/PreparationMaterialDetail.android';

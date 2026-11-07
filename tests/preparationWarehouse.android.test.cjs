@@ -65,6 +65,7 @@ function setupWarehouse() {
     './preparationNavigation.android': { openPreparationScale: options => calls.push(['scale', options]) },
     './usePreparationNotice': { usePreparationNotice: () => ({ message: '', show() {} }) },
   };
+  mocks['./usePreparationStockActions.android'] = compile('preparation/usePreparationStockActions.android.ts', mocks);
   const filename = path.resolve(__dirname, '../src/preparation/PreparationStock.android.tsx'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);

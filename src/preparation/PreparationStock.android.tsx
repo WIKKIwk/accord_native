@@ -1,5 +1,5 @@
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
-import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -14,38 +14,19 @@ import { OrdersList } from '../shared/orders/OrdersList';
 import { preparationReverseReceipt } from './preparationCommandApi';
 import { usePreparationContext } from './PreparationContext.android';
 import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRenameWarehouse } from './preparationManagementApi';
-import { preparationMaterialAvailable, preparationMaterialHistory, preparationReceiptMode, preparationReceiptPayload,
+import { preparationMaterialAvailable, preparationReceiptMode,
   preparationReverseHistory, preparationVisibleMaterials, type PreparationMaterial } from './preparationLogic';
 import { preparationDisplay } from './preparationModel';
-import { preparationHistoryCard, preparationMaterialConsumptionCard, preparationMaterialReceiptCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
+import { preparationHistoryCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
 import { PreparationNotice } from './PreparationNotice';
 import { usePreparationFab } from './PreparationFab.android';
 import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
 import { PreparationWarehouseCreateDialog } from './PreparationWarehouseCreateDialog';
 import { preparationWarehouseDeleteMessage, preparationWarehouseErrorMessage } from './preparationWarehousePresentation';
 import { usePreparationNotice } from './usePreparationNotice';
+import { usePreparationStockActions } from './usePreparationStockActions.android';
 import { openPreparationScale } from './preparationNavigation.android';
 import { PreparationButton, PreparationDock, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
-
-function useStockActions(notice: ReturnType<typeof usePreparationNotice>) {
-  const { home } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
-  const receive = async (material: PreparationMaterial, selectedWarehouse = home.warehouse) => {
-    if (!selectedWarehouse || !home.snapshot || home.locked) return;
-    if (preparationReceiptMode(selectedWarehouse, home.snapshot.material_warehouses) !== 'manual') return;
-    const kg = await dialogs.input({ title: `${material.name} — kirim`, label: 'Kirim (kg)', quantity: true });
-    if (kg === null) return;
-    try { await home.controller.submit('receipts', preparationReceiptPayload(material, selectedWarehouse, kg)); notice.show(t('Saqlandi')); }
-    catch (error) { notice.show(String(error)); }
-  };
-  const createMaterial = async () => {
-    if (!home.warehouse || home.locked) return;
-    const name = await dialogs.input({ title: 'Yangi homashyo', label: 'Homashyo nomi' });
-    if (name === null) return;
-    try { await home.controller.submit('materials', { name, warehouse: home.warehouse }); notice.show(t('Saqlandi')); }
-    catch (error) { notice.show(String(error)); }
-  };
-  return { receive, createMaterial };
-}
 
 function useStockReturnReload(controller: ReturnType<typeof usePreparationContext>['home']['controller']) {
   useFocusEffect(useCallback(() => { void controller.loadForPage(); }, [controller]));
@@ -75,7 +56,7 @@ export function PreparationWarehouseScreen() {
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const sheet = useNativeSheet(), notice = usePreparationNotice(), afterAction = useRef<(() => void) | null>(null);
   useStockReturnReload(home.controller);
-  const { receive, createMaterial } = useStockActions(notice);
+  const { receive, createMaterial } = usePreparationStockActions(notice);
   const [query, setQuery] = useState(''), [managing, setManaging] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const data = home.snapshot, warehouse = home.warehouse;
@@ -187,30 +168,6 @@ const styles = StyleSheet.create({
   empty: { paddingHorizontal: 24, paddingVertical: 16 },
   fabSpace: { height: 112 },
 });
-
-// @v2 PreparationMaterialDetailScreen
-export function PreparationMaterialDetailScreen() {
-  const params = useLocalSearchParams<{ code: string; warehouse?: string }>(), code = params.code;
-  const { home } = usePreparationContext(), notice = usePreparationNotice(), t = usePreparationText();
-  const { receive } = useStockActions(notice);
-  useStockReturnReload(home.controller);
-  const item = home.snapshot?.materials.find(material => material.code === code);
-  const warehouse = params.warehouse ?? home.warehouse;
-  const history = preparationMaterialHistory(home.snapshot?.history ?? [], warehouse ?? '', code ?? '');
-  const manual = preparationReceiptMode(warehouse, home.snapshot?.material_warehouses ?? []) === 'manual';
-  return <View style={{ flex: 1 }}><PreparationPage title={item?.name ?? 'Homashyo'} subtitle={warehouse ?? undefined} refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
-    {item ? <PreparationRow title={item.name} subtitle={`${item.code}\n${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`} /> : null}
-    {manual ? <PreparationButton label="Kirim qilish" disabled={home.locked || !item || !item.can_receive} onPress={() => { if (item) void receive(item, warehouse); }} />
-      : <PreparationButton label="Tarozi kirimi" disabled={home.locked || !item} onPress={() => openPreparationScale({ warehouse })} />}
-    {!history.receipts.length && !history.consumptions.length ? <PreparationText>{t('Bu homashyo bo‘yicha hali kirim yoki chiqim yo‘q.')}</PreparationText> : null}
-    {history.receipts.length ? <PreparationText title>{t('Kirimlar')}</PreparationText> : null}
-    {history.receipts.map((doc, index) => { const card = preparationMaterialReceiptCard(doc, item?.name);
-      return <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={card.title} subtitle={[card.subtitle, card.value].filter(Boolean).join('\n')} />; })}
-    {history.consumptions.length ? <PreparationText title>{t('Chiqimlar')}</PreparationText> : null}
-    {history.consumptions.map(({ doc, line }, index) => { const card = preparationMaterialConsumptionCard(doc, line);
-      return <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={card.title} subtitle={card.subtitle} />; })}
-  </PreparationPage><PreparationNotice message={notice.message} /></View>;
-}
 
 // @v2 PreparationHistoryScreen
 export function PreparationHistoryScreen() {

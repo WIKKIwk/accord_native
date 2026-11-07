@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoleFab, type RoleFabAction } from '../shared/navigation/RoleFab.android';
 
-type Scope = 'home' | 'warehouse';
+type Scope = 'home' | 'warehouse' | 'material';
 type FabOptions = {
   actions: readonly RoleFabAction[]; onSelect: (id: string) => void;
   enabled: boolean; visible: boolean; openLabel: string; closeLabel: string;
@@ -20,7 +20,8 @@ const noSelect = () => {};
 
 function fabScope(pathname: string): Scope | null {
   const path = pathname.replace(/\/+$/, '');
-  return path === '/android-preparation' ? 'home' : path === '/android-preparation/warehouse' ? 'warehouse' : null;
+  return path === '/android-preparation' ? 'home' : path === '/android-preparation/warehouse' ? 'warehouse'
+    : path === '/android-preparation/material' ? 'material' : null;
 }
 
 /** One FAB stays above the native stack while each focused screen supplies its menu. */
@@ -45,7 +46,7 @@ export function PreparationFabProvider({ children }: { children: ReactNode }) {
     <View style={[StyleSheet.absoluteFill, { opacity: visible ? 1 : 0 }]} pointerEvents={enabled ? 'box-none' : 'none'}
       accessibilityElementsHidden={!enabled} importantForAccessibility={enabled ? 'auto' : 'no-hide-descendants'}>
       <RoleFab actions={entry?.actions ?? emptyActions} onSelect={entry?.onSelect ?? noSelect} bottomOffset={dockHeight + 16}
-        testIDPrefix={scope === 'warehouse' ? 'preparation-warehouse-fab' : 'preparation-fab'}
+        testIDPrefix={scope && scope !== 'home' ? `preparation-${scope}-fab` : 'preparation-fab'}
         openLabel={entry?.openLabel} closeLabel={entry?.closeLabel} resetKey={`${scope}:${enabled}`} />
     </View>
   </View></Context.Provider>;
