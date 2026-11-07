@@ -1,22 +1,10 @@
-import { Host, Row, Spacer, Text } from '@expo/ui';
-import { DropdownMenu, DropdownMenuItem, OutlinedButton, Text as ComposeText } from '@expo/ui/jetpack-compose';
-import { useState } from 'react';
 import { QUEUE_LIMITS, type QueueLimit } from '../workerQueueLimit';
-import { WorkerQueueCard } from './WorkerQueueCard.android';
+import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
 import type { WorkerQueueFilterProps } from './workerQueueFilterProps';
 
 const label = (count: QueueLimit) => count === 0 ? 'Barchasi' : `${count} ta`;
 
 export function WorkerQueueFilter({ value, enabled, loading, backgroundColor, onChange }: WorkerQueueFilterProps) {
-  const [expanded, setExpanded] = useState(false);
-  return <WorkerQueueCard first backgroundColor={backgroundColor}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Row alignment="center" spacing={8} style={{ width: '100%' }}>
-    <Text>{loading ? 'Yangilanmoqda…' : 'Ko‘rsatish'}</Text>
-    <Spacer flexible />
-    <DropdownMenu expanded={expanded} onDismissRequest={() => setExpanded(false)}>
-      <DropdownMenu.Trigger><OutlinedButton enabled={enabled} onClick={() => setExpanded(true)}><ComposeText>{`${label(value)} ▾`}</ComposeText></OutlinedButton></DropdownMenu.Trigger>
-      <DropdownMenu.Items>{QUEUE_LIMITS.map(count => <DropdownMenuItem key={count} onClick={() => { setExpanded(false); onChange(count); }}>
-        <DropdownMenuItem.Text><ComposeText>{label(count)}</ComposeText></DropdownMenuItem.Text>
-      </DropdownMenuItem>)}</DropdownMenu.Items>
-    </DropdownMenu>
-  </Row></Host></WorkerQueueCard>;
+  return <DropdownFilter label={loading ? 'Yangilanmoqda…' : 'Ko‘rsatish'} selectedLabel={label(value)} enabled={enabled}
+    backgroundColor={backgroundColor} options={QUEUE_LIMITS.map(count => ({ value: count, label: label(count) }))} onChange={onChange} />;
 }

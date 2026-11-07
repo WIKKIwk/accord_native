@@ -39,8 +39,12 @@ function setup(platform, screen) {
   const mocks = {
     '@expo/ui/swift-ui': swift,
     '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }),
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
     'expo-router': { router: {}, Stack: { Screen: 'Stack.Screen' }, useFocusEffect: callback => { focus = callback; } },
+    'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', PlatformColor: value => value, StyleSheet: { create: value => value } },
+    'react-native-reanimated': { useSharedValue: value => ({ value }) },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
     '../components/useWorkerColors': { useWorkerColors: () => ({}) },
     '../nativeSheet': { useNativeSheet: () => sheet },
     './PreparationContext': context, './PreparationContext.android': context,

@@ -1,7 +1,15 @@
+import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useNativeSheet } from '../nativeSheet';
+import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
+import { OrdersHeader } from '../shared/orders/OrdersHeader';
+import { OrdersList } from '../shared/orders/OrdersList';
 import { preparationReverseReceipt } from './preparationCommandApi';
 import { usePreparationContext } from './PreparationContext.android';
 import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRenameWarehouse } from './preparationManagementApi';
@@ -15,7 +23,7 @@ import { PreparationWarehouseCreateDialog } from './PreparationWarehouseCreateDi
 import { preparationWarehouseDeleteMessage, preparationWarehouseErrorMessage } from './preparationWarehousePresentation';
 import { usePreparationNotice } from './usePreparationNotice';
 import { openPreparationScale } from './preparationNavigation.android';
-import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDock, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 function useStockActions(notice: ReturnType<typeof usePreparationNotice>) {
   const { home } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
@@ -41,13 +49,32 @@ function useStockReturnReload(controller: ReturnType<typeof usePreparationContex
   useFocusEffect(useCallback(() => { void controller.loadForPage(); }, [controller]));
 }
 
+function WarehouseMaterialRow({ item, warehouse, last }: { item: PreparationMaterial; warehouse: string; last: boolean }) {
+  const colors = useMaterialColors(), t = usePreparationText();
+  const subtitle = `${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`;
+  return <WorkerQueueCard backgroundColor={colors.surface} last={last}
+    onPress={() => router.push({ pathname: '/android-preparation/material', params: { code: item.code, warehouse } } as unknown as Href)}>
+    <View accessible={false} style={[styles.materialIcon, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <SymbolView name={{ android: 'inventory_2' }} size={20} tintColor={colors.onSurfaceVariant} />
+    </View>
+    <View style={styles.materialText}>
+      <Text numberOfLines={1} style={[styles.headline, { color: colors.onSurface }]}>{item.name}</Text>
+      <Text numberOfLines={1} style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</Text>
+    </View>
+  </WorkerQueueCard>;
+}
+
+const passthroughListItems = () => true;
+
 // @v2 PreparationWarehouseScreen
 export function PreparationWarehouseScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const sheet = useNativeSheet(), notice = usePreparationNotice(), afterAction = useRef<(() => void) | null>(null);
   useStockReturnReload(home.controller);
   const { receive, createMaterial } = useStockActions(notice);
-  const [query, setQuery] = useState(''), [managing, setManaging] = useState(false), [expanded, setExpanded] = useState(false);
+  const [query, setQuery] = useState(''), [managing, setManaging] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const data = home.snapshot, warehouse = home.warehouse;
   const materials = preparationVisibleMaterials(data?.materials ?? [], warehouse, query);
@@ -59,7 +86,7 @@ export function PreparationWarehouseScreen() {
       try {
         const created = await preparationCreateWarehouse(session, name, parent);
         if (!created) return;
-        await home.controller.reload(); home.controller.selectWarehouse(created); setExpanded(false);
+        await home.controller.reload(); home.controller.selectWarehouse(created);
         notice.show(t(`Ombor ochildi: ${created}`));
       } catch (error) { notice.show(t(preparationWarehouseErrorMessage(error))); }
       finally { setManaging(false); }
@@ -105,32 +132,47 @@ export function PreparationWarehouseScreen() {
       choose={material => { selected = material; sheet.close(); }} />,
     { dismissible: true, onDismiss: () => { if (selected) void receive(selected); } });
   };
-  return <View style={{ flex: 1 }}><PreparationPage title="Ombor" refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
+  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
+    <OrdersHeader search={query} searchPlaceholder={t('Qidirish')} onSearchChange={setQuery}
+      onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }}
+      onProfile={() => router.navigate('/android-preparation/profile' as Href)} />
+    <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={passthroughListItems}
+      onRefresh={async () => { if (!home.loading && !home.saving) await home.controller.reload(); }}>
     {home.error ? <><PreparationRow title={t('Xatolik yuz berdi')} subtitle={home.error} />
       <PreparationButton label="Qayta urinish" onPress={() => { void home.controller.reload(); }} /></> : null}
-    {data && !data.assigned_warehouses.length ? <PreparationText>{t('Sizga ombor biriktirilmagan.')}</PreparationText> : null}
-    {!!data?.assigned_warehouses.length && <PreparationRow title={t('Ombor')} subtitle={warehouse ?? t('Tanlanmagan')} onPress={() => setExpanded(value => !value)} />}
-    {expanded && (data?.assigned_warehouses ?? []).map(name => <PreparationRow key={name} title={name}
-      onPress={() => { home.controller.selectWarehouse(name); setExpanded(false); }}
-      onLongPress={data?.managed_warehouses.includes(name) && !home.locked && !managing ? () => warehouseMenu(name) : undefined} />)}
-    <PreparationField label="Qidirish" onChange={setQuery} />
-    {data && (!warehouse ? <PreparationText>{t('Yuqoridagi filtrdan ombor tanlang.')}</PreparationText>
-      : !materials.length ? <PreparationText>{t('Bu omborda hali kirim yo‘q.')}</PreparationText> : null)}
-    {materials.map(item => <PreparationRow key={item.code} title={item.name}
-      subtitle={`${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`}
-      onPress={() => router.push({ pathname: '/android-preparation/material', params: { code: item.code, warehouse } } as unknown as Href)} />)}
-    {warehouse && manual ? <>
+    {!!data?.assigned_warehouses.length && <DropdownFilter label={t('Ombor')} selectedLabel={warehouse ?? t('Tanlanmagan')}
+      backgroundColor={colors.surface} last={!materials.length} options={data.assigned_warehouses.map(name => ({
+        value: name, label: name,
+        onLongPress: data.managed_warehouses.includes(name) && !home.locked && !managing ? () => warehouseMenu(name) : undefined,
+      }))} onChange={name => home.controller.selectWarehouse(name)} />}
+    {data && (!data.assigned_warehouses.length || !warehouse || !materials.length) ? <View style={styles.empty}>
+      <PreparationText>{t(!data.assigned_warehouses.length ? 'Sizga ombor biriktirilmagan.'
+        : !warehouse ? 'Yuqoridagi filtrdan ombor tanlang.' : 'Bu omborda hali kirim yo‘q.')}</PreparationText>
+    </View> : null}
+    {warehouse && materials.map((item, index) => <WarehouseMaterialRow key={item.code} item={item} warehouse={warehouse} last={index === materials.length - 1} />)}
+    <View style={styles.actions}>{warehouse && manual ? <>
       <PreparationButton label="Kirim" disabled={home.locked || managing} onPress={pickReceipt} id="preparation-receipt" />
       <PreparationButton label="Homashyo qo‘shish" disabled={home.locked || managing} onPress={() => void createMaterial()} />
     </> : null}
     {warehouse && !manual ? <PreparationButton label="Tarozi kirimi"
       disabled={home.locked || managing} onPress={() => openPreparationScale({ warehouse })} /> : null}
     {data?.assigned_warehouses.length && data.material_warehouses.length ? <PreparationButton label="Ombor qo‘shish" disabled={home.locked || managing} onPress={() => setShowCreate(true)} /> : null}
-  </PreparationPage><PreparationNotice message={notice.message} />
+    </View>
+    </OrdersList>
+    <PreparationDock /><PreparationNotice message={notice.message} />
     {showCreate && data && <PreparationWarehouseCreateDialog warehouses={data.material_warehouses} selected={warehouse}
       close={() => setShowCreate(false)} create={createWarehouse} />}
   </View>;
 }
+
+const styles = StyleSheet.create({
+  materialIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  materialText: { flex: 1, marginStart: 16 },
+  headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
+  supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
+  empty: { paddingHorizontal: 24, paddingVertical: 16 },
+  actions: { paddingHorizontal: 8, paddingBottom: 12, gap: 8 },
+});
 
 // @v2 PreparationMaterialDetailScreen
 export function PreparationMaterialDetailScreen() {
