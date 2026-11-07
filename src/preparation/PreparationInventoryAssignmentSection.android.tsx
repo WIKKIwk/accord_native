@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { adminApparatus } from '../apparatusApi';
 import { activeSessionToken, type Session } from '../auth';
 import { adminRawMaterialLookup } from '../rawMaterialLookupApi';
 import { adminUnlinkRawMaterialAssignment } from '../rawMaterialUnlinkApi';
 import { sessionReadScope } from '../sessionReadScope';
 import { preparationAssignMaterial, preparationAssignmentCandidates } from './preparationInventoryAssignment';
-import { PreparationButton, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { InventoryDetailRow, InventorySheetButton } from './PreparationInventoryDetails.android';
+import { PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 type Lookup = Awaited<ReturnType<typeof adminRawMaterialLookup>>;
 type Candidate = Awaited<ReturnType<typeof preparationAssignmentCandidates>>[number];
@@ -74,12 +75,12 @@ export function PreparationInventoryAssignment({ session, barcode, allowAssignme
     finally { if (isCurrent()) setSaving(false); }
   };
   const assignment = state.lookup?.assignment;
-  return <>
-    <PreparationRow title={t('Buyurtma')} subtitle={state.loading ? t('Tekshirilmoqda...') : state.error ? t('Xato')
+  return <View style={{ gap: 8 }}>
+    <InventoryDetailRow label="Buyurtma" value={state.loading ? t('Tekshirilmoqda...') : state.error ? t('Xato')
       : assignment ? [state.lookup?.order?.order_number || state.lookup?.order?.code || assignment.order_id, state.lookup?.order?.title, assignment.apparatus].filter(Boolean).join(' · ') : t('Ulanmagan')} />
-    {state.loading ? <ActivityIndicator /> : state.error ? <><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={retry} /></>
-      : assignment ? <PreparationButton label="Ulanishni uzish" disabled={saving} onPress={() => void unlink()} />
+    {state.loading ? <ActivityIndicator /> : state.error ? <><PreparationText>{state.error}</PreparationText><InventorySheetButton label="Qayta urinish" kind="outlined" onPress={retry} /></>
+      : assignment ? <InventorySheetButton label="Ulanishni uzish" kind="outlined" disabled={saving} onPress={() => void unlink()} />
       : <>{allowAssignment && !state.candidates.length ? <PreparationText>{t('Bu homashyoga mos faol buyurtma topilmadi')}</PreparationText> : null}
-        <PreparationButton label="Buyurtmaga ulash" disabled={!allowAssignment || !state.candidates.length || saving} onPress={() => void assign()} /></>}
-  </>;
+        <InventorySheetButton label="Buyurtmaga ulash" kind="outlined" disabled={!allowAssignment || !state.candidates.length || saving} onPress={() => void assign()} /></>}
+  </View>;
 }

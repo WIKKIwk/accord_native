@@ -17,6 +17,7 @@ import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
 import { usePreparationContext } from './PreparationContext.android';
 import { usePreparationFab } from './PreparationFab.android';
 import { PreparationInventoryAssignment } from './PreparationInventoryAssignmentSection.android';
+import { InventoryDetailRow, InventorySheetButton, InventorySheetSummary } from './PreparationInventoryDetails.android';
 import { selectPreparationInventoryDevice } from './preparationDevicePicker.android';
 import { preparationInventoryAssetBarcode, preparationInventoryQuantity, preparationInventoryStatus, preparationInventoryTransferTimestamp,
   type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventory';
@@ -149,10 +150,16 @@ const styles = StyleSheet.create({
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
   scan: { padding: 16, gap: 10 }, status: { padding: 16 }, fabSpace: { height: 112 },
+  sheet: { flex: 1 },
+  sheetContent: { padding: 16, gap: 16 },
+  sheetScroll: { flex: 1 },
+  sheetActions: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, gap: 4, borderTopWidth: StyleSheet.hairlineWidth },
+  sheetCodes: { gap: 12, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth },
 });
 
 function AssetDetail({ asset, inventory, assigned, close }: { asset: PreparationInventoryAsset; inventory: Inventory; assigned: readonly string[]; close: () => void }) {
   const [showQr, setShowQr] = useState(false), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const colors = useMaterialColors();
   const { session } = usePreparationContext();
   const [finished, setFinished] = useState(false), [printing, setPrinting] = useState(false), [notice, setNotice] = useState<string | null>(null);
   const mounted = useRef(true), printBusy = useRef(false);
@@ -191,30 +198,45 @@ function AssetDetail({ asset, inventory, assigned, close }: { asset: Preparation
       if (current() && !(error instanceof PreparationReprintCancelled)) setNotice(error instanceof Error ? error.message : 'QR kodini qayta chop etib bo‘lmadi');
     } finally { printBusy.current = false; if (current()) setPrinting(false); }
   };
-  if (showQr) return <ScrollView nestedScrollEnabled contentContainerStyle={{ padding: 16, gap: 10 }}>
-    <PreparationText title>{t('Homashyo QR')}</PreparationText><PreparationText>{asset.item_name || asset.item_code}</PreparationText>
-    {image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
-    {asset.item_code ? <PreparationRow title={t('Mahsulot kodi')} subtitle={asset.item_code} /> : null}
-    <PreparationRow title={t('Identifikator')} subtitle={barcode} /><PreparationRow title={t('Miqdor')} subtitle={`${preparationInventoryQuantity(asset.qty)} ${asset.uom}`} />
-    {asset.custody_warehouse ? <PreparationRow title={t('Ombor')} subtitle={asset.custody_warehouse} /> : null}
-    {asset.physical_location.name ? <PreparationRow title={t('Fizik joy')} subtitle={asset.physical_location.name} /> : null}
-    <PreparationRow title={t('Holati')} subtitle={t(preparationInventoryStatus(asset.status))} />
-    {notice ? <PreparationText>{t(notice)}</PreparationText> : null}
-    <PreparationButton label="Qayta chop etish" disabled={printing} id="preparation-inventory-qr-reprint" onPress={() => void reprint()} />
-    <PreparationButton label="Yopish" disabled={printing} onPress={close} />
-  </ScrollView>;
-  return <ScrollView nestedScrollEnabled contentContainerStyle={{ padding: 16, gap: 10 }}>
-    <PreparationText title>{asset.item_name || asset.item_code}</PreparationText>
-    {asset.item_code && asset.item_name !== asset.item_code ? <PreparationText>{asset.item_code}</PreparationText> : null}
-    <PreparationRow title={t('Identifikator')} subtitle={asset.identifier} />
-    <PreparationRow title={t('Miqdor')} subtitle={`${preparationInventoryQuantity(asset.qty)} ${asset.uom}`} />
-    <PreparationRow title={t('Fizik joy')} subtitle={asset.physical_location.name} />
-    <PreparationRow title={t('Holati')} subtitle={t(preparationInventoryStatus(asset.status))} />
-    {showAssignment && barcode ? <PreparationInventoryAssignment session={session} barcode={barcode} allowAssignment={inventory.canTransfer(asset)}
-      changed={() => inventory.assets.refresh()} isCurrent={inventory.current} />
-      : asset.order_assignment ? <PreparationRow title={t('Buyurtma')} subtitle={asset.order_assignment.order_label} /> : null}
-    {barcode ? <PreparationButton label="QR kodni ko‘rish" onPress={() => setShowQr(true)} /> : null}
-    {owns ? <PreparationButton label="Transfer" disabled={!inventory.canTransfer(asset) || inventory.busy || finished} onPress={() => void transfer()} /> : null}
-    <PreparationButton label="Yopish" onPress={close} />
-  </ScrollView>;
+  const summary = <InventorySheetSummary title={asset.item_name || asset.item_code}
+    quantity={`${preparationInventoryQuantity(asset.qty)} ${asset.uom}`} status={t(preparationInventoryStatus(asset.status))}
+    caption={showQr ? t('Homashyo QR') : undefined} />;
+  const codes = <View style={[styles.sheetCodes, { borderTopColor: colors.outlineVariant }]}>
+    {asset.item_code ? <InventoryDetailRow label="Mahsulot kodi" value={asset.item_code} stacked /> : null}
+    <InventoryDetailRow label="Identifikator" value={showQr ? barcode : asset.identifier} stacked />
+  </View>;
+  if (showQr) return <View style={styles.sheet}>
+    <ScrollView key="qr" nestedScrollEnabled style={styles.sheetScroll} contentContainerStyle={styles.sheetContent}>
+      {summary}
+      {image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
+      <View>
+        {asset.custody_warehouse ? <InventoryDetailRow label="Ombor" value={asset.custody_warehouse} /> : null}
+        {asset.physical_location.name ? <InventoryDetailRow label="Fizik joy" value={asset.physical_location.name} /> : null}
+      </View>
+      {codes}
+      {notice ? <PreparationText>{t(notice)}</PreparationText> : null}
+    </ScrollView>
+    <View style={[styles.sheetActions, { borderTopColor: colors.outlineVariant }]}>
+      <InventorySheetButton label="Qayta chop etish" disabled={printing} id="preparation-inventory-qr-reprint" onPress={() => void reprint()} />
+      <InventorySheetButton label="Yopish" kind="text" disabled={printing} onPress={close} />
+    </View>
+  </View>;
+  return <View style={styles.sheet}>
+    <ScrollView key="details" nestedScrollEnabled style={styles.sheetScroll} contentContainerStyle={styles.sheetContent}>
+      {summary}
+      <View>
+        <InventoryDetailRow label="Ombor" value={asset.custody_warehouse} />
+        <InventoryDetailRow label="Fizik joy" value={asset.physical_location.name} />
+        {showAssignment && barcode ? <PreparationInventoryAssignment session={session} barcode={barcode} allowAssignment={inventory.canTransfer(asset)}
+          changed={() => inventory.assets.refresh()} isCurrent={inventory.current} />
+          : asset.order_assignment ? <InventoryDetailRow label="Buyurtma" value={asset.order_assignment.order_label} /> : null}
+      </View>
+      {codes}
+    </ScrollView>
+    <View style={[styles.sheetActions, { borderTopColor: colors.outlineVariant }]}>
+      {barcode ? <InventorySheetButton label="QR kodni ko‘rish" onPress={() => setShowQr(true)} /> : null}
+      {owns ? <InventorySheetButton label="Transfer" kind="outlined" disabled={!inventory.canTransfer(asset) || inventory.busy || finished} onPress={() => void transfer()} /> : null}
+      <InventorySheetButton label="Yopish" kind="text" onPress={close} />
+    </View>
+  </View>;
 }
