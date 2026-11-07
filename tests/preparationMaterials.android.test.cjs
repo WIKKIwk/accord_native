@@ -27,7 +27,7 @@ test('materials use the warehouse list and retain search, refresh and row action
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), Host: 'Host', DropdownMenu: menu, DropdownMenuItem: menuItem, IconButton: 'IconButton', RNHostView: 'RNHostView', Text: 'ComposeText' },
     '@expo/ui/jetpack-compose/modifiers': { size: () => ({}), semantics: () => ({}) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']), navigate: route => calls.push(['navigate', route]) } },
-    'react-native': { View: 'View', Text: 'Text', ActivityIndicator: 'ActivityIndicator', StyleSheet: { create: value => value } },
+    'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', ActivityIndicator: 'ActivityIndicator', StyleSheet: { create: value => value } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
@@ -60,7 +60,11 @@ test('materials use the warehouse list and retain search, refresh and row action
   assert.equal(row.props.subtitle, 'Own');
   let card = row.type(row.props);
   assert.equal(card.type, 'WorkerQueueCard');
-  nodes(card, node => node.type === 'IconButton')[0].props.onClick();
+  assert.equal(nodes(card, node => node.type === menu).length, 0);
+  assert.equal(nodes(card, node => node.type === 'Host').length, 0);
+  const trigger = nodes(card, node => node.type === 'Pressable')[0];
+  assert.equal(trigger.props.accessibilityLabel, 'BOPP — Homashyo amallari');
+  trigger.props.onPress();
   assert.equal(expanded, true);
   card = row.type(row.props);
   assert.equal(nodes(card, node => node.type === menu)[0].props.expanded, true);
@@ -81,6 +85,7 @@ test('materials use the warehouse list and retain search, refresh and row action
   } finally { global.requestAnimationFrame = previousFrame; }
   const blocked = row.type({ ...row.props, blocked: true });
   assert.equal(blocked.props.onPress, undefined);
+  assert.equal(nodes(blocked, node => node.type === 'Pressable')[0].props.disabled, true);
   header.props.onBack();
   assert.deepEqual(calls.at(-1), ['back']);
   header.props.onProfile();

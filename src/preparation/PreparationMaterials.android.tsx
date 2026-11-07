@@ -3,7 +3,7 @@ import { clickable, fillMaxWidth, height, semantics, size } from '@expo/ui/jetpa
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text as NativeText, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text as NativeText, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
@@ -34,7 +34,7 @@ function MaterialRow({ name, subtitle, blocked, choose, first, last }: { name: s
       <NativeText numberOfLines={1} style={[styles.headline, { color: colors.onSurface }]}>{name}</NativeText>
       <NativeText numberOfLines={1} style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</NativeText>
     </View>
-    <Host matchContents style={{ width: 48, height: 48 }}>
+    {expanded && !blocked ? <Host matchContents style={styles.menuTrigger}>
       <DropdownMenu expanded={expanded && !blocked} onDismissRequest={() => setExpanded(false)}>
         <DropdownMenu.Trigger><IconButton enabled={!blocked} onClick={() => setExpanded(true)}
           modifiers={[size(48, 48), semantics({ contentDescription: `${name} — ${t('Homashyo amallari')}` })]}>
@@ -50,7 +50,10 @@ function MaterialRow({ name, subtitle, blocked, choose, first, last }: { name: s
             </DropdownMenuItem>)}
         </DropdownMenu.Items>
       </DropdownMenu>
-    </Host>
+    </Host> : <Pressable accessibilityRole="button" accessibilityLabel={`${name} — ${t('Homashyo amallari')}`}
+      disabled={blocked} onPress={() => setExpanded(true)} style={styles.menuTrigger}>
+      <SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} />
+    </Pressable>}
   </WorkerQueueCard>;
 }
 
@@ -150,6 +153,7 @@ export function PreparationMaterialsScreen() {
 const styles = StyleSheet.create({
   materialIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   materialText: { flex: 1, marginStart: 16 },
+  menuTrigger: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
 });
