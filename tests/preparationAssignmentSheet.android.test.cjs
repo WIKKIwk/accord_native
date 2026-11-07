@@ -76,24 +76,20 @@ test('assignment sheet opens with cached choices, retries errors and ignores lat
         old?.cleanup?.(); slots[index] = { deps, cleanup: effect() };
       }); },
   };
-  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/jetpack-compose': {}, '@expo/ui/jetpack-compose/modifiers': {},
-    'expo-router': {}, 'expo-symbols': {}, 'react-native': { StyleSheet: { create: value => value } },
-    'react-native-reanimated': {}, 'react-native-safe-area-context': {},
-    './usePreparationMaterials': { preparationMaterialsErrorMessage: () => 'offline' } };
-  const { AssignmentSheetLoader } = load('preparation/PreparationMaterials.android.tsx', mocks, '\nexport { AssignmentSheetLoader };\n');
+  const mocks = { react, './usePreparationMaterials': { preparationMaterialsErrorMessage: () => 'offline' } };
+  const { usePreparationWarehouseChoices } = load('preparation/usePreparationWarehouseChoices.android.ts', mocks);
   const cached = [{ name: 'Old', selected: true, editable: true }], fresh = [{ name: 'New', selected: false, editable: true }];
   let finish, reject, calls = 0;
   const loadChoices = () => { calls++; return new Promise((resolve, fail) => { finish = resolve; reject = fail; }); };
-  const props = { name: 'BOPP', initialChoices: cached, load: loadChoices, save() {} };
-  const render = () => { cursor = 0; const tree = AssignmentSheetLoader(props); while (effects.length) effects.shift()(); return tree; };
+  const render = () => { cursor = 0; const state = usePreparationWarehouseChoices(cached, loadChoices); while (effects.length) effects.shift()(); return state; };
   let tree = render();
-  assert.equal(tree.props.loading, true); assert.equal(tree.props.choices, cached); assert.equal(calls, 1);
+  assert.equal(tree.loading, true); assert.equal(tree.choices, cached); assert.equal(calls, 1);
   reject(new Error('offline')); await new Promise(resolve => setImmediate(resolve));
-  tree = render(); assert.equal(tree.props.loading, false); assert.equal(tree.props.error, 'offline');
-  tree.props.retry(); tree = render(); assert.equal(tree.props.loading, true); assert.equal(calls, 2);
+  tree = render(); assert.equal(tree.loading, false); assert.equal(tree.error, 'offline');
+  tree.retry(); tree = render(); assert.equal(tree.loading, true); assert.equal(calls, 2);
   finish(fresh); await new Promise(resolve => setImmediate(resolve));
-  tree = render(); assert.equal(tree.props.loading, false); assert.deepEqual(tree.props.choices, fresh);
-  tree.props.retry(); render(); const lastEffect = slots.at(-1); lastEffect.cleanup();
+  tree = render(); assert.equal(tree.loading, false); assert.deepEqual(tree.choices, fresh);
+  tree.retry(); render(); const lastEffect = slots.at(-1); lastEffect.cleanup();
   finish(cached); await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(slots[0].value, fresh);
 });

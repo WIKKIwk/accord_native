@@ -2,7 +2,7 @@ import { Button, Checkbox, Column, DropdownMenu, DropdownMenuItem, Host, IconBut
 import { clickable, fillMaxWidth, height, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text as NativeText, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ import { preparationWarehouseChoices } from './preparationLogic';
 import { preparationMaterialDeleteMessage, preparationMaterialsEmptyMessage, preparationMaterialsErrorMessage } from './usePreparationMaterials';
 import { usePreparationMaterialsView } from './usePreparationAndroidView.android';
 import { usePreparationNotice } from './usePreparationNotice';
+import { usePreparationWarehouseChoices } from './usePreparationWarehouseChoices.android';
 
 type Choices = { name: string; editable: boolean; selected: boolean }[];
 type MaterialAction = 'rename' | 'warehouses' | 'delete';
@@ -91,20 +92,8 @@ function AssignmentSheet({ name, choices, save, loading = false, error, retry }:
 
 function AssignmentSheetLoader({ name, initialChoices, load, save }: { name: string; initialChoices: Choices;
   load: () => Promise<Choices | null>; save: (selected: string[]) => void }) {
-  const [choices, setChoices] = useState(initialChoices), [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null), [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    let active = true;
-    void load().then(result => {
-      if (!active) return;
-      if (result) { setChoices(result); setError(null); }
-      else setError('Omborlar ro‘yxatini olib bo‘lmadi. Qayta urinib ko‘ring');
-    }).catch(reason => { if (active) setError(preparationMaterialsErrorMessage(reason)); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [load, attempt]);
-  const retry = () => { setError(null); setLoading(true); setAttempt(value => value + 1); };
-  return <AssignmentSheet name={name} choices={choices} save={save} loading={loading} error={error} retry={retry} />;
+  const state = usePreparationWarehouseChoices(initialChoices, load);
+  return <AssignmentSheet name={name} save={save} {...state} />;
 }
 
 // @v2 PreparationMaterialsScreen

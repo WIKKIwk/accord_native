@@ -37,6 +37,7 @@ test('materials use the warehouse list and retain search, refresh and row action
     './PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     './PreparationFab.android': { usePreparationFab: () => () => {} }, './PreparationUI.android': ui,
     './usePreparationAndroidView.android': { usePreparationMaterialsView: () => state },
+    './usePreparationWarehouseChoices.android': { usePreparationWarehouseChoices() {} },
     './usePreparationNotice': { usePreparationNotice: () => ({ message: '', show() {} }) },
     './preparationLogic': { preparationWarehouseChoices: (editable, selected) => [...new Set([...editable, ...selected])].sort().map(name => ({ name, editable: editable.includes(name), selected: selected.includes(name) })) },
     './usePreparationMaterials': { preparationMaterialsEmptyMessage: () => 'empty', preparationMaterialDeleteMessage: () => 'confirm' },
