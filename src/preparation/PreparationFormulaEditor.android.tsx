@@ -1,8 +1,10 @@
-import { Host, ModalBottomSheet, RNHostView } from '@expo/ui/jetpack-compose';
+import { Host, ModalBottomSheet, RNHostView, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, ScrollView, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, BackHandler, ScrollView, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { usePreparationContext } from './PreparationContext.android';
@@ -70,6 +72,7 @@ export function PreparationOrderFormulaScreen() {
 
 function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
   const { session } = usePreparationContext(), state = usePreparationFormulaView(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const colors = useMaterialColors();
   const [shares, setShares] = useState(false), sheet = useNativeSheet();
   const { message: noticeMessage, show: showNotice } = usePreparationNotice();
   const scaleReturn = useRef<(() => void) | null>(null);
@@ -124,14 +127,22 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
       <PreparationText title>{`${options.variantName ? 'Ichki formulalar' : 'Saqlangan formulalar'} (${state.formulas.length})`}</PreparationText>
       {!state.formulas.length ? <PreparationText>{t(options.manageSavedFormula && !options.allowAddingFormula
         ? 'Bu formulada ichki tarkib yo‘q.' : 'Hali formula yo‘q. FAB orqali formula qo‘shing.')}</PreparationText> : null}
-      {state.formulas.map(formula => {
+      {state.formulas.length ? <View style={styles.formulas}>{state.formulas.map((formula, index) => {
         const card = preparationFormulaCard(formula, state.formulas, state.estimatedMaterialKg);
-        return <PreparationRow key={formula.name} title={formula.name}
-          subtitle={[card.count, card.share, ...card.lines].join('\n')} disabled={blocked} onPress={() => openFormula(formula)}
-          trailing={<PreparationFormulaMenu name={formula.name} disabled={blocked} onSelect={action => {
+        return <WorkerQueueCard key={formula.name} backgroundColor={colors.surface} first={index === 0} last={index === state.formulas.length - 1}
+          onPress={blocked ? undefined : () => openFormula(formula)}>
+          <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
+            <SymbolView name={{ android: 'functions' }} size={20} tintColor={colors.onSurfaceVariant} />
+          </View>
+          <View style={styles.rowText}>
+            <NativeText style={[styles.headline, { color: colors.onSurface }]}>{formula.name}</NativeText>
+            <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{[card.count, card.share, ...card.lines].join('\n')}</NativeText>
+          </View>
+          <View style={styles.menu}><PreparationFormulaMenu name={formula.name} disabled={blocked} onSelect={action => {
             if (!blocked && action !== 'rename') void formulaAction(formula, action);
-          }} />} />;
-      })}
+          }} /></View>
+        </WorkerQueueCard>;
+      })}</View> : null}
       {(!options.manageSavedFormula || options.allowAddingFormula) ? <InventorySheetButton large
         label={options.manageSavedFormula ? 'Ichki formula qo‘shish' : 'Shnek formula qo‘shish'} disabled={blocked}
         onPress={() => state.controller.openEditor()} /> : null}
@@ -146,3 +157,12 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
       onSave={values => state.controller.saveShares(values)} onClose={() => setShares(false)} /> : null}
   </>;
 }
+
+const styles = StyleSheet.create({
+  formulas: { marginHorizontal: -16 },
+  icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginTop: 6 },
+  rowText: { flex: 1, marginStart: 16, paddingVertical: 6 },
+  headline: { fontSize: 16, lineHeight: 24, fontWeight: '500', includeFontPadding: false },
+  supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
+  menu: { alignSelf: 'flex-start', paddingTop: 6 },
+});
