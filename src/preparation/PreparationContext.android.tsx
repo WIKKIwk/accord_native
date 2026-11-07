@@ -8,6 +8,7 @@ import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { PreparationDialogs } from './PreparationUI.android';
 import { usePreparationHome } from './usePreparationHome';
 import { PreparationDrawer } from './PreparationDrawer.android';
+import { PreparationFabProvider } from './PreparationFab.android';
 
 type Context = { session: Session; home: ReturnType<typeof usePreparationHome>; onLogout: () => void };
 const PreparationContext = createContext<Context | null>(null);
@@ -16,7 +17,7 @@ function Provider({ session, onLogout, children }: { session: Session; onLogout:
   const home = usePreparationHome(session);
   useEffect(() => registerSessionResetHook(async () => { home.controller.invalidate(); }), [home.controller]);
   return <PreparationContext.Provider value={{ session, home, onLogout }}><PreparationDialogs>
-    <PreparationDrawer>{children}</PreparationDrawer>
+    <PreparationDrawer><PreparationFabProvider>{children}</PreparationFabProvider></PreparationDrawer>
   </PreparationDialogs></PreparationContext.Provider>;
 }
 

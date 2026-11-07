@@ -23,7 +23,7 @@ function compile(filename, mocks) {
 
 function setupWarehouse() {
   const calls = [], slots = [];
-  let index = 0, sheetContent;
+  let index = 0, sheetContent, fab, dockHeight;
   const home = { warehouse: 'Own', loading: false, saving: false, locked: false, error: null,
     snapshot: { assigned_warehouses: ['Own', 'Other'], managed_warehouses: ['Other'], material_warehouses: ['Own'],
       materials: [{ code: 'A1', name: 'Kley', visible_warehouses: ['own'], balances: { Own: '12' }, can_receive: true },
@@ -57,6 +57,7 @@ function setupWarehouse() {
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../nativeSheet': { useNativeSheet: () => ({ open: content => { sheetContent = content; }, close() {} }) },
     './PreparationContext.android': { usePreparationContext: () => ({ home, session: {} }) },
+    './PreparationFab.android': { usePreparationFab: (scope, options) => { fab = { scope, ...options }; return height => { dockHeight = height; }; } },
     './PreparationUI.android': ui, './preparationLogic': logic,
     './preparationModel': { preparationDisplay: value => value },
     './PreparationSeriyoPicker.android': { PreparationSeriyoPicker: 'PreparationSeriyoPicker' },
@@ -70,7 +71,8 @@ function setupWarehouse() {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
-  return { calls, home, sheetContent: () => sheetContent, render() { index = 0; return mod.exports.PreparationWarehouseScreen(); } };
+  return { calls, home, sheetContent: () => sheetContent, fab: () => fab, dockHeight: () => dockHeight,
+    render() { index = 0; return mod.exports.PreparationWarehouseScreen(); } };
 }
 
 test('warehouse reuses worker search and list while retaining warehouse selection and management', () => {
@@ -106,47 +108,53 @@ test('warehouse reuses worker search and list while retaining warehouse selectio
   tree = view.render();
   rows = nodes(tree, node => typeof node.type === 'function' && node.type.name === 'WarehouseMaterialRow');
   assert.deepEqual(rows.map(row => row.props.item.code), ['B2']);
-  assert.ok(nodes(tree, node => node.type === 'RoleFab')[0].props.actions.some(action => action.label === 'Tarozi kirimi'));
+  assert.ok(view.fab().actions.some(action => action.label === 'Tarozi kirimi'));
 });
 
 test('warehouse FAB contains the available actions and preserves their behavior', () => {
   const view = setupWarehouse();
   let tree = view.render();
-  let fab = nodes(tree, node => node.type === 'RoleFab')[0];
-  assert.deepEqual(fab.props.actions.map(action => action.label), ['Kirim', 'Homashyo qo‘shish', 'Ombor qo‘shish']);
-  assert.equal(fab.props.bottomOffset, 96);
+  let fab = view.fab();
+  assert.equal(fab.scope, 'warehouse');
+  assert.deepEqual(fab.actions.map(action => action.label), ['Kirim', 'Homashyo qo‘shish', 'Ombor qo‘shish']);
+  assert.equal(nodes(tree, node => node.type === 'RoleFab').length, 0);
   nodes(tree, node => node.props?.onLayout && nodes(node, child => child.type === 'PreparationDock').length)[0]
     .props.onLayout({ nativeEvent: { layout: { height: 104 } } });
-  tree = view.render();
-  fab = nodes(tree, node => node.type === 'RoleFab')[0];
-  assert.equal(fab.props.bottomOffset, 120);
+  assert.equal(view.dockHeight(), 104);
   assert.equal(nodes(tree, node => node.type === 'PreparationButton' && ['Kirim', 'Homashyo qo‘shish', 'Ombor qo‘shish'].includes(node.props.label)).length, 0);
-  fab.props.onSelect('receive');
+  fab.onSelect('receive');
   assert.equal(view.sheetContent().type, 'PreparationSeriyoPicker');
-  fab.props.onSelect('material');
+  fab.onSelect('material');
   assert.deepEqual(view.calls.at(-1), ['input', 'Yangi homashyo']);
 
   view.home.warehouse = 'Other';
   tree = view.render();
-  fab = nodes(tree, node => node.type === 'RoleFab')[0];
-  assert.deepEqual(fab.props.actions.map(action => action.label), ['Tarozi kirimi', 'Ombor qo‘shish']);
+  fab = view.fab();
+  assert.deepEqual(fab.actions.map(action => action.label), ['Tarozi kirimi', 'Ombor qo‘shish']);
   assert.equal(nodes(tree, node => node.type === 'PreparationButton' && ['Tarozi kirimi', 'Ombor qo‘shish'].includes(node.props.label)).length, 0);
-  fab.props.onSelect('scale');
+  fab.onSelect('scale');
   assert.deepEqual(view.calls.at(-1), ['scale', { warehouse: 'Other' }]);
-  fab.props.onSelect('warehouse');
+  fab.onSelect('warehouse');
   tree = view.render();
   assert.equal(nodes(tree, node => node.type === 'PreparationWarehouseCreateDialog')[0].props.selected, 'Other');
 
   view.home.locked = true;
   tree = view.render();
-  assert.equal(nodes(tree, node => node.type === 'RoleFab').length, 0);
+  assert.equal(view.fab().enabled, false);
+  assert.equal(view.fab().visible, true);
   view.home.locked = false;
   view.home.warehouse = null;
   tree = view.render();
-  assert.deepEqual(nodes(tree, node => node.type === 'RoleFab')[0].props.actions.map(action => action.label), ['Ombor qo‘shish']);
+  assert.deepEqual(view.fab().actions.map(action => action.label), ['Ombor qo‘shish']);
   view.home.snapshot.assigned_warehouses = [];
   tree = view.render();
-  assert.equal(nodes(tree, node => node.type === 'RoleFab').length, 0);
+  assert.equal(view.fab().visible, false);
+  view.home.snapshot = null;
+  view.home.loading = true;
+  view.home.locked = true;
+  tree = view.render();
+  assert.equal(view.fab().visible, true);
+  assert.equal(view.fab().enabled, false);
 });
 
 test('shared dropdown keeps worker choices and supports warehouse long press', () => {

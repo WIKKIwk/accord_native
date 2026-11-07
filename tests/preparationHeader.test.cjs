@@ -43,7 +43,7 @@ test('iOS preparation headers choose a drawer or an icon-only native back button
 });
 
 test('Android preparation headers show only the drawer at home and only back on child pages', () => {
-  const calls = [];
+  const calls = [], fabRegistrations = [];
   let canGoBack = true;
   const router = { canGoBack: () => canGoBack, back: () => calls.push('back'), replace: value => calls.push(value), navigate: value => calls.push(value) };
   const ui = new Proxy({}, { get: (_, key) => key === 'useMaterialColors' ? () => ({ surfaceContainerLow: 'surface' }) : key });
@@ -59,6 +59,7 @@ test('Android preparation headers show only the drawer at home and only back on 
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
     '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
+    './PreparationFab.android': { usePreparationFab: (scope, options) => { fabRegistrations.push({ scope, ...options }); return () => {}; } },
   });
   const root = PreparationPage({ title: 'Tayyorlov', root: true, drawer: true });
   const rootHeader = findAll(root, node => node.type === 'RoleHeader')[0];
@@ -76,11 +77,10 @@ test('Android preparation headers show only the drawer at home and only back on 
   const actions = [{ id: 'receive', label: 'Kirim', icon: 'add_circle', width: 164 }];
   const select = () => {};
   const withFab = PreparationPage({ title: 'Tayyorlov', root: true, drawer: true, fabActions: actions, onFabSelect: select });
-  const fab = findAll(withFab, node => node.type === 'RoleFab')[0];
-  assert.equal(fab.props.actions, actions);
-  assert.equal(fab.props.onSelect, select);
-  assert.equal(fab.props.bottomOffset, 96);
-  assert.equal(fab.props.testIDPrefix, 'preparation-fab');
+  assert.equal(findAll(withFab, node => node.type === 'RoleFab').length, 0);
+  assert.equal(fabRegistrations.at(-1).scope, 'home');
+  assert.equal(fabRegistrations.at(-1).actions, actions);
+  assert.equal(fabRegistrations.at(-1).onSelect, select);
 });
 
 test('Android preparation dock has home, chat and profile with role-scoped routes', () => {

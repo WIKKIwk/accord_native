@@ -7,7 +7,7 @@ import Animated, { type SharedValue, useAnimatedReaction, useAnimatedStyle, useS
 
 export type RoleFabAction = { id: string; label: string; icon: AndroidSymbol; width: number };
 type Props = { actions: readonly RoleFabAction[]; onSelect: (id: string) => void; bottomOffset?: number;
-  testIDPrefix?: string; openLabel?: string; closeLabel?: string };
+  testIDPrefix?: string; openLabel?: string; closeLabel?: string; resetKey?: string };
 
 // AndroidX FAB menu springs: spatial motion, opacity, then the visible item count.
 const fastSpatial = { mass: 1, stiffness: 800, damping: 2 * 0.6 * Math.sqrt(800) };
@@ -49,13 +49,18 @@ function MenuItem({ action, index, count, visibleCount, open, width, onSelect, t
 
 /** Shared native FAB menu. Long role menus scroll within the available screen. */
 export function RoleFab({ actions, onSelect, bottomOffset = 96, testIDPrefix = 'role-fab',
-  openLabel = 'Amallarni ochish', closeLabel = 'Amallarni yopish' }: Props) {
+  openLabel = 'Amallarni ochish', closeLabel = 'Amallarni yopish', resetKey }: Props) {
   const colors = useMaterialColors(), { width: screenWidth } = useWindowDimensions();
   const [open, setOpen] = useState(false), [availableHeight, setAvailableHeight] = useState(0);
   const visibleCount = useSharedValue(0), checkedProgress = useSharedValue(0);
   const toggle = useCallback(() => setOpen(value => !value), []);
   const close = useCallback(() => setOpen(false), []);
 
+  useEffect(() => {
+    if (resetKey === undefined) return;
+    const frame = requestAnimationFrame(close);
+    return () => cancelAnimationFrame(frame);
+  }, [resetKey, close]);
   useEffect(() => {
     visibleCount.value = withSpring(open ? actions.length : 0, slowEffects);
     checkedProgress.value = withSpring(open ? 1 : 0, fastSpatial);

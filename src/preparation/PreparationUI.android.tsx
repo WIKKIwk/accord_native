@@ -8,8 +8,9 @@ import { uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { RoleBottomBar, type RoleNavigationItem } from '../shared/navigation/RoleBottomBar.android';
-import { RoleFab, type RoleFabAction } from '../shared/navigation/RoleFab.android';
+import type { RoleFabAction } from '../shared/navigation/RoleFab.android';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { usePreparationFab } from './PreparationFab.android';
 import { preparationInputError, preparationQuantityInput } from './preparationLogic';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -76,7 +77,10 @@ export function PreparationPage({ title, subtitle, children, refreshing, onRefre
 }) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = usePreparationText();
   const roleDrawer = useRoleDrawer();
-  const [dockHeight, setDockHeight] = useState(80 + insets.bottom);
+  const setDockHeight = usePreparationFab(root && fabActions && onFabSelect ? 'home' : null, {
+    actions: fabActions ?? [], onSelect: onFabSelect ?? (() => {}), enabled: !!fabActions?.length && !!onFabSelect,
+    visible: true, openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish'),
+  });
   const navigation = root && drawer ? { icon: 'menu' as const, label: t('Menyu'), onPress: roleDrawer.open, testID: 'preparation-menu' }
     : !root ? { icon: 'back' as const, label: t('Orqaga'), onPress: () => {
       if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href);
@@ -88,8 +92,6 @@ export function PreparationPage({ title, subtitle, children, refreshing, onRefre
       {children}
     </ScrollView>
     <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
-    {fabActions?.length && onFabSelect ? <RoleFab actions={fabActions} onSelect={onFabSelect} bottomOffset={dockHeight + 16}
-      testIDPrefix="preparation-fab" openLabel={t('Amallarni ochish')} closeLabel={t('Amallarni yopish')} /> : null}
   </View>;
 }
 

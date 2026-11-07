@@ -81,7 +81,7 @@ test('shared FAB opens, scrolls long menus, dispatches an action and closes on A
       useWindowDimensions: () => ({ width: 360 }) },
   });
   const actions = Array.from({ length: 7 }, (_, index) => ({ id: `action-${index}`, label: `Action ${index}`, icon: 'home', width: 240 }));
-  const render = () => { cursor = 0; effects.length = 0; return RoleFab({ actions, onSelect: id => calls.push(id), bottomOffset: 96 }); };
+  const render = resetKey => { cursor = 0; effects.length = 0; return RoleFab({ actions, onSelect: id => calls.push(id), bottomOffset: 96, resetKey }); };
   let tree = render();
   tree.props.onLayout({ nativeEvent: { layout: { height: 500 } } });
   tree = render();
@@ -100,4 +100,17 @@ test('shared FAB opens, scrolls long menus, dispatches an action and closes on A
   nodes(rendered, node => node.type === 'Button')[0].props.onClick();
   assert.deepEqual(calls, ['action-0']);
   assert.equal(nodes(render(), node => node.type === 'Pressable')[0].props.accessible, false);
+
+  const previousFrame = global.requestAnimationFrame, previousCancel = global.cancelAnimationFrame;
+  let scheduled;
+  global.requestAnimationFrame = callback => { scheduled = callback; return 1; };
+  global.cancelAnimationFrame = () => {};
+  try {
+    tree = render('home'); effects[0](); scheduled();
+    tree = render('home'); nodes(tree, node => node.type === fab)[0].props.onClick();
+    tree = render('warehouse');
+    assert.equal(nodes(tree, node => node.type === 'Pressable')[0].props.accessible, true);
+    effects[0](); scheduled();
+    assert.equal(nodes(render('warehouse'), node => node.type === 'Pressable')[0].props.accessible, false);
+  } finally { global.requestAnimationFrame = previousFrame; global.cancelAnimationFrame = previousCancel; }
 });

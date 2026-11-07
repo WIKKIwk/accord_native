@@ -25,6 +25,8 @@ test('Android preparation keeps earlier native screens attached with the default
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
     './PreparationUI.android': { PreparationDialogs: 'PreparationDialogs' },
     './PreparationDrawer.android': { PreparationDrawer: 'PreparationDrawer' },
+    './PreparationFab.android': { PreparationFabProvider: 'PreparationFabProvider' },
+    './usePreparationHome': { usePreparationHome: () => ({ controller: {} }) },
   };
   const filename = path.resolve(__dirname, '../src/preparation/PreparationContext.android.tsx');
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
@@ -41,4 +43,9 @@ test('Android preparation keeps earlier native screens attached with the default
   const home = nodes(navigator, node => node.type === 'Stack.Screen' && node.props.name === 'index')[0];
   assert.equal(home.props.options.presentation, 'card');
   assert.equal(home.props.activityEnabled, false);
+  const provider = nodes(page, node => typeof node.type === 'function' && node.type.name === 'Provider')[0];
+  const layout = provider.type(provider.props);
+  const drawer = nodes(layout, node => node.type === 'PreparationDrawer')[0];
+  assert.equal(drawer.props.children.type, 'PreparationFabProvider');
+  assert.equal(drawer.props.children.props.children.type, Stack);
 });

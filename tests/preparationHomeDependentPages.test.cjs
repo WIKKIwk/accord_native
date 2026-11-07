@@ -48,6 +48,7 @@ function setup(platform, screen) {
     '../components/useWorkerColors': { useWorkerColors: () => ({}) },
     '../nativeSheet': { useNativeSheet: () => sheet },
     './PreparationContext': context, './PreparationContext.android': context,
+    './PreparationFab.android': { usePreparationFab: () => () => {} },
     './PreparationUI': ui, './PreparationUI.android': ui,
     './preparationLogic': { preparationReceiptMode: () => 'warehouse', preparationVisibleMaterials: () => [],
       preparationReverseHistory: (entries, id, result) => [...entries.map(entry => entry.id === id ? { ...entry, reversed: true } : entry), result] },
