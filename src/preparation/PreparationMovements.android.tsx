@@ -5,7 +5,7 @@ import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import qrFactory from 'qrcode-generator';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text as NativeText, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
@@ -112,7 +112,7 @@ export function PreparationInventoryScreen() {
     </OrdersWorkspace>
     <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
     </View>
-    {asset ? <WorkerOrderSheet onClose={() => setAsset(null)} dismissible>
+    {asset ? <WorkerOrderSheet onClose={() => setAsset(null)} dismissible fitContent>
       <PreparationDialogs><AssetDetail asset={asset} inventory={inventory} assigned={assigned} close={() => setAsset(null)} /></PreparationDialogs>
     </WorkerOrderSheet> : null}
     {transfer ? <WorkerOrderSheet onClose={() => setTransfer(null)} dismissible compact>
@@ -150,16 +150,21 @@ const styles = StyleSheet.create({
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
   scan: { padding: 16, gap: 10 }, status: { padding: 16 }, fabSpace: { height: 112 },
-  sheet: { flex: 1 },
-  sheetContent: { padding: 16, gap: 16 },
-  sheetScroll: { flex: 1 },
+  sheet: { flexShrink: 1 },
+  sheetContent: { padding: 16, gap: 12 },
+  sheetScroll: { flexGrow: 0, flexShrink: 1 },
   sheetActions: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, gap: 4, borderTopWidth: StyleSheet.hairlineWidth },
-  sheetCodes: { gap: 12, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth },
+  sheetMainActions: { flexDirection: 'row', gap: 8 },
+  sheetAction: { flex: 1 },
+  sheetCodes: { gap: 12 },
 });
 
 function AssetDetail({ asset, inventory, assigned, close }: { asset: PreparationInventoryAsset; inventory: Inventory; assigned: readonly string[]; close: () => void }) {
   const [showQr, setShowQr] = useState(false), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const [showCodes, setShowCodes] = useState(false);
   const colors = useMaterialColors();
+  const { height } = useWindowDimensions(), insets = useSafeAreaInsets();
+  const sheetStyle = [styles.sheet, { maxHeight: Math.round((height - insets.top - insets.bottom) * 0.72) }];
   const { session } = usePreparationContext();
   const [finished, setFinished] = useState(false), [printing, setPrinting] = useState(false), [notice, setNotice] = useState<string | null>(null);
   const mounted = useRef(true), printBusy = useRef(false);
@@ -199,20 +204,25 @@ function AssetDetail({ asset, inventory, assigned, close }: { asset: Preparation
     } finally { printBusy.current = false; if (current()) setPrinting(false); }
   };
   const summary = <InventorySheetSummary title={asset.item_name || asset.item_code}
-    quantity={`${preparationInventoryQuantity(asset.qty)} ${asset.uom}`} status={t(preparationInventoryStatus(asset.status))}
-    caption={showQr ? t('Homashyo QR') : undefined} />;
-  const codes = <View style={[styles.sheetCodes, { borderTopColor: colors.outlineVariant }]}>
-    {asset.item_code ? <InventoryDetailRow label="Mahsulot kodi" value={asset.item_code} stacked /> : null}
-    <InventoryDetailRow label="Identifikator" value={showQr ? barcode : asset.identifier} stacked />
+    quantity={`${preparationInventoryQuantity(asset.qty)} ${asset.uom}`} status={t(preparationInventoryStatus(asset.status))} />;
+  const separateLocation = asset.physical_location.name && (asset.physical_location.kind !== 'warehouse' ||
+    asset.physical_location.name.trim().toLowerCase() !== asset.custody_warehouse.trim().toLowerCase());
+  const location = <>
+    <InventoryDetailRow label="Ombor" value={asset.custody_warehouse} />
+    {separateLocation ? <InventoryDetailRow label="Fizik joy" value={asset.physical_location.name} /> : null}
+  </>;
+  const codes = <View style={styles.sheetCodes}>
+    <InventorySheetButton label={showCodes ? 'Kodlarni yashirish' : 'Kodlarni ko‘rsatish'} kind="text" onPress={() => setShowCodes(value => !value)} />
+    {showCodes ? <>
+      {asset.item_code ? <InventoryDetailRow label="Mahsulot kodi" value={asset.item_code} stacked /> : null}
+      <InventoryDetailRow label="Identifikator" value={showQr ? barcode : asset.identifier} stacked />
+    </> : null}
   </View>;
-  if (showQr) return <View style={styles.sheet}>
+  if (showQr) return <View style={sheetStyle}>
     <ScrollView key="qr" nestedScrollEnabled style={styles.sheetScroll} contentContainerStyle={styles.sheetContent}>
       {summary}
-      {image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
-      <View>
-        {asset.custody_warehouse ? <InventoryDetailRow label="Ombor" value={asset.custody_warehouse} /> : null}
-        {asset.physical_location.name ? <InventoryDetailRow label="Fizik joy" value={asset.physical_location.name} /> : null}
-      </View>
+      {image ? <Image source={{ uri: image }} style={{ width: 176, height: 176, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
+      <View>{location}</View>
       {codes}
       {notice ? <PreparationText>{t(notice)}</PreparationText> : null}
     </ScrollView>
@@ -221,12 +231,11 @@ function AssetDetail({ asset, inventory, assigned, close }: { asset: Preparation
       <InventorySheetButton label="Yopish" kind="text" disabled={printing} onPress={close} />
     </View>
   </View>;
-  return <View style={styles.sheet}>
+  return <View style={sheetStyle}>
     <ScrollView key="details" nestedScrollEnabled style={styles.sheetScroll} contentContainerStyle={styles.sheetContent}>
       {summary}
       <View>
-        <InventoryDetailRow label="Ombor" value={asset.custody_warehouse} />
-        <InventoryDetailRow label="Fizik joy" value={asset.physical_location.name} />
+        {location}
         {showAssignment && barcode ? <PreparationInventoryAssignment session={session} barcode={barcode} allowAssignment={inventory.canTransfer(asset)}
           changed={() => inventory.assets.refresh()} isCurrent={inventory.current} />
           : asset.order_assignment ? <InventoryDetailRow label="Buyurtma" value={asset.order_assignment.order_label} /> : null}
@@ -234,8 +243,10 @@ function AssetDetail({ asset, inventory, assigned, close }: { asset: Preparation
       {codes}
     </ScrollView>
     <View style={[styles.sheetActions, { borderTopColor: colors.outlineVariant }]}>
-      {barcode ? <InventorySheetButton label="QR kodni ko‘rish" onPress={() => setShowQr(true)} /> : null}
-      {owns ? <InventorySheetButton label="Transfer" kind="outlined" disabled={!inventory.canTransfer(asset) || inventory.busy || finished} onPress={() => void transfer()} /> : null}
+      <View style={styles.sheetMainActions}>
+        {barcode ? <View style={styles.sheetAction}><InventorySheetButton label="QR kodni ko‘rish" onPress={() => setShowQr(true)} /></View> : null}
+        {owns ? <View style={styles.sheetAction}><InventorySheetButton label="Transfer" kind="outlined" disabled={!inventory.canTransfer(asset) || inventory.busy || finished} onPress={() => void transfer()} /></View> : null}
+      </View>
       <InventorySheetButton label="Yopish" kind="text" onPress={close} />
     </View>
   </View>;
