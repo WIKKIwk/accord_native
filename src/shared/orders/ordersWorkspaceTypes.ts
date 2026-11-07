@@ -15,6 +15,7 @@ export type OrdersWorkspaceProps = {
   header?: ReactNode;
   headerOffset?: SharedValue<number>;
   fontFamily?: string;
+  distributeTabs?: boolean;
   search?: string;
   onSearchChange?: (value: string) => void;
   onMenu?: () => void;

@@ -81,7 +81,7 @@ export function PreparationMaterialDetailScreen() {
     <StockSummary summary={state.summary} />
   </View>;
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
-    <OrdersWorkspace session={session} tabs={materialStockTabs.map(id => ({ id, name: t(materialStockTabLabels[id]) }))}
+    <OrdersWorkspace session={session} distributeTabs tabs={materialStockTabs.map(id => ({ id, name: t(materialStockTabLabels[id]) }))}
       selected={state.tab} onSelect={id => { if (materialStockTabs.includes(id as MaterialStockTab)) state.controller.select(id as MaterialStockTab); }}
       header={header} headerOffset={headerOffset}>
       {(id, pagerGesture) => {

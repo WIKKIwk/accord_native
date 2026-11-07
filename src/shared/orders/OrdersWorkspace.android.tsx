@@ -67,7 +67,7 @@ export function OrdersWorkspace(props: OrdersWorkspaceProps) {
   return <NativeOrdersTabs key={JSON.stringify(tabs.map(tab => tab.id))} {...props} tabs={tabs} />;
 }
 
-function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header, headerOffset, fontFamily }: OrdersWorkspaceProps & { tabs: readonly OrdersTab[] }) {
+function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header, headerOffset, fontFamily, distributeTabs }: OrdersWorkspaceProps & { tabs: readonly OrdersTab[] }) {
   const colors = useMaterialColors();
   const defaultHeaderOffset = useSharedValue(0);
   const offset = headerOffset ?? defaultHeaderOffset;
@@ -86,7 +86,7 @@ function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header,
   const pagePosition = useSharedValue(selectedIndex);
   const gestureStartPage = useSharedValue(selectedIndex);
   const gestureStartPosition = useSharedValue(selectedIndex);
-  const fixedWidth = tabs.length <= 2 && barWidth > 0 ? barWidth / tabs.length : undefined;
+  const fixedWidth = barWidth > 0 && (tabs.length <= 2 || (distributeTabs && barWidth / tabs.length >= 90)) ? barWidth / tabs.length : undefined;
 
   const selectPage = useCallback((index: number) => {
     const tab = tabs[index];
@@ -228,7 +228,7 @@ function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header,
     <View style={{ backgroundColor: colors.surfaceContainerLow }}>{header}</View>
     <View style={[styles.tabBar, { backgroundColor: colors.surfaceContainerLow }]} onLayout={event => setBarWidth(event.nativeEvent.layout.width)}>
       {/* Host.matchContents is mount-only: measure the row before mounting Hosts. */}
-      {barWidth > 0 ? <Animated.ScrollView ref={tabStrip} horizontal scrollEnabled={tabs.length > 2} showsHorizontalScrollIndicator={false}>
+      {barWidth > 0 ? <Animated.ScrollView ref={tabStrip} horizontal scrollEnabled={!fixedWidth} showsHorizontalScrollIndicator={false}>
         <View style={[styles.tabRow, fixedWidth ? { width: barWidth } : undefined]}>
           {tabs.map((tab, index) => <NativeTab key={tab.id} tab={tab} index={index} selected={selectedIndex === index}
             fixedWidth={fixedWidth} fontFamily={fontFamily} pagePosition={pagePosition} goToPage={goToPage}

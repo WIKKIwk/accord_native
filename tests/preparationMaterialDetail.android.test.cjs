@@ -58,6 +58,7 @@ test('material detail reuses the worker pager with Mavjud, Kirim, Chiqim and ind
   const tree = PreparationMaterialDetailScreen();
   const workspace = nodes(tree, node => node.type === 'OrdersWorkspace')[0];
   assert.deepEqual(workspace.props.tabs.map(tab => tab.name), ['Mavjud', 'Kirim', 'Chiqim']);
+  assert.equal(workspace.props.distributeTabs, true);
   assert.equal(workspace.props.selected, 'available');
   assert.deepEqual(calls[0], ['load', 'Own', 'BOPP']);
   const header = nodes(workspace.props.header, node => node.type === 'RoleHeader')[0];
