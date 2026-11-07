@@ -67,6 +67,13 @@ test('one FAB stays mounted and visible across home, warehouse loading and back'
   assert.equal(overlay(tree).props.style[1].opacity, 1);
   assert.equal(overlay(tree).props.pointerEvents, 'none');
 
+  context.setDockHeight(24);
+  tree = render(); context = tree.props.value;
+  assert.equal(getFab(tree).props.bottomOffset, 120, 'a partially measured dock must not move the FAB');
+  context.setDockHeight(104);
+  tree = render(); context = tree.props.value;
+  assert.equal(getFab(tree).props.bottomOffset, 120);
+
   const warehouseOwner = {};
   let unregisterWarehouse = context.register('warehouse', warehouseOwner, options([], false, true, 'warehouse'));
   tree = render(); context = tree.props.value;

@@ -36,7 +36,11 @@ export function PreparationFabProvider({ children }: { children: ReactNode }) {
       const next = { ...previous }; delete next[scope]; return next;
     });
   }, []);
-  const setDockHeight = useCallback((height: number) => { if (height > 0) updateDockHeight(height); }, []);
+  // The Compose navigation bar initially reports only its bottom inset while it
+  // measures. Keep the previous height until the full Material bar is laid out.
+  const setDockHeight = useCallback((height: number) => {
+    if (Number.isFinite(height) && height >= 80 + insets.bottom - 1) updateDockHeight(height);
+  }, [insets.bottom]);
   const context = useMemo(() => ({ register, setDockHeight }), [register, setDockHeight]);
   const scope = fabScope(pathname), entry = scope ? entries[scope] : undefined;
   const visible = scope !== null && (entry?.visible ?? true);
