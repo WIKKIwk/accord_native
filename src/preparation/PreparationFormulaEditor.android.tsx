@@ -9,6 +9,7 @@ import { usePreparationContext } from './PreparationContext.android';
 import { PreparationFormulaEditForm } from './PreparationFormulaEditForm.android';
 import { PreparationFormulaMenu } from './PreparationFormulaMenu.android';
 import { PreparationFormulaDetails, type FormulaDetailAction } from './PreparationFormulaDetails.android';
+import { InventorySheetButton } from './PreparationInventoryDetails.android';
 import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
 import type { PreparationMaterial } from './preparationLogic';
 import { preparationDisplay, preparationFormulaSharesComplete, type PreparationFormula } from './preparationModel';
@@ -131,10 +132,10 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
             if (!blocked && action !== 'rename') void formulaAction(formula, action);
           }} />} />;
       })}
-      {(!options.manageSavedFormula || options.allowAddingFormula) ? <PreparationButton
+      {(!options.manageSavedFormula || options.allowAddingFormula) ? <InventorySheetButton large
         label={options.manageSavedFormula ? 'Ichki formula qo‘shish' : 'Shnek formula qo‘shish'} disabled={blocked}
         onPress={() => state.controller.openEditor()} /> : null}
-      {!options.manageSavedFormula && canOpenScale ? <PreparationButton label="Ishlab chiqarishni boshlash" disabled={blocked}
+      {!options.manageSavedFormula && canOpenScale ? <InventorySheetButton large label="Ishlab chiqarishni boshlash" disabled={blocked}
         onPress={() => { void state.controller.startProduction(canOpenScale, args => new Promise<void>((resolve, reject) => {
           scaleReturn.current = resolve;
           try { openPreparationScale(args); } catch (error) { scaleReturn.current = null; reject(error); }
