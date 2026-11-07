@@ -16,7 +16,7 @@ export default function NativeSheetRoute() {
 
   if (!sheet) return <Redirect href="/" />;
   return <SecurityContext.Provider value={sheet.security}>
-    <WorkerOrderSheet onClose={close} compact={sheet.options.compact} dismissible={sheet.options.dismissible}>
+    <WorkerOrderSheet onClose={close} compact={sheet.options.compact} fitContent={sheet.options.fitContent} dismissible={sheet.options.dismissible}>
       {sheet.content}
     </WorkerOrderSheet>
   </SecurityContext.Provider>;

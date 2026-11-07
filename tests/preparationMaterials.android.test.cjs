@@ -11,7 +11,7 @@ function nodes(node, predicate) {
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
 test('materials use the warehouse list and retain search, refresh and row actions', async () => {
-  const calls = [], sheets = []; let expanded = false;
+  const calls = [], sheets = []; let expanded = false, sheetOptions;
   const state = { query: '', items: [{ item_code: 'B', name: 'BOPP', warehouses: ['Own'] }], loading: false, refreshing: false,
     saving: false, error: null, actionsBlocked: false, controller: { setQuery: value => calls.push(['query', value]),
       load: async refresh => calls.push(['load', refresh]), rename: async (item, name) => { calls.push(['rename', item.item_code, name]); return true; },
@@ -32,7 +32,7 @@ test('materials use the warehouse list and retain search, refresh and row action
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
-    '../nativeSheet': { useNativeSheet: () => ({ open: content => sheets.push(content), close() {} }) },
+    '../nativeSheet': { useNativeSheet: () => ({ open: (content, options) => { sheets.push(content); sheetOptions = options; }, close() {} }) },
     './PreparationContext.android': { usePreparationContext: () => ({ session: {} }) },
     './PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     './PreparationFab.android': { usePreparationFab: () => () => {} }, './PreparationUI.android': ui,
@@ -71,6 +71,7 @@ test('materials use the warehouse list and retain search, refresh and row action
     assert.deepEqual(calls.at(-1), ['rename', 'B', 'Updated']); assert.equal(expanded, false);
     options[1].props.onClick(); await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(calls.at(-1), ['choices', 'B']); assert.equal(sheets[0].props.name, 'BOPP');
+    assert.equal(sheetOptions.fitContent, true); assert.equal(sheetOptions.compact, true);
     options[2].props.onClick(); await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(calls.at(-1), ['delete', 'B']);
   } finally { global.requestAnimationFrame = previousFrame; }

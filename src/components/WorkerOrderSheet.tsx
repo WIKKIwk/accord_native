@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 
-type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean };
+type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean; fitContent?: boolean };
 
 export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false }: Props) {
   const sheet = useRef<BottomSheetMethods>(null);

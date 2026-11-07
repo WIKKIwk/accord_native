@@ -1,5 +1,5 @@
-import { Checkbox, Column, DropdownMenu, DropdownMenuItem, Host, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { clickable, fillMaxWidth, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
+import { Button, Checkbox, Column, DropdownMenu, DropdownMenuItem, Host, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { background, clickable, clip, fillMaxWidth, height, padding, semantics, Shapes, size } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
@@ -55,7 +55,7 @@ function MaterialRow({ name, subtitle, blocked, choose, first, last }: { name: s
 const passthroughListItems = () => true;
 
 function AssignmentSheet({ name, choices, save }: { name: string; choices: Choices; save: (selected: string[]) => void }) {
-  const t = usePreparationText();
+  const t = usePreparationText(), colors = useMaterialColors();
   const initial = choices.filter(choice => choice.selected).map(choice => choice.name).sort();
   const [selected, setSelected] = useState(initial);
   const changed = JSON.stringify([...selected].sort()) !== JSON.stringify(initial);
@@ -65,7 +65,7 @@ function AssignmentSheet({ name, choices, save }: { name: string; choices: Choic
     <PreparationText title>{t('Omborga biriktirish')}</PreparationText><PreparationText>{name}</PreparationText>
     {choices.length === 0 ? <PreparationText>{t('Sizga exclusive ombor biriktirilmagan.')}</PreparationText> : null}
     {choices.map(choice => <Host key={choice.name} matchContents={{ vertical: true }} style={{ width: '100%' }}>
-      <Row verticalAlignment="center" modifiers={[fillMaxWidth(), ...(choice.editable
+      <Row verticalAlignment="center" modifiers={[fillMaxWidth(), clip(Shapes.RoundedCorner(12)), background(colors.surface), padding(8, 2, 12, 2), ...(choice.editable
         ? [clickable(() => toggle(choice.name, !selected.includes(choice.name)))] : [])]}>
         <Checkbox value={selected.includes(choice.name)} enabled={choice.editable}
           onCheckedChange={value => toggle(choice.name, value)} />
@@ -73,7 +73,10 @@ function AssignmentSheet({ name, choices, save }: { name: string; choices: Choic
       </Row>
     </Host>)}
     <PreparationText>{t('Bu amal ombordagi qoldiqni ko‘chirmaydi.')}</PreparationText>
-    <PreparationButton label="Saqlash" disabled={!changed} onPress={() => save([...selected].sort())} />
+    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Button enabled={changed}
+      onClick={() => save([...selected].sort())} modifiers={[fillMaxWidth(), height(56)]}>
+      <Text style={{ typography: 'titleMedium' }}>{t('Saqlash')}</Text>
+    </Button></Host>
   </View>;
 }
 
@@ -103,7 +106,7 @@ export function PreparationMaterialsScreen() {
           afterAssignment.current = () => { void state.controller.setWarehouses(item, selected)
             .then(saved => { if (saved) notice.show(t('Ombor biriktirish yangilandi')); }).catch(failure); };
           assignmentSheet.close();
-        }} />, { compact: true, dismissible: true, onDismiss: () => {
+        }} />, { compact: true, fitContent: true, dismissible: true, onDismiss: () => {
           const next = afterAssignment.current; afterAssignment.current = null; next?.();
         } });
       }

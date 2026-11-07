@@ -5,6 +5,7 @@ import { SecurityContext } from './components/WorkerSecurity';
 export type NativeSheetOptions = {
   onDismiss?: () => void;
   compact?: boolean;
+  fitContent?: boolean;
   dismissible?: boolean;
 };
 

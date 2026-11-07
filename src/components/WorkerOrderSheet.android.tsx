@@ -5,9 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 
-type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean };
+type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean; fitContent?: boolean };
 
-export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false }: Props) {
+export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false, fitContent = false }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const colors = useWorkerColors();
@@ -18,9 +18,9 @@ export function WorkerOrderSheet({ children, onClose, dismissible = false, compa
       sheetGesturesEnabled={dismissible} showDragHandle={dismissible} containerColor={colors.field}
       properties={{ shouldDismissOnBackPress: true, shouldDismissOnClickOutside: dismissible }}>
       <RNHostView matchContents>
-        <View style={{ width, height: sheetHeight, paddingBottom: insets.bottom }}>
+        <View style={{ width, ...(fitContent ? { maxHeight: sheetHeight } : { height: sheetHeight }), paddingBottom: insets.bottom }}>
           <WorkerSheetCloseContext.Provider value={onClose}>
-            {compact ? <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: 8 }}>
+            {compact ? <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={fitContent ? { flexGrow: 0, flexShrink: 1 } : undefined} contentContainerStyle={{ paddingTop: 8 }}>
               {children}
             </ScrollView> : children}
           </WorkerSheetCloseContext.Provider>
