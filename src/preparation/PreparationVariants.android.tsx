@@ -19,7 +19,8 @@ import { PreparationButton, PreparationDock, PreparationPage, PreparationRow, Pr
 import { preparationVariantNameCanSave } from './usePreparationLibrary';
 import { usePreparationVariantsView } from './usePreparationAndroidView.android';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
-import { preparationReuseSubtitle, type PreparationVariantsOptions, type PreparationVariantsState } from './usePreparationVariants';
+import { preparationCatalogSubtitle } from './preparationLibraryPresentation';
+import type { PreparationVariantsOptions, PreparationVariantsState } from './usePreparationVariants';
 import { usePreparationReusePicker } from './usePreparationReusePicker.android';
 import { preparationVariantRemoveMessage, preparationVariantRemovedMessage, preparationVariantSubtitle } from './preparationVariantPresentation';
 import { usePreparationNotice } from './usePreparationNotice';
@@ -28,8 +29,8 @@ type Options = PreparationVariantsOptions & { orderCode: string; productTitle: s
 type Variant = ReturnType<typeof usePreparationVariantsView>['variants'][number];
 const passthroughListItems = () => true;
 
-function VariantRow({ variant, disabled, first, last, onPress, onLongPress }: {
-  variant: Variant; disabled: boolean; first: boolean; last: boolean; onPress: () => void; onLongPress: () => void;
+function VariantRow({ title, subtitle, disabled = false, first, last, onPress, onLongPress }: {
+  title: string; subtitle: string; disabled?: boolean; first: boolean; last: boolean; onPress: () => void; onLongPress?: () => void;
 }) {
   const colors = useMaterialColors();
   return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last}
@@ -38,8 +39,8 @@ function VariantRow({ variant, disabled, first, last, onPress, onLongPress }: {
       <SymbolView name={{ android: 'functions' }} size={20} tintColor={colors.onSurfaceVariant} />
     </View>
     <View style={styles.rowText}>
-      <NativeText style={[styles.headline, { color: colors.onSurface }]}>{variant.name}</NativeText>
-      <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{preparationVariantSubtitle(variant)}</NativeText>
+      <NativeText style={[styles.headline, { color: colors.onSurface }]}>{title}</NativeText>
+      <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</NativeText>
     </View>
   </WorkerQueueCard>;
 }
@@ -57,21 +58,23 @@ function VariantActions({ variant, choose }: { variant: Variant; choose: (action
 function ReusePicker({ controller, close, choose }: { controller: PreparationVariantsState; close: () => void; choose: (id: string) => void }) {
   const picker = usePreparationReusePicker(controller), query = useNativeState(''), t = usePreparationText();
   return <WorkerOrderSheet onClose={close} dismissible>
-    <View style={{ flex: 1, padding: 16, gap: 10 }}>
+    <View style={{ flex: 1, paddingTop: 8, gap: 12 }}>
+      <View style={{ paddingHorizontal: 16, gap: 12 }}>
       <PreparationText title>{t('Shnek formulasini tanlang')}</PreparationText>
       <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={query} singleLine autoFocus
         onValueChange={picker.setQuery} modifiers={[fillMaxWidth(), testID('preparation-variant-reuse-search')]}>
         <OutlinedTextField.Label><Text>{t('Formula nomi, kodi yoki buyurtmani qidirish')}</Text></OutlinedTextField.Label>
       </OutlinedTextField></Host>
-      <FlatList data={picker.items} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled"
+      </View>
+      <FlatList data={picker.items} keyExtractor={item => item.id} nestedScrollEnabled keyboardShouldPersistTaps="handled"
         onEndReached={picker.loadMore} onEndReachedThreshold={0.4}
-        renderItem={({ item }) => <PreparationRow title={item.name} subtitle={preparationReuseSubtitle(item)} onPress={() => choose(item.id)} />}
-        contentContainerStyle={{ gap: 8, paddingBottom: 16, flexGrow: 1 }}
-        ListEmptyComponent={!picker.loading && !picker.error ? <PreparationText>{t('Formula topilmadi.')}</PreparationText> : undefined}
+        renderItem={({ item, index }) => <VariantRow title={item.name} subtitle={preparationCatalogSubtitle(item)}
+          first={index === 0} last={index === picker.items.length - 1} onPress={() => choose(item.id)} />}
+        contentContainerStyle={{ paddingBottom: 8, flexGrow: 1 }}
+        ListEmptyComponent={!picker.loading && !picker.error ? <View style={styles.context}><PreparationText>{t('Formula topilmadi.')}</PreparationText></View> : undefined}
         ListFooterComponent={<>{picker.loading ? <ActivityIndicator /> : null}
-          {picker.error ? <><PreparationText>{picker.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={picker.retry} /></> : null}
-          {picker.hasMore && !picker.loading && !picker.error ? <PreparationButton label="Yana yuklash" onPress={picker.loadMore} /> : null}</>} />
-      <PreparationButton label="Bekor qilish" onPress={close} />
+          {picker.error ? <View style={styles.context}><PreparationText>{picker.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={picker.retry} /></View> : null}</>} />
+      <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}><PreparationButton label="Bekor qilish" onPress={close} /></View>
     </View>
   </WorkerOrderSheet>;
 }
@@ -180,7 +183,7 @@ function Variants({ options }: { options: Options }) {
       {state.error ? <View style={styles.context}><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => void state.controller.load()} /></View> : null}
       {state.nameError && !nameDialog ? <View style={styles.context}><PreparationText>{state.nameError}</PreparationText></View> : null}
       {!state.loading && !state.error && !state.variants.length ? <View style={styles.context}><PreparationText>{t('Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.')}</PreparationText></View> : null}
-      {state.variants.map((variant, index) => <VariantRow key={variant.id} variant={variant}
+      {state.variants.map((variant, index) => <VariantRow key={variant.id} title={variant.name} subtitle={preparationVariantSubtitle(variant)}
         first={index === 0} last={index === state.variants.length - 1} disabled={blocked}
         onPress={() => open(variant)} onLongPress={() => menu(variant)} />)}
       <View style={{ height: 112 }} />

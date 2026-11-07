@@ -16,6 +16,7 @@ function setup() {
   const calls = [], slots = [], options = { orderId: 'order-1', orderCode: '0284', productCode: 'product-1', productTitle: 'Product', materialId: 'PE', materialName: 'PE' };
   let cursor = 0, fab;
   const variant = { id: 'variant-1', name: 'Variant', formula_code: 'F1', formula_count: 0, shares_complete: false };
+  const source = { ...variant, id: 'source-1' };
   const state = { variants: [variant], loading: false, actionsBlocked: false, creating: false };
   const controller = {
     load: async () => { calls.push(['load']); },
@@ -35,14 +36,16 @@ function setup() {
   const ui = new Proxy({ usePreparationText: () => value => value, usePreparationDialogs: () => ({}) },
     { get: (object, key) => object[key] ?? key });
   const mocks = {
-    'react/jsx-runtime': jsx, react, '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
-    '@expo/ui/jetpack-compose/modifiers': {}, 'expo-symbols': { SymbolView: 'SymbolView' },
+    'react/jsx-runtime': jsx, react, '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), useNativeState: value => ({ value }),
+      Host: 'Host', OutlinedTextField: Object.assign(() => {}, { Label: 'FieldLabel' }), Text: 'Text' },
+    '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}), testID: value => value }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { useFocusEffect() {}, useLocalSearchParams: () => ({ data: 'route-data' }),
       router: { canGoBack: () => true, back: () => calls.push(['back']) } },
-    'react-native': { View: 'View', Text: 'Text', StyleSheet: { create: value => value } },
+    'react-native': { View: 'View', Text: 'Text', FlatList: 'FlatList', StyleSheet: { create: value => value } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24 }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
+    '../components/WorkerOrderSheet': { WorkerOrderSheet: 'WorkerOrderSheet' },
     '../nativeSheet': { useNativeSheet: () => ({ open: () => calls.push(['menu']), close() {} }) },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     './PreparationContext.android': { usePreparationContext: () => ({ session: {} }) },
@@ -51,6 +54,9 @@ function setup() {
     './usePreparationNotice': { usePreparationNotice: () => ({ message: '', show() {} }) },
     './preparationNavigation.android': { readPreparationRouteData: () => options, openPreparationFormula: value => calls.push(['formula', value]) },
     './preparationVariantPresentation': { preparationVariantSubtitle: () => 'F1 • Tarkib hali kiritilmagan' },
+    './preparationLibraryPresentation': { preparationCatalogSubtitle: () => 'F1 • Product • PE' },
+    './usePreparationReusePicker.android': { usePreparationReusePicker: () => ({ items: [source], loading: false, error: null,
+      hasMore: true, setQuery: value => calls.push(['search', value]), loadMore: () => calls.push(['more']) }) },
   };
   const filename = path.resolve(__dirname, '../src/preparation/PreparationVariants.android.tsx'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
@@ -59,7 +65,7 @@ function setup() {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
   const wrapper = mod.exports.PreparationFormulaVariantsScreen();
-  return { calls, state, options, variant, fab: () => fab, render: () => { cursor = 0; return wrapper.type(wrapper.props); } };
+  return { calls, state, options, variant, source, fab: () => fab, render: () => { cursor = 0; return wrapper.type(wrapper.props); } };
 }
 
 test('variant cards keep opening, long press and refresh behavior in the shared list', async () => {
@@ -92,7 +98,15 @@ test('variant FAB starts create and reuse flows and blocks actions while a flow 
   const picker = nodes(tree, node => node.type?.name === 'ReusePicker')[0];
   assert.ok(picker); picker.props.close(); x.render(); assert.deepEqual(x.calls.at(-1), ['cancelReuse']);
   x.fab().onSelect('reuse'); tree = x.render();
-  nodes(tree, node => node.type?.name === 'ReusePicker')[0].props.choose('source-1'); await tick();
+  const openedPicker = nodes(tree, node => node.type?.name === 'ReusePicker')[0];
+  const sheet = openedPicker.type(openedPicker.props);
+  nodes(sheet, node => typeof node.props?.onValueChange === 'function')[0].props.onValueChange('PE');
+  assert.deepEqual(x.calls.at(-1), ['search', 'PE']);
+  const list = nodes(sheet, node => node.type === 'FlatList')[0];
+  list.props.onEndReached(); assert.deepEqual(x.calls.at(-1), ['more']);
+  const row = list.props.renderItem({ item: x.source, index: 0 }), card = row.type(row.props);
+  assert.equal(card.type, 'WorkerQueueCard');
+  card.props.onPress(); await tick();
   assert.ok(x.calls.some(call => call[0] === 'reuse' && call[1] === 'source-1'));
   assert.equal(x.calls.at(-1)[0], 'formula'); assert.equal(x.calls.at(-1)[1].materialId, 'PE');
 });
