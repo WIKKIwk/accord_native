@@ -2,7 +2,7 @@ import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
@@ -26,7 +26,7 @@ import { preparationWarehouseDeleteMessage, preparationWarehouseErrorMessage } f
 import { usePreparationNotice } from './usePreparationNotice';
 import { usePreparationStockActions } from './usePreparationStockActions.android';
 import { openPreparationScale } from './preparationNavigation.android';
-import { PreparationButton, PreparationDock, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDock, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 function useStockReturnReload(controller: ReturnType<typeof usePreparationContext>['home']['controller']) {
   useFocusEffect(useCallback(() => { void controller.loadForPage(); }, [controller]));
@@ -172,7 +172,12 @@ const styles = StyleSheet.create({
 // @v2 PreparationHistoryScreen
 export function PreparationHistoryScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
+  const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
+    openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
   const sheet = useNativeSheet(), notice = usePreparationNotice(), afterSheet = useRef<(() => void) | null>(null);
+  const [query, setQuery] = useState('');
   const [optimistic, setOptimistic] = useState<{ snapshot: typeof home.snapshot; history: Record<string, unknown>[] } | null>(null);
   const history = optimistic && optimistic.snapshot === home.snapshot ? optimistic.history : home.snapshot?.history ?? [];
   useEffect(() => { void home.controller.loadForPage(); }, [home.controller]);
@@ -202,15 +207,35 @@ export function PreparationHistoryScreen() {
       const next = afterSheet.current; afterSheet.current = null; next?.();
     } });
   };
-  return <View style={{ flex: 1 }}><PreparationPage title="Tarix" refreshing={home.loading} onRefresh={() => void home.controller.reload()}>
+  const search = query.trim().toLowerCase();
+  const entries = history.map(doc => ({ doc, card: preparationHistoryCard(doc) })).filter(({ card }) =>
+    !search || `${card.title} ${card.subtitle} ${card.value}`.toLowerCase().includes(search));
+  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
+    <OrdersHeader search={query} searchPlaceholder={t('Qidirish')} onSearchChange={setQuery}
+      onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }}
+      onProfile={() => router.navigate('/android-preparation/profile' as Href)} />
+    <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={passthroughListItems}
+      onRefresh={async () => { await home.controller.reload(); }}>
     {home.error ? <><PreparationRow title={t('Xatolik yuz berdi')} subtitle={home.error} />
       <PreparationButton label="Qayta urinish" onPress={() => { void home.controller.reload(); }} /></> : null}
-    <PreparationText>{t('Oxirgi 100 ta kirim va sarf')}</PreparationText>
-    {home.snapshot && !history.length ? <PreparationText>{t('Hali kirim yoki sarf yo‘q.')}</PreparationText> : null}
-    {history.map((doc, index) => {
-      const card = preparationHistoryCard(doc);
-      return <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={card.title} subtitle={`${card.subtitle}\n${card.value}`}
-        onLongPress={doc.kind === 'receipt' && doc.reversed !== true ? () => openActions(doc) : undefined} />;
-    })}
-  </PreparationPage><PreparationNotice message={notice.message} /></View>;
+    <View style={styles.empty}><PreparationText>{t('Oxirgi 100 ta kirim va sarf')}</PreparationText></View>
+    {home.loading && !home.snapshot ? <ActivityIndicator /> : null}
+    {home.snapshot && !home.error && !entries.length ? <View style={styles.empty}><PreparationText>{t(search ? 'Tarixda hech narsa topilmadi.' : 'Hali kirim yoki sarf yo‘q.')}</PreparationText></View> : null}
+    {entries.map(({ doc, card }, index) => <HistoryRow key={`${String(doc.id ?? '')}-${index}`} title={card.title}
+      subtitle={`${card.subtitle}\n${card.value}`} first={index === 0} last={index === entries.length - 1}
+      onLongPress={doc.kind === 'receipt' && doc.reversed !== true ? () => openActions(doc) : undefined} />)}
+    </OrdersList>
+    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+    <PreparationNotice message={notice.message} /></View>;
+}
+
+function HistoryRow({ title, subtitle, first, last, onLongPress }: { title: string; subtitle: string; first: boolean; last: boolean; onLongPress?: () => void }) {
+  const colors = useMaterialColors();
+  return <WorkerQueueCard first={first} last={last} backgroundColor={colors.surface} onPress={onLongPress} onLongPress={onLongPress}>
+    <View accessible={false} style={[styles.materialIcon, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <SymbolView name={{ android: 'history' }} size={20} tintColor={colors.onSurfaceVariant} />
+    </View>
+    <View style={styles.materialText}><Text style={[styles.headline, { color: colors.onSurface }]}>{title}</Text>
+      <Text style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</Text></View>
+  </WorkerQueueCard>;
 }

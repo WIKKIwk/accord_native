@@ -46,6 +46,9 @@ function setup(platform, screen) {
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
     '../components/useWorkerColors': { useWorkerColors: () => ({}) },
+    '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
+    '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
+    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../nativeSheet': { useNativeSheet: () => sheet },
     './PreparationContext': context, './PreparationContext.android': context,
     './PreparationFab.android': { usePreparationFab: () => () => {} },
@@ -76,6 +79,24 @@ function setup(platform, screen) {
   };
   return { home, render, focus: () => focus(), loads: () => loads, sheetContent: () => sheetContent };
 }
+
+test('android history uses shared search and virtual list while retaining receipt actions', () => {
+  const view = setup('android', 'History');
+  view.home.loading = false;
+  view.home.snapshot = { history: [
+    { id: '1', name: 'BOPP', kind: 'receipt', can_reverse: true },
+    { id: '2', name: 'PET', kind: 'receipt', can_reverse: true },
+  ] };
+  let page = view.render();
+  const header = findAll(page, node => node.type === 'OrdersHeader')[0];
+  assert.ok(header); assert.ok(findAll(page, node => node.type === 'OrdersList').length);
+  header.props.onSearchChange('bopp');
+  page = view.render();
+  assert.equal(findAll(page, node => node.props?.title === 'BOPP').length, 1);
+  assert.equal(findAll(page, node => node.props?.title === 'PET').length, 0);
+  findAll(page, node => node.props?.title === 'BOPP')[0].props.onLongPress();
+  assert.ok(findAll(view.sheetContent(), node => node.props?.title === 'Kirimni bekor qilish').length);
+});
 
 for (const platform of ['ios', 'android']) {
   test(`${platform}: history accepts a snapshot that arrives after the screen opens`, () => {
