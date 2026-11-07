@@ -2,7 +2,7 @@ import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { WorkerControlException } from '../workerControlsApi';
 import { jsonObject, preparationOwnedMaterialFromJson } from './preparationModel';
-import { preparationGuard, withQuery } from './preparationRequest';
+import { preparationGuard, preparationResponse, withQuery } from './preparationRequest';
 
 const materialMessages: Record<string, string> = {
   preparation_material_not_owned: 'Faqat o‘zingiz yaratgan homashyoni boshqarishingiz mumkin',
@@ -55,6 +55,25 @@ export async function preparationOwnedMaterials(session: Session) {
   const data = await managementRequest(session, 'GET', {}, 'material');
   if (!Array.isArray(data.materials)) throw new TypeError('Invalid materials');
   return data.materials.map(preparationOwnedMaterialFromJson);
+}
+/** Fresh assignment options without loading the full preparation snapshot. */
+export async function preparationMaterialWarehouseOptions(session: Session, itemCode: string) {
+  const code = itemCode.trim();
+  if (!code) invalid('Homashyo kodi noto‘g‘ri');
+  const guard = preparationGuard(session, true);
+  const response = await authorizedFetch(session, withQuery('/v1/mobile/preparation/materials/warehouses', { item_code: code }),
+    { headers: { 'Cache-Control': 'no-cache' } }, guard);
+  guard();
+  // Older servers only support PATCH at this path.
+  if (response.status === 404 || response.status === 405) return null;
+  const data = await preparationResponse(response);
+  guard();
+  if (data.item_code !== code || !Array.isArray(data.warehouses) || !Array.isArray(data.editable_warehouses) ||
+      data.warehouses.some(value => typeof value !== 'string' || !value.trim()) ||
+      data.editable_warehouses.some(value => typeof value !== 'string' || !value.trim())) {
+    invalid('Omborlar ro‘yxati mos kelmadi. Qayta urinib ko‘ring');
+  }
+  return { assigned: data.warehouses as string[], editable: data.editable_warehouses as string[] };
 }
 /** @v2 preparationRenameMaterial */
 export async function preparationRenameMaterial(session: Session, itemCode: string, name: string) {

@@ -49,6 +49,26 @@ test('delete and warehouse assignment keep the server confirmation', async () =>
   await run.api.preparationOwnedMaterials(run.session);
   assert.deepEqual((await run.api.preparationSetMaterialWarehouses(run.session, 'PREP-1', ['Second'])).warehouses, ['Second']); run.replay.assertDone();
 });
+test('warehouse options use the lightweight scoped read and validate the response', async () => {
+  let status = 200, body = { item_code: 'PREP-1', warehouses: ['Shared'], editable_warehouses: ['Own'] };
+  const calls = [];
+  const api = load('preparationManagementApi', {
+    '../workerControlsApi': { WorkerControlException: class extends Error { constructor(code, message, statusCode) { super(message); this.code = code; this.statusCode = statusCode; } } },
+    '../authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => { guard(); calls.push(url);
+      return new Response(JSON.stringify(body), { status }); } },
+  });
+  const session = { baseUrl: 'https://test.invalid', profile: { role: 'tayyorlov_masteri', ref: 'prep' }, capabilities: ['preparation.access'] };
+  assert.deepEqual(await api.preparationMaterialWarehouseOptions(session, ' PREP-1 '), { assigned: ['Shared'], editable: ['Own'] });
+  assert.equal(calls[0], '/v1/mobile/preparation/materials/warehouses?item_code=PREP-1');
+  body = { ...body, item_code: 'OTHER' };
+  await assert.rejects(api.preparationMaterialWarehouseOptions(session, 'PREP-1'), /mos kelmadi/);
+  body = { item_code: 'PREP-1', warehouses: ['Shared'], editable_warehouses: [1] };
+  await assert.rejects(api.preparationMaterialWarehouseOptions(session, 'PREP-1'), /mos kelmadi/);
+  status = 405;
+  assert.equal(await api.preparationMaterialWarehouseOptions(session, 'PREP-1'), null);
+  status = 403; body = { error: 'forbidden' };
+  await assert.rejects(api.preparationMaterialWarehouseOptions(session, 'PREP-1'), error => error.statusCode === 403);
+});
 // @v2-test test/preparation_warehouse_management_test.dart
 for (const code of ['preparation_warehouse_name_taken', 'preparation_warehouse_not_exclusive', 'unknown']) {
   test(`warehouse rename preserves error mapping: ${code}`, async () => {

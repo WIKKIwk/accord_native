@@ -16,7 +16,7 @@ test('materials use the warehouse list and retain search, refresh and row action
     saving: false, error: null, actionsBlocked: false, controller: { setQuery: value => calls.push(['query', value]),
       load: async refresh => calls.push(['load', refresh]), rename: async (item, name) => { calls.push(['rename', item.item_code, name]); return true; },
       remove: async item => { calls.push(['delete', item.item_code]); return true; },
-      warehouseChoices: async item => { calls.push(['choices', item.item_code]); return [{ name: 'Own', editable: true, selected: true }]; } } };
+      warehouseChoices: async (item, options) => { calls.push(['choices', item.item_code, options]); return [{ name: 'Own', editable: true, selected: true }]; } } };
   state.filtered = state.items;
   const ui = new Proxy({ usePreparationText: () => value => value, usePreparationDialogs: () => ({
     input: async () => 'Updated', confirm: async () => true,
@@ -33,11 +33,12 @@ test('materials use the warehouse list and retain search, refresh and row action
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
     '../nativeSheet': { useNativeSheet: () => ({ open: (content, options) => { sheets.push(content); sheetOptions = options; }, close() {} }) },
-    './PreparationContext.android': { usePreparationContext: () => ({ session: {} }) },
+    './PreparationContext.android': { usePreparationContext: () => ({ session: {}, home: { snapshot: { material_warehouses: ['Own', 'Other'] } } }) },
     './PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     './PreparationFab.android': { usePreparationFab: () => () => {} }, './PreparationUI.android': ui,
     './usePreparationAndroidView.android': { usePreparationMaterialsView: () => state },
     './usePreparationNotice': { usePreparationNotice: () => ({ message: '', show() {} }) },
+    './preparationLogic': { preparationWarehouseChoices: (editable, selected) => [...new Set([...editable, ...selected])].sort().map(name => ({ name, editable: editable.includes(name), selected: selected.includes(name) })) },
     './usePreparationMaterials': { preparationMaterialsEmptyMessage: () => 'empty', preparationMaterialDeleteMessage: () => 'confirm' },
   };
   const filename = path.resolve(__dirname, '../src/preparation/PreparationMaterials.android.tsx'), mod = new Module(filename, module);
@@ -69,9 +70,11 @@ test('materials use the warehouse list and retain search, refresh and row action
   try {
     options[0].props.onClick(); await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(calls.at(-1), ['rename', 'B', 'Updated']); assert.equal(expanded, false);
-    options[1].props.onClick(); await new Promise(resolve => setImmediate(resolve));
-    assert.deepEqual(calls.at(-1), ['choices', 'B']); assert.equal(sheets[0].props.name, 'BOPP');
+    options[1].props.onClick();
+    assert.equal(sheets[0].props.name, 'BOPP');
+    assert.deepEqual(sheets[0].props.initialChoices, [{ name: 'Other', editable: true, selected: false }, { name: 'Own', editable: true, selected: true }]);
     assert.equal(sheetOptions.fitContent, true); assert.equal(sheetOptions.compact, true);
+    await sheets[0].props.load(); assert.deepEqual(calls.at(-1), ['choices', 'B', { silent: true }]);
     options[2].props.onClick(); await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(calls.at(-1), ['delete', 'B']);
   } finally { global.requestAnimationFrame = previousFrame; }

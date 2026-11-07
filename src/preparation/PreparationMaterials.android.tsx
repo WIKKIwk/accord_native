@@ -2,7 +2,7 @@ import { Button, Checkbox, Column, DropdownMenu, DropdownMenuItem, Host, IconBut
 import { clickable, fillMaxWidth, height, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text as NativeText, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import { usePreparationContext } from './PreparationContext.android';
 import { usePreparationFab } from './PreparationFab.android';
 import { PreparationNotice } from './PreparationNotice';
 import { PreparationButton, PreparationDock, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { preparationWarehouseChoices } from './preparationLogic';
 import { preparationMaterialDeleteMessage, preparationMaterialsEmptyMessage, preparationMaterialsErrorMessage } from './usePreparationMaterials';
 import { usePreparationMaterialsView } from './usePreparationAndroidView.android';
 import { usePreparationNotice } from './usePreparationNotice';
@@ -54,38 +55,61 @@ function MaterialRow({ name, subtitle, blocked, choose, first, last }: { name: s
 
 const passthroughListItems = () => true;
 
-function AssignmentSheet({ name, choices, save }: { name: string; choices: Choices; save: (selected: string[]) => void }) {
+function AssignmentSheet({ name, choices, save, loading = false, error, retry }: { name: string; choices: Choices; save: (selected: string[]) => void;
+  loading?: boolean; error?: string | null; retry?: () => void }) {
   const t = usePreparationText(), colors = useMaterialColors();
   const initial = choices.filter(choice => choice.selected).map(choice => choice.name).sort();
-  const [selected, setSelected] = useState(initial);
-  const changed = JSON.stringify([...selected].sort()) !== JSON.stringify(initial);
-  const toggle = (name: string, value: boolean) => setSelected(current => value
-    ? current.includes(name) ? current : [...current, name] : current.filter(entry => entry !== name));
+  const [changes, setChanges] = useState<Record<string, boolean>>({});
+  const isSelected = (choice: Choices[number]) => choice.editable && Object.hasOwn(changes, choice.name) ? changes[choice.name] : choice.selected;
+  const effective = choices.filter(isSelected).map(choice => choice.name).sort();
+  const changed = JSON.stringify(effective) !== JSON.stringify(initial);
+  const toggle = (name: string, value: boolean) => setChanges(current => ({ ...current, [name]: value }));
   return <View style={{ padding: 16, gap: 12 }}>
     <PreparationText title>{t('Omborga biriktirish')}</PreparationText><PreparationText>{name}</PreparationText>
-    {choices.length === 0 ? <PreparationText>{t('Sizga exclusive ombor biriktirilmagan.')}</PreparationText> : null}
+    {loading ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><ActivityIndicator />
+      <View style={{ flex: 1 }}><PreparationText>{t('Omborlar tekshirilmoqda…')}</PreparationText></View></View> : null}
+    {error ? <><PreparationText>{t(error)}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => retry?.()} /></> : null}
+    {!loading && !error && choices.length === 0 ? <PreparationText>{t('Sizga exclusive ombor biriktirilmagan.')}</PreparationText> : null}
     <View style={{ marginHorizontal: -8 }}>{choices.map((choice, index) =>
       <WorkerQueueCard key={choice.name} backgroundColor={colors.surface} first={index === 0} last={index === choices.length - 1}>
         <Host matchContents={{ vertical: true }} style={{ flex: 1 }}>
           <Row verticalAlignment="center" modifiers={[fillMaxWidth(), ...(choice.editable
-            ? [clickable(() => toggle(choice.name, !selected.includes(choice.name)))] : [])]}>
-            <Checkbox value={selected.includes(choice.name)} enabled={choice.editable}
+            ? [clickable(() => toggle(choice.name, !isSelected(choice)))] : [])]}>
+            <Checkbox value={isSelected(choice)} enabled={choice.editable}
               onCheckedChange={value => { if (choice.editable) toggle(choice.name, value); }} />
             <Column><Text>{choice.name}</Text>{!choice.editable ? <Text>{t('Bu biriktirishni faqat administrator o‘zgartira oladi')}</Text> : null}</Column>
           </Row>
         </Host>
       </WorkerQueueCard>)}</View>
     <PreparationText>{t('Bu amal ombordagi qoldiqni ko‘chirmaydi.')}</PreparationText>
-    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Button enabled={changed}
-      onClick={() => save([...selected].sort())} modifiers={[fillMaxWidth(), height(56)]}>
+    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Button enabled={changed && !loading && !error}
+      onClick={() => { if (changed && !loading && !error) save(effective); }} modifiers={[fillMaxWidth(), height(56)]}>
       <Text style={{ typography: 'titleMedium' }}>{t('Saqlash')}</Text>
     </Button></Host>
   </View>;
 }
 
+function AssignmentSheetLoader({ name, initialChoices, load, save }: { name: string; initialChoices: Choices;
+  load: () => Promise<Choices | null>; save: (selected: string[]) => void }) {
+  const [choices, setChoices] = useState(initialChoices), [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null), [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    void load().then(result => {
+      if (!active) return;
+      if (result) { setChoices(result); setError(null); }
+      else setError('Omborlar ro‘yxatini olib bo‘lmadi. Qayta urinib ko‘ring');
+    }).catch(reason => { if (active) setError(preparationMaterialsErrorMessage(reason)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [load, attempt]);
+  const retry = () => { setError(null); setLoading(true); setAttempt(value => value + 1); };
+  return <AssignmentSheet name={name} choices={choices} save={save} loading={loading} error={error} retry={retry} />;
+}
+
 // @v2 PreparationMaterialsScreen
 export function PreparationMaterialsScreen() {
-  const { session } = usePreparationContext(), state = usePreparationMaterialsView(session), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const { session, home } = usePreparationContext(), state = usePreparationMaterialsView(session), dialogs = usePreparationDialogs(), t = usePreparationText();
   const colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
@@ -103,9 +127,9 @@ export function PreparationMaterialsScreen() {
         const confirmed = await dialogs.confirm('Homashyoni o‘chirish', preparationMaterialDeleteMessage(item.name), 'O‘chirish');
         if (confirmed && await state.controller.remove(item)) notice.show(t('Homashyo o‘chirildi'));
       } else {
-        const choices = await state.controller.warehouseChoices(item);
-        if (!choices) return;
-        assignmentSheet.open(<AssignmentSheet name={item.name} choices={choices} save={selected => {
+        const initialChoices = preparationWarehouseChoices(home.snapshot?.material_warehouses ?? [], item.warehouses);
+        assignmentSheet.open(<AssignmentSheetLoader name={item.name} initialChoices={initialChoices}
+          load={() => state.controller.warehouseChoices(item, { silent: true })} save={selected => {
           afterAssignment.current = () => { void state.controller.setWarehouses(item, selected)
             .then(saved => { if (saved) notice.show(t('Ombor biriktirish yangilandi')); }).catch(failure); };
           assignmentSheet.close();

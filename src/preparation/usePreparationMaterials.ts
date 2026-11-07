@@ -2,10 +2,11 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import type { Session } from '../auth';
 import { preparationSnapshot } from '../preparationReadApi';
 import { WorkerControlException } from '../workerControlsApi';
-import { preparationDeleteMaterial, preparationOwnedMaterials, preparationRenameMaterial, preparationSetMaterialWarehouses } from './preparationManagementApi';
+import { preparationDeleteMaterial, preparationMaterialWarehouseOptions, preparationOwnedMaterials, preparationRenameMaterial, preparationSetMaterialWarehouses } from './preparationManagementApi';
 import { preparationWarehouseChoices } from './preparationLogic';
 
 type Material = Awaited<ReturnType<typeof preparationOwnedMaterials>>[number];
+type WarehouseChoices = ReturnType<typeof preparationWarehouseChoices>;
 type State = { items: Material[]; query: string; error: string | null; loading: boolean; refreshing: boolean; saving: boolean };
 export function preparationMaterialDeleteMessage(name: string) {
   return `«${name}» o‘chirilsinmi? Faqat ishlatilmagan homashyo o‘chiriladi. Qoldiq, kirim yoki formula bo‘lsa, o‘chirish rad etiladi.`;
@@ -22,6 +23,7 @@ export class PreparationMaterialsState {
   private state: State = { items: [], query: '', error: null, loading: true, refreshing: false, saving: false };
   private active = true;
   private generation = 0;
+  private choiceRead: { code: string; generation: number; promise: Promise<WarehouseChoices | null> } | null = null;
   private readonly listeners = new Set<() => void>();
   constructor(private readonly session: Session) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
@@ -61,12 +63,33 @@ export class PreparationMaterialsState {
       this.update({ items: this.state.items.filter(item => item.item_code !== material.item_code) }); return true; }
     finally { if (generation === this.generation) this.update({ saving: false }); }
   }
-  async warehouseChoices(material: Material) {
+  async warehouseChoices(material: Material, options: { silent?: boolean } = {}) {
     if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return null;
-    const generation = this.generation; this.update({ saving: true });
-    try { const snapshot = await preparationSnapshot(this.session);
-      return this.active && generation === this.generation ? preparationWarehouseChoices(snapshot.material_warehouses, material.warehouses) : null; }
+    const generation = this.generation;
+    if (options.silent) {
+      if (this.choiceRead?.code === material.item_code && this.choiceRead.generation === generation) return this.choiceRead.promise;
+      const promise = this.readWarehouseChoices(material, generation);
+      this.choiceRead = { code: material.item_code, generation, promise };
+      try { return await promise; }
+      finally { if (this.choiceRead?.promise === promise) this.choiceRead = null; }
+    }
+    this.update({ saving: true });
+    try {
+      const snapshot = await preparationSnapshot(this.session);
+      return this.active && generation === this.generation ? preparationWarehouseChoices(snapshot.material_warehouses, material.warehouses) : null;
+    }
     finally { if (generation === this.generation) this.update({ saving: false }); }
+  }
+  private async readWarehouseChoices(material: Material, generation: number): Promise<WarehouseChoices | null> {
+    const fresh = await preparationMaterialWarehouseOptions(this.session, material.item_code);
+    if (!this.active || generation !== this.generation) return null;
+    if (fresh) return preparationWarehouseChoices(fresh.editable, fresh.assigned);
+    // Compatibility with servers that have not yet added the lightweight GET.
+    const [snapshot, materials] = await Promise.all([preparationSnapshot(this.session), preparationOwnedMaterials(this.session)]);
+    if (!this.active || generation !== this.generation) return null;
+    const updated = materials.find(item => item.item_code === material.item_code);
+    if (!updated) throw new Error('Homashyo topilmadi. Ro‘yxatni yangilang');
+    return preparationWarehouseChoices(snapshot.material_warehouses, updated.warehouses);
   }
   async setWarehouses(material: Material, warehouses: string[]) {
     if (!this.active || this.state.saving || this.state.loading || this.state.refreshing) return false;
@@ -78,10 +101,10 @@ export class PreparationMaterialsState {
   }
   invalidate() {
     if (!this.active) return;
-    this.generation++; this.update({ items: [], query: '', loading: false, refreshing: false, saving: false,
+    this.generation++; this.choiceRead = null; this.update({ items: [], query: '', loading: false, refreshing: false, saving: false,
       error: 'Akkaunt o‘zgargan. Sahifani qayta oching' }); this.active = false;
   }
-  dispose() { this.active = false; this.generation++; this.listeners.clear(); }
+  dispose() { this.active = false; this.generation++; this.choiceRead = null; this.listeners.clear(); }
 }
 export function usePreparationMaterials(session: Session) {
   const controller = useMemo(() => new PreparationMaterialsState(session), [session]);
