@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import qrFactory from 'qrcode-generator';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,10 @@ import { usePreparationInventory } from './usePreparationInventory.android';
 
 type Inventory = ReturnType<typeof usePreparationInventory>;
 type InventoryTab = Inventory['tab'];
+type InventoryDetailsHandle = {
+  openAsset: (asset: PreparationInventoryAsset) => void;
+  openTransfer: (transfer: PreparationInventoryTransfer) => void;
+};
 const inventoryTabs: InventoryTab[] = ['assets', 'incoming', 'outgoing'];
 const passthrough = () => true;
 
@@ -39,7 +43,7 @@ export function PreparationInventoryScreen() {
   const inventory = usePreparationInventory(session, assigned), t = usePreparationText();
   const colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(70), [headerSize, setHeaderSize] = useState(70);
-  const [asset, setAsset] = useState<PreparationInventoryAsset | null>(null), [transfer, setTransfer] = useState<PreparationInventoryTransfer | null>(null);
+  const details = useRef<InventoryDetailsHandle>(null);
   const [scanning, setScanning] = useState(false), [manual, setManual] = useState(''), [manualOpen, setManualOpen] = useState(false), [manualKey, setManualKey] = useState(0);
   const [permission, requestPermission] = useCameraPermissions();
   const scanLock = useRef(false), lastScan = useRef('');
@@ -91,7 +95,7 @@ export function PreparationInventoryScreen() {
             void lookup(manual).then(() => { setManual(''); setManualKey(value => value + 1); });
           }} /></>}
         {inventory.busy ? <ActivityIndicator /> : null}{inventory.qrError ? <PreparationText>{inventory.qrError}</PreparationText> : null}
-        {inventory.qrAssets.map(item => <AssetRow key={`${item.kind}:${item.asset_ref}`} asset={item} open={() => setAsset(item)} />)}
+        {inventory.qrAssets.map(item => <AssetRow key={`${item.kind}:${item.asset_ref}`} asset={item} open={() => details.current?.openAsset(item)} />)}
       </View> : null}
       {!scanVisible && (inventory.locations.error || window.error) ? <View style={styles.status}><PreparationText>{inventory.locations.error || window.error || ''}</PreparationText>
         <PreparationButton label="Qayta urinish" onPress={() => { void Promise.all([inventory.locations.refresh(), window.refresh()]); }} /></View> : null}
@@ -99,13 +103,13 @@ export function PreparationInventoryScreen() {
       {!scanVisible && tab === 'assets' && !window.loading && !window.error && inventory.warehouses.length && !inventory.visibleAssets.length && !window.hasMore
         ? <View style={styles.status}><PreparationText>{t('Omborda harakatlantiriladigan mahsulot yo‘q')}</PreparationText></View> : null}
       {!scanVisible && tab === 'assets' && inventory.visibleAssets.map((item, index) => <AssetRow key={`${item.kind}:${item.asset_ref}`} asset={item}
-        last={index === inventory.visibleAssets.length - 1} open={() => setAsset(item)} />)}
+        last={index === inventory.visibleAssets.length - 1} open={() => details.current?.openAsset(item)} />)}
       {!scanVisible && tab !== 'assets' && !window.loading && !window.error && !rows.length && !window.hasMore
         ? <View style={styles.status}><PreparationText>{t(tab === 'incoming' ? 'Kiruvchi transfer yo‘q' : 'Chiquvchi transfer yo‘q')}</PreparationText></View> : null}
       {!scanVisible && tab !== 'assets' && rows.map((item, index) => <InventoryRow key={String(item.id)}
         title={`${String(item.source_warehouse)} → ${String(item.destination_warehouse)}`} last={index === rows.length - 1}
         subtitle={`${t(preparationInventoryStatus(item.status))} · ${item.lines.map((line: Record<string, unknown>) => String(line.item_name || line.item_code || '')).join(', ')}`}
-        open={() => setTransfer(item)} />)}
+        open={() => details.current?.openTransfer(item)} />)}
       {!scanVisible && (inventory.locations.loading || window.loading) ? <ActivityIndicator style={styles.status} /> : null}
       <View style={styles.fabSpace} />
       </OrdersList>;
@@ -113,6 +117,16 @@ export function PreparationInventoryScreen() {
     </OrdersWorkspace>
     <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
     </View>
+    <InventoryDetails ref={details} inventory={inventory} assigned={assigned} />
+  </>;
+}
+
+function InventoryDetails({ ref, inventory, assigned }: {
+  ref: Ref<InventoryDetailsHandle>; inventory: Inventory; assigned: readonly string[];
+}) {
+  const [asset, setAsset] = useState<PreparationInventoryAsset | null>(null), [transfer, setTransfer] = useState<PreparationInventoryTransfer | null>(null);
+  useImperativeHandle(ref, () => ({ openAsset: setAsset, openTransfer: setTransfer }), []);
+  return <>
     {asset ? <WorkerOrderSheet onClose={() => setAsset(null)} dismissible fitContent>
       <PreparationDialogs><AssetDetail asset={asset} inventory={inventory} assigned={assigned} /></PreparationDialogs>
     </WorkerOrderSheet> : null}
@@ -194,7 +208,10 @@ function AssetDetail({ asset, inventory, assigned }: { asset: PreparationInvento
   const barcode = preparationInventoryAssetBarcode(asset);
   const owns = assigned.some(name => name.trim().toLowerCase() === asset.custody_warehouse.trim().toLowerCase());
   const showAssignment = session.capabilities.includes('raw_material.assign') && owns;
-  const image = useMemo(() => { try { const qr = qrFactory(0, 'M'); qr.addData(barcode); qr.make(); return qr.createDataURL(5, 20); } catch { return null; } }, [barcode]);
+  const image = useMemo(() => {
+    if (!showQr) return null;
+    try { const qr = qrFactory(0, 'M'); qr.addData(barcode); qr.make(); return qr.createDataURL(5, 20); } catch { return null; }
+  }, [barcode, showQr]);
   const transfer = async () => {
     if (!inventory.canTransfer(asset)) return;
     const choices = inventory.warehouses.filter(location => location.warehouse_id !== asset.custody_warehouse_id);
