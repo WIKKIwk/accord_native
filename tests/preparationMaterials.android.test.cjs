@@ -20,12 +20,12 @@ test('materials use the warehouse list and retain search, refresh and row action
   const mocks = { 'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }), useState: value => [value, () => {}] },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
     '@expo/ui/jetpack-compose/modifiers': {}, 'expo-symbols': { SymbolView: 'SymbolView' },
-    'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']) } },
+    'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']), navigate: route => calls.push(['navigate', route]) } },
     'react-native': { View: 'View', Text: 'Text', ActivityIndicator: 'ActivityIndicator', StyleSheet: { create: value => value } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
-    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
+    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
     '../nativeSheet': { useNativeSheet: () => ({ open: content => sheets.push(content), close() {} }) },
     './PreparationContext.android': { usePreparationContext: () => ({ session: {} }) },
     './PreparationNotice': { PreparationNotice: 'PreparationNotice' },
@@ -42,7 +42,11 @@ test('materials use the warehouse list and retain search, refresh and row action
   const list = nodes(tree, node => node.type === 'OrdersList')[0];
   assert.ok(list); assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 1);
   await list.props.onRefresh(); assert.deepEqual(calls.at(-1), ['load', true]);
-  nodes(list, node => node.type === 'PreparationField')[0].props.onChange('BOPP');
+  const header = nodes(tree, node => node.type === 'OrdersHeader')[0];
+  assert.equal(header.props.search, '');
+  assert.equal(header.props.searchPlaceholder, 'Qidirish');
+  assert.equal(nodes(list, node => node.type === 'PreparationField').length, 0);
+  header.props.onSearchChange('BOPP');
   assert.deepEqual(calls.at(-1), ['query', 'BOPP']);
   const row = nodes(list, node => typeof node.type === 'function' && node.type.name === 'MaterialRow')[0];
   assert.equal(row.props.subtitle, 'Own');
@@ -51,6 +55,8 @@ test('materials use the warehouse list and retain search, refresh and row action
   assert.equal(sheets[0].props.name, 'BOPP');
   const blocked = row.type({ ...row.props, blocked: true });
   assert.equal(blocked.props.onPress, undefined);
-  nodes(tree, node => node.type === 'RoleHeader')[0].props.navigation.onPress();
+  header.props.onBack();
   assert.deepEqual(calls.at(-1), ['back']);
+  header.props.onProfile();
+  assert.deepEqual(calls.at(-1), ['navigate', '/android-preparation/profile']);
 });

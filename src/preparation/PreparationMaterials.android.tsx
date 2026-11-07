@@ -8,12 +8,12 @@ import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useNativeSheet } from '../nativeSheet';
-import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { OrdersHeader } from '../shared/orders/OrdersHeader';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { usePreparationContext } from './PreparationContext.android';
 import { usePreparationFab } from './PreparationFab.android';
 import { PreparationNotice } from './PreparationNotice';
-import { PreparationButton, PreparationDock, PreparationField, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDock, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { preparationMaterialDeleteMessage, preparationMaterialsEmptyMessage, preparationMaterialsErrorMessage } from './usePreparationMaterials';
 import { usePreparationMaterialsView } from './usePreparationAndroidView.android';
 import { usePreparationNotice } from './usePreparationNotice';
@@ -110,12 +110,12 @@ export function PreparationMaterialsScreen() {
     } });
   };
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
-    <RoleHeader title={t('Homashyolar')} navigation={{ icon: 'back', label: t('Orqaga'), onPress: () => {
+    <OrdersHeader search={state.query} searchPlaceholder={t('Qidirish')} onSearchChange={value => state.controller.setQuery(value)}
+      onBack={() => {
       if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href);
-    } }} />
+    }} onProfile={() => router.navigate('/android-preparation/profile' as Href)} />
     <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={passthroughListItems}
       onRefresh={async () => { await state.controller.load(true); }}>
-    <View style={styles.field}><PreparationField label="Homashyoni qidirish" initial={state.query} onChange={value => state.controller.setQuery(value)} /></View>
     {(state.loading && !state.items.length) || state.saving ? <ActivityIndicator /> : null}
     {state.error ? <><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => void state.controller.load()} /></> : null}
     {!state.loading && !state.filtered.length && !state.error ? <PreparationText>{t(preparationMaterialsEmptyMessage(state.query))}</PreparationText> : null}
@@ -129,7 +129,6 @@ export function PreparationMaterialsScreen() {
 }
 
 const styles = StyleSheet.create({
-  field: { padding: 16 },
   materialIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   materialText: { flex: 1, marginStart: 16 },
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
