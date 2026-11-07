@@ -29,6 +29,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   const variant = useSyncExternalStore(subscribeTheme, currentVariant, currentVariant);
   const themeMode = useSyncExternalStore(subscribeTheme, currentThemeMode, currentThemeMode);
   const t = (key: string) => localizedGetter(key, locale);
+  const dynamicColors = session.profile.role === 'tayyorlov_masteri';
   const { setAppearance } = useAppSettings();
   const pin = usePinSetup();
   const switchPin = useSwitchPinSetup(session);
@@ -70,7 +71,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
       { id: 'uz', label: t('uzbek') }, { id: 'en', label: t('english') },
       { id: 'ru', label: t('russian') }, { id: 'ur-PK', label: 'اردو (پاکستان)' },
     ];
-    selectionSheet.open(<Host style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
+    selectionSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('languageTitle')}</Text>
       <Text>{t('languageBody')}</Text>
       {choices.map(choice => <TextButton key={choice.id} onClick={() => {
@@ -86,7 +87,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
       { id: 'moss', label: t('themeMossLabel') }, { id: 'lavender', label: t('themeLavenderLabel') },
       { id: 'bliss', label: t('themeBlissLabel') }, { id: 'white', label: t('themeWhiteLabel') },
     ];
-    selectionSheet.open(<Host style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
+    selectionSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('themeTitle')}</Text>
       <Text>{t('themeBody')}</Text>
       {choices.map(choice => <TextButton key={choice.id} onClick={() => {

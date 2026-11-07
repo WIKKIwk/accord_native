@@ -1,5 +1,5 @@
 import { Button, Column, FieldGroup, ListItem, RNHostView, Row, ScrollView, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
-import { PullToRefreshBox } from '@expo/ui/jetpack-compose';
+import { PullToRefreshBox, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, useColorScheme } from 'react-native';
 import { profileDisplay } from '../profileModel';
@@ -45,7 +45,8 @@ export function ProfileView(props: ProfileViewProps) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const dark = useColorScheme() === 'dark';
   const theme = useBaseTheme();
-  const muted = theme.colors.onSurfaceVariant ?? (dark ? '#aeaeb2' : '#6d6d72');
+  const colors = useMaterialColors(), dynamicColors = session.profile.role === 'tayyorlov_masteri';
+  const muted = dynamicColors ? colors.onSurfaceVariant : theme.colors.onSurfaceVariant ?? (dark ? '#aeaeb2' : '#6d6d72');
   const [apparatusExpanded, setApparatusExpanded] = useState(false);
   const editorSheet = useNativeSheet();
   const settingsSheet = useNativeSheet();
@@ -64,7 +65,7 @@ export function ProfileView(props: ProfileViewProps) {
     ]);
   }, [locale, onLogout]);
   useLayoutEffect(() => {
-    const content = <Host style={{ flex: 1 }}><ScrollView>
+    const content = <Host dynamicColors={dynamicColors} style={{ flex: 1 }}><ScrollView>
       <ProfileEditor {...props} />
     </ScrollView></Host>;
     if (editing) {
@@ -76,17 +77,18 @@ export function ProfileView(props: ProfileViewProps) {
       editorSheet.close();
     }
     if (settingsSheet.isOpen()) {
-      settingsSheet.update(<Host style={{ flex: 1 }}>
+      settingsSheet.update(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}>
         <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
       </Host>, { dismissible: true, onDismiss: settingsDismissed });
     }
-  }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet]);
-  const openSettings = () => settingsSheet.open(<Host style={{ flex: 1 }}>
+  }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet, dynamicColors]);
+  const openSettings = () => settingsSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}>
     <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
   </Host>, { dismissible: true, onDismiss: settingsDismissed });
   const details = profileDisplay(snapshot);
-  return <Host style={{ flex: 1 }}>
-    <PullToRefreshBox isRefreshing={props.refreshing} onRefresh={() => { void props.onRefresh(); }}><FieldGroup>
+  return <Host dynamicColors={dynamicColors} style={{ flex: 1 }}>
+    <PullToRefreshBox isRefreshing={props.refreshing} onRefresh={() => { void props.onRefresh(); }}><FieldGroup
+      style={dynamicColors ? { backgroundColor: colors.surfaceContainerLow } : undefined}>
       <FieldGroup.Section title={localizedGetter('profileTitle', locale)}>
         <Row spacing={16} alignment="center" style={{ paddingVertical: 8 }}>
           <RNHostView matchContents><ProfileAvatarPreview session={session} profile={snapshot.profile} token={avatarToken}
