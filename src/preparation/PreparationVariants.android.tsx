@@ -1,14 +1,21 @@
-import { AlertDialog, Column, Host, OutlinedTextField, Text, TextButton, useNativeState } from '@expo/ui/jetpack-compose';
+import { AlertDialog, Column, Host, OutlinedTextField, Text, TextButton, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { WorkerOrderSheet } from '../components/WorkerOrderSheet';
 import { useNativeSheet } from '../nativeSheet';
+import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { OrdersList } from '../shared/orders/OrdersList';
 import { usePreparationContext } from './PreparationContext.android';
+import { usePreparationFab } from './PreparationFab.android';
 import { PreparationNotice } from './PreparationNotice';
 import { openPreparationFormula, readPreparationRouteData } from './preparationNavigation.android';
-import { PreparationButton, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDock, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { preparationVariantNameCanSave } from './usePreparationLibrary';
 import { usePreparationVariantsView } from './usePreparationAndroidView.android';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
@@ -19,6 +26,23 @@ import { usePreparationNotice } from './usePreparationNotice';
 
 type Options = PreparationVariantsOptions & { orderCode: string; productTitle: string; materialName: string; customerName?: string };
 type Variant = ReturnType<typeof usePreparationVariantsView>['variants'][number];
+const passthroughListItems = () => true;
+
+function VariantRow({ variant, disabled, first, last, onPress, onLongPress }: {
+  variant: Variant; disabled: boolean; first: boolean; last: boolean; onPress: () => void; onLongPress: () => void;
+}) {
+  const colors = useMaterialColors();
+  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last}
+    onPress={disabled ? undefined : onPress} onLongPress={disabled ? undefined : onLongPress}>
+    <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <SymbolView name={{ android: 'functions' }} size={20} tintColor={colors.onSurfaceVariant} />
+    </View>
+    <View style={styles.rowText}>
+      <NativeText style={[styles.headline, { color: colors.onSurface }]}>{variant.name}</NativeText>
+      <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{preparationVariantSubtitle(variant)}</NativeText>
+    </View>
+  </WorkerQueueCard>;
+}
 
 function VariantActions({ variant, choose }: { variant: Variant; choose: (action: 'edit' | 'delete' | 'rename') => void }) {
   const t = usePreparationText();
@@ -83,6 +107,8 @@ export function PreparationFormulaVariantsScreen() {
 
 function Variants({ options }: { options: Options }) {
   const { session } = usePreparationContext(), state = usePreparationVariantsView(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const sheet = useNativeSheet(), notice = usePreparationNotice(), afterSheet = useRef<(() => void) | null>(null);
   const [nameDialog, setNameDialog] = useState<'create' | Variant | null>(null), [renaming, setRenaming] = useState(false), [renameError, setRenameError] = useState<string | null>(null);
   const [hideCreateError, setHideCreateError] = useState(false);
@@ -91,6 +117,16 @@ function Variants({ options }: { options: Options }) {
   const focused = useRef(false);
   useFocusEffect(useCallback(() => { if (focused.current) { setOpening(false); void state.controller.load(); } focused.current = true; }, [state.controller]));
   const blocked = state.actionsBlocked || opening;
+  const setDockHeight = usePreparationFab('variants', {
+    actions: [{ id: 'add', label: t('Variant qo‘shish'), icon: 'add', width: 240 },
+      { id: 'reuse', label: t('Qidirib variant qo‘shish'), icon: 'search', width: 290 }],
+    enabled: !blocked, visible: true, openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish'),
+    onSelect: action => {
+      if (blocked) return;
+      if (action === 'add') void state.controller.beginCreate().then(id => { if (id) setNameDialog('create'); });
+      else if (action === 'reuse' && state.controller.beginReuse()) setReusePicker(true);
+    },
+  });
   const open = (variant: Variant, edit = false) => {
     setOpening(true);
     openPreparationFormula({ ...options, variantId: variant.id, variantName: variant.name, variantCode: variant.formula_code, openEditorOnLoad: edit });
@@ -130,23 +166,27 @@ function Variants({ options }: { options: Options }) {
     catch (error) { notice.show(preparationFormulaErrorMessage(error)); }
   };
   return <>
-    <View style={{ flex: 1 }}><PreparationPage title="Shnek formulalar" refreshing={state.loading && !!state.variants.length} onRefresh={() => void state.controller.load()}>
+    <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
+    <RoleHeader title={t('Shnek formulalar')} navigation={{ icon: 'back', label: t('Orqaga'), onPress: () => {
+      if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href);
+    } }} />
+    <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={passthroughListItems}
+      onRefresh={async () => { await state.controller.load(); }}>
+    <View style={styles.context}>
       <PreparationText>{`${options.materialName} • ${options.orderCode}`}</PreparationText>
       <PreparationText>{`${options.orderCode} • ${options.productTitle}`}</PreparationText>
+    </View>
       {state.loading && !state.variants.length ? <ActivityIndicator /> : null}
-      {state.error ? <><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => void state.controller.load()} /></> : null}
-      {state.nameError && !nameDialog ? <PreparationText>{state.nameError}</PreparationText> : null}
-      {!state.loading && !state.error && !state.variants.length ? <PreparationText>{t('Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.')}</PreparationText> : null}
-      {state.variants.map(variant => <PreparationRow key={variant.id} title={variant.name}
-        subtitle={preparationVariantSubtitle(variant)}
-        disabled={blocked} onPress={() => open(variant)} onLongPress={() => menu(variant)} />)}
-      <PreparationButton label="Variant qo‘shish" disabled={blocked} id="preparation-variant-add" onPress={() => {
-        void state.controller.beginCreate().then(id => { if (id) setNameDialog('create'); });
-      }} />
-      <PreparationButton label="Qidirib variant qo‘shish" disabled={blocked} id="preparation-variant-reuse" onPress={() => {
-        if (state.controller.beginReuse()) setReusePicker(true);
-      }} />
-    </PreparationPage><PreparationNotice message={notice.message} /></View>
+      {state.error ? <View style={styles.context}><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => void state.controller.load()} /></View> : null}
+      {state.nameError && !nameDialog ? <View style={styles.context}><PreparationText>{state.nameError}</PreparationText></View> : null}
+      {!state.loading && !state.error && !state.variants.length ? <View style={styles.context}><PreparationText>{t('Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.')}</PreparationText></View> : null}
+      {state.variants.map((variant, index) => <VariantRow key={variant.id} variant={variant}
+        first={index === 0} last={index === state.variants.length - 1} disabled={blocked}
+        onPress={() => open(variant)} onLongPress={() => menu(variant)} />)}
+      <View style={{ height: 112 }} />
+    </OrdersList>
+    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+    <PreparationNotice message={notice.message} /></View>
     {nameDialog ? <VariantNameDialog initial={nameDialog === 'create' ? undefined : nameDialog.name} busy={state.savingName || renaming}
       error={nameDialog === 'create' ? (hideCreateError ? null : state.nameError) : renameError} submit={name => void submit(name)} orderScoped
       clearError={() => { setRenameError(null); setHideCreateError(true); }}
@@ -156,3 +196,11 @@ function Variants({ options }: { options: Options }) {
     }} /> : null}
   </>;
 }
+
+const styles = StyleSheet.create({
+  context: { padding: 16, gap: 8 },
+  icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  rowText: { flex: 1, marginStart: 16, paddingVertical: 6 },
+  headline: { fontSize: 16, lineHeight: 24, fontWeight: '500', includeFontPadding: false },
+  supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
+});

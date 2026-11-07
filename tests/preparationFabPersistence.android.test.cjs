@@ -102,6 +102,19 @@ test('one FAB stays mounted and visible across home, warehouse loading and back'
   getFab(tree).props.onSelect('scan');
   assert.deepEqual(calls.at(-1), ['inventory', 'scan']);
 
+  pathname = '/android-preparation/variants';
+  const variantActions = [{ id: 'add', label: 'Variant qo‘shish', icon: 'add', width: 240 },
+    { id: 'reuse', label: 'Qidirib variant qo‘shish', icon: 'search', width: 290 }];
+  context.register('variants', {}, options(variantActions, true, true, 'variants'));
+  tree = render(); context = tree.props.value;
+  assert.equal(getFab(tree).type, firstFab.type);
+  assert.equal(getFab(tree).key, firstFab.key);
+  assert.equal(getFab(tree).props.bottomOffset, 120);
+  assert.equal(overlay(tree).props.pointerEvents, 'box-none');
+  assert.deepEqual(getFab(tree).props.actions, variantActions);
+  getFab(tree).props.onSelect('reuse');
+  assert.deepEqual(calls.at(-1), ['variants', 'reuse']);
+
   pathname = '/android-preparation/history';
   unregisterNewer();
   tree = render(); context = tree.props.value;
