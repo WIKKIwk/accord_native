@@ -23,10 +23,10 @@ export default function PreparationLayout() {
     <PreparationProvider session={session} onLogout={onLogout} setChatClosing={setChatClosing}><PreparationDrawer><NativeTabs hidden={pathname.startsWith('/ios-preparation/chat/') && !chatClosing} disableHiddenAnimation>
       <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
         <NativeTabs.Trigger.Label>{t('Tayyorlov')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile"><NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
-        <NativeTabs.Trigger.Label>{t('Profil')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
       <NativeTabs.Trigger name="chat"><NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
         <NativeTabs.Trigger.Label>{t('Chat')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile"><NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
+        <NativeTabs.Trigger.Label>{t('Profil')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     </NativeTabs></PreparationDrawer></PreparationProvider>
   </WorkerSecurityProvider>;
 }
