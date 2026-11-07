@@ -1,3 +1,5 @@
+import { Column, Host, ListItem, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { clickable, clip, fillMaxWidth, Shapes } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { useRef } from 'react';
 import { View } from 'react-native';
@@ -16,6 +18,7 @@ import { usePreparationNotice } from './usePreparationNotice';
 // @v2 PreparationScreen
 export function PreparationHomeScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const colors = useMaterialColors();
   const sheet = useNativeSheet(), notice = usePreparationNotice();
   const submitting = useRef(false);
   const data = home.snapshot;
@@ -65,14 +68,28 @@ export function PreparationHomeScreen() {
     else if (chosen === 'sequence') router.replace('/android-preparation/sequence' as Href);
     else if (chosen === 'history') router.push('/android-preparation/history' as Href);
   };
+  const menuItems = [
+    { title: 'Ombor', onPress: () => router.push('/android-preparation/warehouse' as Href) },
+    { title: 'Homashyolar', onPress: () => router.push('/android-preparation/materials' as Href) },
+    { title: 'Mahsulot formulasi', onPress: () => router.push('/android-preparation/sets' as Href) },
+    { title: 'Buyurtmalar', onPress: () => router.replace('/android-preparation/sequence' as Href) },
+    { title: 'Ishlab chiqarish', onPress: () => router.replace('/android-preparation/production' as Href) },
+    { title: 'Ishlab chiqarilgan homashyolar', onPress: () => router.push('/android-preparation/inventory' as Href) },
+    { title: 'Tarix', onPress: () => router.push('/android-preparation/history' as Href) },
+  ];
   return <View style={{ flex: 1 }}><PreparationPage title="Tayyorlov masteri" subtitle="Ichki homashyo ta’minoti" root drawer actions={() => void actions()}>
-    <PreparationRow title={t('Ombor')} onPress={() => router.push('/android-preparation/warehouse' as Href)} />
-    <PreparationRow title={t('Homashyolar')} onPress={() => router.push('/android-preparation/materials' as Href)} />
-    <PreparationRow title={t('Mahsulot formulasi')} onPress={() => router.push('/android-preparation/sets' as Href)} />
-    <PreparationRow title={t('Buyurtmalar')} onPress={() => router.replace('/android-preparation/sequence' as Href)} />
-    <PreparationRow title={t('Ishlab chiqarish')} onPress={() => router.replace('/android-preparation/production' as Href)} />
-    <PreparationRow title={t('Ishlab chiqarilgan homashyolar')} onPress={() => router.push('/android-preparation/inventory' as Href)} />
-    <PreparationRow title={t('Tarix')} onPress={() => router.push('/android-preparation/history' as Href)} />
+    <View style={{ marginHorizontal: -8 }}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+      <Column verticalArrangement={{ spacedBy: 2 }} modifiers={[fillMaxWidth()]}>
+        {menuItems.map((item, index) => <ListItem key={item.title} colors={{ containerColor: colors.surface }} modifiers={[
+          fillMaxWidth(),
+          clip(Shapes.RoundedCorner({ topStart: index === 0 ? 16 : 4, topEnd: index === 0 ? 16 : 4,
+            bottomStart: index === menuItems.length - 1 ? 16 : 4, bottomEnd: index === menuItems.length - 1 ? 16 : 4 })),
+          clickable(item.onPress),
+        ]}>
+          <ListItem.HeadlineContent><Text style={{ typography: 'bodyLarge', fontWeight: '500' }}>{t(item.title)}</Text></ListItem.HeadlineContent>
+        </ListItem>)}
+      </Column>
+    </Host></View>
     {home.pending ? <PreparationRow title={t('Tasdiqlanmagan operatsiya')}
       subtitle={preparationPendingLabel(home.pending)} /> : null}
     {home.pending ? <PreparationButton label="Tekshirish" disabled={home.saving || home.loading} onPress={() => {

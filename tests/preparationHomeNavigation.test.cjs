@@ -7,6 +7,7 @@ const ts = require('typescript');
 
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 const react = { useCallback: fn => fn, useRef: value => ({ current: value }), useState: value => [value, () => {}] };
+const nativeListItem = Object.assign(function NativeListItem() {}, { HeadlineContent: 'ListItem.HeadlineContent' });
 function findAll(node, predicate) {
   if (!node || typeof node !== 'object') return [];
   if (Array.isArray(node)) return node.flatMap(child => findAll(child, predicate));
@@ -29,6 +30,11 @@ function setup(platform, options = {}) {
     usePreparationText: () => value => value, usePreparationDialogs: () => ({ choose: async (_title, items) => { choices = items; return chosen; } }) };
   const context = { usePreparationContext: () => ({ home, session: {} }) };
   const mocks = {
+    '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'ComposeHost', ListItem: nativeListItem, Text: 'ComposeText',
+      useMaterialColors: () => ({ surface: options.dark ? 'dark-surface' : 'light-surface' }) },
+    '@expo/ui/jetpack-compose/modifiers': { clickable: onClick => ({ kind: 'clickable', onClick }),
+      clip: shape => ({ kind: 'clip', shape }), fillMaxWidth: () => ({ kind: 'fillMaxWidth' }),
+      Shapes: { RoundedCorner: radii => radii } },
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', Menu: 'Menu', ProgressView: 'ProgressView', Section: 'Section', Text: 'Text' },
     '@expo/ui/swift-ui/modifiers': { disabled: value => value },
     'expo-router': { router, Stack: { Screen: 'Stack.Screen' }, useFocusEffect: callback => { focus = callback; } },
@@ -58,8 +64,30 @@ const labels = ['Ombor', 'Homashyolar', 'Mahsulot formulasi', 'Buyurtmalar', 'Is
 function menuRows(page, platform) {
   return platform === 'ios'
     ? findAll(page, node => node.type === 'Button' && node.props.systemImage)
-    : findAll(page, node => node.type === 'PreparationRow' && labels.includes(node.props.title));
+    : findAll(page, node => node.type === nativeListItem).map(row => ({
+      ...row, props: { ...row.props, title: findAll(row, node => node.type === 'ComposeText')[0].props.children,
+        onPress: row.props.modifiers.find(modifier => modifier.kind === 'clickable').onClick },
+    }));
 }
+
+test('android: home menu uses a grouped native list with worker-style corners', () => {
+  for (const dark of [false, true]) {
+    const page = setup('android', { dark }).render();
+    const group = findAll(page, node => node.type === 'Column')[0];
+    const host = findAll(page, node => node.type === 'ComposeHost')[0];
+    const rows = menuRows(page, 'android');
+    assert.deepEqual(host.props.matchContents, { vertical: true });
+    assert.deepEqual(group.props.verticalArrangement, { spacedBy: 2 });
+    assert.deepEqual(rows.map(row => row.props.title), labels);
+    for (const [index, row] of rows.entries()) {
+      const top = index === 0 ? 16 : 4, bottom = index === rows.length - 1 ? 16 : 4;
+      assert.deepEqual(row.props.modifiers.find(modifier => modifier.kind === 'clip').shape,
+        { topStart: top, topEnd: top, bottomStart: bottom, bottomEnd: bottom });
+      assert.equal(row.props.colors.containerColor, dark ? 'dark-surface' : 'light-surface');
+      assert.equal(typeof row.props.onPress, 'function');
+    }
+  }
+});
 
 for (const platform of ['ios', 'android']) {
   test(`${platform}: menu is immediately visible and enabled regardless of snapshot and loading`, () => {
