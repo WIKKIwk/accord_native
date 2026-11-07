@@ -1,5 +1,5 @@
 import { Button, Checkbox, Column, DropdownMenu, DropdownMenuItem, Host, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { background, clickable, clip, fillMaxWidth, height, padding, semantics, Shapes, size } from '@expo/ui/jetpack-compose/modifiers';
+import { clickable, fillMaxWidth, height, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
@@ -64,14 +64,17 @@ function AssignmentSheet({ name, choices, save }: { name: string; choices: Choic
   return <View style={{ padding: 16, gap: 12 }}>
     <PreparationText title>{t('Omborga biriktirish')}</PreparationText><PreparationText>{name}</PreparationText>
     {choices.length === 0 ? <PreparationText>{t('Sizga exclusive ombor biriktirilmagan.')}</PreparationText> : null}
-    {choices.map(choice => <Host key={choice.name} matchContents={{ vertical: true }} style={{ width: '100%' }}>
-      <Row verticalAlignment="center" modifiers={[fillMaxWidth(), clip(Shapes.RoundedCorner(12)), background(colors.surface), padding(8, 2, 12, 2), ...(choice.editable
-        ? [clickable(() => toggle(choice.name, !selected.includes(choice.name)))] : [])]}>
-        <Checkbox value={selected.includes(choice.name)} enabled={choice.editable}
-          onCheckedChange={value => toggle(choice.name, value)} />
-        <Column><Text>{choice.name}</Text>{!choice.editable ? <Text>{t('Bu biriktirishni faqat administrator o‘zgartira oladi')}</Text> : null}</Column>
-      </Row>
-    </Host>)}
+    <View style={{ marginHorizontal: -8 }}>{choices.map((choice, index) =>
+      <WorkerQueueCard key={choice.name} backgroundColor={colors.surface} first={index === 0} last={index === choices.length - 1}>
+        <Host matchContents={{ vertical: true }} style={{ flex: 1 }}>
+          <Row verticalAlignment="center" modifiers={[fillMaxWidth(), ...(choice.editable
+            ? [clickable(() => toggle(choice.name, !selected.includes(choice.name)))] : [])]}>
+            <Checkbox value={selected.includes(choice.name)} enabled={choice.editable}
+              onCheckedChange={value => { if (choice.editable) toggle(choice.name, value); }} />
+            <Column><Text>{choice.name}</Text>{!choice.editable ? <Text>{t('Bu biriktirishni faqat administrator o‘zgartira oladi')}</Text> : null}</Column>
+          </Row>
+        </Host>
+      </WorkerQueueCard>)}</View>
     <PreparationText>{t('Bu amal ombordagi qoldiqni ko‘chirmaydi.')}</PreparationText>
     <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Button enabled={changed}
       onClick={() => save([...selected].sort())} modifiers={[fillMaxWidth(), height(56)]}>

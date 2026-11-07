@@ -20,14 +20,20 @@ test('assignment keeps locked warehouses and enables the large save button only 
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/jetpack-compose': { Host: 'Host', Row: 'Row', Column: 'Column', Text: 'Text',
     Checkbox: 'Checkbox', Button: 'Button', useMaterialColors: () => ({ surface: 'surface' }) }, '@expo/ui/jetpack-compose/modifiers': modifiers,
     'expo-router': {}, 'expo-symbols': {}, 'react-native': { StyleSheet: { create: value => value }, View: 'View' }, 'react-native-reanimated': {},
-    'react-native-safe-area-context': {}, './PreparationUI.android': { usePreparationText: () => value => value, PreparationText: 'PreparationText' } };
+    'react-native-safe-area-context': {}, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
+    './PreparationUI.android': { usePreparationText: () => value => value, PreparationText: 'PreparationText' } };
   const { AssignmentSheet } = load('preparation/PreparationMaterials.android.tsx', mocks, '\nexport { AssignmentSheet };\n');
   const props = { name: 'BOPP', choices: [{ name: 'Own', selected: true, editable: true }, { name: 'Other', selected: false, editable: true },
     { name: 'Locked', selected: true, editable: false }], save: value => { saved = value; } };
   let tree = AssignmentSheet(props), boxes = nodes(tree, node => node.type === 'Checkbox'), button = nodes(tree, node => node.type === 'Button')[0];
+  const cards = nodes(tree, node => node.type === 'WorkerQueueCard');
+  assert.equal(cards.length, 3); assert.equal(cards[0].props.first, true); assert.equal(cards[2].props.last, true);
+  assert.equal(cards[2].props.onPress, undefined);
   assert.equal(button.props.enabled, false); assert.equal(boxes[2].props.enabled, false);
   assert.ok(button.props.modifiers.some(value => value.name === 'height' && value.args[0] === 56));
-  boxes[1].props.onCheckedChange(true);
+  const rows = nodes(tree, node => node.type === 'Row');
+  rows[1].props.modifiers.find(value => value.name === 'clickable').args[0]();
+  boxes[2].props.onCheckedChange(false);
   tree = AssignmentSheet(props); button = nodes(tree, node => node.type === 'Button')[0];
   assert.equal(button.props.enabled, true); button.props.onClick(); assert.deepEqual(saved, ['Locked', 'Other', 'Own']);
 });
