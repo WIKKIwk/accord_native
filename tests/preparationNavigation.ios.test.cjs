@@ -32,7 +32,7 @@ test('both preparation home order buttons push a screen that can be popped', () 
   const calls = [];
   const router = { push: path => calls.push(['push', path]), replace: path => calls.push(['replace', path]) };
   const home = { snapshot: { assigned_warehouses: ['A'], material_warehouses: [], materials: [] }, warehouse: 'A', locked: false,
-    controller: { reload() {}, submit() {}, getSnapshot: () => ({ saving: false }) } };
+    controller: { reload() {}, refresh() {}, refreshOnReturn() {}, markReloadOnReturn() {}, submit() {}, getSnapshot: () => ({ saving: false }) } };
   const { PreparationHome } = load('preparation/PreparationHome.ios.tsx', {
     '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
     'expo-router': { router, Stack: { Screen: 'Stack.Screen' }, useFocusEffect() {} }, 'react-native': { View: 'View' },

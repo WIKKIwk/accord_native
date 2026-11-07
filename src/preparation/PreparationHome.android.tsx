@@ -17,12 +17,13 @@ import { usePreparationNotice } from './usePreparationNotice';
 export function PreparationHomeScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
   const sheet = useNativeSheet(), notice = usePreparationNotice();
-  const hadFocus = useRef(false), submitting = useRef(false);
+  const submitting = useRef(false);
   useFocusEffect(useCallback(() => {
-    if (hadFocus.current) void home.controller.reload();
-    hadFocus.current = true;
+    void home.controller.refreshOnReturn();
   }, [home.controller]));
   const data = home.snapshot;
+  const openWithReload = (path: Href) => { home.controller.markReloadOnReturn(); router.push(path); };
+  const openScaleWithReload = () => { home.controller.markReloadOnReturn(); openPreparationScale({ warehouse: home.warehouse }); };
   const submit = async (kind: string, payload: Record<string, unknown>) => {
     if (submitting.current || home.controller.getSnapshot().saving) return;
     submitting.current = true;
@@ -33,8 +34,8 @@ export function PreparationHomeScreen() {
   const receive = () => {
     if (!data) return;
     const mode = preparationReceiptMode(home.warehouse, data.material_warehouses);
-    if (mode === 'warehouse') { router.push('/android-preparation/warehouse' as Href); return; }
-    if (mode === 'scale') { openPreparationScale({ warehouse: home.warehouse }); return; }
+    if (mode === 'warehouse') { openWithReload('/android-preparation/warehouse' as Href); return; }
+    if (mode === 'scale') { openScaleWithReload(); return; }
     const materials = preparationVisibleMaterials(data.materials, home.warehouse).filter(item => item.can_receive);
     const warehouse = home.warehouse;
     if (!warehouse) return;
@@ -62,16 +63,16 @@ export function PreparationHomeScreen() {
       { label: 'Tarix', value: 'history' },
     ]);
     if (chosen === 'receive') receive();
-    else if (chosen === 'scale') openPreparationScale({ warehouse: home.warehouse });
-    else if (chosen === 'warehouse') router.push('/android-preparation/warehouse' as Href);
-    else if (chosen === 'materials') router.push('/android-preparation/materials' as Href);
-    else if (chosen === 'sets') router.push('/android-preparation/sets' as Href);
+    else if (chosen === 'scale') openScaleWithReload();
+    else if (chosen === 'warehouse') openWithReload('/android-preparation/warehouse' as Href);
+    else if (chosen === 'materials') openWithReload('/android-preparation/materials' as Href);
+    else if (chosen === 'sets') openWithReload('/android-preparation/sets' as Href);
     else if (chosen === 'sequence') router.replace('/android-preparation/sequence' as Href);
-    else if (chosen === 'history') router.push('/android-preparation/history' as Href);
+    else if (chosen === 'history') openWithReload('/android-preparation/history' as Href);
   };
-  return <View style={{ flex: 1 }}><PreparationPage title="Tayyorlov masteri" subtitle="Ichki homashyo ta’minoti" root drawer actions={data ? () => void actions() : undefined} refreshing={home.loading && !!data}
-    onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
-    {home.loading && !data ? <ActivityIndicator /> : null}
+  return <View style={{ flex: 1 }}><PreparationPage title="Tayyorlov masteri" subtitle="Ichki homashyo ta’minoti" root drawer actions={data ? () => void actions() : undefined} refreshing={home.refreshing}
+    onRefresh={() => { void home.controller.refresh(); }}>
+    {home.loading && !data ? <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator /></View> : <>
     {home.error ? <PreparationRow title={t('Xatolik yuz berdi')} subtitle={home.error} /> : null}
     {data && !data.assigned_warehouses.length ? <PreparationText>{t('Sizga ombor biriktirilmagan. Admin foydalanuvchi kartasidan ombor biriktirishi kerak.')}</PreparationText> : null}
     {home.pending ? <PreparationRow title={t('Tasdiqlanmagan operatsiya')}
@@ -80,13 +81,14 @@ export function PreparationHomeScreen() {
       if (home.pending) void submit(home.pending.kind, home.pending.payload);
     }} /> : null}
     {data ? <>
-      {!!data.assigned_warehouses.length && <PreparationRow title={t('Ombor')} subtitle={home.warehouse ?? undefined} disabled={home.locked} onPress={() => router.push('/android-preparation/warehouse' as Href)} />}
-      <PreparationRow title={t('Homashyolar')} disabled={home.locked} onPress={() => router.push('/android-preparation/materials' as Href)} />
-      <PreparationRow title={t('Mahsulot formulasi')} disabled={home.locked} onPress={() => router.push('/android-preparation/sets' as Href)} />
+      {!!data.assigned_warehouses.length && <PreparationRow title={t('Ombor')} subtitle={home.warehouse ?? undefined} disabled={home.locked} onPress={() => openWithReload('/android-preparation/warehouse' as Href)} />}
+      <PreparationRow title={t('Homashyolar')} disabled={home.locked} onPress={() => openWithReload('/android-preparation/materials' as Href)} />
+      <PreparationRow title={t('Mahsulot formulasi')} disabled={home.locked} onPress={() => openWithReload('/android-preparation/sets' as Href)} />
       <PreparationRow title={t('Buyurtmalar')} onPress={() => router.replace('/android-preparation/sequence' as Href)} />
       <PreparationRow title={t('Ishlab chiqarish')} onPress={() => router.replace('/android-preparation/production' as Href)} />
       <PreparationRow title={t('Ishlab chiqarilgan homashyolar')} onPress={() => router.push('/android-preparation/inventory' as Href)} />
-      <PreparationRow title={t('Tarix')} onPress={() => router.push('/android-preparation/history' as Href)} />
+      <PreparationRow title={t('Tarix')} onPress={() => openWithReload('/android-preparation/history' as Href)} />
     </> : null}
+    </>}
   </PreparationPage><PreparationNotice message={notice.message} /></View>;
 }

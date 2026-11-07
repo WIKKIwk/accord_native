@@ -6,14 +6,17 @@ import { preparationPendingCommand, preparationSubmit } from './preparationComma
 type Snapshot = Awaited<ReturnType<typeof preparationSnapshot>>;
 type Pending = Awaited<ReturnType<typeof preparationPendingCommand>>;
 type HomeState = { snapshot: Snapshot | null; pending: Pending; warehouse: string | null; orderId: string | null;
-  percentages: Record<string, string>; loading: boolean; saving: boolean; error: string | null };
+  percentages: Record<string, string>; loading: boolean; refreshing: boolean; saving: boolean; error: string | null };
 
 export class PreparationHomeState {
   private state: HomeState = { snapshot: null, pending: null, warehouse: null, orderId: null,
-    percentages: {}, loading: true, saving: false, error: null };
+    percentages: {}, loading: true, refreshing: false, saving: false, error: null };
   private active = true;
   private invalidated = false;
   private revision = 0;
+  private reloadRevision = 0;
+  private latestReload: Promise<void> | null = null;
+  private reloadOnReturn = false;
   private listeners = new Set<() => void>();
   constructor(private readonly session: Session) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
@@ -25,15 +28,25 @@ export class PreparationHomeState {
   get locked() { return this.invalidated || this.state.loading || this.state.saving || this.state.pending !== null; }
   activate() { this.active = true; }
   sessionChanged() {
-    this.invalidated = true; this.revision++;
+    this.invalidated = true; this.revision++; this.reloadOnReturn = false;
     this.update({ snapshot: null, pending: null, warehouse: null, orderId: null, percentages: {},
-      loading: false, saving: false, error: 'Akkaunt o‘zgargan. Sahifani qayta oching' });
+      loading: false, refreshing: false, saving: false, error: 'Akkaunt o‘zgargan. Sahifani qayta oching' });
   }
   async reload() {
     if (!this.active || this.invalidated) return;
-    const revision = this.revision;
-    const current = () => this.active && revision === this.revision;
+    const revision = this.revision, reloadRevision = ++this.reloadRevision;
+    const current = () => this.active && revision === this.revision && reloadRevision === this.reloadRevision;
     this.update({ loading: true, error: null });
+    const request = this.readSnapshot(current);
+    this.latestReload = request;
+    await request;
+    let completed = request;
+    while (this.active && !this.invalidated && this.latestReload && this.latestReload !== completed) {
+      completed = this.latestReload;
+      await completed;
+    }
+  }
+  private async readSnapshot(current: () => boolean) {
     try {
       const pending = await preparationPendingCommand(this.session);
       if (!current()) return;
@@ -48,6 +61,18 @@ export class PreparationHomeState {
       this.update({ snapshot, warehouse, orderId, percentages });
     } catch (error) { if (current()) this.update({ error: String(error) }); }
     finally { if (current()) this.update({ loading: false }); }
+  }
+  async refresh() {
+    if (!this.active || this.invalidated || this.state.loading || this.state.saving) return;
+    this.update({ refreshing: true });
+    try { await this.reload(); }
+    finally { this.update({ refreshing: false }); }
+  }
+  markReloadOnReturn() { if (this.active && !this.invalidated) this.reloadOnReturn = true; }
+  async refreshOnReturn() {
+    if (!this.reloadOnReturn || !this.active || this.invalidated) return;
+    this.reloadOnReturn = false;
+    await this.reload();
   }
   selectWarehouse(warehouse: string) { this.update({ warehouse }); }
   selectOrder(orderId: string) { this.update({ orderId, percentages: {} }); }
@@ -69,8 +94,8 @@ export class PreparationHomeState {
   }
   invalidate() {
     if (!this.active) return;
-    this.revision++;
-    this.update({ snapshot: null, pending: null, warehouse: null, orderId: null, percentages: {}, loading: false, saving: false,
+    this.revision++; this.reloadOnReturn = false;
+    this.update({ snapshot: null, pending: null, warehouse: null, orderId: null, percentages: {}, loading: false, refreshing: false, saving: false,
       error: 'Akkaunt o‘zgargan. Sahifani qayta oching' });
     this.active = false;
   }
