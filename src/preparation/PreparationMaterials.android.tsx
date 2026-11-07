@@ -26,7 +26,7 @@ type MaterialAction = 'rename' | 'warehouses' | 'delete';
 function MaterialRow({ name, subtitle, blocked, choose, first, last }: { name: string; subtitle: string; blocked: boolean; choose: (action: MaterialAction) => void; first: boolean; last: boolean }) {
   const colors = useMaterialColors(), t = usePreparationText(), [expanded, setExpanded] = useState(false);
   const select = (action: MaterialAction) => { setExpanded(false); if (!blocked) requestAnimationFrame(() => choose(action)); };
-  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last} onPress={blocked ? undefined : () => setExpanded(true)}>
+  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last}>
     <View accessible={false} style={[styles.materialIcon, { backgroundColor: colors.surfaceContainerHighest }]}>
       <SymbolView name={{ android: 'inventory_2' }} size={20} tintColor={colors.onSurfaceVariant} />
     </View>

@@ -60,6 +60,7 @@ test('materials use the warehouse list and retain search, refresh and row action
   assert.equal(row.props.subtitle, 'Own');
   let card = row.type(row.props);
   assert.equal(card.type, 'WorkerQueueCard');
+  assert.equal(card.props.onPress, undefined);
   assert.equal(nodes(card, node => node.type === menu).length, 0);
   assert.equal(nodes(card, node => node.type === 'Host').length, 0);
   const trigger = nodes(card, node => node.type === 'Pressable')[0];
