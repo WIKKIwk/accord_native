@@ -137,10 +137,10 @@ function DialogContent({ dialog, close }: { dialog: Dialog; close: () => void })
           keyboardOptions={{ keyboardType: dialog.quantity ? 'decimal' : 'text' }} modifiers={[fillMaxWidth()]}>
           <OutlinedTextField.Label><Text>{t(dialog.label)}</Text></OutlinedTextField.Label>
         </OutlinedTextField>{error ? <Text>{t(error)}</Text> : null}</Column>
-        : dialog.kind === 'choice' ? <Column>{dialog.message ? <Text>{dialog.message}</Text> : null}
+        : dialog.kind === 'choice' ? <Column verticalArrangement={{ spacedBy: 12 }}>{dialog.message ? <Text>{dialog.message}</Text> : null}
           {dialog.searchable ? <OutlinedTextField value={searchValue} singleLine onValueChange={setSearch} modifiers={[fillMaxWidth()]}>
             <OutlinedTextField.Label><Text>{t('Qidirish')}</Text></OutlinedTextField.Label></OutlinedTextField> : null}
-          <RNHostView matchContents><ScrollView style={{ maxHeight: height * 0.45, width: width * 0.7 }}>
+          <RNHostView matchContents><ScrollView style={{ maxHeight: height * 0.45, width: width * 0.7 }} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
           {dialog.choices.filter(item => `${item.label} ${item.subtitle ?? ''} ${item.searchText ?? ''}`.toLowerCase().includes(search.trim().toLowerCase())).map(item => <PreparationRow key={item.value} title={t(item.label)} subtitle={item.subtitle}
             disabled={item.disabled} onPress={() => { close(); dialog.resolve(item.value); }} />)}
         </ScrollView></RNHostView></Column> : <Text>{dialog.message}</Text>}</AlertDialog.Text>

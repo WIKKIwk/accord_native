@@ -43,15 +43,15 @@ export function InventorySheetNote({ children }: { children: string }) {
   </Host>;
 }
 
-export function InventorySheetButton({ label, onPress, disabled, kind = 'primary', id }: {
-  label: string; onPress: () => void; disabled?: boolean; kind?: 'primary' | 'outlined' | 'text'; id?: string;
+export function InventorySheetButton({ label, onPress, disabled, kind = 'primary', id, large = false }: {
+  label: string; onPress: () => void; disabled?: boolean; kind?: 'primary' | 'outlined' | 'text'; id?: string; large?: boolean;
 }) {
   const t = usePreparationText();
   const Component = kind === 'outlined' ? OutlinedButton : kind === 'text' ? TextButton : Button;
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
     <Component enabled={!disabled} onClick={onPress}
-      modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 48 }), ...(id ? [testID(id)] : [])]}>
-      <Text>{t(label)}</Text>
+      modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: large ? 64 : 48 }), ...(id ? [testID(id)] : [])]}>
+      <Text style={large ? { typography: 'titleMedium', fontSize: 18 } : undefined}>{t(label)}</Text>
     </Component>
   </Host>;
 }
