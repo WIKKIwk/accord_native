@@ -13,7 +13,10 @@ export function WorkerQueueCard({ children, backgroundColor, backgroundImage, fi
     borderBottomLeftRadius: last ? 16 : 4, borderBottomRightRadius: last ? 16 : 4,
   }];
   return <View style={[styles.inset, { paddingTop: first ? 0 : 1, paddingBottom: last ? 12 : 1 }]}>
-    {onPress ? <Pressable accessibilityRole="button" onPress={onPress} onLongPress={onLongPress} android_ripple={{}} style={cardStyle}>{children}</Pressable>
+    {onPress || onLongPress ? <Pressable accessibilityRole="button" onPress={onPress} onLongPress={onLongPress}
+      accessibilityActions={!onPress && onLongPress ? [{ name: 'activate' }] : undefined}
+      onAccessibilityAction={!onPress && onLongPress ? event => { if (event.nativeEvent.actionName === 'activate') onLongPress(); } : undefined}
+      android_ripple={{}} style={cardStyle}>{children}</Pressable>
       : <View style={cardStyle}>{children}</View>}
   </View>;
 }

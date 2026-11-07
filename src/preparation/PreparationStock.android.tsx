@@ -1,4 +1,5 @@
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Box, Column, DropdownMenu, DropdownMenuItem, Host, RNHostView, Text as ComposeText, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { size } from '@expo/ui/jetpack-compose/modifiers';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -17,7 +18,7 @@ import { preparationCreateWarehouse, preparationDeleteWarehouse, preparationRena
 import { preparationMaterialAvailable, preparationReceiptMode,
   preparationReverseHistory, preparationVisibleMaterials, type PreparationMaterial } from './preparationLogic';
 import { preparationDisplay } from './preparationModel';
-import { preparationHistoryCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
+import { preparationHistoryCard, preparationReceiptReverseMessage } from './preparationHistoryModel';
 import { PreparationNotice } from './PreparationNotice';
 import { usePreparationFab } from './PreparationFab.android';
 import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
@@ -167,6 +168,8 @@ const styles = StyleSheet.create({
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
   empty: { paddingHorizontal: 24, paddingVertical: 16 },
   fabSpace: { height: 112 },
+  historyMenuAnchor: { position: 'absolute', top: 0, right: 0, width: 48, height: 48 },
+  historyMenuOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
 });
 
 // @v2 PreparationHistoryScreen
@@ -176,7 +179,7 @@ export function PreparationHistoryScreen() {
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
     openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
-  const sheet = useNativeSheet(), notice = usePreparationNotice(), afterSheet = useRef<(() => void) | null>(null);
+  const notice = usePreparationNotice();
   const [query, setQuery] = useState('');
   const [optimistic, setOptimistic] = useState<{ snapshot: typeof home.snapshot; history: Record<string, unknown>[] } | null>(null);
   const history = optimistic && optimistic.snapshot === home.snapshot ? optimistic.history : home.snapshot?.history ?? [];
@@ -195,18 +198,6 @@ export function PreparationHistoryScreen() {
       await home.controller.reload(); notice.show(t('Kirim bekor qilindi'));
     } catch (error) { notice.show(String(error)); }
   };
-  const openActions = (doc: Record<string, unknown>) => {
-    sheet.open(<View style={{ padding: 16, gap: 10 }}>
-      <PreparationText title>{`Kirim — ${String(doc.name ?? '')}`}</PreparationText>
-      <PreparationText>{preparationReceiptActionSubtitle(doc)}</PreparationText>
-      <PreparationRow title={t('Kirimni bekor qilish')} subtitle={t(doc.can_reverse === true
-        ? 'Ishlatilmagan va orderga ulanmagan kirim' : 'Bu kirim ishlatilgan yoki orderga ulangan')}
-        disabled={doc.can_reverse !== true} onPress={() => { afterSheet.current = () => { void reverse(doc); }; sheet.close(); }} />
-      <PreparationRow title={t('Yopish')} onPress={sheet.close} />
-    </View>, { compact: true, dismissible: true, onDismiss: () => {
-      const next = afterSheet.current; afterSheet.current = null; next?.();
-    } });
-  };
   const search = query.trim().toLowerCase();
   const entries = history.map(doc => ({ doc, card: preparationHistoryCard(doc) })).filter(({ card }) =>
     !search || `${card.title} ${card.subtitle} ${card.value}`.toLowerCase().includes(search));
@@ -223,19 +214,47 @@ export function PreparationHistoryScreen() {
     {home.snapshot && !home.error && !entries.length ? <View style={styles.empty}><PreparationText>{t(search ? 'Tarixda hech narsa topilmadi.' : 'Hali kirim yoki sarf yo‘q.')}</PreparationText></View> : null}
     {entries.map(({ doc, card }, index) => <HistoryRow key={`${String(doc.id ?? '')}-${index}`} title={card.title}
       subtitle={`${card.subtitle}\n${card.value}`} first={index === 0} last={index === entries.length - 1}
-      onLongPress={doc.kind === 'receipt' && doc.reversed !== true ? () => openActions(doc) : undefined} />)}
+      canReverse={doc.can_reverse === true}
+      onReverse={doc.kind === 'receipt' && doc.reversed !== true ? () => { void reverse(doc); } : undefined} />)}
     </OrdersList>
     <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
     <PreparationNotice message={notice.message} /></View>;
 }
 
-function HistoryRow({ title, subtitle, first, last, onLongPress }: { title: string; subtitle: string; first: boolean; last: boolean; onLongPress?: () => void }) {
+function HistoryMenu({ canReverse, close, select }: { canReverse: boolean; close: () => void; select: () => void }) {
+  const colors = useMaterialColors(), t = usePreparationText(), [ready, setReady] = useState(false);
+  return <Host pointerEvents="none" style={styles.historyMenuOverlay} onLayoutContent={({ nativeEvent }) => {
+    if (!ready && nativeEvent.width > 0 && nativeEvent.height > 0) setReady(true);
+  }}>
+    <DropdownMenu expanded={ready} onDismissRequest={close}>
+      <DropdownMenu.Trigger><Box modifiers={[size(48, 48)]} /></DropdownMenu.Trigger>
+      <DropdownMenu.Items>
+        <DropdownMenuItem enabled={canReverse} onClick={select}>
+          <DropdownMenuItem.LeadingIcon><RNHostView matchContents><SymbolView name={{ android: 'undo' }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView></DropdownMenuItem.LeadingIcon>
+          <DropdownMenuItem.Text><Column verticalArrangement={{ spacedBy: 4 }}>
+            <ComposeText>{t('Kirimni bekor qilish')}</ComposeText>
+            <ComposeText color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t(canReverse
+              ? 'Ishlatilmagan va orderga ulanmagan kirim' : 'Bu kirim ishlatilgan yoki orderga ulangan')}</ComposeText>
+          </Column></DropdownMenuItem.Text>
+        </DropdownMenuItem>
+      </DropdownMenu.Items>
+    </DropdownMenu>
+  </Host>;
+}
+
+function HistoryRow({ title, subtitle, first, last, canReverse, onReverse }: { title: string; subtitle: string; first: boolean; last: boolean;
+  canReverse: boolean; onReverse?: () => void }) {
   const colors = useMaterialColors();
-  return <WorkerQueueCard first={first} last={last} backgroundColor={colors.surface} onPress={onLongPress} onLongPress={onLongPress}>
+  const [expanded, setExpanded] = useState(false);
+  const select = () => { setExpanded(false); if (canReverse && onReverse) requestAnimationFrame(onReverse); };
+  return <WorkerQueueCard first={first} last={last} backgroundColor={colors.surface} onLongPress={onReverse ? () => setExpanded(true) : undefined}>
     <View accessible={false} style={[styles.materialIcon, { backgroundColor: colors.surfaceContainerHighest }]}>
       <SymbolView name={{ android: 'history' }} size={20} tintColor={colors.onSurfaceVariant} />
     </View>
     <View style={styles.materialText}><Text style={[styles.headline, { color: colors.onSurface }]}>{title}</Text>
       <Text style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</Text></View>
+    {expanded && onReverse ? <View pointerEvents="none" style={styles.historyMenuAnchor}>
+      <HistoryMenu canReverse={canReverse} close={() => setExpanded(false)} select={select} />
+    </View> : null}
   </WorkerQueueCard>;
 }
