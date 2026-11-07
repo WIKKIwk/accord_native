@@ -3,6 +3,7 @@ import { SymbolView } from 'expo-symbols';
 import { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useWorkerColors } from '../../components/useWorkerColors';
+import { RoleHeaderButton } from '../navigation/RoleHeaderButton';
 
 type Props = {
   search: string; searchPlaceholder?: string;
@@ -21,9 +22,7 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onProfile, search
 
   return (
     <View style={styles.row}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Bo‘limlar" onPress={onMenu} style={styles.iconButton} hitSlop={8}>
-        <SymbolView name={{ ios: 'line.3.horizontal', android: 'menu', web: 'menu' }} size={25} tintColor={colors.icon} />
-      </Pressable>
+      <RoleHeaderButton icon="menu" label="Bo‘limlar" onPress={onMenu} tintColor={colors.icon} />
       <View style={[styles.field, { backgroundColor: colors.field }]}>
         <Host colorScheme={Platform.OS === 'android' ? undefined : 'light'} matchContents={{ vertical: true }} style={styles.inputHost}>
           <TextInput
@@ -45,18 +44,14 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onProfile, search
           </Pressable>
         )}
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Profil" onPress={onProfile} style={styles.profile} hitSlop={8}>
-        <SymbolView name={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }} size={27} tintColor={colors.icon} />
-      </Pressable>
+      <RoleHeaderButton icon="profile" label="Profil" onPress={onProfile} tintColor={colors.icon} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingTop: 6, paddingBottom: 6, minHeight: 70 },
-  iconButton: { width: 38, height: 48, justifyContent: 'center', alignItems: 'center' },
   field: { flex: 1, minHeight: 56, flexDirection: 'row', alignItems: 'center', borderRadius: 30, paddingHorizontal: 4 },
   inputHost: { flex: 1 },
   clear: { position: 'absolute', right: 4, width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
-  profile: { width: 38, height: 48, justifyContent: 'center', alignItems: 'center' },
 });
