@@ -125,6 +125,7 @@ function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType
   const title = screen.controlOnly ? t('Homashyo kirimi') : screen.state.device.selection?.transport === 'wifi'
     ? screen.state.device.selection.server.handshake.serverName : t('Tarozilar rejimi');
   return <><Stack.Screen options={{ headerShown: true, title,
+    ...(session.profile.role === 'tayyorlov_masteri' ? { headerBackButtonDisplayMode: 'minimal' as const } : {}),
     ...(!router.canGoBack() ? { headerLeft: () => <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')} onPress={exit}>
       <SymbolView name="chevron.left" size={20} /></Pressable> } : {}) }} />
     <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped')]}><Section>

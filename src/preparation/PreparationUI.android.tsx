@@ -80,7 +80,7 @@ export function PreparationPage({ title, subtitle, children, refreshing, onRefre
   const roleDrawer = useRoleDrawer();
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
     <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      {drawer && <Pressable accessibilityRole="button" accessibilityLabel={t('Menyu')} testID="preparation-menu" onPress={roleDrawer.open} style={{ padding: 8, width: 40 }}>
+      {root && drawer && <Pressable accessibilityRole="button" accessibilityLabel={t('Menyu')} testID="preparation-menu" onPress={roleDrawer.open} style={{ padding: 8, width: 40 }}>
         <PreparationText>☰</PreparationText></Pressable>}
       {!root && <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')}
         onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }} style={{ padding: 8 }}>

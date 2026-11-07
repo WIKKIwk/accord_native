@@ -8,7 +8,6 @@ import { ListItem, Row } from '@expo/ui';
 import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { OrderListItem } from '../shared/orders/OrderListItem';
-import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import type { Session } from '../auth';
 import { activeSessionToken, registerSessionResetHook } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
@@ -92,7 +91,7 @@ function OrderDetail({ session, controller, row, close, renderDetail }: Props & 
 // @v2 AdminProductionMapOrdersScreen
 // @v2 _PreparationOrdersListState
 export function PreparationSequence({ session, controller, selectApparatus, renderDetail }: Props) {
-  const t = usePreparationText(), sheet = useNativeSheet(), drawer = useRoleDrawer();
+  const t = usePreparationText(), sheet = useNativeSheet();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(70);
   const [query, setQuery] = useState('');
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
@@ -105,7 +104,7 @@ export function PreparationSequence({ session, controller, selectApparatus, rend
   };
   return <OrdersWorkspace session={session} tabs={state.window?.apparatus ?? []} selected={state.apparatus}
     onSelect={id => { void select(id); }} search={query} onSearchChange={value => { setQuery(value); controller.searchChanged(value); }}
-    loading={state.loading && !state.window} onMenu={drawer.open}
+    loading={state.loading && !state.window}
     onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/ios-preparation' as Href); }}
     onProfile={() => router.navigate('/ios-preparation/profile' as Href)}>
     {(tabId, pagerGesture, machinePicker) => <OrdersList active={tabId === state.apparatus} pagerGesture={pagerGesture}

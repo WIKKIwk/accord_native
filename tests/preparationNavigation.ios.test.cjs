@@ -65,6 +65,7 @@ test('preparation orders back returns to the previous page or home on a direct e
   const controller = { subscribe() {}, getSnapshot: () => ({ window: { apparatus: [] }, apparatus: '', rows: [], loading: false }) };
   const page = PreparationSequence({ session: {}, controller, selectApparatus() {}, renderDetail() {} });
   assert.equal(page.type, 'OrdersWorkspace');
+  assert.equal(page.props.onMenu, undefined);
   page.props.onBack();
   canGoBack = false;
   page.props.onBack();
