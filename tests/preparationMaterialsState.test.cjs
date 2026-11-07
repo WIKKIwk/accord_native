@@ -53,7 +53,7 @@ test('a rename completed after the account scope is invalidated cannot update th
 
 test('background warehouse validation leaves the material list state unchanged', async () => {
   let finish, calls = 0; const pending = new Promise(resolve => { finish = resolve; });
-  const { state } = setup({ options: () => { calls++; return pending; } });
+  const { state } = setup({ options: () => { calls++; return pending; }, snapshot: () => { throw new Error('full snapshot should not be requested'); } });
   await state.load();
   const initial = state.getSnapshot(), changes = [];
   state.subscribe(() => changes.push(state.getSnapshot()));

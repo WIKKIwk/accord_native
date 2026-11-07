@@ -54,12 +54,13 @@ test('warehouse options use the lightweight scoped read and validate the respons
   const calls = [];
   const api = load('preparationManagementApi', {
     '../workerControlsApi': { WorkerControlException: class extends Error { constructor(code, message, statusCode) { super(message); this.code = code; this.statusCode = statusCode; } } },
-    '../authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => { guard(); calls.push(url);
+    '../authorizedFetch': { authorizedFetch: async (_session, url, init, guard) => { guard(); calls.push({ url, init });
       return new Response(JSON.stringify(body), { status }); } },
   });
   const session = { baseUrl: 'https://test.invalid', profile: { role: 'tayyorlov_masteri', ref: 'prep' }, capabilities: ['preparation.access'] };
   assert.deepEqual(await api.preparationMaterialWarehouseOptions(session, ' PREP-1 '), { assigned: ['Shared'], editable: ['Own'] });
-  assert.equal(calls[0], '/v1/mobile/preparation/materials/warehouses?item_code=PREP-1');
+  assert.equal(calls[0].url, '/v1/mobile/preparation/materials/warehouses?item_code=PREP-1');
+  assert.equal(calls[0].init.headers['Cache-Control'], 'no-cache');
   body = { ...body, item_code: 'OTHER' };
   await assert.rejects(api.preparationMaterialWarehouseOptions(session, 'PREP-1'), /mos kelmadi/);
   body = { item_code: 'PREP-1', warehouses: ['Shared'], editable_warehouses: [1] };
