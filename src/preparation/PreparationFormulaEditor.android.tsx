@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { usePreparationContext } from './PreparationContext.android';
+import { PreparationFormulaEditForm } from './PreparationFormulaEditForm.android';
 import { PreparationFormulaDetails, type FormulaDetailAction } from './PreparationFormulaDetails.android';
 import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
 import type { PreparationMaterial } from './preparationLogic';
@@ -103,24 +104,19 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
     <View style={{ flex: 1 }}><PreparationPage title={state.variantName || 'Formulalar'} refreshing={state.loading} onRefresh={() => void state.controller.reload()}>
       {state.loading && !state.materials.length ? <ActivityIndicator /> : null}
       {state.error ? <PreparationText>{state.error}</PreparationText> : null}
+      {!state.editing ? <>
       {heading.context ? <PreparationText>{heading.context}</PreparationText> : null}
       <PreparationRow title={heading.code} subtitle={heading.subtitle} />
       {heading.estimate !== null ? <PreparationText>{heading.estimate}</PreparationText> : null}
-      {state.editing ? <>
-        <PreparationText title>{state.editingName === null ? t('Yangi formula') : `«${state.editingName}»`}</PreparationText>
-        {state.editingName === null ? <><PreparationText>{`Formula: ${preparationNextFormulaName(state.formulas.map(formula => formula.name))}`}</PreparationText>
-          <PreparationText>{t('Nom avtomatik beriladi')}</PreparationText></> : null}
-        {state.rows.map((row, index) => <PreparationRowEditor key={`${index}:${row.material?.code ?? ''}`} index={index} row={row} disabled={state.saving}
-          canRemove={state.rows.length > 1}
-          choose={() => chooseMaterial(index)} update={percent => state.controller.setRows(state.rows.map((entry, i) => i === index ? { ...entry, percent } : entry))}
-          remove={() => state.controller.setRows(state.rows.filter((_, i) => i !== index))} />)}
-        <PreparationButton label="Seriyo qo‘shish" disabled={state.saving} onPress={() => state.controller.setRows([...state.rows, { material: null, percent: '' }])} />
-        <PreparationText>{total.total === null ? 'Jami: —' : `Jami: ${total.total}%`}</PreparationText><PreparationText>{t('100% shart')}</PreparationText>
-        {state.editorError ? <PreparationText>{state.editorError}</PreparationText> : null}
-        <PreparationButton label={state.saving ? 'Saqlanmoqda…' : 'Saqlash'} id="preparation-formula-save" disabled={!state.canSave}
-          onPress={() => { void state.controller.save().then(saved => { if (saved) showNotice(t('Formula saqlandi')); }).catch(showError); }} />
-        <PreparationButton label="Bekor qilish" disabled={state.saving} onPress={() => state.controller.closeEditor()} />
       </> : null}
+      {state.editing ? <PreparationFormulaEditForm name={state.editingName ?? preparationNextFormulaName(state.formulas.map(formula => formula.name))}
+        creating={state.editingName === null} context={[heading.context, heading.subtitle, heading.estimate].filter(Boolean).join('\n')}
+        rows={state.rows} total={total.total} error={state.editorError} saving={state.saving} canSave={state.canSave}
+        choose={chooseMaterial} update={(index, percent) => state.controller.setRows(state.rows.map((entry, i) => i === index ? { ...entry, percent } : entry))}
+        add={() => state.controller.setRows([...state.rows, { material: null, percent: '' }])}
+        remove={index => state.controller.setRows(state.rows.filter((_, i) => i !== index))}
+        save={() => { void state.controller.save().then(saved => { if (saved) showNotice(t('Formula saqlandi')); }).catch(showError); }}
+        cancel={() => state.controller.closeEditor()} /> : <>
       {state.formulas.length ? <PreparationRow title={t('Shnek ulushlari')} disabled={blocked} subtitle={t(preparationFormulaSharesComplete(state.formulas)
         ? 'Jami: 100% • bitta umumiy tarkib' : 'Jami 100% qilib belgilang — kg shundan keyin hisoblanadi')} onPress={() => setShares(true)} /> : null}
       <PreparationText title>{`${options.variantName ? 'Ichki formulalar' : 'Saqlangan formulalar'} (${state.formulas.length})`}</PreparationText>
@@ -133,7 +129,7 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
           <PreparationButton label="Tahrirlash" disabled={blocked} onPress={() => state.controller.openEditor(formula)} />
           <PreparationButton label="O‘chirish" disabled={blocked} onPress={() => { void formulaAction(formula, 'delete'); }} /></View>;
       })}
-      {(!options.manageSavedFormula || options.allowAddingFormula) && !state.editing ? <PreparationButton
+      {(!options.manageSavedFormula || options.allowAddingFormula) ? <PreparationButton
         label={options.manageSavedFormula ? 'Ichki formula qo‘shish' : 'Shnek formula qo‘shish'} disabled={blocked}
         onPress={() => state.controller.openEditor()} /> : null}
       {!options.manageSavedFormula && canOpenScale ? <PreparationButton label="Ishlab chiqarishni boshlash" disabled={blocked}
@@ -141,21 +137,9 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
           scaleReturn.current = resolve;
           try { openPreparationScale(args); } catch (error) { scaleReturn.current = null; reject(error); }
         })).catch(showError); }} /> : null}
+      </>}
     </PreparationPage><PreparationNotice message={noticeMessage} /></View>
     {shares ? <PreparationSharesDialog formulas={state.formulas} materialName={options.materialName}
       onSave={values => state.controller.saveShares(values)} onClose={() => setShares(false)} /> : null}
-  </>;
-}
-
-function PreparationRowEditor({ row, index, disabled, canRemove, choose, update, remove }: {
-  row: { material: { code: string; name: string } | null; percent: string }; index: number; disabled: boolean; canRemove: boolean;
-  choose: () => void; update: (value: string) => void; remove: () => void;
-}) {
-  const t = usePreparationText();
-  return <>
-    <PreparationText title>{`${index + 1}-seriyo`}</PreparationText>
-    {canRemove ? <PreparationButton label="Olib tashlash" disabled={disabled} onPress={remove} /> : null}
-    <PreparationRow title={row.material?.name || row.material?.code || t('Seriyo tanlang')} disabled={disabled} onPress={choose} />
-    {row.material ? <PreparationField label="Foiz (%)" initial={row.percent} enabled={!disabled} decimal onChange={update} /> : null}
   </>;
 }
