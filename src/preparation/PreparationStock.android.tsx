@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useNativeSheet } from '../nativeSheet';
 import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
+import { RoleFab, type RoleFabAction } from '../shared/navigation/RoleFab.android';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { preparationReverseReceipt } from './preparationCommandApi';
@@ -76,6 +77,7 @@ export function PreparationWarehouseScreen() {
   const { receive, createMaterial } = useStockActions(notice);
   const [query, setQuery] = useState(''), [managing, setManaging] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [dockHeight, setDockHeight] = useState(80 + insets.bottom);
   const data = home.snapshot, warehouse = home.warehouse;
   const materials = preparationVisibleMaterials(data?.materials ?? [], warehouse, query);
   const manual = preparationReceiptMode(warehouse, data?.material_warehouses ?? []) === 'manual';
@@ -132,6 +134,21 @@ export function PreparationWarehouseScreen() {
       choose={material => { selected = material; sheet.close(); }} />,
     { dismissible: true, onDismiss: () => { if (selected) void receive(selected); } });
   };
+  const fabActions: RoleFabAction[] = home.locked || managing ? [] : [
+    ...(warehouse && manual ? [
+      { id: 'receive', label: t('Kirim'), icon: 'add_circle' as const, width: 164 },
+      { id: 'material', label: t('Homashyo qo‘shish'), icon: 'add' as const, width: 240 },
+    ] : warehouse ? [{ id: 'scale', label: t('Tarozi kirimi'), icon: 'scale' as const, width: 210 }] : []),
+    ...(data?.assigned_warehouses.length && data.material_warehouses.length
+      ? [{ id: 'warehouse', label: t('Ombor qo‘shish'), icon: 'warehouse' as const, width: 220 }] : []),
+  ];
+  const selectFabAction = (id: string) => {
+    if (home.locked || managing) return;
+    if (id === 'receive' && warehouse && manual) pickReceipt();
+    else if (id === 'material' && warehouse && manual) void createMaterial();
+    else if (id === 'scale' && warehouse && !manual) openPreparationScale({ warehouse });
+    else if (id === 'warehouse' && data?.assigned_warehouses.length && data.material_warehouses.length) setShowCreate(true);
+  };
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
     <OrdersHeader search={query} searchPlaceholder={t('Qidirish')} onSearchChange={setQuery}
       onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }}
@@ -150,16 +167,12 @@ export function PreparationWarehouseScreen() {
         : !warehouse ? 'Yuqoridagi filtrdan ombor tanlang.' : 'Bu omborda hali kirim yo‘q.')}</PreparationText>
     </View> : null}
     {warehouse && materials.map((item, index) => <WarehouseMaterialRow key={item.code} item={item} warehouse={warehouse} last={index === materials.length - 1} />)}
-    <View style={styles.actions}>{warehouse && manual ? <>
-      <PreparationButton label="Kirim" disabled={home.locked || managing} onPress={pickReceipt} id="preparation-receipt" />
-      <PreparationButton label="Homashyo qo‘shish" disabled={home.locked || managing} onPress={() => void createMaterial()} />
-    </> : null}
-    {warehouse && !manual ? <PreparationButton label="Tarozi kirimi"
-      disabled={home.locked || managing} onPress={() => openPreparationScale({ warehouse })} /> : null}
-    {data?.assigned_warehouses.length && data.material_warehouses.length ? <PreparationButton label="Ombor qo‘shish" disabled={home.locked || managing} onPress={() => setShowCreate(true)} /> : null}
-    </View>
+    {fabActions.length ? <View style={styles.fabSpace} /> : null}
     </OrdersList>
-    <PreparationDock /><PreparationNotice message={notice.message} />
+    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+    {fabActions.length ? <RoleFab actions={fabActions} onSelect={selectFabAction} bottomOffset={dockHeight + 16}
+      testIDPrefix="preparation-warehouse-fab" openLabel={t('Amallarni ochish')} closeLabel={t('Amallarni yopish')} /> : null}
+    <PreparationNotice message={notice.message} />
     {showCreate && data && <PreparationWarehouseCreateDialog warehouses={data.material_warehouses} selected={warehouse}
       close={() => setShowCreate(false)} create={createWarehouse} />}
   </View>;
@@ -171,7 +184,7 @@ const styles = StyleSheet.create({
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
   empty: { paddingHorizontal: 24, paddingVertical: 16 },
-  actions: { paddingHorizontal: 8, paddingBottom: 12, gap: 8 },
+  fabSpace: { height: 112 },
 });
 
 // @v2 PreparationMaterialDetailScreen

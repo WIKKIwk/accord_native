@@ -39,7 +39,9 @@ function setupWarehouse() {
   const logic = compile('preparation/preparationLogic.ts', {
     './preparationModel': compile('preparation/preparationModel.ts', {}),
   });
-  const ui = new Proxy({ usePreparationText: () => text => text, usePreparationDialogs: () => ({}) }, { get: (object, key) => object[key] ?? key });
+  const ui = new Proxy({ usePreparationText: () => text => text, usePreparationDialogs: () => ({
+    input: async options => { calls.push(['input', options.title]); return null; },
+  }) }, { get: (object, key) => object[key] ?? key });
   const mocks = { 'react/jsx-runtime': jsx, react,
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
     'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']),
@@ -47,15 +49,19 @@ function setupWarehouse() {
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', Text: 'Text', StyleSheet: { create: value => value } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
-    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' },
+    '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
     '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../nativeSheet': { useNativeSheet: () => ({ open: content => { sheetContent = content; }, close() {} }) },
     './PreparationContext.android': { usePreparationContext: () => ({ home, session: {} }) },
     './PreparationUI.android': ui, './preparationLogic': logic,
     './preparationModel': { preparationDisplay: value => value },
+    './PreparationSeriyoPicker.android': { PreparationSeriyoPicker: 'PreparationSeriyoPicker' },
+    './PreparationWarehouseCreateDialog': { PreparationWarehouseCreateDialog: 'PreparationWarehouseCreateDialog' },
+    './preparationNavigation.android': { openPreparationScale: options => calls.push(['scale', options]) },
     './usePreparationNotice': { usePreparationNotice: () => ({ message: '', show() {} }) },
   };
   const filename = path.resolve(__dirname, '../src/preparation/PreparationStock.android.tsx'), mod = new Module(filename, module);
@@ -100,7 +106,47 @@ test('warehouse reuses worker search and list while retaining warehouse selectio
   tree = view.render();
   rows = nodes(tree, node => typeof node.type === 'function' && node.type.name === 'WarehouseMaterialRow');
   assert.deepEqual(rows.map(row => row.props.item.code), ['B2']);
-  assert.ok(nodes(tree, node => node.type === 'PreparationButton' && node.props.label === 'Tarozi kirimi').length);
+  assert.ok(nodes(tree, node => node.type === 'RoleFab')[0].props.actions.some(action => action.label === 'Tarozi kirimi'));
+});
+
+test('warehouse FAB contains the available actions and preserves their behavior', () => {
+  const view = setupWarehouse();
+  let tree = view.render();
+  let fab = nodes(tree, node => node.type === 'RoleFab')[0];
+  assert.deepEqual(fab.props.actions.map(action => action.label), ['Kirim', 'Homashyo qo‘shish', 'Ombor qo‘shish']);
+  assert.equal(fab.props.bottomOffset, 96);
+  nodes(tree, node => node.props?.onLayout && nodes(node, child => child.type === 'PreparationDock').length)[0]
+    .props.onLayout({ nativeEvent: { layout: { height: 104 } } });
+  tree = view.render();
+  fab = nodes(tree, node => node.type === 'RoleFab')[0];
+  assert.equal(fab.props.bottomOffset, 120);
+  assert.equal(nodes(tree, node => node.type === 'PreparationButton' && ['Kirim', 'Homashyo qo‘shish', 'Ombor qo‘shish'].includes(node.props.label)).length, 0);
+  fab.props.onSelect('receive');
+  assert.equal(view.sheetContent().type, 'PreparationSeriyoPicker');
+  fab.props.onSelect('material');
+  assert.deepEqual(view.calls.at(-1), ['input', 'Yangi homashyo']);
+
+  view.home.warehouse = 'Other';
+  tree = view.render();
+  fab = nodes(tree, node => node.type === 'RoleFab')[0];
+  assert.deepEqual(fab.props.actions.map(action => action.label), ['Tarozi kirimi', 'Ombor qo‘shish']);
+  assert.equal(nodes(tree, node => node.type === 'PreparationButton' && ['Tarozi kirimi', 'Ombor qo‘shish'].includes(node.props.label)).length, 0);
+  fab.props.onSelect('scale');
+  assert.deepEqual(view.calls.at(-1), ['scale', { warehouse: 'Other' }]);
+  fab.props.onSelect('warehouse');
+  tree = view.render();
+  assert.equal(nodes(tree, node => node.type === 'PreparationWarehouseCreateDialog')[0].props.selected, 'Other');
+
+  view.home.locked = true;
+  tree = view.render();
+  assert.equal(nodes(tree, node => node.type === 'RoleFab').length, 0);
+  view.home.locked = false;
+  view.home.warehouse = null;
+  tree = view.render();
+  assert.deepEqual(nodes(tree, node => node.type === 'RoleFab')[0].props.actions.map(action => action.label), ['Ombor qo‘shish']);
+  view.home.snapshot.assigned_warehouses = [];
+  tree = view.render();
+  assert.equal(nodes(tree, node => node.type === 'RoleFab').length, 0);
 });
 
 test('shared dropdown keeps worker choices and supports warehouse long press', () => {
