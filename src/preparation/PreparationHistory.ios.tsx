@@ -1,13 +1,13 @@
 import { Button, Host, HStack, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { disabled, onLongPressGesture } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Modal, PlatformColor, Pressable, StyleSheet, View } from 'react-native';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { useNativeSheet } from '../nativeSheet';
 import { usePreparationContext } from './PreparationContext';
 import { PreparationNotice } from './PreparationNotice';
-import { PreparationList, usePreparationText } from './PreparationUI';
+import { PreparationList, PreparationStatus, usePreparationText } from './PreparationUI';
 import { preparationReverseReceipt } from './preparationCommandApi';
 import { preparationHistoryCard, preparationReceiptActionSubtitle, preparationReceiptReverseMessage } from './preparationHistoryModel';
 import { preparationInputError, preparationReverseHistory } from './preparationLogic';
@@ -76,9 +76,11 @@ function ReverseDialog({ doc, close, confirm }: { doc: Entry; close: () => void;
 // @v2 PreparationHistoryScreen
 export function PreparationHistory() {
   const { home, session } = usePreparationContext(), t = usePreparationText(), sheet = useNativeSheet(), notice = usePreparationNotice();
-  const [history, setHistory] = useState<Entry[]>(() => [...(home.snapshot?.history ?? [])]);
+  const [optimistic, setOptimistic] = useState<{ snapshot: typeof home.snapshot; history: Entry[] } | null>(null);
+  const history = optimistic && optimistic.snapshot === home.snapshot ? optimistic.history : home.snapshot?.history ?? [];
   const [reverseDoc, setReverseDoc] = useState<Entry | null>(null);
   const afterSheet = useRef<(() => void) | null>(null);
+  useEffect(() => { void home.controller.loadForPage(); }, [home.controller]);
   const openActions = (doc: Entry) => {
     sheet.open(<ReceiptActions doc={doc} close={sheet.close} reverse={() => {
       afterSheet.current = () => setReverseDoc(doc); sheet.close();
@@ -89,13 +91,18 @@ export function PreparationHistory() {
   const reverse = (doc: Entry, reason: string) => {
     setReverseDoc(null);
     void preparationReverseReceipt(session, String(doc.id ?? ''), reason).then(async result => {
-      setHistory(current => preparationReverseHistory(current, doc.id == null ? null : String(doc.id), result, new Date().toISOString()));
+      const snapshot = home.controller.getSnapshot().snapshot;
+      setOptimistic(current => {
+        const entries = current && current.snapshot === snapshot ? current.history : snapshot?.history ?? [];
+        return { snapshot, history: preparationReverseHistory(entries, doc.id == null ? null : String(doc.id), result, new Date().toISOString()) };
+      });
       await home.controller.reload(); notice.show(t('Kirim bekor qilindi'));
     }).catch(error => notice.show(String(error)));
   };
   return <View style={{ flex: 1 }}><Stack.Screen options={{ title: t('Tarix') }} /><PreparationList refresh={() => home.controller.reload()}>
+    <PreparationStatus loading={home.loading && !home.snapshot} error={home.error} retry={() => { void home.controller.reload(); }} />
     <Section><Text>{t('Oxirgi 100 ta kirim va sarf')}</Text></Section>
-    <Section>{!history.length && <Text>{t('Hali kirim yoki sarf yo‘q.')}</Text>}
+    <Section>{home.snapshot && !history.length && <Text>{t('Hali kirim yoki sarf yo‘q.')}</Text>}
       {history.map((doc, index) => <HistoryRow key={`${String(doc.id ?? '')}-${index}`} doc={doc} onLongPress={() => openActions(doc)} />)}
     </Section>
   </PreparationList><PreparationNotice message={notice.message} />

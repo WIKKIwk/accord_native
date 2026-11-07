@@ -53,16 +53,18 @@ test('account reset clears home state and rejects a late snapshot', async () => 
   assert.match(state.getSnapshot().error, /Akkaunt/);
 });
 
-test('only a marked child return reloads the preparation home', async () => {
-  let reads = 0;
-  const state = setup({ snapshot: async () => { reads++; return snapshot(); }, pending: async () => null });
-  await state.reload();
-  await state.refreshOnReturn(); // Returning from chat or profile does not mark the home.
+test('a data page shares an in-flight background read and refreshes when opened later', async () => {
+  let reads = 0, finish;
+  const state = setup({ snapshot: () => ++reads === 1 ? new Promise(resolve => { finish = resolve; }) : Promise.resolve(snapshot()),
+    pending: async () => null });
+  const background = state.loadForPage();
+  await Promise.resolve();
+  const page = state.loadForPage();
   assert.equal(reads, 1);
-  state.markReloadOnReturn();
-  await state.refreshOnReturn();
-  assert.equal(reads, 2);
-  await state.refreshOnReturn();
+  finish(snapshot());
+  await Promise.all([background, page]);
+  assert.equal(reads, 1);
+  await state.loadForPage();
   assert.equal(reads, 2);
 });
 

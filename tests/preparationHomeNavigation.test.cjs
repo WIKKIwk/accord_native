@@ -15,17 +15,18 @@ function findAll(node, predicate) {
 
 function setup(platform, options = {}) {
   const calls = [], router = { push: route => calls.push(['push', route]), replace: route => calls.push(['replace', route]) };
-  let focus, marked = false, reloads = 0, chosen;
+  let focus = () => {}, reads = 0, marked = false, chosen, choices;
   const controller = {
-    reload() {}, refresh() {}, getSnapshot: () => ({ saving: false }),
+    reload() { reads++; }, refresh() { reads++; }, loadForPage() { reads++; }, getSnapshot: () => ({ saving: false }),
     markReloadOnReturn() { marked = true; },
-    refreshOnReturn() { if (marked) { marked = false; reloads++; } },
+    refreshOnReturn() { if (marked) { marked = false; reads++; } },
   };
-  const home = { controller, snapshot: options.noSnapshot ? null : { assigned_warehouses: ['Own'], material_warehouses: ['Own'], materials: [] },
-    warehouse: 'Own', loading: !!options.loading, refreshing: !!options.refreshing, saving: false, error: null, pending: null, locked: false };
+  const home = { controller, snapshot: options.noSnapshot ? null : { assigned_warehouses: options.noWarehouse ? [] : ['Own'], material_warehouses: ['Own'], materials: [] },
+    warehouse: options.noSnapshot ? null : 'Own', loading: !!options.loading, refreshing: false, saving: false,
+    error: options.error ?? null, pending: options.pending ?? null, locked: !!options.loading };
   const ui = { PreparationList: 'PreparationList', PreparationStatus: 'PreparationStatus', PreparationPage: 'PreparationPage',
     PreparationRow: 'PreparationRow', PreparationText: 'PreparationText', PreparationButton: 'PreparationButton',
-    usePreparationText: () => value => value, usePreparationDialogs: () => ({ choose: async () => chosen }) };
+    usePreparationText: () => value => value, usePreparationDialogs: () => ({ choose: async (_title, items) => { choices = items; return chosen; } }) };
   const context = { usePreparationContext: () => ({ home, session: {} }) };
   const mocks = {
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', Menu: 'Menu', ProgressView: 'ProgressView', Section: 'Section', Text: 'Text' },
@@ -36,6 +37,7 @@ function setup(platform, options = {}) {
     '../shared/appRoutes': { appRoutes: { gscaleMode: 'gscale' }, canOpenRoute: () => true },
     './PreparationUI': ui, './PreparationUI.android': ui, './PreparationContext': context, './PreparationContext.android': context,
     './preparationLogic': { preparationReceiptMode: () => 'warehouse', preparationVisibleMaterials: () => [] },
+    './preparationHomePresentation': { preparationPendingLabel: () => 'pending' },
     './PreparationRoutes': { openPreparationScale: () => calls.push(['scale']) },
     './preparationNavigation.android': { openPreparationScale: () => calls.push(['scale']) },
     './usePreparationNotice': { usePreparationNotice: () => ({ message: '', show() {} }) },
@@ -49,65 +51,69 @@ function setup(platform, options = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
   const render = () => platform === 'ios' ? mod.exports.PreparationHome() : mod.exports.PreparationHomeScreen();
-  return { home, render, focus: () => focus(), calls, reloads: () => reloads, choose: value => { chosen = value; } };
+  return { home, render, focus: () => focus(), calls, reads: () => reads, choose: value => { chosen = value; }, choices: () => choices };
+}
+
+const labels = ['Ombor', 'Homashyolar', 'Mahsulot formulasi', 'Buyurtmalar', 'Ishlab chiqarish', 'Ishlab chiqarilgan homashyolar', 'Tarix'];
+function menuRows(page, platform) {
+  return platform === 'ios'
+    ? findAll(page, node => node.type === 'Button' && node.props.systemImage)
+    : findAll(page, node => node.type === 'PreparationRow' && labels.includes(node.props.title));
 }
 
 for (const platform of ['ios', 'android']) {
-  test(`${platform}: tab returns keep data, while home child returns reload once`, () => {
-    const view = setup(platform), page = view.render();
-    view.focus(); view.focus();
-    assert.equal(view.reloads(), 0);
-    const items = platform === 'ios'
-      ? [['building.2', '/ios-preparation/warehouse'], ['shippingbox', '/ios-preparation/materials'],
-        ['list.bullet.rectangle', '/ios-preparation/sets'], ['clock.arrow.circlepath', '/ios-preparation/history']]
-      : [['Ombor', '/android-preparation/warehouse'], ['Homashyolar', '/android-preparation/materials'],
-        ['Mahsulot formulasi', '/android-preparation/sets'], ['Tarix', '/android-preparation/history']];
-    for (const [label, route] of items) {
-      const row = findAll(page, node => platform === 'ios' ? node.type === 'Button' && node.props.systemImage === label
-        : node.type === 'PreparationRow' && node.props.title === label)[0];
-      assert.ok(row, `missing ${label}`);
-      row.props.onPress();
-      assert.deepEqual(view.calls.at(-1), ['push', route]);
-      const before = view.reloads();
-      view.focus(); view.focus();
-      assert.equal(view.reloads(), before + 1);
+  test(`${platform}: menu is immediately visible and enabled regardless of snapshot and loading`, () => {
+    for (const options of [{ noSnapshot: true, loading: true }, { noSnapshot: true, error: 'offline' },
+      { noWarehouse: true }, { loading: true }, {}]) {
+      const page = setup(platform, options).render();
+      const rows = menuRows(page, platform);
+      assert.deepEqual(rows.map(row => row.props.label ?? row.props.title), labels);
+      assert.ok(rows.every(row => !row.props.disabled && !row.props.modifiers?.includes(true)));
+      assert.equal(findAll(page, node => node.type === 'ProgressView' || node.type === 'ActivityIndicator').length, 0);
+      const container = findAll(page, node => node.type === (platform === 'ios' ? 'PreparationList' : 'PreparationPage'))[0];
+      assert.equal(container.props.refresh ?? container.props.onRefresh, undefined);
+      assert.ok(platform === 'ios' ? findAll(page, node => node.type === 'Menu' && node.props.label === 'Amallar').length
+        : typeof container.props.actions === 'function');
     }
-    const inventory = findAll(page, node => platform === 'ios'
-      ? node.type === 'Button' && node.props.label === 'Ishlab chiqarilgan homashyolar'
-      : node.type === 'PreparationRow' && node.props.title === 'Ishlab chiqarilgan homashyolar')[0];
-    inventory.props.onPress();
-    const before = view.reloads(); view.focus();
-    assert.equal(view.reloads(), before);
+  });
+
+  test(`${platform}: returning from any menu page never reloads home data`, () => {
+    const view = setup(platform, { noSnapshot: true, loading: true });
+    const page = view.render();
+    const routes = [
+      ['push', `/${platform}-preparation/warehouse`], ['push', `/${platform}-preparation/materials`],
+      ['push', `/${platform}-preparation/sets`], [platform === 'ios' ? 'push' : 'replace', `/${platform}-preparation/sequence`],
+      ['replace', `/${platform}-preparation/production`], ['push', `/${platform}-preparation/inventory`],
+      ['push', `/${platform}-preparation/history`],
+    ];
+    for (const [index, row] of menuRows(page, platform).entries()) {
+      row.props.onPress();
+      assert.deepEqual(view.calls.at(-1), routes[index]);
+      view.focus(); view.render(); view.focus();
+      assert.equal(view.reads(), 0);
+    }
+  });
+
+  test(`${platform}: actions remain available before the background snapshot completes`, async () => {
+    const view = setup(platform, { noSnapshot: true, loading: true });
+    const page = view.render();
+    if (platform === 'ios') {
+      const menu = findAll(page, node => node.type === 'Menu' && node.props.label === 'Amallar')[0];
+      for (const label of ['Mahsulot formulasi', 'Homashyolar', 'Ombor', 'Tarozi kirimi', 'Kirim', 'Buyurtmalar', 'Tarix']) {
+        assert.ok(findAll(menu, node => node.type === 'Button' && node.props.label === label).length, label);
+      }
+      findAll(menu, node => node.type === 'Button' && node.props.label === 'Kirim')[0].props.onPress();
+      assert.deepEqual(view.calls.at(-1), ['push', '/ios-preparation/warehouse']);
+      findAll(menu, node => node.type === 'Button' && node.props.label === 'Tarozi kirimi')[0].props.onPress();
+    } else {
+      const actions = findAll(page, node => node.type === 'PreparationPage')[0].props.actions;
+      view.choose('receive'); actions(); await new Promise(resolve => setImmediate(resolve));
+      assert.deepEqual(view.choices().map(choice => choice.label), ['Mahsulot formulasi', 'Homashyolar', 'Ombor', 'Tarozi kirimi', 'Kirim', 'Buyurtmalar', 'Tarix']);
+      assert.deepEqual(view.calls.at(-1), ['push', '/android-preparation/warehouse']);
+      view.choose('scale'); actions(); await new Promise(resolve => setImmediate(resolve));
+    }
+    assert.deepEqual(view.calls.at(-1), ['scale']);
+    view.focus(); view.render();
+    assert.equal(view.reads(), 0);
   });
 }
-
-test('iOS shows initial loading centrally without inserting a row during refresh', () => {
-  const initial = setup('ios', { noSnapshot: true, loading: true }).render();
-  assert.equal(findAll(initial, node => node.type === 'ProgressView').length, 1);
-  assert.equal(findAll(initial, node => node.type === 'PreparationList').length, 0);
-  const refresh = setup('ios', { loading: true }).render();
-  assert.equal(findAll(refresh, node => node.type === 'ProgressView').length, 0);
-  assert.equal(findAll(refresh, node => node.type === 'PreparationStatus')[0].props.loading, false);
-  assert.equal(findAll(refresh, node => node.type === 'PreparationList').length, 1);
-});
-
-test('Android only displays the refresh indicator for a manual refresh', () => {
-  const automatic = setup('android', { loading: true }).render();
-  assert.equal(findAll(automatic, node => node.type === 'PreparationPage')[0].props.refreshing, false);
-  const manual = setup('android', { loading: true, refreshing: true }).render();
-  assert.equal(findAll(manual, node => node.type === 'PreparationPage')[0].props.refreshing, true);
-  const initial = setup('android', { noSnapshot: true, loading: true }).render();
-  assert.equal(findAll(initial, node => node.type === 'ActivityIndicator').length, 1);
-  assert.equal(findAll(initial, node => node.type === 'PreparationRow').length, 0);
-});
-
-test('scale launched from home requests a reload on return', async () => {
-  const ios = setup('ios'), iosPage = ios.render();
-  findAll(iosPage, node => node.type === 'Button' && node.props.label === 'Tarozi kirimi')[0].props.onPress();
-  ios.focus(); assert.equal(ios.reloads(), 1);
-  const android = setup('android'), androidPage = android.render();
-  android.choose('scale');
-  findAll(androidPage, node => node.type === 'PreparationPage')[0].props.actions();
-  await Promise.resolve();
-  android.focus(); assert.equal(android.reloads(), 1);
-});

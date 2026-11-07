@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { preparationReverseReceipt } from './preparationCommandApi';
@@ -38,8 +38,7 @@ function useStockActions(notice: ReturnType<typeof usePreparationNotice>) {
 }
 
 function useStockReturnReload(controller: ReturnType<typeof usePreparationContext>['home']['controller']) {
-  const focused = useRef(false);
-  useFocusEffect(useCallback(() => { if (focused.current) void controller.reload(); focused.current = true; }, [controller]));
+  useFocusEffect(useCallback(() => { void controller.loadForPage(); }, [controller]));
 }
 
 // @v2 PreparationWarehouseScreen
@@ -107,14 +106,16 @@ export function PreparationWarehouseScreen() {
     { dismissible: true, onDismiss: () => { if (selected) void receive(selected); } });
   };
   return <View style={{ flex: 1 }}><PreparationPage title="Ombor" refreshing={home.loading} onRefresh={() => { if (!home.loading && !home.saving) void home.controller.reload(); }}>
-    {!data?.assigned_warehouses.length ? <PreparationText>{t('Sizga ombor biriktirilmagan.')}</PreparationText> : null}
+    {home.error ? <><PreparationRow title={t('Xatolik yuz berdi')} subtitle={home.error} />
+      <PreparationButton label="Qayta urinish" onPress={() => { void home.controller.reload(); }} /></> : null}
+    {data && !data.assigned_warehouses.length ? <PreparationText>{t('Sizga ombor biriktirilmagan.')}</PreparationText> : null}
     {!!data?.assigned_warehouses.length && <PreparationRow title={t('Ombor')} subtitle={warehouse ?? t('Tanlanmagan')} onPress={() => setExpanded(value => !value)} />}
     {expanded && (data?.assigned_warehouses ?? []).map(name => <PreparationRow key={name} title={name}
       onPress={() => { home.controller.selectWarehouse(name); setExpanded(false); }}
       onLongPress={data?.managed_warehouses.includes(name) && !home.locked && !managing ? () => warehouseMenu(name) : undefined} />)}
     <PreparationField label="Qidirish" onChange={setQuery} />
-    {!warehouse ? <PreparationText>{t('Yuqoridagi filtrdan ombor tanlang.')}</PreparationText>
-      : !materials.length ? <PreparationText>{t('Bu omborda hali kirim yo‘q.')}</PreparationText> : null}
+    {data && (!warehouse ? <PreparationText>{t('Yuqoridagi filtrdan ombor tanlang.')}</PreparationText>
+      : !materials.length ? <PreparationText>{t('Bu omborda hali kirim yo‘q.')}</PreparationText> : null)}
     {materials.map(item => <PreparationRow key={item.code} title={item.name}
       subtitle={`${t('Mavjud qoldiq')}: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`}
       onPress={() => router.push({ pathname: '/android-preparation/material', params: { code: item.code, warehouse } } as unknown as Href)} />)}
@@ -159,14 +160,20 @@ export function PreparationMaterialDetailScreen() {
 export function PreparationHistoryScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
   const sheet = useNativeSheet(), notice = usePreparationNotice(), afterSheet = useRef<(() => void) | null>(null);
-  const [history, setHistory] = useState<Record<string, unknown>[]>(() => [...(home.snapshot?.history ?? [])]);
+  const [optimistic, setOptimistic] = useState<{ snapshot: typeof home.snapshot; history: Record<string, unknown>[] } | null>(null);
+  const history = optimistic && optimistic.snapshot === home.snapshot ? optimistic.history : home.snapshot?.history ?? [];
+  useEffect(() => { void home.controller.loadForPage(); }, [home.controller]);
   const reverse = async (doc: Record<string, unknown>) => {
     const reason = await dialogs.input({ title: 'Kirimni bekor qilish', label: 'Sabab', emptyError: 'Sabab kiriting', maxLength: 500 });
     if (reason === null || !(await dialogs.confirm('Kirimni bekor qilish', preparationReceiptReverseMessage(doc), 'Bekor qilish', 'Qaytish'))) return;
     try {
       const id = doc.id == null ? null : String(doc.id);
       const result = await preparationReverseReceipt(session, id ?? '', reason);
-      setHistory(current => preparationReverseHistory(current, id, result, new Date().toISOString()));
+      const snapshot = home.controller.getSnapshot().snapshot;
+      setOptimistic(current => {
+        const entries = current && current.snapshot === snapshot ? current.history : snapshot?.history ?? [];
+        return { snapshot, history: preparationReverseHistory(entries, id, result, new Date().toISOString()) };
+      });
       await home.controller.reload(); notice.show(t('Kirim bekor qilindi'));
     } catch (error) { notice.show(String(error)); }
   };
@@ -183,8 +190,10 @@ export function PreparationHistoryScreen() {
     } });
   };
   return <View style={{ flex: 1 }}><PreparationPage title="Tarix" refreshing={home.loading} onRefresh={() => void home.controller.reload()}>
+    {home.error ? <><PreparationRow title={t('Xatolik yuz berdi')} subtitle={home.error} />
+      <PreparationButton label="Qayta urinish" onPress={() => { void home.controller.reload(); }} /></> : null}
     <PreparationText>{t('Oxirgi 100 ta kirim va sarf')}</PreparationText>
-    {!history.length ? <PreparationText>{t('Hali kirim yoki sarf yo‘q.')}</PreparationText> : null}
+    {home.snapshot && !history.length ? <PreparationText>{t('Hali kirim yoki sarf yo‘q.')}</PreparationText> : null}
     {history.map((doc, index) => {
       const card = preparationHistoryCard(doc);
       return <PreparationRow key={`${String(doc.id ?? '')}-${index}`} title={card.title} subtitle={`${card.subtitle}\n${card.value}`}

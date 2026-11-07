@@ -16,7 +16,6 @@ export class PreparationHomeState {
   private revision = 0;
   private reloadRevision = 0;
   private latestReload: Promise<void> | null = null;
-  private reloadOnReturn = false;
   private listeners = new Set<() => void>();
   constructor(private readonly session: Session) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
@@ -28,7 +27,7 @@ export class PreparationHomeState {
   get locked() { return this.invalidated || this.state.loading || this.state.saving || this.state.pending !== null; }
   activate() { this.active = true; }
   sessionChanged() {
-    this.invalidated = true; this.revision++; this.reloadOnReturn = false;
+    this.invalidated = true; this.revision++;
     this.update({ snapshot: null, pending: null, warehouse: null, orderId: null, percentages: {},
       loading: false, refreshing: false, saving: false, error: 'Akkaunt o‘zgargan. Sahifani qayta oching' });
   }
@@ -68,11 +67,15 @@ export class PreparationHomeState {
     try { await this.reload(); }
     finally { this.update({ refreshing: false }); }
   }
-  markReloadOnReturn() { if (this.active && !this.invalidated) this.reloadOnReturn = true; }
-  async refreshOnReturn() {
-    if (!this.reloadOnReturn || !this.active || this.invalidated) return;
-    this.reloadOnReturn = false;
-    await this.reload();
+  async loadForPage() {
+    if (!this.active || this.invalidated) return;
+    if (!this.state.loading || !this.latestReload) { await this.reload(); return; }
+    let pending = this.latestReload;
+    while (this.active && !this.invalidated) {
+      await pending;
+      if (!this.latestReload || this.latestReload === pending) return;
+      pending = this.latestReload;
+    }
   }
   selectWarehouse(warehouse: string) { this.update({ warehouse }); }
   selectOrder(orderId: string) { this.update({ orderId, percentages: {} }); }
@@ -94,12 +97,12 @@ export class PreparationHomeState {
   }
   invalidate() {
     if (!this.active) return;
-    this.revision++; this.reloadOnReturn = false;
+    this.revision++;
     this.update({ snapshot: null, pending: null, warehouse: null, orderId: null, percentages: {}, loading: false, refreshing: false, saving: false,
       error: 'Akkaunt o‘zgargan. Sahifani qayta oching' });
     this.active = false;
   }
-  dispose() { this.active = false; this.revision++; this.listeners.clear(); }
+  dispose() { this.active = false; this.revision++; this.latestReload = null; this.listeners.clear(); }
 }
 
 export function usePreparationHome(session: Session) {
@@ -108,7 +111,7 @@ export function usePreparationHome(session: Session) {
   useEffect(() => {
     controller.activate();
     const unregister = registerSessionResetHook(async () => { controller.sessionChanged(); });
-    void controller.reload();
+    void controller.loadForPage();
     return () => { unregister(); controller.dispose(); };
   }, [controller]);
   return { ...state, locked: controller.locked, controller };

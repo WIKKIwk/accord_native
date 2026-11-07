@@ -35,8 +35,7 @@ export function PreparationWarehouse() {
   const [input, setInput] = useState<StockInput | null>(null);
   const afterAction = useRef<(() => void) | null>(null);
   const { snapshot, warehouse, controller } = home;
-  const firstFocus = useRef(true);
-  useFocusEffect(useCallback(() => { if (firstFocus.current) firstFocus.current = false; else void controller.reload(); }, [controller]));
+  useFocusEffect(useCallback(() => { void controller.loadForPage(); }, [controller]));
   const mode = preparationReceiptMode(warehouse, snapshot?.material_warehouses ?? []);
   const items = preparationVisibleMaterials(snapshot?.materials ?? [], warehouse, query);
   const blocked = home.locked || managing;
