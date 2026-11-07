@@ -1,7 +1,8 @@
-import { Host, ModalBottomSheet, RNHostView, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Host, ModalBottomSheet, RNHostView, Text as ComposeText, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { router, useFocusEffect, type Href } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { ActivityIndicator, AppState, ScrollView, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, AppState, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { WorkerOrderHeader, WorkerOrderImage } from '../components/WorkerOrderHeader';
@@ -19,12 +20,13 @@ import { workerOrderDetailFromSnapshot } from '../workerApi';
 import type { calculateOrderTemplateFromJson } from '../workerOpenedOrderEditApi';
 import type { productionMapDefinitionFromJson } from '../workerProductionMapSaved';
 import { usePreparationContext } from './PreparationContext.android';
+import { InventoryDetailRow, InventorySheetButton } from './PreparationInventoryDetails.android';
 import { preparationOrderDetail, type PreparationOrderListRow } from './preparationOrdersApi';
 import { preparationOrderDisplayCode, preparationOrderMetrics, preparationOrderProductTitle } from './preparationOrderMetrics';
 import { subscribePreparationOrdersLive } from './preparationOrdersLive';
 import { PreparationOrdersState } from './preparationOrdersState';
 import { preparationAllOrdersWarmStore } from './preparationRuntime';
-import { PreparationButton, PreparationDialogs, PreparationDock, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDialogs, PreparationDock, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 type Props = { session: Session; controller: PreparationOrdersState; openOrder: (row: PreparationOrderListRow) => void };
 type VariantOptions = { orderId: string; orderCode: string; productCode: string; productTitle: string; materialId: string; materialName: string };
@@ -127,8 +129,8 @@ function PreparationDetailSheet({ children }: { children: ReactNode }) {
   return <Host style={{ position: 'absolute', top: 0, bottom: 0, width }} pointerEvents="none">
     <ModalBottomSheet onDismissRequest={() => {}} skipPartiallyExpanded sheetGesturesEnabled={false} showDragHandle={false}
       containerColor={colors.surface} properties={{ shouldDismissOnBackPress: false, shouldDismissOnClickOutside: false }}>
-      <RNHostView matchContents><View style={{ width, height: Math.round((height - insets.top) * 0.86) }}>
-        <View style={{ flex: 1, minHeight: 0 }}>{children}</View>
+      <RNHostView matchContents><View style={{ width, maxHeight: Math.round((height - insets.top) * 0.86) }}>
+        <View style={{ flexShrink: 1, minHeight: 0 }}>{children}</View>
         <View style={{ flexShrink: 0 }}><PreparationDock /></View>
       </View></RNHostView>
     </ModalBottomSheet>
@@ -146,6 +148,7 @@ function PreparationSequenceDetail({ session, controller, selected, isCurrent, c
   const [retry, setRetry] = useState(0), [loadingMaterials, setLoadingMaterials] = useState(false);
   const [imageOpen, setImageOpen] = useState(false), [expanded, setExpanded] = useState(true);
   const dialogs = usePreparationDialogs(), t = usePreparationText();
+  const colors = useMaterialColors(), { height } = useWindowDimensions(), insets = useSafeAreaInsets();
   const current = () => isCurrent() && controller.getSnapshot().window?.scope === selected.scope &&
     controller.getSnapshot().rows.some(row => row.id === selected.row.id);
   const valid = isCurrent() && state.window?.scope === selected.scope && state.rows.some(row => row.id === selected.row.id);
@@ -167,6 +170,7 @@ function PreparationSequenceDetail({ session, controller, selected, isCurrent, c
   const map = latest?.value?.maps[0].map as ReturnType<typeof productionMapDefinitionFromJson> | undefined;
   const code = map ? preparationOrderDisplayCode(map) : selected.row.code || selected.row.order_number;
   const title = map ? map.title.trim() || preparationOrderProductTitle(map) || productionText('worker.order.fallback', locale) : selected.row.title;
+  const customer = detail?.customer || selected.row.customer_name;
   const error = latest?.error ?? null;
   const openFormulas = async () => {
     if (!detail || !current() || loadingMaterials) return;
@@ -185,25 +189,46 @@ function PreparationSequenceDetail({ session, controller, selected, isCurrent, c
     } catch (failure) { if (current()) dialogs.message('Xatolik yuz berdi', failure instanceof Error ? failure.message : String(failure)); }
     finally { setLoadingMaterials(false); }
   };
-  if (imageOpen && valid) return <WorkerOrderImage session={session} orderId={selected.row.id} imageId={selected.row.image_id} onClose={() => setImageOpen(false)} />;
-  return <ScrollView nestedScrollEnabled contentContainerStyle={{ padding: 16, gap: 10 }}>
+  if (imageOpen && valid) return <View style={{ height: Math.round((height - insets.top - insets.bottom) * 0.65) }}>
+    <WorkerOrderImage session={session} orderId={selected.row.id} imageId={selected.row.image_id} onClose={() => setImageOpen(false)} />
+  </View>;
+  return <View style={{ flexShrink: 1, minHeight: 0 }}>
+    <ScrollView nestedScrollEnabled style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ paddingTop: 8, paddingBottom: 16, gap: 12 }}>
     <WorkerOrderHeader session={session} orderId={selected.row.id} imageId={selected.row.image_id}
       code={code || '-'} onOpenImage={() => setImageOpen(true)} onClose={close} />
-    <PreparationText>{[detail?.customer || selected.row.customer_name, title].filter(Boolean).join(' • ')}</PreparationText>
-    {!valid ? <PreparationText>{t('Buyurtma o‘zgargan. Qayta oching.')}</PreparationText> : null}
+    <View style={{ paddingHorizontal: 16, gap: 4 }}>
+      <PreparationText title>{title}</PreparationText>
+      {customer ? <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+        <ComposeText color={colors.onSurfaceVariant} style={{ typography: 'bodyMedium' }}>{customer}</ComposeText>
+      </Host> : null}
+    </View>
+    <View style={{ height: StyleSheet.hairlineWidth, marginHorizontal: 16, backgroundColor: colors.outlineVariant }} />
+    {!valid ? <View style={{ paddingHorizontal: 16 }}><PreparationText>{t('Buyurtma o‘zgargan. Qayta oching.')}</PreparationText></View> : null}
     {valid && !detail && !error ? <ActivityIndicator /> : null}
-    {valid && error ? <><PreparationText>{error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => setRetry(value => value + 1)} /></> : null}
-    <PreparationRow title={productionText('worker.summary.expected.title', locale)} subtitle={productionText('worker.summary.expected.subtitle', locale)}
-      disabled={!detail} onPress={() => setExpanded(value => !value)} />
-    {valid && detail && map && expanded ? <>
-      {latest?.metrics?.length ? <PreparationRow title={productionText('worker.summary.length', locale)}
-        subtitle={productionText('worker.summary.length_value', locale, { value: Math.ceil(latest.metrics.length / 500) * 500 })} /> : null}
-      {latest?.metrics?.kg ? <PreparationRow title={productionText('worker.summary.weight', locale)}
-        subtitle={productionText('worker.summary.weight_value', locale, { value: latest.metrics.kg })} /> : null}
-      {map.roll_count && map.roll_count > 0 ? <PreparationRow title={productionText('worker.summary.shafts', locale)}
-        subtitle={productionText('worker.summary.shaft_value', locale, { count: map.roll_count, width: map.width_mm && map.width_mm > 0 ? map.width_mm : '—' })} /> : null}
-      <PreparationRow title={productionText('order.print_side', locale)} subtitle={productionText(map.standard_print_side === false ? 'order.print_side.nonstandard' : 'order.print_side.standard', locale)} />
-    </> : null}
-    {valid && detail ? <PreparationButton label="Formulalar" disabled={loadingMaterials} onPress={() => void openFormulas()} /> : null}
-  </ScrollView>;
+    {valid && error ? <View style={{ paddingHorizontal: 16, gap: 8 }}>
+      <PreparationText>{error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => setRetry(value => value + 1)} />
+    </View> : null}
+    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+      <ListItem colors={{ containerColor: colors.surface }} supportingText={productionText('worker.summary.expected.subtitle', locale)}
+        onPress={valid && detail ? () => setExpanded(value => !value) : undefined}
+        trailing={<RNHostView matchContents><SymbolView name={{ android: expanded ? 'expand_less' : 'expand_more' }}
+          size={24} tintColor={colors.onSurfaceVariant} /></RNHostView>}>
+        {productionText('worker.summary.expected.title', locale)}
+      </ListItem>
+    </Host>
+    {valid && detail && map && expanded ? <View style={{ paddingHorizontal: 16, gap: 4 }}>
+      {latest?.metrics?.length ? <InventoryDetailRow label={productionText('worker.summary.length', locale)}
+        value={productionText('worker.summary.length_value', locale, { value: Math.ceil(latest.metrics.length / 500) * 500 })} /> : null}
+      {latest?.metrics?.kg ? <InventoryDetailRow label={productionText('worker.summary.weight', locale)}
+        value={productionText('worker.summary.weight_value', locale, { value: latest.metrics.kg })} /> : null}
+      {map.roll_count && map.roll_count > 0 ? <InventoryDetailRow label={productionText('worker.summary.shafts', locale)}
+        value={productionText('worker.summary.shaft_value', locale, { count: map.roll_count, width: map.width_mm && map.width_mm > 0 ? map.width_mm : '—' })} /> : null}
+      <InventoryDetailRow label={productionText('order.print_side', locale)} value={productionText(map.standard_print_side === false ? 'order.print_side.nonstandard' : 'order.print_side.standard', locale)} />
+    </View> : null}
+    </ScrollView>
+    {valid && detail ? <View style={{ flexShrink: 0, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
+      borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.outlineVariant }}>
+      <InventorySheetButton label="Formulalar" disabled={loadingMaterials} onPress={() => void openFormulas()} />
+    </View> : null}
+  </View>;
 }
