@@ -11,15 +11,21 @@ function nodes(node, predicate) {
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
 test('materials use the warehouse list and retain search, refresh and row actions', async () => {
-  const calls = [], sheets = [];
+  const calls = [], sheets = []; let expanded = false;
   const state = { query: '', items: [{ item_code: 'B', name: 'BOPP', warehouses: ['Own'] }], loading: false, refreshing: false,
     saving: false, error: null, actionsBlocked: false, controller: { setQuery: value => calls.push(['query', value]),
-      load: async refresh => calls.push(['load', refresh]) } };
+      load: async refresh => calls.push(['load', refresh]), rename: async (item, name) => { calls.push(['rename', item.item_code, name]); return true; },
+      remove: async item => { calls.push(['delete', item.item_code]); return true; },
+      warehouseChoices: async item => { calls.push(['choices', item.item_code]); return [{ name: 'Own', editable: true, selected: true }]; } } };
   state.filtered = state.items;
-  const ui = new Proxy({ usePreparationText: () => value => value, usePreparationDialogs: () => ({}) }, { get: (obj, key) => obj[key] ?? key });
-  const mocks = { 'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }), useState: value => [value, () => {}] },
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
-    '@expo/ui/jetpack-compose/modifiers': {}, 'expo-symbols': { SymbolView: 'SymbolView' },
+  const ui = new Proxy({ usePreparationText: () => value => value, usePreparationDialogs: () => ({
+    input: async () => 'Updated', confirm: async () => true,
+  }) }, { get: (obj, key) => obj[key] ?? key });
+  const menu = Object.assign(function Menu() {}, { Trigger: 'MenuTrigger', Items: 'MenuItems' });
+  const menuItem = Object.assign(function Item() {}, { LeadingIcon: 'LeadingIcon', Text: 'ItemText' });
+  const mocks = { 'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }), useState: () => [expanded, value => { expanded = value; }], useEffect() {} },
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), Host: 'Host', DropdownMenu: menu, DropdownMenuItem: menuItem, IconButton: 'IconButton', RNHostView: 'RNHostView', Text: 'ComposeText' },
+    '@expo/ui/jetpack-compose/modifiers': { size: () => ({}), semantics: () => ({}) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']), navigate: route => calls.push(['navigate', route]) } },
     'react-native': { View: 'View', Text: 'Text', ActivityIndicator: 'ActivityIndicator', StyleSheet: { create: value => value } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
@@ -32,7 +38,7 @@ test('materials use the warehouse list and retain search, refresh and row action
     './PreparationFab.android': { usePreparationFab: () => () => {} }, './PreparationUI.android': ui,
     './usePreparationAndroidView.android': { usePreparationMaterialsView: () => state },
     './usePreparationNotice': { usePreparationNotice: () => ({ message: '', show() {} }) },
-    './usePreparationMaterials': { preparationMaterialsEmptyMessage: () => 'empty' },
+    './usePreparationMaterials': { preparationMaterialsEmptyMessage: () => 'empty', preparationMaterialDeleteMessage: () => 'confirm' },
   };
   const filename = path.resolve(__dirname, '../src/preparation/PreparationMaterials.android.tsx'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
@@ -50,9 +56,24 @@ test('materials use the warehouse list and retain search, refresh and row action
   assert.deepEqual(calls.at(-1), ['query', 'BOPP']);
   const row = nodes(list, node => typeof node.type === 'function' && node.type.name === 'MaterialRow')[0];
   assert.equal(row.props.subtitle, 'Own');
-  const card = row.type(row.props);
-  assert.equal(card.type, 'WorkerQueueCard'); card.props.onPress();
-  assert.equal(sheets[0].props.name, 'BOPP');
+  let card = row.type(row.props);
+  assert.equal(card.type, 'WorkerQueueCard');
+  nodes(card, node => node.type === 'IconButton')[0].props.onClick();
+  assert.equal(expanded, true);
+  card = row.type(row.props);
+  assert.equal(nodes(card, node => node.type === menu)[0].props.expanded, true);
+  const options = nodes(card, node => node.type === menuItem);
+  assert.equal(options.length, 3);
+  const previousFrame = global.requestAnimationFrame;
+  global.requestAnimationFrame = callback => { callback(); return 1; };
+  try {
+    options[0].props.onClick(); await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(calls.at(-1), ['rename', 'B', 'Updated']); assert.equal(expanded, false);
+    options[1].props.onClick(); await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(calls.at(-1), ['choices', 'B']); assert.equal(sheets[0].props.name, 'BOPP');
+    options[2].props.onClick(); await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(calls.at(-1), ['delete', 'B']);
+  } finally { global.requestAnimationFrame = previousFrame; }
   const blocked = row.type({ ...row.props, blocked: true });
   assert.equal(blocked.props.onPress, undefined);
   header.props.onBack();

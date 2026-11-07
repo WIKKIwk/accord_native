@@ -1,5 +1,5 @@
-import { Checkbox, Column, Host, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { clickable, fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
+import { Checkbox, Column, DropdownMenu, DropdownMenuItem, Host, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { clickable, fillMaxWidth, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
@@ -13,7 +13,7 @@ import { OrdersList } from '../shared/orders/OrdersList';
 import { usePreparationContext } from './PreparationContext.android';
 import { usePreparationFab } from './PreparationFab.android';
 import { PreparationNotice } from './PreparationNotice';
-import { PreparationButton, PreparationDock, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDock, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { preparationMaterialDeleteMessage, preparationMaterialsEmptyMessage, preparationMaterialsErrorMessage } from './usePreparationMaterials';
 import { usePreparationMaterialsView } from './usePreparationAndroidView.android';
 import { usePreparationNotice } from './usePreparationNotice';
@@ -21,9 +21,10 @@ import { usePreparationNotice } from './usePreparationNotice';
 type Choices = { name: string; editable: boolean; selected: boolean }[];
 type MaterialAction = 'rename' | 'warehouses' | 'delete';
 
-function MaterialRow({ name, subtitle, blocked, open, first, last }: { name: string; subtitle: string; blocked: boolean; open: () => void; first: boolean; last: boolean }) {
-  const colors = useMaterialColors();
-  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last} onPress={blocked ? undefined : open}>
+function MaterialRow({ name, subtitle, blocked, choose, first, last }: { name: string; subtitle: string; blocked: boolean; choose: (action: MaterialAction) => void; first: boolean; last: boolean }) {
+  const colors = useMaterialColors(), t = usePreparationText(), [expanded, setExpanded] = useState(false);
+  const select = (action: MaterialAction) => { setExpanded(false); if (!blocked) requestAnimationFrame(() => choose(action)); };
+  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last} onPress={blocked ? undefined : () => setExpanded(true)}>
     <View accessible={false} style={[styles.materialIcon, { backgroundColor: colors.surfaceContainerHighest }]}>
       <SymbolView name={{ android: 'inventory_2' }} size={20} tintColor={colors.onSurfaceVariant} />
     </View>
@@ -31,20 +32,27 @@ function MaterialRow({ name, subtitle, blocked, open, first, last }: { name: str
       <NativeText numberOfLines={1} style={[styles.headline, { color: colors.onSurface }]}>{name}</NativeText>
       <NativeText numberOfLines={1} style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</NativeText>
     </View>
-    <SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} />
+    <Host matchContents style={{ width: 48, height: 48 }}>
+      <DropdownMenu expanded={expanded && !blocked} onDismissRequest={() => setExpanded(false)}>
+        <DropdownMenu.Trigger><IconButton enabled={!blocked} onClick={() => setExpanded(true)}
+          modifiers={[size(48, 48), semantics({ contentDescription: `${name} — ${t('Homashyo amallari')}` })]}>
+          <RNHostView matchContents><SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView>
+        </IconButton></DropdownMenu.Trigger>
+        <DropdownMenu.Items>
+          {([{ action: 'rename', label: 'Nomini o‘zgartirish', icon: 'edit' },
+            { action: 'warehouses', label: 'Omborga biriktirish', icon: 'warehouse' },
+            { action: 'delete', label: 'O‘chirish', icon: 'delete' }] as const).map(option =>
+            <DropdownMenuItem key={option.action} enabled={!blocked} onClick={() => select(option.action)}>
+              <DropdownMenuItem.LeadingIcon><RNHostView matchContents><SymbolView name={{ android: option.icon }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView></DropdownMenuItem.LeadingIcon>
+              <DropdownMenuItem.Text><Text>{t(option.label)}</Text></DropdownMenuItem.Text>
+            </DropdownMenuItem>)}
+        </DropdownMenu.Items>
+      </DropdownMenu>
+    </Host>
   </WorkerQueueCard>;
 }
 
 const passthroughListItems = () => true;
-
-function MaterialActions({ name, choose }: { name: string; choose: (action: MaterialAction) => void }) {
-  const t = usePreparationText();
-  return <View style={{ padding: 16, gap: 10 }}><PreparationText title>{name}</PreparationText>
-    <PreparationRow title={t('Nomini o‘zgartirish')} onPress={() => choose('rename')} />
-    <PreparationRow title={t('Omborga biriktirish')} onPress={() => choose('warehouses')} />
-    <PreparationRow title={t('O‘chirish')} onPress={() => choose('delete')} />
-  </View>;
-}
 
 function AssignmentSheet({ name, choices, save }: { name: string; choices: Choices; save: (selected: string[]) => void }) {
   const t = usePreparationText();
@@ -76,8 +84,8 @@ export function PreparationMaterialsScreen() {
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
     openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
-  const actionSheet = useNativeSheet(), assignmentSheet = useNativeSheet(), notice = usePreparationNotice();
-  const afterAction = useRef<(() => void) | null>(null), afterAssignment = useRef<(() => void) | null>(null);
+  const assignmentSheet = useNativeSheet(), notice = usePreparationNotice();
+  const afterAssignment = useRef<(() => void) | null>(null);
   const blocked = state.actionsBlocked;
   const failure = (error: unknown) => notice.show(t(preparationMaterialsErrorMessage(error)));
   const perform = async (item: typeof state.items[number], action: MaterialAction) => {
@@ -101,14 +109,6 @@ export function PreparationMaterialsScreen() {
       }
     } catch (error) { failure(error); }
   };
-  const openActions = (item: typeof state.items[number]) => {
-    if (blocked) return;
-    actionSheet.open(<MaterialActions name={item.name} choose={action => {
-      afterAction.current = () => { void perform(item, action); }; actionSheet.close();
-    }} />, { compact: true, dismissible: true, onDismiss: () => {
-      const next = afterAction.current; afterAction.current = null; next?.();
-    } });
-  };
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
     <OrdersHeader search={state.query} searchPlaceholder={t('Qidirish')} onSearchChange={value => state.controller.setQuery(value)}
       onBack={() => {
@@ -121,7 +121,7 @@ export function PreparationMaterialsScreen() {
     {!state.loading && !state.filtered.length && !state.error ? <PreparationText>{t(preparationMaterialsEmptyMessage(state.query))}</PreparationText> : null}
     {state.filtered.map((item, index) => <MaterialRow key={item.item_code} name={item.name}
       subtitle={item.warehouses.length ? item.warehouses.join(', ') : t('Ombor biriktirilmagan')}
-      blocked={blocked} first={index === 0} last={index === state.filtered.length - 1} open={() => openActions(item)} />)}
+      blocked={blocked} first={index === 0} last={index === state.filtered.length - 1} choose={action => { if (!blocked) void perform(item, action); }} />)}
     </OrdersList>
     <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
     <PreparationNotice message={notice.message} />
