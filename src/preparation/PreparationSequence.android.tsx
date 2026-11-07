@@ -101,6 +101,7 @@ export function PreparationSequenceScreen() {
   useFocusEffect(useCallback(() => {
     const previous = returnDetail.current;
     if (previous && binding.current()) { returnDetail.current = null; setSelected(previous); }
+    return () => setSelected(null);
   }, [binding]));
   const openVariants = (options: VariantOptions) => {
     returnDetail.current = selected;
@@ -108,9 +109,11 @@ export function PreparationSequenceScreen() {
     requestAnimationFrame(() => router.push({ pathname: '/android-preparation/variants', params: { data: JSON.stringify(options) } } as unknown as Href));
   };
   return <View style={{ flex: 1 }}>
-    <PreparationSequenceList session={session} controller={binding.controller}
-      openOrder={row => { const scope = binding.controller.getSnapshot().window?.scope; if (scope) setSelected({ row, scope }); }} />
-    <PreparationDock />
+    <View style={{ flex: 1, minHeight: 0 }}>
+      <PreparationSequenceList session={session} controller={binding.controller}
+        openOrder={row => { const scope = binding.controller.getSnapshot().window?.scope; if (scope) setSelected({ row, scope }); }} />
+    </View>
+    <View style={{ flexShrink: 0 }}><PreparationDock /></View>
     {selected ? <PreparationDetailSheet>
       <PreparationDialogs><PreparationSequenceDetail session={session} controller={binding.controller} selected={selected}
         isCurrent={binding.current} close={() => setSelected(null)} openVariants={openVariants} /></PreparationDialogs>
@@ -123,7 +126,10 @@ function PreparationDetailSheet({ children }: { children: ReactNode }) {
   return <Host style={{ position: 'absolute', top: 0, bottom: 0, width }} pointerEvents="none">
     <ModalBottomSheet onDismissRequest={() => {}} skipPartiallyExpanded sheetGesturesEnabled={false} showDragHandle={false}
       containerColor={colors.surface} properties={{ shouldDismissOnBackPress: false, shouldDismissOnClickOutside: false }}>
-      <RNHostView matchContents><View style={{ width, height: Math.round((height - insets.top) * 0.86), paddingBottom: insets.bottom }}>{children}</View></RNHostView>
+      <RNHostView matchContents><View style={{ width, height: Math.round((height - insets.top) * 0.86) }}>
+        <View style={{ flex: 1, minHeight: 0 }}>{children}</View>
+        <View style={{ flexShrink: 0 }}><PreparationDock /></View>
+      </View></RNHostView>
     </ModalBottomSheet>
   </Host>;
 }

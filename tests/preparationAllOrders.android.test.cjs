@@ -81,3 +81,46 @@ test('orders header uses a back button for preparation and keeps the worker menu
   assert.equal(menu.props.icon, 'menu'); assert.equal(menu.props.label, 'Bo‘limlar'); menu.props.onPress();
   assert.deepEqual(actions, ['back', 'menu']);
 });
+
+test('preparation orders keep navigation available on the list and order detail', () => {
+  const session = { token: 'token' }, focusEffects = [], row = { id: 'one' };
+  let selected = null;
+  class Controller { getSnapshot() { return { window: { scope: 'orders' } }; } sessionChanged() {} }
+  const mocks = {
+    'react/jsx-runtime': jsx,
+    react: { useCallback: fn => fn, useEffect() {}, useMemo: fn => fn(), useRef: value => ({ current: value }),
+      useState: () => [selected, value => { selected = value; }] },
+    '@expo/ui/jetpack-compose': { Host: 'Host', ModalBottomSheet: 'ModalBottomSheet', RNHostView: 'RNHostView', useMaterialColors: () => ({}) },
+    '@expo/ui': { Button: 'Button', ListItem: 'ListItem' },
+    'expo-router': { router: {}, useFocusEffect: effect => focusEffects.push(effect) },
+    'react-native': { View: 'View', useWindowDimensions: () => ({ width: 400, height: 800 }) },
+    'react-native-reanimated': {},
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
+    '../auth': { activeSessionToken: () => session.token },
+    '../sessionReadScope': { sessionReadScope: () => 'account' },
+    './PreparationContext.android': { usePreparationContext: () => ({ session }) },
+    './preparationOrdersState': { PreparationOrdersState: Controller },
+    './PreparationUI.android': { PreparationDock: 'PreparationDock', PreparationDialogs: 'PreparationDialogs' },
+  };
+  const filename = path.resolve(__dirname, '../src/preparation/PreparationSequence.android.tsx'), mod = new Module(filename, module);
+  mod.filename = filename; mod.paths = module.paths;
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
+  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, filename);
+
+  let page = mod.exports.PreparationSequenceScreen();
+  assert.equal(nodes(page, node => node.type === 'PreparationDock').length, 1);
+  const list = nodes(page, node => node.type === mod.exports.PreparationSequenceList)[0];
+  list.props.openOrder(row);
+  assert.deepEqual(selected, { row, scope: 'orders' });
+  page = mod.exports.PreparationSequenceScreen();
+  assert.equal(nodes(page, node => node.type === 'PreparationDock').length, 1);
+  const sheet = nodes(page, node => typeof node.type === 'function' && node.type.name === 'PreparationDetailSheet')[0];
+  assert.ok(sheet);
+  const sheetTree = sheet.type(sheet.props);
+  const modal = nodes(sheetTree, node => node.type === 'ModalBottomSheet')[0];
+  assert.equal(nodes(modal, node => node.type === 'PreparationDock').length, 1);
+  focusEffects.at(-1)()();
+  assert.equal(selected, null);
+});
