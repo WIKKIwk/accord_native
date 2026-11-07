@@ -1,10 +1,10 @@
-import { Host, IconButton, LinearProgressIndicator, OutlinedButton, RNHostView, Row, Shape, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { defaultMinSize, fillMaxWidth, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { Column, Host, IconButton, LinearProgressIndicator, OutlinedButton, OutlinedTextField, RNHostView, Row, Shape, Text, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
+import { defaultMinSize, fillMaxWidth, semantics, size, testID, weight, width as composeWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { View, useWindowDimensions } from 'react-native';
 import { InventorySheetButton } from './PreparationInventoryDetails.android';
 import type { FormulaEditorRow } from './preparationLogic';
-import { PreparationField, usePreparationText } from './PreparationUI.android';
+import { usePreparationText } from './PreparationUI.android';
 
 type Props = {
   name: string; creating: boolean; context: string; rows: readonly FormulaEditorRow[];
@@ -66,6 +66,22 @@ function IngredientRow({ row, index, disabled, canRemove, choose, update, remove
 }) {
   const colors = useMaterialColors(), t = usePreparationText(), { width, fontScale } = useWindowDimensions();
   const stacked = width < 360 || fontScale > 1.2;
+  const percent = useNativeState(row.percent);
+  const shape = Shape.RoundedCorner({ cornerRadii: { topStart: 8, topEnd: 8, bottomStart: 8, bottomEnd: 8 } });
+  const material = <OutlinedButton enabled={!disabled} onClick={choose} contentPadding={{ start: 12, end: 12 }} shape={shape}
+    modifiers={[defaultMinSize({ minHeight: 56 }), stacked ? fillMaxWidth() : weight(1), testID(`preparation-formula-material-${index}`)]}>
+    <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
+      <Text maxLines={1} overflow="ellipsis" modifiers={[weight(1)]}>{row.material?.name || row.material?.code || t('Seriyo tanlang')}</Text>
+      <RNHostView matchContents><SymbolView name={{ android: 'expand_more' }} size={22} tintColor={colors.onSurfaceVariant} /></RNHostView>
+    </Row>
+  </OutlinedButton>;
+  const percentField = <OutlinedTextField value={percent} singleLine enabled={!disabled && !!row.material}
+    shape={shape} keyboardOptions={{ keyboardType: 'decimal' }} onValueChange={update}
+    modifiers={[defaultMinSize({ minHeight: 56 }), stacked ? fillMaxWidth() : composeWidth(112),
+      semantics({ contentDescription: t('Foiz (%)') }), testID(`preparation-formula-percent-${index}`)]}>
+    <OutlinedTextField.Placeholder><Text>0</Text></OutlinedTextField.Placeholder>
+    <OutlinedTextField.Suffix><Text>%</Text></OutlinedTextField.Suffix>
+  </OutlinedTextField>;
   return <View style={{ padding: 12, gap: 10, borderRadius: 20, backgroundColor: colors.surface }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36 }}>
       <Host matchContents={{ vertical: true }} style={{ flex: 1 }}>
@@ -77,22 +93,9 @@ function IngredientRow({ row, index, disabled, canRemove, choose, update, remove
         </IconButton>
       </Host> : null}
     </View>
-    <View style={{ flexDirection: stacked ? 'column' : 'row', gap: 12, alignItems: 'stretch' }}>
-      <View style={stacked ? undefined : { flex: 1 }}>
-        <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
-          <OutlinedButton enabled={!disabled} onClick={choose} contentPadding={{ start: 12, end: 12 }}
-            shape={Shape.RoundedCorner({ cornerRadii: { topStart: 8, topEnd: 8, bottomStart: 8, bottomEnd: 8 } })}
-            modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID(`preparation-formula-material-${index}`)]}>
-            <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
-              <Text maxLines={1} overflow="ellipsis" modifiers={[weight(1)]}>{row.material?.name || row.material?.code || t('Seriyo tanlang')}</Text>
-              <RNHostView matchContents><SymbolView name={{ android: 'expand_more' }} size={22} tintColor={colors.onSurfaceVariant} /></RNHostView>
-            </Row>
-          </OutlinedButton>
-        </Host>
-      </View>
-      <View style={stacked ? undefined : { width: 112 }}>
-        <PreparationField label="Foiz (%)" initial={row.percent} enabled={!disabled && !!row.material} decimal onChange={update} />
-      </View>
-    </View>
+    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+      {stacked ? <Column verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth()]}>{material}{percentField}</Column>
+        : <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth()]}>{material}{percentField}</Row>}
+    </Host>
   </View>;
 }

@@ -70,14 +70,16 @@ test('formula editing isolates the form and preserves material, row, save and ca
 test('native formula controls keep save locked and avoid untouched-field errors', () => {
   const calls = [];
   const modifiers = new Proxy({}, { get: (_object, key) => value => ({ [key]: value }) });
+  const outlinedField = Object.assign(function OutlinedField() {}, { Placeholder: 'Placeholder', Suffix: 'Suffix' });
   const native = { Host: 'Host', Text: 'Text', OutlinedButton: 'OutlinedButton', LinearProgressIndicator: 'Progress',
-    Row: 'Row', RNHostView: 'RNHostView', IconButton: 'IconButton', useMaterialColors: () => ({}), Shape: { RoundedCorner: () => ({}) } };
+    Row: 'Row', Column: 'Column', OutlinedTextField: outlinedField, useNativeState: value => ({ value }),
+    RNHostView: 'RNHostView', IconButton: 'IconButton', useMaterialColors: () => ({}), Shape: { RoundedCorner: () => ({}) } };
   let width = 400;
   const { PreparationFormulaEditForm } = load('PreparationFormulaEditForm.android.tsx', {
     'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifiers,
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { View: 'View', useWindowDimensions: () => ({ width, fontScale: 1 }) },
     './PreparationInventoryDetails.android': { InventorySheetButton: 'Button' },
-    './PreparationUI.android': { PreparationField: 'Field', usePreparationText: () => value => value },
+    './PreparationUI.android': { usePreparationText: () => value => value },
   });
   const props = { name: 'A', creating: true, context: 'PE', rows: [{ material: null, percent: '' }], total: null,
     error: 'Choose material', saving: false, canSave: false, choose: index => calls.push(['choose', index]),
@@ -86,14 +88,41 @@ test('native formula controls keep save locked and avoid untouched-field errors'
   assert.equal(nodes(tree, node => node.props?.label === 'Saqlash')[0].props.disabled, true);
   assert.equal(nodes(tree, node => node.type === 'Text' && node.props.children === 'Choose material').length, 0);
   let row = nodes(tree, node => node.type?.name === 'IngredientRow')[0], controls = row.type(row.props);
-  assert.equal(nodes(controls, node => node.type === 'Field')[0].props.enabled, false);
+  assert.equal(nodes(controls, node => node.type === outlinedField)[0].props.enabled, false);
   nodes(controls, node => node.type === 'OutlinedButton')[0].props.onClick(); assert.deepEqual(calls.at(-1), ['choose', 0]);
   tree = PreparationFormulaEditForm({ ...props, rows: [{ material: { code: 'C1', name: 'First' }, percent: '50' }], total: '50', error: 'Total must be 100%' });
   assert.equal(nodes(tree, node => node.type === 'Text' && node.props.children === 'Total must be 100%').length, 1);
   assert.equal(nodes(tree, node => node.type === 'Progress')[0].props.progress, 0.5);
   row = nodes(tree, node => node.type?.name === 'IngredientRow')[0]; controls = row.type(row.props);
-  const field = nodes(controls, node => node.type === 'Field')[0];
-  assert.equal(field.props.enabled, true); field.props.onChange('100'); assert.deepEqual(calls.at(-1), ['percent', 0, '100']);
+  const field = nodes(controls, node => node.type === outlinedField)[0];
+  const inputRow = nodes(controls, node => node.type === 'Row' && Array.isArray(node.props.children) && node.props.children.includes(field))[0];
+  assert.equal(inputRow.props.verticalAlignment, 'center');
+  assert.equal(inputRow.props.children[0].type, 'OutlinedButton');
+  assert.equal(field.props.enabled, true); assert.equal(field.props.value.value, '50');
+  assert.equal(nodes(field, node => node.type === 'Suffix')[0].props.children.props.children, '%');
+  field.props.onValueChange('100'); assert.deepEqual(calls.at(-1), ['percent', 0, '100']);
   width = 320; controls = row.type(row.props);
-  assert.ok(nodes(controls, node => node.props?.style?.flexDirection === 'column').length);
+  assert.equal(nodes(controls, node => node.type === 'Column').length, 1);
+});
+
+test('seriyo picker reuses standard cards while preserving search, paging and the selected material', () => {
+  const calls = [], materials = [{ code: 'C1', name: 'First' }, { code: 'C2', name: 'Second' }];
+  const ui = new Proxy({ usePreparationText: () => value => value }, { get: (object, key) => object[key] ?? key });
+  const { PreparationSeriyoPicker } = load('PreparationSeriyoPicker.android.tsx', {
+    'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { View: 'View', Text: 'Text', FlatList: 'FlatList', StyleSheet: { create: value => value } },
+    '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './PreparationUI.android': ui,
+    './usePreparationSeriyoPicker': { usePreparationSeriyoPicker: () => ({ items: materials,
+      setQuery: value => calls.push(['search', value]), loadMore: () => calls.push(['more']) }) },
+  });
+  const tree = PreparationSeriyoPicker({ materials, subtitle: () => 'Mavjud: 12 kg', choose: material => calls.push(['choose', material]) });
+  nodes(tree, node => node.type === 'PreparationField')[0].props.onChange('Second');
+  assert.deepEqual(calls.at(-1), ['search', 'Second']);
+  const list = nodes(tree, node => node.type === 'FlatList')[0];
+  list.props.onEndReached(); assert.deepEqual(calls.at(-1), ['more']);
+  const row = list.props.renderItem({ item: materials[1], index: 1 }), card = row.type(row.props);
+  assert.equal(card.type, 'WorkerQueueCard');
+  assert.equal(nodes(card, node => node.type === 'Text' && node.props.children === 'Mavjud: 12 kg').length, 1);
+  card.props.onPress(); assert.equal(calls.at(-1)[1], materials[1]);
 });
