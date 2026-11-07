@@ -4,14 +4,14 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
-const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+const jsx = { Fragment: 'Fragment', jsx: (type, props, key) => ({ type, props, key }), jsxs: (type, props, key) => ({ type, props, key }) };
 function nodes(node, predicate) {
   if (!node || typeof node !== 'object') return [];
   if (Array.isArray(node)) return node.flatMap(child => nodes(child, predicate));
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
 test('materials use the warehouse list and retain search, refresh and row actions', async () => {
-  const calls = [], sheets = []; let expanded = false, sheetOptions;
+  const calls = [], sheets = []; let expanded = false, menuReady = false, renderingMenu = false, sheetOptions;
   const state = { query: '', items: [{ item_code: 'B', name: 'BOPP', warehouses: ['Own'] }], loading: false, refreshing: false,
     saving: false, error: null, actionsBlocked: false, controller: { setQuery: value => calls.push(['query', value]),
       load: async refresh => calls.push(['load', refresh]), rename: async (item, name) => { calls.push(['rename', item.item_code, name]); return true; },
@@ -23,8 +23,9 @@ test('materials use the warehouse list and retain search, refresh and row action
   }) }, { get: (obj, key) => obj[key] ?? key });
   const menu = Object.assign(function Menu() {}, { Trigger: 'MenuTrigger', Items: 'MenuItems' });
   const menuItem = Object.assign(function Item() {}, { LeadingIcon: 'LeadingIcon', Text: 'ItemText' });
-  const mocks = { 'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }), useState: () => [expanded, value => { expanded = value; }], useEffect() {} },
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), Host: 'Host', DropdownMenu: menu, DropdownMenuItem: menuItem, IconButton: 'IconButton', RNHostView: 'RNHostView', Text: 'ComposeText' },
+  const mocks = { 'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }),
+    useState: () => renderingMenu ? [menuReady, value => { menuReady = value; }] : [expanded, value => { expanded = value; }], useEffect() {} },
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), Host: 'Host', Box: 'Box', DropdownMenu: menu, DropdownMenuItem: menuItem, RNHostView: 'RNHostView', Text: 'ComposeText' },
     '@expo/ui/jetpack-compose/modifiers': { size: () => ({}), semantics: () => ({}) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']), navigate: route => calls.push(['navigate', route]) } },
     'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', ActivityIndicator: 'ActivityIndicator', StyleSheet: { create: value => value } },
@@ -68,9 +69,26 @@ test('materials use the warehouse list and retain search, refresh and row action
   trigger.props.onPress();
   assert.equal(expanded, true);
   card = row.type(row.props);
-  assert.equal(nodes(card, node => node.type === menu)[0].props.expanded, true);
-  const options = nodes(card, node => node.type === menuItem);
+  const sameTrigger = nodes(card, node => node.type === 'Pressable')[0];
+  assert.equal(sameTrigger.type, trigger.type);
+  assert.equal(sameTrigger.key, trigger.key);
+  assert.deepEqual(sameTrigger.props.style, trigger.props.style);
+  assert.equal(sameTrigger.props.children.type, trigger.props.children.type);
+  const popup = nodes(card, node => typeof node.type === 'function' && node.type.name === 'MaterialMenu')[0];
+  assert.ok(popup);
+  renderingMenu = true;
+  let popupTree = popup.type(popup.props);
+  assert.equal(nodes(popupTree, node => node.type === menu)[0].props.expanded, false);
+  const popupHost = nodes(popupTree, node => node.type === 'Host')[0];
+  assert.equal(popupHost.props.pointerEvents, 'none');
+  popupHost.props.onLayoutContent({ nativeEvent: { width: 0, height: 0 } });
+  assert.equal(menuReady, false);
+  popupHost.props.onLayoutContent({ nativeEvent: { width: 48, height: 48 } });
+  popupTree = popup.type(popup.props);
+  assert.equal(nodes(popupTree, node => node.type === menu)[0].props.expanded, true);
+  const options = nodes(popupTree, node => node.type === menuItem);
   assert.equal(options.length, 3);
+  renderingMenu = false;
   const previousFrame = global.requestAnimationFrame;
   global.requestAnimationFrame = callback => { callback(); return 1; };
   try {

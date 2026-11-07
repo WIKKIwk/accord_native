@@ -1,5 +1,5 @@
-import { Button, Checkbox, Column, DropdownMenu, DropdownMenuItem, Host, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { clickable, fillMaxWidth, height, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
+import { Box, Button, Checkbox, Column, DropdownMenu, DropdownMenuItem, Host, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { clickable, fillMaxWidth, height, size } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
@@ -23,6 +23,26 @@ import { usePreparationWarehouseChoices } from './usePreparationWarehouseChoices
 type Choices = { name: string; editable: boolean; selected: boolean }[];
 type MaterialAction = 'rename' | 'warehouses' | 'delete';
 
+function MaterialMenu({ close, select }: { close: () => void; select: (action: MaterialAction) => void }) {
+  const colors = useMaterialColors(), t = usePreparationText(), [ready, setReady] = useState(false);
+  return <Host pointerEvents="none" style={styles.menuOverlay} onLayoutContent={({ nativeEvent }) => {
+    if (!ready && nativeEvent.width > 0 && nativeEvent.height > 0) setReady(true);
+  }}>
+    <DropdownMenu expanded={ready} onDismissRequest={close}>
+      <DropdownMenu.Trigger><Box modifiers={[size(48, 48)]} /></DropdownMenu.Trigger>
+      <DropdownMenu.Items>
+        {([{ action: 'rename', label: 'Nomini o‘zgartirish', icon: 'edit' },
+          { action: 'warehouses', label: 'Omborga biriktirish', icon: 'warehouse' },
+          { action: 'delete', label: 'O‘chirish', icon: 'delete' }] as const).map(option =>
+          <DropdownMenuItem key={option.action} onClick={() => select(option.action)}>
+            <DropdownMenuItem.LeadingIcon><RNHostView matchContents><SymbolView name={{ android: option.icon }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView></DropdownMenuItem.LeadingIcon>
+            <DropdownMenuItem.Text><Text>{t(option.label)}</Text></DropdownMenuItem.Text>
+          </DropdownMenuItem>)}
+      </DropdownMenu.Items>
+    </DropdownMenu>
+  </Host>;
+}
+
 function MaterialRow({ name, subtitle, blocked, choose, first, last }: { name: string; subtitle: string; blocked: boolean; choose: (action: MaterialAction) => void; first: boolean; last: boolean }) {
   const colors = useMaterialColors(), t = usePreparationText(), [expanded, setExpanded] = useState(false);
   const select = (action: MaterialAction) => { setExpanded(false); if (!blocked) requestAnimationFrame(() => choose(action)); };
@@ -34,26 +54,13 @@ function MaterialRow({ name, subtitle, blocked, choose, first, last }: { name: s
       <NativeText numberOfLines={1} style={[styles.headline, { color: colors.onSurface }]}>{name}</NativeText>
       <NativeText numberOfLines={1} style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</NativeText>
     </View>
-    {expanded && !blocked ? <Host matchContents style={styles.menuTrigger}>
-      <DropdownMenu expanded={expanded && !blocked} onDismissRequest={() => setExpanded(false)}>
-        <DropdownMenu.Trigger><IconButton enabled={!blocked} onClick={() => setExpanded(true)}
-          modifiers={[size(48, 48), semantics({ contentDescription: `${name} — ${t('Homashyo amallari')}` })]}>
-          <RNHostView matchContents><SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView>
-        </IconButton></DropdownMenu.Trigger>
-        <DropdownMenu.Items>
-          {([{ action: 'rename', label: 'Nomini o‘zgartirish', icon: 'edit' },
-            { action: 'warehouses', label: 'Omborga biriktirish', icon: 'warehouse' },
-            { action: 'delete', label: 'O‘chirish', icon: 'delete' }] as const).map(option =>
-            <DropdownMenuItem key={option.action} enabled={!blocked} onClick={() => select(option.action)}>
-              <DropdownMenuItem.LeadingIcon><RNHostView matchContents><SymbolView name={{ android: option.icon }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView></DropdownMenuItem.LeadingIcon>
-              <DropdownMenuItem.Text><Text>{t(option.label)}</Text></DropdownMenuItem.Text>
-            </DropdownMenuItem>)}
-        </DropdownMenu.Items>
-      </DropdownMenu>
-    </Host> : <Pressable accessibilityRole="button" accessibilityLabel={`${name} — ${t('Homashyo amallari')}`}
-      disabled={blocked} onPress={() => setExpanded(true)} style={styles.menuTrigger}>
-      <SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} />
-    </Pressable>}
+    <View style={styles.menuTrigger}>
+      {expanded && !blocked ? <MaterialMenu key="menu" close={() => setExpanded(false)} select={select} /> : null}
+      <Pressable key="trigger" accessibilityRole="button" accessibilityLabel={`${name} — ${t('Homashyo amallari')}`}
+        disabled={blocked} onPress={() => setExpanded(true)} style={styles.menuTrigger}>
+        <SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} />
+      </Pressable>
+    </View>
   </WorkerQueueCard>;
 }
 
@@ -154,6 +161,7 @@ const styles = StyleSheet.create({
   materialIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   materialText: { flex: 1, marginStart: 16 },
   menuTrigger: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  menuOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
 });
