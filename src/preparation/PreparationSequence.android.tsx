@@ -11,10 +11,8 @@ import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { OrderListItem } from '../shared/orders/OrderListItem';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
-import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { preparationOrderMaterials } from '../preparationReadApi';
 import { sessionReadScope } from '../sessionReadScope';
-import { adminSequenceApparatusStore } from '../shared/adminSequenceApparatusStore';
 import { productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { workerOrderDetailFromSnapshot } from '../workerApi';
@@ -25,11 +23,10 @@ import { preparationOrderDetail, type PreparationOrderListRow } from './preparat
 import { preparationOrderDisplayCode, preparationOrderMetrics, preparationOrderProductTitle } from './preparationOrderMetrics';
 import { subscribePreparationOrdersLive } from './preparationOrdersLive';
 import { PreparationOrdersState } from './preparationOrdersState';
-import { preparationOrdersWarmStore } from './preparationRuntime';
+import { preparationAllOrdersWarmStore } from './preparationRuntime';
 import { PreparationButton, PreparationDialogs, PreparationDock, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
-type Props = { session: Session; controller: PreparationOrdersState;
-  selectApparatus: (id: string) => Promise<void>; openOrder: (row: PreparationOrderListRow) => void };
+type Props = { session: Session; controller: PreparationOrdersState; openOrder: (row: PreparationOrderListRow) => void };
 type VariantOptions = { orderId: string; orderCode: string; productCode: string; productTitle: string; materialId: string; materialName: string };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -44,10 +41,10 @@ function sequenceLifecycle(controller: PreparationOrdersState) {
 
 // @v2 AdminProductionMapOrdersScreen
 // @v2 _PreparationOrdersListState
-export function PreparationSequenceList({ session, controller, selectApparatus, openOrder }: Props) {
+export function PreparationSequenceList({ session, controller, openOrder }: Props) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const [query, setQuery] = useState(''), dialogs = usePreparationDialogs(), t = usePreparationText();
-  const drawer = useRoleDrawer(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(70);
+  const [query, setQuery] = useState(''), t = usePreparationText();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(70);
   const [headerSize, setHeaderSize] = useState(70);
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), visible = useRef(false), focusedOnce = useRef(false);
   const lifecycle = useMemo(() => sequenceLifecycle(controller), [controller]);
@@ -62,19 +59,14 @@ export function PreparationSequenceList({ session, controller, selectApparatus, 
     const sub = AppState.addEventListener('change', value => controller.setForeground(visible.current && value === 'active'));
     return () => sub.remove();
   }, [controller]);
-  const select = async (id: string) => {
-    if (id === state.apparatus) return;
-    try { await selectApparatus(id); await controller.changeQuery({ apparatus: id }); }
-    catch (error) { dialogs.message('Xatolik yuz berdi', String(error)); }
-  };
   const header = <View onLayout={event => {
     const height = event.nativeEvent.layout.height;
     if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
   }}><OrdersHeader search={query} onSearchChange={value => { setQuery(value); controller.searchChanged(value); }}
-    onMenu={drawer.open} onProfile={() => router.navigate('/android-preparation/profile' as Href)} /></View>;
+    onBack={() => router.replace('/android-preparation' as Href)} onProfile={() => router.navigate('/android-preparation/profile' as Href)} /></View>;
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
-    <OrdersWorkspace session={session} tabs={state.window?.apparatus ?? []} selected={state.apparatus}
-      onSelect={id => { void select(id); }} loading={state.loading && !state.window} header={header} headerOffset={headerOffset}>
+    <OrdersWorkspace session={session} tabs={[{ id: '', name: t('Buyurtmalar') }]} selected=""
+      onSelect={() => {}} loading={state.loading && !state.window} header={header} headerOffset={headerOffset}>
       {(tabId, pagerGesture) => <OrdersList active={tabId === state.apparatus} pagerGesture={pagerGesture}
         headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48}
         onRefresh={() => controller.reload(true)} onEndReached={() => { if (tabId === state.apparatus) void controller.loadMore(); }}>
@@ -94,9 +86,9 @@ function createSequenceBinding(session: Session) {
   let valid = true;
   const scope = sessionReadScope(session);
   const current = () => valid && !!activeSessionToken(session) && scope === sessionReadScope(session);
-  const controller = new PreparationOrdersState(preparationOrdersWarmStore, current,
-    (window, search, length, message, error, done) => subscribePreparationOrdersLive(session, window, { search, length }, message, error, done),
-    () => adminSequenceApparatusStore.loadSavedApparatusId());
+  const controller = new PreparationOrdersState(preparationAllOrdersWarmStore, current,
+    (window, search, length, message, error, done) => subscribePreparationOrdersLive(session, window, { search, length, allApparatus: true }, message, error, done),
+    async () => null);
   return { controller, current, invalidate() { valid = false; controller.sessionChanged(); } };
 }
 
@@ -110,17 +102,13 @@ export function PreparationSequenceScreen() {
     const previous = returnDetail.current;
     if (previous && binding.current()) { returnDetail.current = null; setSelected(previous); }
   }, [binding]));
-  const selectApparatus = async (id: string) => {
-    const item = binding.controller.getSnapshot().window?.apparatus.find(value => value.id === id);
-    if (item && binding.current()) await adminSequenceApparatusStore.saveApparatus(item);
-  };
   const openVariants = (options: VariantOptions) => {
     returnDetail.current = selected;
     setSelected(null);
     requestAnimationFrame(() => router.push({ pathname: '/android-preparation/variants', params: { data: JSON.stringify(options) } } as unknown as Href));
   };
   return <View style={{ flex: 1 }}>
-    <PreparationSequenceList session={session} controller={binding.controller} selectApparatus={selectApparatus}
+    <PreparationSequenceList session={session} controller={binding.controller}
       openOrder={row => { const scope = binding.controller.getSnapshot().window?.scope; if (scope) setSelected({ row, scope }); }} />
     <PreparationDock />
     {selected ? <PreparationDetailSheet>

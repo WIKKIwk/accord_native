@@ -6,9 +6,8 @@ import { preparationOrderListWindowFromJson, type PreparationOrderListWindow } f
 
 type LoadOptions = { apparatus: string; search: string; cursor: string | null; baseline: PreparationOrderListWindow | null; refresh: boolean };
 type Options = { session: () => Session | null; enabled: () => boolean; snapshots: ProductionSnapshotStore;
-  loader: (options: LoadOptions) => Promise<PreparationOrderListWindow>; selectionLoader: () => Promise<string | null> };
+  loader: (options: LoadOptions) => Promise<PreparationOrderListWindow>; selectionLoader: () => Promise<string | null>; cacheNamespace?: string };
 const normalize = (value: string) => value.trim().toLowerCase();
-const keyFor = (apparatus: string, search: string) => JSON.stringify(['preparation-orders-v1', apparatus, normalize(search)]);
 const asWire = (window: PreparationOrderListWindow) => ({ ...window, ok: true, projection: 'preparation_order_list_v1' });
 
 /** @v2 PreparationOrdersWarmStore */
@@ -25,6 +24,7 @@ export class PreparationOrdersWarmStore {
   private prepared = false;
   private denied = false;
   constructor(private readonly options: Options) {}
+  private keyFor(apparatus: string, search: string) { return JSON.stringify([this.options.cacheNamespace ?? 'preparation-orders-v1', apparatus, normalize(search)]); }
   private get currentOwner(): string {
     const session = this.options.session();
     return JSON.stringify([session ? sessionReadScope(session) : '', this.options.snapshots.generation]);
@@ -46,14 +46,14 @@ export class PreparationOrdersWarmStore {
   }
   peek(options: { apparatus?: string; search?: string } = {}) {
     this.synchronize();
-    return this.options.enabled() && !this.denied ? this.windows.get(keyFor(options.apparatus ?? '', options.search ?? '')) ?? null : null;
+    return this.options.enabled() && !this.denied ? this.windows.get(this.keyFor(options.apparatus ?? '', options.search ?? '')) ?? null : null;
   }
   restore(options: { apparatus?: string; search?: string } = {}): Promise<PreparationOrderListWindow | null> {
     this.synchronize();
     if (!this.options.enabled() || this.denied) return Promise.resolve(null);
     const apparatus = options.apparatus ?? '', search = normalize(options.search ?? ''), ready = this.peek({ apparatus, search });
     if (ready) return Promise.resolve(ready);
-    const key = keyFor(apparatus, search), pending = this.restores.get(key);
+    const key = this.keyFor(apparatus, search), pending = this.restores.get(key);
     if (pending) return pending;
     const owner = this.owner!, generation = this.generation, serverSerial = this.serverSerial, session = this.options.session();
     if (!session) return Promise.resolve(null);
@@ -77,7 +77,7 @@ export class PreparationOrdersWarmStore {
     fresh?: boolean; force?: boolean } = {}): Promise<PreparationOrderListWindow> {
     this.synchronize();
     const apparatus = options.apparatus ?? '', search = normalize(options.search ?? ''), cursor = options.cursor ?? null;
-    const key = keyFor(apparatus, search), ready = this.peek({ apparatus, search });
+    const key = this.keyFor(apparatus, search), ready = this.peek({ apparatus, search });
     if (!options.fresh && !options.force && cursor === null && ready) return Promise.resolve(ready);
     const pendingKey = JSON.stringify([key, cursor]), pending = this.pending.get(pendingKey);
     if (pending) {
@@ -117,15 +117,15 @@ export class PreparationOrdersWarmStore {
   remember(window: PreparationOrderListWindow, search = '') {
     this.synchronize(); if (!this.options.enabled()) return;
     search = normalize(search);
-    const previous = this.windows.get(keyFor(window.apparatus_id, search));
+    const previous = this.windows.get(this.keyFor(window.apparatus_id, search));
     if (previous && previous.scope === window.scope && previous.epoch === window.epoch && previous.rev > window.rev) return;
-    for (const key of new Set([keyFor('', search), keyFor(window.apparatus_id, search)])) this.readSerials.set(key, ++this.nextReadSerial);
+    for (const key of new Set([this.keyFor('', search), this.keyFor(window.apparatus_id, search)])) this.readSerials.set(key, ++this.nextReadSerial);
     this.serverSerial++; this.denied = false; this.rememberInternal({ ...window, search }, search);
   }
   private rememberInternal(window: PreparationOrderListWindow, search: string, persist = true) {
     const session = this.options.session(); if (!session) return;
     const scope = sessionReadScope(session);
-    for (const key of new Set([keyFor('', search), keyFor(window.apparatus_id, search)])) {
+    for (const key of new Set([this.keyFor('', search), this.keyFor(window.apparatus_id, search)])) {
       const previous = this.windows.get(key); this.windows.delete(key); this.windows.set(key, window);
       if (persist && (previous?.version !== window.version || previous?.epoch !== window.epoch || previous?.scope !== window.scope || previous?.rows.length !== window.rows.length)) {
         void this.options.snapshots.write(scope, key, { schema: 1, search, window: asWire(window) });
@@ -136,7 +136,7 @@ export class PreparationOrdersWarmStore {
   async forget(options: { apparatus?: string; search?: string } = {}) {
     this.synchronize();
     const session = this.options.session(), scope = session ? sessionReadScope(session) : '';
-    const keys = new Set([...this.windows.keys(), keyFor('', options.search ?? ''), keyFor(options.apparatus ?? '', options.search ?? '')]);
+    const keys = new Set([...this.windows.keys(), this.keyFor('', options.search ?? ''), this.keyFor(options.apparatus ?? '', options.search ?? '')]);
     this.generation++; this.serverSerial++; this.windows.clear(); this.pending.clear(); this.forcedReads.clear();
     this.readSerials.clear(); this.restores.clear(); this.denied = true;
     await Promise.all([...keys].map(key => this.options.snapshots.remove(scope, key)));

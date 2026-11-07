@@ -74,3 +74,25 @@ test('recorded preparation order detail decodes through the shared snapshot pars
   const snapshot = loadRoot('productionMapSnapshot').decodeCanonicalProductionMapSnapshot(JSON.parse(record.responseBody.text));
   assert.equal(snapshot.maps.length, 1); assert.equal(snapshot.maps[0].map.id, 'zakaz-1'); assert.equal(snapshot.revision, 7);
 });
+
+test('all-orders mode requests every apparatus and rejects an old machine-scoped server response', async () => {
+  const requests = [], session = { baseUrl: 'https://example.test' };
+  let all = true;
+  const payload = () => ({ ok: true, projection: 'preparation_order_list_v1', scope: 'all', epoch: 'e', version: 'v', rev: 1,
+    apparatus_id: all ? '' : 'apparatus:x:y', apparatus: all ? [] : [{ id: 'apparatus:x:y', name: 'Old server' }],
+    ...(all ? { all_apparatus: true } : {}), rows: [], total: 0, next_cursor: null });
+  const api = load('preparationOrdersApi', {
+    '../workerControlsApi': { WorkerControlException: ApiError, isCanonicalApparatusId: id => /^apparatus:/.test(id) },
+    '../productionMapSnapshot': {}, '../sessionReadScope': { sessionReadScope: () => 'account' },
+    './preparationRequest': { preparationStorageKey: () => 'account', withQuery: (path, query) => `${path}?${new URLSearchParams(query)}` },
+    '../authorizedFetch': { authorizedFetch: async (_session, url) => { requests.push(url); return { status: 200, json: async () => payload() }; } },
+  });
+  const result = await api.preparationOrders(session, { allApparatus: true, apparatus: 'apparatus:ignored', search: ' film ' });
+  const url = new URL(requests[0], session.baseUrl);
+  assert.equal(url.searchParams.get('all_apparatus'), 'true');
+  assert.equal(url.searchParams.has('apparatus'), false);
+  assert.equal(url.searchParams.get('search'), 'film');
+  assert.equal(result.all_apparatus, true);
+  all = false;
+  await assert.rejects(api.preparationOrders(session, { allApparatus: true }), error => error.code === 'preparation_orders_mode_unavailable');
+});

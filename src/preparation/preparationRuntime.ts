@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { activeSessionToken, currentSession, registerSessionResetHook, type Session } from '../auth';
 import { adminSequenceApparatusStore } from '../shared/adminSequenceApparatusStore';
 import { productionSnapshotStore } from '../shared/productionSnapshotRuntime';
@@ -24,17 +24,30 @@ export const preparationOrdersWarmStore = new PreparationOrdersWarmStore({
   },
 });
 
+export const preparationAllOrdersWarmStore = new PreparationOrdersWarmStore({
+  session: currentSession,
+  enabled,
+  snapshots: productionSnapshotStore,
+  cacheNamespace: 'preparation-all-orders-v1',
+  selectionLoader: async () => null,
+  loader: options => {
+    const session = currentSession();
+    if (!session || !enabled()) throw new Error('Akkaunt o‘zgargan');
+    return preparationOrders(session, { ...options, allApparatus: true });
+  },
+});
+
 let foreground = AppState.currentState == null || AppState.currentState === 'active';
 function synchronize() {
-  if (!enabled()) preparationOrdersWarmStore.reset();
-  else if (foreground) void preparationOrdersWarmStore.prepare();
+  if (!enabled()) { preparationOrdersWarmStore.reset(); preparationAllOrdersWarmStore.reset(); }
+  else if (foreground) void (Platform.OS === 'android' ? preparationAllOrdersWarmStore : preparationOrdersWarmStore).prepare();
 }
 
 AppState.addEventListener('change', state => {
   if (state === 'active') { foreground = true; synchronize(); }
   else if (state === 'background') { foreground = false; synchronize(); }
 });
-registerSessionResetHook(async () => { preparationOrdersWarmStore.reset(); adminSequenceApparatusStore.clearCache(); });
+registerSessionResetHook(async () => { preparationOrdersWarmStore.reset(); preparationAllOrdersWarmStore.reset(); adminSequenceApparatusStore.clearCache(); });
 
 // The entry screen receives both restored and newly authenticated sessions.
 export function usePreparationRuntime(session: Session | null): void {

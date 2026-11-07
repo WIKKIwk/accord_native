@@ -170,7 +170,7 @@ export class PreparationOrdersState {
         if (this.state.error) this.update({ error: null });
       } else if (event.type === 'list_snapshot' || event.type === 'list_delta') {
         const next = event.type === 'list_snapshot' ? preparationOrderListWindowFromJson(event) : preparationOrdersDelta(before, event);
-        if (next.search !== this.state.search) throw new Error('Preparation query changed');
+        if (next.search !== this.state.search || !!next.all_apparatus !== !!before.all_apparatus) throw new Error('Preparation query changed');
         this.generation++; this.apply(next);
       }
     } catch { this.stopLive(); void this.reload(); }

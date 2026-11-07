@@ -8,7 +8,7 @@ import { preparationStorageKey, withQuery } from './preparationRequest';
 
 export type PreparationOrderListRow = { id: string; code: string; order_number: string; title: string; customer_name: string; image_id: string; position: number };
 export type PreparationOrderListWindow = { scope: string; epoch: string; rev: number; version: string; apparatus_id: string;
-  apparatus: { id: string; name: string }[]; rows: PreparationOrderListRow[]; total: number; next_cursor: string | null; search: string };
+  apparatus: { id: string; name: string }[]; rows: PreparationOrderListRow[]; total: number; next_cursor: string | null; search: string; all_apparatus?: boolean };
 const invalid = (): never => { throw new WorkerControlException('preparation_orders_invalid', 'Buyurtmalar yuklanmadi. Qayta urinib ko‘ring.'); };
 const resync = (): never => { throw new WorkerControlException('preparation_orders_resync', 'Buyurtmalar o‘zgardi. Qayta yuklang.', 409); };
 const isInt = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value);
@@ -30,6 +30,7 @@ export function preparationOrderListWindowFromJson(value: unknown): PreparationO
       ['scope', 'epoch', 'version', 'apparatus_id'].some(key => typeof data[key] !== 'string') ||
       !data.scope || !data.epoch || !data.version || !isInt(data.rev) || data.rev < 0 ||
       !isInt(data.total) || data.total < 0 || !Array.isArray(data.rows) || !Array.isArray(data.apparatus) ||
+      (data.all_apparatus != null && typeof data.all_apparatus !== 'boolean') ||
       (data.next_cursor != null && typeof data.next_cursor !== 'string')) return invalid();
   const apparatus = data.apparatus.map(value => {
     if (!isObject(value)) return invalid();
@@ -41,6 +42,7 @@ export function preparationOrderListWindowFromJson(value: unknown): PreparationO
   if ((apparatusId && !apparatus.some(item => item.id === apparatusId)) || new Set(rows.map(row => row.id)).size !== rows.length || rows.length > data.total) return invalid();
   return { scope: data.scope as string, epoch: data.epoch as string, rev: data.rev, version: data.version as string,
     apparatus_id: apparatusId, apparatus, rows, total: data.total, next_cursor: data.next_cursor as string | null ?? null,
+    all_apparatus: data.all_apparatus === true,
     search: typeof data.search === 'string' ? data.search.trim().toLowerCase() : '' };
 }
 /** @v2 applyLiveCheckpoint */
@@ -84,17 +86,17 @@ function orderGuard(session: Session) {
 }
 /** @v2 preparationOrders */
 export async function preparationOrders(session: Session, options: { apparatus?: string; search?: string; cursor?: string | null;
-  baseline?: PreparationOrderListWindow | null; refresh?: boolean } = {}): Promise<PreparationOrderListWindow> {
-  const apparatus = options.apparatus ?? '', search = (options.search ?? '').trim().toLowerCase(), cursor = options.cursor ?? null;
+  baseline?: PreparationOrderListWindow | null; refresh?: boolean; allApparatus?: boolean } = {}): Promise<PreparationOrderListWindow> {
+  const apparatus = options.allApparatus ? '' : options.apparatus ?? '', search = (options.search ?? '').trim().toLowerCase(), cursor = options.cursor ?? null;
   const conditional = cursor === null && options.baseline && options.baseline.search === search && (!apparatus || apparatus === options.baseline.apparatus_id)
     ? options.baseline : null;
-  const query = { limit: '30', ...(apparatus ? { apparatus } : {}), ...(search ? { search } : {}), ...(cursor !== null ? { cursor } : {}),
+  const query = { limit: '30', ...(options.allApparatus ? { all_apparatus: 'true' } : {}), ...(apparatus ? { apparatus } : {}), ...(search ? { search } : {}), ...(cursor !== null ? { cursor } : {}),
     ...(conditional && conditional.rows.length > 30 ? { length: String(Math.min(10000, Math.max(30, conditional.rows.length))) } : {}),
     ...(conditional && !options.refresh ? { if_version: conditional.version } : {}), ...(options.refresh ? { refresh: 'true' } : {}) };
   const guard = orderGuard(session), response = await authorizedFetch(session, withQuery('/v1/mobile/preparation/orders', query), {}, guard);
   guard();
   if (response.status === 304) {
-    if (!conditional || options.refresh) return invalid();
+    if (!conditional || options.refresh || !!conditional.all_apparatus !== !!options.allApparatus) return invalid();
     const epoch = response.headers.get('x-production-epoch'), serverScope = response.headers.get('x-preparation-scope');
     const version = response.headers.get('x-preparation-version'), rawRevision = response.headers.get('x-production-revision');
     const revision = rawRevision != null && /^\s*[+-]?\d+\s*$/.test(rawRevision) ? Number(rawRevision) : null;
@@ -103,7 +105,11 @@ export async function preparationOrders(session: Session, options: { apparatus?:
     return { ...conditional, rev: revision ?? conditional.rev };
   }
   if (response.status !== 200) return errorResponse(response, 'preparation_orders_failed');
-  return { ...preparationOrderListWindowFromJson(await response.json()), search };
+  const window = preparationOrderListWindowFromJson(await response.json());
+  if (!!window.all_apparatus !== !!options.allApparatus || (options.allApparatus && (window.apparatus_id || window.apparatus.length))) {
+    throw new WorkerControlException('preparation_orders_mode_unavailable', 'Barcha buyurtmalarni yuklash uchun serverni yangilash kerak.');
+  }
+  return { ...window, search };
 }
 /** @v2 preparationOrderDetail */
 export async function preparationOrderDetail(session: Session, orderId: string) {

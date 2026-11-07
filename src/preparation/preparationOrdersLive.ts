@@ -5,7 +5,7 @@ import type { PreparationOrderListWindow } from './preparationOrdersApi';
 
 /** @v2 preparationOrdersLive */
 export function subscribePreparationOrdersLive(session: Session, window: PreparationOrderListWindow,
-  options: { search?: string; length?: number }, onMessage: (event: Record<string, unknown>) => void,
+  options: { search?: string; length?: number; allApparatus?: boolean }, onMessage: (event: Record<string, unknown>) => void,
   onError: (error: unknown) => void, onDone: () => void): () => void {
   const token = activeSessionToken(session), scope = sessionReadScope(session), baseUrl = session.baseUrl;
   const current = () => !!token && activeSessionToken(session) === token && sessionReadScope(session) === scope && session.baseUrl === baseUrl;
@@ -22,7 +22,7 @@ export function subscribePreparationOrdersLive(session: Session, window: Prepara
   const url = new URL(baseUrl);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.pathname = '/v1/mobile/preparation/orders/live';
-  url.search = new URLSearchParams({ token: token!, apparatus: window.apparatus_id, search: options.search ?? '', limit: '30',
+  url.search = new URLSearchParams({ token: token!, apparatus: window.apparatus_id, ...(options.allApparatus ? { all_apparatus: 'true' } : {}), search: options.search ?? '', limit: '30',
     epoch: window.epoch, rev: String(window.rev), scope: window.scope, version: window.version,
     length: String(options.length ?? window.rows.length) }).toString();
   try {
@@ -35,6 +35,8 @@ export function subscribePreparationOrdersLive(session: Session, window: Prepara
       try {
         const value: unknown = JSON.parse(message.data);
         if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid live event');
+        if (options.allApparatus && ['list_snapshot', 'list_delta'].includes(String((value as Record<string, unknown>).type)) &&
+            (value as Record<string, unknown>).all_apparatus !== true) throw new Error('Barcha buyurtmalar doirasi o‘zgardi.');
         onMessage(value as Record<string, unknown>);
       } catch (error) { finish(error); }
     };

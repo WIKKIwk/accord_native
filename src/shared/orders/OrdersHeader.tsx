@@ -8,12 +8,11 @@ import { RoleHeaderButton } from '../navigation/RoleHeaderButton';
 type Props = {
   search: string; searchPlaceholder?: string;
   onSearchChange: (value: string) => void;
-  onMenu: () => void;
   onProfile: () => void;
-};
+} & ({ onMenu: () => void; onBack?: never } | { onMenu?: never; onBack: () => void });
 
 /** The worker queue uses the same menu and search layout as V2. */
-export function OrdersHeader({ search, onSearchChange, onMenu, onProfile, searchPlaceholder = 'Buyurtmani izlash' }: Props) {
+export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, searchPlaceholder = 'Buyurtmani izlash' }: Props) {
   const colors = useWorkerColors();
   const nativeSearch = useNativeState(search);
   useEffect(() => {
@@ -22,7 +21,7 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onProfile, search
 
   return (
     <View style={styles.row}>
-      <RoleHeaderButton icon="menu" label="Bo‘limlar" onPress={onMenu} tintColor={colors.icon} />
+      <RoleHeaderButton icon={onBack ? 'back' : 'menu'} label={onBack ? 'Orqaga' : 'Bo‘limlar'} onPress={onBack ?? onMenu!} tintColor={colors.icon} />
       <View style={[styles.field, { backgroundColor: colors.field }]}>
         <Host colorScheme={Platform.OS === 'android' ? undefined : 'light'} matchContents={{ vertical: true }} style={styles.inputHost}>
           <TextInput

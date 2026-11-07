@@ -63,3 +63,14 @@ test('unchanged checkpoints do not repeatedly write the same prefix', () => {
   const writes = x.calls.filter(call => call[0] === 'write').length;
   x.store.remember({ ...first, rev: 2 }); assert.equal(x.calls.filter(call => call[0] === 'write').length, writes);
 });
+
+test('all-orders cache cannot restore an older machine-scoped snapshot', async () => {
+  const x = setup(async () => window());
+  x.store.remember(window());
+  const all = new PreparationOrdersWarmStore({ session: () => x.session, enabled: () => true, snapshots: x.snapshots,
+    cacheNamespace: 'preparation-all-orders-v1', loader: async () => window(2, 'all'), selectionLoader: async () => null });
+  assert.equal(await all.restore(), null);
+  await all.read({ fresh: true });
+  assert.equal(all.peek().rows[0].id, 'all');
+  assert.equal(x.store.peek().rows[0].id, 'a');
+});

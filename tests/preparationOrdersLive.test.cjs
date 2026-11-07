@@ -24,3 +24,17 @@ test('live subscription sends the scoped V2 cursor and stops on account change',
     session.scope = 'B'; ws.onmessage({ data: '{}' }); assert.equal(errors[0].code, 'session_changed'); assert.equal(ws.closed, true); stop();
   } finally { global.WebSocket = original; }
 });
+
+test('all-orders live requests retain the mode and reject a machine-scoped snapshot', () => {
+  global.WebSocket = Socket;
+  try {
+    const errors = [], session = { baseUrl: 'https://example.test', token: 'secret', scope: 'A' };
+    const window = { apparatus_id: '', epoch: 'e', scope: 'all-scope', version: 'v', rev: 1, rows: [] };
+    const stop = mod.exports.subscribePreparationOrdersLive(session, window, { allApparatus: true, length: 30 }, () => {}, error => errors.push(error), () => {});
+    const ws = Socket.current, url = new URL(ws.url);
+    assert.equal(url.searchParams.get('all_apparatus'), 'true');
+    assert.equal(url.searchParams.get('apparatus'), '');
+    ws.onopen(); ws.onmessage({ data: '{"type":"list_snapshot","all_apparatus":false}' });
+    assert.equal(errors.length, 1); assert.equal(ws.closed, true); stop();
+  } finally { global.WebSocket = original; }
+});
