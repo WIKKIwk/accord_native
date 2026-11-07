@@ -28,6 +28,21 @@ test('pagination appends visible rows and a refresh retains the full prefix', as
   await x.state.reload(); assert.deepEqual(x.state.getSnapshot().rows.map(row => row.id), ['a', 'b']);
   assert.deepEqual(requests.map(r => r.cursor), [null, 'page2', null, 'page2']); x.state.dispose();
 });
+test('reaching the end during a refresh loads the next page once after refresh', async () => {
+  const requests = []; let release;
+  const waiting = new Promise(resolve => { release = resolve; });
+  const x = setup(async options => {
+    requests.push(options.cursor);
+    if (requests.length === 2) await waiting;
+    return options.cursor ? window(['b']) : window(['a'], 'page2');
+  });
+  await x.state.reload();
+  const refresh = x.state.reload(), more = x.state.loadMore(), duplicate = x.state.loadMore();
+  release(); await Promise.all([refresh, more, duplicate]);
+  assert.deepEqual(requests, [null, null, 'page2']);
+  assert.deepEqual(x.state.getSnapshot().rows.map(row => row.id), ['a', 'b']);
+  x.state.dispose();
+});
 test('live checkpoint keeps rows and a valid delta reorders them without reading again', async () => {
   let reads = 0; const x = setup(async () => { reads++; return window(['a', 'b']); });
   await x.state.reload();

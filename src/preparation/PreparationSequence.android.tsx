@@ -5,7 +5,7 @@ import { ActivityIndicator, AppState, ScrollView, View, useWindowDimensions } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { WorkerOrderHeader, WorkerOrderImage } from '../components/WorkerOrderHeader';
-import { Button as ListButton, ListItem } from '@expo/ui';
+import { ListItem } from '@expo/ui';
 import { useSharedValue } from 'react-native-reanimated';
 import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
 import { OrdersList } from '../shared/orders/OrdersList';
@@ -70,14 +70,14 @@ export function PreparationSequenceList({ session, controller, openOrder }: Prop
       onSelect={() => {}} loading={state.loading && !state.window} header={header} headerOffset={headerOffset}>
       {(tabId, pagerGesture) => <OrdersList active={tabId === state.apparatus} pagerGesture={pagerGesture}
         headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48}
-        onRefresh={() => controller.reload(true)} onEndReached={() => { if (tabId === state.apparatus) void controller.loadMore(); }}>
+        onRefresh={() => controller.reload(true)} onEndReached={() => { if (tabId === state.apparatus && !state.error) void controller.loadMore(); }}>
         {!!state.error && <ListItem supportingText={state.error} onPress={() => void controller.reload(true)}>{t('Qayta urinish')}</ListItem>}
         {!state.loading && !state.error && !state.rows.length && <ListItem>{t('Mos buyurtma topilmadi.')}</ListItem>}
         {tabId === state.apparatus && state.rows.map((row, index) => <OrderListItem key={row.id}
           session={session} orderId={row.id} imageId={row.image_id} imageActive last={index === state.rows.length - 1}
           headline={`${row.position}. ${row.code || row.order_number || row.id} · ${row.title}`} supportingText={row.customer_name}
           onPress={() => openOrder(row)} />)}
-        {state.window?.next_cursor && <ListButton label={t('Yana yuklash')} disabled={state.loading} onPress={() => void controller.loadMore()} />}
+        {state.loading && state.rows.length > 0 && state.window?.next_cursor ? <ActivityIndicator /> : null}
       </OrdersList>}
     </OrdersWorkspace>
   </View>;

@@ -73,7 +73,15 @@ export class PreparationOrdersState {
     return this.loadPage(false, force);
   }
   loadMore(): Promise<void> {
-    if (this.read || this.state.window?.next_cursor == null) return this.read ?? Promise.resolve();
+    const cursor = this.state.window?.next_cursor;
+    if (cursor == null) return this.read ?? Promise.resolve();
+    if (this.read) {
+      const pending = this.read, { apparatus, search } = this.state;
+      return pending.then(() => {
+        if (this.current && !this.state.error && this.state.apparatus === apparatus && this.state.search === search &&
+            this.state.window?.next_cursor === cursor) return this.loadMore();
+      });
+    }
     return this.loadPage(true, false);
   }
   private loadPage(append: boolean, force: boolean): Promise<void> {

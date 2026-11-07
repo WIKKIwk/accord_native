@@ -17,9 +17,9 @@ test('Android preparation orders use one tab and a back button without machine s
     { id: 'two', position: 2, code: '2', title: 'Film', customer_name: '', image_id: '' }];
   let canGoBack = true;
   const state = { apparatus: '', rows, loading: false, error: null,
-    window: { apparatus_id: '', apparatus: [{ id: 'first', name: 'First' }, { id: 'second', name: 'Second' }], next_cursor: null } };
+    window: { apparatus_id: '', apparatus: [{ id: 'first', name: 'First' }, { id: 'second', name: 'Second' }], next_cursor: 'page2' } };
   const controller = { subscribe() {}, getSnapshot: () => state, searchChanged: value => calls.push(['search', value]),
-    reload: async () => {}, loadMore: async () => {}, setForeground() {} };
+    reload: async () => {}, loadMore: async () => calls.push(['more']), setForeground() {} };
   const shared = value => ({ value, set(next) { this.value = next; }, get() { return this.value; } });
   const mocks = {
     'react/jsx-runtime': jsx,
@@ -55,6 +55,9 @@ test('Android preparation orders use one tab and a back button without machine s
   canGoBack = false; header.props.onBack();
   assert.deepEqual(calls.at(-1), ['replace', '/android-preparation']);
   const list = workspace.props.children('');
+  list.props.onEndReached();
+  assert.deepEqual(calls.at(-1), ['more']);
+  assert.equal(nodes(list, node => node.type === 'Button' && node.props.label === 'Yana yuklash').length, 0);
   const items = nodes(list, node => node.type === 'OrderListItem');
   assert.equal(items.length, 2);
   items[1].props.onPress();
