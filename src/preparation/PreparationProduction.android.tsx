@@ -1,10 +1,18 @@
 import { Image } from 'expo-image';
+import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import qrFactory from 'qrcode-generator';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, ScrollView, View } from 'react-native';
+import { ActivityIndicator, AppState, ScrollView, StyleSheet, Text as NativeText, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useNativeSheet } from '../nativeSheet';
+import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
+import { OrdersHeader } from '../shared/orders/OrdersHeader';
+import { OrdersList } from '../shared/orders/OrdersList';
 import { sessionReadScope } from '../sessionReadScope';
 import { usePreparationContext } from './PreparationContext.android';
 import { type JournalState, PreparationJournal } from './preparationJournal';
@@ -14,16 +22,25 @@ import { preparationProductionBatchCard, preparationProductionDate, preparationP
 import { selectPreparationDevice } from './preparationDevicePicker.android';
 import { reprintPreparationRollWithPrinter } from './preparationPrinter';
 import { PreparationReprintCancelled } from './preparationReprint';
-import { PreparationButton, PreparationDialogs, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { usePreparationFab } from './PreparationFab.android';
+import { PreparationButton, PreparationDialogs, PreparationDock, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
 
 type Order = ReturnType<typeof preparationProductionOrderFromJson>;
 type Batch = ReturnType<typeof preparationProductionBatchFromJson>;
 type Roll = ReturnType<typeof preparationProductionRollFromJson>;
-function ProductionStatusOptions({ choose }: { choose: (value: string) => void }) {
-  const t = usePreparationText();
-  return <>{[{ label: 'Barchasi', value: 'all' }, { label: 'Davom etmoqda', value: 'active' }, { label: 'Yakunlangan', value: 'completed' }]
-    .map(option => <PreparationRow key={option.value} title={t(option.label)} onPress={() => choose(option.value)} />)}</>;
+const passthroughListItems = () => true;
+function ProductionOrderRow({ order, last }: { order: Order; last: boolean }) {
+  const colors = useMaterialColors(), card = preparationProductionOrderCard(order);
+  return <WorkerQueueCard backgroundColor={colors.surface} last={last} onPress={() => router.push({
+    pathname: '/android-preparation/production-order', params: { id: order.order_id },
+  } as unknown as Href)}>
+    <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <SymbolView name={{ android: 'precision_manufacturing' }} size={20} tintColor={colors.onSurfaceVariant} />
+    </View>
+    <View style={styles.rowText}><NativeText style={[styles.headline, { color: colors.onSurface }]}>{card.title}</NativeText>
+      <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{`${card.subtitle}\n${card.metrics}`}</NativeText></View>
+  </WorkerQueueCard>;
 }
 const empty = <T, S,>(): JournalState<T, S> => ({ items: [], loading: true, error: null, has_more: false, next_offset: null, summary: null });
 
@@ -65,7 +82,11 @@ function JournalFooter<T, S>({ state, journal, emptyText }: { state: JournalStat
 // @v2 PreparationProductionScreen
 export function PreparationProductionScreen() {
   const { session } = usePreparationContext(), t = usePreparationText();
-  const [query, setQuery] = useState(''), [status, setStatus] = useState('all'), [expanded, setExpanded] = useState(false);
+  const [query, setQuery] = useState(''), [status, setStatus] = useState('all');
+  const colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
+  const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
+    openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
   const filters = useRef({ query: '', status: 'all' });
   const createJournal = useCallback((change: (state: JournalState<Order>) => void) =>
     createPreparationProductionOrdersJournal(session, () => filters.current, change), [session]);
@@ -78,20 +99,36 @@ export function PreparationProductionScreen() {
   }, [query, journal]);
   const chooseStatus = (value: string) => {
     if (searchTimer.current) clearTimeout(searchTimer.current); searchTimer.current = null;
-    setStatus(value); setExpanded(false); filters.current = { query: query.trim(), status: value }; void journal.load();
+    setStatus(value); filters.current = { query: query.trim(), status: value }; void journal.load();
   };
   const accountChanged = state.error === 'Akkaunt o‘zgargan. Sahifani qayta oching';
-  return <PreparationPage title="Ishlab chiqarish" drawer refreshing={state.loading && !!state.items.length} onRefresh={() => void journal.load()}>
-    <PreparationField label="Buyurtma, homashyo yoki formula" onChange={setQuery} enabled={!accountChanged} />
-    <PreparationRow title={t('Holat')} subtitle={t(status === 'active' ? 'Davom etmoqda' : status === 'completed' ? 'Yakunlangan' : 'Barchasi')}
-      disabled={accountChanged} onPress={() => setExpanded(value => !value)} />
-    {expanded && !accountChanged && <ProductionStatusOptions choose={chooseStatus} />}
-    <JournalHeader state={state} journal={journal} />
-    {state.items.map(order => { const card = preparationProductionOrderCard(order); return <PreparationRow key={order.order_id} title={card.title}
-      subtitle={`${card.subtitle}\n${card.metrics}`} onPress={() => router.push({ pathname: '/android-preparation/production-order', params: { id: order.order_id } } as unknown as Href)} />; })}
-    <JournalFooter state={state} journal={journal} emptyText="Hali ishlab chiqarish yozuvlari yo‘q." />
-  </PreparationPage>;
+  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
+    <OrdersHeader search={query} searchPlaceholder={t('Qidirish')} onSearchChange={value => { if (!accountChanged) setQuery(value); }}
+      onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }}
+      onProfile={() => router.navigate('/android-preparation/profile' as Href)} />
+    <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={passthroughListItems}
+      onRefresh={() => journal.load()} onEndReached={() => { if (state.has_more && !state.error) void journal.load({ append: true }); }}>
+    <DropdownFilter label={t('Holat')} selectedLabel={t(status === 'active' ? 'Davom etmoqda' : status === 'completed' ? 'Yakunlangan' : 'Barchasi')}
+      enabled={!accountChanged} backgroundColor={colors.surface} options={[
+        { value: 'all', label: t('Barchasi') }, { value: 'active', label: t('Davom etmoqda') }, { value: 'completed', label: t('Yakunlangan') },
+      ]} onChange={chooseStatus} last={!state.items.length} />
+    {state.error ? <View style={styles.status}><PreparationText>{state.error}</PreparationText>{!accountChanged &&
+      <PreparationButton label="Qayta urinish" onPress={() => void journal.load()} />}</View> : null}
+    {!state.loading && !state.error && !state.items.length ? <View style={styles.status}><PreparationText>{t('Hali ishlab chiqarish yozuvlari yo‘q.')}</PreparationText></View> : null}
+    {state.items.map((order, index) => <ProductionOrderRow key={order.order_id} order={order} last={index === state.items.length - 1} />)}
+    {state.loading ? <ActivityIndicator style={styles.status} /> : null}
+    </OrdersList>
+    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+  </View>;
 }
+
+const styles = StyleSheet.create({
+  icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  rowText: { flex: 1, marginStart: 16, paddingVertical: 6 },
+  headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
+  supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
+  status: { padding: 16 },
+});
 
 // @v2 PreparationProductionOrderScreen
 export function PreparationProductionOrderScreen() {

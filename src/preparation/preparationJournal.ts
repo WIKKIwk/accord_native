@@ -12,6 +12,7 @@ export class PreparationJournal<T, S = unknown> {
   private loadedPages = 0;
   private busy = false;
   private queued = false;
+  private queuedAppend: number | null = null;
   private valid = true;
   private disposed = false;
   private visible = true;
@@ -40,7 +41,7 @@ export class PreparationJournal<T, S = unknown> {
   }
   invalidate(): void {
     if (!this.valid || this.disposed) return;
-    this.valid = false; this.epoch++; this.queued = false;
+    this.valid = false; this.epoch++; this.queued = false; this.queuedAppend = null;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.update({ items: [], summary: null, has_more: false, loading: false, error: 'Akkaunt o‘zgargan. Sahifani qayta oching' });
@@ -49,9 +50,11 @@ export class PreparationJournal<T, S = unknown> {
     if (!this.current) return;
     const append = options.append ?? false, silent = options.silent ?? false;
     if (this.busy) {
-      if (!silent && !append) { this.epoch++; this.queued = true; }
+      if (!silent && !append) { this.epoch++; this.queued = true; this.queuedAppend = null; }
+      else if (append && this.state.has_more && !this.state.error) this.queuedAppend = this.state.next_offset;
       return;
     }
+    if (!append) this.queuedAppend = null;
     let offset: number | null = append ? this.state.next_offset : 0;
     if (offset === null) return;
     const epoch = ++this.epoch;
@@ -82,7 +85,11 @@ export class PreparationJournal<T, S = unknown> {
       this.busy = false;
       if (this.current) {
         this.update({ loading: false });
-        if (this.queued) { this.queued = false; void this.load(); }
+        if (this.queued) { this.queued = false; this.queuedAppend = null; void this.load(); }
+        else if (this.queuedAppend !== null) {
+          const offset = this.queuedAppend; this.queuedAppend = null;
+          if (!this.state.error && this.state.has_more && this.state.next_offset === offset) void this.load({ append: true });
+        }
       }
     }
   }

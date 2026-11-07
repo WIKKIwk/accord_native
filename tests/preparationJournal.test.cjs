@@ -26,6 +26,37 @@ test('a changed filter discards the old response and queues one fresh load', asy
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(calls, 2); assert.deepEqual(journal.state.items, [{ id: 'new' }]); journal.dispose();
 });
+test('scrolling near the end during silent refresh loads the next page once', async () => {
+  let release; const wait = new Promise(resolve => { release = resolve; });
+  const calls = [];
+  const journal = new PreparationJournal(async offset => {
+    calls.push(offset);
+    if (calls.length === 2) await wait;
+    return offset ? page([{ id: 'b' }], false, null) : page([{ id: 'a' }], true, 1);
+  }, x => x.id, () => 'scope', () => {});
+  await journal.load();
+  const refresh = journal.load({ silent: true });
+  await journal.load({ append: true }); await journal.load({ append: true });
+  release(); await refresh; await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(calls, [0, 0, 1]);
+  assert.deepEqual(journal.state.items.map(item => item.id), ['a', 'b']);
+  journal.dispose();
+});
+test('changing filters cancels a queued append from the old results', async () => {
+  let release; const wait = new Promise(resolve => { release = resolve; });
+  const calls = [];
+  const journal = new PreparationJournal(async offset => {
+    calls.push(offset);
+    if (calls.length === 2) await wait;
+    return page([{ id: String(calls.length) }], true, 1);
+  }, x => x.id, () => 'scope', () => {});
+  await journal.load();
+  const refresh = journal.load({ silent: true });
+  await journal.load({ append: true }); await journal.load();
+  release(); await refresh; await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(calls, [0, 0, 0]);
+  journal.dispose();
+});
 test('account changes discard a late response and clear journal data', async () => {
   let release, scope = 'a'; const pending = new Promise(resolve => { release = resolve; });
   const journal = new PreparationJournal(() => pending, x => x.id, () => scope, () => {});
