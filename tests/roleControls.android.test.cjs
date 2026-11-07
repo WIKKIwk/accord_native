@@ -9,7 +9,8 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsx
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id]
+    : id.endsWith('.xml') ? id : id.startsWith('.') ? {} : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
   }).outputText, filename);
@@ -43,6 +44,30 @@ test('worker FAB and navigation retain their destinations when using shared cont
   assert.deepEqual(bar.props.items.map(item => item.id), ['home', 'profile', 'chat']);
   bar.props.onSelect('chat');
   assert.equal(calls.at(-1), 'chat');
+});
+
+test('shared navigation fills only the selected Google icon and keeps all destinations clickable', () => {
+  const calls = [], item = Object.assign(function NavigationItem() {}, { Icon: 'ItemIcon', Label: 'ItemLabel' });
+  const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
+    '@expo/ui/jetpack-compose': { Host: 'Host', Icon: 'Icon', NavigationBar: 'NavigationBar', NavigationBarItem: item,
+      RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => ({ onSecondaryContainer: 'selected', onSurfaceVariant: 'outline' }) },
+    '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}), testID: value => value },
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { View: 'View', StyleSheet: { create: value => value } },
+  });
+  const items = [{ id: 'home', label: 'Tayyorlov', icon: 'home' }, { id: 'chat', label: 'Chat', icon: 'chat_bubble' },
+    { id: 'profile', label: 'Profil', icon: 'person' }];
+  for (const active of ['home', 'chat', 'profile']) {
+    const tree = RoleBottomBar({ active, items, onSelect: id => calls.push(id) });
+    const buttons = nodes(tree, node => node.type?.name === 'NavItem').map(node => node.type(node.props));
+    buttons.forEach((button, index) => {
+      const selected = items[index].id === active, icon = nodes(button, node => node.type === 'Icon')[0];
+      assert.equal(button.props.selected, selected);
+      assert.match(icon.props.source, selected ? /\/filled\/.*_fill\.xml$/ : /\/outlined\/.*\.xml$/);
+      assert.equal(icon.props.tint, selected ? 'selected' : 'outline');
+      button.props.onClick();
+    });
+    assert.deepEqual(calls.slice(-3), ['home', 'chat', 'profile']);
+  }
 });
 
 test('shared header button keeps the worker menu icon and callback', () => {

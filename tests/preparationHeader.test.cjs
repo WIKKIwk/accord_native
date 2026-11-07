@@ -101,17 +101,19 @@ test('Android preparation dock has home, chat and profile with role-scoped route
   assert.equal(home.props.bottomInset, 24);
   assert.deepEqual(home.props.items.map(item => item.label), ['Tayyorlov', 'Chat', 'Profil']);
   home.props.onSelect('home'); home.props.onSelect('chat'); home.props.onSelect('profile');
-  assert.deepEqual(calls, [['navigate', '/android-preparation/chat'], ['navigate', '/android-preparation/profile']]);
+  assert.deepEqual(calls, [['dismissTo', '/android-preparation'], ['navigate', '/android-preparation/chat'], ['navigate', '/android-preparation/profile']]);
   const chat = PreparationDock({ chat: true });
   assert.equal(chat.props.active, 'chat');
+  const before = calls.length;
+  chat.props.onSelect('chat'); assert.equal(calls.length, before);
   chat.props.onSelect('home');
   assert.deepEqual(calls.at(-1), ['dismissTo', '/android-preparation']);
   assert.equal(PreparationDock({ profile: true }).props.active, 'profile');
 });
 
-test('Android preparation dock returns to the existing home route and handles a direct profile entry', () => {
+test('Android preparation dock returns home from a child with Home selected and preserves the existing home route', () => {
   const { StackActions, StackRouter } = require('expo-router/build/react-navigation/routers/StackRouter');
-  const routeNames = ['index', 'chat', 'profile'];
+  const routeNames = ['index', 'formula', 'chat', 'profile'];
   const options = { routeNames, routeParamList: {}, routeGetIdList: {} };
   const stack = StackRouter({ initialRouteName: 'index' });
   const home = { name: 'index', key: 'existing-preparation-home' };
@@ -134,6 +136,11 @@ test('Android preparation dock returns to the existing home route and handles a 
   PreparationDock({ profile: true }).props.onSelect('home');
   assert.equal(state.index, 0);
   assert.equal(state.routes[0], home);
+  state = { ...state, index: 1, routes: [home, { name: 'formula', key: 'nested-formula' }] };
+  PreparationDock({}).props.onSelect('home');
+  assert.equal(state.index, 0); assert.deepEqual(state.routes, [home]); assert.equal(state.routes[0], home);
+  PreparationDock({}).props.onSelect('home');
+  assert.equal(state.routes.length, 1); assert.equal(state.routes[0], home);
   state = { ...state, index: 0, routes: [{ name: 'profile', key: 'direct-profile' }] };
   PreparationDock({ profile: true }).props.onSelect('home');
   assert.equal(state.routes[state.index].name, 'index');
