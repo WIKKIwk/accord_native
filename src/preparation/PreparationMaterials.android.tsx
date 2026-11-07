@@ -1,12 +1,19 @@
-import { Checkbox, Column, Host, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { clickable, fillMaxWidth, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
+import { Checkbox, Column, Host, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { clickable, fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
+import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text as NativeText, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useNativeSheet } from '../nativeSheet';
+import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { OrdersList } from '../shared/orders/OrdersList';
 import { usePreparationContext } from './PreparationContext.android';
+import { usePreparationFab } from './PreparationFab.android';
 import { PreparationNotice } from './PreparationNotice';
-import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDock, PreparationField, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { preparationMaterialDeleteMessage, preparationMaterialsEmptyMessage, preparationMaterialsErrorMessage } from './usePreparationMaterials';
 import { usePreparationMaterialsView } from './usePreparationAndroidView.android';
 import { usePreparationNotice } from './usePreparationNotice';
@@ -14,16 +21,21 @@ import { usePreparationNotice } from './usePreparationNotice';
 type Choices = { name: string; editable: boolean; selected: boolean }[];
 type MaterialAction = 'rename' | 'warehouses' | 'delete';
 
-function MaterialRow({ name, subtitle, blocked, open }: { name: string; subtitle: string; blocked: boolean; open: () => void }) {
-  const colors = useMaterialColors(), t = usePreparationText();
-  return <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16 }}>
-    <View style={{ flex: 1 }}><PreparationRow title={name} subtitle={subtitle} disabled={blocked} onPress={open} /></View>
-    <Host matchContents style={{ width: 48, height: 48 }}><IconButton enabled={!blocked} onClick={open}
-      modifiers={[size(48, 48), semantics({ contentDescription: t('Homashyo amallari') })]}>
-      <RNHostView matchContents><SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView>
-    </IconButton></Host>
-  </View>;
+function MaterialRow({ name, subtitle, blocked, open, first, last }: { name: string; subtitle: string; blocked: boolean; open: () => void; first: boolean; last: boolean }) {
+  const colors = useMaterialColors();
+  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last} onPress={blocked ? undefined : open}>
+    <View accessible={false} style={[styles.materialIcon, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <SymbolView name={{ android: 'inventory_2' }} size={20} tintColor={colors.onSurfaceVariant} />
+    </View>
+    <View style={styles.materialText}>
+      <NativeText numberOfLines={1} style={[styles.headline, { color: colors.onSurface }]}>{name}</NativeText>
+      <NativeText numberOfLines={1} style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</NativeText>
+    </View>
+    <SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} />
+  </WorkerQueueCard>;
 }
+
+const passthroughListItems = () => true;
 
 function MaterialActions({ name, choose }: { name: string; choose: (action: MaterialAction) => void }) {
   const t = usePreparationText();
@@ -60,6 +72,10 @@ function AssignmentSheet({ name, choices, save }: { name: string; choices: Choic
 // @v2 PreparationMaterialsScreen
 export function PreparationMaterialsScreen() {
   const { session } = usePreparationContext(), state = usePreparationMaterialsView(session), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
+  const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
+    openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
   const actionSheet = useNativeSheet(), assignmentSheet = useNativeSheet(), notice = usePreparationNotice();
   const afterAction = useRef<(() => void) | null>(null), afterAssignment = useRef<(() => void) | null>(null);
   const blocked = state.actionsBlocked;
@@ -93,13 +109,29 @@ export function PreparationMaterialsScreen() {
       const next = afterAction.current; afterAction.current = null; next?.();
     } });
   };
-  return <View style={{ flex: 1 }}><PreparationPage title="Homashyolar" refreshing={state.refreshing} onRefresh={() => void state.controller.load(true)}>
-    <PreparationField label="Homashyoni qidirish" onChange={value => state.controller.setQuery(value)} />
+  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
+    <RoleHeader title={t('Homashyolar')} navigation={{ icon: 'back', label: t('Orqaga'), onPress: () => {
+      if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href);
+    } }} />
+    <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={passthroughListItems}
+      onRefresh={async () => { await state.controller.load(true); }}>
+    <View style={styles.field}><PreparationField label="Homashyoni qidirish" initial={state.query} onChange={value => state.controller.setQuery(value)} /></View>
     {(state.loading && !state.items.length) || state.saving ? <ActivityIndicator /> : null}
     {state.error ? <><PreparationText>{state.error}</PreparationText><PreparationButton label="Qayta urinish" onPress={() => void state.controller.load()} /></> : null}
     {!state.loading && !state.filtered.length && !state.error ? <PreparationText>{t(preparationMaterialsEmptyMessage(state.query))}</PreparationText> : null}
-    {state.filtered.map(item => <MaterialRow key={item.item_code} name={item.name}
+    {state.filtered.map((item, index) => <MaterialRow key={item.item_code} name={item.name}
       subtitle={item.warehouses.length ? item.warehouses.join(', ') : t('Ombor biriktirilmagan')}
-      blocked={blocked} open={() => openActions(item)} />)}
-  </PreparationPage><PreparationNotice message={notice.message} /></View>;
+      blocked={blocked} first={index === 0} last={index === state.filtered.length - 1} open={() => openActions(item)} />)}
+    </OrdersList>
+    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+    <PreparationNotice message={notice.message} />
+  </View>;
 }
+
+const styles = StyleSheet.create({
+  field: { padding: 16 },
+  materialIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  materialText: { flex: 1, marginStart: 16 },
+  headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
+  supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
+});
