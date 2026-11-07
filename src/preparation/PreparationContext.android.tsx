@@ -1,3 +1,4 @@
+import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { Redirect, Stack, router } from 'expo-router';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
@@ -22,6 +23,7 @@ function Provider({ session, onLogout, children }: { session: Session; onLogout:
 export function PreparationLayout() {
   const [session, setSession] = useState<Session | null | undefined>();
   const generation = useRef(0);
+  const colors = useMaterialColors();
   useEffect(() => {
     let mounted = true; const request = generation.current;
     void loadSession().then(value => { if (mounted && request === generation.current) setSession(value); })
@@ -35,7 +37,13 @@ export function PreparationLayout() {
     void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {})]).finally(() => { setSession(null); router.replace('/'); });
   };
   return <WorkerSecurityProvider session={session} onLogout={onLogout}>
-    <Provider session={session} onLogout={onLogout}><Stack screenOptions={{ headerShown: false }} /></Provider>
+    <Provider session={session} onLogout={onLogout}>
+      {/* Keep native screens attached behind opaque preparation pages. */}
+      <Stack screenOptions={{ headerShown: false, presentation: 'transparentModal',
+        contentStyle: { backgroundColor: colors.surfaceContainerLow } }}>
+        <Stack.Screen name="index" activityEnabled={false} options={{ presentation: 'card' }} />
+      </Stack>
+    </Provider>
   </WorkerSecurityProvider>;
 }
 

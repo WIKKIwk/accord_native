@@ -184,7 +184,7 @@ for (const platform of ['ios', 'android']) {
     const api = load(`preparation/PreparationDrawer.${platform}.tsx`, {
       'expo-router': { usePathname: () => pathname, router: {
         push: path => calls.push(['push', path]), navigate: path => calls.push(['tab', path]),
-        dismissTo: path => calls.push(['root', path]), replace: path => calls.push(['root', path]),
+        dismissTo: path => calls.push(['dismissTo', path]), replace: path => calls.push(['replace', path]),
       } },
       '../shared/appRoutes': { appRoutes: { gscaleMode: 'gscale', inventoryMovements: 'inventory' },
         canOpenRoute: (current, capability) => current.capabilities.includes(capability) },
@@ -218,7 +218,7 @@ for (const platform of ['ios', 'android']) {
     tree.props.onSelect('chat');
     assert.deepEqual(calls, [
       ['push', `/${platform}-preparation/sequence`],
-      [platform === 'ios' ? 'root' : 'push', `/${platform}-preparation/${platform === 'ios' ? 'catalog' : 'formulas'}`],
+      [platform === 'ios' ? 'dismissTo' : 'push', `/${platform}-preparation/${platform === 'ios' ? 'catalog' : 'formulas'}`],
       ['tab', `/${platform}-preparation/profile`], ['scale', { warehouse: 'Assigned' }],
       ['tab', `/${platform}-preparation/chat`],
     ]);
@@ -231,7 +231,9 @@ for (const platform of ['ios', 'android']) {
       assert.deepEqual(calls.at(-1), ['push', '/android-preparation/production']);
       pathname = '/android-preparation/warehouse';
       api.PreparationDrawer({ children: null }).props.onSelect('production');
-      assert.deepEqual(calls.at(-1), ['root', '/android-preparation/production']);
+      assert.deepEqual(calls.at(-1), ['replace', '/android-preparation/production']);
+      api.PreparationDrawer({ children: null }).props.onSelect('home');
+      assert.deepEqual(calls.at(-1), ['dismissTo', '/android-preparation']);
     }
   });
 

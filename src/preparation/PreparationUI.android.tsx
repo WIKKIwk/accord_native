@@ -64,7 +64,7 @@ export function PreparationDock({ profile = false, chat = false }: { profile?: b
   ];
   return <RoleBottomBar active={active} items={items} bottomInset={insets.bottom} onSelect={id => {
     if (id === active) return;
-    if (id === 'home') router.replace('/android-preparation' as Href);
+    if (id === 'home') router.dismissTo('/android-preparation' as Href);
     else if (id === 'chat') router.navigate('/android-preparation/chat' as Href);
     else if (id === 'profile') router.navigate('/android-preparation/profile' as Href);
   }} />;

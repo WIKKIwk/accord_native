@@ -88,7 +88,7 @@ test('Android preparation dock has home, chat and profile with role-scoped route
   const ui = new Proxy({}, { get: (_, key) => key === 'useMaterialColors' ? () => ({}) : key });
   const { PreparationDock } = load('preparation/PreparationUI.android.tsx', {
     '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': {},
-    'expo-router': { router: { replace: route => calls.push(['replace', route]), navigate: route => calls.push(['navigate', route]) } },
+    'expo-router': { router: { dismissTo: route => calls.push(['dismissTo', route]), navigate: route => calls.push(['navigate', route]) } },
     'react-native': {}, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 24 }) },
     '../shared/localization': { uiText: value => value },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
@@ -105,8 +105,59 @@ test('Android preparation dock has home, chat and profile with role-scoped route
   const chat = PreparationDock({ chat: true });
   assert.equal(chat.props.active, 'chat');
   chat.props.onSelect('home');
-  assert.deepEqual(calls.at(-1), ['replace', '/android-preparation']);
+  assert.deepEqual(calls.at(-1), ['dismissTo', '/android-preparation']);
   assert.equal(PreparationDock({ profile: true }).props.active, 'profile');
+});
+
+test('Android preparation dock returns to the existing home route and handles a direct profile entry', () => {
+  const { StackActions, StackRouter } = require('expo-router/build/react-navigation/routers/StackRouter');
+  const routeNames = ['index', 'chat', 'profile'];
+  const options = { routeNames, routeParamList: {}, routeGetIdList: {} };
+  const stack = StackRouter({ initialRouteName: 'index' });
+  const home = { name: 'index', key: 'existing-preparation-home' };
+  let state = { stale: false, type: 'stack', key: 'preparation-stack', index: 2, routeNames,
+    routes: [home, { name: 'chat', key: 'chat' }, { name: 'profile', key: 'profile' }] };
+  const router = { dismissTo: route => {
+    assert.equal(route, '/android-preparation');
+    const result = stack.getStateForAction(state, StackActions.popTo('index'), options);
+    assert.ok(result?.state); state = result.state;
+  } };
+  const ui = new Proxy({}, { get: (_, key) => key === 'useMaterialColors' ? () => ({}) : key });
+  const { PreparationDock } = load('preparation/PreparationUI.android.tsx', {
+    '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': {}, 'expo-router': { router },
+    'react-native': {}, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
+    '../shared/localization': { uiText: value => value },
+    '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
+    '../shared/navigation/roleDrawerContext': {}, '../shared/navigation/RoleHeader.android': {}, '../shared/navigation/RoleFab.android': {},
+    '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
+  });
+  PreparationDock({ profile: true }).props.onSelect('home');
+  assert.equal(state.index, 0);
+  assert.equal(state.routes[0], home);
+  state = { ...state, index: 0, routes: [{ name: 'profile', key: 'direct-profile' }] };
+  PreparationDock({ profile: true }).props.onSelect('home');
+  assert.equal(state.routes[state.index].name, 'index');
+  assert.notEqual(state.routes[state.index].key, 'direct-profile');
+});
+
+test('Android preparation profile goes back normally or returns home when opened directly', () => {
+  const calls = [];
+  let canGoBack = true;
+  const router = { canGoBack: () => canGoBack, back: () => calls.push('back'),
+    dismissTo: route => calls.push(['home', route]), replace: route => calls.push(['replace', route]) };
+  const { PreparationProfileScreen } = load('preparation/PreparationProfile.android.tsx', {
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) }, 'expo-router': { router },
+    'react-native': { View: 'View' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
+    '../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },
+    './PreparationContext.android': { usePreparationContext: () => ({ session: {}, onLogout() {} }) },
+    '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
+    './PreparationUI.android': { PreparationDock: 'PreparationDock', usePreparationText: () => value => value },
+  });
+  const page = PreparationProfileScreen();
+  const header = findAll(page, node => node.type === 'RoleHeader')[0];
+  header.props.navigation.onPress();
+  canGoBack = false; header.props.navigation.onPress();
+  assert.deepEqual(calls, ['back', ['home', '/android-preparation']]);
 });
 
 test('iOS scale uses an icon-only back button for the preparation role', () => {

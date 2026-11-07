@@ -19,9 +19,10 @@ export function PreparationDrawer({ children }: { children: ReactNode }) {
     if (id === 'scale') { openPreparationScale({ warehouse: home.warehouse }); return; }
     const target = preparationDrawerRoute(id, 'android');
     if (!target) return;
-    if (target.kind === 'push') router.push(target.path as Href);
+    if (id === 'home') router.dismissTo(target.path as Href);
+    else if (target.kind === 'push') router.push(target.path as Href);
     else if (target.kind === 'tab') router.navigate(target.path as Href);
-    else if (id !== 'home' && preparationDrawerActive(pathname) === 'home') router.push(target.path as Href);
+    else if (preparationDrawerActive(pathname) === 'home') router.push(target.path as Href);
     else router.replace(target.path as Href);
   };
   return <RoleDrawer {...state} title={t('Tayyorlov bo‘limlari')} items={items} active={preparationDrawerActive(pathname)}
