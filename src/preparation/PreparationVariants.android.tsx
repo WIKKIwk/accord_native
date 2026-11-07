@@ -1,21 +1,20 @@
-import { AlertDialog, Column, Host, OutlinedTextField, Text, TextButton, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
+import { AlertDialog, Box, Column, DropdownMenu, DropdownMenuItem, Host, OutlinedTextField, RNHostView, Text, TextButton, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, size, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { WorkerOrderSheet } from '../components/WorkerOrderSheet';
-import { useNativeSheet } from '../nativeSheet';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { usePreparationContext } from './PreparationContext.android';
 import { usePreparationFab } from './PreparationFab.android';
 import { PreparationNotice } from './PreparationNotice';
 import { openPreparationFormula, readPreparationRouteData } from './preparationNavigation.android';
-import { PreparationButton, PreparationDock, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDock, PreparationPage, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { preparationVariantNameCanSave } from './usePreparationLibrary';
 import { usePreparationVariantsView } from './usePreparationAndroidView.android';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
@@ -27,14 +26,16 @@ import { usePreparationNotice } from './usePreparationNotice';
 
 type Options = PreparationVariantsOptions & { orderCode: string; productTitle: string; materialName: string; customerName?: string };
 type Variant = ReturnType<typeof usePreparationVariantsView>['variants'][number];
+type VariantAction = 'edit' | 'delete' | 'rename';
 const passthroughListItems = () => true;
 
-function VariantRow({ title, subtitle, disabled = false, first, last, onPress, onLongPress }: {
-  title: string; subtitle: string; disabled?: boolean; first: boolean; last: boolean; onPress: () => void; onLongPress?: () => void;
+function VariantRow({ title, subtitle, disabled = false, first, last, onPress, onAction }: {
+  title: string; subtitle: string; disabled?: boolean; first: boolean; last: boolean; onPress: () => void; onAction?: (action: VariantAction) => void;
 }) {
-  const colors = useMaterialColors();
+  const colors = useMaterialColors(), t = usePreparationText(), [expanded, setExpanded] = useState(false);
+  const select = (action: VariantAction) => { setExpanded(false); if (!disabled) requestAnimationFrame(() => onAction?.(action)); };
   return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last}
-    onPress={disabled ? undefined : onPress} onLongPress={disabled ? undefined : onLongPress}>
+    onPress={disabled ? undefined : onPress}>
     <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
       <SymbolView name={{ android: 'functions' }} size={20} tintColor={colors.onSurfaceVariant} />
     </View>
@@ -42,17 +43,34 @@ function VariantRow({ title, subtitle, disabled = false, first, last, onPress, o
       <NativeText style={[styles.headline, { color: colors.onSurface }]}>{title}</NativeText>
       <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</NativeText>
     </View>
+    {onAction ? <View style={styles.menuTrigger}>
+      {expanded && !disabled ? <VariantMenu key="menu" close={() => setExpanded(false)} select={select} /> : null}
+      <Pressable key="trigger" accessibilityRole="button" accessibilityLabel={`${title} — ${t('Amallar')}`} disabled={disabled}
+        onPress={event => { event.stopPropagation(); setExpanded(true); }} style={styles.menuTrigger}>
+        <SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} />
+      </Pressable>
+    </View> : null}
   </WorkerQueueCard>;
 }
 
-function VariantActions({ variant, choose }: { variant: Variant; choose: (action: 'edit' | 'delete' | 'rename') => void }) {
-  const t = usePreparationText();
-  return <View style={{ padding: 16, gap: 10 }}><PreparationText title>{variant.name}</PreparationText>
-    {variant.formula_code ? <PreparationText>{variant.formula_code}</PreparationText> : null}
-    <PreparationRow title={t('Tahrirlash')} onPress={() => choose('edit')} />
-    <PreparationRow title={t('O‘chirish')} onPress={() => choose('delete')} />
-    <PreparationRow title={t('Nomini o‘zgartirish')} onPress={() => choose('rename')} />
-  </View>;
+function VariantMenu({ close, select }: { close: () => void; select: (action: VariantAction) => void }) {
+  const colors = useMaterialColors(), t = usePreparationText(), [ready, setReady] = useState(false);
+  return <Host pointerEvents="none" style={styles.menuOverlay} onLayoutContent={({ nativeEvent }) => {
+    if (!ready && nativeEvent.width > 0 && nativeEvent.height > 0) setReady(true);
+  }}>
+    <DropdownMenu expanded={ready} onDismissRequest={close}>
+      <DropdownMenu.Trigger><Box modifiers={[size(48, 48)]} /></DropdownMenu.Trigger>
+      <DropdownMenu.Items>
+        {([{ action: 'edit', label: 'Tahrirlash', icon: 'edit' },
+          { action: 'delete', label: 'O‘chirish', icon: 'delete' },
+          { action: 'rename', label: 'Nomini o‘zgartirish', icon: 'drive_file_rename_outline' }] as const).map(option =>
+          <DropdownMenuItem key={option.action} onClick={() => select(option.action)}>
+            <DropdownMenuItem.LeadingIcon><RNHostView matchContents><SymbolView name={{ android: option.icon }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView></DropdownMenuItem.LeadingIcon>
+            <DropdownMenuItem.Text><Text>{t(option.label)}</Text></DropdownMenuItem.Text>
+          </DropdownMenuItem>)}
+      </DropdownMenu.Items>
+    </DropdownMenu>
+  </Host>;
 }
 
 function ReusePicker({ controller, close, choose }: { controller: PreparationVariantsState; close: () => void; choose: (id: string) => void }) {
@@ -112,7 +130,7 @@ function Variants({ options }: { options: Options }) {
   const { session } = usePreparationContext(), state = usePreparationVariantsView(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
   const colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
-  const sheet = useNativeSheet(), notice = usePreparationNotice(), afterSheet = useRef<(() => void) | null>(null);
+  const notice = usePreparationNotice();
   const [nameDialog, setNameDialog] = useState<'create' | Variant | null>(null), [renaming, setRenaming] = useState(false), [renameError, setRenameError] = useState<string | null>(null);
   const [hideCreateError, setHideCreateError] = useState(false);
   const [reusePicker, setReusePicker] = useState(false), [opening, setOpening] = useState(false);
@@ -134,21 +152,13 @@ function Variants({ options }: { options: Options }) {
     setOpening(true);
     openPreparationFormula({ ...options, variantId: variant.id, variantName: variant.name, variantCode: variant.formula_code, openEditorOnLoad: edit });
   };
-  const perform = async (variant: Variant, action: 'edit' | 'delete' | 'rename') => {
+  const perform = async (variant: Variant, action: VariantAction) => {
     if (action === 'edit') open(variant, true);
     else if (action === 'rename') { setRenameError(null); setNameDialog(variant); }
     else if (await dialogs.confirm('Shnek formulasini olib tashlash', preparationVariantRemoveMessage(variant.name, options.orderCode), 'O‘chirish')) {
       try { if (await state.controller.remove(variant)) notice.show(preparationVariantRemovedMessage(variant.name)); }
       catch (error) { notice.show(preparationFormulaErrorMessage(error)); }
     }
-  };
-  const menu = (variant: Variant) => {
-    if (blocked) return;
-    sheet.open(<VariantActions variant={variant} choose={action => {
-      afterSheet.current = () => { void perform(variant, action); }; sheet.close();
-    }} />, { compact: true, dismissible: true, onDismiss: () => {
-      const next = afterSheet.current; afterSheet.current = null; next?.();
-    } });
   };
   const submit = async (name: string) => {
     if (nameDialog === 'create') {
@@ -185,7 +195,7 @@ function Variants({ options }: { options: Options }) {
       {!state.loading && !state.error && !state.variants.length ? <View style={styles.context}><PreparationText>{t('Hali shnek varianti yo‘q. FAB orqali variant qo‘shing.')}</PreparationText></View> : null}
       {state.variants.map((variant, index) => <VariantRow key={variant.id} title={variant.name} subtitle={preparationVariantSubtitle(variant)}
         first={index === 0} last={index === state.variants.length - 1} disabled={blocked}
-        onPress={() => open(variant)} onLongPress={() => menu(variant)} />)}
+        onPress={() => open(variant)} onAction={action => { if (!blocked) void perform(variant, action); }} />)}
       <View style={{ height: 112 }} />
     </OrdersList>
     <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
@@ -204,6 +214,8 @@ const styles = StyleSheet.create({
   context: { padding: 16, gap: 8 },
   icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, marginStart: 16, paddingVertical: 6 },
+  menuTrigger: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  menuOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   headline: { fontSize: 16, lineHeight: 24, fontWeight: '500', includeFontPadding: false },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
 });
