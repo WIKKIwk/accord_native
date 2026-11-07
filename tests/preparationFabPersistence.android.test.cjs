@@ -93,6 +93,15 @@ test('one FAB stays mounted and visible across home, warehouse loading and back'
   getFab(tree).props.onSelect('scale');
   assert.deepEqual(calls.at(-1), ['newer', 'scale']);
 
+  pathname = '/android-preparation/inventory';
+  const inventoryActions = [{ id: 'scan', label: 'QR orqali izlash', icon: 'qr_code_scanner', width: 230 }];
+  context.register('inventory', {}, options(inventoryActions, true, true, 'inventory'));
+  tree = render(); context = tree.props.value;
+  assert.equal(getFab(tree).type, firstFab.type);
+  assert.deepEqual(getFab(tree).props.actions, inventoryActions);
+  getFab(tree).props.onSelect('scan');
+  assert.deepEqual(calls.at(-1), ['inventory', 'scan']);
+
   pathname = '/android-preparation/history';
   unregisterNewer();
   tree = render(); context = tree.props.value;

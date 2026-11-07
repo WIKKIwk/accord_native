@@ -1,57 +1,84 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { Image } from 'expo-image';
+import { router, type Href } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import qrFactory from 'qrcode-generator';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text as NativeText, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { WorkerOrderSheet } from '../components/WorkerOrderSheet';
+import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
+import { OrdersHeader } from '../shared/orders/OrdersHeader';
+import { OrdersList } from '../shared/orders/OrdersList';
+import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
 import { usePreparationContext } from './PreparationContext.android';
+import { usePreparationFab } from './PreparationFab.android';
 import { PreparationInventoryAssignment } from './PreparationInventoryAssignmentSection.android';
 import { selectPreparationInventoryDevice } from './preparationDevicePicker.android';
 import { preparationInventoryAssetBarcode, preparationInventoryQuantity, preparationInventoryStatus, preparationInventoryTransferTimestamp,
   type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventory';
 import { reprintPreparationInventoryAsset } from './preparationInventoryReprint';
 import { PreparationReprintCancelled } from './preparationReprint';
-import { PreparationButton, PreparationDialogs, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDialogs, PreparationDock, PreparationField, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationInventory } from './usePreparationInventory.android';
 
 type Inventory = ReturnType<typeof usePreparationInventory>;
+type InventoryTab = Inventory['tab'];
+const inventoryTabs: InventoryTab[] = ['assets', 'incoming', 'outgoing'];
+const passthrough = () => true;
 
 // @v2 InventoryMovementsScreen
 export function PreparationInventoryScreen() {
   const { session, home } = usePreparationContext();
   const assigned = home.snapshot?.assigned_warehouses ?? [];
-  const inventory = usePreparationInventory(session, assigned), dialogs = usePreparationDialogs(), t = usePreparationText();
+  const inventory = usePreparationInventory(session, assigned), t = usePreparationText();
+  const colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(70), [headerSize, setHeaderSize] = useState(70);
   const [asset, setAsset] = useState<PreparationInventoryAsset | null>(null), [transfer, setTransfer] = useState<PreparationInventoryTransfer | null>(null);
   const [scanning, setScanning] = useState(false), [manual, setManual] = useState(''), [manualOpen, setManualOpen] = useState(false), [manualKey, setManualKey] = useState(0);
   const [permission, requestPermission] = useCameraPermissions();
   const scanLock = useRef(false), lastScan = useRef('');
-  const chooseWarehouse = async () => {
-    const value = await dialogs.choose('Ombor', [{ label: 'Barcha omborlar', value: '' },
-      ...inventory.warehouses.map(location => ({ label: location.name, value: location.warehouse_id }))], undefined, true);
-    if (value !== null) inventory.chooseWarehouse(value);
-  };
   const lookup = async (value: string) => {
     if (scanLock.current) return;
     scanLock.current = true;
     try { await inventory.lookup(value); } finally { scanLock.current = false; }
   };
-  const window = inventory.tab === 'assets' ? inventory.assets : inventory.transfers;
-  const refresh = () => { void Promise.all([inventory.locations.refresh(), window.refresh()]); };
+  const setDockHeight = usePreparationFab('inventory', { actions: [{ id: 'scan', label: t(scanning ? 'QR izlashni yopish' : 'QR orqali izlash'), icon: 'qr_code_scanner', width: 230 }],
+    enabled: !asset && !transfer, visible: !asset && !transfer, onSelect: () => {
+      if (!scanning && !permission?.granted) void requestPermission();
+      setScanning(!scanning); setManualOpen(false); lastScan.current = ''; inventory.clearQr();
+    }, openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
+  const activeWindow = inventory.tab === 'assets' ? inventory.assets : inventory.tab === 'incoming' ? inventory.incoming : inventory.outgoing;
+  const activeCount = inventory.tab === 'assets' ? inventory.visibleAssets.length : inventory.tab === 'incoming' ? inventory.visibleIncoming.length : inventory.visibleOutgoing.length;
+  useEffect(() => {
+    if (!scanning && !activeWindow.loading && !activeWindow.error && activeWindow.hasMore && activeCount === 0) activeWindow.loadMore();
+  }, [scanning, activeWindow, activeCount]);
+  const header = <View onLayout={event => { const height = event.nativeEvent.layout.height;
+    if (height > 0) { headerHeight.set(height); setHeaderSize(height); } }}>
+    <OrdersHeader search={inventory.query} searchPlaceholder={t('Qidirish')} onSearchChange={inventory.setQuery}
+      onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }}
+      onProfile={() => router.navigate('/android-preparation/profile' as Href)} />
+  </View>;
   return <>
-    <PreparationPage title="Ishlab chiqarilgan homashyolar" refreshing={window.loading && !!window.rows} onRefresh={refresh}>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {(['assets', 'incoming', 'outgoing'] as const).map(tab => <View key={tab} style={{ flex: 1 }}><PreparationButton
-          label={tab === 'assets' ? 'Mahsulotlar' : tab === 'incoming' ? 'Kiruvchi' : 'Chiquvchi'}
-          onPress={() => { setScanning(false); inventory.setTab(tab); }} disabled={inventory.tab === tab && !scanning} /></View>)}
-      </View>
-      <PreparationField label="Mahsulot, kod yoki QR qidirish" onChange={inventory.setQuery} />
-      <PreparationRow title={t('Ombor')} subtitle={inventory.warehouses.find(item => item.warehouse_id === inventory.warehouse)?.name ?? t('Barcha omborlar')}
-        onPress={() => void chooseWarehouse()} />
-      <PreparationButton label={scanning ? 'QR izlashni yopish' : 'QR orqali izlash'} onPress={() => {
-        if (!scanning && !permission?.granted) void requestPermission();
-        setScanning(!scanning); setManualOpen(false); lastScan.current = ''; inventory.clearQr();
-      }} />
-      {scanning ? <>
+    <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
+    <OrdersWorkspace session={session} tabs={inventoryTabs.map(id => ({ id, name: t(id === 'assets' ? 'Mahsulotlar' : id === 'incoming' ? 'Kiruvchi' : 'Chiquvchi') }))}
+      selected={inventory.tab} distributeTabs header={header} headerOffset={headerOffset}
+      onSelect={id => { if (inventoryTabs.includes(id as InventoryTab)) { setScanning(false); inventory.setTab(id as InventoryTab); } }}>
+      {(id, pagerGesture) => {
+        const tab = id as InventoryTab, window = tab === 'assets' ? inventory.assets : tab === 'incoming' ? inventory.incoming : inventory.outgoing;
+        const rows = tab === 'incoming' ? inventory.visibleIncoming : inventory.visibleOutgoing;
+        const scanVisible = scanning && tab === inventory.tab;
+        return <OrdersList active={tab === inventory.tab} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight}
+          topInset={headerSize + 48} passthrough={passthrough}
+          onRefresh={async () => { await Promise.all([inventory.locations.refresh(), window.refresh()]); }}
+          onEndReached={() => { if (tab === inventory.tab && !scanning) window.loadMore(); }}>
+        <DropdownFilter label={t('Ombor')} selectedLabel={inventory.warehouses.find(item => item.warehouse_id === inventory.warehouse)?.name ?? t('Barcha omborlar')}
+          backgroundColor={colors.surface} options={[{ value: '', label: t('Barcha omborlar') }, ...inventory.warehouses.map(location => ({ value: location.warehouse_id, label: location.name }))]}
+          onChange={inventory.chooseWarehouse} />
+      {scanVisible ? <View style={styles.scan}>
         <PreparationText>{t('QR kodni ramkaga keltiring')}</PreparationText>
         {permission?.granted ? <CameraView style={{ height: 280, width: '100%' }} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }}
           onBarcodeScanned={inventory.busy ? undefined : ({ data }) => { if (data !== lastScan.current) { lastScan.current = data; void lookup(data); } }} />
@@ -63,22 +90,27 @@ export function PreparationInventoryScreen() {
           }} /></>}
         {inventory.busy ? <ActivityIndicator /> : null}{inventory.qrError ? <PreparationText>{inventory.qrError}</PreparationText> : null}
         {inventory.qrAssets.map(item => <AssetRow key={`${item.kind}:${item.asset_ref}`} asset={item} open={() => setAsset(item)} />)}
-      </> : <>
-        {inventory.locations.loading || window.loading ? <ActivityIndicator /> : null}
-        {inventory.locations.error || window.error ? <><PreparationText>{inventory.locations.error || window.error || ''}</PreparationText>
-          <PreparationButton label="Qayta urinish" onPress={refresh} /></> : null}
-        {inventory.tab === 'assets' ? <>
-          {!inventory.locations.loading && !inventory.warehouses.length ? <PreparationText>{t('Sizga biriktirilgan ombor topilmadi')}</PreparationText> : null}
-          {!window.loading && !window.error && inventory.warehouses.length && !inventory.visibleAssets.length ? <PreparationText>{t('Omborda harakatlantiriladigan mahsulot yo‘q')}</PreparationText> : null}
-          {inventory.visibleAssets.map(item => <AssetRow key={`${item.kind}:${item.asset_ref}`} asset={item} open={() => setAsset(item)} />)}
-        </> : <>
-          {!window.loading && !window.error && !inventory.visibleTransfers.length ? <PreparationText>{t(inventory.tab === 'incoming' ? 'Kiruvchi transfer yo‘q' : 'Chiquvchi transfer yo‘q')}</PreparationText> : null}
-          {inventory.visibleTransfers.map(item => <PreparationRow key={String(item.id)} title={`${String(item.source_warehouse)} → ${String(item.destination_warehouse)}`}
-            subtitle={`${t(preparationInventoryStatus(item.status))} · ${item.lines.map((line: Record<string, unknown>) => String(line.item_name || line.item_code || '')).join(', ')}`}
-            onPress={() => setTransfer(item)} />)}
-        </>}
-      </>}
-    </PreparationPage>
+      </View> : null}
+      {!scanVisible && (inventory.locations.error || window.error) ? <View style={styles.status}><PreparationText>{inventory.locations.error || window.error || ''}</PreparationText>
+        <PreparationButton label="Qayta urinish" onPress={() => { void Promise.all([inventory.locations.refresh(), window.refresh()]); }} /></View> : null}
+      {!scanVisible && tab === 'assets' && !inventory.locations.loading && !inventory.warehouses.length ? <View style={styles.status}><PreparationText>{t('Sizga biriktirilgan ombor topilmadi')}</PreparationText></View> : null}
+      {!scanVisible && tab === 'assets' && !window.loading && !window.error && inventory.warehouses.length && !inventory.visibleAssets.length && !window.hasMore
+        ? <View style={styles.status}><PreparationText>{t('Omborda harakatlantiriladigan mahsulot yo‘q')}</PreparationText></View> : null}
+      {!scanVisible && tab === 'assets' && inventory.visibleAssets.map((item, index) => <AssetRow key={`${item.kind}:${item.asset_ref}`} asset={item}
+        last={index === inventory.visibleAssets.length - 1} open={() => setAsset(item)} />)}
+      {!scanVisible && tab !== 'assets' && !window.loading && !window.error && !rows.length && !window.hasMore
+        ? <View style={styles.status}><PreparationText>{t(tab === 'incoming' ? 'Kiruvchi transfer yo‘q' : 'Chiquvchi transfer yo‘q')}</PreparationText></View> : null}
+      {!scanVisible && tab !== 'assets' && rows.map((item, index) => <InventoryRow key={String(item.id)}
+        title={`${String(item.source_warehouse)} → ${String(item.destination_warehouse)}`} last={index === rows.length - 1}
+        subtitle={`${t(preparationInventoryStatus(item.status))} · ${item.lines.map((line: Record<string, unknown>) => String(line.item_name || line.item_code || '')).join(', ')}`}
+        open={() => setTransfer(item)} />)}
+      {!scanVisible && (inventory.locations.loading || window.loading) ? <ActivityIndicator style={styles.status} /> : null}
+      <View style={styles.fabSpace} />
+      </OrdersList>;
+      }}
+    </OrdersWorkspace>
+    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+    </View>
     {asset ? <WorkerOrderSheet onClose={() => setAsset(null)} dismissible>
       <PreparationDialogs><AssetDetail asset={asset} inventory={inventory} assigned={assigned} close={() => setAsset(null)} /></PreparationDialogs>
     </WorkerOrderSheet> : null}
@@ -95,11 +127,29 @@ export function PreparationInventoryScreen() {
   </>;
 }
 
-function AssetRow({ asset, open }: { asset: PreparationInventoryAsset; open: () => void }) {
-  return <PreparationRow title={asset.order_assignment?.order_label || asset.item_name || asset.item_code}
+function AssetRow({ asset, open, last }: { asset: PreparationInventoryAsset; open: () => void; last?: boolean }) {
+  return <InventoryRow title={asset.order_assignment?.order_label || asset.item_name || asset.item_code} last={last}
     subtitle={[asset.order_assignment ? asset.item_name || asset.item_code : asset.identifier, `${preparationInventoryQuantity(asset.qty)} ${asset.uom}`,
-      asset.custody_warehouse].filter(Boolean).join(' · ')} onPress={open} />;
+      asset.custody_warehouse].filter(Boolean).join(' · ')} open={open} />;
 }
+
+function InventoryRow({ title, subtitle, last, open }: { title: string; subtitle: string; last?: boolean; open: () => void }) {
+  const colors = useMaterialColors();
+  return <WorkerQueueCard backgroundColor={colors.surface} last={last} onPress={open}>
+    <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <SymbolView name={{ android: 'inventory_2' }} size={20} tintColor={colors.onSurfaceVariant} /></View>
+    <View style={styles.rowText}><NativeText style={[styles.headline, { color: colors.onSurface }]}>{title}</NativeText>
+      <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</NativeText></View>
+  </WorkerQueueCard>;
+}
+
+const styles = StyleSheet.create({
+  icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  rowText: { flex: 1, marginStart: 16, paddingVertical: 6 },
+  headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
+  supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
+  scan: { padding: 16, gap: 10 }, status: { padding: 16 }, fabSpace: { height: 112 },
+});
 
 function AssetDetail({ asset, inventory, assigned, close }: { asset: PreparationInventoryAsset; inventory: Inventory; assigned: readonly string[]; close: () => void }) {
   const [showQr, setShowQr] = useState(false), dialogs = usePreparationDialogs(), t = usePreparationText();

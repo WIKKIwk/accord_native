@@ -19,8 +19,8 @@ export function preparationInventoryStore(session: Session): InventoryViewStore 
   return inventoryViewRuntimeFor(session);
 }
 
-export function preparationInventoryAssets(store: InventoryViewStore, warehouseId: string, query: string) {
-  return store.assets({ warehouseId, query, assetKind: 'raw_material', includeOrderAssignment: true });
+export function preparationInventoryAssets(store: InventoryViewStore, warehouseId: string, query: string, offset = 0) {
+  return store.assets({ warehouseId, query, assetKind: 'raw_material', includeOrderAssignment: true, ...(offset ? { offset } : {}) });
 }
 
 /** @v2 rawMaterialBarcodeFromQr */

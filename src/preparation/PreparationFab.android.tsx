@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoleFab, type RoleFabAction } from '../shared/navigation/RoleFab.android';
 
-type Scope = 'home' | 'warehouse' | 'material';
+type Scope = 'home' | 'warehouse' | 'material' | 'inventory';
 type FabOptions = {
   actions: readonly RoleFabAction[]; onSelect: (id: string) => void;
   enabled: boolean; visible: boolean; openLabel: string; closeLabel: string;
@@ -21,7 +21,7 @@ const noSelect = () => {};
 function fabScope(pathname: string): Scope | null {
   const path = pathname.replace(/\/+$/, '');
   return path === '/android-preparation' ? 'home' : path === '/android-preparation/warehouse' ? 'warehouse'
-    : path === '/android-preparation/material' ? 'material' : null;
+    : path === '/android-preparation/material' ? 'material' : path === '/android-preparation/inventory' ? 'inventory' : null;
 }
 
 /** One FAB stays above the native stack while each focused screen supplies its menu. */
