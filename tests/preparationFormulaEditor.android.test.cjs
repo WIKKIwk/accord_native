@@ -67,6 +67,50 @@ test('formula editing isolates the form and preserves material, row, save and ca
   state.editing = true; form().cancel(); assert.equal(state.editing, false); assert.equal(calls.at(-1), 'cancel');
 });
 
+test('inner formula cards keep details on tap and move edit and confirmed delete into their menu', async () => {
+  const calls = [], sheets = [], formulas = [{ name: 'A' }, { name: 'B' }];
+  let confirmed = false;
+  const state = { editing: false, variantName: 'LG', rows: [], materials: [], formulas,
+    loading: false, saving: false, actionsBlocked: false, error: null, estimatedMaterialKg: '100' };
+  state.controller = { clearNotice() {}, openEditor: formula => calls.push(['edit', formula]),
+    remove: async name => { calls.push(['remove', name]); return true; } };
+  const ui = new Proxy({ usePreparationText: () => value => value,
+    usePreparationDialogs: () => ({ confirm: async () => confirmed }) }, { get: (object, key) => object[key] ?? key });
+  const { PreparationOrderFormulaScreen } = load('PreparationFormulaEditor.android.tsx', {
+    'react/jsx-runtime': jsx, react: { useCallback: fn => fn, useEffect() {}, useRef: value => ({ current: value }), useState: value => [value, () => {}] },
+    '@expo/ui/jetpack-compose': {}, 'expo-router': { useFocusEffect() {}, useLocalSearchParams: () => ({ data: 'route' }) },
+    'react-native': { View: 'View' }, 'react-native-safe-area-context': {},
+    '../nativeSheet': { useNativeSheet: () => ({ open: content => sheets.push(content), close() {} }) },
+    '../shared/appRoutes': { appRoutes: { gscaleMode: 'scale' }, canOpenRoute: () => false },
+    './PreparationContext.android': { usePreparationContext: () => ({ session: {} }) },
+    './PreparationFormulaMenu.android': { PreparationFormulaMenu: 'FormulaMenu' },
+    './PreparationFormulaDetails.android': { PreparationFormulaDetails: 'FormulaDetails' },
+    './PreparationUI.android': ui, './usePreparationAndroidView.android': { usePreparationFormulaView: () => state },
+    './usePreparationNotice': { usePreparationNotice: () => ({ message: '', show() {} }) },
+    './preparationNavigation.android': { readPreparationRouteData: () => ({ variantName: 'LG', materialName: 'PE' }) },
+    './preparationModel': { preparationFormulaSharesComplete: () => true },
+    './preparationSharePresentation': { preparationShareSummary: () => ({ total: null, valid: false }) },
+    './preparationFormulaPresentation': { preparationFormulaHeading: () => ({ context: 'PE', code: 'Order', subtitle: 'Product', estimate: null }),
+      preparationFormulaCard: () => ({ count: '2 ta seriyo', share: '100%', lines: ['0209 · 100%'] }) },
+  });
+  const wrapper = PreparationOrderFormulaScreen(), render = () => wrapper.type(wrapper.props);
+  const cards = () => nodes(render(), node => node.type === 'PreparationRow' && formulas.some(formula => formula.name === node.props.title));
+  assert.equal(cards().length, 2);
+  assert.equal(nodes(render(), node => node.type === 'PreparationButton' && ['Tahrirlash', 'O‘chirish'].includes(node.props.label)).length, 0);
+  const [first, second] = cards();
+  assert.equal(first.props.trailing.type, 'FormulaMenu'); assert.equal(second.props.trailing.props.name, 'B');
+  first.props.onPress(); assert.equal(sheets[0].type, 'FormulaDetails'); assert.equal(sheets[0].props.formula, formulas[0]);
+  second.props.trailing.props.onSelect('edit'); assert.deepEqual(calls.at(-1), ['edit', formulas[1]]);
+  second.props.trailing.props.onSelect('delete'); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.some(call => call[0] === 'remove'), false);
+  confirmed = true; second.props.trailing.props.onSelect('delete'); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(calls.at(-1), ['remove', 'B']);
+  state.actionsBlocked = true;
+  const disabled = cards()[1], before = calls.length;
+  assert.equal(disabled.props.disabled, true); assert.equal(disabled.props.trailing.props.disabled, true);
+  disabled.props.trailing.props.onSelect('edit'); assert.equal(calls.length, before);
+});
+
 test('native formula controls keep save locked and avoid untouched-field errors', () => {
   const calls = [];
   const modifiers = new Proxy({}, { get: (_object, key) => value => ({ [key]: value }) });

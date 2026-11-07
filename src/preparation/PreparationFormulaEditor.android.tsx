@@ -7,6 +7,7 @@ import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { usePreparationContext } from './PreparationContext.android';
 import { PreparationFormulaEditForm } from './PreparationFormulaEditForm.android';
+import { PreparationFormulaMenu } from './PreparationFormulaMenu.android';
 import { PreparationFormulaDetails, type FormulaDetailAction } from './PreparationFormulaDetails.android';
 import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
 import type { PreparationMaterial } from './preparationLogic';
@@ -124,10 +125,11 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
         ? 'Bu formulada ichki tarkib yo‘q.' : 'Hali formula yo‘q. FAB orqali formula qo‘shing.')}</PreparationText> : null}
       {state.formulas.map(formula => {
         const card = preparationFormulaCard(formula, state.formulas, state.estimatedMaterialKg);
-        return <View key={formula.name} style={{ gap: 8 }}><PreparationRow title={formula.name}
-          subtitle={[card.count, card.share, ...card.lines].join('\n')} disabled={blocked} onPress={() => openFormula(formula)} />
-          <PreparationButton label="Tahrirlash" disabled={blocked} onPress={() => state.controller.openEditor(formula)} />
-          <PreparationButton label="O‘chirish" disabled={blocked} onPress={() => { void formulaAction(formula, 'delete'); }} /></View>;
+        return <PreparationRow key={formula.name} title={formula.name}
+          subtitle={[card.count, card.share, ...card.lines].join('\n')} disabled={blocked} onPress={() => openFormula(formula)}
+          trailing={<PreparationFormulaMenu name={formula.name} disabled={blocked} onSelect={action => {
+            if (!blocked && action !== 'rename') void formulaAction(formula, action);
+          }} />} />;
       })}
       {(!options.manageSavedFormula || options.allowAddingFormula) ? <PreparationButton
         label={options.manageSavedFormula ? 'Ichki formula qo‘shish' : 'Shnek formula qo‘shish'} disabled={blocked}

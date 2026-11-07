@@ -65,14 +65,19 @@ function setup() {
     './usePreparationReusePicker.android': { usePreparationReusePicker: () => ({ items: [source], loading: false, error: null,
       hasMore: true, setQuery: value => calls.push(['search', value]), loadMore: () => calls.push(['more']) }) },
   };
-  const filename = path.resolve(__dirname, '../src/preparation/PreparationVariants.android.tsx'), mod = new Module(filename, module);
-  mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
-  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText, filename);
-  const wrapper = mod.exports.PreparationFormulaVariantsScreen();
-  return { calls, state, options, variant, source, menu, menuItem, confirm: value => { confirmed = value; }, fab: () => fab,
+  const compile = file => {
+    const filename = path.resolve(__dirname, '../src/preparation', file), mod = new Module(filename, module);
+    mod.filename = filename; mod.paths = module.paths;
+    mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
+    mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+    }).outputText, filename);
+    return mod.exports;
+  };
+  mocks['./PreparationFormulaMenu.android'] = compile('PreparationFormulaMenu.android.tsx');
+  const menuControl = mocks['./PreparationFormulaMenu.android'].PreparationFormulaMenu;
+  const wrapper = compile('PreparationVariants.android.tsx').PreparationFormulaVariantsScreen();
+  return { calls, state, options, variant, source, menu, menuItem, menuControl, confirm: value => { confirmed = value; }, fab: () => fab,
     render: () => { cursor = 0; return wrapper.type(wrapper.props); },
     renderPart: node => {
       const previousSlots = slots, previousCursor = cursor;
@@ -95,7 +100,8 @@ test('variant cards keep opening and refresh behavior while actions move to the 
   tree = x.render();
   row = nodes(tree, node => node.type?.name === 'VariantRow')[0]; card = x.renderPart(row);
   assert.equal(card.props.onPress, undefined); assert.equal(card.props.onLongPress, undefined);
-  assert.equal(nodes(card, node => node.type === 'Pressable')[0].props.disabled, true);
+  const menuTree = x.renderPart(nodes(card, node => node.type === x.menuControl)[0]);
+  assert.equal(nodes(menuTree, node => node.type === 'Pressable')[0].props.disabled, true);
   assert.equal(x.fab().enabled, false);
   nodes(tree, node => node.type === 'RoleHeader')[0].props.navigation.onPress(); assert.deepEqual(x.calls.at(-1), ['back']);
 });
@@ -105,16 +111,17 @@ test('only dots open the anchored menu and actions target the selected variant',
   global.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
   const openMenu = () => {
     const row = nodes(x.render(), node => node.type?.name === 'VariantRow')[0];
-    let card = x.renderPart(row);
-    assert.equal(nodes(card, node => node.type === 'Host').length, 0);
-    const trigger = nodes(card, node => node.type === 'Pressable')[0];
+    const card = x.renderPart(row), control = nodes(card, node => node.type === x.menuControl)[0];
+    let menuTree = x.renderPart(control);
+    assert.equal(nodes(menuTree, node => node.type === 'Host').length, 0);
+    const trigger = nodes(menuTree, node => node.type === 'Pressable')[0];
     let stopped = false;
     trigger.props.onPress({ stopPropagation: () => { stopped = true; } });
     assert.equal(stopped, true);
-    card = x.renderPart(row);
-    const sameTrigger = nodes(card, node => node.type === 'Pressable')[0];
+    menuTree = x.renderPart(control);
+    const sameTrigger = nodes(menuTree, node => node.type === 'Pressable')[0];
     assert.equal(sameTrigger.type, trigger.type); assert.equal(sameTrigger.props.style, trigger.props.style);
-    const popup = nodes(card, node => node.type?.name === 'VariantMenu')[0];
+    const popup = nodes(menuTree, node => node.type?.name === 'FormulaMenuPopup')[0];
     let tree = x.renderPart(popup);
     nodes(tree, node => node.type === 'Host')[0].props.onLayoutContent({ nativeEvent: { width: 48, height: 48 } });
     tree = x.renderPart(popup);
@@ -136,6 +143,12 @@ test('only dots open the anchored menu and actions target the selected variant',
     items = openMenu(); items[0].props.onClick(); frames.shift()(); await tick();
     assert.equal(x.calls.at(-1)[0], 'formula'); assert.equal(x.calls.at(-1)[1].variantId, 'variant-1');
     assert.equal(x.calls.at(-1)[1].openEditorOnLoad, true);
+    const innerMenu = { type: x.menuControl, props: { name: 'A', onSelect() {} } };
+    let innerTree = x.renderPart(innerMenu);
+    nodes(innerTree, node => node.type === 'Pressable')[0].props.onPress({ stopPropagation() {} });
+    innerTree = x.renderPart(innerMenu);
+    const innerPopup = x.renderPart(nodes(innerTree, node => node.type?.name === 'FormulaMenuPopup')[0]);
+    assert.deepEqual(nodes(innerPopup, node => node.type === x.menuItem).map(item => nodes(item, node => node.type === 'Text')[0].props.children), ['Tahrirlash', 'O‘chirish']);
   } finally { global.requestAnimationFrame = previousFrame; }
 });
 

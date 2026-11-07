@@ -44,14 +44,17 @@ export function PreparationField({ label, initial = '', onChange, enabled = true
   </OutlinedTextField></Host>;
 }
 
-export function PreparationRow({ title, subtitle, onPress, onLongPress, disabled = false }: {
-  title: string; subtitle?: string; onPress?: () => void; onLongPress?: () => void; disabled?: boolean;
+export function PreparationRow({ title, subtitle, onPress, onLongPress, disabled = false, trailing }: {
+  title: string; subtitle?: string; onPress?: () => void; onLongPress?: () => void; disabled?: boolean; trailing?: ReactNode;
 }) {
   const colors = useMaterialColors();
+  const content = <><PreparationText title>{title}</PreparationText>{subtitle ? <PreparationText>{subtitle}</PreparationText> : null}</>;
   return <Pressable accessibilityRole={onPress || onLongPress ? 'button' : 'text'} accessibilityLabel={[title, subtitle].filter(Boolean).join(', ')}
     disabled={disabled || (!onPress && !onLongPress)} onPress={onPress} onLongPress={onLongPress}
     style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 16, opacity: disabled ? 0.55 : 1 }}>
-    <PreparationText title>{title}</PreparationText>{subtitle ? <PreparationText>{subtitle}</PreparationText> : null}
+    {trailing ? <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+      <View style={{ flex: 1 }}>{content}</View>{trailing}
+    </View> : content}
   </Pressable>;
 }
 
