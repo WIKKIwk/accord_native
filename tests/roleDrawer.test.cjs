@@ -218,7 +218,7 @@ for (const platform of ['ios', 'android']) {
     tree.props.onSelect('chat');
     assert.deepEqual(calls, [
       ['push', `/${platform}-preparation/sequence`],
-      ['root', `/${platform}-preparation/${platform === 'ios' ? 'catalog' : 'formulas'}`],
+      [platform === 'ios' ? 'root' : 'push', `/${platform}-preparation/${platform === 'ios' ? 'catalog' : 'formulas'}`],
       ['tab', `/${platform}-preparation/profile`], ['scale', { warehouse: 'Assigned' }],
       ['tab', `/${platform}-preparation/chat`],
     ]);
@@ -226,6 +226,13 @@ for (const platform of ['ios', 'android']) {
     assert.equal(calls.at(-1)[0], 'confirm');
     calls.at(-1)[1]();
     assert.deepEqual(calls.at(-1), ['logout']);
+    if (platform === 'android') {
+      tree.props.onSelect('production');
+      assert.deepEqual(calls.at(-1), ['push', '/android-preparation/production']);
+      pathname = '/android-preparation/warehouse';
+      api.PreparationDrawer({ children: null }).props.onSelect('production');
+      assert.deepEqual(calls.at(-1), ['root', '/android-preparation/production']);
+    }
   });
 
   test(`${platform}: existing worker callers now use the shared shell and keep their selection callbacks`, () => {

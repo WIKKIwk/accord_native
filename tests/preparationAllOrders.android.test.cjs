@@ -15,6 +15,7 @@ function nodes(node, predicate) {
 test('Android preparation orders use one tab and a back button without machine selection', () => {
   const calls = [], rows = [{ id: 'one', position: 1, code: '1', title: 'Film', customer_name: '', image_id: '' },
     { id: 'two', position: 2, code: '2', title: 'Film', customer_name: '', image_id: '' }];
+  let canGoBack = true;
   const state = { apparatus: '', rows, loading: false, error: null,
     window: { apparatus_id: '', apparatus: [{ id: 'first', name: 'First' }, { id: 'second', name: 'Second' }], next_cursor: null } };
   const controller = { subscribe() {}, getSnapshot: () => state, searchChanged: value => calls.push(['search', value]),
@@ -26,7 +27,8 @@ test('Android preparation orders use one tab and a back button without machine s
       useState: value => [value, () => {}], useSyncExternalStore: (_subscribe, get) => get() },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
     '@expo/ui': { Button: 'Button', ListItem: 'ListItem' },
-    'expo-router': { router: { replace: route => calls.push(['replace', route]), navigate: route => calls.push(['navigate', route]) }, useFocusEffect() {} },
+    'expo-router': { router: { canGoBack: () => canGoBack, back: () => calls.push(['back']),
+      replace: route => calls.push(['replace', route]), navigate: route => calls.push(['navigate', route]) }, useFocusEffect() {} },
     'react-native': { View: 'View', AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } },
     'react-native-reanimated': { useSharedValue: shared },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
@@ -49,7 +51,9 @@ test('Android preparation orders use one tab and a back button without machine s
   const header = nodes(workspace.props.header, node => node.type === 'OrdersHeader')[0];
   assert.equal(header.props.onMenu, undefined);
   header.props.onBack(); header.props.onSearchChange('film');
-  assert.deepEqual(calls.slice(0, 2), [['replace', '/android-preparation'], ['search', 'film']]);
+  assert.deepEqual(calls.slice(0, 2), [['back'], ['search', 'film']]);
+  canGoBack = false; header.props.onBack();
+  assert.deepEqual(calls.at(-1), ['replace', '/android-preparation']);
   const list = workspace.props.children('');
   const items = nodes(list, node => node.type === 'OrderListItem');
   assert.equal(items.length, 2);

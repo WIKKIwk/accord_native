@@ -15,7 +15,7 @@ function findAll(node, predicate) {
 }
 
 function setup(platform, options = {}) {
-  const calls = [], router = { push: route => calls.push(['push', route]), replace: route => calls.push(['replace', route]) };
+  const calls = [], router = options.router ?? { push: route => calls.push(['push', route]), replace: route => calls.push(['replace', route]) };
   let focus = () => {}, reads = 0, marked = false;
   const controller = {
     reload() { reads++; }, refresh() { reads++; }, loadForPage() { reads++; }, getSnapshot: () => ({ saving: false }),
@@ -110,8 +110,8 @@ for (const platform of ['ios', 'android']) {
     const page = view.render();
     const routes = [
       ['push', `/${platform}-preparation/warehouse`], ['push', `/${platform}-preparation/materials`],
-      ['push', `/${platform}-preparation/sets`], [platform === 'ios' ? 'push' : 'replace', `/${platform}-preparation/sequence`],
-      ['replace', `/${platform}-preparation/production`], ['push', `/${platform}-preparation/inventory`],
+      ['push', `/${platform}-preparation/sets`], ['push', `/${platform}-preparation/sequence`],
+      [platform === 'ios' ? 'replace' : 'push', `/${platform}-preparation/production`], ['push', `/${platform}-preparation/inventory`],
       ['push', `/${platform}-preparation/history`],
     ];
     for (const [index, row] of menuRows(page, platform).entries()) {
@@ -153,7 +153,7 @@ test('android: FAB preserves each action route and capability-dependent choices'
   const routes = [
     ['sets', ['push', '/android-preparation/sets']], ['materials', ['push', '/android-preparation/materials']],
     ['warehouse', ['push', '/android-preparation/warehouse']], ['scale', ['scale']],
-    ['receive', ['push', '/android-preparation/warehouse']], ['sequence', ['replace', '/android-preparation/sequence']],
+    ['receive', ['push', '/android-preparation/warehouse']], ['sequence', ['push', '/android-preparation/sequence']],
     ['history', ['push', '/android-preparation/history']],
   ];
   assert.deepEqual(fabActions.map(action => action.id), routes.map(([id]) => id));
@@ -161,4 +161,26 @@ test('android: FAB preserves each action route and capability-dependent choices'
   const limited = setup('android', { scaleAllowed: false, receiptMode: 'scale' });
   const limitedActions = findAll(limited.render(), node => node.type === 'PreparationPage')[0].props.fabActions;
   assert.ok(limitedActions.every(action => action.id !== 'scale' && action.id !== 'receive'));
+});
+
+test('android: opening orders and production keeps the original home route for back navigation', () => {
+  const { StackActions, StackRouter } = require('expo-router/build/react-navigation/routers/StackRouter');
+  const routeNames = ['index', 'sequence', 'production'];
+  const options = { routeNames, routeParamList: {}, routeGetIdList: {} };
+  const stack = StackRouter({ initialRouteName: 'index' });
+  const home = { name: 'index', key: 'existing-preparation-home' };
+  let state = { stale: false, type: 'stack', key: 'preparation-stack', index: 0, routeNames, routes: [home] };
+  const apply = action => { const result = stack.getStateForAction(state, action, options); assert.ok(result?.state); state = result.state; };
+  const screen = route => route.split('/').at(-1);
+  const router = { push: route => apply(StackActions.push(screen(route))),
+    replace: route => apply(StackActions.replace(screen(route))), back: () => apply({ type: 'GO_BACK' }) };
+  const view = setup('android', { router });
+  const rows = menuRows(view.render(), 'android');
+  for (const [index, name] of [[3, 'sequence'], [4, 'production']]) {
+    rows[index].props.onPress();
+    assert.equal(state.routes[0], home);
+    assert.equal(state.routes[state.index].name, name);
+    router.back();
+    assert.equal(state.routes[state.index], home);
+  }
 });

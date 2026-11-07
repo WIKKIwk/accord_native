@@ -67,15 +67,15 @@ export function PreparationHomeScreen() {
     else if (chosen === 'warehouse') router.push('/android-preparation/warehouse' as Href);
     else if (chosen === 'materials') router.push('/android-preparation/materials' as Href);
     else if (chosen === 'sets') router.push('/android-preparation/sets' as Href);
-    else if (chosen === 'sequence') router.replace('/android-preparation/sequence' as Href);
+    else if (chosen === 'sequence') router.push('/android-preparation/sequence' as Href);
     else if (chosen === 'history') router.push('/android-preparation/history' as Href);
   };
   const menuItems = [
     { title: 'Ombor', onPress: () => router.push('/android-preparation/warehouse' as Href) },
     { title: 'Homashyolar', onPress: () => router.push('/android-preparation/materials' as Href) },
     { title: 'Mahsulot formulasi', onPress: () => router.push('/android-preparation/sets' as Href) },
-    { title: 'Buyurtmalar', onPress: () => router.replace('/android-preparation/sequence' as Href) },
-    { title: 'Ishlab chiqarish', onPress: () => router.replace('/android-preparation/production' as Href) },
+    { title: 'Buyurtmalar', onPress: () => router.push('/android-preparation/sequence' as Href) },
+    { title: 'Ishlab chiqarish', onPress: () => router.push('/android-preparation/production' as Href) },
     { title: 'Ishlab chiqarilgan homashyolar', onPress: () => router.push('/android-preparation/inventory' as Href) },
     { title: 'Tarix', onPress: () => router.push('/android-preparation/history' as Href) },
   ];

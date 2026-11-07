@@ -63,7 +63,8 @@ export function PreparationSequenceList({ session, controller, openOrder }: Prop
     const height = event.nativeEvent.layout.height;
     if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
   }}><OrdersHeader search={query} onSearchChange={value => { setQuery(value); controller.searchChanged(value); }}
-    onBack={() => router.replace('/android-preparation' as Href)} onProfile={() => router.navigate('/android-preparation/profile' as Href)} /></View>;
+    onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }}
+    onProfile={() => router.navigate('/android-preparation/profile' as Href)} /></View>;
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
     <OrdersWorkspace session={session} tabs={[{ id: '', name: t('Buyurtmalar') }]} selected=""
       onSelect={() => {}} loading={state.loading && !state.window} header={header} headerOffset={headerOffset}>
