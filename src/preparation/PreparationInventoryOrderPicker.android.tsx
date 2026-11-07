@@ -4,7 +4,6 @@ import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
 import { FlatList, Keyboard, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WorkerIconButton } from '../components/WorkerIconButton.android';
 import { WorkerOrderSheet } from '../components/WorkerOrderSheet.android';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { preparationOrderCandidateLabel, type PreparationOrderCandidate } from './preparationOrderCandidateSearch';
@@ -30,10 +29,6 @@ export function PreparationInventoryOrderPicker({ candidates, onClose, onSelect 
   const dismissed = () => { if (mounted.current && !closing.current) { closing.current = true; Keyboard.dismiss(); onClose(); } };
   return <WorkerOrderSheet sheetRef={sheetRef} onClose={dismissed} dismissible fitContent>
     <View style={[styles.content, { height: Math.round((height - insets.top - insets.bottom) * 0.6) }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.onSurface }]}>{t('Buyurtmani tanlang')}</Text>
-        <WorkerIconButton icon="close" label={t('Yopish')} onPress={() => dismiss()} />
-      </View>
       <View style={[styles.search, { backgroundColor: colors.surfaceContainerHighest, borderColor: colors.outlineVariant }]}>
         <SymbolView name={{ android: 'search' }} size={24} tintColor={colors.onSurfaceVariant} />
         <Host matchContents={{ vertical: true }} style={styles.searchInput}>
@@ -60,8 +55,6 @@ export function PreparationInventoryOrderPicker({ candidates, onClose, onSelect 
 
 const styles = StyleSheet.create({
   content: { paddingTop: 8, gap: 12 },
-  header: { paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { flex: 1, fontSize: 20, lineHeight: 28, fontWeight: '500' },
   search: { marginHorizontal: 16, minHeight: 56, paddingHorizontal: 16, borderRadius: 28, borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row', alignItems: 'center', gap: 12 },
   searchInput: { flex: 1 },
