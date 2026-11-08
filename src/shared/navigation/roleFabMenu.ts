@@ -43,7 +43,8 @@ export function createRoleFabPresentation(actions: readonly RoleFabAction[]): Ro
 }
 
 /** A closed gate never reactivates. Only a committed component effect creates a fresh gate. */
-export function createRoleFabGate(presentation: RoleFabPresentation, isCurrent: () => boolean, onSelect: (id: string) => void) {
+export function createRoleFabGate(presentation: RoleFabPresentation, isCurrent: () => boolean, onSelect: (id: string) => void,
+  onInvalid?: () => void) {
   let active = true, selecting = false;
   return {
     invalidate: () => { active = false; },
@@ -52,7 +53,9 @@ export function createRoleFabGate(presentation: RoleFabPresentation, isCurrent: 
       selecting = true;
       try {
         const id = presentation.resolve(eventId);
-        if (id === undefined || !isSynchronouslyTrue(isCurrent) || !active) return;
+        if (id === undefined) return;
+        if (!isSynchronouslyTrue(isCurrent)) { active = false; onInvalid?.(); return; }
+        if (!active) return;
         // A native presentation can deliver at most one selected action.
         active = false;
         onSelect(id);
@@ -104,7 +107,7 @@ export function createRoleFabStore(actions: readonly RoleFabAction[], resetKey: 
                 void Promise.resolve(result).then(settled, failed).catch(failed);
               } else settled();
             } catch (error) { failed(error); }
-          });
+          }, () => { if (live && entry?.gate === gate) { pending = true; publish(); } });
           entry = Object.freeze({ presentation, gate });
         }
       }

@@ -106,12 +106,22 @@ test('effect cleanup and re-setup create a fresh native event namespace', () => 
   fire(second, newId); assert.deepEqual(calls, ['receipt']); h.unmount();
 });
 
-test('focus/session guard and in-place action mutation are checked before each selection', () => {
+test('observed focus/session loss permanently invalidates the old presentation', () => {
   const h = harness(), calls = [], list = actions(); let current = true;
-  const menu = menuOf(h.render(base({ actions: list, isCurrent: () => current, onSelect: id => calls.push(id) })));
-  const id = menu.props.actions[0].id; current = false; fire(menu, id); assert.deepEqual(calls, []);
-  current = true; list[0].disabled = true; fire(menu, id); assert.deepEqual(calls, []);
-  list[0].disabled = false; fire(menu, id); assert.deepEqual(calls, ['receipt']); h.unmount();
+  const props = base({ actions: list, isCurrent: () => current, onSelect: id => calls.push(id) });
+  const menu = menuOf(h.render(props)), id = menu.props.actions[0].id;
+  current = false; fire(menu, id); current = true; fire(menu, id); assert.deepEqual(calls, []); assert.equal(h.flush(), null);
+  const next = menuOf(h.render({ ...props, resetKey: 'epoch-2' })); assert.notEqual(next.props.actions[0].id, id);
+  fire(next, id); fire(next, next.props.actions[0].id); assert.deepEqual(calls, ['receipt']); h.unmount();
+});
+
+test('observed in-place action change cannot revive an old menu after restoration', () => {
+  const h = harness(), calls = [], list = actions(), props = base({ actions: list, onSelect: id => calls.push(id) });
+  const menu = menuOf(h.render(props)), id = menu.props.actions[0].id;
+  list[0].disabled = true; fire(menu, id); list[0].disabled = false; fire(menu, id);
+  assert.deepEqual(calls, []); assert.equal(h.flush(), null);
+  const next = menuOf(h.render({ ...props, resetKey: 'epoch-2' })); fire(next, next.props.actions[0].id);
+  assert.deepEqual(calls, ['receipt']); h.unmount();
 });
 
 test('reentrant guard invalidation or action mutation prevents its own selection', () => {
@@ -150,7 +160,8 @@ test('reentry from guard or selected callback cannot dispatch the same event twi
 test('malformed native events and stale or disabled event IDs never dispatch', () => {
   const h = harness(), calls = [], menu = menuOf(h.render(base({ onSelect: id => calls.push(id) })));
   for (const event of [undefined, {}, { nativeEvent: {} }, { nativeEvent: { event: null } }]) menu.props.onPressAction(event);
-  fire(menu, menu.props.actions[2].id); fire(menu, 'unrecognized'); assert.deepEqual(calls, []); h.unmount();
+  fire(menu, menu.props.actions[2].id); fire(menu, 'unrecognized'); assert.deepEqual(calls, []);
+  fire(menu, menu.props.actions[0].id); assert.deepEqual(calls, ['receipt']); h.unmount();
 });
 
 test('duplicate native delivery invokes once and a later menu receives a new event namespace', () => {
@@ -238,4 +249,12 @@ test('reentrant invalidation from a subscriber does not recurse', () => {
   store.activate(); const entry = store.getSnapshot();
   entry.gate.select(entry.presentation.key, entry.presentation.menuActions[0].id);
   assert.equal(store.getSnapshot(), null); assert.deepEqual(calls, []);
+});
+
+test('invalid guard is terminal but disabled and unknown IDs do not consume the gate', () => {
+  const p = model.createRoleFabPresentation(actions()), calls = []; let current = true, invalid = 0, checks = 0;
+  const gate = model.createRoleFabGate(p, () => { checks++; return current; }, id => calls.push(id), () => { invalid++; });
+  gate.select(p.key, 'unknown'); gate.select(p.key, p.menuActions[2].id); assert.equal(checks, 0); assert.equal(invalid, 0);
+  current = false; gate.select(p.key, p.menuActions[0].id); assert.equal(invalid, 1);
+  current = true; gate.select(p.key, p.menuActions[0].id); assert.deepEqual(calls, []); assert.equal(invalid, 1);
 });
