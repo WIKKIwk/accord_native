@@ -22,14 +22,14 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     controller: { reload: async () => calls.push('reload'), next: async () => calls.push('next') }, query: '',
     controls: { module: 'sequence' }, loading: false, error: null, emptyText: '', refresh: async () => calls.push('reload'),
     search: value => calls.push(['search', value]), goBack: () => calls.push('back'), onProfile: () => calls.push('profile'), open: item => calls.push(['open', item.id]) };
-  const mocks = { react: { useEffect() {} }, 'react-native': { Platform: { OS: platform }, PlatformColor: value => value, View: 'View', ActivityIndicator: 'ActivityIndicator', BackHandler: { addEventListener: () => ({ remove() {} }) } },
+  const mocks = { react: { useEffect() {}, isValidElement: value => !!value && typeof value === 'object' && 'type' in value }, 'react-native': { Platform: { OS: platform }, PlatformColor: value => value, View: 'View', ActivityIndicator: 'ActivityIndicator', BackHandler: { addEventListener: () => ({ remove() {} }) } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     'expo-router': { Redirect: 'Redirect', Stack: { Screen: 'Stack.Screen' } }, '@expo/ui': { ListItem: 'ListItem' }, '@expo/ui/swift-ui': { Button: 'Button' },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: '#fff' }) },
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route } }, '../shared/localization': { adminText: key => key, localizedGetter: key => key, productionText: key => key },
     '../components/BaseHost': { BaseHost: 'BaseHost' }, '../shared/orders/OrderListItem': { OrderListItem: 'OrderListItem' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
-    './AdminWorkMapMove': { AdminWorkMapMove: 'AdminWorkMapMove' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
+    './AdminWorkMapMove': { AdminWorkMapMove: 'AdminWorkMapMove' }, './AdminWorkMapPendingRow': { AdminWorkMapPendingRow: 'AdminWorkMapPendingRow' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
     './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' }, './AdminShellContext': { useAdminShell: () => shell },
     './useAdminWorkMapView': { useAdminWorkMapView: () => view }, './adminWorkMapText': { adminWorkMapText: () => ({ partial: 'partial', more: 'more' }) },
     './adminWorkMapPresentation': { adminWorkMapPresentation: value => ({ headline: value.title, supporting: value.customer, tone: 'paused' }) } };
@@ -53,6 +53,14 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   assert.equal(renderedRow.props.imageActive, false); renderedRow.props.onPress();
   const more = listChildren.at(-1); more.props.onPress(); await Promise.resolve();
   assert.deepEqual(calls, [['search', 'abc'], 'back', 'profile', 'reload', ['open', 'zakaz-1'], 'next']);
+  view.controls.module = 'orders'; const pending = { ...row, kind: 'pending', id: 'pending-1' }; view.state.rows = [pending];
+  const pendingTree = bound.type(), pendingBody = platform === 'ios' ? pendingTree.props.children.find(value => value?.type === 'View') : pendingTree;
+  const pendingList = platform === 'ios' ? pendingBody.props.children.find(value => value?.type === 'BaseHost' && value.props.children?.type === 'OrdersList').props.children
+    : pendingBody.props.children.find(value => value?.type === 'OrdersList');
+  const pendingRow = pendingList.props.children.flat(Infinity).filter(Boolean).find(value => value.type === 'AdminWorkMapPendingRow');
+  assert.ok(pendingRow); pendingRow.props.onPress(); assert.deepEqual(calls.at(-1), ['open', 'pending-1']);
+  assert.equal(pendingRow.props.infoLabel, 'worker.order.info');
+  if (platform === 'android') { assert.equal(pendingList.props.passthrough(pendingRow), true); assert.equal(pendingList.props.passthrough({ type: 'Other' }), false); }
   view.controls.module = 'audit'; view.state.rows = []; view.audit = { title: 'Audit' }; view.error = 'failed';
   const auditTree = bound.type();
   const auditBody = platform === 'ios' ? auditTree.props.children.find(value => value?.type === 'View') : auditTree;

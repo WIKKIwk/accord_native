@@ -78,10 +78,16 @@ test('card formatting retains V2 pending label and a Dart-like decimal for ordin
   const localization = { productionText: () => 'Order' };
   const tone = { workerOrderTone: state => state || 'neutral' };
   const presentation = load('admin/adminWorkMapPresentation', { '../shared/localization': localization, '../workerOrderAppearance': tone,
-    './adminWorkMapText': { adminWorkMapText: () => ({ pending: 'Chala buyurtma' }) } }).adminWorkMapPresentation;
+    './adminWorkMapText': { adminWorkMapText: () => ({ pending: 'Chala buyurtma' }) },
+    './adminDartDouble': load('admin/adminDartDouble') }).adminWorkMapPresentation;
   assert.deepEqual(presentation({ kind: 'pending', code: 'P', title: 'Product', customer: 'Client', kg: 10, displayState: 'pending' }, 'uz'),
     { headline: 'P • Product', supporting: 'Client · 10.0 kg · Chala buyurtma', tone: 'pending' });
   assert.equal(presentation({ kind: 'order', code: '1', title: '', customer: 'Client', kg: null, displayState: '' }, 'en').headline, '1 • Order');
+  const projected = rows([summary({ pending_rows: { p1: { id: 'p1', code: ' 17 ', title: ' Film ', customer_name: ' Ana ', image_id: '', kg: -0 } } })])[0];
+  assert.deepEqual(presentation(projected, 'ru'), { headline: ' 17  •  Film ', supporting: ' Ana  · -0.0 kg · Chala buyurtma', tone: 'pending' });
+  const legacy = rows([summary({ projection: '', length: 1, next_cursor: null, order_ids: [], pending_ids: [], order_rows: {}, pending_rows: {},
+    pending_orders: [{ id: 'p', template: { order_number: '', product: '', customer: '', image_id: '', kg: 4 } }], snapshot: { maps: [] } })])[0];
+  assert.deepEqual(presentation(legacy, 'en'), { headline: ' • ', supporting: ' · 4.0 kg · Chala buyurtma', tone: 'pending' });
 });
 
 test('Sequence summaries preserve server order, absolute positions, display states and count', async () => {
