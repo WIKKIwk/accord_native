@@ -1,6 +1,7 @@
 import { werkaArchiveDayRange, werkaArchiveMonthRange } from './werkaArchiveCalendar';
 
 export type WerkaArchivePickerBounds = { firstDate: Date; lastDate: Date };
+export type WerkaArchivePickerState = { displayMonth: Date; selectedDate: Date | null; mode: 'day' | 'year' };
 
 function dateOnly(value: Date): Date {
   if (!Number.isFinite(value.getTime())) throw new RangeError();
@@ -18,6 +19,35 @@ function normalizedBounds(bounds: WerkaArchivePickerBounds) {
   const firstDate = dateOnly(bounds.firstDate), lastDate = dateOnly(bounds.lastDate);
   if (firstDate > lastDate) throw new RangeError();
   return { firstDate, lastDate };
+}
+
+/** CalendarDatePicker owns this state; subsequent initialDate changes require an explicit remount. */
+export function werkaArchivePickerInitial(initialDate: Date | null, currentDate: Date,
+  bounds: WerkaArchivePickerBounds): WerkaArchivePickerState {
+  const { firstDate, lastDate } = normalizedBounds(bounds), selectedDate = initialDate === null ? null : dateOnly(initialDate);
+  const displayMonth = month(selectedDate ?? currentDate);
+  if (displayMonth < month(firstDate) || displayMonth > month(lastDate)
+    || (selectedDate !== null && (selectedDate < firstDate || selectedDate > lastDate))) throw new RangeError();
+  return { displayMonth, selectedDate, mode: 'day' };
+}
+
+export function werkaArchivePickerMonths(bounds: WerkaArchivePickerBounds): Date[] {
+  const { firstDate, lastDate } = normalizedBounds(bounds);
+  const count = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + lastDate.getMonth() - firstDate.getMonth() + 1;
+  return Array.from({ length: count }, (_, index) =>
+    werkaArchiveMonthRange(firstDate.getFullYear(), firstDate.getMonth() + index + 1).from);
+}
+
+/** The source YearPicker backfills to 18 cells; its selected year is the displayed month, not selectedDate. */
+export function werkaArchivePickerYears(displayMonth: Date, currentDate: Date, bounds: WerkaArchivePickerBounds, columns: 2 | 3 = 3) {
+  const { firstDate, lastDate } = normalizedBounds(bounds), shown = month(displayMonth), today = dateOnly(currentDate);
+  const count = lastDate.getFullYear() - firstDate.getFullYear() + 1, offset = count < 18 ? Math.floor((18 - count) / 2) : 0;
+  const cells = Array.from({ length: Math.max(count, 18) }, (_, index) => {
+    const year = firstDate.getFullYear() + index - offset;
+    return { year, enabled: year >= firstDate.getFullYear() && year <= lastDate.getFullYear(),
+      selected: year === shown.getFullYear(), today: year === today.getFullYear() };
+  });
+  return { cells, rows: Array.from({ length: Math.ceil(cells.length / columns) }, (_, index) => cells.slice(index * columns, (index + 1) * columns)) };
 }
 
 /** Declared Flutter 3.47.8 Gregorian day-grid contract, not a native picker implementation.
