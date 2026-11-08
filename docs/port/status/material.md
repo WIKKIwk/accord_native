@@ -24,7 +24,7 @@ Stopped at: history surfaces and partial navigation are built in unlinked Materi
 | Remaining tests | `.port/role-material-tests.md` | Re-record any actually used preparation/qolip shared fixture at f119 in coordinated nested stems, and inspect remaining contract/logic/widget cases for reachable tasks, inventory, assignment and GScale; historical top-level recordings are not f119 evidence. |
 
 ## Deviations candidates
-None identified yet.
+- The unlinked scanned-assignment command permits an explicit apparatus choice only after the f119-tested HTTP 400 ambiguity response and refuses automatic mutation retries, including after a 401 refresh. V2's screen catches ambiguity regardless of HTTP status; the stricter behavior is a safety hold pending integrator review, not a completed parity claim. A sent request can still have an uncertain outcome and requires state reconciliation.
 
 ## Test mode pending
 History returns an empty list in V2 test mode; shared test mode is intentionally deferred.
@@ -85,3 +85,7 @@ The scoped `order_scan_bootstrap_api_test` f119 fixture is owned by this branch;
 ## Scoped assignment reads (not yet wired)
 - Default-undefined `beforeSend` callbacks are available on the existing order, apparatus catalog, raw-material lookup, candidate and diagnostic readers; they reach `authorizedFetch` before the initial send and a 401 retry. Callback failures are terminal even when they are `TypeError`, rather than triggering a transient-read retry. Default call signatures and behavior remain unchanged.
 - Forty focused tests passed, including 401 role, capability, identity and account changes and default-reader regressions. This only supplies a boundary hook: a consumer must supply a sound scope/lifetime guard and invalidate results on account changes. It does not solve same-object/same-scope ABA, the protected assignment list reader, or the shared login redirect hold. No assignment screen or route is exposed.
+
+## Scanned assignment command (not yet wired)
+- `RawMaterialAssignmentCommands.assignScanned` reuses the existing Preparation assignment API without modifying it. It permits a second command only following a definite 400 `raw_material_group_ambiguous` and an explicit, offered, canonical apparatus choice. Cancel, invalid choices, account/scope/permission changes, network errors, 5xx, malformed success, concurrent calls, and 401 retries are covered without live writes. An already-sent command cannot be retracted; the caller must refresh and reconcile before another attempt.
+- A consumer must pass an `isCurrent` guard covering the screen, selected order, scanned code and account lifetime and use the existing QR parser before calling. The command is not wired to UI; manual candidate assignment, unlink, all remaining error messages and the complete controller remain open. Dart and JavaScript stringify nested list/map and some numeric `apparatus_options` differently, so exact malformed-payload presentation is not claimed. The known epoch/ABA issue and protected assignment-list read still block the route.
