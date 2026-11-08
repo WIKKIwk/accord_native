@@ -23,7 +23,8 @@ function history(platform, translate = value => value) {
   const controller = { getSnapshot: () => state, subscribe: () => () => {}, reload: async () => { loads++; } };
   const react = { useEffect: fn => effects.push(fn), useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': new Proxy({}, { get: (_, name) => name }),
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surface: 'surface', onSurface: 'text', onSurfaceVariant: 'muted' }) },
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surface: 'surface', primary: 'primary', onSurface: 'text', onSurfaceVariant: 'muted' }) },
+    '@expo/ui/swift-ui/modifiers': { lineLimit: value => ({ type: 'lineLimit', value }) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'NativeText', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
@@ -47,6 +48,18 @@ for (const platform of ['ios', 'android']) {
     assert.equal(buttons.length, 2); buttons[0].props.onPress(); buttons[1].props.onPress();
     assert.equal(h.result(), result); assert.deepEqual(h.issue(), [issue, true]);
     if (platform === 'android') assert.equal(find(tree, n => n.type === 'OrdersList').length, 1);
+  });
+  test(`${platform} history rows reuse native cut, warning and disclosure icons with V2 text limits`, () => {
+    const h = history(platform); h.state.snapshot = { warehouses: [], history: [result], issues: [issue] }; const tree = h.render();
+    const images = platform === 'ios' ? find(tree, n => n.type === 'Image').map(n => n.props.systemName)
+      : find(tree, n => n.type === 'SymbolView').map(n => n.props.name.android);
+    assert.deepEqual(images, platform === 'ios' ? ['scissors', 'chevron.right', 'exclamationmark.triangle', 'chevron.right']
+      : ['content_cut', 'chevron_right', 'warning_amber', 'chevron_right']);
+    const title = find(tree, n => n.type === (platform === 'ios' ? 'Text' : 'NativeText') && text(n) === '100 → 98 kg')[0];
+    const subtitle = find(tree, n => n.type === (platform === 'ios' ? 'Text' : 'NativeText') && text(n) === 'Raw W • 1 rulon • 2 kg chiqindi')[0];
+    if (platform === 'ios') { assert.deepEqual(title.props.modifiers, [{ type: 'lineLimit', value: 1 }]);
+      assert.deepEqual(subtitle.props.modifiers, [{ type: 'lineLimit', value: 2 }]); }
+    else { assert.equal(title.props.numberOfLines, 1); assert.equal(subtitle.props.numberOfLines, 2); }
   });
   test(`${platform} history preserves existing issues while showing a reload error`, () => {
     const h = history(platform); h.state.snapshot = { warehouses: [], history: [result], issues: [issue] }; h.state.error = 'offline';

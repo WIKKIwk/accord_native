@@ -1,4 +1,5 @@
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -29,16 +30,21 @@ export function RawSplitHistory({ controller, onResult, onIssue }: RawSplitHisto
         <Text style={secondary}>Wi-Fi printer: {state.wifiPrinter}</Text>}
     </View></WorkerQueueCard>);
     rows.push(...history.map((result, index) => <WorkerQueueCard key={`result:${result.id}`} first={index === 0} last={index === history.length - 1}
-      backgroundColor={colors.surface} onPress={() => onResult(result)}><View style={{ flex: 1, padding: 8 }}>
-      <Text style={primary}>{rawSplitHistoryTitle(result)}</Text><Text style={secondary}>{rawSplitHistorySubtitle(result)}</Text>
-    </View><Text style={secondary}>{rawSplitHistoryTime(result.createdAt)}</Text></WorkerQueueCard>));
+      backgroundColor={colors.surface} onPress={() => onResult(result)}><SymbolView name={{ android: 'content_cut' }} size={22} tintColor={colors.primary} />
+    <View style={{ flex: 1, padding: 8 }}><Text style={primary} numberOfLines={1}>{rawSplitHistoryTitle(result)}</Text>
+      <Text style={secondary} numberOfLines={2}>{rawSplitHistorySubtitle(result)}</Text></View>
+    <View style={{ alignItems: 'flex-end' }}><Text style={secondary}>{rawSplitHistoryTime(result.createdAt)}</Text>
+      <SymbolView name={{ android: 'chevron_right' }} size={20} tintColor={colors.onSurfaceVariant} /></View></WorkerQueueCard>));
   }
   if (issues.length) rows.push(<View key="issues" style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 }}>
     <Text style={primary}>{t('Muammolar')}</Text></View>);
   rows.push(...issues.map((issue, index) => <WorkerQueueCard key={`issue:${issue.id}`} first={index === 0} last={index === issues.length - 1}
     backgroundColor={colors.surface} onPress={() => onIssue(issue, history.some(result => result.issueId === issue.id))}>
-    <View style={{ flex: 1, padding: 8 }}><Text style={primary}>{issue.source.itemName}</Text><Text style={secondary}>{issue.check.message}</Text></View>
-    <Text style={secondary}>{t(rawSplitIssueTime(issue))}</Text>
+    <SymbolView name={{ android: 'warning_amber' }} size={22} tintColor={colors.primary} />
+    <View style={{ flex: 1, padding: 8 }}><Text style={primary} numberOfLines={1}>{issue.source.itemName}</Text>
+      <Text style={secondary} numberOfLines={2}>{issue.check.message}</Text></View>
+    <View style={{ alignItems: 'flex-end' }}><Text style={secondary}>{t(rawSplitIssueTime(issue))}</Text>
+      <SymbolView name={{ android: 'chevron_right' }} size={20} tintColor={colors.onSurfaceVariant} /></View>
   </WorkerQueueCard>));
   return <OrdersList onRefresh={() => controller.reload()} active headerOffset={headerOffset} headerHeight={headerHeight} topInset={8}
     passthrough={passthrough}>{rows}</OrdersList>;
