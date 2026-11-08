@@ -27,8 +27,8 @@ function fixture(platform, state, locale = 'uz') {
       foregroundStyle: v => ['foregroundStyle', v], buttonStyle: v => ['buttonStyle', v], contentShape: v => ['contentShape', v],
       fixedSize: v => ['fixedSize', v], font: v => ['font', v], frame: v => ['frame', v], lineLimit: () => ['lineLimit'], padding: v => ['padding', v],
       shapes: { rectangle: () => ['rectangle'] } },
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'highlight', onSurface: 'fg', onSurfaceVariant: 'muted' }) },
-    'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'highlight', onSurface: 'fg', onSurfaceVariant: 'muted', outlineVariant: 'outline' }) },
+    'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', Pressable: 'Pressable', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './CustomerContext': { useCustomerText: () => ({ locale, text: key => key }) },
     './CustomerStates': loadCustomerStates(platform), './CustomerStatusPanel': { CustomerStatusPanel: 'CustomerStatusPanel' }, './customerPresentation': presentation,
     './useCustomerScreens': { useCustomerHome: () => state, useCustomerStatus: () => state } };
@@ -43,12 +43,12 @@ test('iOS home supplies the real summary and status callback to its native panel
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);
   assert.ok(nodes(shipment, item => item.type === 'Text' && item.props.children === 'P1').length);
 });
-test('Android home supplies the real summary/status callback and reuses queue cards for shipments', () => {
+test('Android home supplies the real summary/status callback and opens shipment details', () => {
   const calls = [], screen = fixture('android', state).CustomerHomeScreen({ onOpenStatus: kind => calls.push(kind), onOpenDetail: id => calls.push(id) });
   assert.equal(screen.type, 'FlatList');
   const panel = nodes(screen.props.ListHeaderComponent, item => item.type === 'CustomerStatusPanel')[0]; assert.equal(panel.props.summary, state.summary);
   for (const kind of ['pending', 'confirmed', 'rejected']) panel.props.onOpenStatus(kind);
-  const shipment = screen.props.renderItem({ item: record, index: 0 }); shipment.props.onPress();
+  const shipment = screen.props.renderItem({ item: record, index: 0 }); nodes(shipment, item => item.type === 'Pressable')[0].props.onPress();
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);
 });
 
@@ -56,6 +56,46 @@ test('Android recent shipments heading uses V2 titleLarge emphasis', () => {
   const screen = fixture('android', state).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
   const title = nodes(screen.props.ListHeaderComponent, item => item.type === 'Text' && item.props.children === 'recentShipmentsTitle')[0];
   assert.equal(title.props.style.fontSize, 20); assert.equal(title.props.style.fontWeight, '700');
+});
+
+test('Android Home groups the heading, empty state and shipment rows like the source panels', () => {
+  const empty = fixture('android', { ...state, records: [] }).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
+  const emptyHeader = nodes(empty.props.ListHeaderComponent, item => item.props.testID === 'customer-shipments-heading')[0];
+  assert.equal(emptyHeader.props.style.backgroundColor, 'bg'); assert.equal(emptyHeader.props.style.paddingTop, 16);
+  assert.equal(emptyHeader.props.style.marginTop, 18);
+  assert.equal(emptyHeader.props.style.borderTopLeftRadius, 28); assert.equal(emptyHeader.props.style.borderTopRightRadius, 28);
+  const title = nodes(emptyHeader, item => item.type === 'Text')[0];
+  assert.equal(title.props.style.marginHorizontal, 16); assert.equal(title.props.style.marginBottom, 14);
+  const emptyPanel = empty.props.ListEmptyComponent; assert.equal(emptyPanel.props.style.backgroundColor, 'bg');
+  assert.equal(emptyPanel.props.style.borderBottomLeftRadius, 28); assert.equal(emptyPanel.props.style.borderBottomRightRadius, 28);
+  const emptyLabel = nodes(emptyPanel, item => item.type === 'Text')[0]; assert.equal(emptyLabel.props.children, 'noShipments');
+  assert.equal(emptyLabel.props.style.marginHorizontal, 20); assert.equal(emptyLabel.props.style.marginTop, 4); assert.equal(emptyPanel.props.style.paddingBottom, 18);
+  assert.equal(nodes(emptyPanel, item => item.type === 'Pressable').length, 0);
+
+  const records = [0, 1, 2].map(index => ({ ...record, id: `dn-${index}` })), calls = [];
+  const screen = fixture('android', { ...state, records }, 'ur-PK').CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail: id => calls.push(id) });
+  records.forEach((item, index) => {
+    const row = screen.props.renderItem({ item, index });
+    const outer = nodes(row, n => n.props.testID === 'customer-shipment-card')[0];
+    const inner = nodes(row, n => n.props.testID === 'customer-shipment-fill')[0];
+    const target = nodes(row, n => n.type === 'Pressable')[0];
+    assert.equal(outer.props.style.backgroundColor, 'bg'); assert.equal(outer.props.style.direction, 'rtl');
+    assert.equal(outer.props.style.borderBottomLeftRadius, index === 2 ? 28 : 0);
+    assert.equal(outer.props.style.borderBottomRightRadius, index === 2 ? 28 : 0);
+    assert.equal(inner.props.style.backgroundColor, 'highlight');
+    assert.equal(inner.props.style.borderTopLeftRadius, index === 0 ? 24 : 0);
+    assert.equal(inner.props.style.borderTopRightRadius, index === 0 ? 24 : 0);
+    assert.equal(inner.props.style.borderBottomLeftRadius, index === 2 ? 24 : 0);
+    assert.equal(inner.props.style.borderBottomRightRadius, index === 2 ? 24 : 0);
+    assert.equal(target.props.accessibilityRole, 'button'); target.props.onPress();
+    const dividers = nodes(row, n => n.props.testID === 'customer-shipment-divider');
+    assert.equal(dividers.length, index === 2 ? 0 : 1);
+    if (dividers.length) assert.deepEqual(dividers[0].props.style, { height: 1, marginHorizontal: 16, backgroundColor: 'outline', opacity: 0.55 });
+  });
+  assert.deepEqual(calls, records.map(item => item.id));
+  const single = fixture('android', state).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} }).props.renderItem({ item: record, index: 0 });
+  const fill = nodes(single, n => n.props.testID === 'customer-shipment-fill')[0].props.style;
+  assert.equal(fill.borderTopLeftRadius, 24); assert.equal(fill.borderBottomLeftRadius, 24);
 });
 test('both platforms show loading before the initial bootstrap and retry after an initial failure', () => {
   for (const platform of ['ios', 'android']) {
@@ -198,7 +238,8 @@ for (const platform of ['ios', 'android']) test(`${platform} shipment previews r
   const screen = fixture(platform, state).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
   const row = platform === 'ios' ? nodes(screen, item => ['ListItem', 'Button'].includes(item.type)).at(-1)
     : screen.props.renderItem({ item: record, index: 0 });
-  const body = row.props.children;
+  const target = platform === 'ios' ? row : nodes(row, item => item.type === 'Pressable')[0];
+  const body = target.props.children;
   assert.equal(body.type, platform === 'ios' ? 'HStack' : 'View');
   const [details, quantity] = body.props.children;
   assert.deepEqual(nodes(details, item => item.type === 'Text').map(item => item.props.children), [record.item_name, record.item_code]);
@@ -213,7 +254,7 @@ for (const platform of ['ios', 'android']) test(`${platform} shipment previews r
     assert.equal(body.props.style.alignItems, 'center'); assert.equal(details.props.style.gap, 3);
     assert.equal(quantity.props.style.fontSize, 14); assert.equal(quantity.props.style.fontWeight, '600');
     assert.equal(details.props.children[0].props.style.fontWeight, '500');
-    assert.equal(body.props.style.paddingHorizontal, 10); assert.equal(body.props.style.paddingVertical, 10);
+    assert.equal(target.props.style.paddingHorizontal, 18); assert.equal(target.props.style.paddingVertical, 16);
   }
 });
 
@@ -224,11 +265,12 @@ test('shipment previews retain exact fields and one real target with native intr
     const calls = [], screen = fixture(platform, { ...state, records: [raw] }).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail: id => calls.push(id) });
     const row = platform === 'ios' ? nodes(screen, item => item.type === 'Button')[0]
       : screen.props.renderItem({ item: raw, index: 0 });
-    row.props.onPress(); assert.deepEqual(calls, [raw.id]);
+    const target = platform === 'ios' ? row : nodes(row, item => item.type === 'Pressable')[0];
+    target.props.onPress(); assert.deepEqual(calls, [raw.id]);
     const texts = nodes(row, item => item.type === 'Text');
     assert.deepEqual(texts.map(item => item.props.children), [raw.item_name, raw.item_code, '7 kg / m²']);
     const quantity = texts[2]; assert.equal(quantity.props.numberOfLines, undefined);
-    assert.equal(nodes(row.props.children, item => ['Button', 'Pressable', 'ListItem'].includes(item.type)).length, 0);
+    assert.equal(nodes(target.props.children, item => ['Button', 'Pressable', 'ListItem'].includes(item.type)).length, 0);
     if (platform === 'ios') {
       assert.deepEqual(row.props.modifiers, [['buttonStyle', 'plain']]);
       assert.ok(row.props.children.props.modifiers.some(m => m[0] === 'contentShape' && m[1][0] === 'rectangle'));

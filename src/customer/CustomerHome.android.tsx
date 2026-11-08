@@ -1,11 +1,11 @@
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import type { DispatchRecord } from '../shared/notificationApi';
 import { useCustomerText } from './CustomerContext';
 import { CustomerEmptyStatusState, CustomerLoadingState, CustomerRetryState } from './CustomerStates';
 import { CustomerStatusPanel } from './CustomerStatusPanel';
-import { customerHomeRecord, customerStatusRecord } from './customerPresentation';
+import { customerHomeRecord, customerLayoutDirection, customerStatusRecord } from './customerPresentation';
 import type { CustomerStatusKind } from './customerStore';
 import { useCustomerHome, useCustomerStatus } from './useCustomerScreens';
 
@@ -14,26 +14,42 @@ type StatusProps = { kind: CustomerStatusKind; onOpenDetail: (id: string) => voi
 
 // @v2 CustomerHomeScreen
 export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
-  const state = useCustomerHome(), colors = useMaterialColors(), { text } = useCustomerText();
+  const state = useCustomerHome(), colors = useMaterialColors(), { locale, text } = useCustomerText();
   if (!state.loaded) return state.loading || !state.error ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
+  const direction = customerLayoutDirection(locale) === 'rightToLeft' ? 'rtl' : 'ltr';
   return <FlatList data={state.records} keyExtractor={item => item.id}
     refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}
     contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
-    ListHeaderComponent={<View style={{ gap: 2 }}>
+    ListHeaderComponent={<View>
       <CustomerStatusPanel summary={state.summary} onOpenStatus={onOpenStatus} />
-      <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700', marginHorizontal: 24, marginTop: 16, marginBottom: 12 }}>{text('recentShipmentsTitle')}</Text>
+      <View testID="customer-shipments-heading" style={{ marginHorizontal: 8, marginTop: 18, paddingTop: 16, direction,
+        backgroundColor: colors.surfaceContainerLow, borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
+        <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700', marginHorizontal: 16, marginBottom: 14 }}>{text('recentShipmentsTitle')}</Text>
+      </View>
     </View>}
-    ListEmptyComponent={<Text style={{ color: colors.onSurfaceVariant, marginHorizontal: 24 }}>{text('noShipments')}</Text>}
+    ListEmptyComponent={<View style={{ marginHorizontal: 8, paddingBottom: 18, backgroundColor: colors.surfaceContainerLow, direction,
+      borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+      <Text style={{ color: colors.onSurfaceVariant, fontSize: 14, marginHorizontal: 20, marginTop: 4 }}>{text('noShipments')}</Text>
+    </View>}
     renderItem={({ item, index }: { item: DispatchRecord; index: number }) => {
-      const row = customerHomeRecord(item);
-      return <WorkerQueueCard backgroundColor={colors.surfaceContainerLow} first={index === 0} last={index === state.records.length - 1}
-        onPress={() => onOpenDetail(item.id)}><View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16,
-          paddingHorizontal: 10, paddingVertical: 10 }}>
-          <View style={{ flex: 1, gap: 3 }}>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurface, fontSize: 16, fontWeight: '500' }}>{row.name}</Text>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.code}</Text>
-          </View><Text style={{ color: colors.onSurfaceVariant, fontSize: 14, fontWeight: '600' }}>{row.quantity}</Text>
-        </View></WorkerQueueCard>;
+      const row = customerHomeRecord(item), first = index === 0, last = index === state.records.length - 1;
+      return <View testID="customer-shipment-card" style={{ marginHorizontal: 8, backgroundColor: colors.surfaceContainerLow, direction,
+        borderBottomLeftRadius: last ? 28 : 0, borderBottomRightRadius: last ? 28 : 0, overflow: 'hidden' }}>
+        <View testID="customer-shipment-fill" style={{ backgroundColor: colors.surfaceContainer, overflow: 'hidden',
+          borderTopLeftRadius: first ? 24 : 0, borderTopRightRadius: first ? 24 : 0,
+          borderBottomLeftRadius: last ? 24 : 0, borderBottomRightRadius: last ? 24 : 0 }}>
+          <Pressable accessibilityRole="button" android_ripple={{}} onPress={() => onOpenDetail(item.id)}
+            style={{ paddingHorizontal: 18, paddingVertical: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurface, fontSize: 16, fontWeight: '500' }}>{row.name}</Text>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.code}</Text>
+              </View><Text style={{ color: colors.onSurfaceVariant, fontSize: 14, fontWeight: '600' }}>{row.quantity}</Text>
+            </View>
+          </Pressable>
+          {!last ? <View testID="customer-shipment-divider" style={{ height: 1, marginHorizontal: 16, backgroundColor: colors.outlineVariant, opacity: 0.55 }} /> : null}
+        </View>
+      </View>;
     }} />;
 }
 
