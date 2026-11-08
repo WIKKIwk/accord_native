@@ -30,6 +30,7 @@ Source Git objects `7c87a54e` and `f11910bb` were compared without modifying V2.
 | Image origin | `returnedPaintImageUrl`, `downloadReturnedPaintImage` | V2 attaches bearer headers even to absolute external URLs; the existing native transport restricts authenticated requests to the server origin. Do not weaken credential protection; confirm required cross-origin behavior. |
 | Palette | `returned_paint_sheet.dart:175-231`, `returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:85-120` | The reused Worker palette does not expose filled/partial indicators; its iOS fallback omits the three category headings, and its tab control does not support V2's horizontal swipe. Do not modify the protected Worker component as part of this role. |
 | Request cards | `boyoqchi_home_screen_widgets_part_01.dart:161-180`, `boyoqchi_astatka_screen.dart:209-228` | The reused `WorkerExpansion` does not expose V2's two-line title limit or animated expansion arrow. Check long titles and expansion on a phone; changing the protected component is outside this role. |
+| Shared Profile extra action | `features/shared/presentation/profile_screen*.dart`; native `ProfileView.android.tsx:123`, `ProfileView.ios.tsx:149` | The reused native Profile displays a `Kunlik ish` action for Boyoqchi, whose role callback currently goes to Home; the pinned V2 Profile source has no corresponding daily-work row. Removing this extra action without changing other roles needs a coordinated opt-in prop on the shared Profile component. Do not change protected Worker/Preparation behavior. |
 | Sheet dismissal | `returned_paint_sheet.dart:240`, `src/components/WorkerOrderSheet.android.tsx` | A hardware-back handler and non-dismissible sheet option are set during saving, but the shared Android sheet always sets native `shouldDismissOnBackPress`; verify and resolve on a phone without changing Worker behavior. |
 | iOS photo save | `returned_paint_sheet_helpers_part_01.dart:279-300`; `app.json` | Integrator commit `c678e86` adds the V2 photo-add purpose string. The save action requests write-only access through SDK 58; a fresh development binary and real-phone permission test are required. |
 | Photo filename | `returned_paint_sheet_helpers_part_01.dart:379-381` | V2 passes the trimmed image name through, whereas the native temporary-file adapter strips path components and control characters and substitutes a safe fallback for `.` or `..`. Check unusual server filenames without weakening file-path safety. |
@@ -49,6 +50,7 @@ Source Git objects `7c87a54e` and `f11910bb` were compared without modifying V2.
 ## Needs from the integrator
 
 - Reconcile protected Worker `OrderScreen.tsx` returned-image/draft differences separately.
+- Coordinate a backward-compatible shared Profile option to hide `Kunlik ish` only for Boyoqchi on both platforms; verify other roles' existing output is unchanged.
 
 ## Checkpoint verification
 
