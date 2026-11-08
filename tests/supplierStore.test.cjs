@@ -71,11 +71,15 @@ test('errors remain visible without discarding a prior successful result', async
 
 test('empty breakdown and detail results are cached, with Dart-trimmed detail keys', async () => {
   const f = fixture();
+  assert.equal(f.store.loadedBreakdown('returned'), false);
+  assert.equal(f.store.loadedDetail('returned', 'A'), false);
   let changes = 0; f.store.subscribe(() => changes++);
   const initial = f.store.bootstrapBreakdown('returned');
   assert.equal(f.store.loadingBreakdown('returned'), true);
   assert.equal(changes, 0); // V2 does not notify at breakdown request start.
   await initial; assert.equal(changes, 1);
+  assert.equal(f.store.loadedBreakdown('returned'), true);
+  assert.equal(f.store.loadedBreakdown('pending'), false);
   await f.store.bootstrapBreakdown('returned');
   assert.equal(f.calls.filter(call => call[0] === 'breakdown').length, 1);
   await f.store.bootstrapDetail('returned', ' \u0085A\u0085 ');
@@ -83,8 +87,30 @@ test('empty breakdown and detail results are cached, with Dart-trimmed detail ke
   assert.equal(f.calls.filter(call => call[0] === 'detail').length, 1);
   assert.deepEqual(f.calls.at(-1).slice(2), ['returned', ' \u0085A\u0085 ']);
   assert.deepEqual(f.store.detailItems('returned', 'A'), []);
+  assert.equal(f.store.loadedDetail('returned', 'A'), true);
+  assert.equal(f.store.loadedDetail('pending', 'A'), false);
+  assert.equal(f.store.loadedDetail('returned', 'B'), false);
   await f.store.bootstrapDetail('returned', 'A', true);
   assert.equal(f.calls.filter(call => call[0] === 'detail').length, 2);
+  f.store.clear();
+  assert.equal(f.store.loadedBreakdown('returned'), false);
+  assert.equal(f.store.loadedDetail('returned', 'A'), false);
+  f.store.dispose();
+});
+
+test('failed breakdown and detail loads do not become cached successes', async () => {
+  let failure = true;
+  const result = async () => { if (failure) throw Error('offline'); return []; };
+  const f = fixture({ supplierStatusBreakdown: result, supplierStatusDetails: result });
+  await Promise.all([f.store.bootstrapBreakdown('returned'), f.store.bootstrapDetail('returned', 'A')]);
+  assert.equal(f.store.loadedBreakdown('returned'), false);
+  assert.equal(f.store.loadedDetail('returned', 'A'), false);
+  failure = false;
+  await Promise.all([f.store.bootstrapBreakdown('returned'), f.store.bootstrapDetail('returned', 'A')]);
+  failure = true;
+  await Promise.all([f.store.refreshBreakdown('returned'), f.store.refreshDetail('returned', 'A')]);
+  assert.equal(f.store.loadedBreakdown('returned'), true);
+  assert.equal(f.store.loadedDetail('returned', 'A'), true);
   f.store.dispose();
 });
 

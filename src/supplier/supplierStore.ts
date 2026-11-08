@@ -60,9 +60,12 @@ export class SupplierStore {
     }
     return this.runtime.applySummary(counts);
   }
+  // V2's bootstrap guards cache successful empty responses as well as populated lists.
+  loadedBreakdown(kind: SupplierStatusKind): boolean { return this._breakdownItems.has(kind); }
   breakdownItems(kind: SupplierStatusKind): SupplierStatusBreakdownEntry[] { return this._breakdownItems.get(kind) ?? []; }
   loadingBreakdown(kind: SupplierStatusKind): boolean { return this._loadingBreakdown.get(kind) === true; }
   breakdownError(kind: SupplierStatusKind): unknown | null { return this._breakdownErrors.get(kind) ?? null; }
+  loadedDetail(kind: SupplierStatusKind, itemCode: string): boolean { return this._detailItems.has(this.detailKey(kind, itemCode)); }
   detailItems(kind: SupplierStatusKind, itemCode: string): DispatchRecord[] { return this._detailItems.get(this.detailKey(kind, itemCode)) ?? []; }
   loadingDetail(kind: SupplierStatusKind, itemCode: string): boolean { return this._loadingDetail.get(this.detailKey(kind, itemCode)) === true; }
   detailError(kind: SupplierStatusKind, itemCode: string): unknown | null { return this._detailErrors.get(this.detailKey(kind, itemCode)) ?? null; }

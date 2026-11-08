@@ -34,25 +34,27 @@ export function useSupplierRootRefresh(store: SupplierStore, mode: 'home' | 'his
   }, [store, mode]);
 }
 export function useSupplierBreakdown(store: SupplierStore, kind: SupplierStatusKind): boolean {
-  const [ready, setReady] = useState<SupplierStatusKind | null>(null);
+  const [ready, setReady] = useState<{ store: SupplierStore; kind: SupplierStatusKind } | null>(null);
   useEffect(() => {
     let active = true;
     const breakdown = store.bootstrapBreakdown(kind);
     const visible = kind === 'pending' || kind === 'submitted' ? store.bootstrapHistory() : breakdown;
-    void visible.finally(() => { if (active) setReady(kind); });
+    void visible.finally(() => { if (active) setReady({ store, kind }); });
     return () => { active = false; };
   }, [store, kind]);
-  return ready === kind;
+  // V2 bootstraps before build: revisiting cached content must not flash a loading screen.
+  const cached = kind === 'pending' || kind === 'submitted' ? store.loadedHistory : store.loadedBreakdown(kind);
+  return cached || (ready?.store === store && ready.kind === kind);
 }
 export function useSupplierCategory(store: SupplierStore): void {
   useEffect(() => { void store.bootstrapHistory(); }, [store]);
 }
 export function useSupplierStatusDetail(store: SupplierStore, kind: SupplierStatusKind, itemCode: string): boolean {
-  const key = `${kind}:${itemCode}`, [ready, setReady] = useState<string | null>(null);
+  const key = `${kind}:${itemCode}`, [ready, setReady] = useState<{ store: SupplierStore; key: string } | null>(null);
   useEffect(() => {
     let active = true;
-    void store.bootstrapDetail(kind, itemCode).finally(() => { if (active) setReady(key); });
+    void store.bootstrapDetail(kind, itemCode).finally(() => { if (active) setReady({ store, key }); });
     return () => { active = false; };
   }, [store, kind, itemCode, key]);
-  return ready === key;
+  return store.loadedDetail(kind, itemCode) || (ready?.store === store && ready.key === key);
 }
