@@ -6,7 +6,7 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Role-wide UI contract | `docs/port/roles/qolipchi.md` | The block screen is specified, but the other 20 Qolip surfaces are only inventoried; read their states and actions from f119 before treating the contract as complete. |
+| Role-wide UI contract | `docs/port/roles/qolipchi.md` | The block screen is specified and home has partial logic notes, but the other Qolip surfaces are not fully specified; read their states and actions from f119 before treating the contract as complete. |
 | Role-wide logic and surfaces | `lib/src/features/qolip/`, `lib/src/core/api/qolip/` | Except for the checkpoints below, the role logic, iOS and Android views, navigation, text gate and surface audit remain to be completed. The text gate currently reports 143 missing iOS and 141 missing Android V2 strings, plus unmatched existing V4 strings. |
 | Qolip search on devices | `qolip_search_engine.dart`, `search_normalizer.dart` | Confirm React Native timer slicing and cancellation on both phones. Rare Unicode lowercase mapping differences between the Dart VM and the phone's JavaScript engine have not been verified. |
 | Blocks screen wiring | `qolip_blocks_screen.dart`, `src/qolip/QolipBlocksScreen.*.tsx` | Both platform views exist but are not routed; connect the role drawer, dock, profile and chat, and hide the profile button while the shared search field has focus. Validate accessibility and native interaction on real phones. Do not mark the screen complete until then. |
@@ -53,7 +53,11 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 - Block screen logic checkpoint: specified the block screen contract and added its controller, hook, existing Qolip search reuse and localized error mapping. Tests cover load/refresh ordering, search, save exclusion, action notices and disposal. The 147 Qolip tests, iOS typecheck and Expo lint passed; Android and full-suite gates were not rerun. Navigation and the other surface contracts remain open.
 - Block view checkpoint: added separate native iOS and Android block views, reusing the shared orders search header/list, worker card, native action sheet and existing notice. Static native-component renders check loading, error, empty, long press and destructive confirmation; the controller tests cover state and server calls. The views deliberately remain unwired and untagged while role navigation and focus handling are incomplete. All 152 Qolip tests, iOS typecheck and Expo lint passed; Android typecheck reports the same nine existing worker errors. No device, simulator, printer or backend was used.
 
+- Home logic checkpoint: ported saved block ordering, selected-tab reorder, exact snapshot equality and cancellable block/cell search counts. The f119 oracle passed its direct reorder test; additional tests are source-derived. All 158 Qolip tests, iOS typecheck and Expo lint passed. Android typecheck and the full suite were not rerun for this checkpoint. The home state, screen and complete contract are not implemented.
+
 ## Deviations candidates
+
+- Home saved order keys use only trimmed lowercased block names, so duplicate names in different warehouses collapse to the last value. The f119 V2 behavior is preserved and needs product review after parity.
 
 - `qolipTransferProducts` validates a set of returned codes, not the returned list length. A response containing extra duplicate rows for the same requested code is accepted by V2; this behavior is preserved for the parity pass.
 
