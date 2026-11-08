@@ -16,7 +16,7 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot
 | Test mode | `rawSplitSave`, `rawSplitReportIssue` | Implement the shared test-mode policy in the deferred test-mode pass. |
 
 ## Verification so far
-- `node --test tests/homashyo*.test.cjs`: 39 passed, including mocked iOS/Android history render trees, including selected-baseline wire replays.
+- `node --test tests/homashyo*.test.cjs`: 41 passed, including mocked iOS/Android history render trees and source-derived home labels, including selected-baseline wire replays.
 - `tests/contracts/f11910bb/raw_material_split_test.json` is a new f119 recording; prior historical fixtures remain untouched. The file includes requests from the three failed V2 widget tests, which must not be treated as specifications.
 - `npx tsc --noEmit -p tsconfig.ios.json`: passed after regenerating the worktree’s stale ignored Expo Router types.
 - Selected-baseline Flutter oracle: 16 passed, 3 failed; no simulator or device.
