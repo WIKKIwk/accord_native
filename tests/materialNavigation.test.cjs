@@ -14,13 +14,16 @@ function load(file, mocks = {}) {
 }
 const routes = load('shared/appRoutes'), nav = load('material/materialNavigation', { '../shared/appRoutes': routes });
 const session = caps => ({ token: 'x', profile: { role: 'material_taminotchi', ref: 'material-1' }, capabilities: caps });
-test('authorized Material home and Profile are the only drawer destinations', () => {
+test('authorized Material drawer exposes the real task route and omits held destinations', () => {
   const labels = { home: 'Bosh sahifa', profile: 'Profil' }, material = session(['raw_material.assign', 'gscale.print', 'inventory.movement.manage']);
-  assert.deepEqual(nav.materialDrawerItems(material, labels).map(item => item.id), ['home', 'profile']);
+  assert.deepEqual(nav.materialDrawerItems(material, labels).map(item => item.id), ['home', 'tasks', 'profile']);
+  assert.deepEqual(nav.materialDrawerItems(session(['gscale.print']), labels).map(item => item.id), ['home', 'profile']);
   for (const platform of ['ios', 'android']) {
     assert.equal(nav.materialRoute('home', platform), `/${platform}-material`);
     assert.equal(nav.materialRoute('profile', platform), `/${platform}-material/profile`);
-    for (const id of ['history', 'tasks', 'chat', 'scale', 'assignment', 'inventory']) assert.equal(nav.materialRoute(id, platform), null);
+    assert.equal(nav.materialRoute('tasks', platform), `/${platform}-material/tasks`);
+    assert.equal(nav.materialDrawerActive(`/${platform}-material/tasks`), 'tasks');
+    for (const id of ['history', 'chat', 'scale', 'assignment', 'inventory']) assert.equal(nav.materialRoute(id, platform), null);
   }
   assert.deepEqual(nav.materialDrawerItems(session(['inventory.movement.manage']), labels), []);
   assert.deepEqual(nav.materialDrawerItems({ ...material, profile: { ...material.profile, role: 'admin' } }, labels), []);
@@ -37,7 +40,7 @@ test('home target opens Material on both platforms without changing Worker or Pr
   assert.equal(routes.homeTarget(material, 'web'), null);
 });
 
-test('Expo Router exposes only guarded Material home and Profile entrypoints', () => {
+test('Expo Router exposes Material task entrypoints but no held destinations', () => {
   const walk = (directory, prefix = '.') => fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory() ? walk(path.join(directory, entry.name), `${prefix}/${entry.name}`)
       : /\.[jt]sx?$/.test(entry.name) ? [`${prefix}/${entry.name}`] : []);
@@ -51,7 +54,8 @@ test('Expo Router exposes only guarded Material home and Profile entrypoints', (
     for (const other of ['ios', 'android']) {
       assert.ok(paths.includes(`./${other}-material/_layout.tsx`)); assert.ok(paths.includes(`./${other}-material/profile.tsx`));
       assert.ok(paths.includes(other === 'ios' ? './ios-material/(home)/index.tsx' : './android-material/index.tsx'));
+      assert.ok(paths.includes(`./${other}-material/tasks.tsx`));
     }
-    assert.equal(paths.some(key => /^\.\/(ios|android)-material\/.*(?:history|tasks|chat|gscale|assignment|inventory)/.test(key)), false);
+    assert.equal(paths.some(key => /^\.\/(ios|android)-material\/.*(?:history|chat|gscale|assignment|inventory)/.test(key)), false);
   }
 });

@@ -21,14 +21,16 @@ export function MaterialLayout() {
   if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   if (!canOpenRoute(session, appRoutes.materialHome)) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
     <Text>{localizedGetter('accessDenied', current)}</Text></View>;
-  const active = path.endsWith('/profile') ? 'profile' : 'home';
+  const active = path.endsWith('/profile') ? 'profile' : path.endsWith('/tasks') ? 'tasks' : 'home';
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
     <MaterialProvider session={session} onLogout={onLogout}><MaterialDrawer><View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow }}>
       <Stack screenOptions={{ headerShown: false }} />
       <RoleBottomBar active={active} bottomInset={insets.bottom} items={[
         { id: 'home', label: localizedGetter('homeNavTitle', current), icon: 'home' },
+        ...(canOpenRoute(session, appRoutes.materialTasks) ? [{ id: 'tasks', label: 'Vazifalar', icon: 'assignment' as const }] : []),
         { id: 'profile', label: localizedGetter('profileTitle', current), icon: 'person' },
       ]} onSelect={id => { if (id === 'home') router.navigate('/android-material' as Href);
+        else if (id === 'tasks' && canOpenRoute(session, appRoutes.materialTasks)) router.navigate('/android-material/tasks' as Href);
         else if (id === 'profile') router.navigate('/android-material/profile' as Href); }} />
     </View></MaterialDrawer></MaterialProvider>
   </WorkerSecurityProvider>;

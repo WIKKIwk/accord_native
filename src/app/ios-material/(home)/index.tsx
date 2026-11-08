@@ -1,1 +1,1 @@
-export { MaterialHome as default } from '../../../material/MaterialHome';
+export { MaterialHomeRoute as default } from '../../../material/MaterialHomeRoute';

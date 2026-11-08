@@ -22,6 +22,9 @@ export function MaterialLayout() {
     <MaterialProvider session={session} onLogout={onLogout}><MaterialDrawer><NativeTabs>
       <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
         <NativeTabs.Trigger.Label>{localizedGetter('homeNavTitle', current)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
+      <NativeTabs.Trigger name="tasks" hidden={!canOpenRoute(session, appRoutes.materialTasks)}>
+        <NativeTabs.Trigger.Icon sf={{ default: 'checklist', selected: 'checklist' }} />
+        <NativeTabs.Trigger.Label>Vazifalar</NativeTabs.Trigger.Label></NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile"><NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
         <NativeTabs.Trigger.Label>{localizedGetter('profileTitle', current)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     </NativeTabs></MaterialDrawer></MaterialProvider>

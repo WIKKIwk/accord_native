@@ -1,6 +1,7 @@
 import { router, usePathname, type Href } from 'expo-router';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { Platform } from 'react-native';
+import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { RoleDrawer } from '../shared/navigation/RoleDrawer';
@@ -17,6 +18,7 @@ export function MaterialDrawer({ children }: { children: ReactNode }) {
   const items = materialDrawerItems(session, { home: localizedGetter('homeNavTitle', current), profile: localizedGetter('profileTitle', current) });
   const select = (id: string) => {
     if (id === 'logout') { confirmRoleDrawerLogout(onLogout); return; }
+    if (id === 'tasks' && !canOpenRoute(session, appRoutes.materialTasks)) return;
     const destination = materialRoute(id, Platform.OS === 'ios' ? 'ios' : 'android');
     if (!destination) return;
     if (id === 'history') router.push(destination as Href); else router.navigate(destination as Href);

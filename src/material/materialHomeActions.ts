@@ -1,5 +1,5 @@
 import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
-import { activeSessionToken, type Session } from '../auth';
+import { activeSessionEpoch, activeSessionToken, type Session } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
@@ -26,11 +26,11 @@ export function materialHomeActions(session: Session, handlers?: MaterialHomeHan
   const empty = { cards: [], fab: [], select: () => {} };
   if (!handlers || typeof handlers.isCurrent !== 'function') return empty;
   const { isCurrent, showMissingGroup, tasks, receipt, scan, assignment, movement } = handlers;
-  const token = activeSessionToken(session), scope = sessionReadScope(session);
+  const epoch = activeSessionEpoch(session), scope = sessionReadScope(session);
   const allowed = () => session.profile.role === 'material_taminotchi' && sessionReadScope(session) === scope;
   const current = () => {
-    try { return !!token && activeSessionToken(session) === token && allowed() && isSynchronouslyTrue(isCurrent) &&
-      activeSessionToken(session) === token && allowed(); } catch { return false; }
+    try { return epoch !== null && activeSessionEpoch(session) === epoch && !!activeSessionToken(session) && allowed() && isSynchronouslyTrue(isCurrent) &&
+      activeSessionEpoch(session) === epoch && !!activeSessionToken(session) && allowed(); } catch { return false; }
   };
   if (!current()) return empty;
   const candidates: readonly Candidate[] = [

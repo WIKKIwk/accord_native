@@ -14,14 +14,16 @@ function compile(relative, mocks = {}) {
 function setup() {
   const session = { token: 'a', baseUrl: 'https://example.test', profile: { role: 'material_taminotchi', ref: 'user' },
     capabilities: ['raw_material.assign', 'gscale.print', 'inventory.movement.manage'], assigned_apparatus: [], assigned_item_groups: ['group'], assigned_warehouses: [] };
-  const calls = []; let active = true, live = true;
-  const api = compile('material/materialHomeActions', { '../auth': { activeSessionToken: s => active && s === session ? s.token : null },
+  const calls = []; let active = true, live = true, epoch = 1;
+  const api = compile('material/materialHomeActions', { '../auth': {
+    activeSessionToken: s => active && s === session ? s.token : null,
+    activeSessionEpoch: s => active && s === session ? epoch : null },
     '../sessionReadScope': compile('sessionReadScope'), '../shared/appRoutes': compile('shared/appRoutes'),
     '../shared/camera/synchronousGuard': compile('shared/camera/synchronousGuard') });
   const handlers = { isCurrent: () => live, tasks: () => calls.push('tasks'), receipt: () => calls.push('receipt'),
     scan: () => calls.push('scan'), assignment: () => calls.push('assignment'), movement: () => calls.push('movement'),
     showMissingGroup: () => calls.push('group-warning') };
-  return { session, api, handlers, calls, deactivate: () => { active = false; }, dispose: () => { live = false; } };
+  return { session, api, handlers, calls, deactivate: () => { active = false; }, newEpoch: () => { epoch++; }, dispose: () => { live = false; } };
 }
 const ids = actions => actions.map(action => action.id);
 
@@ -59,7 +61,7 @@ test('a nonempty group array preserves the V2 isNotEmpty check', () => {
   menu.select('assignment'); assert.deepEqual(h.calls, ['assignment']);
 });
 
-for (const change of ['role', 'identity', 'permission', 'groups', 'warehouses', 'token', 'account', 'screen']) {
+for (const change of ['role', 'identity', 'permission', 'groups', 'warehouses', 'epoch', 'account', 'screen']) {
   test(`a visible home action cannot invoke a stale handler after ${change} changes`, () => {
     const h = setup(), menu = h.api.materialHomeActions(h.session, h.handlers);
     if (change === 'role') h.session.profile.role = 'admin';
@@ -67,13 +69,20 @@ for (const change of ['role', 'identity', 'permission', 'groups', 'warehouses', 
     if (change === 'permission') h.session.capabilities = [];
     if (change === 'groups') h.session.assigned_item_groups = [];
     if (change === 'warehouses') h.session.assigned_warehouses = ['other'];
-    if (change === 'token') h.session.token = 'b';
+    if (change === 'epoch') h.newEpoch();
     if (change === 'account') h.deactivate();
     if (change === 'screen') h.dispose();
     for (const id of ['tasks', 'receipt', 'scan', 'assignment', 'movement']) menu.select(id);
     assert.deepEqual(h.calls, []);
   });
 }
+
+test('same-session token refresh keeps home actions usable', () => {
+  const h = setup(), menu = h.api.materialHomeActions(h.session, h.handlers);
+  h.session.token = 'refreshed'; menu.select('tasks');
+  assert.deepEqual(h.calls, ['tasks']);
+  h.newEpoch(); menu.select('tasks'); assert.deepEqual(h.calls, ['tasks']);
+});
 
 test('only synchronous true lifetime checks pass, including reentrant mutation', async () => {
   for (const guard of [() => 1, () => Promise.resolve(true), () => Promise.reject(Error('async guard')), () => { throw Error('guard'); }]) {
