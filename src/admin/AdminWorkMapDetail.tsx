@@ -12,6 +12,7 @@ import { adminWorkMapMetadataRows } from './adminWorkMapMetadataModel';
 import { useAdminWorkMapSummary } from './useAdminWorkMapSummary';
 import { adminWorkMapSummaryPresentation } from './adminWorkMapSummaryPresentation';
 import { AdminWorkMapSummary } from './AdminWorkMapSummary';
+import { adminWorkMapDetailHeader } from './adminWorkMapDetailHeader';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeNow = () => localeController.locale;
@@ -25,18 +26,23 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
   const value = detail.value, data = value?.kind === 'order' ? value.map : value?.template;
   const title = value?.kind === 'order' ? value.map.title : value?.template.product;
   const customer = value?.kind === 'order' ? value.customer : value?.template.customer;
+  const header = ticket.kind === 'order' ? adminWorkMapDetailHeader(row, value?.kind === 'order' ? value.map : null,
+    value?.kind === 'order' ? value.customer : row.customer, productionText('worker.order.fallback', locale)) : null;
   const weight = value?.kind === 'order' ? value.map.order_kg : value?.template.kg;
   const length = value?.kind === 'order' ? value.map.base_length : null;
   const width = data?.width_mm;
   const metadata = adminWorkMapMetadataRows(value?.kind === 'order' ? value.metadata : null, session.profile.role, ticket.kind,
     { admin: key => adminText(key, locale), loading: localizedGetter('loading', locale) });
   return <View style={[styles.screen, { backgroundColor: colors.field }]}><ScrollView contentContainerStyle={styles.content}>
-    <Text style={[styles.title, { color: colors.text }]}>{[row.code || row.id, title || row.title].filter(Boolean).join(' • ')}</Text>
+    {header ? <View><Text style={{ color: colors.text }}>{productionText('worker.order.code', locale)}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{header.code}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{header.label}</Text></View>
+      : <Text style={[styles.title, { color: colors.text }]}>{[row.code || row.id, title || row.title].filter(Boolean).join(' • ')}</Text>}
     {detail.loading && <ActivityIndicator />}
     {detail.error && <><Text accessibilityRole="alert" style={{ color: colors.text }}>{detail.error}</Text>
       <Host matchContents={{ vertical: true }}><Button label={localizedGetter('retry', locale)} onPress={detail.retry} /></Host></>}
     {(metadata.length > 0 || data) && <Host matchContents={{ vertical: true }}><Column>
-      {!!customer && <ListItem supportingText={customer}>{localizedGetter('customerLabel', locale)}</ListItem>}
+      {!header && !!customer && <ListItem supportingText={customer}>{localizedGetter('customerLabel', locale)}</ListItem>}
       {metadata.length > 0 && <AdminWorkMapMetadata rows={metadata} />}
       {showSummary ? <AdminWorkMapSummary model={adminWorkMapSummaryPresentation(value?.kind === 'order' ? value.map : null, summary, locale)} onToggle={summary.toggle} onRetry={summary.retry} /> : <>
         {typeof weight === 'number' && Number.isFinite(weight) && <ListItem supportingText={`${weight} kg`}>{productionText('worker.summary.weight', locale)}</ListItem>}

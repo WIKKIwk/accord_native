@@ -142,19 +142,21 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
     './useAdminWorkMapDetail': { useAdminWorkMapDetail: () => ({ ...detail, retry }) },
     './AdminWorkMapMetadata': { AdminWorkMapMetadata: 'Metadata' }, './adminWorkMapMetadataModel': metadata,
     './AdminWorkMapSummary': { AdminWorkMapSummary: 'Summary' },
+    './adminWorkMapDetailHeader': load('admin/adminWorkMapDetailHeader.ts', { './dartJsonString': load('admin/dartJsonString.ts') }),
     './adminWorkMapSummaryPresentation': { adminWorkMapSummaryPresentation: (map, state) => ({ map, ...state }) },
     './useAdminWorkMapSummary': { useAdminWorkMapSummary: (_session, _isCurrent, _controller, _ticket, hydrated) => ({ expanded: false, canExpand: !!hydrated }) },
   }).AdminWorkMapDetail;
   const props = { session: { profile: { role: 'admin' } }, ticket: { kind: 'order' }, row: { code: '1', id: 'o', title: 'Old' }, close };
   const tree = nodes(View(props));
-  assert.equal(tree.find(node => node.type === 'ListItem' && node.props.children === 'customerLabel').props.supportingText, 'Canonical');
-  assert.equal(tree.find(node => node.type === 'Text').props.children, '1 • Hydrated');
+  assert.equal(tree.some(node => node.type === 'ListItem' && node.props.children === 'customerLabel'), false);
+  assert.deepEqual(tree.filter(node => node.type === 'Text').slice(0, 3).map(node => node.props.children), ['worker.order.code', '-', 'Canonical • Hydrated']);
   assert.deepEqual(tree.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_missing']);
   assert.equal(tree.find(node => node.type === 'Summary').props.model.canExpand, true);
   detail.value.metadata = { createdAtUnix: null, creator: { role: 'telegram', displayName: 'Ana' } };
   assert.deepEqual(nodes(View(props)).find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_role.telegram · Ana']);
   detail = { valid: true, loading: false, error: 'failed' };
   const failed = nodes(View(props)); assert.equal(failed.some(node => node.type === 'ListItem'), false);
+  assert.deepEqual(failed.filter(node => node.type === 'Text').slice(0, 3).map(node => node.props.children), ['worker.order.code', '1', 'Old']);
   assert.deepEqual(failed.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['loading', 'loading']);
   assert.equal(failed.find(node => node.type === 'Summary').props.model.canExpand, false);
   assert.equal(nodes(View({ ...props, session: { profile: { role: 'sales_manager' } } })).some(node => node.type === 'Metadata'), false);
