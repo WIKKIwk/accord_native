@@ -4,7 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
-const file = path.resolve(__dirname, '../src/rezka/rezkaItemPicker.ts'), mod = new Module(file, module);
+const file = path.resolve(__dirname, '../src/rezka/rezkaItemPickerController.ts'), mod = new Module(file, module);
 mod.filename = file; mod.paths = module.paths;
 mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
 const { RezkaItemPickerController } = mod.exports;
