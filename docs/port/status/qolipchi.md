@@ -12,6 +12,7 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 | Rework request ID | `qolip_rework_request_id.dart` | Supply the secure 128-bit random ID with V2's microsecond timestamp before connecting rework actions. The API currently accepts the caller's request ID and preserves it across retries. |
 | Rework JSON edge values | `QolipReworkEntry.fromJson`, `QolipMileage.fromJson` | JavaScript JSON parsing can lose integer precision above 2^53 or the `.0` spelling of a floating numeric value when V2 converts optional fields with `toString`; no recorded response exercises those edge values. |
 | Shared product parser edge cases | `QolipProduct.fromJson`, `src/qolipCatalogApi.ts` | Existing native `customer_names` handling drops null entries, while V2 converts them to the string `null`; Dart-style trimming and other non-string JSON conversions also need a shared comparison. Leave the protected existing consumers intact until the integrator coordinates a fix. |
+| Set reuse and search | `qolip_set_search.dart`, `_sharedMoldForProduct` | Set-name search/ranking and lookup caching remain to be ported. Reused-set `is_in_rework` reflects the deferred V2 test-mode rework store; that in-memory branch remains open. |
 | Shared product cache invalidation | `mobile_api_qolip_reworks.dart` `_qolipProductsSnapshot`, `src/qolipProductsApi.ts`, `src/authorizedFetch.ts` | V2 clears the product snapshot after successful rework mutations. The existing native shared request layer invalidates its read epoch for every mutation, including failures; reconcile without changing worker or preparation behavior. |
 | Shared contract ownership | `admin_sequence_list_widget_test`, `order_image_memory_peek_test`, `order_image_widgets_test`, `tayyorlov_order_sheet_test` | These cross-role fixture stems are owned by the integrator or another role; do not overwrite them here. The Qolip PostgreSQL E2E case writes to a server and was not run. |
 | Full test gate | `tests/preparationHomeDependentPages.test.cjs`, `tests/preparationWarehouse.android.test.cjs` | Six existing preparation Android tests cannot resolve `@expo/ui`'s extensionless `createModifier` import under Node in this fresh install. They do not import this checkpoint's code. |
@@ -37,6 +38,8 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 - Product actions checkpoint: ported live `qolipSaveProductSpec`, `qolipSaveProductSpecsBatch`, `qolipDeleteProductSpecs` and `qolipTransferProducts`, reusing the existing Qolip product parser and scoped catalog store. The f119 oracle passed the single/batch warehouse contract case and the incomplete-transfer contract case separately. Their 3 and 1 requests were recorded in separate f119 fixtures and replayed; no widget or server-writing test was used.
 - After the product actions checkpoint, `node --test tests/qolip*.test.cjs` passed all 74 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 - QR API checkpoint: ported `qolipCellQrLookup`, `qolipScanQr`, `qolipProductByQr` and their result models; product lookup reuses the existing Qolip products API. The f119 oracle passed three corresponding `HttpOverrides` cases without a camera or backend. Six source-derived native tests passed, as did iOS typecheck and Expo lint. Android typecheck and the full suite were not rerun for this checkpoint.
+- Sets checkpoint: ported live `qolipCreateSet`, `qolipManagedSets`, `qolipRenameSet`, `qolipEditSet`, `qolipResolveSet`, `qolipReuseSet`, `qolipAddProductMold` and `qolipRemoveProductMolds`, reusing the existing product parser and catalog store. The f119 oracle passed the rename wire case; its two mock requests were recorded in the f119 namespace and replayed. Additional source-derived tests cover identity checks, name validation, grouping, reuse and scoped catalog updates.
+- After the sets checkpoint, `node --test tests/qolip*.test.cjs` passed all 89 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 
 ## Deviations candidates
 
@@ -44,7 +47,7 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 
 ## Test mode pending
 
-The role-wide test mode is deferred by the port plan. Rework, block, location, checkout, product-action and QR functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the corresponding in-memory operations remain to be ported in the shared test-mode pass.
+The role-wide test mode is deferred by the port plan. Rework, block, location, checkout, product-action, QR and set functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the corresponding in-memory operations remain to be ported in the shared test-mode pass.
 
 ## Needs from the integrator
 
