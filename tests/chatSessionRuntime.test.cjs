@@ -28,7 +28,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 
 function fixture(overrides = {}, foreground = true) {
   const calls = [];
-  let current = true, listener, recovery, stops = 0, timerStops = 0, aborted = false;
+  let current = true, listener, invalidate, lastInvalidation, recovery, stops = 0, timerStops = 0, aborted = false;
   const receipts = new Map();
   const deps = {
     isCurrent: () => current,
@@ -52,14 +52,16 @@ function fixture(overrides = {}, foreground = true) {
     sendDelivered: async (...args) => { calls.push(['delivered', ...args]); },
     sendRead: async (...args) => { calls.push(['read', ...args]); },
     decodeRealtimeMessage: payload => payload.message ?? null,
-    subscribeLive: callback => { listener = callback; calls.push(['subscribe']); return () => { stops++; listener = undefined; }; },
+    subscribeLive: (callback, onInvalidate) => { listener = callback; invalidate = onInvalidate; lastInvalidation = onInvalidate;
+      calls.push(['subscribe']); return () => { stops++; listener = undefined; invalidate = undefined; }; },
     scheduleRecovery: callback => { recovery = callback; return () => { timerStops++; recovery = undefined; }; },
     abort: () => { aborted = true; },
     ...overrides,
   };
   const runtime = new ChatSessionRuntime({ role: 'customer', ref: 'me' }, deps, foreground);
   return { runtime, calls, stopSession: () => { current = false; }, emit: payload => listener?.(payload),
-    recover: () => recovery?.(), stops: () => stops, timerStops: () => timerStops, aborted: () => aborted };
+    invalidate: () => invalidate?.(), staleInvalidation: () => lastInvalidation?.(), recover: () => recovery?.(),
+    stops: () => stops, timerStops: () => timerStops, aborted: () => aborted };
 }
 
 test('startup restores cached unread before the server responds and keeps it after a failed refresh', async () => {
@@ -121,6 +123,28 @@ test('pause stops live and timer, while resume starts one of each and recovers',
   f.runtime.close();
   assert.equal(f.stops(), 2);
   assert.equal(f.timerStops(), 2);
+});
+
+test('focused screens share invalidations and stale callbacks stop on pause or session close', async () => {
+  const f = fixture();
+  let first = 0, second = 0;
+  const unsubscribe = f.runtime.subscribeInvalidation(() => first++);
+  f.runtime.subscribeInvalidation(() => second++);
+  await f.runtime.start();
+  f.invalidate();
+  assert.deepEqual([first, second], [1, 1]);
+  unsubscribe();
+  f.invalidate();
+  assert.deepEqual([first, second], [1, 2]);
+  f.runtime.pause();
+  f.staleInvalidation();
+  assert.deepEqual([first, second], [1, 2]);
+  f.runtime.resume();
+  f.invalidate();
+  assert.deepEqual([first, second], [1, 3]);
+  f.runtime.close();
+  f.staleInvalidation();
+  assert.deepEqual([first, second], [1, 3]);
 });
 
 test('a closed or switched session cannot publish a late refresh', async () => {

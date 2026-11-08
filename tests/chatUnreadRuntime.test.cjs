@@ -28,7 +28,7 @@ const conversation = count => ({ id: 'a', title: 'A', peer: null, preview: '', l
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
 function fixture(overrides = {}) {
-  let active, liveListener, liveStarts = 0, liveStops = 0, removedAppState = 0;
+  let active, liveListener, liveInvalidation, liveStarts = 0, liveStops = 0, removedAppState = 0;
   const resetHooks = new Set(), appStateListeners = new Set(), signals = [];
   const appState = { currentState: 'active', addEventListener: (_, listener) => {
     appStateListeners.add(listener);
@@ -54,9 +54,9 @@ function fixture(overrides = {}) {
     '../../auth': { activeSessionToken: session => active === session ? session.token : null,
       registerSessionResetHook: hook => { resetHooks.add(hook); return () => resetHooks.delete(hook); } },
     '../../chatApi': api,
-    '../../chatLive': { subscribeChatLive: (_session, _invalidate, onEvent) => {
-      liveStarts++; liveListener = onEvent;
-      return () => { liveStops++; liveListener = undefined; };
+    '../../chatLive': { subscribeChatLive: (_session, onInvalidate, onEvent) => {
+      liveStarts++; liveListener = onEvent; liveInvalidation = onInvalidate;
+      return () => { liveStops++; liveListener = undefined; liveInvalidation = undefined; };
     } },
     '../../chatModel': model,
     '../../chatOutbox': { chatDeviceId: async () => 'device-1' },
@@ -68,7 +68,7 @@ function fixture(overrides = {}) {
   return { ...result, session, signals, activate: value => { active = value; },
     reset: async () => { await Promise.all([...resetHooks].map(hook => hook())); },
     changeState: value => { appState.currentState = value; for (const listener of [...appStateListeners]) listener(value); },
-    emit: value => liveListener?.(value), liveStarts: () => liveStarts, liveStops: () => liveStops,
+    emit: value => liveListener?.(value), invalidate: () => liveInvalidation?.(), liveStarts: () => liveStarts, liveStops: () => liveStops,
     removedAppState: () => removedAppState };
 }
 
@@ -83,6 +83,11 @@ test('the same active session shares one live runtime and restored unread total'
   await tick();
   assert.equal(first.value, 2);
   assert.equal(f.liveStarts(), 1);
+  let invalidations = 0;
+  const stopInvalidation = first.subscribeInvalidation(() => invalidations++);
+  f.invalidate();
+  assert.equal(invalidations, 1);
+  stopInvalidation();
   await f.reset();
   assert.deepEqual(changes, [true, false]);
   unsubscribe();

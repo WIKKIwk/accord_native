@@ -67,7 +67,7 @@ export function chatUnreadRuntimeFor(session: Session): ChatSessionRuntime {
       const conversationId = (raw as Record<string, unknown>).conversation_id;
       return parseChatMessage(raw, typeof conversationId === 'string' ? conversationId.trim() : '');
     },
-    subscribeLive: onEvent => subscribeChatLive(session, () => {}, onEvent),
+    subscribeLive: (onEvent, onInvalidate) => subscribeChatLive(session, onInvalidate, onEvent),
     scheduleRecovery: callback => {
       const timer = setInterval(callback, 30000);
       return () => clearInterval(timer);

@@ -228,7 +228,8 @@ export function useChatThread(session: Session, conversationId: string) {
     };
     restoreStorage.current = () => { void restore(); };
     void restore();
-    const stopLive = subscribeChatLive(session, () => { void refresh(); void drain(); });
+    const onInvalidate = () => { void refresh(); void drain(); };
+    const stopLive = unreadRuntime ? unreadRuntime.subscribeInvalidation(onInvalidate) : subscribeChatLive(session, onInvalidate);
     const timer = setInterval(() => { void refresh(); void drain(); }, 30000);
     const appState = AppState.addEventListener('change', state => {
       if (state === 'active') {
@@ -261,7 +262,7 @@ export function useChatThread(session: Session, conversationId: string) {
       appState.remove();
       stopLive();
     };
-  }, [conversationId, drain, refresh, session, visible]));
+  }, [conversationId, drain, refresh, session, unreadRuntime, visible]));
 
   const retry = useCallback(() => {
     if (!storageReadyRef.current) { restoreStorage.current?.(); return; }

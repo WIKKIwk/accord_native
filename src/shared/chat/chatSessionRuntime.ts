@@ -25,7 +25,7 @@ type RuntimeDependencies = {
   sendDelivered: (conversationId: string, sequence: number, deviceId: string) => Promise<void>;
   sendRead: (conversationId: string, sequence: number, deviceId: string) => Promise<void>;
   decodeRealtimeMessage: (payload: Record<string, unknown>) => ChatMessage | null;
-  subscribeLive: (onEvent: (payload: Record<string, unknown>) => void) => () => void;
+  subscribeLive: (onEvent: (payload: Record<string, unknown>) => void, onInvalidate: () => void) => () => void;
   scheduleRecovery: (callback: () => void) => () => void;
   abort: () => void;
 };
@@ -34,6 +34,7 @@ type RuntimeDependencies = {
 export class ChatSessionRuntime {
   private readonly unread: ChatUnreadState;
   private readonly flusher: ChatReceiptFlusher;
+  private readonly invalidationListeners = new Set<() => void>();
   private engine: ChatSyncEngine | null = null;
   private startOperation: Promise<void> | null = null;
   private refreshOperation: Promise<void> | null = null;
@@ -56,6 +57,10 @@ export class ChatSessionRuntime {
   get value(): number { return this.unread.value; }
   subscribe = (listener: () => void): (() => void) => this.unread.subscribe(listener);
   getSnapshot = (): number => this.unread.value;
+  subscribeInvalidation = (listener: () => void): (() => void) => {
+    this.invalidationListeners.add(listener);
+    return () => { this.invalidationListeners.delete(listener); };
+  };
 
   start(): Promise<void> {
     if (!this.current() || this.engine) return Promise.resolve();
@@ -163,7 +168,9 @@ export class ChatSessionRuntime {
 
   private attachLive(): void {
     if (!this.current() || !this.foreground || !this.engine) return;
-    if (!this.stopLive) this.stopLive = this.deps.subscribeLive(payload => this.handleLive(payload));
+    if (!this.stopLive) this.stopLive = this.deps.subscribeLive(payload => this.handleLive(payload), () => {
+      if (this.current() && this.foreground) for (const listener of this.invalidationListeners) listener();
+    });
     if (!this.stopTimer) this.stopTimer = this.deps.scheduleRecovery(() => { void this.recover(); });
   }
 
@@ -197,6 +204,7 @@ export class ChatSessionRuntime {
     this.pause();
     this.deps.abort();
     this.unread.close();
+    this.invalidationListeners.clear();
   }
 
   private current(): boolean { return !this.closed && this.deps.isCurrent(); }

@@ -69,16 +69,23 @@ test('without an opted-in runtime, the existing thread and direct read receipt r
 
 test('an opted-in runtime receives active thread and newest messages instead of a duplicate direct receipt', async () => {
   const events = [];
+  let invalidate;
   const runtime = { setActiveConversation: id => events.push(['active', id]),
-    rememberThreadMessages: async (id, items, markRead) => events.push(['messages', id, items.map(item => item.sequence), markRead]) };
+    rememberThreadMessages: async (id, items, markRead) => events.push(['messages', id, items.map(item => item.sequence), markRead]),
+    subscribeInvalidation: callback => { invalidate = callback; events.push(['subscribe']); return () => { events.push(['unsubscribe']); invalidate = undefined; }; } };
   const f = fixture(runtime);
   f.mount();
   try {
     await tick(); await tick();
-    assert.deepEqual(events.slice(0, 2), [['active', 'c1'], ['messages', 'c1', [2], undefined]]);
+    assert.deepEqual(events.slice(0, 3), [['active', 'c1'], ['subscribe'], ['messages', 'c1', [2], undefined]]);
     assert.ok(!f.calls.some(call => call[0] === 'directRead'));
+    assert.ok(!f.calls.some(call => call[0] === 'existingLive'));
+    invalidate();
+    await tick(); await tick();
+    assert.equal(events.filter(event => event[0] === 'messages').length, 2);
     await f.thread.loadOlder();
     assert.deepEqual(events.at(-1), ['messages', 'c1', [1], false]);
   } finally { f.unmount(); }
+  assert.ok(events.some(event => event[0] === 'unsubscribe'));
   assert.deepEqual(events.at(-1), ['active', '']);
 });
