@@ -56,3 +56,13 @@ export function supplierDockIntent(destination: SupplierDockDestination, state: 
   if (!state.chatActive && state.activeTab === destination && (destination !== 'home' || !state.centerActive)) return null;
   return { kind: 'root', destination };
 }
+
+/** React Navigation action for a single stack. Unlike POP_TO, this pushes when the route is absent. */
+export function supplierRootStackAction(name: string): { type: 'NAVIGATE'; payload: { name: string; pop: true } } {
+  return { type: 'NAVIGATE', payload: { name, pop: true } };
+}
+
+/** @v2 SupplierNavigationDrawer: the enclosing Supplier and Profile screens push-replace. */
+export function supplierDrawerStackAction(current: string, name: string): { type: 'REPLACE'; payload: { name: string } } | null {
+  return current === name ? null : { type: 'REPLACE', payload: { name } };
+}

@@ -51,3 +51,50 @@ test('dock navigation is guarded for current destination, pushes create and navi
   assert.deepEqual(supplierDockIntent('home', state({ activeTab: 'home', centerActive: true })), { kind: 'root', destination: 'home' });
   assert.deepEqual(supplierDockIntent('home', state({ activeTab: 'home', chatActive: true })), { kind: 'root', destination: 'home' });
 });
+
+test('real Expo StackRouter pops to an existing dock target and pushes an absent target', () => {
+  // Exercise the SDK's actual stack reducer, not an imitation of its navigation rules.
+  const { StackRouter } = require('../node_modules/expo-router/build/react-navigation/routers/StackRouter.js');
+  const { createInitialState } = require('../node_modules/expo-router/build/react-navigation/core/createInitialState.js');
+  const { supplierRootStackAction } = mod.exports;
+  const routeNames = ['home', 'notifications', 'recent', 'chat', 'create', 'profile', 'detail'];
+  const router = StackRouter({ initialRouteName: 'home' }), options = { routeParamList: {}, routeGetIdList: {} };
+  const initial = () => createInitialState({ routeNames, initialRouteName: 'home' });
+  const reduce = (s, action) => {
+    const result = router.getStateForAction(s, action, options);
+    assert.ok(result && result.state, `Unhandled ${JSON.stringify(action)}`);
+    return result.state;
+  };
+  const names = s => s.routes.slice(0, s.index + 1).map(x => x.name);
+  let s = reduce(initial(), { type: 'PUSH', payload: { name: 'detail' } });
+  s = reduce(s, supplierRootStackAction('notifications'));
+  assert.deepEqual(names(s), ['home', 'detail', 'notifications'], 'absent target must push');
+  s = reduce(s, supplierRootStackAction('home'));
+  assert.deepEqual(names(s), ['home'], 'existing target must remove screens above it');
+  s = reduce(s, { type: 'PUSH', payload: { name: 'notifications' } });
+  s = reduce(s, { type: 'PUSH', payload: { name: 'home' } });
+  s = reduce(s, { type: 'PUSH', payload: { name: 'detail' } });
+  s = reduce(s, supplierRootStackAction('home'));
+  assert.deepEqual(names(s), ['home', 'notifications', 'home'], 'last existing matching route wins');
+
+  const before = reduce(initial(), { type: 'PUSH', payload: { name: 'detail' } });
+  const dismissed = reduce(before, { type: 'POP_TO', payload: { name: 'notifications' } });
+  assert.deepEqual(names(dismissed), ['home', 'notifications'], 'dismissTo replaces absent target and is not the V2 root operation');
+});
+
+test('real Expo StackRouter replaces only the current screen for drawer navigation', () => {
+  const { StackRouter } = require('../node_modules/expo-router/build/react-navigation/routers/StackRouter.js');
+  const { createInitialState } = require('../node_modules/expo-router/build/react-navigation/core/createInitialState.js');
+  const { supplierDrawerStackAction } = mod.exports;
+  const routeNames = ['home', 'notifications', 'recent', 'profile'];
+  const router = StackRouter({ initialRouteName: 'home' }), options = { routeParamList: {}, routeGetIdList: {} };
+  const reduce = (s, action) => router.getStateForAction(s, action, options).state;
+  let s = createInitialState({ routeNames, initialRouteName: 'home' });
+  s = reduce(s, { type: 'PUSH', payload: { name: 'notifications' } });
+  assert.equal(supplierDrawerStackAction('notifications', 'notifications'), null);
+  s = reduce(s, supplierDrawerStackAction('notifications', 'profile'));
+  assert.deepEqual(s.routes.slice(0, s.index + 1).map(x => x.name), ['home', 'profile']);
+  s = reduce(s, supplierDrawerStackAction('profile', 'home'));
+  assert.deepEqual(s.routes.slice(0, s.index + 1).map(x => x.name), ['home', 'home'],
+    'drawer replacement must not pop to the older matching root');
+});
