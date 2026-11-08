@@ -2,6 +2,17 @@ import * as Crypto from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
 import { ReturnedPaintDraftStore, type ReturnedPaintDraftStorage } from './returnedPaintDraft';
 
+// Adapters sharing this module may address the same app-private scope.
+const mutations = new Map<string, Promise<void>>();
+function serializeMutation(scope: string, action: () => Promise<void>): Promise<void> {
+  const prior = mutations.get(scope) ?? Promise.resolve();
+  const operation = prior.then(action);
+  const settled = operation.then(() => {}, () => {});
+  mutations.set(scope, settled);
+  void settled.then(() => { if (mutations.get(scope) === settled) mutations.delete(scope); });
+  return operation;
+}
+
 /** Account/request-scoped files are separate from the worker's existing draft store. */
 export class ReturnedPaintDraftFileStorage implements ReturnedPaintDraftStorage {
   private root: Directory | null = null;
@@ -27,7 +38,10 @@ export class ReturnedPaintDraftFileStorage implements ReturnedPaintDraftStorage 
     }
     return backup.exists ? backup.text() : null;
   }
-  async write(scope: string, value: string): Promise<void> {
+  write(scope: string, value: string): Promise<void> {
+    return serializeMutation(scope, () => this.writeFile(scope, value));
+  }
+  private async writeFile(scope: string, value: string): Promise<void> {
     const file = await this.file(scope), temporary = new File(this.directory(), `${file.name}.tmp`),
       backup = new File(this.directory(), `${file.name}.bak`);
     // SDK 58 mutates temporary.uri after move; keep a separate reference to the old path.
@@ -40,7 +54,10 @@ export class ReturnedPaintDraftFileStorage implements ReturnedPaintDraftStorage 
       await temporary.move(file, { overwrite: true });
     } finally { if (originalTemporary.exists) originalTemporary.delete(); }
   }
-  async remove(scope: string): Promise<void> {
+  remove(scope: string): Promise<void> {
+    return serializeMutation(scope, () => this.removeFile(scope));
+  }
+  private async removeFile(scope: string): Promise<void> {
     const file = await this.file(scope), backup = new File(this.directory(), `${file.name}.bak`),
       temporary = new File(this.directory(), `${file.name}.tmp`);
     // Remove recovery first, so a completed primary delete cannot resurrect it.

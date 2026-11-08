@@ -306,3 +306,100 @@ test('replacement waits for the asynchronous backup copy while the previous prim
   await pending;
   assert.equal((await new draft.ReturnedPaintDraftStore(backend.storage()).load('copy-order')).valuesFor('rasxot:Oq', 1)[0], 'new');
 });
+
+test('clear and an overlapping edit serialize same-scope moves without blocking another scope', async () => {
+  const backend = createBackend(), store = new draft.ReturnedPaintDraftStore(backend.storage());
+  const a = await store.load('overlap-a'), b = await store.load('overlap-b');
+  a.setValue('rasxot:Oq', 0, 'before-clear', 1);
+  const first = await backend.nextMove();
+  const firstFlush = store.flush('overlap-a');
+  const clearing = store.clear('overlap-a');
+  a.setValue('rasxot:Oq', 0, 'after-clear', 1);
+  const afterEdit = store.flush('overlap-a');
+  b.setValue('rasxot:Oq', 0, 'other-scope', 1);
+  const other = await backend.nextMove();
+  assert.notEqual(other.originalUri, first.originalUri, 'another scope must progress while A is pending');
+  await tick();
+  assert.equal(backend.pendingMoves(), 0, 'same-scope edit must wait for the first move and clear');
+  other.succeed();
+  await store.flush('overlap-b');
+  first.succeed();
+  await firstFlush;
+  await clearing;
+  const second = await backend.nextMove();
+  assert.equal(second.originalUri, first.originalUri);
+  second.succeed();
+  await afterEdit;
+  const restarted = new draft.ReturnedPaintDraftStore(backend.storage());
+  assert.equal((await restarted.load('overlap-a')).valuesFor('rasxot:Oq', 1)[0], 'after-clear');
+  assert.equal((await restarted.load('overlap-b')).valuesFor('rasxot:Oq', 1)[0], 'other-scope');
+});
+
+test('a failed move does not poison a queued or later same-scope edit', async () => {
+  const backend = createBackend(), store = new draft.ReturnedPaintDraftStore(backend.storage());
+  const current = await store.load('failure-recovery');
+  current.setValue('rasxot:Oq', 0, 'fails', 1);
+  const failed = store.flush('failure-recovery'), first = await backend.nextMove();
+  current.setValue('rasxot:Oq', 0, 'queued-retry', 1);
+  const retry = store.flush('failure-recovery');
+  first.fail();
+  await assert.rejects(failed, /move failed/);
+  const second = await backend.nextMove();
+  second.succeed();
+  await retry;
+  current.setValue('rasxot:Oq', 0, 'later', 1);
+  const third = await backend.nextMove();
+  third.succeed();
+  await store.flush('failure-recovery');
+  assert.equal((await new draft.ReturnedPaintDraftStore(backend.storage()).load('failure-recovery')).valuesFor('rasxot:Oq', 1)[0], 'later');
+});
+
+test('separate file adapters serialize the same scope and recover after a failed move', async () => {
+  const backend = createBackend(), firstAdapter = backend.storage(), secondAdapter = backend.storage();
+  const first = firstAdapter.write('shared-scope', '{"value":1}'), firstMove = await backend.nextMove();
+  const second = secondAdapter.write('shared-scope', '{"value":2}');
+  await tick();
+  assert.equal(backend.pendingMoves(), 0, 'separate adapters must not share a live temp file');
+  firstMove.fail();
+  await assert.rejects(first, /move failed/);
+  const secondMove = await backend.nextMove();
+  secondMove.succeed();
+  await second;
+  assert.equal(await firstAdapter.read('shared-scope'), '{"value":2}');
+});
+
+test('a failed write during clear rejects that clear but a queued edit still persists', async () => {
+  const backend = createBackend(), store = new draft.ReturnedPaintDraftStore(backend.storage());
+  const current = await store.load('failed-clear-overlap');
+  current.setValue('rasxot:Oq', 0, 'fails', 1);
+  const first = await backend.nextMove(), failed = store.flush('failed-clear-overlap');
+  const clearing = store.clear('failed-clear-overlap');
+  const failedWrite = assert.rejects(failed, /move failed/), failedClear = assert.rejects(clearing, /move failed/);
+  current.setValue('rasxot:Oq', 0, 'survives', 1);
+  const retried = store.flush('failed-clear-overlap');
+  await tick();
+  assert.equal(backend.pendingMoves(), 0);
+  first.fail();
+  await Promise.all([failedWrite, failedClear]);
+  const next = await backend.nextMove();
+  next.succeed();
+  await retried;
+  assert.equal((await new draft.ReturnedPaintDraftStore(backend.storage()).load('failed-clear-overlap')).valuesFor('rasxot:Oq', 1)[0], 'survives');
+});
+
+test('separate adapters order write, remove and later write for the same scope', async () => {
+  const backend = createBackend(), a = backend.storage(), b = backend.storage();
+  const first = a.write('ordered-scope', '{"value":1}'), firstMove = await backend.nextMove();
+  const removal = b.remove('ordered-scope');
+  const later = a.write('ordered-scope', '{"value":2}');
+  await tick();
+  assert.equal(backend.pendingMoves(), 0);
+  firstMove.succeed();
+  await first;
+  await removal;
+  const secondMove = await backend.nextMove();
+  secondMove.succeed();
+  await later;
+  assert.equal(await b.read('ordered-scope'), '{"value":2}');
+  assert.equal(backend.files.has(`${secondMove.targetUri}.bak`), false, 'removed draft must not remain as a backup');
+});

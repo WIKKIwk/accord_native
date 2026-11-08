@@ -132,17 +132,19 @@ export class ReturnedPaintDraftStore {
   async clear(scope: string): Promise<void> {
     const normalized = scope.trim();
     this.cache.delete(normalized);
-    const previous = this.writeChains.get(normalized);
-    this.writeChains.delete(normalized);
-    if (previous) await previous;
-    await this.storage.remove(normalized);
+    const previous = this.writeChains.get(normalized) ?? Promise.resolve();
+    const clearing = previous.then(() => this.storage.remove(normalized));
+    this.writeChains.set(normalized, clearing);
+    try { await clearing; } finally {
+      if (this.writeChains.get(normalized) === clearing) this.writeChains.delete(normalized);
+    }
   }
   flush(scope: string): Promise<void> { return this.writeChains.get(scope.trim()) ?? Promise.resolve(); }
   private schedulePersist(scope: string, draft: ReturnedPaintDraft): void {
     const previous = this.writeChains.get(scope) ?? Promise.resolve();
-    const next = previous.then(() => this.storage.write(scope, JSON.stringify(draft.toJson())));
+    const next = previous.catch(() => {}).then(() => this.storage.write(scope, JSON.stringify(draft.toJson())));
     this.writeChains.set(scope, next);
-    // Persistence failures remain observable through flush; V2 starts writes without awaiting them.
+    // A flush captured for this write rejects on failure; later edits can retry.
     void next.catch(() => {});
   }
 }
