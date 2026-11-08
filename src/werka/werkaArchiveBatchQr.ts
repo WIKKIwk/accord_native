@@ -85,5 +85,10 @@ export function archiveBatchCustomerFromOption(option: CustomerItemOption): Cust
 /** @v2 resolveArchiveBatchDefaultCustomer */
 export function resolveArchiveBatchDefaultCustomer(option: CustomerItemOption, customers: readonly CustomerDirectoryEntry[]): CustomerDirectoryEntry {
   const eligible = customers.filter(customer => customer.ref.trim());
-  return eligible.find(customer => customer.name.trim().toLowerCase() !== 'saidamin') ?? eligible[0] ?? archiveBatchCustomerFromOption(option);
+  return preferWerkaPrimaryCustomer(eligible) ?? archiveBatchCustomerFromOption(option);
+}
+
+/** @v2 preferPrimaryCustomer */
+export function preferWerkaPrimaryCustomer(customers: readonly CustomerDirectoryEntry[]): CustomerDirectoryEntry | null {
+  return customers.find(customer => customer.name.trim().toLowerCase() !== 'saidamin') ?? customers[0] ?? null;
 }
