@@ -1,6 +1,7 @@
 import { localizedGetter } from '../shared/localization';
 import type { WerkaArchiveKind, WerkaArchiveQuery } from './werkaArchiveApi';
 import { werkaArchiveMonthRange, werkaArchiveYearPageRange, werkaArchiveYearRange } from './werkaArchiveCalendar';
+import { werkaArchiveMonthYear } from './werkaArchiveDateLabels';
 
 export type WerkaArchivePeriodPage = { period: 'monthly'; year: number } | { period: 'yearly'; firstYear: number };
 export type WerkaArchivePeriodContentProps = {
@@ -10,8 +11,8 @@ export type WerkaArchivePeriodContentProps = {
   loading: boolean;
   error: unknown | null;
   locale: string;
-  /** Supply the source-compatible Material month/year label; no Intl fallback is assumed. */
-  formatMonthYear: (date: Date) => string;
+  /** Optional source-compatible override; defaults to the role's recorded Material date labels. */
+  formatMonthYear?: (date: Date) => string;
   /** Apply each step to the owner's latest page, then perform its scoped load. */
   onPageStep: (step: -1 | 1) => void;
   onSelect: (query: WerkaArchiveQuery) => void;
@@ -47,7 +48,7 @@ function pageLabel(page: WerkaArchivePeriodPage): string {
 
 /** Pure content and callback arguments, not a controller, account guard or route. */
 export function werkaArchivePeriodPresentation(kind: WerkaArchiveKind, page: WerkaArchivePeriodPage,
-  active: ReadonlySet<number>, locale: string, formatMonthYear: (date: Date) => string) {
+  active: ReadonlySet<number>, locale: string, formatMonthYear = (date: Date) => werkaArchiveMonthYear(date, locale)) {
   const t = (key: string) => localizedGetter(key, locale);
   const previous = werkaArchivePeriodStep(page, -1), next = werkaArchivePeriodStep(page, 1);
   const cells = Array.from({ length: 12 }, (_, index) => {

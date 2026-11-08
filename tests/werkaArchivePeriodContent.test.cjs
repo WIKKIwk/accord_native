@@ -22,6 +22,7 @@ const dates = compile('werka/werkaArchiveCalendar.ts', {
 });
 const model = compile('werka/werkaArchivePeriodPresentation.ts', {
   '../shared/localization': localization, './werkaArchiveCalendar': dates,
+  './werkaArchiveDateLabels': compile('werka/werkaArchiveDateLabels.ts'),
 });
 const ymd = date => [date.getFullYear(), date.getMonth() + 1, date.getDate()];
 const formatMonthYear = date => `Month${date.getMonth() + 1} ${date.getFullYear()}`;
@@ -204,5 +205,20 @@ for (const platform of ['ios', 'android']) {
     assert.equal(nodes(result.tree, 'Text').at(-1).props.children, localization.localizedGetter('archiveCalendarEmptyYear', 'uz'));
     press(cells[0]); assert.equal(result.calls[0][0], 'select');
     assert.deepEqual(ymd(result.calls[0][1].from), [2024, 1, 1]);
+  });
+
+  test(`${platform} default month labels use the recorded Material format rather than a caller stub`, () => {
+    const expected = {
+      uz: ['yanvar,', 'fevral,', 'mart,', 'aprel,', 'may,', 'iyun,', 'iyul,', 'avgust,', 'sentabr,', 'oktabr,', 'noyabr,', 'dekabr,'],
+      en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      ru: ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'],
+      'ur-PK': ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'],
+    };
+    for (const [locale, labels] of Object.entries(expected)) {
+      const result = setup(platform, { locale, formatMonthYear: undefined });
+      const cells = nodes(result.tree, 'Button').filter(isCell);
+      assert.deepEqual(cells.map(cell => nodes(cell, 'Text')[0].props.children), labels);
+      assert.deepEqual(result.calls, []);
+    }
   });
 }
