@@ -21,7 +21,8 @@ function setup(overrides = {}) {
     rawSplitSnapshot: async () => snapshot, rawSplitSource: async () => source, rawSplitSave: async (_session, payload) => { stockCalls.push(payload); return result; },
     rawSplitReportIssue: async (_session, payload) => { issueCalls.push(payload); return { id: 'issue-1' }; }, ...overrides };
   const options = { session: {}, operations: ops, requestId: async () => 'split-id', selectPrinter: async () => pick,
-    print: async (...args) => { prints.push(args); }, onMessage: value => notices.push(value), onIssueVisible: () => notices.push('issue-visible') };
+    print: async (...args) => { prints.push(args); }, onMessage: value => notices.push(value), onIssueVisible: () => notices.push('issue-visible'),
+    printerSupported: () => true, onUnsupportedPrinter: () => notices.push('unsupported-printer') };
   const controller = new RawSplitController(options);
   return { controller, ops, stockCalls, issueCalls, prints, notices, options, setScope: value => { scope = value; },
     setPending: value => { pending = value; }, setPendingIssue: value => { pendingIssue = value; }, setPick: value => { pick = value; } };
@@ -82,4 +83,10 @@ test('lost response reloads durable command and retry reuses exactly that comman
   await fill(h.controller); await h.controller.save(); const pending = h.controller.getSnapshot().pending;
   assert.equal(h.controller.locked, true); assert.equal(pending.request_id, 'split-id');
   await h.controller.save(true); assert.deepEqual(h.stockCalls, [pending, pending]); assert.equal(h.controller.getSnapshot().pending, null);
+});
+
+test('unsupported printer is reported before any stock write', async () => {
+  const h = setup(); h.options.printerSupported = () => false; await fill(h.controller); await h.controller.save();
+  assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []); assert.ok(h.notices.includes('unsupported-printer'));
+  assert.equal(h.controller.getSnapshot().source.barcode, 'parent');
 });

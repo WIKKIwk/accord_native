@@ -21,6 +21,7 @@ export type RawSplitControllerOptions = {
   session: Session; selectPrinter: () => Promise<Device | null>;
   print: (result: RawSplitResult, printer: Device, wifiPrinter: string, guard: () => void) => Promise<void>;
   onMessage: (message: string) => void; onIssueVisible: () => void;
+  printerSupported: (printer: Device, wifiPrinter: string) => boolean; onUnsupportedPrinter: () => void;
   operations?: Operations; requestId?: () => Promise<string>;
 };
 let nextOutputKey = 0;
@@ -116,6 +117,7 @@ export class RawSplitController {
       const payload = retry ? this.state.pending : await this.payload(false);
       if (!payload) return;
       if (!this.state.printer && !await this.selectPrinter()) return;
+      if (!this.options.printerSupported(this.state.printer!, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
       this.checkScope();
       const result = await this.ops.rawSplitSave(this.options.session, payload); this.checkScope();
       this.update({ saved: result, source: null, pending: null, barcode: '' });

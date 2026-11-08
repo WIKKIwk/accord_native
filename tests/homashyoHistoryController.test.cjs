@@ -12,7 +12,8 @@ const result = new model.RawSplitResult({ id: 'result', source, source_kg: '100'
 function setup() {
   let selection = { transport: 'bluetooth', printer: {} }, calls = [], notices = [];
   const options = { session: {}, snapshot: async () => new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] }),
-    selectPrinter: async () => selection, printOne: async (_result, output) => { calls.push(output.barcode); }, onMessage: message => notices.push(message) };
+    selectPrinter: async () => selection, printOne: async (_result, output) => { calls.push(output.barcode); }, onMessage: message => notices.push(message),
+    printerSupported: () => true, onUnsupportedPrinter: () => notices.push('unsupported-printer') };
   return { c: new RawSplitHistoryController(options), options, calls, notices, setSelection: value => { selection = value; } };
 }
 test('history loads snapshot and surfaces errors without manufacturing data', async () => {
@@ -36,4 +37,9 @@ test('printer failure leaves history intact and does not continue subsequent out
 test('disposal stops remaining output and success message', async () => {
   const h = setup(); h.options.printOne = async (_result, output) => { h.calls.push(output.barcode); h.c.dispose(); };
   await h.c.reprint(result); assert.deepEqual(h.calls, ['c1']); assert.deepEqual(h.notices, []);
+});
+
+test('unsupported printer reports the exclusion without attempting a reprint', async () => {
+  const h = setup(); h.options.printerSupported = () => false; await h.c.reprint(result);
+  assert.deepEqual(h.calls, []); assert.deepEqual(h.notices, ['unsupported-printer']);
 });

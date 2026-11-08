@@ -8,7 +8,8 @@ export type RawSplitHistoryState = { snapshot: RawSplitSnapshot | null; printer:
   error: string | null; busy: boolean };
 export type RawSplitHistoryOptions = { session: Session; selectPrinter: () => Promise<Device | null>;
   printOne: (result: RawSplitResult, output: RawSplitRoll, printer: Device, wifiPrinter: string) => Promise<void>;
-  onMessage: (message: string) => void; snapshot?: typeof rawSplitSnapshot };
+  onMessage: (message: string) => void; printerSupported: (printer: Device, wifiPrinter: string) => boolean;
+  onUnsupportedPrinter: () => void; snapshot?: typeof rawSplitSnapshot };
 const message = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
 
 /** State transitions from V2 _RawMaterialSplitHistoryScreenState. */
@@ -42,6 +43,7 @@ export class RawSplitHistoryController {
     try {
       if (!this.state.printer) { await this.selectPrinter(); if (!this.state.printer) return; }
       const printer = this.state.printer;
+      if (!this.options.printerSupported(printer, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
       for (const output of only ? [only] : result.outputs) {
         if (!this.active) return;
         await this.options.printOne(result, output, printer, this.state.wifiPrinter);
