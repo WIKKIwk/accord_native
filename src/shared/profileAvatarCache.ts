@@ -1,3 +1,4 @@
+import { isProfileSessionCurrent, type ProfileSessionGuard } from './profileSessionGuard';
 type Account = { baseUrl: string; profile: Record<string, unknown> };
 type Cached = { url: string; uri: string };
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -33,14 +34,14 @@ export class ProfileAvatarCache {
     this.values.set(this.key(account), { url: this.url(account), uri });
     return uri;
   }
-  async refresh(account: Account, download: () => Promise<{ bytes: Uint8Array; mime?: string } | null>): Promise<string | null> {
+  async refresh(account: Account, download: () => Promise<{ bytes: Uint8Array; mime?: string } | null>, isCurrent?: ProfileSessionGuard): Promise<string | null> {
     if (!this.url(account)) return null;
     const generation = this.generation;
     try {
       const image = await download();
-      if (generation !== this.generation) return null;
+      if (generation !== this.generation || !isProfileSessionCurrent(isCurrent)) return null;
       return image ? this.remember(account, image.bytes, image.mime) ?? this.get(account) : this.get(account);
-    } catch { return this.get(account); }
+    } catch { return isProfileSessionCurrent(isCurrent) ? this.get(account) : null; }
   }
   async ensure(account: Account, download: () => Promise<{ bytes: Uint8Array; mime?: string } | null>): Promise<string | null> {
     if (!this.url(account)) return null;
