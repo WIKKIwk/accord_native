@@ -1,6 +1,14 @@
 import { assertQolipReadCurrent } from './qolipApiCommon';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 
+function safelyInvoke(callback: () => unknown) {
+  try {
+    const result = callback();
+    if (result && (typeof result === 'object' || typeof result === 'function') &&
+        typeof (result as { then?: unknown }).then === 'function') void Promise.resolve(result).catch(() => {});
+  } catch { /* A failed observer or cleanup cannot reopen this lifetime. */ }
+}
+
 /** A mounted read-only picker lifetime, not another session witness, data reader or mutation gate. */
 export class QolipLocationChoiceLifetime {
   private active = false;
@@ -18,7 +26,8 @@ export class QolipLocationChoiceLifetime {
   private invalidate() {
     this.expired = true; this.active = false;
     const stop = this.stop; this.stop = null;
-    try { stop?.(); } finally { for (const listener of [...this.listeners]) listener(); }
+    if (stop) safelyInvoke(stop);
+    for (const listener of [...this.listeners]) safelyInvoke(listener);
   }
   activate() {
     if (!this.getSnapshot()) { this.invalidate(); return; }
@@ -28,11 +37,11 @@ export class QolipLocationChoiceLifetime {
     try { stop = this.boundary.subscribe(() => { if (!this.getSnapshot()) this.invalidate(); }); }
     catch { this.invalidate(); return; }
     if (typeof stop !== 'function') {
-      void Promise.resolve(stop).then(cleanup => { if (typeof cleanup === 'function') cleanup(); }).catch(() => {});
+      void Promise.resolve(stop).then(cleanup => { if (typeof cleanup === 'function') return cleanup(); }).catch(() => {});
       this.invalidate(); return;
     }
-    if (!this.canChoose()) { stop(); return; }
-    this.stop = () => { stop(); };
+    if (!this.canChoose()) { safelyInvoke(stop as () => unknown); return; }
+    this.stop = () => { safelyInvoke(stop as () => unknown); };
   }
   canChoose(): boolean {
     if (!this.active) return false;
@@ -41,6 +50,6 @@ export class QolipLocationChoiceLifetime {
   }
   suspend() {
     this.active = false;
-    const stop = this.stop; this.stop = null; stop?.();
+    const stop = this.stop; this.stop = null; if (stop) safelyInvoke(stop);
   }
 }

@@ -46,6 +46,25 @@ test('invalidation during subscription installation and an async subscription fa
 test('cleanup/recreation may reuse the same valid original boundary but never captures a new account witness', () => {
   const h = boundaryHarness(); h.state.activate(); h.state.suspend(); h.state.activate(); assert.equal(h.listeners.size, 1); assert.equal(h.state.canChoose(), true); h.state.suspend();
 });
+test('one failing observer or cleanup cannot suppress other invalidation observers', () => {
+  let valid = true, signal, observed = 0;
+  const state = new Lifetime({ current: () => valid, subscribe: listener => { signal = listener; return () => { throw new Error('cleanup'); }; } });
+  state.subscribe(() => { throw new Error('observer'); }); state.subscribe(() => observed++); state.activate(); valid = false; signal();
+  assert.equal(state.getSnapshot(), false); assert.equal(state.canChoose(), false); assert.equal(observed, 1); state.suspend();
+});
+test('rejected async observers and cleanup results are consumed while the lifetime closes', async () => {
+  let valid = true, signal;
+  const state = new Lifetime({ current: () => valid, subscribe: listener => { signal = listener; return async () => { throw new Error('cleanup'); }; } });
+  state.subscribe(async () => { throw new Error('observer'); }); state.activate(); valid = false; signal(); await tick(); assert.equal(state.canChoose(), false);
+  const asyncSubscription = new Lifetime({ current: () => true, subscribe: async () => async () => { throw new Error('delayed cleanup'); } });
+  asyncSubscription.activate(); await tick(); assert.equal(asyncSubscription.canChoose(), false);
+});
+test('a reentrant boundary signal cannot return true after the lifetime has expired', () => {
+  let valid = true, signal, trigger = false;
+  const state = new Lifetime({ current: () => { if (trigger) { trigger = false; valid = false; signal(); return true; } return valid; },
+    subscribe: listener => { signal = listener; return () => {}; } });
+  state.activate(); trigger = true; assert.equal(state.getSnapshot(), false); assert.equal(state.canChoose(), false);
+});
 
 for (const platform of ['ios', 'android']) {
   function native(options) {
