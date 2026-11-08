@@ -12,7 +12,8 @@ function load(file, mocks = {}) {
   return mod.exports;
 }
 const controller = load('admin/adminWorkMapController', { './dartJsonString': load('admin/dartJsonString'), './adminWorkMapAuditModel': load('admin/adminWorkMapAuditModel', { './dartJsonString': load('admin/dartJsonString') }), './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel', { './dartJsonString': load('admin/dartJsonString') }) });
-const Workspace = load('admin/adminWorkMapWorkspace', { './adminWorkMapController': controller }).AdminWorkMapWorkspace;
+const moveController = load('admin/adminWorkMapMoveController', { './adminWorkMapController': controller, './adminWorkMapMoveModel': load('admin/adminWorkMapMoveModel') });
+const Workspace = load('admin/adminWorkMapWorkspace', { './adminWorkMapController': controller, './adminWorkMapMoveController': moveController }).AdminWorkMapWorkspace;
 const Store = load('shared/adminSequenceApparatusStore', { '../auth': {}, '../appPreferences': {} }).AdminSequenceApparatusStore;
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
@@ -92,7 +93,7 @@ test('Audit opens independently of catalog, retains report state and never admit
       violations: [{ code: 'invalid_queue_state', order_id: 'o', subject: 'queue', detail: '' }] } };
   f.reads[0].response.resolve(auditPage); await tick(); f.catalog.resolve([a, b]); await tick();
   assert.equal(f.workspace.getSnapshot().module, 'audit'); assert.equal(f.workspace.getSnapshot().list.audit.checked_order_count, 12); assert.equal(f.reads.length, 1);
-  f.workspace.selectModule('move'); f.workspace.selectApparatus(b.id); assert.equal(f.workspace.getSnapshot().module, 'audit'); assert.equal(f.reads.length, 1);
+  f.workspace.selectModule('not-implemented'); f.workspace.selectApparatus(b.id); assert.equal(f.workspace.getSnapshot().module, 'audit'); assert.equal(f.reads.length, 1);
   f.workspace.selectModule('sequence'); assert.equal(f.workspace.getSnapshot().list.audit, null); assert.equal(f.reads[1].request.apparatus, a.id); f.workspace.dispose();
 });
 
@@ -105,6 +106,20 @@ test('Closed reads without waiting for catalog and cannot install live order or 
   f.reads[0].response.resolve(closedPage); await tick(); f.catalog.resolve([a]); await tick();
   assert.equal(f.workspace.getSnapshot().module, 'closed'); assert.equal(f.workspace.getSnapshot().list.closed[0].history_version, 'h1');
   assert.deepEqual(f.workspace.getSnapshot().list.rows, []); assert.equal(f.workspace.getSnapshot().list.audit, null); assert.equal(f.reads.length, 1);
-  f.workspace.selectModule('move'); assert.equal(f.reads.length, 1);
+  f.workspace.selectModule('not-implemented'); assert.equal(f.reads.length, 1);
   f.workspace.selectModule('orders'); assert.equal(f.workspace.getSnapshot().list.closed.length, 0); f.workspace.dispose();
+});
+
+test('Move waits for catalog, opens opposite scopes only, propagates search and retires both panes on module return', async () => {
+  const f = fixture(); f.workspace.start(); f.workspace.selectModule('move'); await tick(); assert.equal(f.reads.length, 0);
+  f.catalog.resolve([a, b]); await tick();
+  assert.deepEqual(f.reads.map(read => read.request), [{ view: 'move', apparatus: a.id, target: b.id, search: '' }, { view: 'move', apparatus: b.id, target: a.id, search: '' }]);
+  const full = id => ({ ...page('orders', id), projection: '', order_rows: {}, snapshot: { maps: [{ map: { id, code: id, title: 'Film', nodes: [] } }] } });
+  f.reads[0].response.resolve(full('top')); f.reads[1].response.resolve(full('bottom')); await tick();
+  assert.equal(f.workspace.getSnapshot().move.topWindow.rows[0].id, 'top'); assert.equal(f.workspace.getSnapshot().move.bottomWindow.rows[0].id, 'bottom');
+  f.workspace.setQuery(' Film '); const refresh = f.workspace.reload();
+  assert.equal(f.reads[2].request.search, 'Film'); assert.equal(f.reads[3].request.search, 'Film');
+  f.reads[2].response.resolve(full('new-top')); f.reads[3].response.resolve(full('new-bottom')); await refresh;
+  f.workspace.selectModule('orders'); assert.equal(f.workspace.getSnapshot().move.topWindow.rows.length, 0); assert.equal(f.workspace.getSnapshot().move.bottomWindow.rows.length, 0);
+  const before = f.reads.length; await f.workspace.move.topWindow.reload(); assert.equal(f.reads.length, before); f.workspace.dispose();
 });

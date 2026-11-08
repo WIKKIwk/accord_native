@@ -10,6 +10,7 @@ import { localizedGetter, productionText } from '../shared/localization';
 import { OrderListItem } from '../shared/orders/OrderListItem';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
 import { OrdersList } from '../shared/orders/OrdersList';
+import { AdminWorkMapMove } from './AdminWorkMapMove';
 import { AdminWorkMapClosedRow } from './AdminWorkMapClosedRow';
 import { AdminWorkMapAudit } from './AdminWorkMapAudit';
 import { AdminWorkMapApparatusFilter, AdminWorkMapModules } from './AdminWorkMapControls';
@@ -26,7 +27,7 @@ function BoundWorkMap() {
       <OrdersHeader search={view.query} searchPlaceholder={productionText('worker.queue.search.open', locale)} onSearchChange={view.search}
         onBack={view.goBack} onProfile={view.onProfile} />
       <BaseHost matchContents={{ vertical: true }}><AdminWorkMapModules {...view.controls} /></BaseHost>
-      <BaseHost style={{ flex: 1 }}><OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0}
+      {view.controls.module === 'move' ? <AdminWorkMapMove {...view.move} /> : <BaseHost style={{ flex: 1 }}><OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0}
         onRefresh={view.refresh}>
         {view.controls.module === 'sequence' && <AdminWorkMapApparatusFilter {...view.controls} />}
         <ListItem>{label.partial}</ListItem>
@@ -38,8 +39,8 @@ function BoundWorkMap() {
           cardTone={item.tone} first={index === 0} last={index === state.rows.length - 1} onPress={() => view.open(row)} />; })}
         {view.closed?.map(row => <AdminWorkMapClosedRow key={row.id} row={row} />)}
         {state.hasMore && !view.error && <Button label={label.more} onPress={() => { void controller.next(); }} />}
-      </OrdersList></BaseHost>
-      {view.controls.module !== 'audit' && view.loading && !state.loaded && <ActivityIndicator style={{ position: 'absolute', alignSelf: 'center', top: insets.top + 80 }} />}
+      </OrdersList></BaseHost>}
+      {view.controls.module !== 'audit' && view.controls.module !== 'move' && view.loading && !state.loaded && <ActivityIndicator style={{ position: 'absolute', alignSelf: 'center', top: insets.top + 80 }} />}
     </View>
   </>;
 }

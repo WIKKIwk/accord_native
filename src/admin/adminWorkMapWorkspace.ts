@@ -1,16 +1,18 @@
 import type { AdminApparatus } from '../apparatusApi';
 import type { AdminSequenceApparatusStore } from '../shared/adminSequenceApparatusStore';
+import { AdminWorkMapMoveController, type AdminWorkMapMoveState } from './adminWorkMapMoveController';
 import { AdminWorkMapController, type AdminWorkMapModule, type AdminWorkMapPage, type AdminWorkMapRequest, type AdminWorkMapState } from './adminWorkMapController';
 
 type Dependencies = { isCurrent: () => boolean; readCatalog: () => Promise<AdminApparatus[]>;
   read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }) => Promise<AdminWorkMapPage | null>;
   selection: Pick<AdminSequenceApparatusStore, 'loadSavedApparatusId' | 'resolveApparatus'> };
 export type AdminWorkMapWorkspaceState = { module: AdminWorkMapModule; catalog: readonly AdminApparatus[]; selected: AdminApparatus | null;
-  catalogLoading: boolean; catalogLoaded: boolean; catalogError: string | null; list: AdminWorkMapState };
+  catalogLoading: boolean; catalogLoaded: boolean; catalogError: string | null; list: AdminWorkMapState; move: AdminWorkMapMoveState };
 
-/** One active server window. Selecting another module/apparatus retires every old row/detail ticket. */
+/** One active module owns its windows; Move has opposite read-only panes. Old row/detail tickets retire on selection. */
 export class AdminWorkMapWorkspace {
   readonly window: AdminWorkMapController;
+  readonly move: AdminWorkMapMoveController;
   private state: AdminWorkMapWorkspaceState;
   private listeners = new Set<() => void>();
   private started = false;
@@ -19,21 +21,25 @@ export class AdminWorkMapWorkspace {
   private stopWindow: () => void;
   constructor(private readonly deps: Dependencies) {
     this.window = new AdminWorkMapController({ isCurrent: deps.isCurrent, read: deps.read, request: null });
+    this.move = new AdminWorkMapMoveController({ isCurrent: deps.isCurrent, read: deps.read });
     this.state = { module: 'sequence', catalog: [], selected: null, catalogLoading: false, catalogLoaded: false, catalogError: null,
-      list: this.window.getSnapshot() };
-    this.stopWindow = this.window.subscribe(() => this.publish({ list: this.window.getSnapshot() }));
+      list: this.window.getSnapshot(), move: this.move.getSnapshot() };
+    const stopList = this.window.subscribe(() => this.publish({ list: this.window.getSnapshot() }));
+    const stopMove = this.move.subscribe(() => this.publish({ move: this.move.getSnapshot() }));
+    this.stopWindow = () => { stopList(); stopMove(); };
   }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private publish(patch: Partial<AdminWorkMapWorkspaceState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()); }
   private current(generation?: number) { return !this.disposed && this.deps.isCurrent() && (generation == null || generation === this.catalogGeneration); }
-  start() { if (!this.started && !this.disposed) { this.started = true; this.window.start(); void this.loadCatalog(); } }
+  start() { if (!this.started && !this.disposed) { this.started = true; this.window.start(); this.move.start(); void this.loadCatalog(); } }
   private configure() {
-    this.window.configure(this.state.module !== 'sequence' ? { view: this.state.module }
+    this.move.setActive(this.state.module === 'move');
+    this.window.configure(this.state.module === 'move' ? null : this.state.module !== 'sequence' ? { view: this.state.module }
       : this.state.selected ? { view: 'sequence', apparatus: this.state.selected.id } : null);
   }
   selectModule(module: AdminWorkMapModule) {
-    if (!this.current() || !['sequence', 'orders', 'closed', 'audit'].includes(module) || this.state.module === module) return;
+    if (!this.current() || !['sequence', 'orders', 'move', 'closed', 'audit'].includes(module) || this.state.module === module) return;
     this.state = { ...this.state, module }; this.configure(); this.publish({});
   }
   selectApparatus(id: string) {
@@ -43,10 +49,11 @@ export class AdminWorkMapWorkspace {
     this.state = { ...this.state, selected }; this.configure(); this.publish({});
     // Saving the shared cross-account fallback preference is held for a reviewed scoped adapter.
   }
+  setQuery(value: string) { if (this.current()) { this.window.setQuery(value); this.move.setQuery(value); } }
   async reload() {
     if (!this.current()) return;
-    if (this.state.module === 'sequence' && !this.state.catalogLoaded) return this.loadCatalog();
-    return this.window.reload();
+    if ((this.state.module === 'sequence' || this.state.module === 'move') && !this.state.catalogLoaded) return this.loadCatalog();
+    return this.state.module === 'move' ? this.move.reload() : this.window.reload();
   }
   async loadCatalog() {
     if (!this.current() || this.state.catalogLoading) return;
@@ -61,15 +68,15 @@ export class AdminWorkMapWorkspace {
       const selected = (old ? this.deps.selection.resolveApparatus(catalog, old.id, old.name) : null)
         ?? this.deps.selection.resolveApparatus(catalog) ?? catalog[0] ?? null;
       this.state = { ...this.state, catalog, selected, catalogLoading: false, catalogLoaded: true, catalogError: null };
-      this.configure(); this.publish({});
+      this.move.setCatalog(catalog); this.configure(); this.publish({});
     } catch (error) {
       if (this.current(generation)) this.publish({ catalogLoading: false, catalogError: error instanceof Error ? error.message : 'Buyurtmalar yuklanmadi' });
     }
   }
   invalidate() {
     if (this.disposed) return;
-    this.catalogGeneration++; this.window.invalidate();
+    this.catalogGeneration++; this.window.invalidate(); this.move.invalidate();
     this.publish({ catalog: [], selected: null, catalogLoading: false, catalogLoaded: false, catalogError: null });
   }
-  dispose() { this.invalidate(); this.disposed = true; this.stopWindow(); this.window.dispose(); this.listeners.clear(); }
+  dispose() { this.invalidate(); this.disposed = true; this.stopWindow(); this.window.dispose(); this.move.dispose(); this.listeners.clear(); }
 }

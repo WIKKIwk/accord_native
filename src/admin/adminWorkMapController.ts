@@ -2,8 +2,8 @@ import { adminWorkMapAuditPages, type AdminWorkMapAuditReport } from './adminWor
 import { adminWorkMapClosedPages, type AdminWorkMapClosedOrder } from './adminWorkMapClosedModel';
 import { dartTrim } from './dartJsonString';
 
-export type AdminWorkMapModule = 'sequence' | 'orders' | 'closed' | 'audit';
-export type AdminWorkMapRequest = { view: AdminWorkMapModule; apparatus?: string };
+export type AdminWorkMapModule = 'sequence' | 'orders' | 'move' | 'closed' | 'audit';
+export type AdminWorkMapRequest = { view: AdminWorkMapModule; apparatus?: string; target?: string };
 export type AdminWorkMapRow = { kind: 'pending' | 'order'; id: string; code: string; title: string; customer: string; imageId: string;
   displayState: string; kg: number | null; position?: number };
 export type AdminWorkMapPage = { projection: string; version: string; epoch: string; scope: string; revision: number | null;
@@ -51,7 +51,7 @@ export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: Admin
           imageId: text(row.image_id), displayState: text(row.display_state), kg: null });
       }
     } else if (page.projection === '') {
-      if (view === 'sequence' && page.pending_orders.length) throw new Error(readError);
+      if ((view === 'sequence' || view === 'move') && page.pending_orders.length) throw new Error(readError);
       for (const row of page.pending_orders) {
         const item = row.template;
         pending.push({ kind: 'pending', id: text(row.id), code: text(item.order_number), title: text(item.product), customer: text(item.customer),
@@ -60,9 +60,11 @@ export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: Admin
       for (const id of page.order_ids) {
         const saved = page.snapshot?.maps.find(item => item.map.id === id), map = saved?.map;
         if (!map) throw new Error(readError);
-        orders.push({ kind: 'order', id, code: codeOf(map), title: text(map.title), customer: text(map.customer_name),
+        const product = view === 'move' ? text(map.nodes?.find((node: any) => node.kind === 'end' && dartTrim(text(node.title)) && dartTrim(text(node.title)) !== dartTrim(text(map.title)))?.title) : '';
+        orders.push({ kind: 'order', id, code: codeOf(map), title: view === 'move' ? dartTrim(text(map.title)) || dartTrim(product) : text(map.title),
+          customer: view === 'move' ? dartTrim(text(map.customer_name)) || dartTrim(text(map.product_code)) || dartTrim(product) : text(map.customer_name),
           imageId: text(map.image_id), displayState: '', kg: null,
-          ...(view === 'sequence' ? { position: page.sequence_positions?.[id] ?? orders.length + 1 } : {}) });
+          ...(view === 'sequence' ? { position: page.sequence_positions?.[id] ?? orders.length + 1 } : view === 'move' ? { position: orders.length + 1 } : {}) });
       }
     } else throw new Error(readError);
   }
@@ -87,7 +89,7 @@ export class AdminWorkMapController {
   private publish(patch: Partial<AdminWorkMapState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()); }
   private current(ticket: number) { return !this.disposed && ticket === this.generation && this.deps.isCurrent(); }
   detailTicket(row: AdminWorkMapRow): AdminWorkMapDetailTicket | null {
-    if (!this.deps.isCurrent() || !this.state.rows.some(item => item.id === row.id && item.kind === row.kind)) return null;
+    if (this.request?.view === 'move' || !this.deps.isCurrent() || !this.state.rows.some(item => item.id === row.id && item.kind === row.kind)) return null;
     const first = this.pages[0];
     return first ? { generation: this.generation, id: row.id, kind: row.kind, epoch: first.epoch, revision: first.revision,
       ...(this.request?.view === 'sequence' ? { apparatus: this.request.apparatus } : {}) } : null;
@@ -97,7 +99,7 @@ export class AdminWorkMapController {
   }
   configure(request: AdminWorkMapRequest | null) {
     if (this.disposed || !this.deps.isCurrent()) return;
-    if (this.request?.view === request?.view && this.request?.apparatus === request?.apparatus) return;
+    if (this.request?.view === request?.view && this.request?.apparatus === request?.apparatus && this.request?.target === request?.target) return;
     this.request = request;
     this.generation++; this.pages = [];
     if (this.timer) clearTimeout(this.timer); this.timer = null;

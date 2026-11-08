@@ -164,3 +164,23 @@ test('real guarded Closed page decodes summary/history metadata without using th
     assert.deepEqual(Object.fromEntries(requested.searchParams), { view: 'closed', limit: '20', search: 'Ana' });
   }
 });
+
+test('real guarded Move page sends only its ordered source/target scope and rejects an account-changed body', async () => {
+  for (const invalidate of [false, true]) {
+    const f = fixture(), requests = [], apparatus = 'apparatus:default:asset-005', target = 'apparatus:default:asset-010';
+    const raw = { version: 'move-1', epoch: 'server', scope: 'move-scope', rev: 4, offset: 0, total: 1, next_cursor: null, order_ids: ['o'],
+      sequences: { [apparatus]: ['o'] }, visible_order_ids: { [apparatus]: ['o'] }, queue_states: { [apparatus]: { o: 'pending' } },
+      queue_policies: [{ apparatus_id: apparatus, policy: 'strict_sequence' }], order_controls: {}, stage_states: {}, queue_action_controls: {}, frozen_orders_by_apparatus: {},
+      maps: [{ map: { id: 'o', code: '1', title: 'Film', nodes: [], edges: [] }, program: {} }] };
+    const pageApi = loadRoot('productionOrderPageApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
+      requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
+    } } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderPageApi': pageApi }).adminWorkMapReader(f.session, f.witness);
+    const result = reader({ view: 'move', apparatus, target, search: 'Film' });
+    if (invalidate) await assert.rejects(result, /session changed/);
+    else { const page = await result; assert.equal(page.snapshot.maps[0].map.id, 'o'); assert.equal(page.snapshot.maps[0].map.title, 'Film'); }
+    assert.equal(requests.length, 1); const requested = new URL(requests[0], f.session.baseUrl);
+    assert.equal(requested.pathname, '/v1/mobile/admin/production-maps/order-page');
+    assert.deepEqual(Object.fromEntries(requested.searchParams), { view: 'move', limit: '20', apparatus, target, search: 'Film' });
+  }
+});

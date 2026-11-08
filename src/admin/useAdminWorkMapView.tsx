@@ -3,9 +3,12 @@ import { useCallback, useState, useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
 import { appRoutes } from '../shared/appRoutes';
-import { adminText, productionText } from '../shared/localization';
+import { adminText, localizedGetter, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { AdminWorkMapDetail } from './AdminWorkMapDetail';
+import { adminWorkMapPresentation } from './adminWorkMapPresentation';
+import { adminWorkMapText } from './adminWorkMapText';
+import type { AdminWorkMapMoveProps } from './adminWorkMapMoveTypes';
 import { adminWorkMapClosedRows } from './adminWorkMapClosedModel';
 import { adminWorkMapAuditPresentation } from './adminWorkMapAuditPresentation';
 import type { AdminWorkMapModule, AdminWorkMapRow } from './adminWorkMapController';
@@ -22,7 +25,7 @@ export function useAdminWorkMapView() {
     const path = shell.isCurrent() ? shell.destination(appRoutes.profile, Platform.OS) : null;
     if (path) router.push(path as Href);
   }, [shell]);
-  const search = (value: string) => { setQuery(value); controller.setQuery(value); };
+  const search = (value: string) => { setQuery(value); workspace.setQuery(value); };
   const open = (row: AdminWorkMapRow) => {
     if (!shell.isCurrent() || !shell.destination(appRoutes.adminProductionMapOrders, Platform.OS)) return;
     const ticket = controller.detailTicket(row); if (!ticket) return;
@@ -35,13 +38,25 @@ export function useAdminWorkMapView() {
     onApparatus: (id: string) => { if (shell.isCurrent()) { sheet.close(); workspace.selectApparatus(id); setFilterExpanded(false); } },
     apparatusLabel: productionText('worker.queue.filter.apparatus', locale), unselectedLabel: productionText('worker.queue.filter.unselected', locale),
     countText: workspaceState.module === 'sequence' && state.total > 0 ? productionText('worker.queue.orders_count', locale, { count: state.total }) : '' };
-  const error = state.error ?? (workspaceState.module === 'sequence' ? workspaceState.catalogError : null);
-  const loading = state.loading || (workspaceState.module === 'sequence' && workspaceState.catalogLoading);
+  const error = state.error ?? (workspaceState.module === 'sequence' || workspaceState.module === 'move' ? workspaceState.catalogError : null);
+  const loading = state.loading || ((workspaceState.module === 'sequence' || workspaceState.module === 'move') && workspaceState.catalogLoading);
   const emptyText = workspaceState.module === 'sequence'
     ? !workspaceState.catalogLoaded || loading ? '' : workspaceState.selected == null
       ? productionText('worker.queue.empty.select_apparatus', locale)
       : state.loaded && !state.rows.length ? productionText('worker.queue.empty.for_apparatus', locale, { apparatus: workspaceState.selected.name.trim() }) : ''
     : workspaceState.module === 'closed' ? state.loaded && !loading && !state.closed.length ? adminText('production.closed_empty', locale) : ''
     : workspaceState.module === 'orders' && state.loaded && !loading && !state.rows.length ? adminText(state.query ? 'production.search_empty' : 'production.open_empty', locale) : '';
-  return { shell, locale, state, controller, controls, error, loading, emptyText, closed: adminWorkMapClosedRows(state.closed ?? []), audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), query, goBack, onProfile, search, open };
+  const pair = workspaceState.move, label = adminWorkMapText(locale), retryLabel = localizedGetter('retry', locale);
+  const move: AdminWorkMapMoveProps = { partial: label.partial, loading: workspaceState.catalogLoading, error: workspaceState.catalogError,
+    empty: workspaceState.catalogLoaded && (!pair.top || !pair.bottom) ? adminText('production.move.no_equipment', locale) : '', retryLabel,
+    onRetry: () => workspace.reload(), panes: !pair.top || !pair.bottom ? [] : (['top', 'bottom'] as const).map(id => {
+      const apparatus = id === 'top' ? pair.top! : pair.bottom!, pane = id === 'top' ? pair.topWindow : pair.bottomWindow,
+        controller = id === 'top' ? workspace.move.topWindow : workspace.move.bottomWindow;
+      return { id, name: apparatus.name, loading: pane.loading, loaded: pane.loaded, error: pane.error, hasMore: pane.hasMore,
+        rows: pane.rows.map((row, index) => { const display = adminWorkMapPresentation({ ...row, position: undefined }, locale);
+          return { id: row.id, position: String(index + 1), headline: display.headline, supporting: display.supporting }; }),
+        empty: `${apparatus.name} uchun zakaz yo‘q`, moreLabel: label.more, retryLabel,
+        onRefresh: () => controller.reload(), onMore: () => controller.next() };
+    }) };
+  return { shell, locale, state, controller, controls, error, loading, emptyText, move, closed: adminWorkMapClosedRows(state.closed ?? []), audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), query, goBack, onProfile, search, open };
 }

@@ -29,7 +29,7 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route } }, '../shared/localization': { adminText: key => key, localizedGetter: key => key, productionText: key => key },
     '../components/BaseHost': { BaseHost: 'BaseHost' }, '../shared/orders/OrderListItem': { OrderListItem: 'OrderListItem' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
-    './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
+    './AdminWorkMapMove': { AdminWorkMapMove: 'AdminWorkMapMove' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
     './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' }, './AdminShellContext': { useAdminShell: () => shell },
     './useAdminWorkMapView': { useAdminWorkMapView: () => view }, './adminWorkMapText': { adminWorkMapText: () => ({ partial: 'partial', more: 'more' }) },
     './adminWorkMapPresentation': { adminWorkMapPresentation: value => ({ headline: value.title, supporting: value.customer, tone: 'paused' }) } };
@@ -66,6 +66,10 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     : closedBody.props.children.find(value => value?.type === 'OrdersList');
   const closedRow = closedList.props.children.flat(Infinity).filter(Boolean).find(value => value.type === 'AdminWorkMapClosedRow');
   assert.equal(closedRow.props.row, view.closed[0]); assert.equal(closedRow.props.onPress, undefined);
+  view.controls.module = 'move'; view.move = { panes: [], partial: 'read-only' };
+  const moveTree = bound.type(), moveBody = platform === 'ios' ? moveTree.props.children.find(value => value?.type === 'View') : moveTree;
+  const moveContent = moveBody.props.children.find(value => value?.type === 'AdminWorkMapMove'); assert.deepEqual(moveContent.props, view.move);
+
 
 
 });
@@ -79,9 +83,9 @@ test('opening a detail requires the current shell, enabled destination and a lis
     '../nativeSheet': { useNativeSheet: () => ({ open: (value, options) => opened.push({ value, options }), close() {} }) },
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route, profile: '/profile' } },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
-    '../shared/localization': { productionText: key => key, adminText: key => key }, './AdminWorkMapDetail': { AdminWorkMapDetail: 'Detail' },
-    './AdminShellContext': { useAdminShell: () => shell }, './adminWorkMapClosedModel': { adminWorkMapClosedRows: () => [] }, './adminWorkMapAuditPresentation': { adminWorkMapAuditPresentation: () => ({}) }, './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: ctrl, workspace: { reload() {}, selectModule() {}, selectApparatus() {} },
-      workspaceState: { module: 'sequence', catalog: [], selected: null, catalogLoaded: false, catalogLoading: false } }) } };
+    '../shared/localization': { productionText: key => key, adminText: key => key, localizedGetter: key => key }, './AdminWorkMapDetail': { AdminWorkMapDetail: 'Detail' },
+    './AdminShellContext': { useAdminShell: () => shell }, './adminWorkMapText': { adminWorkMapText: () => ({ partial: 'partial', more: 'more' }) }, './adminWorkMapPresentation': {}, './adminWorkMapClosedModel': { adminWorkMapClosedRows: () => [] }, './adminWorkMapAuditPresentation': { adminWorkMapAuditPresentation: () => ({}) }, './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: ctrl, workspace: { reload() {}, setQuery() {}, selectModule() {}, selectApparatus() {}, move: {} },
+      workspaceState: { module: 'sequence', catalog: [], selected: null, catalogLoaded: false, catalogLoading: false, move: { top: null, bottom: null } } }) } };
   const view = load('admin/useAdminWorkMapView.tsx', mocks).useAdminWorkMapView();
   current = false; view.open(row); current = true; allowed = false; view.open(row); allowed = true; ticket = null; view.open(row); assert.equal(opened.length, 0);
   ticket = { generation: 1, id: 'o' }; view.open(row); assert.equal(opened.length, 1); assert.equal(opened[0].value.props.row, row); assert.equal(opened[0].options.dismissible, false);
