@@ -54,6 +54,8 @@ test('delete sends warehouse and delete-products choice only after validation', 
   await assert.rejects(api.adminDeleteWarehouse(session, 'Warehouse', true), e => e.code === 'warehouse_has_active_reservations' &&
     e.statusCode === 409 && e.message === 'warehouse_has_active_reservations');
   assert.deepEqual(JSON.parse(api.requests[1].init.body), { warehouse: 'Warehouse', delete_products: true });
+  api.setResponse({ error: 'constructor' }, 409);
+  await assert.rejects(api.adminDeleteWarehouse(session, 'Warehouse', false), e => e.code === 'constructor' && e.message === 'constructor');
 });
 // @v2-test test/admin_warehouses_screen_test.dart, run independently against f119 before recording.
 test('warehouse summary replays the available-stock widget test request', async () => {

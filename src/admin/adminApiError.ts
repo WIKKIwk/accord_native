@@ -20,7 +20,8 @@ export async function adminApiError(response: Response, fallbackCode: string, fa
           'worker not found': 'Ishchi topilmadi',
           'worker store failed': 'Ishchi telefoni bazaga saqlanmadi',
         };
-        message = messages[error.toLowerCase()] ?? error;
+        const key = error.toLowerCase();
+        message = Object.hasOwn(messages, key) ? messages[key] : error;
         if (code === 'rezka_worker_has_open_run' && Array.isArray(row.blocked_apparatus_ids)) {
           details = row.blocked_apparatus_ids.filter((item): item is string => typeof item === 'string');
         }
