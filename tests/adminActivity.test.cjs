@@ -13,12 +13,13 @@ function load(file, overrides = {}) {
   return mod.exports;
 }
 const dispatch = load('shared/notificationApi', { '../authorizedFetch': {} });
+const guards = load('admin/adminProductionRequest', { '../authorizedFetch': {}, '../shared/mobileApiException': {}, '../workerControlsApi': {} });
 const stem = 'f11910bb/admin_activity_probe_test';
 function replayFixture(name) {
   const replay = contractFetch(stem, name), session = recordedSession(stem, name);
   const api = load('admin/adminActivityApi', { '../authorizedFetch': { authorizedFetch: (s, p, init = {}) =>
     replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) },
-    '../shared/notificationApi': dispatch });
+    '../shared/notificationApi': dispatch, './adminProductionRequest': guards });
   return { api, session, replay };
 }
 // These recordings come from a source-derived probe executed against f119, not an existing upstream test.
@@ -41,7 +42,7 @@ test('admin activity reproduces the f119 failure', async () => {
 test('admin activity validates the list and reuses the shared parser', async () => {
   let payload = [null];
   const api = load('admin/adminActivityApi', { '../authorizedFetch': { authorizedFetch: async () =>
-    new Response(JSON.stringify(payload), { status: 200 }) }, '../shared/notificationApi': dispatch });
+    new Response(JSON.stringify(payload), { status: 200 }) }, '../shared/notificationApi': dispatch, './adminProductionRequest': guards });
   await assert.rejects(api.adminActivity({}), TypeError);
   payload = { id: 'A' }; await assert.rejects(api.adminActivity({}), TypeError);
   payload = [{ status: '\u0085ACCEPTED\u0085' }];

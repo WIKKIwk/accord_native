@@ -13,6 +13,7 @@ export function adminDestinationPath(session: Session, route: string, platform: 
   if (!adminShellMayEnter(session) || !enabled.has(route) || !canOpenRoute(session, route)) return null;
   if (platform !== 'ios' && platform !== 'android') return null;
   if (route === appRoutes.profile) return `/${platform}-admin/profile`;
+  if (route === appRoutes.adminActivity) return `/${platform}-admin/activity`;
   if (route === appRoutes.gscaleMode) return `/${platform}-gscale`;
   return null;
 }

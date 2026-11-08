@@ -44,7 +44,7 @@ test('shell and login reject missing session, unauthorized capabilities and role
   assert.equal(routes.homeTarget(session('brigader', ['admin.access']), 'android'), null);
 });
 test('destination requires shell access, current route permission, explicit integration enablement and platform', () => {
-  const enabled = new Set([r.profile, r.gscaleMode]), held = new Set();
+  const enabled = new Set([r.profile, r.gscaleMode]), held = new Set(), activityEnabled = new Set([r.adminActivity]);
   for (const platform of ['ios', 'android']) {
     assert.equal(access.adminDestinationPath(admin, r.profile, platform, held), null);
     assert.equal(access.adminDestinationPath(admin, r.profile, platform, enabled), `/${platform}-admin/profile`);
@@ -52,6 +52,7 @@ test('destination requires shell access, current route permission, explicit inte
     assert.equal(access.adminDestinationPath(worker, r.profile, platform, enabled), null);
     assert.equal(access.adminDestinationPath(sales, r.gscaleMode, platform, enabled), null);
     assert.equal(access.adminDestinationPath(admin, r.adminActivity, platform, enabled), null);
+    assert.equal(access.adminDestinationPath(session('admin', ['admin.access', 'admin.activity.read']), r.adminActivity, platform, activityEnabled), `/${platform}-admin/activity`);
   }
   assert.equal(access.adminDestinationPath(admin, r.profile, 'web', enabled), null);
 });
