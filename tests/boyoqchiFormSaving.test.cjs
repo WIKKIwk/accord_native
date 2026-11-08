@@ -28,7 +28,7 @@ function fixture() {
     'react-native': { ActivityIndicator: 'ActivityIndicator', Keyboard: { dismiss() {} }, BackHandler: { addEventListener: (_event, callback) => { back = callback; return { remove() {} }; } },
       Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View', StyleSheet: { create: value => value, absoluteFill: {} } },
     '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, './BoyoqchiUsageSwipe': { BoyoqchiUsageSwipe: 'BoyoqchiUsageSwipe' }, './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' },
-    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../components/useWorkerColors': { useWorkerColors: () => ({}) },
+    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { outlineVariant: '#theme-outline' } }) }, '../components/useWorkerColors': { useWorkerColors: () => ({}) },
     '../workerOrderLogic': { paintOptions: [] }, './BoyoqchiImage': { BoyoqchiImage: 'BoyoqchiImage' },
     './boyoqchiLogic': { boyoqchiInputAllowed: () => true, boyoqchiSaveInput: () => ({ items: [{ name: 'paint' }], error: '' }) },
     './returnedPaintModel': {}, './useBoyoqchiText': { useBoyoqchiText: () => value => value },
