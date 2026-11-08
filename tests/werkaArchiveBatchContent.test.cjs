@@ -5,7 +5,8 @@ function compile(file,mocks={}){const filename=path.resolve(__dirname,'../src/we
   m.require=name=>Object.hasOwn(mocks,name)?mocks[name]:require(name);
   m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,filename);return m.exports;}
 const delivery=compile('werkaDeliveryPresentation.ts',{'../shared/localization':{}});
-const model=compile('werkaArchiveBatchPresentation.ts',{'./werkaDeliveryPresentation':delivery});
+const trim=compile('werkaBatchTrim.ts');
+const model=compile('werkaArchiveBatchPresentation.ts',{'./werkaDeliveryPresentation':delivery,'./werkaBatchTrim':trim});
 const jsx={Fragment:'Fragment',jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
 function nodes(node,type){if(!node||typeof node!=='object')return[];if(Array.isArray(node))return node.flatMap(x=>nodes(x,type));
   return [...(node.type===type?[node]:[]),...nodes(node.props?.children,type)];}
@@ -26,6 +27,12 @@ test('archive batch loading, missing and resolved text and rows follow source',(
 });
 test('batch quantity reuses two-decimal formatter and trims only fractional zeros',()=>{
   assert.deepEqual([-0,0,100,1.5,1.234,1.999,1e21].map(model.werkaArchiveBatchQuantity),['-0','0','100','1.5','1.23','2','1e+21']);
+});
+test('batch presentation follows Dart edge whitespace for optional source fields',()=>{
+  const view=model.werkaArchiveBatchPresentation({payload:{...payload,itemName:'\u0085',batchTime:'\u0085'},
+    state:'resolved',option:{...option,warehouse:'\u0085'},customer});
+  assert.equal(view.shellSubtitle,'Batch tafsiloti');
+  assert.deepEqual(view.rows.map(row=>row.label),['Netto','Brutto','Kod','Haridor']);
 });
 for(const platform of ['ios','android'])test(`${platform} archive batch body reuses native rows and exposes no held action`,()=>{
   const mocks={'react/jsx-runtime':jsx,'./werkaArchiveBatchPresentation':model,

@@ -1,5 +1,6 @@
 import type { CustomerDirectoryEntry, CustomerItemOption, WerkaArchiveBatchQrPayload } from './werkaArchiveBatchQr';
 import { werkaDeliveryQuantity } from './werkaDeliveryPresentation';
+import { werkaBatchTrim } from './werkaBatchTrim';
 
 export type WerkaArchiveBatchContentProps = { payload: WerkaArchiveBatchQrPayload } & (
   | { state: 'loading' }
@@ -18,8 +19,8 @@ export function werkaArchiveBatchPresentation(props: WerkaArchiveBatchContentPro
     : props.state === 'missing' ? 'Batch QR ichidagi mahsulot customer jo‘natish ro‘yxatidan topilmadi.' : props.customer.name;
   const rows = [{ label: 'Netto', value: `${werkaArchiveBatchQuantity(payload.nettoQty)} Kg` },
     { label: 'Brutto', value: `${werkaArchiveBatchQuantity(payload.bruttoQty)} Kg` },
-    ...(payload.batchTime.trim() ? [{ label: 'Sana', value: payload.batchTime }] : []),
+    ...(werkaBatchTrim(payload.batchTime) ? [{ label: 'Sana', value: payload.batchTime }] : []),
     ...(props.state === 'resolved' ? [{ label: 'Kod', value: props.option.itemCode }, { label: 'Haridor', value: props.customer.name },
-      ...(props.option.warehouse.trim() ? [{ label: 'Ombor', value: props.option.warehouse }] : [])] : [])];
-  return { title, subtitle, rows, shellTitle: 'Batch QR', shellSubtitle: payload.itemName.trim() || 'Batch tafsiloti' };
+      ...(werkaBatchTrim(props.option.warehouse) ? [{ label: 'Ombor', value: props.option.warehouse }] : [])] : [])];
+  return { title, subtitle, rows, shellTitle: 'Batch QR', shellSubtitle: werkaBatchTrim(payload.itemName) || 'Batch tafsiloti' };
 }

@@ -8,6 +8,7 @@ const ts = require('typescript');
 function load(file) {
   const filename = path.resolve(__dirname, '../src/werka', file), loaded = new Module(filename);
   loaded.filename = filename; loaded.paths = require.main.paths;
+  loaded.require = name => name === './werkaBatchTrim' ? load('werkaBatchTrim.ts') : require(name);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return loaded.exports;
 }

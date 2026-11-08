@@ -8,6 +8,10 @@ const ts = require('typescript');
 
 const filename = path.resolve(__dirname, '../src/werka/werkaArchiveBatchQr.ts');
 const loaded = new Module(filename, module); loaded.filename = filename; loaded.paths = module.paths;
+const trimFile = path.resolve(__dirname, '../src/werka/werkaBatchTrim.ts'), trim = new Module(trimFile, module);
+trim.filename = trimFile; trim.paths = module.paths;
+trim._compile(ts.transpileModule(fs.readFileSync(trimFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, trimFile);
+loaded.require = name => name === './werkaBatchTrim' ? trim.exports : require(name);
 loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
 const { parseWerkaArchiveBatchQr: parse, resolveExactArchiveBatchItemOption: exact,
   resolveArchiveBatchDefaultCustomer: customer } = loaded.exports;
@@ -55,4 +59,19 @@ test('rejects nonzero unused base64 tail bits like Dart base64Url', () => {
   const corrupted = clean.slice(0, -1) + alphabet[alphabet.indexOf(clean.at(-1)) + 1];
   assert.ok(parse(`https://scan.wspace.sbs/A/${clean}`));
   assert.equal(parse(`https://scan.wspace.sbs/A/${corrupted}`), null);
+});
+test('replays U+0085 and encoded-segment outputs from the exact f119 Dart parser', () => {
+  const fixture = require('./contracts/f11910bb/werka_batch_qr_trim_oracle.json');
+  for (const entry of fixture.cases) assert.deepEqual(parse(entry.input), entry.output, entry.name);
+});
+test('exact item and default customer selection trim U+0085 at edges, never in the middle', () => {
+  const chosen = option('C', 'Customer', '\u0085Item\u0085');
+  assert.equal(exact('\u0085item\u0085', [chosen]), chosen);
+  assert.equal(exact('left\u0085right', [option('C', 'Customer', 'leftright')]), null);
+  assert.equal(exact('\u0085', [chosen]), null);
+  const invalid = { ref: '\u0085', name: 'Customer', phone: '' };
+  const secondary = { ref: 'S', name: '\u0085SAIDAMIN\u0085', phone: '' };
+  const primary = { ref: 'P', name: 'Primary', phone: '' };
+  assert.equal(customer(chosen, [invalid, secondary, primary]), primary);
+  assert.equal(customer(chosen, [invalid, secondary]), secondary);
 });

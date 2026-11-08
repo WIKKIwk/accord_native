@@ -1,3 +1,5 @@
+import { werkaBatchTrim } from './werkaBatchTrim';
+
 export type CustomerDirectoryEntry = { ref: string; name: string; phone: string };
 export type CustomerItemOption = { customerRef: string; customerName: string; customerPhone: string;
   itemCode: string; itemName: string; uom: string; warehouse: string };
@@ -11,12 +13,12 @@ function archiveEncodedPayload(raw: string): string | null {
   try {
     const uri = new URL(raw);
     if (uri.protocol === 'http:' || uri.protocol === 'https:') {
-      const segments = uri.pathname.split('/').filter(segment => segment.trim()).map(decodeURIComponent);
-      if (segments.length >= 2 && segments[0].toUpperCase() === 'A') return segments[1].trim();
+      const segments = uri.pathname.split('/').map(decodeURIComponent).filter(segment => werkaBatchTrim(segment));
+      if (segments.length >= 2 && segments[0].toUpperCase() === 'A') return werkaBatchTrim(segments[1]);
     }
   } catch { /* The V2 fallback also accepts a non-URL containing /A/. */ }
   const marker = raw.indexOf('/A/');
-  return marker < 0 ? null : raw.slice(marker + 3).split('/')[0].trim();
+  return marker < 0 ? null : werkaBatchTrim(raw.slice(marker + 3).split('/')[0]);
 }
 
 function decodeBase64Url(encoded: string): string | null {
@@ -45,7 +47,7 @@ function decodeBase64Url(encoded: string): string | null {
 }
 
 function parseQty(value: string): number {
-  const normalized = value.trim().replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+  const normalized = werkaBatchTrim(value).replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
   // Dart double.tryParse requires the entire value to be numeric.
   if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized)) return 0;
   return Number(normalized);
@@ -53,13 +55,13 @@ function parseQty(value: string): number {
 
 /** @v2 WerkaArchiveBatchQrPayload */
 export function parseWerkaArchiveBatchQr(rawValue: string): WerkaArchiveBatchQrPayload | null {
-  const raw = rawValue.trim();
+  const raw = werkaBatchTrim(rawValue);
   if (!raw) return null;
   const encoded = archiveEncodedPayload(raw);
   if (!encoded) return null;
   const decoded = decodeBase64Url(encoded);
   if (decoded == null) return null;
-  const lines = decoded.split('\n').map(line => line.trim());
+  const lines = decoded.split('\n').map(werkaBatchTrim);
   if (lines.length < 5 || lines[0].toUpperCase() !== 'ARCHIVE') return null;
   const separated = lines.length >= 6, bruttoText = lines[3], nettoText = separated ? lines[4] : lines[3];
   const qty = parseQty(nettoText), brutto = parseQty(bruttoText), netto = parseQty(nettoText);
@@ -71,10 +73,10 @@ export function parseWerkaArchiveBatchQr(rawValue: string): WerkaArchiveBatchQrP
 
 /** @v2 resolveExactArchiveBatchItemOption */
 export function resolveExactArchiveBatchItemOption(itemName: string, options: readonly CustomerItemOption[]): CustomerItemOption | null {
-  const normalized = itemName.trim().toLowerCase();
+  const normalized = werkaBatchTrim(itemName).toLowerCase();
   if (!normalized) return null;
-  return options.find(option => option.itemName.trim().toLowerCase() === normalized ||
-    option.itemCode.trim().toLowerCase() === normalized) ?? null;
+  return options.find(option => werkaBatchTrim(option.itemName).toLowerCase() === normalized ||
+    werkaBatchTrim(option.itemCode).toLowerCase() === normalized) ?? null;
 }
 
 /** @v2 archiveBatchCustomerFromOption */
@@ -84,11 +86,11 @@ export function archiveBatchCustomerFromOption(option: CustomerItemOption): Cust
 
 /** @v2 resolveArchiveBatchDefaultCustomer */
 export function resolveArchiveBatchDefaultCustomer(option: CustomerItemOption, customers: readonly CustomerDirectoryEntry[]): CustomerDirectoryEntry {
-  const eligible = customers.filter(customer => customer.ref.trim());
+  const eligible = customers.filter(customer => werkaBatchTrim(customer.ref));
   return preferWerkaPrimaryCustomer(eligible) ?? archiveBatchCustomerFromOption(option);
 }
 
 /** @v2 preferPrimaryCustomer */
 export function preferWerkaPrimaryCustomer(customers: readonly CustomerDirectoryEntry[]): CustomerDirectoryEntry | null {
-  return customers.find(customer => customer.name.trim().toLowerCase() !== 'saidamin') ?? customers[0] ?? null;
+  return customers.find(customer => werkaBatchTrim(customer.name).toLowerCase() !== 'saidamin') ?? customers[0] ?? null;
 }
