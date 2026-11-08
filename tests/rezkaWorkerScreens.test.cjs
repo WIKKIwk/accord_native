@@ -36,7 +36,7 @@ function setup(platform) {
   mod.filename = filename; mod.paths = module.paths;
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
-  return { state, calls, render: () => mod.exports.RezkaWorkerSettingsScreen({ session: {}, navigation: null, footer: 'existing dock' }),
+  return { state, calls, render: (allowAssignments = true) => mod.exports.RezkaWorkerSettingsScreen({ session: {}, snapshot: {}, allowAssignments, navigation: null, footer: 'existing dock' }),
     sheet: () => ({ content: sheetContent, options: sheetOptions }) };
 }
 for (const platform of ['ios', 'android']) {
@@ -57,5 +57,12 @@ for (const platform of ['ios', 'android']) {
     const save = nodes(picker, n => n.type === 'Button' && n.props.modifiers?.some(m => m.args?.[0] === 'worker-apparatus-save'))[0];
     assert.ok(save); (save.props.onPress ?? save.props.onClick)(); assert.equal(t.calls.at(-1), 'save');
     options.onDismiss(); assert.equal(t.calls.at(-1), 'dismiss');
+  });
+}
+
+for (const platform of ['ios', 'android']) {
+  test(`${platform}: read-only master settings show the assigned scope without a write action`, () => {
+    const t = setup(platform), page = t.render(false), tree = JSON.stringify(page);
+    assert.ok(tree.includes('scope.operator_title')); assert.ok(!tree.includes('worker-apparatus-picker-ali')); assert.equal(t.calls.length, 0);
   });
 }

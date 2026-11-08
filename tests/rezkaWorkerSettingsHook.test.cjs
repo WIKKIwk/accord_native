@@ -29,11 +29,13 @@ test('master settings hook keeps the captured session, epoch and scope for reads
     './rezkaWorkerController': { RezkaWorkerSettingsController: Controller } };
   const mod = new Module(file, module); mod.filename = file; mod.paths = module.paths; mod.require = id => mocks[id] ?? require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
-  mod.exports.useRezkaWorkerSettings(session); effects.forEach(fn => fn());
+  const supplied = Object.freeze({ session, scope: 'scope-a', epoch: 5 });
+  mod.exports.useRezkaWorkerSettings(session, supplied, true); effects.forEach(fn => fn());
   assert.equal(controller.deps.isCurrent(), true);
   await controller.deps.loadTeam(); await controller.deps.loadApparatus(); await controller.deps.save('w', ['a'], ['b']);
   const snapshot = calls.find(row => Array.isArray(row) && row[0] === 'workers')[2];
-  assert.deepEqual(snapshot, { session, scope: 'scope-a', epoch: 5 });
+  assert.equal(snapshot, supplied); assert.deepEqual(snapshot, { session, scope: 'scope-a', epoch: 5 });
+  assert.equal(controller.deps.canWrite(), true);
   assert.equal(calls.find(row => Array.isArray(row) && row[0] === 'save')[5], snapshot);
   assert.deepEqual(calls.find(row => Array.isArray(row) && row[0] === 'apparatus')[2], { limit: 500 });
   session.epoch++; assert.equal(controller.deps.isCurrent(), false);

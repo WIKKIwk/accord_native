@@ -45,8 +45,8 @@ function AssignmentPicker({ controller }: { controller: RezkaWorkerSettingsContr
 }
 
 // Master-only branch of V2 AdminWorkerSettingsScreen; no route is attached yet.
-export function RezkaWorkerSettingsScreen({ session, navigation, footer }: RezkaWorkerSettingsProps) {
-  const { controller, state, t, notice } = useRezkaWorkerSettings(session), sheet = useNativeSheet();
+export function RezkaWorkerSettingsScreen({ session, snapshot, allowAssignments = false, navigation, footer }: RezkaWorkerSettingsProps) {
+  const { controller, state, t, notice } = useRezkaWorkerSettings(session, snapshot, allowAssignments), sheet = useNativeSheet();
   const colors = useMaterialColors();
   useEffect(() => { if (!state.picker && sheet.isOpen()) sheet.close(); }, [sheet, state.picker]);
   const openPicker = (id: string) => {
@@ -83,10 +83,10 @@ export function RezkaWorkerSettingsScreen({ session, navigation, footer }: Rezka
               <Row><Text>{t('worker.level')}</Text><Text>{t(`worker.level.${level}`)}</Text></Row>
               <Row><Text>{t('worker.phone_label')}</Text><Text>{worker.phone || t('worker.not_entered')}</Text></Row>
               <Row><Text>{t('worker.id')}</Text><Text>{worker.id}</Text></Row>
-              <Button enabled={!saving && !!state.team?.apparatus.length} onClick={() => openPicker(worker.id)}
+              {allowAssignments ? <Button enabled={!saving && !!state.team?.apparatus.length} onClick={() => openPicker(worker.id)}
                 modifiers={[fillMaxWidth(), testID(`worker-apparatus-picker-${worker.id}`)]}>
                 <Column><Text>{t('scope.operator_title')}</Text><Text>{labels.length ? labels.join(', ') : t('scope.none_selected')}</Text></Column>
-              </Button>
+              </Button> : <Column><Text>{t('scope.operator_title')}</Text><Text>{labels.length ? labels.join(', ') : t('scope.none_selected')}</Text></Column>}
             </Column></Host> : null}
           </View>
         </WorkerQueueCard>;

@@ -9,6 +9,7 @@ export type RezkaWorkersState = { phase: 'loading' | 'ready' | 'error'; team: Re
   picker: RezkaPicker | null; notice: RezkaNotice | null; savingIds: string[] };
 export type RezkaWorkerDependencies = {
   isCurrent(): boolean;
+  canWrite(): boolean;
   loadTeam(): Promise<{ workers: RezkaWorker[]; assignments: RezkaAssignment[] }>;
   loadApparatus(): Promise<AdminApparatus[]>;
   save(workerId: string, ids: string[], previous: string[]): Promise<void>;
@@ -83,7 +84,7 @@ export class RezkaWorkerSettingsController {
   clearNotice() { this.update({ notice: null }); }
   openPicker(workerId: string) {
     const team = this.state.team;
-    if (!this.active() || this.state.phase !== 'ready' || !team || !team.apparatus.length) return;
+    if (!this.active() || !this.deps.canWrite() || this.state.phase !== 'ready' || !team || !team.apparatus.length) return;
     const worker = team.workers.find(item => item.id === workerId);
     if (!worker || !worker.id.trim() || this.state.savingIds.includes(worker.id.trim())) return;
     const assignments = new Map(team.assignments.map(item => [item.principal_ref, item]));
@@ -106,7 +107,7 @@ export class RezkaWorkerSettingsController {
   dismissPicker() { this.update({ picker: null }); }
   async save(): Promise<void> {
     const picker = this.state.picker, team = this.state.team;
-    if (!this.active() || !picker || picker.saving || !team || !picker.selected.length) return;
+    if (!this.active() || !this.deps.canWrite() || !picker || picker.saving || !team || !picker.selected.length) return;
     const workerId = picker.worker.id.trim();
     if (!workerId) return;
     const values = prepareAssignment(picker.selected, picker.previous, team.apparatus);

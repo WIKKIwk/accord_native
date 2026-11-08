@@ -36,8 +36,8 @@ function AssignmentPicker({ controller }: { controller: RezkaWorkerSettingsContr
 }
 
 // Master-only branch of V2 AdminWorkerSettingsScreen; no route is attached yet.
-export function RezkaWorkerSettingsScreen({ session, navigation, footer }: RezkaWorkerSettingsProps) {
-  const { controller, state, t, notice } = useRezkaWorkerSettings(session), sheet = useNativeSheet();
+export function RezkaWorkerSettingsScreen({ session, snapshot, allowAssignments = false, navigation, footer }: RezkaWorkerSettingsProps) {
+  const { controller, state, t, notice } = useRezkaWorkerSettings(session, snapshot, allowAssignments), sheet = useNativeSheet();
   useEffect(() => { if (!state.picker && sheet.isOpen()) sheet.close(); }, [sheet, state.picker]);
   const openPicker = (id: string) => {
     controller.openPicker(id);
@@ -67,9 +67,10 @@ export function RezkaWorkerSettingsScreen({ session, navigation, footer }: Rezka
             <HStack><Text>{t('worker.level')}</Text><Text>{t(`worker.level.${level}`)}</Text></HStack>
             <HStack><Text>{t('worker.phone_label')}</Text><Text>{worker.phone || t('worker.not_entered')}</Text></HStack>
             <HStack><Text>{t('worker.id')}</Text><Text>{worker.id}</Text></HStack>
-            <Button modifiers={[disabled(saving || !state.team?.apparatus.length), accessibilityIdentifier(`worker-apparatus-picker-${worker.id}`)]}
+            {allowAssignments ? <Button modifiers={[disabled(saving || !state.team?.apparatus.length), accessibilityIdentifier(`worker-apparatus-picker-${worker.id}`)]}
               onPress={() => openPicker(worker.id)}><VStack alignment="leading"><Text>{t('scope.operator_title')}</Text>
-                <Text>{labels.length ? labels.join(', ') : t('scope.none_selected')}</Text></VStack></Button>
+                <Text>{labels.length ? labels.join(', ') : t('scope.none_selected')}</Text></VStack></Button> :
+              <VStack alignment="leading"><Text>{t('scope.operator_title')}</Text><Text>{labels.length ? labels.join(', ') : t('scope.none_selected')}</Text></VStack>}
           </VStack> : null}
         </Section>;
       }) : null}

@@ -15,7 +15,7 @@ const apparatus = [{ id: a, name: 'Rezka 1' }, { id: b, name: 'Rezka 2' }];
 const assignment = { principal_role: 'aparatchi', principal_ref: 'worker-ali', role_id: 'aparatchi', assigned_apparatus: [a], assigned_item_groups: [] };
 function setup() {
   let current = true, assignments = [assignment], calls = [], fail = null;
-  const controller = new RezkaWorkerSettingsController({ isCurrent: () => current,
+  const controller = new RezkaWorkerSettingsController({ isCurrent: () => current, canWrite: () => true,
     loadTeam: async () => ({ workers, assignments }), loadApparatus: async () => apparatus,
     save: async (...args) => { calls.push(args); if (fail) { const value = fail; fail = null; throw value; }
       assignments = [{ ...assignment, assigned_apparatus: args[1] }]; } });
@@ -42,7 +42,7 @@ test('assignment conflict closes picker and reloads current state', async () => 
 });
 test('a switched account cannot receive a stale load or completion', async () => {
   let resolveLoad; let active = true;
-  const c = new RezkaWorkerSettingsController({ isCurrent: () => active, loadTeam: () => new Promise(resolve => { resolveLoad = resolve; }),
+  const c = new RezkaWorkerSettingsController({ isCurrent: () => active, canWrite: () => true, loadTeam: () => new Promise(resolve => { resolveLoad = resolve; }),
     loadApparatus: async () => apparatus, save: async () => {} });
   const pending = c.load(); active = false; resolveLoad({ workers, assignments: [assignment] }); await pending;
   assert.equal(c.getSnapshot().phase, 'loading'); assert.equal(c.getSnapshot().team, null);
@@ -53,7 +53,7 @@ test('a switched account cannot receive a stale load or completion', async () =>
 
 test('reset redacts previous account while an in-flight write remains uncertain', async () => {
   let active = true, resolveSave, calls = 0;
-  const c = new RezkaWorkerSettingsController({ isCurrent: () => active, loadTeam: async () => ({ workers, assignments: [assignment] }),
+  const c = new RezkaWorkerSettingsController({ isCurrent: () => active, canWrite: () => true, loadTeam: async () => ({ workers, assignments: [assignment] }),
     loadApparatus: async () => apparatus, save: () => { calls++; return new Promise(resolve => { resolveSave = resolve; }); } });
   await c.load(); c.openPicker('worker-ali'); c.toggle(b, true); const pending = c.save();
   active = false; c.invalidate(); resolveSave(); await pending;
@@ -61,7 +61,7 @@ test('reset redacts previous account while an in-flight write remains uncertain'
 });
 test('platform dismissal during save does not reopen a blocked sheet or allow duplicate writes', async () => {
   let rejectSave, calls = 0;
-  const c = new RezkaWorkerSettingsController({ isCurrent: () => true, loadTeam: async () => ({ workers, assignments: [assignment] }),
+  const c = new RezkaWorkerSettingsController({ isCurrent: () => true, canWrite: () => true, loadTeam: async () => ({ workers, assignments: [assignment] }),
     loadApparatus: async () => apparatus, save: () => { calls++; return new Promise((_, reject) => { rejectSave = reject; }); } });
   await c.load(); c.openPicker('worker-ali'); c.toggle(b, true); const pending = c.save();
   c.closePicker(); assert.ok(c.getSnapshot().picker, 'the in-sheet close control is disabled while saving');
@@ -69,4 +69,12 @@ test('platform dismissal during save does not reopen a blocked sheet or allow du
   c.openPicker('worker-ali'); assert.equal(c.getSnapshot().picker, null, 'the same worker remains busy');
   rejectSave({ code: 'rezka_worker_has_open_run', details: [a] }); await pending;
   assert.equal(calls, 1); assert.equal(c.getSnapshot().picker, null); assert.deepEqual(c.getSnapshot().savingIds, []);
+});
+
+test('read-only shell cannot open an assignment picker or write', async () => {
+  let calls = 0;
+  const c = new RezkaWorkerSettingsController({ isCurrent: () => true, canWrite: () => false,
+    loadTeam: async () => ({ workers, assignments: [assignment] }), loadApparatus: async () => apparatus, save: async () => { calls++; } });
+  await c.load(); c.openPicker('worker-ali'); await c.save();
+  assert.equal(c.getSnapshot().picker, null); assert.equal(calls, 0);
 });
