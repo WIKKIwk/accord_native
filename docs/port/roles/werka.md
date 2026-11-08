@@ -88,11 +88,21 @@ Sources: `werka_stock_entry_lookup_screen_models_part_01.dart`, `werka_stock_ent
 - The `Customerga jo‘natish` button is enabled for a nonblank item code, positive quantity and a selected customer when not submitting. The submit step additionally validates a nonblank customer reference. It sends the trimmed item code, exact quantity, entry barcode when nonblank otherwise scanned barcode, source stock-entry name and line index. `src/werka/werkaStockIssueLogic.ts` contains the pure payload/record projections. A successful write records item activity, constructs a pending customer-issue dispatch, notifies Werka runtime and navigates to success with `QR scan ga qaytish`; account-safe runtime and route wiring remain open.
 - On failure the source displays insufficient-stock localization, `Bu QR oldin customerga jo‘natilgan.` for duplicate source, `Bu mahsulot uchun customer topilmadi.` for missing customer, or `customerIssueFailed(error)`. The per-entry submitting indicator and duplicate-submit guard must remain active until completion; no fake success or automatic repeat.
 
-## Archive calendar projections (partial)
+## Archive calendars (partial content and projections)
 
 Sources: `werka_archive_daily_calendar_screen.dart:34-152`, `werka_archive_monthly_calendar_screen.dart:32-130`, `werka_archive_yearly_calendar_screen.dart:32-130`. Daily loads the displayed month with monthly period and records active day numbers; monthly loads the displayed year with yearly period and records active months; yearly loads a 12-year page and records active years. Selecting a day/month/year opens Archive List with the corresponding inclusive local date range. Year pages move by 12 years.
 
-`werkaArchiveCalendar.ts` ports only those pure date projections and ranges, reusing the shared timestamp parser and preserving Dart's UTC calendar fields for explicitly zoned strings. Native calendars/grids and their markers, localized month/date rendering, correct active-page load guards, route wiring, parser edges, timezones/DST and device behavior remain open.
+`werkaArchiveCalendar.ts` ports those pure date projections and ranges, reusing the shared timestamp parser and preserving Dart's UTC calendar fields for explicitly zoned strings. Daily calendar UI, localized month/date rendering, correct active-page load guards, route wiring, parser edges, timezones/DST and device behavior remain open.
+
+### Standalone monthly and yearly calendars
+
+Sources: `werka_archive_monthly_calendar_screen.dart:34-303`, `werka_archive_yearly_calendar_screen.dart:34-307`.
+
+- Monthly starts in the current local year and pages by one year. Yearly starts at current local year minus five and pages by twelve years. Both read archive data with `yearly` period for the entire displayed interval. Their titles combine the selected kind and period with ` • `; their dock has no selected tab.
+- While loading with no active months/years, the body is blank and the shell shows loading below its native title. An error with no active values shows `serverDisconnectedRetry` and `retry`. Otherwise retain the grid, including during loading/error, and permit paging and every selection. Active markers indicate recorded data, not selection or enablement. A completed empty set still shows all twelve cells, followed by `archiveCalendarEmptyYear`.
+- Month cells are ordered 1–12 and use `MaterialLocalizations.formatMonthYear(DateTime(year, month, 1)).split(' ').first`. Do not replace this with a guessed abbreviated month name. Year cells are ordered start through start+11 in three columns. Selecting an inactive cell is allowed and opens the same inclusive monthly/yearly range as an active cell. No selection state is set before opening the list.
+
+`werkaArchivePeriodPresentation.ts` supplies initial pages, request descriptions, page steps, the body decision, localized title/empty copy, cell markers and list arguments. `WerkaArchivePeriodContent` supplies controlled native grid bodies on both platforms, reusing the existing iOS list and Android `OrdersList` plus existing native retry rows. Paging emits each step for the owner to apply to its latest page, so repeated taps do not depend on a stale rendered page value. No request is sent and no route is opened. The owner must provide a verified source-compatible month/year formatter; none is assumed. Account-safe loads, page-generation checks, native header/loading/dock/back, full source layout, localized date and Urdu behavior, accessibility and device verification remain open. These bodies do not carry full-screen coverage tags.
 
 ## Archive list (partial content)
 
