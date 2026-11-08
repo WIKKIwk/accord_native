@@ -38,6 +38,8 @@ function decodeBase64Url(encoded: string): string | null {
         bits &= (1 << bitCount) - 1;
       }
     }
+    // Dart rejects a nonzero unused tail even when it decodes to the same bytes.
+    if (bits !== 0) return null;
     return new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes));
   } catch { return null; }
 }

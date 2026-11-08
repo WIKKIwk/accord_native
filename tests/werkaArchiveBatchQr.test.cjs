@@ -49,3 +49,10 @@ test('rejects malformed and non-positive payloads, accepts trimmed Unicode and d
   const parsed = parse(`  ${url(['archive', 'sess', 'Bo‘yoq', '2,5 kg', 'time'])}  `);
   assert.equal(parsed.itemName, 'Bo‘yoq'); assert.equal(parsed.qty, 2.5);
 });
+test('rejects nonzero unused base64 tail bits like Dart base64Url', () => {
+  const clean = Buffer.from('ARCHIVE\ns\nx\n1\nt1').toString('base64url');
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const corrupted = clean.slice(0, -1) + alphabet[alphabet.indexOf(clean.at(-1)) + 1];
+  assert.ok(parse(`https://scan.wspace.sbs/A/${clean}`));
+  assert.equal(parse(`https://scan.wspace.sbs/A/${corrupted}`), null);
+});
