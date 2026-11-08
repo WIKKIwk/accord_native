@@ -9,6 +9,7 @@ import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
 import { MobileApiException } from '../shared/mobileApiException';
 import { checkedAdminGuard } from './adminProductionRequest';
 import type { AdminWorkMapDetailTicket, AdminWorkMapPage } from './adminWorkMapController';
+import { adminWorkMapMetadataFromSaved } from './adminWorkMapMetadataModel';
 
 /** Capture one witness and one read scope for this screen; never recapture a stale operation. */
 function adminWorkMapGuard(session: Session, isWitnessCurrent: () => boolean) {
@@ -50,8 +51,10 @@ export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () 
       guard();
       if (snapshot.epoch === ticket.epoch && snapshot.revision != null && ticket.revision != null && snapshot.revision >= ticket.revision &&
           snapshot.scope && snapshot.maps.length === 1 && snapshot.maps[0].map.id === ticket.id) {
-        const map = snapshot.maps[0].map, customers = snapshot.order_customers ?? {};
-        return { kind: 'order' as const, map, customer: Object.hasOwn(customers, ticket.id) ? customers[ticket.id] : map.customer_name };
+        const saved = snapshot.maps[0], map = saved.map, customers = snapshot.order_customers ?? {};
+        const metadata = adminWorkMapMetadataFromSaved(saved);
+        guard();
+        return { kind: 'order' as const, map, metadata, customer: Object.hasOwn(customers, ticket.id) ? customers[ticket.id] : map.customer_name };
       }
     }
     throw new MobileApiException({ code: 'order_page_changed', message: 'Buyurtma yangilandi. Qayta oching.' });

@@ -13,6 +13,8 @@ function load(file, mocks = {}) {
 }
 const routes = load('shared/appRoutes'), profileGuard = load('shared/profileSessionGuard'), exception = load('shared/mobileApiException');
 const adminGuard = load('admin/adminProductionRequest', { '../authorizedFetch': {}, '../shared/mobileApiException': {}, '../workerControlsApi': {} });
+const metadata = load('admin/adminWorkMapMetadataModel', { './dartJsonString': load('admin/dartJsonString'),
+  './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel', { './dartJsonString': load('admin/dartJsonString') }) });
 function fixture() {
   const session = { baseUrl: 'https://server.example', token: 'token', profile: { role: 'admin', ref: 'me' }, capabilities: ['admin.access'] };
   let current = true, duringRead = () => {}, snapshot = { epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }] };
@@ -25,6 +27,7 @@ function fixture() {
     '../pendingOrderApi': { pendingOrderDetail: async (s, id, guard) => { calls.push(['pending', s, id]); guard(); duringRead(); guard(); return { id, template: { product: 'P' } }; } },
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile, value.capabilities]) },
     '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, '../shared/mobileApiException': exception, './adminProductionRequest': adminGuard,
+    './adminWorkMapMetadataModel': metadata,
   };
   const api = load('admin/adminWorkMapReader', apis);
   return { session, calls, api, dependencies: apis, witness: () => current, invalidate: () => { current = false; }, onRead: fn => { duringRead = fn; }, setSnapshot: value => { snapshot = value; } };
@@ -92,6 +95,16 @@ test('detail customer uses own snapshot entry, including empty text, then map fa
     assert.equal(result.customer, expected);
   }
 });
+test('hydrated detail retains creation metadata without another request and fails malformed dates before publishing', async () => {
+  const f = fixture(), read = f.api.adminWorkMapDetailReader(f.session, f.witness), ticket = { kind: 'order', id: 'o', epoch: 'e', revision: 4 };
+  f.setSnapshot({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' }, created_at_unix: 1700000000,
+    created_by: { role: '\u0085sales_manager\u0085', ref: 'Not displayed', display_name: ' Ana ' } }] });
+  const detail = await read(ticket);
+  assert.deepEqual(detail.metadata, { createdAtUnix: 1700000000, creator: { role: 'sales_manager', displayName: 'Ana' } });
+  assert.equal(f.calls.length, 1);
+  f.setSnapshot({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' }, created_at_unix: 8640000000001 }] });
+  await assert.rejects(read(ticket), RangeError); assert.equal(f.calls.length, 2);
+});
 
 test('Sequence catalog uses the existing guarded limit-200 reader and original witness', async () => {
   const f = fixture(), read = f.api.adminWorkMapCatalogReader(f.session, f.witness);
@@ -127,6 +140,22 @@ function loadRoot(name, mocks) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
+test('actual detail decoder supplies creation metadata only while the opening scope is still current', async () => {
+  for (const invalidate of [false, true]) {
+    const f = fixture(), requests = [], raw = { epoch: 'e', scope: 's', rev: 5, sequences: {}, visible_order_ids: {},
+      queue_states: {}, queue_policies: [], order_controls: {}, stage_states: {}, queue_action_controls: {}, frozen_orders_by_apparatus: {},
+      maps: [{ map: { id: 'o', title: 'Film', nodes: [], edges: [] }, program: {}, created_at_unix: 1700000000,
+        created_by: { role: 'brigader', display_name: 'Ana', ref: 'ignored' } }] };
+    const detailApi = loadRoot('productionOrderDetailApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
+      requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
+    } } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderDetailApi': detailApi }).adminWorkMapDetailReader(f.session, f.witness);
+    const pending = reader({ kind: 'order', id: 'o', epoch: 'e', revision: 4 });
+    if (invalidate) await assert.rejects(pending, /session changed/);
+    else assert.deepEqual((await pending).metadata, { createdAtUnix: 1700000000, creator: { role: 'brigader', displayName: 'Ana' } });
+    assert.equal(requests.length, 1);
+  }
+});
 test('real paged Audit reader keeps complete counts for twenty findings and rechecks a body-time account change', async () => {
   for (const invalidate of [false, true]) {
     const f = fixture(), requests = [];

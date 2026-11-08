@@ -14,6 +14,8 @@ function load(file, mocks = {}) {
   return mod.exports;
 }
 const guard = load('shared/profileSessionGuard.ts');
+const metadata = load('admin/adminWorkMapMetadataModel.ts', { './dartJsonString': load('admin/dartJsonString.ts'),
+  './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel.ts', { './dartJsonString': load('admin/dartJsonString.ts') }) });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 function fixture() {
@@ -92,23 +94,31 @@ function nodes(tree) {
   return tree && typeof tree === 'object' ? [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)] : [];
 }
 test('basic detail view delegates lifecycle/retry and displays the canonical hydrated customer', () => {
-  let detail = { valid: true, loading: false, value: { kind: 'order', customer: 'Canonical', map: { title: 'Hydrated', customer_name: 'Old', order_kg: 12 } } };
+  let detail = { valid: true, loading: false, value: { kind: 'order', customer: 'Canonical', metadata: { createdAtUnix: null, creator: null },
+    map: { title: 'Hydrated', customer_name: 'Old', order_kg: 12 } } };
   const retry = () => {}, close = () => {};
   const View = load('admin/AdminWorkMapDetail.tsx', {
     '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host', ListItem: 'ListItem' },
     react: { useSyncExternalStore: (_s, snapshot) => snapshot() },
     'react-native': { ActivityIndicator: 'ActivityIndicator', ScrollView: 'ScrollView', StyleSheet: { create: x => x }, Text: 'Text', View: 'View' },
     '../components/useWorkerColors': { useWorkerColors: () => ({ text: '#000', field: '#fff' }) },
-    '../shared/localization': { localizedGetter: key => key, productionText: key => key },
+    '../shared/localization': { localizedGetter: key => key, productionText: key => key, adminText: key => key },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './useAdminWorkMapDetail': { useAdminWorkMapDetail: () => ({ ...detail, retry }) },
+    './AdminWorkMapMetadata': { AdminWorkMapMetadata: 'Metadata' }, './adminWorkMapMetadataModel': metadata,
   }).AdminWorkMapDetail;
-  const props = { row: { code: '1', id: 'o', title: 'Old' }, close };
+  const props = { session: { profile: { role: 'admin' } }, ticket: { kind: 'order' }, row: { code: '1', id: 'o', title: 'Old' }, close };
   const tree = nodes(View(props));
   assert.equal(tree.find(node => node.type === 'ListItem' && node.props.children === 'customerLabel').props.supportingText, 'Canonical');
   assert.equal(tree.find(node => node.type === 'Text').props.children, '1 • Hydrated');
+  assert.deepEqual(tree.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_missing']);
+  detail.value.metadata = { createdAtUnix: null, creator: { role: 'telegram', displayName: 'Ana' } };
+  assert.deepEqual(nodes(View(props)).find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_role.telegram · Ana']);
   detail = { valid: true, loading: false, error: 'failed' };
   const failed = nodes(View(props)); assert.equal(failed.some(node => node.type === 'ListItem'), false);
+  assert.deepEqual(failed.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['loading', 'loading']);
+  assert.equal(nodes(View({ ...props, session: { profile: { role: 'sales_manager' } } })).some(node => node.type === 'Metadata'), false);
+  assert.equal(nodes(View({ ...props, ticket: { kind: 'pending' } })).some(node => node.type === 'Metadata'), false);
   assert.equal(failed.find(node => node.type === 'Button' && node.props.label === 'retry').props.onPress, retry);
   assert.equal(failed.find(node => node.type === 'Button' && node.props.label === 'closeAction').props.onPress, close);
   detail = { valid: false }; assert.equal(View(props).type, 'View'); assert.equal(nodes(View(props)).length, 1);
