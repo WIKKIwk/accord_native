@@ -3,7 +3,7 @@ import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 
 /** Chat uses its own short-lived socket ticket, separate from the worker stream. */
-export function subscribeChatLive(session: Session, onInvalidate: () => void): () => void {
+export function subscribeChatLive(session: Session, onInvalidate: () => void, onEvent?: (event: Record<string, unknown>) => void): () => void {
   let stopped = false;
   let foreground = AppState.currentState == null || AppState.currentState === 'active';
   let generation = 0;
@@ -61,19 +61,21 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void): (
         }, 25000);
       };
       ws.onmessage = event => {
-        if (socket !== ws || stopped || !foreground) return;
-        let payload: { event?: unknown };
+        if (socket !== ws || stopped || !foreground || !activeSessionToken(session)) return;
+        let payload: Record<string, unknown>;
         try {
           const parsed: unknown = JSON.parse(String(event.data));
           if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { ws.close(); return; }
-          payload = parsed as { event?: unknown };
+          payload = parsed as Record<string, unknown>;
         } catch { ws.close(); return; }
         if (payload.event === 'chat.ready') {
           if (readyTimer !== undefined) clearTimeout(readyTimer);
           readyTimer = undefined;
           attempts = 0;
+          onEvent?.(payload);
           invalidate();
         } else if (payload.event === 'chat.resync_required' || payload.event === 'chat.message.created' || payload.event === 'chat.message.updated') {
+          onEvent?.(payload);
           invalidate();
         }
       };

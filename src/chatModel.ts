@@ -9,6 +9,7 @@ export type ChatConversation = {
   preview: string;
   lastMessageSequence: number;
   unreadCount: number;
+  updatedAt: number;
   timestamp: number;
 };
 export type ChatAttachment = { mediaId: string; kind: 'image' | 'video'; width: number; height: number };
@@ -23,6 +24,14 @@ export type ChatMessage = {
   timestamp: number;
   attachment?: ChatAttachment;
   caption?: string;
+};
+export type ChatSyncEvent = {
+  eventId: string;
+  cursor: number;
+  event: string;
+  conversationId: string;
+  sequence: number;
+  message: ChatMessage | null;
 };
 
 function object(value: unknown): Record<string, unknown> {
@@ -73,7 +82,7 @@ export function parseOpenedChatConversation(value: unknown, target: ChatPeer): C
   return {
     id, peer, title: peer.displayName || target.displayName || text(row.title) || 'Suhbat',
     preview: Object.keys(message).length ? messagePreview(message) : '',
-    lastMessageSequence: integer(row.last_message_sequence), unreadCount: integer(row.unread_count),
+    lastMessageSequence: integer(row.last_message_sequence), unreadCount: integer(row.unread_count), updatedAt: integer(row.updated_at_unix),
     timestamp: integer(message.created_at_unix) || integer(row.updated_at_unix),
   };
 }
@@ -122,6 +131,39 @@ export function parseChatMessages(value: unknown, conversationId: string): { ite
   if (!Array.isArray(page.items)) throw new Error('Xabarlarni o‘qib bo‘lmadi.');
   const messages = page.items.map(item => parseChatMessage(item, conversationId)).filter((item): item is ChatMessage => item !== null);
   return { items: mergeChatMessages([], messages), hasMore: page.has_more === true };
+}
+
+/** Gap recovery must not skip a malformed map and advance past it. */
+export function parseChatMessagesForRecovery(value: unknown, conversationId: string): { items: ChatMessage[]; hasMore: boolean } {
+  const page = object(value);
+  if (!Array.isArray(page.items)) throw new Error('Chat so‘rovi bajarilmadi');
+  for (const item of page.items) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    if (!parseChatMessage(item, conversationId)) throw new Error('Chat so‘rovi bajarilmadi');
+  }
+  return parseChatMessages(value, conversationId);
+}
+
+/** @v2 ChatSyncPage */
+export function parseChatSyncPage(value: unknown): { events: ChatSyncEvent[]; nextCursor: number; hasMore: boolean } {
+  const page = object(value);
+  if (page.events != null && !Array.isArray(page.events)) throw new Error('Chat so‘rovi bajarilmadi');
+  const events: ChatSyncEvent[] = [];
+  for (const value of (page.events ?? []) as unknown[]) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+    const row = value as Record<string, unknown>;
+    const rawMessage = row.message;
+    let message: ChatMessage | null = null;
+    if (rawMessage && typeof rawMessage === 'object' && !Array.isArray(rawMessage)) {
+      const messageRow = rawMessage as Record<string, unknown>;
+      message = parseChatMessage(messageRow, text(messageRow.conversation_id));
+      // Do not advance a durable cursor past a message we cannot preserve.
+      if (!message) throw new Error('Chat so‘rovi bajarilmadi');
+    }
+    events.push({ eventId: text(row.event_id), cursor: integer(row.cursor), event: text(row.event),
+      conversationId: text(row.conversation_id), sequence: integer(row.sequence), message });
+  }
+  return { events, nextCursor: integer(page.next_cursor), hasMore: page.has_more === true };
 }
 
 export function mergeChatMessages(current: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
@@ -185,7 +227,7 @@ export function parseChatConversations(value: unknown): { items: ChatConversatio
     items.push({
       id, peer, title: peer?.displayName || text(row.title) || 'Suhbat',
       preview: messagePreview(message), lastMessageSequence: sequence,
-      unreadCount: integer(row.unread_count),
+      unreadCount: integer(row.unread_count), updatedAt: integer(row.updated_at_unix),
       timestamp: integer(message.created_at_unix) || integer(row.updated_at_unix),
     });
   }
