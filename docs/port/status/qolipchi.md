@@ -55,7 +55,11 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 
 - Home logic checkpoint: ported saved block ordering, selected-tab reorder, exact snapshot equality and cancellable block/cell search counts. The f119 oracle passed its direct reorder test; additional tests are source-derived. All 158 Qolip tests, iOS typecheck and Expo lint passed. Android typecheck and the full suite were not rerun for this checkpoint. The home state, screen and complete contract are not implemented.
 
+- Grid logic checkpoint: ported fixed A–Z/1–13 grid dimensions, normalized grouping and totals, unplaced/other-cell choices and ID-based multi-selection. Four focused tests derive from f119 source. All 162 Qolip tests, iOS typecheck and Expo lint passed; Android and the full suite were not rerun. No grid UI or hardware was run.
+
 ## Deviations candidates
+
+- Grid statistics count nonempty location labels outside the fixed visible grid, which can yield occupied cells that are not displayed; f119 behavior is retained.
 
 - Home saved order keys use only trimmed lowercased block names, so duplicate names in different warehouses collapse to the last value. The f119 V2 behavior is preserved and needs product review after parity.
 
