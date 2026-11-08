@@ -63,3 +63,40 @@ test('other failures and malformed results are not treated as success', async ()
   await assert.rejects(failed.api.createWerkaCustomerIssue({}, { customerRef: 'c', itemCode: 'i', qty: 1 }), /Werka customer issue create failed/);
   assert.throws(() => failed.api.werkaCustomerIssueBatchResultFromJson({ created: 'not a list' }), /Invalid customer issue list/);
 });
+test('non-finite quantities fail with the Dart encoding error before any issue request', async () => {
+  for (const qty of [NaN, Infinity, -Infinity]) {
+    const { api, calls } = setup(200, {});
+    const requests = [
+      () => api.createWerkaUnannouncedDraft({}, { supplierRef: 's', itemCode: 'i', qty }),
+      () => api.createWerkaCustomerIssue({}, { customerRef: 'c', itemCode: 'i', qty }),
+      () => api.createWerkaCustomerIssueBatch({}, 'batch', [
+        { customerRef: 'c1', itemCode: 'i1', qty: 1 }, { customerRef: 'c2', itemCode: 'i2', qty },
+      ]),
+    ];
+    for (const request of requests) {
+      await assert.rejects(request(), error => {
+        const message = `Converting object to an encodable object failed: ${String(qty)}`;
+        assert.equal(error.name, 'JsonUnsupportedObjectError');
+        assert.equal(error.message, message);
+        assert.equal(String(error), message);
+        return true;
+      });
+      assert.equal(calls.length, 0);
+    }
+  }
+});
+test('unannounced API error matches the standalone f119 source-equivalent samples', async () => {
+  // These are Dart-generated numeric and encoding samples, not Flutter UI tests.
+  const fixture = require('./contracts/f11910bb/werka_json_nonfinite_oracle.json');
+  assert.equal(fixture.baseline, 'f11910bb2c8c7081ce26770e69811b03fd0739ed');
+  for (const sample of fixture.cases.filter(row => row.errorType)) {
+    const qty = sample.input.includes('NaN') ? NaN : Infinity;
+    const { api, calls } = setup(200, {});
+    await assert.rejects(api.createWerkaUnannouncedDraft({}, { supplierRef: 's', itemCode: 'i', qty }), error => {
+      assert.equal(error.name, sample.errorType);
+      assert.equal(String(error), sample.errorText);
+      return true;
+    });
+    assert.equal(calls.length, sample.postCalls);
+  }
+});

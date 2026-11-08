@@ -42,6 +42,14 @@ Source: `werka_status_detail_screen.dart:17-176`, `werka_store.dart:96-105, 231-
 
 Source: `werka_create_hub_screen.dart:9-87`. Title is `createHubTitle`. The four rows, in order, are `QR skaner` / `Paddon yoki WIP ma’lumotini ko‘rish va ixtiyoriy kirim`; `unannouncedTitle` / `unannouncedDescription`; `customerIssueTitle` / `customerIssueDescription`; and `batchDispatchTitle` / `batchDispatchDescription`. Each opens the matching scan, unannounced, customer-issue and batch-dispatch flow. Create dock is active. The sheet entry has an additional Tarozi action; do not conflate the two surfaces.
 
+### Unannounced supplier flow (source notes only)
+
+Source: `werka_unannounced_supplier_screen.dart:30-322` and `createWerkaUnannouncedDraft` in `mobile_api_werka_MobileApiWerka_methods_01.dart:357-381`. The quantity initially is `1`; an optional prefill supplies supplier, item and a formatted quantity. The supplier picker searches paginated supplier names and phone numbers. Selecting a supplier clears the item. The item picker is available after choosing a supplier, searches its items with page size 100, shows the item name and code, and includes the source scan icon. Reuse existing native picker/list/search components rather than rebuilding them.
+
+The form shows supplier, then item and finally a decimal-keyboard quantity field with the selected unit. The confirm button requires supplier and item; when submitting, picker buttons and confirm are disabled, confirm text changes to `pinSaving`, but the quantity field itself is not disabled in this source. `double.tryParse(trimmedText) ?? 0` followed by `qty <= 0` shows `qtyRequired` for invalid or nonpositive input. Otherwise the dialog shows `confirmTitle`, supplier, item, `qty.toStringAsFixed(0)` and unit, then `no`/`yes` actions. Cancel sends nothing. After confirmation the source sets submitting, creates the draft, records item activity and the pending record, emits refresh and navigates to success with the unannounced return target. `finally` resets submitting when mounted; this method has no local error catch or snackbar.
+
+Source permits `NaN` and positive infinity past its numeric validation, where Dart JSON encoding throws before the HTTP `_post`. `werkaJsonEncode` reproduces this particular no-send error for the role's plain write objects; the current standalone source-equivalent fixture is not a Flutter screen test, and the native form, dialog, runtime updates, safe session binding and navigation are not yet implemented. Account and write-settlement holds still prohibit opening the route.
+
 ### WerkaArchiveScreen and WerkaArchivePeriodScreen
 
 Source: `werka_archive_screen.dart:12-67`, `werka_archive_period_screen.dart:12-103`.

@@ -60,3 +60,19 @@ test('server errors and invalid list shapes do not become success', async () => 
   const failed = setup({}, 503); await assert.rejects(failed.api.werkaPending(failed.session), /Werka pending failed/);
   const invalid = setup({}); await assert.rejects(invalid.api.werkaHistory(invalid.session), /Invalid Werka list/);
 });
+test('non-finite accepted or returned quantity fails before sending and formats like Dart', async () => {
+  for (const qty of [NaN, Infinity, -Infinity]) {
+    for (const field of ['acceptedQty', 'returnedQty']) {
+      const { api, calls, session } = setup({});
+      await assert.rejects(api.confirmReceipt(session, { receiptID: 'r', acceptedQty: 1, [field]: qty }), error => {
+        const message = `Converting object to an encodable object failed: ${String(qty)}`;
+        assert.equal(error.name, 'JsonUnsupportedObjectError');
+        assert.equal(String(error), message);
+        // V2's detail screen interpolates the exception into this snackbar.
+        assert.equal(`Qabul qilish bo‘lmadi: ${error}`, `Qabul qilish bo‘lmadi: ${message}`);
+        return true;
+      });
+      assert.equal(calls.length, 0);
+    }
+  }
+});

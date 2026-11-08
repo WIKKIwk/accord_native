@@ -2,6 +2,7 @@ import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
 import { dispatchRecordFromJson } from '../shared/notificationApi';
+import { werkaJsonEncode } from './werkaJsonEncode';
 import { werkaMutationScope } from './werkaMutationScope';
 
 type Obj = Record<string, unknown>;
@@ -52,7 +53,7 @@ export function werkaCustomerIssueBatchResultFromJson(value: unknown) {
 export async function createWerkaUnannouncedDraft(session: Session, input: { supplierRef: string; itemCode: string; qty: number }) {
   const scope = werkaMutationScope(session);
   const response = await authorizedFetch(session, '/v1/mobile/werka/unannounced/create', { method: 'POST', headers: jsonHeaders,
-    body: JSON.stringify({ supplier_ref: input.supplierRef, item_code: input.itemCode, qty: input.qty }) }, scope.beforeSend);
+    body: werkaJsonEncode({ supplier_ref: input.supplierRef, item_code: input.itemCode, qty: input.qty }) }, scope.beforeSend);
   scope.afterResponse();
   if (response.status !== 200) throw new Error('Werka unannounced create failed');
   let data: unknown;
@@ -69,7 +70,7 @@ export async function createWerkaCustomerIssue(session: Session, input: { custom
   if (input.sourceStockEntryName?.trim()) body.source_stock_entry = input.sourceStockEntryName.trim();
   if ((input.sourceLineIndex ?? 0) > 0) body.source_line_index = input.sourceLineIndex;
   const response = await authorizedFetch(session, '/v1/mobile/werka/customer-issue/create', { method: 'POST', headers: jsonHeaders,
-    body: JSON.stringify(body) }, scope.beforeSend);
+    body: werkaJsonEncode(body) }, scope.beforeSend);
   scope.afterResponse();
   if (response.status !== 200) {
     let raw: unknown;
@@ -89,7 +90,7 @@ export async function createWerkaCustomerIssueBatch(session: Session, clientBatc
   lines: readonly { customerRef: string; itemCode: string; qty: number }[]) {
   const scope = werkaMutationScope(session);
   const response = await authorizedFetch(session, '/v1/mobile/werka/customer-issue/batch-create', { method: 'POST', headers: jsonHeaders,
-    body: JSON.stringify({ client_batch_id: clientBatchID,
+    body: werkaJsonEncode({ client_batch_id: clientBatchID,
       lines: lines.map(line => ({ customer_ref: line.customerRef, item_code: line.itemCode, qty: line.qty })) }) }, scope.beforeSend);
   scope.afterResponse();
   if (response.status !== 200) throw new Error('Werka customer issue batch create failed');
