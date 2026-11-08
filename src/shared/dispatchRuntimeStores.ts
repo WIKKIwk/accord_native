@@ -13,9 +13,11 @@ class ObservableStore {
   protected notify(): void { for (const listener of this.listeners) listener(); }
 }
 
+const createdLabelPattern = /^([+-]?\d{4,6})-?(\d\d)-?(\d\d)(?:[ T](\d\d)(?::?(\d\d)(?::?(\d\d)(?:[.,](\d+))?)?)?( ?[zZ]| ?([-+])(\d\d)(?::?(\d\d))?)?)?$/;
+
 /** @v2 parseCreatedLabelTimestamp */
 export function parseCreatedLabelTimestamp(value: string): number | null {
-  const match = /^([+-]?\d{4,6})-?(\d\d)-?(\d\d)(?:[ T](\d\d)(?::?(\d\d)(?::?(\d\d)(?:[.,](\d+))?)?)?( ?[zZ]| ?([-+])(\d\d)(?::?(\d\d))?)?)?$/.exec(value.trim());
+  const match = createdLabelPattern.exec(value.trim());
   if (!match) return null;
   const [, year, month, day, hour = '0', minute = '0', second = '0', fraction = '', zone, sign, offsetHour = '0', offsetMinute = '0'] = match;
   const millis = Number((fraction + '000').slice(0, 3));
@@ -32,10 +34,32 @@ export function parseCreatedLabelTimestamp(value: string): number | null {
   return Number.isFinite(result) ? result : null;
 }
 
+type PreciseCreatedLabel = { milliseconds: number; subMillisecondMicros: number };
+function preciseCreatedLabel(value: string): PreciseCreatedLabel | null {
+  // The Dart VM also treats U+0085 as whitespace. Keep the exported
+  // millisecond parser's existing behavior while matching V2 in the comparator.
+  const normalized = value.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');
+  const milliseconds = parseCreatedLabelTimestamp(normalized);
+  if (milliseconds === null) return null;
+  const match = createdLabelPattern.exec(normalized);
+  if (!match) return null;
+  // Dart DateTime.parse keeps the first six fractional digits, including for
+  // dates before 1970. Keeping the sub-millisecond part separate avoids losing
+  // precision when epoch milliseconds are multiplied by 1,000 in JavaScript.
+  const fraction = (match[7] ?? '').padEnd(6, '0').slice(0, 6);
+  const subMillisecondMicros = Number(fraction.slice(3));
+  const limit = 8_640_000_000_000_000;
+  if (milliseconds < -limit || milliseconds > limit || (milliseconds === limit && subMillisecondMicros > 0)) return null;
+  return { milliseconds, subMillisecondMicros };
+}
+
 /** @v2 compareCreatedLabelsDesc */
 export function compareCreatedLabelsDesc(left: string, right: string): number {
-  const a = parseCreatedLabelTimestamp(left), b = parseCreatedLabelTimestamp(right);
-  if (a !== null && b !== null) return b === a ? 0 : b > a ? 1 : -1;
+  const a = preciseCreatedLabel(left), b = preciseCreatedLabel(right);
+  if (a !== null && b !== null) {
+    if (a.milliseconds !== b.milliseconds) return b.milliseconds > a.milliseconds ? 1 : -1;
+    return b.subMillisecondMicros === a.subMillisecondMicros ? 0 : b.subMillisecondMicros > a.subMillisecondMicros ? 1 : -1;
+  }
   if (a !== null) return -1;
   if (b !== null) return 1;
   return right === left ? 0 : right > left ? 1 : -1;
