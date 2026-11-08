@@ -5,7 +5,11 @@ import { WorkerControlException } from '../workerControlsApi';
 import type { AdminRawMaterialEvent } from './materialHistoryApi';
 import { materialHistoryOptionalText } from './materialHistoryValueText';
 
-const label = (value: string, values: Record<string, string>) => values[dartTrim(value).toLowerCase()] ?? dartTrim(value).toLowerCase();
+const label = (value: string, values: Record<string, string>) => {
+  const normalized = dartTrim(value).toLowerCase();
+  // Dart's switch falls back even when the name is a JavaScript prototype key.
+  return Object.hasOwn(values, normalized) ? values[normalized] : normalized;
+};
 const eventLabels: Record<string, string> = {
   receipt_posted: 'Omborga kirim qilindi', order_reserved: 'Zakaz uchun band qilindi', order_unreserved: 'Zakaz bandi yechildi',
   usage_started: 'Ishlatishga o‘tkazildi', usage_cancelled: 'Boshlash bekor qilindi',
@@ -39,7 +43,7 @@ export function materialHistoryTitle(event: AdminRawMaterialEvent): string {
     consumption_posted: `${item} sarflandi${qty}`, consumption_reversed: `${item} sarfi bekor qilindi${qty}`,
     adjustment_increase: `${item} tuzatildi${qty}`, adjustment_decrease: `${item} kamaytirildi${qty}`,
     transfer_in: `${item} transfer kirim${qty}`, transfer_out: `${item} transfer chiqim${qty}` };
-  return titles[event.event_type] ?? item;
+  return Object.hasOwn(titles, event.event_type) ? titles[event.event_type] : item;
 }
 /** @v2 _materialHistorySubtitle */
 export function materialHistorySubtitle(event: AdminRawMaterialEvent, catalog: Pick<AdminApparatus, 'id' | 'name'>[]): string {

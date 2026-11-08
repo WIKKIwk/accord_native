@@ -154,3 +154,64 @@ test('event payload decoder makes the same shallow map copy as f119 _jsonObject'
   raw.other = 'later'; assert.equal(Object.hasOwn(event.payload_json, 'other'), false);
   for (const value of [null, [], 'not a map', 7, false]) assert.deepEqual(api.rawMaterialEvent({ payload_json: value }).payload_json, {});
 });
+
+// Source-derived, not an executed Flutter oracle: f119 declarations_part_03.dart:155-239.
+// The label switches normalize ASCII names, but the title switch matches the original event type.
+test('unknown History label names cannot resolve JavaScript prototype members', () => {
+  const api = setup(() => {}), cases = [
+    ['constructor', 'constructor'], [' CONSTRUCTOR ', 'constructor'], ['__proto__', '__proto__'],
+    [' __PROTO__ ', '__proto__'], ['toString', 'tostring'], ['hasOwnProperty', 'hasownproperty'],
+    ['valueOf', 'valueof'], ['__defineGetter__', '__definegetter__'],
+  ];
+  for (const [raw, expected] of cases) {
+    const event = api.rawMaterialEvent({ event_type: raw, stock_status_before: raw, stock_status_after: raw,
+      actor_role: raw, owner_role: raw, source_type: raw });
+    assert.deepEqual(api.materialHistoryDetails(event, []), [
+      { label: 'Harakat turi', value: expected }, { label: 'Holati', value: expected },
+      { label: 'Rol', value: expected }, { label: 'Egasi roli', value: expected }, { label: 'Manba', value: expected },
+    ], raw);
+  }
+  const transition = api.materialHistoryDetails(api.rawMaterialEvent({ stock_status_before: '__proto__', stock_status_after: 'constructor' }), []);
+  assert.deepEqual(transition, [{ label: 'Holati', value: '__proto__ → constructor' }]);
+});
+
+test('unknown and unnormalized History title names always return the source item fallback', () => {
+  const api = setup(() => {});
+  for (const event_type of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', '__defineGetter__',
+    '', 'unknown', 'RECEIPT_POSTED', ' receipt_posted ']) {
+    assert.equal(api.materialHistoryTitle(api.rawMaterialEvent({ event_type, item_name: ' Rulon ', item_code: 'CODE' })), 'Rulon', event_type);
+    assert.equal(api.materialHistoryTitle(api.rawMaterialEvent({ event_type, item_name: ' ', item_code: ' CODE ' })), 'CODE', event_type);
+    assert.equal(api.materialHistoryTitle(api.rawMaterialEvent({ event_type })), '', event_type);
+  }
+});
+
+test('History known switches retain source labels and exact event-title matching', () => {
+  const api = setup(() => {}), events = [
+    ['receipt_posted', 'Omborga kirim qilindi', 'Rulon kirim'],
+    ['order_reserved', 'Zakaz uchun band qilindi', 'Rulon berildi'],
+    ['order_unreserved', 'Zakaz bandi yechildi', 'Rulon yechildi'],
+    ['usage_started', 'Ishlatishga o‘tkazildi', 'Rulon ishlatishga o‘tdi'],
+    ['usage_cancelled', 'Boshlash bekor qilindi', 'Rulon ishlatishga o‘tkazish bekor qilindi'],
+    ['delivery_received', 'Apparat oldiga yetkazildi va qabul qilindi', 'Rulon apparat oldiga yetkazildi'],
+    ['consumption_posted', 'Material sarflandi', 'Rulon sarflandi'],
+    ['consumption_reversed', 'Material sarfi bekor qilindi', 'Rulon sarfi bekor qilindi'],
+    ['adjustment_increase', 'Miqdor oshirildi', 'Rulon tuzatildi'],
+    ['adjustment_decrease', 'Miqdor kamaytirildi', 'Rulon kamaytirildi'],
+    ['transfer_in', 'Omborga transfer qilindi', 'Rulon transfer kirim'],
+    ['transfer_out', 'Ombordan transfer qilindi', 'Rulon transfer chiqim'],
+  ];
+  for (const [event_type, value, title] of events) {
+    assert.equal(api.materialHistoryTitle(api.rawMaterialEvent({ event_type, item_name: 'Rulon' })), title, event_type);
+    const details = api.materialHistoryDetails(api.rawMaterialEvent({ event_type: ` ${event_type.toUpperCase()} ` }), []);
+    assert.deepEqual(details, [{ label: 'Harakat turi', value }], event_type);
+  }
+  const labels = [
+    ['stock_status_after', 'Holati', [['available', 'Mavjud'], ['reserved', 'Band qilingan'], ['in_use', 'Ishlatilmoqda'], ['consumed', 'Sarflangan']]],
+    ['actor_role', 'Rol', [['material_taminotchi', 'Material ta’minotchisi'], ['admin', 'Administrator'], ['werka', 'Werka'], ['supplier', 'Ta’minotchi']]],
+    ['source_type', 'Manba', [['gscale_receipt', 'Tarozi kirimi'], ['order_assignment', 'Zakaz biriktirishi'], ['consumption', 'Sarflanish'],
+      ['manual_adjustment', 'Qo‘lda tuzatish'], ['warehouse_transfer', 'Omborlararo transfer'], ['material_delivery', 'Apparat oldiga yetkazish'], ['system', 'Tizim']]],
+  ];
+  for (const [field, label, cases] of labels) for (const [name, value] of cases) {
+    assert.deepEqual(api.materialHistoryDetails(api.rawMaterialEvent({ [field]: ` ${name.toUpperCase()} ` }), []), [{ label, value }], `${field}: ${name}`);
+  }
+});
