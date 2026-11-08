@@ -32,7 +32,7 @@ function setup(platform, initial) {
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener: () => () => {} } },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
     './MaterialContext': { MaterialProvider: 'MaterialProvider' }, './MaterialDrawer': { MaterialDrawer: 'MaterialDrawer' },
-    './useMaterialSession': { useMaterialSession: () => ({ session: state.session, onLogout() {} }) } };
+    './useMaterialSession': { useMaterialSession: () => ({ session: state.session, witness: {}, onLogout() {} }) } };
   const module = load(`material/MaterialLayout.${platform}`, mocks, '.tsx'); return { state, render: () => module.MaterialLayout() };
 }
 

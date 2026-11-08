@@ -15,8 +15,8 @@ import { useMaterialScope } from './useMaterialScope';
 
 // This partial shell is not tagged as V2 coverage until the actions and native FAB are implemented.
 export function MaterialHome({ handlers }: { handlers?: MaterialHomeHandlers } = {}) {
-  const { session } = useMaterialContext(), drawer = useRoleDrawer(), colors = useMaterialColors(), insets = useSafeAreaInsets();
-  const { groups, refresh } = useMaterialScope(session);
+  const { session, witness } = useMaterialContext(), drawer = useRoleDrawer(), colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const { groups, refresh } = useMaterialScope(session, witness);
   const actions = materialHomeActions(session, handlers);
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>

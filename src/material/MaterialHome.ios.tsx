@@ -8,7 +8,7 @@ import { useMaterialScope } from './useMaterialScope';
 
 // This partial shell is not tagged as V2 coverage until the actions and native FAB are implemented.
 export function MaterialHome({ handlers }: { handlers?: MaterialHomeHandlers } = {}) {
-  const { session } = useMaterialContext(), { groups, refresh } = useMaterialScope(session);
+  const { session, witness } = useMaterialContext(), { groups, refresh } = useMaterialScope(session, witness);
   const actions = materialHomeActions(session, handlers);
   return <><Stack.Screen options={{ title: 'Material ta’minotchisi' }} /><PreparationList refresh={refresh}>
     {!groups.length && <Section><Text>Mahsulot guruhi biriktirilmagan</Text>

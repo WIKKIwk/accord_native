@@ -17,7 +17,7 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 function setup(plan, change = '') {
   const session = { token: 'old', baseUrl: 'https://example.test', profile: { role: 'material_taminotchi', ref: 'one' },
     capabilities: ['raw_material.assign'], assigned_apparatus: ['apparatus:default:bosma_7'] };
-  let active = true, epoch = 1, calls = [], refreshes = 0;
+  let active = true, epoch = 1, witness = true, calls = [], refreshes = 0;
   const auth = { activeSessionToken: s => active && s === session ? session.token : null,
     activeSessionEpoch: s => active && s === session ? epoch : null, refreshSession: async () => {
     refreshes++; session.token = 'fresh';
@@ -26,6 +26,7 @@ function setup(plan, change = '') {
     if (change === 'identity') session.profile.ref = 'other';
     if (change === 'account') active = false;
     if (change === 'epoch') epoch++;
+    if (change === 'witness') witness = false;
     return true;
   } };
   const scope = compile('sessionReadScope'), authorized = compile('authorizedFetch', { './auth': auth });
@@ -47,7 +48,7 @@ function setup(plan, change = '') {
     const result = await next;
     return new Response(result.body, { status: result.status, headers: { 'content-type': 'application/json' } });
   };
-  return { session, api, authorized, auth, scope, dart, calls, refreshes: () => refreshes, setActive: value => { active = value; },
+  return { session, api, authorized, auth, scope, dart, calls, isWitnessCurrent: () => witness, refreshes: () => refreshes, setActive: value => { active = value; },
     restore: () => { global.fetch = original; } };
 }
 const wire = fixture.windows.material.input;
@@ -231,3 +232,20 @@ for (const change of ['role', 'permission', 'identity', 'account', 'epoch']) {
     finally { controller.dispose(); h.restore(); }
   });
 }
+
+
+test('task reader checks the captured witness on real authorizedFetch 401 retry', async () => {
+  for (const change of ['', 'witness']) {
+    const h = setup([response({ error: 'expired' }, 401), response(wire)], change);
+    const { SupplyTasksController } = compile('shared/supplyTasks/SupplyTasksController', {
+      '../../auth': h.auth, '../../sessionReadScope': h.scope, '../appRoutes': compile('shared/appRoutes'),
+      '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'), '../dartApparatus': h.dart });
+    const controller = new SupplyTasksController({ session: h.session, kind: 'material', isCurrent: h.isWitnessCurrent,
+      loadWindow: (query, current) => h.api.readSupplyTaskWindow(h.session, query, current) });
+    try {
+      await controller.activate();
+      assert.equal(h.calls.length, change ? 1 : 2);
+      assert.equal(controller.getSnapshot().window === null, !!change);
+    } finally { controller.dispose(); h.restore(); }
+  }
+});

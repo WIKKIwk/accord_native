@@ -15,15 +15,15 @@ import { useMaterialSession } from './useMaterialSession';
 const subscribe = (listener: () => void) => localeController.addListener(listener);
 const locale = () => localeController.locale;
 export function MaterialLayout() {
-  const { session, onLogout } = useMaterialSession(), path = usePathname(), current = useSyncExternalStore(subscribe, locale, locale);
+  const { session, witness, onLogout } = useMaterialSession(), path = usePathname(), current = useSyncExternalStore(subscribe, locale, locale);
   const colors = useMaterialColors(), insets = useSafeAreaInsets();
   if (Platform.OS !== 'android' || session === null || (session && session.profile.role !== 'material_taminotchi')) return <Redirect href="/" />;
-  if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
+  if (!session || !witness) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   if (!canOpenRoute(session, appRoutes.materialHome)) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
     <Text>{localizedGetter('accessDenied', current)}</Text></View>;
   const active = path.endsWith('/profile') ? 'profile' : path.endsWith('/tasks') ? 'tasks' : 'home';
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
-    <MaterialProvider session={session} onLogout={onLogout}><MaterialDrawer><View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow }}>
+    <MaterialProvider session={session} witness={witness} onLogout={onLogout}><MaterialDrawer><View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow }}>
       <Stack screenOptions={{ headerShown: false }} />
       <RoleBottomBar active={active} bottomInset={insets.bottom} items={[
         { id: 'home', label: localizedGetter('homeNavTitle', current), icon: 'home' },

@@ -13,13 +13,13 @@ import { useMaterialSession } from './useMaterialSession';
 const subscribe = (listener: () => void) => localeController.addListener(listener);
 const locale = () => localeController.locale;
 export function MaterialLayout() {
-  const { session, onLogout } = useMaterialSession(), current = useSyncExternalStore(subscribe, locale, locale);
+  const { session, witness, onLogout } = useMaterialSession(), current = useSyncExternalStore(subscribe, locale, locale);
   if (Platform.OS !== 'ios' || session === null || (session && session.profile.role !== 'material_taminotchi')) return <Redirect href="/" />;
-  if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
+  if (!session || !witness) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   if (!canOpenRoute(session, appRoutes.materialHome)) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
     <Text>{localizedGetter('accessDenied', current)}</Text></View>;
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
-    <MaterialProvider session={session} onLogout={onLogout}><MaterialDrawer><NativeTabs>
+    <MaterialProvider session={session} witness={witness} onLogout={onLogout}><MaterialDrawer><NativeTabs>
       <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
         <NativeTabs.Trigger.Label>{localizedGetter('homeNavTitle', current)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
       <NativeTabs.Trigger name="tasks" hidden={!canOpenRoute(session, appRoutes.materialTasks)}>
