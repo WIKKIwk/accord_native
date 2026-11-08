@@ -10,9 +10,9 @@ import type { SupplierBreakdownProps, SupplierCategoryProps, SupplierHomeProps, 
 import { useSupplierBreakdown, useSupplierCategory, useSupplierRootRefresh, useSupplierStatusDetail, useSupplierStore, useSupplierText } from './useSupplierOverview';
 
 function Header({ title, subtitle, onAction, menu = false }: { title: string; subtitle?: string; onAction: () => void; menu?: boolean }) {
-  const { t } = useSupplierText();
+  const { t, menuTooltip } = useSupplierText();
   return <Stack.Screen options={{ title, headerLeft: () => <RoleHeaderButton icon={menu ? 'menu' : 'back'}
-    label={t(menu ? 'Menyu' : 'Orqaga')} onPress={onAction} tintColor={PlatformColor('label')} />,
+    label={menu ? menuTooltip : t('Orqaga')} onPress={onAction} tintColor={PlatformColor('label')} />,
     ...(subtitle ? { headerTitle: () => <View><NativeText style={{ color: PlatformColor('label'), fontWeight: '600' }}>{title}</NativeText>
       <NativeText style={{ color: PlatformColor('secondaryLabel'), fontSize: 12 }}>{subtitle}</NativeText></View> } : {}) }} />;
 }

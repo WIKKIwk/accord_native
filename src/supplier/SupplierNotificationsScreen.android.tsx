@@ -20,7 +20,7 @@ const icons: Record<ReturnType<typeof supplierNotificationStatusIcon>, AndroidSy
 
 // @v2 SupplierNotificationsScreen
 export function SupplierNotificationsScreen(props: SupplierNotificationsProps) {
-  const { controller, items, highlighted, store } = useSupplierNotifications(props), { l, t } = useSupplierText();
+  const { controller, items, highlighted, store } = useSupplierNotifications(props), { l, menuTooltip } = useSupplierText();
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), [alert, setAlert] = useState<WorkerAlertData | null>(null);
   const loading = !store.loadedHistory && !store.historyError && !items.length;
   const failed = !store.loadedHistory && store.historyError != null && !items.length;
@@ -28,7 +28,7 @@ export function SupplierNotificationsScreen(props: SupplierNotificationsProps) {
     cancelLabel: l('no'), confirmLabel: l('yes'), onConfirm: () => { void controller.clearAll(); } });
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
     <View style={{ flexDirection: 'row', alignItems: 'center' }}><View style={{ flex: 1 }}>
-      <RoleHeader title={l('notificationsTitle')} navigation={{ icon: 'menu', label: t('Menyu'), onPress: props.onOpenDrawer }} />
+      <RoleHeader title={l('notificationsTitle')} navigation={{ icon: 'menu', label: menuTooltip, onPress: props.onOpenDrawer }} />
     </View><Host matchContents><IconButton onClick={clear} modifiers={[testID('supplier-clear-notifications'), semantics({ contentDescription: l('clearTitle') })]}>
       <RNHostView matchContents><SymbolView name={{ android: 'clear_all' }} size={24} tintColor={colors.onSurface} /></RNHostView>
     </IconButton></Host></View>

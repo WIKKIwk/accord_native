@@ -5,12 +5,13 @@ import { localeController } from '../shared/localization/runtime';
 import { refreshHub } from '../shared/notificationStoresRuntime';
 import type { SupplierStatusKind } from './supplierApi';
 import type { SupplierStore } from './supplierStore';
+import { supplierMenuTooltip } from './supplierMaterialText';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 export function useSupplierText() {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  return { t: (source: string) => uiText(source, locale), l: (key: string) => localizedGetter(key, locale),
+  return { menuTooltip: supplierMenuTooltip(locale), t: (source: string) => uiText(source, locale), l: (key: string) => localizedGetter(key, locale),
     lm: (key: string, values: Record<string, unknown>) => localizedMethod(key, locale, values) };
 }
 export function useSupplierStore(store: SupplierStore): SupplierStore {

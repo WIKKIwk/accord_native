@@ -17,14 +17,14 @@ const icons = { clock: 'clock', doneAll: 'checkmark.circle.fill', check: 'checkm
 
 // @v2 SupplierNotificationsScreen
 export function SupplierNotificationsScreen(props: SupplierNotificationsProps) {
-  const { controller, items, highlighted, store } = useSupplierNotifications(props), { l, t } = useSupplierText();
+  const { controller, items, highlighted, store } = useSupplierNotifications(props), { l, menuTooltip } = useSupplierText();
   const [alert, setAlert] = useState<WorkerAlertData | null>(null);
   const loading = !store.loadedHistory && !store.historyError && !items.length;
   const failed = !store.loadedHistory && store.historyError != null && !items.length;
   const clear = () => setAlert({ title: l('clearTitle'), message: l('clearAllNotificationsPrompt'),
     cancelLabel: l('no'), confirmLabel: l('yes'), onConfirm: () => { void controller.clearAll(); } });
   return <View style={{ flex: 1 }}><Stack.Screen options={{ title: l('notificationsTitle'),
-    headerLeft: () => <RoleHeaderButton icon="menu" label={t('Menyu')} onPress={props.onOpenDrawer} tintColor={PlatformColor('label')} />,
+    headerLeft: () => <RoleHeaderButton icon="menu" label={menuTooltip} onPress={props.onOpenDrawer} tintColor={PlatformColor('label')} />,
     headerRight: () => <Pressable accessibilityRole="button" accessibilityLabel={l('clearTitle')} onPress={clear} hitSlop={10}>
       <SymbolView name="line.3.horizontal.decrease.circle" size={24} tintColor={PlatformColor('label')} /></Pressable> }} />
     <PreparationList refresh={!loading ? () => controller.reload() : undefined}>

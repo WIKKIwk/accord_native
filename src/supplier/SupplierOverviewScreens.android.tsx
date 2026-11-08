@@ -12,9 +12,9 @@ import { useSupplierBreakdown, useSupplierCategory, useSupplierRootRefresh, useS
 
 function Page({ title, subtitle, onAction, menu, footer, refresh, refreshing, children }: { title: string; subtitle?: string; onAction: () => void;
   menu?: boolean; footer?: ReactNode; refresh?: () => Promise<void>; refreshing?: boolean; children: ReactNode }) {
-  const colors = useMaterialColors(), insets = useSafeAreaInsets(), { t } = useSupplierText();
+  const colors = useMaterialColors(), insets = useSafeAreaInsets(), { t, menuTooltip } = useSupplierText();
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
-    <RoleHeader title={title} subtitle={subtitle} navigation={{ icon: menu ? 'menu' : 'back', label: t(menu ? 'Menyu' : 'Orqaga'), onPress: onAction }} />
+    <RoleHeader title={title} subtitle={subtitle} navigation={{ icon: menu ? 'menu' : 'back', label: menu ? menuTooltip : t('Orqaga'), onPress: onAction }} />
     <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 12, paddingBottom: 24, gap: 2 }}
       refreshControl={refresh ? <RefreshControl refreshing={!!refreshing} onRefresh={() => { void refresh(); }} /> : undefined}>{children}</ScrollView>
     {footer}
