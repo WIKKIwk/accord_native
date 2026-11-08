@@ -54,3 +54,54 @@ for (const platform of ['ios', 'android']) {
     assert.doesNotMatch(text(tree), /100 → 98 kg/);
   });
 }
+const width = load('rawSplitWidthPlan.ts', { './rawSplitModel': model });
+const draft = load('rawSplitDraft.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
+const homePresentation = load('rawSplitHomePresentation.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, './rawSplitDraft': draft });
+function home(platform) {
+  const calls = [], output1 = { id: '1', width: '400', gross: '40', bobina: '1', length: '1000' };
+  const output2 = { id: '2', width: '600', gross: '60', bobina: '1', length: '1500' };
+  const state = { snapshot: { warehouses: ['Raw W'] }, barcode: 'parent', source: new model.RawSplitRoll(source), outputs: [output1, output2],
+    waste: '2', issueNote: '', issueError: null, error: null, pending: null, pendingIssue: null, printer: null,
+    wifiPrinter: 'godex', showIssue: false, issueSaved: false, savedIssueId: null, busy: false };
+  const controller = { getSnapshot: () => state, subscribe: () => () => {}, reload: async () => calls.push('reload'), locked: false,
+    get widthPlan() { return new width.RawSplitWidthPlan(state.source.widthMm, state.outputs.map(o => o.width)); },
+    get wasteCheck() { return new model.RawSplitWasteCheck(model.rawSplitQuantity('100'), model.rawSplitQuantity('98'), state.waste); },
+    setBarcode: value => calls.push(['barcode', value]), lookup: async () => calls.push('lookup'), setOutput: (...args) => calls.push(['output', ...args]),
+    confirmWidth: () => calls.push('confirmWidth'), addRoll: () => calls.push('addRoll'), removeRoll: i => calls.push(['removeRoll', i]),
+    setWaste: value => calls.push(['waste', value]), setIssueNote: value => calls.push(['note', value]), setWifiPrinter: value => calls.push(['wifi', value]),
+    save: async retry => calls.push(['save', retry]), saveIssue: async retry => calls.push(['issue', retry]) };
+  const swift = new Proxy({}, { get: (_, name) => name });
+  const compose = new Proxy({ useMaterialColors: () => ({ error: 'error', surface: 'surface', onSurfaceVariant: 'muted' }) }, { get: (o, name) => o[name] ?? name });
+  const react = { useEffect() {}, useSyncExternalStore: (_subscribe, get) => get() };
+  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }),
+    '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View' },
+    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText' },
+    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitHomePresentation': homePresentation };
+  const component = load(`RawSplitHome.${platform}.tsx`, mocks, true).RawSplitHome;
+  return { state, controller, calls, render: () => component({ controller, onScan: () => calls.push('scan') }) };
+}
+for (const platform of ['ios', 'android']) {
+  test(`${platform} home exposes measured fields, source, balance and real actions`, () => {
+    const h = home(platform), tree = h.render(); assert.match(text(tree), /Ombor: Raw W/); assert.match(text(tree), /Hisob teng ✓/);
+    for (const label of ['Rulon QR / shtrix-kodi', 'Eni (mm)', 'Og‘irlik (kg)', 'Babina (kg)', 'Metraj (m)', 'Atxot (kg) *'])
+      assert.ok(find(tree, n => n.props?.label === label).length, label);
+    const field = find(tree, n => n.props?.label === 'Eni (mm)')[0]; field.props.onChange('500'); field.props.onDone();
+    assert.deepEqual(h.calls.slice(0, 2), [['output', 0, 'width', '500'], 'confirmWidth']);
+    const actionType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
+    find(tree, n => n.type === actionType && n.props.label === 'Skanerlash')[0].props.onPress();
+    find(tree, n => n.type === actionType && n.props.label === 'Saqlash va chop etish')[0].props.onPress();
+    assert.ok(h.calls.includes('scan')); assert.ok(h.calls.some(call => Array.isArray(call) && call[0] === 'save'));
+  });
+  test(`${platform} home exposes discrepancy note only when required and respects pending lock`, () => {
+    const h = home(platform); h.state.waste = '1'; h.state.showIssue = true;
+    let tree = h.render(); assert.match(text(tree), /1 kg hisobga olinmagan/);
+    assert.ok(find(tree, n => n.props?.label === 'Farq sababi').length);
+    const actionType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
+    find(tree, n => n.type === actionType && n.props.label === 'Muammoni saqlash')[0].props.onPress();
+    assert.ok(h.calls.some(call => Array.isArray(call) && call[0] === 'issue'));
+    h.state.pending = { request_id: 'pending' }; h.controller.locked = true; tree = h.render();
+    assert.match(text(tree), /Oldingi saqlash natijasini tekshiring/);
+    assert.equal(find(tree, n => n.props?.label === 'Eni (mm)')[0].props.enabled, false);
+  });
+}
