@@ -1,25 +1,28 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { adminApparatus } from '../apparatusApi';
-import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
+import { registerSessionResetHook, subscribeSessionWitness, type Session, type SessionWitness } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
-import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { adminRawMaterialHistory } from './materialHistoryApi';
+import { materialHistoryCurrent } from './materialHistoryAccess';
 import { MaterialHistoryState } from './materialHistoryState';
 
-export function useMaterialHistory(session: Session) {
-  const controller = useMemo(() => {
+export function useMaterialHistory(session: Session, witness: SessionWitness) {
+  const { controller, current } = useMemo(() => {
     const scope = sessionReadScope(session);
-    const isCurrent = () => !!activeSessionToken(session) && sessionReadScope(session) === scope &&
-      canOpenRoute(session, appRoutes.materialHistory);
-    const guard = (current: () => boolean) => () => { if (!current()) throw new Error('Sessiya o‘zgardi.'); };
-    return new MaterialHistoryState({ history: current => adminRawMaterialHistory(session, { limit: 100 }, guard(current)),
-      apparatus: current => adminApparatus(session, { limit: 10000, beforeSend: guard(current) }), isCurrent });
-  }, [session]);
+    const current = () => materialHistoryCurrent(session, witness) && sessionReadScope(session) === scope && materialHistoryCurrent(session, witness);
+    const guard = (requestCurrent: () => boolean) => () => { if (!requestCurrent() || !current()) throw new Error('Sessiya o‘zgardi.'); };
+    const controller = new MaterialHistoryState({ history: request => adminRawMaterialHistory(session, { limit: 100 }, guard(request)),
+      apparatus: request => adminApparatus(session, { limit: 10000, beforeSend: guard(request) }), isCurrent: current });
+    return { controller, current };
+  }, [session, witness]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => {
-    controller.activate(); void controller.load(); void controller.loadCatalog();
+    const onWitness = () => { if (!current()) controller.invalidate(); };
+    const unsubscribe = subscribeSessionWitness(onWitness);
     const unregister = registerSessionResetHook(async () => { controller.invalidate(); });
-    return () => { unregister(); controller.dispose(); };
-  }, [controller]);
-  return { ...state, reload: () => controller.load(), refresh: () => controller.load(true) };
+    if (current()) { controller.activate(); void controller.load(); void controller.loadCatalog(); }
+    else controller.invalidate();
+    return () => { unregister(); unsubscribe(); controller.dispose(); };
+  }, [controller, current]);
+  return { ...state, allowed: current(), reload: () => controller.load(), refresh: () => controller.load(true) };
 }

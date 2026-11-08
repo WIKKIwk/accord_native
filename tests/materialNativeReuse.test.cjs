@@ -20,11 +20,11 @@ function load(filename, mocks) {
   return loaded.exports;
 }
 function setup() {
-  const calls = [], session = {}, state = { groups: [], events: [{ event_id: 'one', event_type: 'receipt_posted' },
+  const calls = [], session = {}, witness = { session }, state = { groups: [], events: [{ event_id: 'one', event_type: 'receipt_posted' },
     { event_id: 'two', event_type: 'transfer_out' }], error: null, loading: false };
   state.homeActions = { cards: [], fab: [], select: id => calls.push(['select', id]) };
   const refresh = async () => { calls.push('refresh'); }, sheet = { open: (value, options) => calls.push(['sheet', value, options]), close() {} };
-  const react = { useEffect() {}, useState: initial => [initial, () => {}] };
+  const react = { useEffect() {}, useState: initial => [initial, () => {}], useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = { 'react/jsx-runtime': jsx, react,
     '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', Text: 'ComposeText', useMaterialColors: () => ({}) },
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', Image: 'Image', List: 'List',
@@ -35,7 +35,8 @@ function setup() {
     'react-native': { ActivityIndicator: 'ActivityIndicator', PlatformColor: value => value, Text: 'Text', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
-    '../auth': { activeSessionToken: () => 'token', registerSessionResetHook: () => () => {} },
+    '../auth': { activeSessionToken: () => 'token', registerSessionResetHook: () => () => {},
+      sessionWitnessVersion: () => 1, subscribeSessionWitness: () => () => {} },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     '../nativeSheet': { useNativeSheet: () => sheet },
     '../preparation/PreparationUI': { PreparationList: 'PreparationList' },
@@ -44,10 +45,12 @@ function setup() {
     '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
-    './MaterialContext': { useMaterialContext: () => ({ session }) },
+    './MaterialContext': { useMaterialContext: () => ({ session, witness }) },
     './useMaterialScope': { useMaterialScope: () => ({ groups: state.groups, refresh }) },
     './materialHomeActions': { materialHomeActions: () => state.homeActions },
-    './useMaterialHistory': { useMaterialHistory: () => ({ events: state.events, apparatus: [], error: state.error,
+    './materialHistoryAccess': { materialHistoryCurrent: () => true }, '../shared/localization': { localizedGetter: () => 'denied' },
+    '../shared/localization/runtime': { localeController: { locale: 'uz' } },
+    './useMaterialHistory': { useMaterialHistory: () => ({ allowed: true, events: state.events, apparatus: [], error: state.error,
       loading: state.loading, refreshing: false, refresh, reload: () => calls.push('reload') }) },
     './materialHistoryPresentation': { materialHistoryTitle: event => `title-${event.event_id}`, materialHistorySubtitle: () => 'subtitle',
       materialHistoryTime: () => 'time', materialHistoryDetails: () => [] },

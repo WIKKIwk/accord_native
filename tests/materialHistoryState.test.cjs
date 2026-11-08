@@ -41,7 +41,7 @@ test('account switch or disposal clears data and ignores in-flight results', asy
   assert.equal(state.getSnapshot().loading, false);
 });
 
-test('characterization: scope-only changes without a reset event leave old data in state, so the route is held', async () => {
+test('history state alone requires its owner to invalidate on a scope change', async () => {
   let current = true;
   const state = new MaterialHistoryState({ history: async () => [{ event_id: 'old-scope' }], apparatus: async () => [], isCurrent: () => current });
   state.activate(); await state.load(); assert.equal(state.getSnapshot().events[0].event_id, 'old-scope');

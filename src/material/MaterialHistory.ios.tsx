@@ -1,9 +1,9 @@
 import { Button, Host, HStack, Image, List, ProgressView, Section, Text, VStack } from '@expo/ui/swift-ui';
 import { font, foregroundStyle, frame, lineLimit } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { PlatformColor, View } from 'react-native';
-import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
+import { useEffect, useSyncExternalStore } from 'react';
+import { PlatformColor, Text as NativeText, View } from 'react-native';
+import { registerSessionResetHook, sessionWitnessVersion, subscribeSessionWitness, type Session, type SessionWitness } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { PreparationList } from '../preparation/PreparationUI';
 import type { AdminApparatus } from '../apparatusApi';
@@ -12,13 +12,15 @@ import { materialHistoryDetails, materialHistorySubtitle, materialHistoryTime, m
 import { materialHistorySymbol } from './materialHistorySymbols';
 import { useMaterialContext } from './MaterialContext';
 import { useMaterialHistory } from './useMaterialHistory';
+import { materialHistoryCurrent } from './materialHistoryAccess';
+import { localizedGetter } from '../shared/localization';
+import { localeController } from '../shared/localization/runtime';
 
 // @v2 _MaterialHistoryDetailsSheet
-function MaterialHistoryDetails({ event, catalog, session }: { event: AdminRawMaterialEvent; catalog: AdminApparatus[]; session: Session }) {
-  const [valid, setValid] = useState(true);
-  useEffect(() => registerSessionResetHook(async () => { setValid(false); }), []);
+function MaterialHistoryDetails({ event, catalog, session, witness }: { event: AdminRawMaterialEvent; catalog: AdminApparatus[]; session: Session; witness: SessionWitness }) {
+  useSyncExternalStore(subscribeSessionWitness, sessionWitnessVersion, sessionWitnessVersion);
   const details = materialHistoryDetails(event, catalog);
-  if (!valid || !activeSessionToken(session)) return null;
+  if (!materialHistoryCurrent(session, witness)) return null;
   return <Host style={{ flex: 1, minHeight: 360 }}><VStack spacing={10}>
     <Text>{materialHistoryTitle(event)}</Text><Text>{materialHistorySubtitle(event, catalog)}</Text>
     <List><Section>{details.map((detail, index) => <VStack key={`${detail.label}:${index}`} alignment="leading">
@@ -31,15 +33,21 @@ const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 
 // @v2 MaterialTaminotchiHistoryScreen
 export function MaterialHistory() {
-  const { session } = useMaterialContext(), history = useMaterialHistory(session), sheet = useNativeSheet();
-  useEffect(() => registerSessionResetHook(async () => { sheet.close(); }), [sheet]);
+  const { session, witness } = useMaterialContext(), history = useMaterialHistory(session, witness), sheet = useNativeSheet();
+  useEffect(() => {
+    const check = () => { if (!materialHistoryCurrent(session, witness)) sheet.close(); };
+    const unsubscribe = subscribeSessionWitness(check), unregister = registerSessionResetHook(async () => { sheet.close(); });
+    check(); return () => { unregister(); unsubscribe(); sheet.close(); };
+  }, [session, witness, sheet]);
+  if (!history.allowed) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+    <NativeText>{localizedGetter('accessDenied', localeController.locale)}</NativeText></View>;
   return <View style={{ flex: 1 }}><Stack.Screen options={{ title: 'Harakatlar tarixi' }} />
     <PreparationList refresh={history.refresh}>
       {history.loading ? <ProgressView /> : history.error ? <Section><Button onPress={history.reload}>
         <VStack alignment="leading"><Text>Tarix yuklanmadi</Text><Text>{history.error}</Text></VStack>
       </Button></Section> : !history.events.length ? <Section><Text>Harakatlar hali yo‘q</Text></Section> :
         <Section>{history.events.slice(0, 100).map((event, index) => <Button key={`${event.event_id}:${index}`}
-          onPress={() => sheet.open(<MaterialHistoryDetails event={event} catalog={history.apparatus} session={session} />, { dismissible: true })}>
+          onPress={() => { if (materialHistoryCurrent(session, witness)) sheet.open(<MaterialHistoryDetails event={event} catalog={history.apparatus} session={session} witness={witness} />, { dismissible: true }); }}>
           <HStack alignment="top" spacing={12}><Image systemName={materialHistorySymbol(event.event_type).ios} size={22} color={PlatformColor('systemBlue')} />
             <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
               <Text modifiers={[font({ textStyle: 'subheadline', weight: 'bold' }), lineLimit(1)]}>{materialHistoryTitle(event)}</Text>
