@@ -18,6 +18,7 @@ const { MobileApiException } = load('shared/mobileApiException.ts');
 const common = load('qolip/qolipApiCommon.ts', { '../shared/mobileApiException': { MobileApiException } });
 const normalizer = load('shared/searchNormalizer.ts');
 const searchEngine = load('qolip/qolipSearchEngine.ts', { '../shared/searchNormalizer': normalizer });
+const relevance = load('qolip/qolipSearchRelevance.ts', { './qolipSearchEngine': searchEngine });
 const entry = (id, name, codes) => ({ name, display_name: name || id, source: {}, set: {
   id, fingerprint: `fp-${id}`, product_labels: [], members: codes.map(qolip_code => ({ qolip_code })),
 } });
@@ -26,7 +27,7 @@ function harness(reader = async () => []) {
   const api = load('qolip/qolipSetSearch.ts', {
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile.ref]) },
     '../shared/mobileApiException': { MobileApiException }, './qolipApiCommon': common,
-    './qolipSearchEngine': searchEngine, './qolipSetsApi': { qolipManagedSets: reader },
+    './qolipSearchEngine': searchEngine, './qolipSearchRelevance': relevance, './qolipSetsApi': { qolipManagedSets: reader },
   });
   return { api, session };
 }
@@ -117,7 +118,7 @@ test('f119 lookup replay rejects an old account and caches the new read', async 
   });
   const api = load('qolip/qolipSetSearch.ts', { '../sessionReadScope': scope,
     '../shared/mobileApiException': { MobileApiException }, './qolipApiCommon': common,
-    './qolipSearchEngine': searchEngine, './qolipSetsApi': setsApi });
+    './qolipSearchEngine': searchEngine, './qolipSearchRelevance': relevance, './qolipSetsApi': setsApi });
   const lookup = new api.QolipSetLookup(session), old = lookup.load();
   await entered;
   session.profile.ref = 'other';

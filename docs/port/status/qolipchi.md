@@ -74,6 +74,8 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 
 - Cell placement logic checkpoint: specified the cell-placement mode and added placed-code loading, saved-code eligibility, picker search/paging/cache, single selection and sequential confirmed multi-save with full, partial and first-error results. It reuses the existing product, location and search APIs; account reset stops any remaining writes. The independent f119 oracle passed the direct available-cell filter test. Eleven focused source-derived tests and all 223 Qolip tests passed; iOS typecheck and Expo lint passed. The ledger resolves 654 source tags and 72 test tags with no drift. The two native sheets, picker UI, grid caller, scanner and block refresh are not yet wired; no device, backend write or full role parity is claimed.
 
+- Cell picker state checkpoint: factored the existing V2 relevance score into one Qolip module reused by set and cell pickers, then added 220 ms search debounce, 80-item pages, stale-response handling and insertion-ordered multi-selection. Corrected the contract: only raw pages preserve source order; a nonempty query reorders the accumulated rows by relevance. The f119 mock-only picker oracle passed its long-press and selection case, and `search_normalizer_test.dart` passed both relevance cases. All 228 Qolip tests, iOS typecheck and lint passed; Android has the same nine existing worker errors. No fixture or backend call was used. The native picker and placement sheet still need views and wiring.
+
 ## Deviations candidates
 
 - Grid statistics count nonempty location labels outside the fixed visible grid, which can yield occupied cells that are not displayed; f119 behavior is retained.

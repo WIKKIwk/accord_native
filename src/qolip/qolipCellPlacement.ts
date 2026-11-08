@@ -3,6 +3,7 @@ import { trimDart } from './qolipApiCommon';
 import type { QolipBlock } from './qolipBlocksApi';
 import type { QolipLocationEntry } from './qolipLocationsApi';
 import { filterQolipSearch, QolipSearchDocument } from './qolipSearchEngine';
+import { searchRelevanceScore } from './qolipSearchRelevance';
 
 export type QolipPlacementProduct = ReturnType<typeof qolipProductFromJson>;
 const normalizedCode = (code: string) => trimDart(code).toLowerCase();
@@ -45,6 +46,24 @@ export function qolipPlacementProductSearchDocument(product: QolipPlacementProdu
     productDocuments.set(product, document);
   }
   return document;
+}
+
+/** Text used by the V2 product picker for each loaded item. */
+export function qolipPlacementPickerTitle(product: QolipPlacementProduct): string {
+  return trimDart(product.name) || product.code;
+}
+export function qolipPlacementPickerSubtitle(product: QolipPlacementProduct): string {
+  return [product.has_qolip_spec ? `${trimDart(product.qolip_code)} • ${product.size}` : '', trimDart(product.code)]
+    .filter(Boolean).join(' • ');
+}
+
+/** V2 sorts the accumulated visible rows, not the individual source pages. */
+export function qolipPlacementSortLoadedProducts(products: readonly QolipPlacementProduct[], query: string): QolipPlacementProduct[] {
+  const search = trimDart(query);
+  if (!search || products.length < 2) return [...products];
+  return products.map((product, index) => ({ product, index,
+    score: searchRelevanceScore(search, qolipPlacementPickerTitle(product), [qolipPlacementPickerSubtitle(product)]) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index).map(entry => entry.product);
 }
 
 /** The search cache belongs to one open picker, as in V2. */

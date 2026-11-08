@@ -12,7 +12,8 @@ function load(name, dependencies = {}) {
 }
 const common = load('qolip/qolipApiCommon.ts', { '../shared/mobileApiException': {} });
 const search = load('qolip/qolipSearchEngine.ts', { '../shared/searchNormalizer': load('shared/searchNormalizer.ts') });
-const logic = load('qolip/qolipCellPlacement.ts', { './qolipApiCommon': common, './qolipSearchEngine': search });
+const relevance = load('qolip/qolipSearchRelevance.ts', { './qolipSearchEngine': search });
+const logic = load('qolip/qolipCellPlacement.ts', { './qolipApiCommon': common, './qolipSearchEngine': search, './qolipSearchRelevance': relevance });
 const { QolipCellPlacementState } = load('qolip/qolipCellPlacementState.ts', { './qolipCellPlacement': logic });
 const product = (code, more = {}) => ({ code: `ITEM-${code}`, name: `Name ${code}`, item_group: 'Group', customer_names: [],
   qolip_code: code, size: 40, has_qolip_spec: true, is_in_use: false, ...more });
@@ -146,4 +147,14 @@ test('closing the view does not interrupt an already confirmed batch without a s
   const pending = h.state.confirmMulti(h.state.prepareMulti([product('Q1'), product('Q2')]));
   let unregistered = false; h.state.dispose(); h.state.onIdle(() => { unregistered = true; }); first.resolve();
   assert.equal(await pending, null); assert.deepEqual(calls, ['Q1', 'Q2']); assert.equal(unregistered, true);
+});
+
+
+test('picker keeps source order for an empty query and sorts all loaded rows by exact V2 relevance', () => {
+  const values = [product('Q1', { name: 'Other Kross' }), product('Q2', { name: 'Kross' }),
+    product('KROSS', { name: 'Third' }), product('Q4', { name: 'Kross model' }), product('Q5', { name: 'Kross' })];
+  assert.deepEqual(logic.qolipPlacementSortLoadedProducts(values, ''), values);
+  assert.deepEqual(logic.qolipPlacementSortLoadedProducts(values, 'kross').map(x => x.qolip_code), ['Q2', 'Q5', 'Q4', 'Q1', 'KROSS']);
+  assert.equal(logic.qolipPlacementPickerTitle(product('Q1', { name: '  ' })), 'ITEM-Q1');
+  assert.equal(logic.qolipPlacementPickerSubtitle(product(' Q1 ', { code: ' C1 ', size: 43 })), 'Q1 • 43 • C1');
 });
