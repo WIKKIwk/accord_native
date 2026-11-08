@@ -24,4 +24,5 @@ export type ProfileViewProps = {
   onDailyWork?: () => void;
   onLogout: () => void;
   showDirectLogout?: boolean;
+  registerSettingsOpener?: (open: () => void) => () => void;
 };

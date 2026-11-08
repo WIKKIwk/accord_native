@@ -34,7 +34,7 @@ function fixture(platform, role = 'boyoqchi', showDirectLogout) {
     sheets.push(sheet); return sheet;
   };
   const mocks = {
-    react, '@expo/ui': ui, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
+    react, 'expo-router': { useFocusEffect() {} }, '@expo/ui': ui, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
     '@expo/ui/jetpack-compose': { PullToRefreshBox: 'PullToRefreshBox', useMaterialColors: () => ({}) },
     'react-native': { Alert: { alert: (...args) => alerts.push(args) }, useColorScheme: () => 'light', PlatformColor: value => value },
     '../profileModel': { profileDisplay: () => ({ name: 'Name', role: 'Role', phone: '', legalName: '', apparatusLabels: [] }) },
@@ -137,10 +137,12 @@ test('shared ProfileScreen forwards the opt-in without changing the default', ()
   };
   const { ProfileScreen } = load('components/ProfileScreen.tsx', mocks), onLogout = () => {};
   for (const value of [undefined, false, true]) {
-    const wrapper = ProfileScreen({ session: { imageCacheScope: 'scope', profile: {} }, onLogout, showDirectLogout: value });
+    const registerSettingsOpener = value === false ? () => () => {} : undefined;
+    const wrapper = ProfileScreen({ session: { imageCacheScope: 'scope', profile: {} }, onLogout, showDirectLogout: value, registerSettingsOpener });
     const view = wrapper.type(wrapper.props);
     assert.equal(view.type, 'ProfileView');
     assert.equal(view.props.showDirectLogout, value);
+    assert.equal(view.props.registerSettingsOpener, registerSettingsOpener);
     assert.equal(view.props.onLogout, onLogout);
   }
 });
