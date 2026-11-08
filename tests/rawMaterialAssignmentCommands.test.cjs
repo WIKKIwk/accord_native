@@ -114,7 +114,7 @@ test('network failure, server error, malformed response and non-400 ambiguity ne
     try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => { chosen = true; return a; })));
       assert.equal(chosen, false); assert.equal(h.calls.length, 1);
       assert.equal(h.command.needsReconciliation, true);
-      await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
+      await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /natijasi noaniq/);
       assert.equal(h.calls.length, 1);
     } finally { h.restore(); }
   }
@@ -122,18 +122,18 @@ test('network failure, server error, malformed response and non-400 ambiguity ne
 
 test('401 refresh never automatically repeats an assignment that may have reached the server', async () => {
   const h = setup([{ status: 401, body: { error: 'expired' } }, success]);
-  try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
+  try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /natijasi noaniq/);
     assert.equal(h.refreshes(), 1); assert.equal(h.calls.length, 1); assert.equal(h.command.needsReconciliation, true);
-    await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
+    await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /natijasi noaniq/);
     assert.equal(h.calls.length, 1);
   } finally { h.restore(); }
 });
 
 test('the user-chosen second request also cannot retry a 401 automatically', async () => {
   const h = setup([ambiguous(), { status: 401, body: { error: 'expired' } }, success]);
-  try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
+  try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /natijasi noaniq/);
     assert.equal(h.refreshes(), 1); assert.equal(h.calls.length, 2); assert.equal(h.command.needsReconciliation, true);
-    await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
+    await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /natijasi noaniq/);
     assert.equal(h.calls.length, 2);
   } finally { h.restore(); }
 });
@@ -212,9 +212,9 @@ for (const during of ['confirmation', 'apparatus choice']) {
 
 test('manual candidate 401 is not retried and requires reconciliation', async () => {
   const h = setup([{ status: 401, body: { error: 'expired' } }, success]);
-  try { await assert.rejects(h.command.assignCandidate('order', candidate([a]), async () => true, async () => a), /Natijani tekshirib/);
+  try { await assert.rejects(h.command.assignCandidate('order', candidate([a]), async () => true, async () => a), /natijasi noaniq/);
     assert.equal(h.calls.length, 1); assert.equal(h.command.needsReconciliation, true);
-    await assert.rejects(h.command.assignCandidate('order', candidate([a]), async () => true, async () => a), /Natijani tekshirib/);
+    await assert.rejects(h.command.assignCandidate('order', candidate([a]), async () => true, async () => a), /natijasi noaniq/);
     assert.equal(h.calls.length, 1);
   } finally { h.restore(); }
 });
@@ -249,9 +249,9 @@ test('unlink cancel and stale confirmation never send DELETE', async () => {
 
 test('unlink 401 is not retried and requires reconciliation', async () => {
   const h = setup([{ status: 401, body: { error: 'expired' } }, success]);
-  try { await assert.rejects(h.command.unlink(linked(), manual, async () => true), /Natijani tekshirib/);
+  try { await assert.rejects(h.command.unlink(linked(), manual, async () => true), /natijasi noaniq/);
     assert.equal(h.calls.length, 1); assert.equal(h.command.needsReconciliation, true);
-    await assert.rejects(h.command.unlink(linked(), manual, async () => true), /Natijani tekshirib/);
+    await assert.rejects(h.command.unlink(linked(), manual, async () => true), /natijasi noaniq/);
     assert.equal(h.calls.length, 1);
   } finally { h.restore(); }
 });

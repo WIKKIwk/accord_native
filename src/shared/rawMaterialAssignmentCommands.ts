@@ -50,8 +50,9 @@ export class RawMaterialAssignmentCommands {
     const beforeSend = () => {
       this.assertCurrent();
       // A received 401 may refresh authentication, but a mutation already
-      // attempted must not be repeated automatically. Reload its state first.
-      if (attempted) throw new Error('Natijani tekshirib, qayta urinib ko‘ring.');
+      // attempted must not be repeated automatically. A refresh alone cannot
+      // prove a timed-out server operation will not commit later.
+      if (attempted) throw new Error('Oldingi amal natijasi noaniq. Qayta yuborish bloklandi.');
       attempted = true;
     };
     this.assertCurrent();
@@ -74,7 +75,7 @@ export class RawMaterialAssignmentCommands {
 
   private async exclusive<T>(action: () => Promise<T>): Promise<T> {
     if (this.busy) throw new Error('Amal bajarilmoqda.');
-    if (this.reconciliationRequired) throw new Error('Natijani tekshirib, qayta urinib ko‘ring.');
+    if (this.reconciliationRequired) throw new Error('Oldingi amal natijasi noaniq. Qayta yuborish bloklandi.');
     this.assertCurrent();
     this.busy = true;
     try { return await action(); } finally { this.busy = false; }
