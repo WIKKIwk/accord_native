@@ -30,7 +30,7 @@ function environment(platform) {
   const modifiers = new Proxy({}, { get: (_, key) => (...args) => ({ kind: key, args }) });
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': modifiers,
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
-    'react-native': { ScrollView: 'ScrollView', Text: 'Text', View: 'View' }, 'expo-symbols': { SymbolView: 'Symbol' },
+    'react-native': { ScrollView: 'ScrollView', Text: 'Text', View: 'View', PlatformColor: name => `native(${name})` }, 'expo-symbols': { SymbolView: 'Symbol' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'Button' }, '../preparation/PreparationUI': { usePreparationText: () => s => s },
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => s => s },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'Dropdown' }, './rawSplitHomePresentation': new Proxy({}, { get: () => () => '' }) };
