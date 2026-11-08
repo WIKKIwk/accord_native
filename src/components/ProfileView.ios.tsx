@@ -116,14 +116,14 @@ function SettingsOpenerRegistration({ register, setOpen }: { register: NonNullab
 
 // @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout, registerSettingsOpener } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout, registerSettingsOpener, settingsUnavailableMessage } = props;
   const details = profileDisplay(snapshot);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const { text } = useBaseLocale();
-  const switchPin = useSwitchPinSetup(session);
+  const switchPin = useSwitchPinSetup(session, !settingsUnavailableMessage);
   const closeSettings = () => { if (!switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
-  return <>{registerSettingsOpener ? <SettingsOpenerRegistration register={registerSettingsOpener} setOpen={setSettingsOpen} /> : null}<Host style={{ flex: 1 }}>
+  return <>{registerSettingsOpener && !settingsUnavailableMessage ? <SettingsOpenerRegistration register={registerSettingsOpener} setOpen={setSettingsOpen} /> : null}<Host style={{ flex: 1 }}>
     <List modifiers={[listStyle('insetGrouped'), refreshable(props.onRefresh)]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), padding({ vertical: 14 })]}>
         <Spacer />
@@ -157,12 +157,13 @@ export function ProfileView(props: ProfileViewProps) {
       </Section>
       <Section>
         {onDailyWork ? <NavigationRow icon="calendar" title="Kunlik ish" onPress={onDailyWork} /> : null}
-        <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) setSettingsOpen(true); else closeSettings(); }}
-          anchor={<NavigationRow icon="gearshape" title={text('profileSettingsTitle')} onPress={() => setSettingsOpen(true)} />}>
-          <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text}
-            preferences={<ProfileSettingsPreferences />} switchPin={<ProfileSwitchPin pin={switchPin} />} switchPinBusy={switchPin.busy}
-            onAppearanceChange={value => value === 'system' ? Promise.resolve() : themeController.setThemeMode(value)} />
-        </BottomSheet>
+        {settingsUnavailableMessage ? <Text>{settingsUnavailableMessage}</Text> :
+          <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) setSettingsOpen(true); else closeSettings(); }}
+            anchor={<NavigationRow icon="gearshape" title={text('profileSettingsTitle')} onPress={() => setSettingsOpen(true)} />}>
+            <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text}
+              preferences={<ProfileSettingsPreferences />} switchPin={<ProfileSwitchPin pin={switchPin} />} switchPinBusy={switchPin.busy}
+              onAppearanceChange={value => value === 'system' ? Promise.resolve() : themeController.setThemeMode(value)} />
+          </BottomSheet>}
       </Section>
       {showDirectLogout !== false ? <Section>
         <Button role="destructive" label={text('logoutTitle')} systemImage="rectangle.portrait.and.arrow.right"
