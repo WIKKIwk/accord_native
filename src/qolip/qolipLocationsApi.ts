@@ -2,7 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import type { qolipProductFromJson } from '../qolipCatalogApi';
 import { MobileApiException } from '../shared/mobileApiException';
-import { jsonObject, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
 import type { QolipBlock } from './qolipBlocksApi';
 
 /** @v2 QolipLocationEntry */
@@ -10,12 +10,6 @@ export type QolipLocationEntry = {
   id: string; block: string; warehouse: string; item_code: string; item_name: string; qolip_code: string;
   size: number; quantity: number; row_letter: string; column_number: number | null; location_label: string;
 };
-
-function optionalInteger(value: unknown): number | null {
-  if (value == null) return null;
-  if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError('Expected number');
-  return Math.trunc(value);
-}
 
 export function qolipLocationFromJson(value: unknown): QolipLocationEntry {
   const row = jsonObject(value);

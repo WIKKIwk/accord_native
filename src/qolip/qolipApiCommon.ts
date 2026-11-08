@@ -14,6 +14,11 @@ export function dartString(value: unknown): string {
   return String(value);
 }
 export const optionalText = (value: unknown) => value == null ? '' : dartString(value);
+export function optionalInteger(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError('Expected number');
+  return Math.trunc(value);
+}
 
 export async function qolipApiResponseError(response: Response, fallbackCode: string, fallbackMessage: string): Promise<MobileApiException> {
   let code = fallbackCode, message = fallbackMessage;
