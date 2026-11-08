@@ -20,12 +20,15 @@ function fixture() {
       useRef: value => ({ current: value }), useState: initial => [initial, () => {}] },
     'expo-router': { useFocusEffect: fn => { focusEffect = fn; focusCleanup = fn(); } },
     '@expo/ui': { ListItem: 'ListItem', Text: 'Text' },
-    '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
-    '@expo/ui/swift-ui/modifiers': { listStyle: value => value, refreshable: value => value, listRowBackground: value => value },
+    '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', Image: 'Image', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
+    '@expo/ui/swift-ui/modifiers': Object.fromEntries(['listStyle', 'refreshable', 'listRowBackground', 'accessibilityHidden', 'background', 'buttonStyle',
+      'contentShape', 'fixedSize', 'font', 'foregroundStyle', 'frame', 'lineLimit', 'listRowInsets', 'padding'].map(name => [name, value => value]).concat([
+      ['shapes', { rectangle: () => 'rectangle', roundedRectangle: value => value }],
+    ])),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { PlatformColor: value => value },
-    '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' }, './CustomerContext': { useCustomerText: () => ({ text: key => key }) },
+    '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' }, './CustomerContext': { useCustomerText: () => ({ locale: 'uz', text: key => key }) },
     './CustomerStates': { CustomerEmptyFeedState: 'CustomerEmptyFeedState', CustomerLoadingState: 'CustomerLoadingState', CustomerRetryState: 'CustomerRetryState' },
-    './customerPresentation': { customerNotificationRecord: () => ({ icon: 'schedule', name: 'item', code: 'code', body: 'body', created: 'date' }) },
+    './customerPresentation': { customerLayoutDirection: () => 'leftToRight', customerNotificationRecord: () => ({ icon: 'schedule', name: 'item', code: 'code', body: 'body', created: 'date' }) },
     './useCustomerScreens': { useCustomerNotifications: () => state },
   };
   const filename = path.resolve(__dirname, '../src/customer/CustomerNotificationsView.ios.tsx'), mod = new Module(filename, module);
@@ -33,7 +36,7 @@ function fixture() {
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const tree = mod.exports.CustomerNotificationsScreen({ onOpenDetail: id => calls.push(['open', id]) });
-  const row = nodes(tree, node => node.type === 'ListItem')[0];
+  const row = nodes(tree, node => node.type === 'Button')[0];
   return { calls, tap: () => row.props.onPress(), finish, blur: () => { focusCleanup?.(); focusCleanup = undefined; },
     focus: () => { if (!focusCleanup && focusEffect) focusCleanup = focusEffect(); },
     unmount: () => { focusCleanup?.(); cleanups.forEach(cleanup => cleanup()); } };
