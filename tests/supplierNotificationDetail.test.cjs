@@ -125,7 +125,7 @@ test('a host can replace navigation callbacks without restarting the detail read
   assert.deepEqual(f.events, [['seen', 'R'], ['read', 'R']]);
 });
 
-test('each detail controller keeps its original account reference while requests are in flight', async () => {
+test('controller captures its starting account reference; session-reset invalidation remains an open security item', async () => {
   let finish;
   const f = fixture({ services: { read: async () => new Promise(resolve => { finish = resolve; }) } });
   f.controller.start(); await wait();
@@ -134,6 +134,8 @@ test('each detail controller keeps its original account reference while requests
   assert.equal(f.controller.getSnapshot().detail.record.supplier_ref, 'S');
   assert.ok(!f.events.some(event => event[0] === 'foreign'));
 });
+
+test.todo('an old response resolving after account reset must not mutate the next account summary');
 
 test('both platform detail views keep native dialog, feedback and role navigation hooks', () => {
   for (const platform of ['ios', 'android']) {
