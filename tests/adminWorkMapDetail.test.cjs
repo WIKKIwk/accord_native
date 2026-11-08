@@ -137,6 +137,7 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
     react: { useSyncExternalStore: (_s, snapshot) => snapshot() },
     'react-native': { ActivityIndicator: 'ActivityIndicator', ScrollView: 'ScrollView', StyleSheet: { create: x => x }, Text: 'Text', View: 'View' },
     '../components/useWorkerColors': { useWorkerColors: () => ({ text: '#000', field: '#fff' }) },
+    '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' },
     '../shared/localization': { localizedGetter: key => key, productionText: key => key, adminText: key => key },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './useAdminWorkMapDetail': { useAdminWorkMapDetail: () => ({ ...detail, retry }) },
@@ -168,6 +169,10 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   assert.equal(nodes(View({ ...props, session: { profile: { role: 'sales_manager' } } })).some(node => node.type === 'Metadata'), false);
   assert.equal(nodes(View({ ...props, ticket: { kind: 'pending' } })).some(node => node.type === 'Metadata'), false);
   assert.equal(failed.find(node => node.type === 'Button' && node.props.label === 'retry').props.onPress, retry);
-  assert.equal(failed.find(node => node.type === 'Button' && node.props.label === 'closeAction').props.onPress, close);
+  assert.equal(failed.find(node => node.type === 'WorkerIconButton').props.label, 'worker.action.close');
+  assert.equal(failed.find(node => node.type === 'WorkerIconButton').props.onPress, close);
+  const pending = nodes(View({ ...props, ticket: { kind: 'pending' } }));
+  assert.equal(pending.find(node => node.type === 'Button' && node.props.label === 'closeAction').props.onPress, close);
+  assert.equal(pending.some(node => node.type === 'WorkerIconButton'), false);
   detail = { valid: false }; assert.equal(View(props).type, 'View'); assert.equal(nodes(View(props)).length, 1);
 });

@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Session } from '../auth';
 import { useWorkerColors } from '../components/useWorkerColors';
+import { WorkerIconButton } from '../components/WorkerIconButton';
 import { adminText, localizedGetter, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import type { AdminWorkMapController, AdminWorkMapDetailTicket, AdminWorkMapRow } from './adminWorkMapController';
@@ -37,7 +38,7 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
     ? adminWorkMapComboPresentation(value.map.combo, value.map.products, locale) : null;
   const metadata = adminWorkMapMetadataRows(value?.kind === 'order' ? value.metadata : null, session.profile.role, ticket.kind,
     { admin: key => adminText(key, locale), loading: localizedGetter('loading', locale) });
-  return <View style={[styles.screen, { backgroundColor: colors.field }]}><ScrollView contentContainerStyle={styles.content}>
+  return <View style={[styles.screen, { backgroundColor: colors.field }]}><ScrollView contentContainerStyle={[styles.content, ticket.kind === 'order' && styles.openedContent]}>
     {header ? <View><Text style={{ color: colors.text }}>{productionText('worker.order.code', locale)}</Text>
       <Text style={[styles.title, { color: colors.text }]}>{header.code}</Text>
       <Text style={[styles.title, { color: colors.text }]}>{header.label}</Text></View>
@@ -55,7 +56,8 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
         {typeof width === 'number' && Number.isFinite(width) && <ListItem supportingText={`${width} mm`}>{productionText('worker.summary.material_width', locale)}</ListItem>}
       </>}
     </Column></Host>}
-    <Host matchContents={{ vertical: true }}><Button label={localizedGetter('closeAction', locale)} onPress={close} /></Host>
-  </ScrollView></View>;
+    {ticket.kind !== 'order' && <Host matchContents={{ vertical: true }}><Button label={localizedGetter('closeAction', locale)} onPress={close} /></Host>}
+  </ScrollView>{ticket.kind === 'order' && <View style={styles.openedClose}><WorkerIconButton icon="close" label={productionText('worker.action.close', locale)} tonal onPress={close} /></View>}</View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, content: { padding: 16, gap: 12 }, title: { fontSize: 20, fontWeight: '700' } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, content: { padding: 16, gap: 12 }, openedContent: { paddingTop: 56 },
+  openedClose: { position: 'absolute', top: 4, right: 4 }, title: { fontSize: 20, fontWeight: '700' } });
