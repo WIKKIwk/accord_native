@@ -3,7 +3,7 @@ import { activeSessionToken, type Session } from '../../auth';
 import type { ChatLiveState } from '../../chatLive';
 import { chatCacheScope } from './chatLocalStore';
 import { chatUnreadRuntimeFor, existingChatUnreadRuntimeFor, subscribeChatUnreadRuntimeChanges } from './chatUnreadRuntime';
-import { SECURE_CHAT_UNAVAILABLE, secureChatAvailable } from './chatSecureSocket';
+import { secureChatUnavailableReason } from './chatSecureReadiness';
 import { subscribeSecureChatLive } from './secureChatLive';
 
 type InternalStatus = { hasData: boolean; fetch: 'pending' | 'success' | 'failure'; live: ChatLiveState };
@@ -26,13 +26,13 @@ export type SecureChatUnreadState = { count: number | null; status: 'loading' | 
 export function useSecureChatUnreadState(session: Session): SecureChatUnreadState {
   let scope: string | null = null;
   try { scope = chatCacheScope(session); } catch { /* An incomplete session cannot start Chat. */ }
-  const available = secureChatAvailable();
+  const unavailable = secureChatUnavailableReason();
   const runtime = useSyncExternalStore(subscribeChatUnreadRuntimeChanges,
     () => existingChatUnreadRuntimeFor(session, 'secure'), noRuntime);
   const status = useSyncExternalStore(subscribeStatus, () => statusFor(session), () => initial);
   const count = useSyncExternalStore(runtime?.subscribe ?? noSubscribe, runtime?.getSnapshot ?? zero, zero);
   useEffect(() => {
-    if (!scope || !available || !activeSessionToken(session)) return;
+    if (!scope || unavailable || !activeSessionToken(session)) return;
     if (!existingChatUnreadRuntimeFor(session, 'secure')) update(session, initial);
     const current = () => !!existingChatUnreadRuntimeFor(session, 'secure');
     try {
@@ -45,8 +45,8 @@ export function useSecureChatUnreadState(session: Session): SecureChatUnreadStat
       });
       void next.start().catch(() => { if (current()) update(session, { fetch: 'failure', live: 'unavailable' }); });
     } catch { update(session, { fetch: 'failure', live: 'unavailable' }); }
-  }, [session, scope, available]);
-  if (!available) return { count: null, status: 'unavailable', message: SECURE_CHAT_UNAVAILABLE };
+  }, [session, scope, unavailable]);
+  if (unavailable) return { count: null, status: 'unavailable', message: unavailable };
   if (!scope || !activeSessionToken(session)) return { count: null, status: 'unavailable', message: 'Sessiya tugagan.' };
   if (!runtime || !status.hasData) return { count: null, status: status.fetch === 'failure' ? 'unavailable' : 'loading' };
   return { count, status: status.fetch === 'success' && status.live === 'ready' ? 'ready' : 'degraded' };

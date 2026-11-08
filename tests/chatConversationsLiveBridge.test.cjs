@@ -39,6 +39,7 @@ function fixture(runtime = null, role = 'customer', policy = 'legacy', nativeAva
     './chatUnreadRuntime': { existingChatUnreadRuntimeFor: () => runtime, subscribeChatUnreadRuntimeChanges: () => () => {} },
     './ChatLivePolicy': { useChatLivePolicy: () => policy },
     './chatSecureSocket': { SECURE_CHAT_UNAVAILABLE: 'development build required' },
+    './chatSecureReadiness': { secureChatUnavailableReason: () => nativeAvailable ? null : 'development build required' },
     './secureChatLive': { subscribeSecureChatLive: (_session, callback) => {
       if (!nativeAvailable) throw new Error('development build required');
       calls.push(['secureLive']); liveInvalidation = callback;
@@ -81,6 +82,7 @@ test('a secure list never starts the legacy socket before its runtime exists or 
       assert.ok(!f.calls.some(call => call[0] === 'existingLive'));
       assert.equal(f.calls.some(call => call[0] === 'secureLive'), available);
       if (!available) assert.ok(f.calls.some(call => call[0] === 'setState' && call[1] === 'development build required'));
+      if (!available) assert.ok(!f.calls.some(call => call[0] === 'load'));
     } finally { f.blur(); }
     if (available) assert.ok(f.calls.some(call => call[0] === 'stopSecureLive'));
   }

@@ -12,6 +12,7 @@ import { existingChatUnreadRuntimeFor, subscribeChatUnreadRuntimeChanges } from 
 import { useChatLivePolicy } from './shared/chat/ChatLivePolicy';
 import { SECURE_CHAT_UNAVAILABLE } from './shared/chat/chatSecureSocket';
 import { subscribeSecureChatLive } from './shared/chat/secureChatLive';
+import { secureChatUnavailableReason } from './shared/chat/chatSecureReadiness';
 
 const noUnreadRuntime = () => null;
 
@@ -49,10 +50,10 @@ export function useChatThread(session: Session, conversationId: string) {
   const restoreStorage = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (!unreadRuntime) return;
+    if (!unreadRuntime || (policy === 'secure' && secureChatUnavailableReason())) return;
     unreadRuntime.setActiveConversation(conversationId);
     return () => unreadRuntime.setActiveConversation('');
-  }, [conversationId, unreadRuntime]);
+  }, [conversationId, policy, unreadRuntime]);
 
   const visible = useCallback(() => focused.current && activeSessionToken(session) !== null &&
     (AppState.currentState == null || AppState.currentState === 'active'), [session]);
@@ -206,6 +207,12 @@ export function useChatThread(session: Session, conversationId: string) {
   const clearMediaError = useCallback(() => setMediaError(''), []);
 
   useFocusEffect(useCallback(() => {
+    const unavailable = policy === 'secure' ? secureChatUnavailableReason() : null;
+    if (unavailable) {
+      focused.current = false;
+      setLiveError(unavailable);
+      return () => { focused.current = false; };
+    }
     focused.current = true;
     resumeDrain.current = () => { void drain(); };
     setStorageReady(false);

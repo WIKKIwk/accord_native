@@ -60,6 +60,7 @@ function fixture(overrides = {}) {
     } },
     '../../chatModel': model,
     '../../chatOutbox': { chatDeviceId: async () => 'device-1' },
+    './chatSecureReadiness': { secureChatUnavailableReason: () => overrides.secureUnavailable ?? null },
     './chatLocalStore': storage,
     './chatSessionRuntime': sessionRuntime,
   });
@@ -138,6 +139,20 @@ test('a secure role cannot reuse a legacy runtime for the same session', async (
   assert.equal(secureStarts, 1);
   await f.reset();
   assert.equal(secureStops, 1);
+});
+
+test('an unavailable secure policy cannot start network work or dispose an existing legacy runtime', async () => {
+  const f = fixture({ secureUnavailable: 'secure authentication unavailable' });
+  const legacy = f.chatUnreadRuntimeFor(f.session);
+  await legacy.start();
+  await tick();
+  const starts = f.liveStarts(), signals = f.signals.length;
+  assert.throws(() => f.chatUnreadRuntimeFor(f.session, { policy: 'secure', subscribeLive: () => {
+    throw new Error('must not start'); }, onConversationsLoaded: () => {}, onConversationsFailed: () => {} }), /secure authentication unavailable/);
+  assert.equal(f.existingChatUnreadRuntimeFor(f.session), legacy);
+  assert.equal(f.liveStarts(), starts);
+  assert.equal(f.signals.length, signals);
+  await f.reset();
 });
 
 test('background and foreground lifecycle stop and restart the real live adapter', async () => {

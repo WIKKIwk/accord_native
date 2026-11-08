@@ -10,6 +10,7 @@ import { existingChatUnreadRuntimeFor, subscribeChatUnreadRuntimeChanges } from 
 import { useChatLivePolicy } from './ChatLivePolicy';
 import { SECURE_CHAT_UNAVAILABLE } from './chatSecureSocket';
 import { subscribeSecureChatLive } from './secureChatLive';
+import { secureChatUnavailableReason } from './chatSecureReadiness';
 
 const noUnreadRuntime = () => null;
 
@@ -48,6 +49,12 @@ export function useChatConversations(session: Session) {
   }, [remember, session]);
 
   useFocusEffect(useCallback(() => {
+    const unavailable = policy === 'secure' ? secureChatUnavailableReason() : null;
+    if (unavailable) {
+      focused.current = false;
+      setLiveError(unavailable);
+      return () => { focused.current = false; };
+    }
     focused.current = true;
     void refresh();
     const onInvalidate = () => { void refresh(); };

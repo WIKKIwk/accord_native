@@ -11,6 +11,7 @@ import {
 } from './chatLocalStore';
 import { ChatSessionRuntime } from './chatSessionRuntime';
 import type { ChatLivePolicy } from './ChatLivePolicy';
+import { secureChatUnavailableReason } from './chatSecureReadiness';
 
 export type ChatUnreadTransport = { policy: 'secure';
   subscribeLive: (onEvent: (payload: Record<string, unknown>) => void, onInvalidate: () => void) => () => void;
@@ -41,6 +42,10 @@ export function chatUnreadRuntimeFor(session: Session, transport?: ChatUnreadTra
   const scope = chatCacheScope(session);
   const policy = transport?.policy ?? 'legacy';
   if (!activeSessionToken(session)) throw new Error('Sessiya tugagan.');
+  if (transport) {
+    const unavailable = secureChatUnavailableReason();
+    if (unavailable) throw new Error(unavailable);
+  }
   if (current?.session === session && current.scope === scope && current.policy === policy) return current.runtime;
   disposeCurrent();
   const controller = new AbortController();

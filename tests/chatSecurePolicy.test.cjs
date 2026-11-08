@@ -17,15 +17,23 @@ function load(file, mocks) {
 
 test('route policy is selected before nested Chat children render and pushes stay nested', () => {
   const jsx = (type, props) => ({ type, props });
+  let unavailable = null;
   const route = load('shared/chat/ChatRouteContext.tsx', {
     'react/jsx-runtime': { jsx, jsxs: jsx },
     react: { createContext: () => ({ Provider: 'RouteContext' }), useContext: () => null, useMemo: fn => fn() },
+    'react-native': { View: 'View', Text: 'Text' },
     'expo-router': { router: {} }, '../../components/ChatMetadata': { ChatMetadataProvider: 'Metadata' },
     './chatNavigation': { createChatNavigation: () => ({}) }, './ChatLivePolicy': { ChatLivePolicyProvider: 'Policy' },
+    './chatSecureReadiness': { secureChatUnavailableReason: () => unavailable },
   });
   const base = { session: { imageCacheScope: 'synthetic' }, basePath: '/ios-customer/chat', children: 'child' };
   assert.equal(route.ChatRouteProvider({ ...base, livePolicy: 'secure' }).props.policy, 'secure');
   assert.equal(route.ChatRouteProvider(base).props.policy, 'legacy');
+  unavailable = 'secure authentication unavailable';
+  const blocked = route.ChatRouteProvider({ ...base, livePolicy: 'secure' });
+  assert.equal(blocked.props.children.props.children.type, 'View');
+  assert.equal(blocked.props.children.props.children.props.children.props.children, unavailable);
+  assert.equal(route.ChatRouteProvider(base).props.children.props.children.type, 'Metadata');
   const navigation = load('shared/chat/chatNavigation.ts', {});
   const calls = [];
   const nav = navigation.createChatNavigation('/ios-customer/chat', { push: value => calls.push(value), replace: value => calls.push(value) });
@@ -34,7 +42,7 @@ test('route policy is selected before nested Chat children render and pushes sta
   assert.equal(calls[1].pathname, '/ios-customer/chat/[conversationId]');
 });
 
-function unreadFixture(available) {
+function unreadFixture(available, pendingAuth = false) {
   let current = null, transport, liveCallback, count = 0;
   const effects = [];
   const session = { baseUrl: 'https://erp.example', token: 'synthetic', profile: { role: 'customer', ref: 'a' } };
@@ -45,7 +53,8 @@ function unreadFixture(available) {
     './chatLocalStore': { chatCacheScope: () => 'scope' },
     './chatUnreadRuntime': { existingChatUnreadRuntimeFor: (_session, policy) => policy === 'secure' ? current : null,
       subscribeChatUnreadRuntimeChanges: () => () => {}, chatUnreadRuntimeFor: (_session, options) => { current = runtime; transport = options; return runtime; } },
-    './chatSecureSocket': { secureChatAvailable: () => available, SECURE_CHAT_UNAVAILABLE: 'development build required' },
+    './chatSecureReadiness': { secureChatUnavailableReason: () => !available ? 'development build required'
+      : pendingAuth ? 'secure authentication unavailable' : null },
     './secureChatLive': { subscribeSecureChatLive: (_session, _onInvalidate, _onEvent, onState) => { liveCallback = onState; return () => {}; } },
   });
   return { ...api, session, effects, getTransport: () => transport, setCount: value => { count = value; },
@@ -57,6 +66,22 @@ test('secure unread reports missing native module, never an invented zero', () =
   assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: null, status: 'unavailable', message: 'development build required' });
   f.effects[0]();
   assert.equal(f.getTransport(), undefined);
+});
+
+test('native module present but unresolved ticket policy remains unavailable without starting runtime', () => {
+  const f = unreadFixture(true, true);
+  assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: null, status: 'unavailable', message: 'secure authentication unavailable' });
+  f.effects[0]();
+  assert.equal(f.getTransport(), undefined);
+});
+
+test('production readiness remains closed even when the native socket module exists', () => {
+  for (const [available, expected] of [[false, 'development build required'], [true, 'Xavfsiz Chat aloqasi hozircha mavjud emas.']]) {
+    const readiness = load('shared/chat/chatSecureReadiness.ts', {
+      './chatSecureSocket': { secureChatAvailable: () => available, SECURE_CHAT_UNAVAILABLE: 'development build required' },
+    });
+    assert.equal(readiness.secureChatUnavailableReason(), expected);
+  }
 });
 
 test('secure unread exposes a count only after a real list result and marks loss of live sync', () => {

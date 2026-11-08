@@ -28,6 +28,7 @@ function fixture() {
       return new Promise(resolve => { resolvers.push(resolve); });
     } } });
   const secure = load('shared/chat/secureChatLive.ts', { '../../auth': auth, '../../chatLive': chatLive,
+    './chatSecureReadiness': { secureChatUnavailableReason: () => null },
     './chatSecureSocket': { SECURE_CHAT_UNAVAILABLE: 'development build required', secureChatAvailable: () => true,
       secureChatSocket: (_session, uri) => { const socket = { uri, readyState: 1, send() {}, close() { this.readyState = 3; this.onclose?.(); } };
         sockets.push(socket); return socket; } } });
@@ -49,6 +50,19 @@ test('account reset aborts a pending ticket before a secure or legacy socket can
     await tick(); await tick();
     assert.equal(f.sockets.length, 0);
   } finally { stop(); global.WebSocket = Original; }
+});
+
+test('the unresolved secure ticket/refresh policy stops before ticket or socket work', () => {
+  let attempts = 0;
+  const session = { token: 'synthetic' };
+  const secure = load('shared/chat/secureChatLive.ts', {
+    '../../auth': { activeSessionToken: () => 'synthetic', registerSessionResetHook: () => () => {} },
+    '../../chatLive': { subscribeChatLive: () => { attempts++; return () => {}; } },
+    './chatSecureReadiness': { secureChatUnavailableReason: () => 'secure authentication unavailable' },
+    './chatSecureSocket': { secureChatSocket: () => { attempts++; } },
+  });
+  assert.throws(() => secure.subscribeSecureChatLive(session, () => {}), /secure authentication unavailable/);
+  assert.equal(attempts, 0);
 });
 
 test('background cancels the old ticket and resume creates only the secure socket', async () => {
