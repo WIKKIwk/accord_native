@@ -9,6 +9,7 @@ export type ChatConversation = {
   preview: string;
   lastMessageSequence: number;
   unreadCount: number;
+  updatedAt: number;
   timestamp: number;
 };
 export type ChatAttachment = { mediaId: string; kind: 'image' | 'video'; width: number; height: number };
@@ -73,7 +74,7 @@ export function parseOpenedChatConversation(value: unknown, target: ChatPeer): C
   return {
     id, peer, title: peer.displayName || target.displayName || text(row.title) || 'Suhbat',
     preview: Object.keys(message).length ? messagePreview(message) : '',
-    lastMessageSequence: integer(row.last_message_sequence), unreadCount: integer(row.unread_count),
+    lastMessageSequence: integer(row.last_message_sequence), unreadCount: integer(row.unread_count), updatedAt: integer(row.updated_at_unix),
     timestamp: integer(message.created_at_unix) || integer(row.updated_at_unix),
   };
 }
@@ -185,7 +186,7 @@ export function parseChatConversations(value: unknown): { items: ChatConversatio
     items.push({
       id, peer, title: peer?.displayName || text(row.title) || 'Suhbat',
       preview: messagePreview(message), lastMessageSequence: sequence,
-      unreadCount: integer(row.unread_count),
+      unreadCount: integer(row.unread_count), updatedAt: integer(row.updated_at_unix),
       timestamp: integer(message.created_at_unix) || integer(row.updated_at_unix),
     });
   }
