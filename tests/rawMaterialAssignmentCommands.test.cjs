@@ -54,6 +54,7 @@ test('a definite f119 ambiguity is retried only after the user selects an offere
   try {
     const saved = await h.command.assignScanned(' order ', ' ROLL ', opts(async choices => { seen = choices; return b; }));
     assert.deepEqual(seen, [a, b]); assert.ok(Object.isFrozen(seen)); assert.equal(saved.apparatus, b);
+    assert.equal(h.command.needsReconciliation, false);
     assert.deepEqual(h.calls.map(call => [call.method, call.body]), [
       ['POST', { order_id: 'order', barcode: 'ROLL' }], ['POST', { order_id: 'order', barcode: 'ROLL', apparatus: b }],
     ]);
@@ -109,6 +110,9 @@ test('network failure, server error, malformed response and non-400 ambiguity ne
     const h = setup([response]); let chosen = false;
     try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => { chosen = true; return a; })));
       assert.equal(chosen, false); assert.equal(h.calls.length, 1);
+      assert.equal(h.command.needsReconciliation, true);
+      await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
+      assert.equal(h.calls.length, 1);
     } finally { h.restore(); }
   }
 });
@@ -116,14 +120,18 @@ test('network failure, server error, malformed response and non-400 ambiguity ne
 test('401 refresh never automatically repeats an assignment that may have reached the server', async () => {
   const h = setup([{ status: 401, body: { error: 'expired' } }, success]);
   try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
-    assert.equal(h.refreshes(), 1); assert.equal(h.calls.length, 1);
+    assert.equal(h.refreshes(), 1); assert.equal(h.calls.length, 1); assert.equal(h.command.needsReconciliation, true);
+    await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
+    assert.equal(h.calls.length, 1);
   } finally { h.restore(); }
 });
 
 test('the user-chosen second request also cannot retry a 401 automatically', async () => {
   const h = setup([ambiguous(), { status: 401, body: { error: 'expired' } }, success]);
   try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
-    assert.equal(h.refreshes(), 1); assert.equal(h.calls.length, 2);
+    assert.equal(h.refreshes(), 1); assert.equal(h.calls.length, 2); assert.equal(h.command.needsReconciliation, true);
+    await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Natijani tekshirib/);
+    assert.equal(h.calls.length, 2);
   } finally { h.restore(); }
 });
 

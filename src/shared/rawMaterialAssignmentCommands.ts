@@ -19,9 +19,12 @@ type AssignmentCommandOptions = {
 export class RawMaterialAssignmentCommands {
   private readonly scope: string;
   private busy = false;
+  private reconciliationRequired = false;
   constructor(private readonly session: Session, private readonly isCurrent: () => boolean) {
     this.scope = sessionReadScope(session);
   }
+
+  get needsReconciliation(): boolean { return this.reconciliationRequired; }
 
   private assertCurrent() {
     if (!activeSessionToken(this.session) || sessionReadScope(this.session) !== this.scope || !this.isCurrent() ||
@@ -40,12 +43,18 @@ export class RawMaterialAssignmentCommands {
       attempted = true;
     };
     this.assertCurrent();
-    return preparationAssignMaterial(this.session, orderId, barcode, apparatus, beforeSend);
+    return preparationAssignMaterial(this.session, orderId, barcode, apparatus, beforeSend).catch(error => {
+      const definiteAmbiguity = error instanceof WorkerControlException && error.statusCode === 400 &&
+        error.code === 'raw_material_group_ambiguous';
+      if (attempted && !definiteAmbiguity) this.reconciliationRequired = true;
+      throw error;
+    });
   }
 
   /** @v2 _assignMaterialWithApparatusSelection */
   async assignScanned(orderId: string, barcode: string, options: AssignmentCommandOptions) {
     if (this.busy) throw new Error('Amal bajarilmoqda.');
+    if (this.reconciliationRequired) throw new Error('Natijani tekshirib, qayta urinib ko‘ring.');
     const order = orderId.trim(), code = barcode.trim();
     if (!order || !code) throw new Error('Zakaz tanlang va homashyo QR skaner qiling');
     this.assertCurrent();
