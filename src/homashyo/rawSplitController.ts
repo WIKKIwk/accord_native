@@ -1,4 +1,4 @@
-import { preparationInventoryBarcode } from '../preparation/preparationInventory';
+import { rawSplitBarcode } from './rawSplitBarcode';
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
 import * as api from './rawSplitApi';
 import { buildRawSplitPayload, newRawSplitRequestId, rawSplitConfirmWidth, rawSplitOutputNet, RawSplitWasteInputError,
@@ -92,7 +92,7 @@ export class RawSplitController {
   }
   async lookup(raw = this.state.barcode): Promise<void> {
     if (this.locked || !this.isCurrent()) return;
-    const barcode = preparationInventoryBarcode(raw); if (!barcode) return;
+    const barcode = rawSplitBarcode(raw); if (!barcode) return;
     this.update({ barcode: raw, busy: true, error: null, source: null, saved: null });
     try {
       const source = await this.ops.rawSplitSource(this.options.ticket, barcode); this.checkScope();

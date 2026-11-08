@@ -6,7 +6,10 @@ function load(name, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
 const model = load('homashyo/rawSplitModel'); const width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
 const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
-const { RawSplitController } = load('homashyo/rawSplitController', { '../preparation/preparationInventory': { preparationInventoryBarcode: raw => raw.trim() },
+const inventory = load('preparation/preparationInventory', { '../auth': {}, '../shared/appRoutes': {}, '../shared/inventoryViewRuntime': {},
+  '../inventoryReadApi': {}, './preparationInventoryTransfers': {} });
+const barcode = load('homashyo/rawSplitBarcode', { '../preparation/preparationInventory': inventory });
+const { RawSplitController } = load('homashyo/rawSplitController', { './rawSplitBarcode': barcode,
   './rawSplitApi': {}, './rawSplitDraft': draft, './rawSplitModel': model, './rawSplitWidthPlan': width });
 const raw = { revision: '1.000000', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM',
   item_name: 'Film', kg: '100', width_mm: '1000', micron: '20' };
@@ -96,4 +99,11 @@ test('same-account new login cannot apply an old controller lookup result or emi
     rawSplitSessionIsCurrent: () => current }); h.controller.subscribe(() => updates++);
   const pending = h.controller.lookup('parent'); current = false; const count = updates; resolve(source); await pending;
   assert.equal(h.controller.getSnapshot().source, null); assert.equal(updates, count); assert.deepEqual(h.notices, []);
+});
+
+test('manual lookup uses the V2 last duplicate barcode and rejects invalid UTF-8 before any API call', async () => {
+  const requested = [], h = setup({ rawSplitSource: async (_ticket, code) => { requested.push(code); return source; } });
+  await h.controller.lookup('https://example.test/path?barcode=A&barcode=B'); assert.deepEqual(requested, ['B']);
+  await assert.rejects(h.controller.lookup('https://example.test/path?barcode=%FF'), URIError);
+  assert.deepEqual(requested, ['B']);
 });
