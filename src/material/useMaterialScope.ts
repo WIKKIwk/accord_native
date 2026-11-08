@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { activeSessionToken, isSessionWitnessCurrent, registerSessionResetHook, type Session, type SessionWitness } from '../auth';
+import { registerSessionResetHook, type Session, type SessionWitness } from '../auth';
 import { profile } from '../profileApi';
-import { isMaterialTestSession } from './materialTestSession';
+import { materialProfileCurrent } from './materialProfileGuard';
 
 /** V2 keeps the previous profile when pull-to-refresh fails. */
 export function useMaterialScope(session: Session, witness: SessionWitness) {
@@ -12,11 +12,12 @@ export function useMaterialScope(session: Session, witness: SessionWitness) {
     const unregister = registerSessionResetHook(async () => { mounted.current = false; });
     return () => { mounted.current = false; unregister(); };
   }, []);
+  const current = useCallback(() => materialProfileCurrent(session, witness), [session, witness]);
   const refresh = useCallback(async () => {
-    if (busy.current || isMaterialTestSession(session) || !activeSessionToken(session) || !isSessionWitnessCurrent(witness)) return;
+    if (busy.current || !current()) return;
     busy.current = true; setRefreshing(true);
-    try { await profile(session); } catch { /* Keep the previous scope. */ }
-    finally { busy.current = false; if (mounted.current && activeSessionToken(session) && isSessionWitnessCurrent(witness)) setRefreshing(false); }
-  }, [session, witness]);
+    try { await profile(session, false, current); } catch { /* Keep the previous scope. */ }
+    finally { busy.current = false; if (mounted.current && current()) setRefreshing(false); }
+  }, [session, current]);
   return { groups: session.assigned_item_groups ?? [], refreshing, refresh };
 }

@@ -60,14 +60,17 @@ for (const platform of ['ios', 'android']) {
 
 test('both Material Profile wrappers reuse ProfileScreen without a daily-work callback', () => {
   for (const platform of ['ios', 'android']) {
-    const session = material(['raw_material.assign']), logout = () => {};
-    const mocks = { 'react/jsx-runtime': jsx, 'react-native': { View: 'View', PlatformColor: () => 'color' },
+    const session = material(['raw_material.assign']), logout = () => {}, witness = { session }; let current = true;
+    const mocks = { 'react/jsx-runtime': jsx, react: { useCallback: fn => fn }, 'react-native': { View: 'View', PlatformColor: () => 'color' },
       'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 0 }) },
       '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) }, 'expo-router': { router: { canGoBack: () => true, back() {}, navigate() {} } },
       '../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' }, '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
-      './MaterialContext': { useMaterialContext: () => ({ session, onLogout: logout }) } };
+      './MaterialContext': { useMaterialContext: () => ({ session, witness, onLogout: logout }) },
+      './materialProfileGuard': { materialProfileCurrent: (s, w) => current && s === session && w === witness } };
     const screen = load(`material/MaterialProfile.${platform}`, mocks, '.tsx').MaterialProfile();
     const profile = nodes(screen, 'ProfileScreen')[0]; assert.ok(profile); assert.equal(profile.props.session, session);
     assert.equal(profile.props.onLogout, logout); assert.equal(profile.props.onDailyWork, undefined);
+    assert.equal(profile.props.isCurrent(), true); current = false; assert.equal(profile.props.isCurrent(), false);
+    assert.equal(profile.props.settingsUnavailableMessage, 'Sozlamalar vaqtincha mavjud emas.');
   }
 });

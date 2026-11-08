@@ -22,6 +22,6 @@ test('Home refresh sends no profile request for reserved test token', async () =
   const hooks = { useState: initial => [initial, () => {}], useRef: value => ({ current: value }), useEffect() {}, useCallback: fn => fn };
   const { useMaterialScope } = compile('useMaterialScope', { react: hooks,
     '../auth': { activeSessionToken: () => session.token, isSessionWitnessCurrent: () => true, registerSessionResetHook: () => () => {} },
-    '../profileApi': { profile: async () => { reads++; } }, './materialTestSession': { isMaterialTestSession: value => value.token === 'test-mode-token' } });
+    '../profileApi': { profile: async () => { reads++; } }, './materialProfileGuard': { materialProfileCurrent: value => value.token !== 'test-mode-token' } });
   await useMaterialScope(session, witness).refresh(); assert.equal(reads, 0);
 });
