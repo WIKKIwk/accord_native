@@ -23,4 +23,5 @@ export type ProfileViewProps = {
   onSave: () => void;
   onDailyWork?: () => void;
   onLogout: () => void;
+  showDirectLogout?: boolean;
 };
