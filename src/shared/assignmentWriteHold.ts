@@ -93,22 +93,45 @@ export class AssignmentWriteHold {
 }
 
 class AssignmentWriteLease {
-  private phase: 'reserved' | 'attempted' | 'releasing' | 'closed' | 'blocked' = 'reserved';
+  private phase: 'reserved' | 'checking' | 'attempted' | 'releasing' | 'closed' | 'blocked' = 'reserved';
   constructor(private readonly store: AtomicAssignmentHoldStore, private readonly marker: AssignmentWriteMarker,
     private readonly options: Pick<HoldOptions, 'evaluator' | 'isCurrent' | 'scopeSnapshot'>, private readonly scope: string) {}
 
   /** Pass as the synchronous beforeSend guard only after acquisition and readback. */
   beforeSend = (): void => {
-    if (this.phase !== 'reserved') throw denied('already_attempted');
-    if (!current(this.options, this.scope)) throw denied('not_current');
-    this.phase = 'attempted';
+    if (this.phase !== 'reserved') {
+      if (this.phase === 'checking') this.phase = 'blocked';
+      throw denied('already_attempted');
+    }
+    // Lock before calling any supplied evaluator, scope or lifetime callback.
+    // A callback can reenter this lease and even catch the inner rejection.
+    this.phase = 'checking';
+    try {
+      if (!current(this.options, this.scope)) throw denied('not_current');
+      if (!this.isChecking()) throw denied('already_attempted');
+      this.phase = 'attempted';
+    } catch (error) {
+      // A callback failure or reentry leaves the durable reservation in place.
+      this.phase = 'blocked';
+      throw error;
+    }
   };
 
+  private isChecking(): boolean { return this.phase === 'checking'; }
+
   /** Only a definitely unsent reservation may be automatically released. */
-  async releaseIfUnsent(): Promise<void> {
-    if (this.phase !== 'reserved') throw denied('already_attempted');
+  releaseIfUnsent(): Promise<void> {
+    if (this.phase !== 'reserved') {
+      const reentrant = this.phase === 'checking';
+      if (reentrant) this.phase = 'blocked';
+      const rejected = Promise.reject(denied('already_attempted'));
+      // A synchronous guard may invoke and ignore this method repeatedly.
+      // Mark the rejection observed while preserving it for awaiting callers.
+      void rejected.catch(() => {});
+      return rejected;
+    }
     this.phase = 'releasing';
-    try {
+    return (async () => { try {
       if (await this.store.releaseIfOwner(this.marker.owner) !== true) {
         this.phase = 'blocked';
         throw denied('ownership_uncertain');
@@ -118,6 +141,6 @@ class AssignmentWriteLease {
       this.phase = 'blocked';
       if (error instanceof AssignmentWriteHoldError) throw error;
       throw denied('storage_uncertain');
-    }
+    } })();
   }
 }

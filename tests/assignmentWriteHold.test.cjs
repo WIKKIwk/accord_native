@@ -136,7 +136,7 @@ test('account switch before acquisition prevents storage access; after reservati
   const one = new AtomicStore(); await assert.rejects(gate(one, a, () => false).acquire(), code('not_current')); assert.deepEqual(one.calls, []);
   const two = new AtomicStore(); let current = true; const lease = await gate(two, a, () => current).acquire();
   current = false; assert.throws(() => lease.beforeSend(), code('not_current')); assert.equal(two.marker.owner, a);
-  await lease.releaseIfUnsent(); assert.equal(two.marker, null);
+  await assert.rejects(lease.releaseIfUnsent(), code('already_attempted')); assert.equal(two.marker.owner, a);
 });
 
 test('account switch while acquisition is pending conditionally releases only a definitely unsent owner', async () => {
@@ -162,7 +162,7 @@ test('async guard after acquisition or before send fails closed without unhandle
   const second = new AtomicStore(); calls = 0;
   const lease = await gate(second, a, () => ++calls <= 3 ? true : Promise.reject(Error('send guard'))).acquire();
   assert.throws(() => lease.beforeSend(), code('not_current')); assert.equal(second.marker.owner, a);
-  await lease.releaseIfUnsent(); assert.equal(second.marker, null);
+  await assert.rejects(lease.releaseIfUnsent(), code('already_attempted')); assert.equal(second.marker.owner, a);
   await new Promise(resolve => setImmediate(resolve));
 });
 
@@ -196,7 +196,7 @@ test('scope changes inside a true guard or owner callback fail closed before sto
     isCurrent: () => { if (tamper) scope = 'two'; return true; }, scopeSnapshot: () => scope, evaluator });
   const lease = await hold.acquire(); tamper = true;
   assert.throws(() => lease.beforeSend(), code('not_current')); assert.equal(third.marker.owner, a);
-  await lease.releaseIfUnsent(); assert.equal(third.marker, null);
+  await assert.rejects(lease.releaseIfUnsent(), code('already_attempted')); assert.equal(third.marker.owner, a);
 });
 
 test('scope snapshots stay in memory and are never written to the marker', async () => {
@@ -224,4 +224,70 @@ test('invalid owner IDs and missing storage never send or touch a store', async 
   const noStore = new AssignmentWriteHold({ enabled: true, createOwner: () => a, isCurrent: () => true,
     scopeSnapshot: () => 'scope', evaluator });
   await assert.rejects(noStore.acquire(), code('storage_uncertain'));
+});
+
+
+test('reentrant guard callbacks cannot allow either inner or outer send even if the inner error is swallowed', async () => {
+  for (const trigger of ['scopeSnapshot', 'isCurrent', 'evaluator.string', 'evaluator.isTrue']) {
+    const store = new AtomicStore(); let lease, armed = false, innerCompleted = false, attempts = 0;
+    const reenter = () => {
+      if (!armed) return;
+      attempts++;
+      try { lease.beforeSend(); innerCompleted = true; } catch (error) { assert.equal(error.code, 'already_attempted'); }
+    };
+    const chosenEvaluator = {
+      string: check => { if (trigger === 'evaluator.string') reenter(); return evaluator.string(check); },
+      isTrue: check => { if (trigger === 'evaluator.isTrue') reenter(); return evaluator.isTrue(check); },
+    };
+    const hold = new AssignmentWriteHold({ enabled: true, store, createOwner: () => a,
+      scopeSnapshot: () => { if (trigger === 'scopeSnapshot') reenter(); return 'scope'; },
+      isCurrent: () => { if (trigger === 'isCurrent') reenter(); return true; }, evaluator: chosenEvaluator });
+    lease = await hold.acquire(); armed = true;
+    assert.throws(() => lease.beforeSend(), code('already_attempted'), trigger);
+    assert.equal(innerCompleted, false, trigger); assert.ok(attempts > 0, trigger);
+    assert.throws(() => lease.beforeSend(), code('already_attempted'), trigger);
+    await assert.rejects(lease.releaseIfUnsent(), code('already_attempted'));
+    assert.equal(store.marker.owner, a); assert.deepEqual(store.calls, ['acquire', 'read']);
+  }
+});
+
+test('reentrant release is rejected without deleting marker or unhandled rejection', async () => {
+  for (const trigger of ['scopeSnapshot', 'isCurrent', 'evaluator.string', 'evaluator.isTrue']) {
+    const store = new AtomicStore(); let lease, armed = false, release, attempts = 0;
+    const reenter = () => {
+      if (!armed) return;
+      attempts++;
+      // The first rejection is intentionally ignored, as a sync guard can do.
+      // Keep another result to verify awaiting a rejected reentrant call still rejects.
+      if (!release) { void lease.releaseIfUnsent(); void lease.releaseIfUnsent(); release = lease.releaseIfUnsent(); }
+    };
+    const chosenEvaluator = {
+      string: check => { if (trigger === 'evaluator.string') reenter(); return evaluator.string(check); },
+      isTrue: check => { if (trigger === 'evaluator.isTrue') reenter(); return evaluator.isTrue(check); },
+    };
+    const hold = new AssignmentWriteHold({ enabled: true, store, createOwner: () => a,
+      scopeSnapshot: () => { if (trigger === 'scopeSnapshot') reenter(); return 'scope'; },
+      isCurrent: () => { if (trigger === 'isCurrent') reenter(); return true; }, evaluator: chosenEvaluator });
+    lease = await hold.acquire(); armed = true;
+    assert.throws(() => lease.beforeSend(), code('already_attempted'), trigger);
+    assert.ok(attempts > 0, trigger); await assert.rejects(release, code('already_attempted'));
+    assert.throws(() => lease.beforeSend(), code('already_attempted'), trigger);
+    await assert.rejects(lease.releaseIfUnsent(), code('already_attempted'));
+    assert.equal(store.marker.owner, a); assert.deepEqual(store.calls, ['acquire', 'read']);
+  }
+  await new Promise(resolve => setImmediate(resolve));
+});
+
+test('false, throwing or rejected async send guards leave the marker blocked', async () => {
+  for (const outcome of ['false', 'throw', 'async']) {
+    const store = new AtomicStore(); let armed = false;
+    const isCurrent = () => { if (!armed) return true; if (outcome === 'throw') throw Error('guard failed');
+      if (outcome === 'async') return Promise.reject(Error('async guard failed')); return false; };
+    const lease = await gate(store, a, isCurrent).acquire(); armed = true;
+    assert.throws(() => lease.beforeSend(), code('not_current'));
+    assert.throws(() => lease.beforeSend(), code('already_attempted'));
+    await assert.rejects(lease.releaseIfUnsent(), code('already_attempted'));
+    assert.equal(store.marker.owner, a); assert.deepEqual(store.calls, ['acquire', 'read']);
+  }
+  await new Promise(resolve => setImmediate(resolve));
 });
