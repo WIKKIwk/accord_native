@@ -2,6 +2,7 @@ import { ListItem, Text } from '@expo/ui';
 import { Button, Host, List, ProgressView, Section, VStack } from '@expo/ui/swift-ui';
 import { listRowBackground, listStyle, refreshable } from '@expo/ui/swift-ui/modifiers';
 import { SymbolView } from 'expo-symbols';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PlatformColor } from 'react-native';
 import { WorkerAlert } from '../components/WorkerAlert';
@@ -14,11 +15,19 @@ type Props = { onOpenDetail: (id: string) => void; onClearActionChanged?: (actio
 // @v2 CustomerNotificationsScreen
 export function CustomerNotificationsScreen({ onOpenDetail, onClearActionChanged }: Props) {
   const state = useCustomerNotifications(), { text } = useCustomerText(), [confirm, setConfirm] = useState(false);
-  const mounted = useRef(false);
+  const mounted = useRef(false), focusGeneration = useRef(0);
   const openClear = useCallback(() => setConfirm(true), []);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useFocusEffect(useCallback(() => {
+    const generation = ++focusGeneration.current;
+    return () => { if (focusGeneration.current === generation) focusGeneration.current++; };
+  }, []));
   useEffect(() => { onClearActionChanged?.(openClear); return () => { onClearActionChanged?.(null); }; }, [onClearActionChanged, openClear]);
-  const open = async (id: string) => { await state.markSeen(id); if (mounted.current) onOpenDetail(id); };
+  const open = async (id: string) => {
+    const generation = focusGeneration.current;
+    await state.markSeen(id);
+    if (mounted.current && generation === focusGeneration.current) onOpenDetail(id);
+  };
   const showLoading = !state.loaded && state.records.length === 0 && (state.loading || !state.error);
   const showRetry = !state.loaded && state.records.length === 0 && !state.loading && !!state.error;
   return <>

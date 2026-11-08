@@ -27,7 +27,7 @@ function fixture(platform, state, confirm = false) {
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
     '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f], listRowBackground: c => ['background', c] },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', onSurface: 'fg', onSurfaceVariant: 'muted', secondaryContainer: 'highlight', onSecondaryContainer: 'selected' }) },
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl',
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { useFocusEffect: fn => { const clean = fn(); if (clean) cleanups.push(clean); } }, 'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl',
       Text: 'Text', View: 'View', PlatformColor: value => value },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' },
     './CustomerContext': { useCustomerText: () => ({ text: key => key }) }, './customerPresentation': presentation,
