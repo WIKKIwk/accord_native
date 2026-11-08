@@ -28,6 +28,71 @@ let sessionEpoch = 0;
 let storageQueue: Promise<void> = Promise.resolve();
 let refreshing: { session: Session; epoch: number; promise: Promise<boolean> } | null = null;
 let savedAccountStore: SavedAccountStore | null = null;
+
+/** Opt-in observation only: these values never participate in legacy auth decisions. */
+export type SessionWitness = Readonly<{ session: Session; epoch: number; generation: number; scope: string }>;
+let witnessGeneration = 0;
+let witnessSequence = 0;
+const witnessTransitions = new Set<number>();
+const witnessListeners = new Set<() => void>();
+const issuedWitnesses = new WeakSet<SessionWitness>();
+const pendingWitnessSaves = new Map<Session, number>();
+let observedWitnessScope: string | null = null;
+const witnessValues = (value: unknown): string[] => Array.isArray(value)
+  ? [...new Set(value.filter((item): item is string => typeof item === 'string'))].sort() : [];
+function witnessScope(session: Session | null): string | null {
+  if (!session) return null;
+  try {
+    // Keep this shape aligned with sessionReadScope; a token refresh is not an access-scope change.
+    return JSON.stringify([session.baseUrl, session.profile?.role ?? null, session.profile?.ref ?? null,
+      witnessValues(session.capabilities), witnessValues(session.assigned_apparatus),
+      witnessValues(session.assigned_item_groups ?? session.profile?.assigned_item_groups),
+      witnessValues(session.assigned_warehouses ?? session.profile?.assigned_warehouses)]);
+  } catch { return null; }
+}
+function notifyWitness(): void {
+  for (const listener of [...witnessListeners]) {
+    try {
+      const result: unknown = listener();
+      if (result && typeof (result as PromiseLike<unknown>).then === 'function') void Promise.resolve(result).catch(() => {});
+    } catch { /* A subscriber must never alter authentication behavior. */ }
+  }
+}
+function beginWitnessTransition(): () => void {
+  const id = ++witnessSequence;
+  witnessTransitions.add(id); witnessGeneration++; notifyWitness();
+  return () => {
+    if (!witnessTransitions.delete(id)) return;
+    observedWitnessScope = witnessScope(activeSession); witnessGeneration++; notifyWitness();
+  };
+}
+function observeWitnessScope(): void {
+  const next = witnessScope(activeSession);
+  if (observedWitnessScope === next) return;
+  observedWitnessScope = next; witnessGeneration++; notifyWitness();
+}
+
+/** Capture once at shell/operation creation; a null result must not be recaptured for the same stale operation. */
+export function captureSessionWitness(session: Session | null | undefined): SessionWitness | null {
+  if (!session) return null;
+  const scope = witnessScope(session);
+  if (witnessTransitions.size || activeSession !== session || !session.token || scope === null) return null;
+  const snapshot = Object.freeze({ session, epoch: sessionEpoch, generation: witnessGeneration, scope });
+  issuedWitnesses.add(snapshot); return snapshot;
+}
+export function isSessionWitnessCurrent(snapshot: SessionWitness | null | undefined): boolean {
+  if (!snapshot || !issuedWitnesses.has(snapshot)) return false;
+  const current = !witnessTransitions.size && activeSession === snapshot.session && !!snapshot.session.token &&
+    snapshot.epoch === sessionEpoch && snapshot.generation === witnessGeneration && witnessScope(snapshot.session) === snapshot.scope;
+  // Once a consumer observes an invalid witness, a later ABA must never revive it.
+  if (!current) issuedWitnesses.delete(snapshot);
+  return current;
+}
+/** Subscribers must only invalidate/redraw; their exceptions are isolated from auth. */
+export function subscribeSessionWitness(listener: () => void): () => void {
+  witnessListeners.add(listener); return () => { witnessListeners.delete(listener); };
+}
+export function sessionWitnessVersion(): number { return witnessGeneration; }
 const secureStorage = chunkedStorage({ getItem: key => SecureStore.getItemAsync(key),
   setItem: (key, value) => SecureStore.setItemAsync(key, value), removeItem: key => SecureStore.deleteItemAsync(key) });
 const newImageCacheScope = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
@@ -131,14 +196,25 @@ async function readCredentials(): Promise<Credentials | null> {
 
 export async function saveSession(session: Session): Promise<void> {
   const epoch = sessionEpoch;
-  await inStorageOrder(async () => {
-    if (epoch !== sessionEpoch) return;
-    await writeSession(session);
-    if (epoch === sessionEpoch) {
-      activeSession = session;
-      await syncSavedProfile(session);
-    }
-  });
+  const mayReplace = activeSession !== session || [...pendingWitnessSaves.keys()].some(target => target !== session);
+  pendingWitnessSaves.set(session, (pendingWitnessSaves.get(session) ?? 0) + 1);
+  const endWitness = mayReplace ? beginWitnessTransition() : null;
+  if (!endWitness) observeWitnessScope();
+  try {
+    await inStorageOrder(async () => {
+      if (epoch !== sessionEpoch) return;
+      await writeSession(session);
+      if (epoch === sessionEpoch) {
+        activeSession = session;
+        if (!endWitness) observeWitnessScope();
+        await syncSavedProfile(session);
+      }
+    });
+  } finally {
+    const remaining = (pendingWitnessSaves.get(session) ?? 1) - 1;
+    if (remaining) pendingWitnessSaves.set(session, remaining); else pendingWitnessSaves.delete(session);
+    endWitness?.();
+  }
 }
 
 export async function loadSession(): Promise<Session | null> {
@@ -181,6 +257,7 @@ export async function loadSession(): Promise<Session | null> {
     }
     if (epoch !== sessionEpoch) return null;
     activeSession = result;
+    observeWitnessScope();
     return result;
   });
 }
@@ -204,6 +281,8 @@ async function resetForChangedProfile(previous: Session | null, next: Session): 
 
 export async function clearSession(): Promise<void> {
   sessionEpoch++;
+  const endWitness = beginWitnessTransition();
+  try {
   activeSession = null;
   refreshing = null;
   const resets = Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
@@ -215,10 +294,13 @@ export async function clearSession(): Promise<void> {
   const [results] = await Promise.all([resets, storage]);
   const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
   if (failure) throw failure.reason;
+  } finally { endWitness(); }
 }
 
 export async function logout(session: Session): Promise<void> {
   if (activeSession !== session) return;
+  const endWitness = beginWitnessTransition();
+  try {
   const credentials = await inStorageOrder(readCredentials);
   const store = await savedAccountsFor(session.baseUrl, session, credentials);
   if (activeSession !== session) return;
@@ -253,6 +335,7 @@ export async function logout(session: Session): Promise<void> {
       if (activeSession === session) await clearSession();
     }
   });
+  } finally { endWitness(); }
 }
 
 async function authenticate(server: string, phone: string, code: string): Promise<Session> {
@@ -271,6 +354,9 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   const trimmedCode = code.trim();
   const epoch = ++sessionEpoch;
   const previousSession = activeSession;
+  const endWitness = beginWitnessTransition();
+  let deferredWitness = false;
+  try {
   const { initializeServerEndpoints } = await import('./serverEndpointRuntime');
   const endpoints = await initializeServerEndpoints();
   if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
@@ -279,7 +365,7 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   const session = await authenticate(server, normalizedPhone, trimmedCode);
   const account = identity(session);
   if (!account.ref || !account.role) throw new Error('Server noto‘g‘ri hisob ma’lumotlarini qaytardi.');
-  return inStorageOrder(async () => {
+  const pending = inStorageOrder(async () => {
     if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
     const previousCredentials = await readCredentials();
     const store = await savedAccountsFor(previousSession?.baseUrl ?? server, previousSession, previousCredentials);
@@ -336,6 +422,10 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
       }
     });
   });
+  deferredWitness = true;
+  void pending.then(endWitness, endWitness);
+  return pending;
+  } finally { if (!deferredWitness) endWitness(); }
 }
 
 export function currentSession(): Session | null { return activeSession; }
@@ -360,6 +450,7 @@ export function updateSessionAssignments(session: Session, assigned: readonly st
   if (JSON.stringify(session.assigned_apparatus) === JSON.stringify(assigned) && JSON.stringify(session.assigned_apparatus_labels) === JSON.stringify(labels)) return true;
   session.assigned_apparatus = [...assigned];
   session.assigned_apparatus_labels = [...labels];
+  observeWitnessScope();
   const epoch = sessionEpoch;
   void inStorageOrder(async () => {
     if (activeSession !== session || epoch !== sessionEpoch) return;
@@ -389,10 +480,13 @@ export async function refreshSession(session: Session, failedToken: string): Pro
       const applyRefresh = async (next: Session, phone: string, code: string): Promise<boolean> => {
         if (!stillCurrent()) return false;
         const changedIdentity = !sameIdentity(session, next);
+        const endWitness = witnessScope(session) !== witnessScope(next) ? beginWitnessTransition() : null;
+        let deferredWitness = false;
+        try {
         if (!changedIdentity) next.imageCacheScope = session.imageCacheScope;
         await resetForChangedProfile(session, next);
         if (!stillCurrent()) return false;
-        return inStorageOrder(async () => {
+        const pending = inStorageOrder(async () => {
           if (!stillCurrent()) return false;
           if (changedIdentity) await writeCredentials({ baseUrl: next.baseUrl, phone, code, ...identity(next) });
           await writeSession(next);
@@ -400,6 +494,9 @@ export async function refreshSession(session: Session, failedToken: string): Pro
           Object.assign(session, next);
           return true;
         });
+        if (endWitness) { deferredWitness = true; void pending.then(endWitness, endWitness); }
+        return pending;
+        } finally { if (!deferredWitness) endWitness?.(); }
       };
       if (store) {
         return await store.runAccountOperation(async () => {
@@ -461,6 +558,8 @@ export async function createRuntimeAccountSwitchController(baseUrl?: string) {
   }
   async function install(session: Session, nextCredentials: Credentials | null): Promise<void> {
     const epoch = ++sessionEpoch;
+    const endWitness = beginWitnessTransition();
+    try {
     await resetScopedState();
     await inStorageOrder(async () => {
       if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
@@ -472,9 +571,11 @@ export async function createRuntimeAccountSwitchController(baseUrl?: string) {
       activeSession = session;
       refreshing = null;
     });
+    } finally { endWitness(); }
   }
 
   return new AccountSwitchController(store, {
+    beginSessionTransition: beginWitnessTransition,
     current: () => activeSession,
     snapshot: (): AccountRuntimeSnapshot => ({ session: activeSession, credentials: inStorageOrder(readCredentials) }),
     restore: async snapshot => {
