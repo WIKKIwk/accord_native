@@ -14,11 +14,12 @@ function load(file, overrides = {}) {
 const exception = load('shared/mobileApiException');
 const errorApi = load('admin/adminApiError', { '../shared/mobileApiException': exception });
 const dart = load('admin/dartJsonString');
+const warehouseParser = load('gscale/gscaleAdminApi', { '../authorizedFetch': {}, '../workerControlsApi': {}, '../workerProductionMapSaved': {} });
 function fixture() {
   const requests = []; let status = 200, payload = {};
   const api = load('admin/warehouseApi', { '../authorizedFetch': { authorizedFetch: async (session, url, init = {}) => {
     requests.push({ session, url, init }); return new Response(JSON.stringify(payload), { status });
-  } }, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart });
+  } }, '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart });
   return { ...api, requests, setResponse(value, code = 200) { payload = value; status = code; } };
 }
 const session = { token: 'test' };
@@ -65,8 +66,36 @@ test('warehouse summary replays the available-stock widget test request', async 
   const session = recordedSession(stem, name);
   const api = load('admin/warehouseApi', { '../authorizedFetch': { authorizedFetch: (s, p, init = {}) =>
     replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) },
-    '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart });
+    '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart });
   assert.deepEqual(await api.adminWarehouseSummaries(session, { limit: 500 }), [{ warehouse: 'Ulug‘bek ombori', product_count: 1,
     reserved_count: 0, assignment_count: 0, assigned_display_names: [] }]);
   replay.assertDone();
 });
+
+test('warehouse create reuses the GScale parser and validates the trimmed name', async () => {
+  const api = fixture();
+  await assert.rejects(api.adminCreateWarehouse(session, '\u0085 \u0085'), /Admin warehouse name required/);
+  assert.equal(api.requests.length, 0);
+  api.setResponse({ warehouse: 'Production', company: 'Test', is_group: false, parent: 'Root' });
+  assert.deepEqual(await api.adminCreateWarehouse(session, ' Production '), { warehouse: 'Production', company: 'Test',
+    is_group: false, parent_warehouse: 'Root' });
+  assert.equal(api.requests[0].init.method, 'POST');
+  assert.deepEqual(JSON.parse(api.requests[0].init.body), { warehouse: 'Production' });
+  api.setResponse({}, 500); await assert.rejects(api.adminCreateWarehouse(session, 'Production'), /Admin warehouse create failed/);
+});
+// Source-derived probe authored locally and executed against f119, not an upstream test.
+for (const name of ['warehouse create trims name and reads response', 'warehouse delete preserves product choice']) {
+  test(`warehouse mutation replays f119: ${name}`, async () => {
+    const { contractFetch, recordedSession } = require('./support/contractFetch.cjs');
+    const stem = 'f11910bb/admin_warehouse_mutations_probe_test', replay = contractFetch(stem, name);
+    const session = recordedSession(stem, name);
+    const api = load('admin/warehouseApi', { '../authorizedFetch': { authorizedFetch: (s, p, init = {}) =>
+      replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) },
+      '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart });
+    if (name.startsWith('warehouse create')) {
+      assert.deepEqual(await api.adminCreateWarehouse(session, '\u0085 Production \u0085'), { warehouse: 'Production', company: 'Test',
+        is_group: false, parent_warehouse: 'Root' });
+    } else await api.adminDeleteWarehouse(session, ' Production ', true);
+    replay.assertDone();
+  });
+}

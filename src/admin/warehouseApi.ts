@@ -1,5 +1,6 @@
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
+import { adminWarehouseFromJson, type GScaleAdminWarehouse } from '../gscale/gscaleAdminApi';
 import { MobileApiException } from '../shared/mobileApiException';
 import { adminApiError } from './adminApiError';
 import { dartJsonString, dartTrim } from './dartJsonString';
@@ -33,6 +34,15 @@ export async function adminWarehouseSummaries(session: Session, options: { query
   const value: unknown = await response.json();
   if (!Array.isArray(value)) throw new TypeError('Invalid warehouse summaries list');
   return value.map(adminWarehouseSummaryFromJson);
+}
+/** @v2 adminCreateWarehouse */
+export async function adminCreateWarehouse(session: Session, warehouse: string): Promise<GScaleAdminWarehouse> {
+  const name = dartTrim(warehouse);
+  if (!name) throw new Error('Admin warehouse name required');
+  const response = await authorizedFetch(session, '/v1/mobile/admin/warehouses', { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ warehouse: name }) });
+  if (response.status !== 200) throw new Error('Admin warehouse create failed');
+  return adminWarehouseFromJson(await response.json());
 }
 /** @v2 adminDeleteWarehouse */
 export async function adminDeleteWarehouse(session: Session, warehouse: string, deleteProducts: boolean): Promise<void> {
