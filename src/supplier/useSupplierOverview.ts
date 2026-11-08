@@ -23,14 +23,14 @@ export function useSupplierRootRefresh(store: SupplierStore, mode: 'home' | 'his
   useEffect(() => {
     if (mode === 'home') { void store.bootstrapSummary(); void store.bootstrapHistory(); }
     else void store.bootstrapHistory();
-    let lastVersion = 0;
+    let active = true, lastVersion = 0;
     const reload = () => { if (mode === 'home') void store.refreshAll(); else void store.refreshHistory(); };
     const unsubscribe = refreshHub.subscribe(() => {
-      if (refreshHub.topic !== 'supplier' || refreshHub.version === lastVersion) return;
+      if (!active || refreshHub.topic !== 'supplier' || refreshHub.version === lastVersion) return;
       lastVersion = refreshHub.version; reload();
     });
-    const app = AppState.addEventListener('change', state => { if (state === 'active') reload(); });
-    return () => { unsubscribe(); app.remove(); };
+    const app = AppState.addEventListener('change', state => { if (active && state === 'active') reload(); });
+    return () => { active = false; unsubscribe(); app.remove(); };
   }, [store, mode]);
 }
 export function useSupplierBreakdown(store: SupplierStore, kind: SupplierStatusKind): boolean {

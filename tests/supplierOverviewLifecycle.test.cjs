@@ -96,6 +96,23 @@ function renderedNodes(node) {
 }
 const isLoading = nodes => nodes.some(node => node?.type === 'ProgressView' || node?.type === 'ActivityIndicator');
 
+function rootRefreshFixture() {
+  const h = harness(), pushes = new Set(), states = new Set();
+  const refreshHub = { topic: 'supplier', version: 0, subscribe: callback => { pushes.add(callback); return () => pushes.delete(callback); } };
+  const AppState = { addEventListener: (_event, callback) => {
+    states.add(callback); return { remove: () => states.delete(callback) };
+  } };
+  const { useSupplierRootRefresh } = hooks(h, {
+    'react-native': { AppState }, '../shared/notificationStoresRuntime': { refreshHub },
+  });
+  const spyStore = () => {
+    const calls = [], store = Object.fromEntries(['bootstrapSummary', 'bootstrapHistory', 'refreshAll', 'refreshHistory']
+      .map(name => [name, async () => { calls.push(name); }]));
+    return { store, calls };
+  };
+  return { h, pushes, states, refreshHub, spyStore, useSupplierRootRefresh };
+}
+
 // Source-derived: V2 has no Supplier API/logic recordings. The widgets call bootstrap in initState;
 // cached results bypass loading before build, including successful empty maps in SupplierStore.
 test('breakdown first render reuses cached history or returned results, including empty lists', async () => {
@@ -251,5 +268,35 @@ test('home and recent load on entry, refresh only for Supplier push or resume, a
     h.unmount(); assert.equal(pushes.size, 0); assert.equal(states.size, 0);
     push('supplier', 4); states.forEach(callback => callback('active'));
     assert.equal(calls.length, initial + 3);
+  }
+});
+
+test('queued Supplier push and resume callbacks cannot start reads after home or recent unmount', () => {
+  for (const mode of ['home', 'history']) {
+    const f = rootRefreshFixture(), { store, calls } = f.spyStore();
+    f.h.render(() => f.useSupplierRootRefresh(store, mode)); f.h.commit();
+    const queuedPush = [...f.pushes][0], queuedResume = [...f.states][0], initial = calls.length;
+    f.h.unmount();
+    f.refreshHub.version = 1; queuedPush(); queuedResume('active');
+    assert.equal(calls.length, initial, `${mode}: callbacks delivered after disposal`);
+    assert.equal(f.pushes.size, 0); assert.equal(f.states.size, 0);
+  }
+});
+
+test('store or mode replacement retires old callbacks while the current root continues to refresh', () => {
+  for (const [mode, nextMode, replaceStore] of [['home', 'home', true], ['history', 'history', true],
+    ['home', 'history', false], ['history', 'home', false]]) {
+    const f = rootRefreshFixture(), old = f.spyStore(), next = replaceStore ? f.spyStore() : old;
+    f.h.render(() => f.useSupplierRootRefresh(old.store, mode)); f.h.commit();
+    const queuedPush = [...f.pushes][0], queuedResume = [...f.states][0];
+    f.h.render(() => f.useSupplierRootRefresh(next.store, nextMode)); f.h.commit();
+    const oldCount = old.calls.length, nextCount = next.calls.length;
+    f.refreshHub.version = 1; queuedPush(); queuedResume('active');
+    assert.equal(old.calls.length, oldCount); assert.equal(next.calls.length, nextCount);
+    f.pushes.forEach(callback => callback()); f.states.forEach(callback => callback('active'));
+    const refresh = nextMode === 'home' ? 'refreshAll' : 'refreshHistory';
+    assert.deepEqual(next.calls.slice(nextCount), [refresh, refresh]);
+    if (replaceStore) assert.equal(old.calls.length, oldCount);
+    f.h.unmount();
   }
 });

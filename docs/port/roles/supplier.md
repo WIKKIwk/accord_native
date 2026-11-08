@@ -18,6 +18,8 @@ Comments appear for partial/rejected/cancelled or a nonblank note, except during
 
 `SupplierHomeScreen` at `supplier_home_screen.dart` initializes summary and history, refreshes both on Supplier push and app resume, and offers pull-to-refresh. Until history loads show progress; an initial history failure shows the shared retry state. Show the localized `pendingStatus`, `submittedStatus`, `returnedStatus` counts in that order. Each opens status breakdown with the corresponding kind. Pending/draft history rows appear under localized `inProgressItemsTitle`; each shows item name, item code, whole sent quantity with UOM and created label, and opens notification detail by receipt ID.
 
+Home and recent process Supplier push and resume callbacks only while their root view is mounted. Disposal removes both listeners and prevents a late callback from starting another read. Requests that already started are not cancelled by this view guard.
+
 `SupplierDock` supplies localized Home, notifications, create and history in that order; shared `RoleDock` appends Chat. Home/notifications/history/Chat switch root destination, while create pushes item picker; selecting an already active destination does nothing. Notification badge is shown for unseen IDs except on notifications; Chat badge follows Chat's actual unread count. On create-flow pages the center is selected. The primary create action is hidden when profile overlay obscures it. `SupplierNavigationDrawer` has Home, notifications, history, profile in that order and uses the existing role drawer and logout behavior. Profile and Chat use existing shared screens.
 
 ## Product picker and quantity
