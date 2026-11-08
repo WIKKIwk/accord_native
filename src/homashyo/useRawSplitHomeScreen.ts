@@ -6,7 +6,7 @@ import { useRawSplitContext } from './RawSplitContext';
 
 /** Whole-preview detections require an explicit barcode check until native scan-window parity exists. */
 export function useRawSplitHomeScreen() {
-  const { ticket, runtime } = useRawSplitContext(), [visible, setVisible] = useState(false);
+  const { ticket, runtime, issueRevision } = useRawSplitContext(), [visible, setVisible] = useState(false);
   const focused = useRef(false), foreground = useRef(AppState.currentState === 'active'), open = useRef(false), generation = useRef(0);
   const [cameraActive, setCameraActive] = useState(false);
   const isOwnerCurrent = useCallback(() => focused.current && foreground.current && rawSplitSessionIsCurrent(ticket), [ticket]);
@@ -35,5 +35,5 @@ export function useRawSplitHomeScreen() {
       void runtime.home.lookup(barcode).catch(error => { if (dispatch === generation.current && isOwnerCurrent()) Alert.alert('Xatolik', String(error)); });
     } }], { cancelable: true, onDismiss: cancelSelection });
   };
-  return { controller: runtime.home, visible, cameraActive, isScannerCurrent, scan, close, complete };
+  return { controller: runtime.home, visible, cameraActive, isScannerCurrent, scan, close, complete, issueRevision };
 }

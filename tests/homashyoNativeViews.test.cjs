@@ -84,9 +84,9 @@ function home(platform, translate = value => value) {
     confirmWidth: () => calls.push('confirmWidth'), addRoll: () => calls.push('addRoll'), removeRoll: i => calls.push(['removeRoll', i]),
     setWaste: value => calls.push(['waste', value]), setIssueNote: value => calls.push(['note', value]), setWifiPrinter: value => calls.push(['wifi', value]),
     save: async retry => calls.push(['save', retry]), saveIssue: async retry => calls.push(['issue', retry]) };
-  const swift = new Proxy({}, { get: (_, name) => name });
+  const swift = new Proxy({ useNativeState: value => ({ get: () => value, set() {} }) }, { get: (o, name) => o[name] ?? name });
   const compose = new Proxy({ useMaterialColors: () => ({ error: 'error', surface: 'surface', onSurfaceVariant: 'muted' }) }, { get: (o, name) => o[name] ?? name });
-  const react = { useEffect() {}, useSyncExternalStore: (_subscribe, get) => get() };
+  const react = { useEffect() {}, useRef: value => ({ current: value }), useState: value => [value, () => {}], useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }),
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View' },
