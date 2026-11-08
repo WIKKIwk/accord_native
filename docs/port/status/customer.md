@@ -7,7 +7,7 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Shared dispatch timestamp parsing edges | `app_models_declarations_part_01.dart` `compareCreatedLabelsDesc`; Dart `DateTime.parse` | The comparator now preserves six fractional digits, but extreme date/offset overflows and platform-local daylight-saving transitions remain unverified against Dart. The exported millisecond parser retains its prior behavior. |
-| Customer APIs and records | `mobile_api_customer.dart`, `app_models_declarations_part_05.dart` | Port the requests and parsers; reuse Supplier's shared `dispatchRecordFromJson` checkpoint rather than creating another parser. |
+| Customer APIs and records | `mobile_api_customer.dart`, `app_models_declarations_part_05.dart` | Port the requests and detail/summary parsers, reusing the shared `dispatchRecordFromJson` extraction copied from Supplier commit `a947a1a`. |
 | Customer store wiring | `customer_store.dart`, `app_runtime_reset.dart` | The source-derived store class is implemented but not yet connected to a real session, APIs or account reset. Verify that the application uses one store and clears its state on account change. |
 | Timestamp ties | `customer_store.dart` `_mergeHistoryItems`, `customer_delivery_runtime_store.dart` `_sorted` | V2 Dart sorting does not guarantee tie order; JavaScript sorting is stable. Exact visible ordering of records with identical timestamps remains unverified. |
 | Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Port Customer home, notifications, status and delivery detail on iOS and Android; connect Supplier's shared NotificationDetailScreen, existing profile and chat, and complete the text and surface audits. |
@@ -24,6 +24,8 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Supplier dependency: `src/shared/notificationApi.ts` matches Supplier commit `a947a1a46ff32a8afb0be3e6d25da8a71afa355c` byte-for-byte. Existing notification/runtime tests passed 8/8; 66 source-derived mock outcomes matched the original notification API, including malformed data and non-200 responses. iOS typecheck passed.
 
 - `node --test tests/customerStore.test.cjs`: 7 passed. Tests cover bootstrap, forced refresh, all four requests, non-eager failure timing, ordering, runtime transitions, failure recovery and clear. No direct V2 CustomerStore recording was found.
 
@@ -43,4 +45,4 @@ No Customer test-mode branch was identified in the inspected response methods.
 ## Needs from the integrator
 
 - Resolve and pin the wider V2 drift before the remaining Customer work.
-- Integrate the Supplier-owned shared NotificationDetailScreen and record parser once its checkpoint is ready.
+- Integrate Supplier's shared NotificationDetailScreen when its checkpoint is ready. The record parser extraction in this branch is byte-identical to Supplier's checkpoint and will need its identical shared diff reconciled on merge.
