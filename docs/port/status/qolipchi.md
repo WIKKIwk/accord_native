@@ -1,11 +1,12 @@
 # qolipchi
 
 Status: part 1 of 2 in progress; role port incomplete
-Stopped at: continue the remaining Qolip API and UI contracts, then both platform screens, navigation and audits.
+Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, then both platform screens, navigation and audits.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
+| Role-wide UI contract | `docs/port/roles/qolipchi.md` | The block screen is specified, but the other 20 Qolip surfaces are only inventoried; read their states and actions from f119 before treating the contract as complete. |
 | Role-wide logic and surfaces | `lib/src/features/qolip/`, `lib/src/core/api/qolip/` | Except for the checkpoints below, the role logic, iOS and Android views, navigation, text gate and surface audit remain to be completed. The text gate currently reports 143 missing iOS and 141 missing Android V2 strings, plus unmatched existing V4 strings. |
 | Qolip search on devices | `qolip_search_engine.dart`, `search_normalizer.dart` | Confirm React Native timer slicing and cancellation on both phones. Rare Unicode lowercase mapping differences between the Dart VM and the phone's JavaScript engine have not been verified. |
 | Native scanner | `qolip_cell_qr_scan_screen.dart`, `reliable_mobile_scanner.dart` | The QR lookup/scan APIs exist, but the iOS and Android camera views, lifecycle, permission handling and real-phone scans are not yet ported or verified. |
@@ -47,6 +48,7 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 - After the storage checkpoint, `node --test tests/qolip*.test.cjs` passed all 111 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 - Print API checkpoint: ported `qolipPrintCellQr` and `qolipPrintPaddonQr`, reusing the shared print transport and `UsbRpsPrintRequest` model rather than another printer implementation. The independent f119 oracle passed all 13 mock-only cases in `qolip_paddon_print_api_test.dart`; the isolated recorder captured 13 requests, with verified f119 metadata, and all 13 replayed. Cell print tests are source-derived because no corresponding direct V2 wire test was found. No actual printer or backend was contacted.
 - After the print API checkpoint, `node --test tests/qolip*.test.cjs` passed all 137 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
+- Block screen logic checkpoint: specified the block screen contract and added its controller, hook, existing Qolip search reuse and localized error mapping. Tests cover load/refresh ordering, search, save exclusion, action notices and disposal. The 147 Qolip tests, iOS typecheck and Expo lint passed; Android and full-suite gates were not rerun. Its iOS and Android views, navigation and the other surfaces remain open.
 
 ## Deviations candidates
 
