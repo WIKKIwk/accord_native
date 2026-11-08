@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { usePreparationText } from '../preparation/PreparationUI.android';
+import { RawSplitBusy } from './RawSplitBusy';
 import { RawSplitDock } from './RawSplitDock.android';
 
 export function RawSplitFrame({ title, page, busy = false, onPrinter, children }: { title: string; page: 'home' | 'history' | 'profile';
@@ -20,6 +21,7 @@ export function RawSplitFrame({ title, page, busy = false, onPrinter, children }
       onPress={() => router.push('/android-homashyo/history' as Href)} style={{ padding: 12 }}><SymbolView name={{ android: 'history' }} size={24} tintColor={colors.onSurfaceVariant} /></Pressable>}
     {onPrinter && <Pressable accessibilityRole="button" accessibilityLabel={t('Printer tanlash')} disabled={busy} onPress={onPrinter} style={{ padding: 12 }}>
       <SymbolView name={{ android: 'print' }} size={24} tintColor={colors.onSurfaceVariant} /></Pressable>}</View>
+    {busy && <RawSplitBusy />}
     <View style={{ flex: 1 }}>{children}</View><RawSplitDock profile={page === 'profile'} />
   </View>;
 }
