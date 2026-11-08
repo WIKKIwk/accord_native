@@ -12,7 +12,7 @@ const result = new model.RawSplitResult({ id: 'result', source, source_kg: '100'
 function setup() {
   let selection = { transport: 'bluetooth', printer: {} }, calls = [], notices = [];
   const options = { session: {}, snapshot: async () => new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] }),
-    selectPrinter: async () => selection, printOne: async (_result, output) => { calls.push(output.barcode); }, onMessage: message => notices.push(message),
+    scope: () => 'account-1', selectPrinter: async () => selection, printOne: async (_result, output) => { calls.push(output.barcode); }, onMessage: message => notices.push(message),
     printerSupported: () => true, onUnsupportedPrinter: () => notices.push('unsupported-printer') };
   return { c: new RawSplitHistoryController(options), options, calls, notices, setSelection: value => { selection = value; } };
 }
@@ -42,4 +42,18 @@ test('disposal stops remaining output and success message', async () => {
 test('unsupported printer reports the exclusion without attempting a reprint', async () => {
   const h = setup(); h.options.printerSupported = () => false; await h.c.reprint(result);
   assert.deepEqual(h.calls, []); assert.deepEqual(h.notices, ['unsupported-printer']);
+});
+
+test('account change during device selection cannot print or select for the new account', async () => {
+  const h = setup(); let account = 'account-1', complete; h.options.scope = () => account;
+  const scoped = new RawSplitHistoryController(h.options);
+  h.options.selectPrinter = () => new Promise(resolve => { complete = resolve; });
+  const pending = scoped.reprint(result); account = 'account-2'; complete({ transport: 'bluetooth', printer: {} }); await pending;
+  assert.deepEqual(h.calls, []); assert.equal(scoped.getSnapshot().printer, null); assert.match(scoped.getSnapshot().error, /Akkaunt/);
+});
+test('account change between physical labels prevents later labels and success notice', async () => {
+  const h = setup(); let account = 'account-1'; h.options.scope = () => account; const scoped = new RawSplitHistoryController(h.options);
+  h.options.printOne = async (_result, output, _printer, _kind, guard) => { guard(); h.calls.push(output.barcode); account = 'account-2'; };
+  await scoped.reprint(result); assert.deepEqual(h.calls, ['c1']); assert.deepEqual(h.notices, []);
+  assert.match(scoped.getSnapshot().error, /Akkaunt/);
 });
