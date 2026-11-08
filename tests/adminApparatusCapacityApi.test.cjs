@@ -17,9 +17,11 @@ const model = load('admin/apparatusCapacityModel', { '../workerControlsApi': con
 const id = 'apparatus:default:print_1', session = { token: 'mock' };
 function fixture() {
   let response = new Response('{}', { status: 200 }), onSend; const calls = [];
-  const api = load('admin/apparatusCapacityApi', { '../authorizedFetch': { authorizedFetch: async (account, url, init, guard) => {
+  const request = load('admin/adminProductionRequest', { '../authorizedFetch': { authorizedFetch: async (account, url, init, guard) => {
     calls.push({ account, url, init, guard }); guard?.(); if (onSend) await onSend(guard); return response;
-  } }, '../workerControlsApi': controls, '../shared/mobileApiException': exception, './apparatusCapacityModel': model, './dartJsonString': dart });
+  } }, '../workerControlsApi': controls, '../shared/mobileApiException': exception });
+  const api = load('admin/apparatusCapacityApi', { './adminProductionRequest': request, '../shared/mobileApiException': exception,
+    './apparatusCapacityModel': model, './dartJsonString': dart });
   return { ...api, calls, setResponse: value => { response = value; }, onSend: value => { onSend = value; } };
 }
 // Mock-only source audit: the f119 Flutter capacity oracle did not run due the documented native-asset hash mismatch.

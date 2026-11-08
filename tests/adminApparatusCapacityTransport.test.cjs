@@ -21,8 +21,10 @@ function fixture(change = () => {}) {
   const auth = { activeSessionToken: value => value === active ? value.token : null,
     refreshSession: async value => { value.token = 'second'; change(value, () => { active = { ...value }; }, () => { generation++; }); return true; } };
   const transport = load('authorizedFetch', { './auth': auth });
-  const api = load('admin/apparatusCapacityApi', { '../authorizedFetch': transport, '../workerControlsApi': controls,
-    '../shared/mobileApiException': exception, './apparatusCapacityModel': model, './dartJsonString': dart });
+  const request = load('admin/adminProductionRequest', { '../authorizedFetch': transport, '../workerControlsApi': controls,
+    '../shared/mobileApiException': exception });
+  const api = load('admin/apparatusCapacityApi', { './adminProductionRequest': request, '../shared/mobileApiException': exception,
+    './apparatusCapacityModel': model, './dartJsonString': dart });
   const role = session.profile.role, capabilities = JSON.stringify(session.capabilities), capturedGeneration = generation;
   const guard = () => { if (active !== session || session.profile.role !== role || JSON.stringify(session.capabilities) !== capabilities || generation !== capturedGeneration)
     throw new Error('scope changed'); };
