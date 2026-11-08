@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { adminApparatus } from '../apparatusApi';
 import { canOpenRoute, appRoutes } from '../shared/appRoutes';
@@ -6,10 +6,15 @@ import { adminText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { rezkaMasterAssignWorker, rezkaMasterWorkers } from './rezkaMasterApi';
 import { currentRezkaScope } from './rezkaSessionGuard';
-import { RezkaWorkerSettingsController, type RezkaNotice } from './rezkaWorkerSettings';
+import { RezkaWorkerSettingsController, type RezkaNotice } from './rezkaWorkerController';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeSnapshot = () => localeController.locale;
+
+export function useRezkaAdminText() {
+  const locale = useSyncExternalStore(subscribeLocale, localeSnapshot, localeSnapshot);
+  return useCallback((key: string, values: Record<string, string> = {}) => adminText(key, locale, values), [locale]);
+}
 
 export function useRezkaWorkerSettings(session: Session) {
   const scope = currentRezkaScope(session);
@@ -21,24 +26,26 @@ export function useRezkaWorkerSettings(session: Session) {
     save: (workerId, ids, previous) => rezkaMasterAssignWorker(session, workerId, ids, previous, scope),
   }), [session, scope]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const locale = useSyncExternalStore(subscribeLocale, localeSnapshot, localeSnapshot);
-  const lease = useMemo(() => ({ mounts: 0 }), [controller]);
+  const t = useRezkaAdminText();
+  const leases = useRef(new Map<RezkaWorkerSettingsController, number>());
   useEffect(() => {
-    lease.mounts++;
+    const owners = leases.current;
+    owners.set(controller, (owners.get(controller) ?? 0) + 1);
     const unregister = registerSessionResetHook(async () => controller.invalidate());
     void controller.load();
     return () => {
       unregister();
-      lease.mounts--;
-      queueMicrotask(() => { if (lease.mounts === 0) controller.dispose(); });
+      owners.set(controller, (owners.get(controller) ?? 1) - 1);
+      queueMicrotask(() => {
+        if (owners.get(controller) === 0) { owners.delete(controller); controller.dispose(); }
+      });
     };
-  }, [controller, lease]);
+  }, [controller]);
   useEffect(() => {
     if (!state.notice) return;
     const timer = setTimeout(() => controller.clearNotice(), 5000);
     return () => clearTimeout(timer);
   }, [controller, state.notice]);
-  const t = (key: string, values: Record<string, string> = {}) => adminText(key, locale, values);
   const notice = (value: RezkaNotice | null) => value ? t(value.key, value.values) : '';
   return { controller, state, t, notice };
 }

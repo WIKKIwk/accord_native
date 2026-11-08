@@ -4,7 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
-const file = path.resolve(__dirname, '../src/rezka/rezkaWorkerSettings.ts'), loaded = new Module(file, module);
+const file = path.resolve(__dirname, '../src/rezka/rezkaWorkerController.ts'), loaded = new Module(file, module);
 loaded.filename = file; loaded.paths = module.paths;
 loaded.require = id => id === '../workerControlsApi' ? { isCanonicalApparatusId: value => /^apparatus:[^:\s]+:[^\s]+$/.test(value.trim()) } : require(id);
 loaded._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
