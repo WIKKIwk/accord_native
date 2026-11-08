@@ -114,11 +114,11 @@ test('drawer selecting the current destination only closes, and logout does not 
 
 test('iOS native-tab reducer handles replacement from Home and Astatka', () => {
   const nav = harness('ios');
-  for (const [id, name] of [['astatka', '(astatka)'], ['home', '(home)'], ['chat', 'chat']]) {
+  for (const [id, name] of [['astatka', '(astatka)'], ['home', '(home)']]) {
     nav.select(id);
     assert.equal(nav.state.routes[nav.state.index].name, name);
   }
-  assert.deepEqual(nav.events.map(([event]) => event), Array(3).fill('replace'));
+  assert.deepEqual(nav.events.map(([event]) => event), Array(2).fill('replace'));
 });
 
 test('Profile drawer uses the registered role stack on Android and preserves iOS navigation', () => {

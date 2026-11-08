@@ -1,16 +1,15 @@
-# Boyoqchi route hold
+# Boyoqchi Chat hold
 
-These are the existing Boyoqchi route implementations, kept outside Expo Router's
-`src/app` route root while the session and Chat transport holds remain open.
-They are not reachable by deep link and are not selected by `homeTarget`.
-The role's other components remain in `src/boyoqchi`.
+The Boyoqchi Chat route implementations stay outside Expo Router's `src/app`
+root while the shared Chat transport has an unresolved credential/redirect
+security issue. Boyoqchi Home, Astatka and Profile may be routed separately;
+Chat is absent from their dock and drawer and cannot be opened by deep link.
+The existing Worker and Preparation Chat paths are unchanged.
 
-Platform suffixes keep each held route type-checked only for its own platform.
-Once the integrator has explicitly cleared all release holds and reviewed the
-role, restoring a route requires moving it back under its corresponding
-`src/app/{ios,android}-boyoqchi/` directory and removing its `.ios` or
-`.android` filename suffix. Restore the home target only together with the
-complete reviewed route tree. Rerun the manifest, role, routing, session,
-security and platform gates; the manifest hold test must be deliberately
-updated for that separately reviewed release. This directory does not itself
-change the existing Worker or Preparation routes.
+Platform suffixes keep these held files type-checked for their own platform.
+After the integrator verifies a safe transport and approves release, restoring
+Chat requires moving these files into the corresponding platform's Chat route
+folder under `src/app`, removing their `.ios` or `.android` suffixes, and
+restoring the role's Chat destinations. Run the manifest, lifecycle, transport,
+security, navigation and platform gates before release. Do not fabricate an
+unread count or a destination while this hold remains.

@@ -4,7 +4,7 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 import { clearAppLock } from '../appLock';
 import { loadSession, logout, registerSessionResetHook, type Session } from '../auth';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
-import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { canEnterBoyoqchi } from './boyoqchiEntryGuard';
 import { switchPinStore } from '../shared/switchPinRuntime';
 import { BoyoqchiContextShell } from './BoyoqchiShell';
 export function BoyoqchiLayout() {
@@ -15,8 +15,9 @@ export function BoyoqchiLayout() {
     const unregister = registerSessionResetHook(async () => { if (active) setSession(null); });
     return () => { active = false; unregister(); };
   }, []);
-  if (Platform.OS !== 'android' || session === null || (session && !canOpenRoute(session, appRoutes.boyoqchiHome))) return <Redirect href="/" />;
+  if (Platform.OS !== 'android' || session === null) return <Redirect href="/" />;
   if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
+  if (!canEnterBoyoqchi(session, Platform.OS, 'android')) return <Redirect href="/" />;
   const onLogout = () => { void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {}),
     switchPinStore.clear(session).catch(() => {})]).finally(() => { setSession(null); router.replace('/'); }); };
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>

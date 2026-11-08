@@ -23,7 +23,7 @@ const session = { imageCacheScope: 'scope', profile: { role: 'boyoqchi', ref: 'p
 const context = { session, onLogout, profileNavigation: { current: null } };
 
 test('Android Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
-  const Profile = load('held-routes/android-boyoqchi/profile.android', {
+  const Profile = load('app/android-boyoqchi/profile', {
     react: { useRef: value => ({ current: value }), useLayoutEffect() {} },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
     'expo-router': { useIsFocused: () => true, useNavigation: () => ({ dispatch() {} }), router: { navigate() {} } },
@@ -46,7 +46,7 @@ test('Android Boyoqchi reuses shared Profile without an unrelated daily-work act
 
 test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
   const settings = { register: (value, opener) => { assert.equal(value, session); assert.equal(typeof opener, 'function'); return () => {}; } };
-  const Profile = load('held-routes/ios-boyoqchi/(tabs)/profile/index.ios', {
+  const Profile = load('app/ios-boyoqchi/(tabs)/profile/index', {
     react: { useCallback: fn => fn },
     '../../../../boyoqchi/BoyoqchiProfileSettings.ios': { useBoyoqchiProfileSettings: () => settings },
     'expo-router': { router: { navigate() {} } }, 'react-native': { PlatformColor: value => value },

@@ -14,10 +14,9 @@ export function BoyoqchiDock({ active }: { active: 'home' | 'astatka' | 'profile
     { id: 'home', label: getter('homeNavTitle'), icon: 'home' },
     { id: 'astatka', label: t('Astatka'), icon: 'inventory_2' },
     { id: 'profile', label: getter('profileTitle'), icon: 'person' },
-    { id: 'chat', label: t('Chat'), icon: 'chat_bubble' },
   ];
   return <RoleBottomBar active={active} items={items} bottomInset={insets.bottom} onSelect={id => {
-    if (id === active || (id !== 'home' && id !== 'astatka' && id !== 'profile' && id !== 'chat')) return;
+    if (id === active || (id !== 'home' && id !== 'astatka' && id !== 'profile')) return;
     queueBoyoqchiDockNavigation({ destination: id, active: () => current.current, isMounted: () => mounted.current,
       dispatch: action => navigation.dispatch(action) });
   }} />;

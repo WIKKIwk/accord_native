@@ -23,16 +23,20 @@ function manifest(platform, keys) {
   const visit = route => { result.push(route.contextKey); (route.children ?? []).forEach(visit); };
   visit(root); return result;
 }
-for (const platform of ['ios', 'android']) test(`${platform} Expo Router manifest holds both Boyoqchi route trees`, () => {
+for (const platform of ['ios', 'android']) test(`${platform} Expo Router exposes core Boyoqchi routes but holds Chat`, () => {
   const actual = manifest(platform, realKeys);
-  assert.ok(actual.includes('./index.tsx'));
+  for (const route of ['./index.tsx', './ios-boyoqchi/_layout.tsx', './ios-boyoqchi/(tabs)/(home)/index.tsx',
+    './ios-boyoqchi/(tabs)/(astatka)/astatka.tsx', './ios-boyoqchi/(tabs)/profile/index.tsx',
+    './android-boyoqchi/_layout.tsx', './android-boyoqchi/index.tsx', './android-boyoqchi/astatka.tsx',
+    './android-boyoqchi/profile.tsx']) assert.ok(actual.includes(route), route);
   assert.ok(actual.some(key => key.startsWith('./ios-worker/')));
   assert.ok(actual.some(key => key.startsWith('./ios-preparation/')));
   assert.ok(actual.some(key => key.startsWith('./android-preparation/')));
-  assert.ok(!actual.some(key => /^\.\/(ios|android)-boyoqchi(?:\/|\.)/.test(key)), actual.join('\n'));
-  // Positive control: actual SDK resolver would include these paths if reintroduced.
-  const withReintroduced = manifest(platform, [...realKeys, './ios-boyoqchi/_layout.tsx', './ios-boyoqchi/index.tsx',
-    './android-boyoqchi/_layout.tsx', './android-boyoqchi/index.tsx']);
-  assert.ok(withReintroduced.includes('./ios-boyoqchi/_layout.tsx'));
-  assert.ok(withReintroduced.includes('./android-boyoqchi/_layout.tsx'));
+  const isBoyoqchiChat = key => /^\.\/(?:ios-boyoqchi\/\(tabs\)|android-boyoqchi)\/chat(?:\/|\.)/.test(key);
+  assert.ok(!actual.some(isBoyoqchiChat), actual.join('\n'));
+  // Positive control: the installed resolver would detect Chat paths if restored.
+  const withChat = manifest(platform, [...realKeys, './ios-boyoqchi/(tabs)/chat/_layout.tsx', './ios-boyoqchi/(tabs)/chat/index.tsx',
+    './android-boyoqchi/chat/_layout.tsx', './android-boyoqchi/chat/index.tsx']);
+  assert.ok(withChat.includes('./ios-boyoqchi/(tabs)/chat/index.tsx'));
+  assert.ok(withChat.includes('./android-boyoqchi/chat/index.tsx'));
 });

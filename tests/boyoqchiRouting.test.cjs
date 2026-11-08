@@ -11,36 +11,40 @@ const routes = loaded.exports;
 const session = { token: 'token', baseUrl: 'https://example.test', profile: { ref: 'paint-1', role: 'boyoqchi' },
   capabilities: ['boyoqchi.access'], assigned_apparatus: [], assigned_apparatus_labels: [], imageCacheScope: 'scope' };
 
-test('Boyoqchi entry is held on each platform while route capabilities remain intact', () => {
+test('Boyoqchi entry selects native homes only for its authorized role', () => {
   assert.equal(routes.homeRoute(session), routes.appRoutes.boyoqchiHome);
-  assert.equal(routes.homeTarget(session, 'ios'), null);
-  assert.equal(routes.homeTarget(session, 'android'), null);
+  assert.equal(routes.homeTarget(session, 'ios'), '/ios-boyoqchi');
+  assert.equal(routes.homeTarget(session, 'android'), '/android-boyoqchi');
+  assert.equal(routes.homeTarget({ ...session, profile: { ...session.profile, role: 'other' } }, 'ios'), null);
   assert.equal(routes.canOpenRoute(session, routes.appRoutes.boyoqchiHome), true);
   assert.equal(routes.canOpenRoute(session, routes.appRoutes.boyoqchiAstatka), true);
   assert.equal(routes.canOpenRoute({ ...session, capabilities: [] }, routes.appRoutes.boyoqchiAstatka), false);
 });
 
-test('role route trees reuse shared profile and chat pages on both platforms', () => {
+test('role route trees expose Profile while shared Chat routes stay held on both platforms', () => {
   for (const platform of ['ios', 'android']) {
-    const root = path.resolve(__dirname, `../src/held-routes/${platform}-boyoqchi`);
+    const root = path.resolve(__dirname, `../src/app/${platform}-boyoqchi`);
+    const held = path.resolve(__dirname, `../src/held-routes/${platform}-boyoqchi`);
     const chat = platform === 'ios' ? '(tabs)/chat' : 'chat';
-    for (const relative of [`_layout.${platform}.tsx`, `${chat}/_layout.${platform}.tsx`, `${chat}/index.${platform}.tsx`, `${chat}/new.${platform}.tsx`, `${chat}/[conversationId].${platform}.tsx`]) {
-      assert.equal(fs.existsSync(path.join(root, relative)), true, `${platform} ${relative}`);
+    assert.equal(fs.existsSync(path.join(root, '_layout.tsx')), true);
+    for (const relative of [`${chat}/_layout.${platform}.tsx`, `${chat}/index.${platform}.tsx`, `${chat}/new.${platform}.tsx`, `${chat}/[conversationId].${platform}.tsx`]) {
+      assert.equal(fs.existsSync(path.join(held, relative)), true, `${platform} ${relative}`);
     }
-    assert.match(fs.readFileSync(path.join(root, chat, `_layout.${platform}.tsx`), 'utf8'), /ChatRouteProvider/);
+    assert.equal(fs.existsSync(path.join(root, chat)), false);
+    assert.match(fs.readFileSync(path.join(held, chat, `_layout.${platform}.tsx`), 'utf8'), /ChatRouteProvider/);
   }
 });
 
-test('the shared role dock keeps Chat after Profile without an unverified unread badge', () => {
+test('role docks and drawer omit Chat and its unread runtime while the transport is held', () => {
   const android = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiDock.android.tsx'), 'utf8');
-  const ios = fs.readFileSync(path.resolve(__dirname, '../src/held-routes/ios-boyoqchi/(tabs)/_layout.ios.tsx'), 'utf8');
+  const ios = fs.readFileSync(path.resolve(__dirname, '../src/app/ios-boyoqchi/(tabs)/_layout.tsx'), 'utf8');
+  const drawer = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiDrawer.tsx'), 'utf8');
   const context = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiContext.tsx'), 'utf8');
   assert.ok(android.indexOf("id: 'home'") < android.indexOf("id: 'astatka'"));
   assert.ok(android.indexOf("id: 'astatka'") < android.indexOf("id: 'profile'"));
-  assert.ok(android.indexOf("id: 'profile'") < android.indexOf("id: 'chat'"));
-  assert.doesNotMatch(android, /showBadge|useChatUnreadCount|chatUnreadRuntimeFor/);
-  assert.ok(ios.indexOf('name="profile"') < ios.indexOf('name="chat"'));
-  assert.doesNotMatch(ios, /NativeTabs\.Trigger\.Badge|useChatUnreadCount|chatUnreadRuntimeFor/);
+  assert.doesNotMatch(android, /id: 'chat'|showBadge|useChatUnreadCount|chatUnreadRuntimeFor/);
+  assert.doesNotMatch(ios, /name="chat"|NativeTabs\.Trigger\.Badge|useChatUnreadCount|chatUnreadRuntimeFor/);
+  assert.doesNotMatch(drawer, /id: 'chat'/);
   assert.doesNotMatch(context, /useChatUnreadCount|chatUnreadRuntimeFor/);
 });
 
