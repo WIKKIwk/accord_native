@@ -24,7 +24,7 @@ export function FactoryApparatusPicker(props: FactoryApparatusPickerProps) {
     <View style={styles.search}><SymbolView name={{ android: 'search' }} size={24} tintColor={colors.onSurfaceVariant} importantForAccessibility="no" />
       <Host matchContents={{ vertical: true }} style={{ flex: 1 }}>
         <TextInput value={search} onChangeText={picker.setQuery} placeholder={picker.text.search} accessibilityLabel={picker.text.search}
-          autoCapitalize="none" style={{ width: '100%' }} />
+          autoCapitalize="none" style={{ width: '100%', borderWidth: 1, borderColor: colors.onSurfaceVariant, borderRadius: 4, padding: 12 }} />
       </Host></View>
     <FlatList data={picker.rows} keyExtractor={item => item.key} keyboardShouldPersistTaps="handled" style={styles.list}
       contentContainerStyle={styles.listContent} ListEmptyComponent={<Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>{picker.text.empty}</Text>}
