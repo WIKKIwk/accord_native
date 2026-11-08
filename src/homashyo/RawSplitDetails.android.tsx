@@ -17,7 +17,7 @@ export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPr
   const run = async (action: () => Promise<void>) => {
     if (inFlight.current) return;
     inFlight.current = true; setPrinting(true);
-    try { await action(); } catch (error) { onError(error); } finally { inFlight.current = false; if (mounted.current) setPrinting(false); }
+    try { await action(); } catch (error) { if (mounted.current) onError(error); } finally { inFlight.current = false; if (mounted.current) setPrinting(false); }
   };
   return <ScrollView contentContainerStyle={{ padding: 20, gap: 8, paddingBottom: 32 }}>
     <PreparationText title>{rawSplitHistoryTitle(result)}</PreparationText><PreparationText>{rawSplitHistorySubtitle(result)}</PreparationText>

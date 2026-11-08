@@ -120,11 +120,11 @@ for (const platform of ['ios', 'android']) {
     assert.equal(find(tree, n => n.props?.label === 'Eni (mm)')[0].props.enabled, false);
   });
 }
-function details(platform, printerLabel = null, translate = value => value, issueValue = issue) {
-  const calls = [], react = { useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => { fn(); } };
+function details(platform, printerLabel = null, translate = value => value, issueValue = issue, reactOverride = null) {
+  const calls = [], react = reactOverride ?? { useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => { fn(); } };
   const swift = new Proxy({}, { get: (_, name) => name });
   const compose = new Proxy({ useMaterialColors: () => ({ onSurface: 'text', onSurfaceVariant: 'muted', surface: 'surface' }) }, { get: (o, name) => o[name] ?? name });
-  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }),
+  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ modifier: name, args }) }),
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => translate },
@@ -166,6 +166,62 @@ for (const platform of ['ios', 'android']) test(`${platform} reprint errors retu
   else find(tree, n => n.type === 'IconButton')[0].props.onClick();
   await new Promise(resolve => setImmediate(resolve)); assert.deepEqual(h.calls, [['error', error]]);
 });
+function mountedHooks() {
+  const slots = [], cleanups = [], pending = [], writes = []; let cursor = 0, mounted = true;
+  const react = {
+    useRef: value => { const i = cursor++; return slots[i] ?? (slots[i] = { current: value }); },
+    useState: value => { const i = cursor++; if (!(i in slots)) slots[i] = value;
+      return [slots[i], next => { writes.push({ afterUnmount: !mounted, value: next }); slots[i] = next; }]; },
+    useEffect: effect => { const i = cursor++; if (!(i in slots)) { slots[i] = true; pending.push(() => { cleanups[i] = effect(); }); } },
+  };
+  return { react, writes, render: fn => { cursor = 0; const tree = fn(); while (pending.length) pending.shift()(); return tree; },
+    unmount: () => { mounted = false; cleanups.forEach(cleanup => cleanup?.()); } };
+}
+function reprintButtons(tree, platform) {
+  const one = platform === 'ios' ? find(tree, n => n.type === 'Button' && n.props.label === 'Shu rulonni qayta chop etish')[0]
+    : find(tree, n => n.type === 'IconButton')[0];
+  const all = find(tree, n => n.type === (platform === 'ios' ? 'Button' : 'WorkerSheetButton') && n.props.label === 'Barchasini qayta chop etish')[0];
+  return { one, all, clickOne: () => platform === 'ios' ? one.props.onPress() : one.props.onClick(), clickAll: () => all.props.onPress(),
+    isDisabled: button => platform === 'ios' ? button.props.modifiers.some(m => m.modifier === 'disabled' && m.args[0] === true)
+      : button.type === 'IconButton' ? button.props.enabled === false : button.props.disabled === true };
+}
+for (const platform of ['ios', 'android']) {
+  test(`${platform} reprint waits for a deferred job and suppresses rapid repeated taps`, async () => {
+    const hooks = mountedHooks(), h = details(platform, null, value => value, issue, hooks.react); let resolve;
+    h.props.onReprint = value => { h.calls.push(['started', value.barcode]); return new Promise(done => { resolve = done; }); };
+    const first = reprintButtons(hooks.render(h.resultTree), platform); first.clickOne(); first.clickOne(); first.clickAll();
+    assert.deepEqual(h.calls, [['started', 'child']]);
+    const busy = reprintButtons(hooks.render(h.resultTree), platform); assert.equal(busy.isDisabled(busy.one), true); assert.equal(busy.isDisabled(busy.all), true);
+    busy.clickAll(); assert.deepEqual(h.calls, [['started', 'child']]); resolve(); await new Promise(done => setImmediate(done));
+    const idle = reprintButtons(hooks.render(h.resultTree), platform); assert.equal(idle.isDisabled(idle.one), false); assert.equal(idle.isDisabled(idle.all), false);
+    idle.clickAll(); await new Promise(done => setImmediate(done)); assert.deepEqual(h.calls, [['started', 'child'], 'all']); hooks.unmount();
+  });
+  test(`${platform} reprint rejection reports while mounted and recovers the buttons`, async () => {
+    const hooks = mountedHooks(), h = details(platform, null, value => value, issue, hooks.react), error = new Error('printer failed'); let reject;
+    h.props.onReprint = () => new Promise((_resolve, fail) => { reject = fail; });
+    reprintButtons(hooks.render(h.resultTree), platform).clickOne(); reject(error); await new Promise(done => setImmediate(done));
+    assert.deepEqual(h.calls, [['error', error]]); const idle = reprintButtons(hooks.render(h.resultTree), platform);
+    assert.equal(idle.isDisabled(idle.one), false); assert.equal(idle.isDisabled(idle.all), false); hooks.unmount();
+  });
+  test(`${platform} late reprint rejection after unmount cannot update the sheet or report to its old owner`, async () => {
+    const hooks = mountedHooks(), h = details(platform, null, value => value, issue, hooks.react); let reject;
+    h.props.onReprint = () => new Promise((_resolve, fail) => { reject = fail; });
+    reprintButtons(hooks.render(h.resultTree), platform).clickOne(); hooks.unmount(); reject(new Error('late')); await new Promise(done => setImmediate(done));
+    assert.deepEqual(h.calls, []); assert.equal(hooks.writes.some(write => write.afterUnmount), false);
+  });
+  test(`${platform} a closed sheet still lets the current history owner report a print failure`, async () => {
+    const { RawSplitHistoryController } = load('rawSplitHistoryController.ts', { './rawSplitApi': { rawSplitSessionIsCurrent: () => true } });
+    let reject; const options = { ticket: {}, scope: () => 'account', selectPrinter: async () => ({ transport: 'bluetooth', printer: {} }),
+      printerSupported: () => true, onUnsupportedPrinter: () => {}, onMessage: () => {},
+      printOne: () => new Promise((_resolve, fail) => { reject = fail; }) };
+    const controller = new RawSplitHistoryController(options), hooks = mountedHooks(), h = details(platform, null, value => value, issue, hooks.react);
+    h.props.onReprint = value => controller.reprint(result, value);
+    reprintButtons(hooks.render(h.resultTree), platform).clickOne(); await new Promise(done => setImmediate(done));
+    hooks.unmount(); reject(new Error('offline')); await new Promise(done => setImmediate(done));
+    assert.equal(controller.getSnapshot().error, 'Ombordagi hisob o‘zgarmadi. Chop etish: offline');
+    assert.deepEqual(h.calls, []); assert.equal(hooks.writes.some(write => write.afterUnmount), false); controller.dispose();
+  });
+}
 function scanner(platform, granted, active = true, isCurrent = () => active) {
   const guardFile = path.resolve(__dirname, '../src/shared/camera/synchronousGuard.ts'), guardModule = new Module(guardFile, module);
   guardModule.filename = guardFile; guardModule.paths = module.paths;

@@ -65,3 +65,39 @@ test('same-account new login while history loads suppresses old controller state
   resolve(new model.RawSplitSnapshot({ warehouses: ['old'], history: [], issues: [] })); await pending;
   assert.equal(controller.getSnapshot().snapshot, null); assert.equal(updates, count); assert.deepEqual(h.notices, []);
 });
+
+test('a pending reprint blocks a rapid second request while continuing the first job sequentially', async () => {
+  const h = setup(); let complete;
+  h.options.printOne = async (_result, output, _printer, _kind, guard) => {
+    guard(); h.calls.push(output.barcode);
+    if (output.barcode === 'c1') await new Promise(resolve => { complete = resolve; });
+  };
+  const first = h.c.reprint(result); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(h.calls, ['c1']); assert.equal(h.c.getSnapshot().busy, true);
+  await h.c.reprint(result); assert.deepEqual(h.calls, ['c1']);
+  complete(); await first; assert.deepEqual(h.calls, ['c1', 'c2']); assert.deepEqual(h.notices, ['Chop etildi']);
+  assert.equal(h.c.getSnapshot().busy, false);
+});
+
+test('same-account login change during a pending print suppresses remaining jobs and old-owner updates', async () => {
+  for (const outcome of ['resolve', 'reject']) {
+    const h = setup(); let current = true, finish, updates = 0;
+    h.options.ticket.check = () => { if (!current) throw new Error('old session'); };
+    h.options.printOne = async (_result, output, _printer, _kind, guard) => {
+      guard(); h.calls.push(output.barcode); await new Promise((resolve, reject) => { finish = outcome === 'resolve' ? resolve : reject; });
+    };
+    h.c.subscribe(() => updates++); const pending = h.c.reprint(result); await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(h.calls, ['c1']); current = false; const oldUpdates = updates;
+    finish(new Error('late printer result')); await pending;
+    assert.deepEqual(h.calls, ['c1']); assert.deepEqual(h.notices, []); assert.equal(updates, oldUpdates);
+    assert.equal(h.c.getSnapshot().error, null);
+  }
+});
+
+test('disposing a history owner during a pending print prevents later outputs and notices', async () => {
+  const h = setup(); let finish, updates = 0;
+  h.options.printOne = async (_result, output) => { h.calls.push(output.barcode); await new Promise(resolve => { finish = resolve; }); };
+  h.c.subscribe(() => updates++); const pending = h.c.reprint(result); await new Promise(resolve => setImmediate(resolve));
+  h.c.dispose(); const oldUpdates = updates; finish(); await pending;
+  assert.deepEqual(h.calls, ['c1']); assert.deepEqual(h.notices, []); assert.equal(updates, oldUpdates);
+});

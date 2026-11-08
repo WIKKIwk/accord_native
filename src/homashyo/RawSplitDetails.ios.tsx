@@ -13,7 +13,7 @@ export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPr
   const run = async (action: () => Promise<void>) => {
     if (inFlight.current) return;
     inFlight.current = true; setPrinting(true);
-    try { await action(); } catch (error) { onError(error); } finally { inFlight.current = false; if (mounted.current) setPrinting(false); }
+    try { await action(); } catch (error) { if (mounted.current) onError(error); } finally { inFlight.current = false; if (mounted.current) setPrinting(false); }
   };
   return <Host style={{ minHeight: 400 }}><ScrollView><VStack alignment="leading" spacing={10} modifiers={[padding({ all: 20 })]}>
     <Text>{rawSplitHistoryTitle(result)}</Text><Text>{rawSplitHistorySubtitle(result)}</Text>
