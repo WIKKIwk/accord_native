@@ -30,7 +30,7 @@ test('Customer home is connected on both native platforms without changing exist
 test('drawer destinations, active routes and the notification badge follow CustomerDock', () => {
   for (const platform of ['ios', 'android']) {
     assert.equal(nav.customerDestinationPath(platform, 'home'), `/${platform}-customer`);
-    for (const id of ['notifications', 'profile', 'chat']) assert.equal(nav.customerDestinationPath(platform, id), `/${platform}-customer/${id}`);
+    for (const id of ['notifications', 'profile']) assert.equal(nav.customerDestinationPath(platform, id), `/${platform}-customer/${id}`);
     assert.equal(nav.customerDrawerActive(`/${platform}-customer`), 'home');
     assert.equal(nav.customerDrawerActive(`/${platform}-customer/notifications`), 'notifications');
     assert.equal(nav.customerDrawerActive(`/${platform}-customer/profile`), 'profile');
@@ -88,8 +88,6 @@ function routeFixture(platform, params = {}) {
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { PlatformColor: value => value, Pressable: 'Pressable', View: 'View' },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 1 }) },
     '../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' }, '../shared/localization': { uiText: text => text },
-    '../shared/chat/ChatPages': { ChatListPage: 'ChatListPage', ChatRouteStack: 'ChatRouteStack' },
-    '../shared/chat/ChatRouteContext': { ChatRouteProvider: 'ChatRouteProvider' },
     '../shared/navigation/RoleDrawerButton': { RoleDrawerButton: 'RoleDrawerButton' },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open: () => calls.push('drawer') }) },
@@ -98,7 +96,7 @@ function routeFixture(platform, params = {}) {
     './CustomerDelivery': { CustomerDeliveryDetailScreen: 'CustomerDeliveryDetailScreen' },
     './CustomerHome': { CustomerHomeScreen: 'CustomerHomeScreen', CustomerStatusDetailScreen: 'CustomerStatusDetailScreen' },
     [`./CustomerNotificationsView.${platform}`]: { CustomerNotificationsScreen: 'CustomerNotificationsScreen' },
-    './CustomerShell': { useCustomerChatClosing: () => () => {} }, './CustomerDock.android': { CustomerDock: 'CustomerDock' },
+    './CustomerDock.android': { CustomerDock: 'CustomerDock' },
     './customerNavigation': nav, './customerPresentation': { customerStatusTitleKey: kind => `title:${kind}` },
     './useCustomerNavigation': { useCustomerNavigation: () => navigation },
   };
@@ -116,7 +114,7 @@ test('both platform route wrappers connect home, status, notification and delive
     const notifications = nodes(wrappers.CustomerNotificationsRoute(), n => n.type === 'CustomerNotificationsScreen')[0];
     assert.equal(typeof notifications.props.onClearActionChanged, 'function'); notifications.props.onOpenDetail('DN-3');
     const delivery = nodes(wrappers.CustomerDeliveryRoute(), n => n.type === 'CustomerDeliveryDetailScreen')[0];
-    assert.equal(delivery.props.deliveryNoteID, 'DN-42'); delivery.props.onChanged();
+    assert.equal(delivery.props.deliveryNoteID, 'DN-42'); assert.equal(delivery.props.onOpenDiscussion, undefined); delivery.props.onChanged();
     assert.deepEqual(calls, [['status', 'rejected'], ['detail', 'DN-1', 'home'], ['detail', 'DN-2', 'status'],
       ['detail', 'DN-3', 'notifications'], ['changed', 'status']]);
     assert.equal(routeFixture(platform, { kind: 'wrong' }).routes.CustomerStatusRoute().type, 'Redirect');
@@ -126,8 +124,8 @@ test('both platform route wrappers connect home, status, notification and delive
   }
 });
 
-test('Android Customer dock reuses native bar, suppresses notification dot on its own tab and routes taps', () => {
-  for (const active of ['home', 'notifications', 'chat', null]) {
+test('Android Customer dock hides held Chat, suppresses notification dot on its own tab and routes allowed taps', () => {
+  for (const active of ['home', 'notifications', null]) {
     const calls = [];
     const dock = load('src/customer/CustomerDock.android.tsx', {
       'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }), useEffect: fn => { fn(); } },
@@ -139,8 +137,9 @@ test('Android Customer dock reuses native bar, suppresses notification dot on it
       './customerNavigation': nav,
     }).CustomerDock({ active });
     assert.equal(dock.type, 'RoleBottomBar'); assert.equal(dock.props.active, active ?? ''); assert.equal(dock.props.bottomInset, 12);
-    assert.deepEqual(dock.props.items.map(item => item.id), ['home', 'notifications', 'chat']);
-    assert.equal(dock.props.items[1].showBadge, active !== 'notifications'); assert.equal(dock.props.items[2].showBadge, undefined);
+    assert.deepEqual(dock.props.items.map(item => item.id), ['home', 'notifications']);
+    assert.equal(dock.props.items[1].showBadge, active !== 'notifications');
+    dock.props.onSelect('chat'); assert.deepEqual(calls, []);
     if (active) dock.props.onSelect(active);
     dock.props.onSelect('notifications');
     assert.deepEqual(calls, active === 'notifications' ? [] : [{ type: 'NAVIGATE', payload: { name: 'notifications', pop: true } }]);
@@ -165,7 +164,7 @@ test('Customer drawer delegates current-item and logout behavior to the existing
   assert.deepEqual(calls, [['replace', '/android-customer/notifications'], ['replace', '/android-customer/profile'], 'logout']);
 });
 
-test('iOS Customer keeps the notification dot but does not start a Chat badge under the transport hold', () => {
+test('iOS Customer hides held Chat while keeping the notification badge', () => {
   for (const pathname of ['/ios-customer', '/ios-customer/notifications']) {
     const Trigger = Object.assign(function Trigger() {}, { Icon: 'Icon', Label: 'Label', Badge: 'Badge' });
     const NativeTabs = Object.assign(function NativeTabs() {}, { Trigger });
@@ -179,7 +178,27 @@ test('iOS Customer keeps the notification dot but does not start a Chat badge un
     const triggers = nodes(shell, node => node.type === Trigger);
     assert.deepEqual(triggers.map(item => item.props.name), ['(home)', 'notifications', 'chat']);
     assert.equal(nodes(triggers[1], node => node.type === 'Badge').length, pathname.endsWith('/notifications') ? 0 : 1);
+    assert.equal(triggers[2].props.hidden, true);
     assert.equal(nodes(triggers[2], node => node.type === 'Badge').length, 0);
+  }
+});
+
+test('Customer Chat route layouts and leaves redirect home without loading shared Chat', () => {
+  for (const platform of ['ios', 'android']) {
+    const { routes: wrappers } = routeFixture(platform);
+    const guard = wrappers.CustomerChatHold();
+    assert.equal(guard.type, 'Redirect');
+    assert.equal(guard.props.href, `/${platform}-customer`);
+    for (const leaf of ['_layout', 'index', 'new', '[conversationId]']) {
+      const file = fs.readFileSync(path.join(root, `src/app/${platform}-customer/chat/${leaf}.tsx`), 'utf8');
+      assert.match(file, /export \{ CustomerChatHold as default \} from ['"]\.\.\/\.\.\/\.\.\/customer\/CustomerRoutes['"]/);
+      assert.doesNotMatch(file, /shared\/chat/);
+      const entry = load(`src/app/${platform}-customer/chat/${leaf}.tsx`, { '../../../customer/CustomerRoutes': wrappers });
+      const result = entry.default();
+      assert.equal(result.type, 'Redirect'); assert.equal(result.props.href, `/${platform}-customer`);
+    }
+    const source = fs.readFileSync(path.join(root, `src/customer/CustomerRoutes.${platform}.tsx`), 'utf8');
+    assert.doesNotMatch(source, /shared\/chat/);
   }
 });
 

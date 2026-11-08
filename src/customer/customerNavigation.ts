@@ -1,6 +1,6 @@
 import type { CustomerStatusKind } from './customerStore';
 
-export type CustomerDestination = 'home' | 'notifications' | 'profile' | 'chat';
+export type CustomerDestination = 'home' | 'notifications' | 'profile';
 export type CustomerPlatform = 'ios' | 'android';
 
 /** V2 CustomerNavigationDrawer and CustomerDock destinations. */

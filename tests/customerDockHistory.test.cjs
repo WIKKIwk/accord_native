@@ -55,23 +55,23 @@ test('dock pops to an existing destination without duplicating it', () => {
   assert.deepEqual(f.names(), ['index']);
 });
 
-test('dock pushes an absent chat and ignores the currently active destination', () => {
+test('dock ignores held Chat and the currently active destination', () => {
   const f = fixture(['index', 'notifications']);
   f.dock({ active: 'notifications' }).props.onSelect('notifications'); f.flush();
   assert.deepEqual(f.names(), ['index', 'notifications']);
   f.dock({ active: 'notifications' }).props.onSelect('chat'); f.flush();
-  assert.deepEqual(f.names(), ['index', 'notifications', 'chat']);
-  f.back(); assert.deepEqual(f.names(), ['index', 'notifications']);
+  assert.deepEqual(f.names(), ['index', 'notifications']);
+  assert.equal(f.dismisses(), 0);
 });
 
 
 test('rapid same-frame dock choices coalesce to the last requested destination', () => {
-  const f = fixture(['index']);
-  const dock = f.dock({ active: 'home' });
+  const f = fixture(['index', 'detail']);
+  const dock = f.dock({ active: null });
+  dock.props.onSelect('home');
   dock.props.onSelect('notifications');
-  dock.props.onSelect('chat');
-  assert.deepEqual(f.names(), ['index']);
+  assert.deepEqual(f.names(), ['index', 'detail']);
   f.flush();
-  assert.deepEqual(f.names(), ['index', 'chat']);
+  assert.deepEqual(f.names(), ['index', 'detail', 'notifications']);
   assert.equal(f.dismisses(), 2);
 });

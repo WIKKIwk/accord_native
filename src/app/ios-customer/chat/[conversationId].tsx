@@ -1,1 +1,1 @@
-export { ChatThreadPage as default } from '../../../shared/chat/ChatPages';
+export { CustomerChatHold as default } from '../../../customer/CustomerRoutes';

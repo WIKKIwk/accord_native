@@ -1,6 +1,6 @@
 import { Keyboard } from 'react-native';
 
-export type CustomerDockDestination = 'home' | 'notifications' | 'chat';
+export type CustomerDockDestination = 'home' | 'notifications';
 type CustomerDockAction = { type: 'NAVIGATE'; payload: { name: string; pop: true } };
 type Request = { destination: CustomerDockDestination; active: () => CustomerDockDestination | null;
   isMounted: () => boolean; dispatch: (action: CustomerDockAction) => void };
@@ -9,6 +9,7 @@ type Request = { destination: CustomerDockDestination; active: () => CustomerDoc
 export function createCustomerDockScheduler(schedule: (callback: () => void) => void, dismissKeyboard: () => void) {
   let scheduled = false, pending: CustomerDockDestination | null = null;
   return (request: Request) => {
+    if (request.destination !== 'home' && request.destination !== 'notifications') return;
     if (request.destination === request.active()) return;
     dismissKeyboard();
     pending = request.destination;

@@ -5,15 +5,11 @@ import { useCallback, useState } from 'react';
 import { PlatformColor } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProfileScreen } from '../components/ProfileScreen';
-import { ChatListPage, ChatRouteStack } from '../shared/chat/ChatPages';
-import { ChatRouteProvider } from '../shared/chat/ChatRouteContext';
 import { RoleDrawerButton } from '../shared/navigation/RoleDrawerButton';
-import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { useCustomerContext, useCustomerText } from './CustomerContext';
 import { CustomerDeliveryDetailScreen } from './CustomerDelivery';
 import { CustomerHomeScreen, CustomerStatusDetailScreen } from './CustomerHome';
 import { CustomerNotificationsScreen } from './CustomerNotificationsView.ios';
-import { useCustomerChatClosing } from './CustomerShell';
 import { customerStatusKind } from './customerNavigation';
 import { customerStatusTitleKey } from './customerPresentation';
 import { useCustomerNavigation } from './useCustomerNavigation';
@@ -64,11 +60,5 @@ export function CustomerProfileRoute() {
   </>;
 }
 
-export function CustomerChatLayout() {
-  const { session } = useCustomerContext(), drawer = useRoleDrawer(), setChatClosing = useCustomerChatClosing();
-  return <ChatRouteProvider session={session} basePath="/ios-customer/chat" onOpenDrawer={drawer.open} onClosingChange={setChatClosing}>
-    <ChatRouteStack />
-  </ChatRouteProvider>;
-}
-
-export { ChatListPage as CustomerChatHome };
+/** Keep all Customer Chat entry points closed until the shared transport is reviewed. */
+export function CustomerChatHold() { return <Redirect href={'/ios-customer' as Href} />; }

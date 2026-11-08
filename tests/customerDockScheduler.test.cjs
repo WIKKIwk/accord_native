@@ -18,9 +18,9 @@ function fixture() {
 }
 
 test('same-frame requests keep only the last destination and dismiss the keyboard', () => {
-  const f = fixture(); f.request('notifications'); f.request('chat');
+  const f = fixture(); f.setActive(null); f.request('notifications'); f.request('home');
   assert.equal(f.frames.length, 1); assert.equal(f.dismisses(), 2); assert.deepEqual(f.actions, []);
-  f.flush(); assert.deepEqual(f.actions, [{ type: 'NAVIGATE', payload: { name: 'chat', pop: true } }]);
+  f.flush(); assert.deepEqual(f.actions, [{ type: 'NAVIGATE', payload: { name: 'index', pop: true } }]);
 });
 
 test('active destination is ignored and a changed active destination is rechecked at the frame', () => {
@@ -39,7 +39,15 @@ test('coalescing keeps the first requesting context for the scheduled callback',
   let firstMounted = true;
   const queue = createCustomerDockScheduler(fn => frames.push(fn), () => {});
   queue({ destination: 'notifications', active: () => 'home', isMounted: () => firstMounted, dispatch: action => actions.push(['first', action]) });
-  queue({ destination: 'chat', active: () => 'home', isMounted: () => true, dispatch: action => actions.push(['second', action]) });
+  queue({ destination: 'home', active: () => 'notifications', isMounted: () => true, dispatch: action => actions.push(['second', action]) });
   firstMounted = false; frames.shift()();
   assert.deepEqual(actions, []);
+});
+
+test('held or unknown dock destinations cannot schedule or replace an allowed navigation', () => {
+  const f = fixture(); f.request('chat'); f.request('unexpected');
+  assert.equal(f.frames.length, 0); assert.equal(f.dismisses(), 0); assert.deepEqual(f.actions, []);
+  f.request('notifications'); f.request('chat'); f.flush();
+  assert.equal(f.dismisses(), 1);
+  assert.deepEqual(f.actions, [{ type: 'NAVIGATE', payload: { name: 'notifications', pop: true } }]);
 });

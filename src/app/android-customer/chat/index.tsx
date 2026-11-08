@@ -1,1 +1,1 @@
-export { CustomerChatHome as default } from '../../../customer/CustomerRoutes';
+export { CustomerChatHold as default } from '../../../customer/CustomerRoutes';

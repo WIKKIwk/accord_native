@@ -6,8 +6,6 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProfileScreen } from '../components/ProfileScreen';
 import { uiText } from '../shared/localization';
-import { ChatListPage, ChatRouteStack } from '../shared/chat/ChatPages';
-import { ChatRouteProvider } from '../shared/chat/ChatRouteContext';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { useCustomerContext, useCustomerText } from './CustomerContext';
@@ -76,11 +74,5 @@ export function CustomerProfileRoute() {
   </CustomerPage>;
 }
 
-export function CustomerChatLayout() {
-  const { session } = useCustomerContext(), drawer = useRoleDrawer();
-  return <ChatRouteProvider session={session} basePath="/android-customer/chat" onOpenDrawer={drawer.open}><ChatRouteStack /></ChatRouteProvider>;
-}
-
-export function CustomerChatHome() {
-  return <View style={{ flex: 1 }}><View style={{ flex: 1 }}><ChatListPage /></View><CustomerDock active="chat" /></View>;
-}
+/** Keep all Customer Chat entry points closed until the shared transport is reviewed. */
+export function CustomerChatHold() { return <Redirect href={'/android-customer' as Href} />; }
