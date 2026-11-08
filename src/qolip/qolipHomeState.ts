@@ -16,6 +16,13 @@ type Dependencies = {
 type HomeState = { snapshot: QolipBlocksResult | null; orderedBlocks: QolipBlock[]; selectedIndex: number;
   loading: boolean; error: boolean; invalid: boolean; query: string; blockCounts: Record<string, number>;
   cellCounts: Record<string, Record<string, number>> };
+function safelyNotify(listener: () => unknown) {
+  try {
+    const result = listener();
+    if (result && (typeof result === 'object' || typeof result === 'function') &&
+        typeof (result as { then?: unknown }).then === 'function') void Promise.resolve(result).catch(() => {});
+  } catch { /* One observer cannot suppress the remaining state notifications. */ }
+}
 
 /** Home read/search/refresh state. The screen actions and native wiring remain open. */
 export class QolipHomeState {
@@ -46,7 +53,7 @@ export class QolipHomeState {
   private publish(patch: Partial<HomeState> = {}) {
     if (!this.active) return;
     this.value = { ...this.value, orderedBlocks: [...this.ordered], ...patch };
-    this.listeners.forEach(listener => listener());
+    for (const listener of [...this.listeners]) safelyNotify(listener);
   }
   get displayBlocks(): readonly QolipBlock[] {
     return this.value.orderedBlocks.length ? this.value.orderedBlocks : this.value.snapshot?.blocks ?? [];

@@ -43,6 +43,15 @@ test('home load filters blanks, restores order and saves reordered keys while re
   h.state.reorder(-1, 0); assert.equal(h.calls.filter(x => x[0] === 'saveOrder').length, 1);
 });
 
+test('throwing or asynchronous Home observers cannot suppress later updates or turn a successful read into an error', async () => {
+  const h = harness(), observed = [];
+  h.state.subscribe(() => { throw new Error('observer'); });
+  h.state.subscribe(async () => { throw new Error('async observer'); });
+  h.state.subscribe(() => observed.push(h.state.getSnapshot()));
+  await h.state.start(); assert.equal(h.state.getSnapshot().error, false); assert.deepEqual(h.state.displayBlocks.map(item => item.name), ['B', 'A']);
+  h.state.invalidateSession(); assert.equal(h.state.getSnapshot().invalid, true); assert.equal(observed.at(-1).invalid, true); await delay(0);
+});
+
 test('locations are cached per normalized block and older responses cannot replace newer refreshes', async () => {
   const old = deferred(), fresh = deferred(); let reads = 0;
   const h = harness({ locations: () => (++reads === 1 ? old.promise : fresh.promise) });

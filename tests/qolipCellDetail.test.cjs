@@ -67,6 +67,12 @@ test('subscriptions update once per selection and lifecycle cleanup rejects a qu
   h.state.toggle(h.first); assert.equal(changes, 1); h.state.suspend(); assert.equal(h.listeners.size, 0); assert.equal(h.state.bulkChoice(), null);
   h.state.activate(); assert.deepEqual(h.state.bulkChoice().items, [h.first, h.duplicate]); h.state.suspend();
 });
+test('failing detail observers do not suppress later selection and invalidation notifications', async () => {
+  const h = setup(), seen = []; h.state.subscribe(() => { throw new Error('observer'); });
+  h.state.subscribe(async () => { throw new Error('async observer'); }); h.state.subscribe(() => seen.push(h.state.getSnapshot().invalid));
+  h.state.activate(); h.state.toggle(h.first); h.invalidate(); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(seen, [false, true]); assert.equal(h.state.getSnapshot().invalid, true); h.state.suspend();
+});
 test('unmounted detail hook exposes source choices only through a required current callback, never a mutation call', () => {
   const effects = [], choices = [], h = setup(), props = { boundary: h.boundary, cellLabel: 'A1', choose: value => choices.push(value) };
   const hook = load('useQolipCellDetail.ts', { react: { useMemo: fn => fn(), useSyncExternalStore: (_s, get) => get(), useLayoutEffect: fn => effects.push(fn) },

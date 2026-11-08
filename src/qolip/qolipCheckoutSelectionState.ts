@@ -45,7 +45,13 @@ export class QolipCheckoutSelectionState {
     }
     return this.value;
   };
-  private notify() { for (const listener of [...this.listeners]) listener(); }
+  private notify() { for (const listener of [...this.listeners]) {
+    try {
+      const result: unknown = listener();
+      if (result && (typeof result === 'object' || typeof result === 'function') &&
+          typeof (result as { then?: unknown }).then === 'function') void Promise.resolve(result).catch(() => {});
+    } catch { /* Other observers must still see invalidation. */ }
+  } }
   private project(): QolipCheckoutSelectionSnapshot {
     const selectionMode = this.selected.size > 0;
     return { invalid: false, selectionMode, selectedIds: new Set(this.selected),

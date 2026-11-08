@@ -66,3 +66,9 @@ test('an invalidated original boundary clears private selection and prevents old
   h.revive(); h.owner.tap(h.b); h.owner.update(h.all, h.all, unlocked()); assert.equal(h.owner.getSnapshot().invalid, true); assert.equal(seen.at(-1), true);
   assert.equal(h.listeners.size, 0); h.owner.suspend();
 });
+test('failing checkout-selection observers do not suppress later selection and invalidation notifications', async () => {
+  const h = harness(), seen = []; h.owner.subscribe(() => { throw new Error('observer'); });
+  h.owner.subscribe(async () => { throw new Error('async observer'); }); h.owner.subscribe(() => seen.push(h.owner.getSnapshot().invalid));
+  h.owner.activate(); h.owner.longPress(h.a); h.invalidate(); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(seen, [false, true]); assert.equal(h.owner.getSnapshot().invalid, true); h.owner.suspend();
+});

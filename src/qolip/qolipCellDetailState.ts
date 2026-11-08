@@ -48,7 +48,13 @@ export class QolipCellDetailState {
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = (): Snapshot => this.lifetime.getSnapshot() ? this.value : invalidSnapshot;
-  private notify() { for (const listener of [...this.listeners]) listener(); }
+  private notify() { for (const listener of [...this.listeners]) {
+    try {
+      const result: unknown = listener();
+      if (result && (typeof result === 'object' || typeof result === 'function') &&
+          typeof (result as { then?: unknown }).then === 'function') void Promise.resolve(result).catch(() => {});
+    } catch { /* Other observers must still see invalidation. */ }
+  } }
   private project(selectedIds: ReadonlySet<string>): Snapshot {
     const { selectionMode, selectedItems } = qolipCellSelection(this.items, selectedIds);
     return { invalid: false, selectionMode, selectedIds, selectedItems,

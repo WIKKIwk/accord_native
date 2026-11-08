@@ -59,6 +59,12 @@ test('boundary invalidation clears labels/query and permanently blocks old selec
   assert.equal(h.owner.submit(), null); h.revive(); h.owner.setQuery('D4'); assert.equal(h.owner.resultChoice('C3'), null);
   assert.equal(h.owner.getSnapshot().invalid, true); assert.equal(seen.at(-1), true); assert.equal(h.listeners.size, 0); h.owner.suspend();
 });
+test('failing picker observers do not suppress later query and invalidation notifications', async () => {
+  const h = harness(), seen = []; h.owner.subscribe(() => { throw new Error('observer'); });
+  h.owner.subscribe(async () => { throw new Error('async observer'); }); h.owner.subscribe(() => seen.push(h.owner.getSnapshot().invalid));
+  h.owner.activate(); h.owner.setQuery('A1'); h.invalidate(); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(seen, [false, true]); assert.equal(h.owner.getSnapshot().invalid, true); h.owner.suspend();
+});
 
 test('picker hook returns only a current source choice to its mandatory callback', () => {
   const effects = [], calls = [], h = harness(), filename = path.join(root, 'qolip/useQolipGridCellPicker.ts'), loaded = new Module(filename, module);

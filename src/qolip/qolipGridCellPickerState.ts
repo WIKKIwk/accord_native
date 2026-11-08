@@ -31,7 +31,13 @@ export class QolipGridCellPickerState {
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = (): Snapshot => this.lifetime.getSnapshot() ? this.value : invalid;
-  private notify() { for (const listener of [...this.listeners]) listener(); }
+  private notify() { for (const listener of [...this.listeners]) {
+    try {
+      const result: unknown = listener();
+      if (result && (typeof result === 'object' || typeof result === 'function') &&
+          typeof (result as { then?: unknown }).then === 'function') void Promise.resolve(result).catch(() => {});
+    } catch { /* Other observers must still see invalidation. */ }
+  } }
   private isExcluded(label: string): boolean { return this.excluded === trimDart(label).toUpperCase(); }
   private project(query: string, selectedLetter: string): Snapshot {
     const searching = !!trimDart(query), normalized = normalizeQolipCellLabel(query);
