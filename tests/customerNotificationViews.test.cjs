@@ -31,8 +31,8 @@ function fixture(platform, state, confirm = false, locale = 'uz') {
       contentShape: v => ['contentShape', v], fixedSize: v => ['fixedSize', v], font: v => ['font', v], foregroundStyle: v => ['foregroundStyle', v],
       frame: v => ['frame', v], lineLimit: () => ['lineLimit'], listRowInsets: v => ['listRowInsets', v], padding: v => ['padding', v],
       shapes: { rectangle: () => ['rectangle'], roundedRectangle: v => ['roundedRectangle', v] } },
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'card', surfaceContainerHighest: 'icon-bg', onSurface: 'fg', onSurfaceVariant: 'muted', secondaryContainer: 'highlight', onSecondaryContainer: 'selected' }) },
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { useFocusEffect: fn => { const clean = fn(); if (clean) cleanups.push(clean); } }, 'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl',
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'card', surfaceContainerHighest: 'icon-bg', onSurface: 'fg', onSurfaceVariant: 'muted', secondaryContainer: 'highlight', onSecondaryContainer: 'selected', outlineVariant: 'outline' }) },
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { useFocusEffect: fn => { const clean = fn(); if (clean) cleanups.push(clean); } }, 'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', Pressable: 'Pressable', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl',
       Text: 'Text', View: 'View', PlatformColor: value => value },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' },
     './CustomerContext': { useCustomerText: () => ({ locale, text: key => key }) }, './CustomerStates': loadCustomerStates(platform), './customerPresentation': presentation,
@@ -45,9 +45,10 @@ test('both notification views mark the tapped item seen before opening it', asyn
       refresh: async () => {}, markSeen: async id => calls.push(['seen', id]), clearAll: async () => {} };
     const screen = fixture(platform, state).CustomerNotificationsScreen({ onOpenDetail: id => calls.push(['open', id]) });
     const row = platform === 'ios' ? nodes(screen, item => item.type === 'Button')[0] : nodes(screen, item => item.type === 'FlatList')[0].props.renderItem({ item: record, index: 0 });
-    row.props.onPress(); await Promise.resolve(); await Promise.resolve();
+    const target = platform === 'ios' ? row : nodes(row, item => item.type === 'Pressable')[0];
+    target.props.onPress(); await Promise.resolve(); await Promise.resolve();
     assert.deepEqual(calls, [['seen', 'dn'], ['open', 'dn']]);
-    if (platform === 'android') assert.equal(row.props.backgroundColor, 'highlight');
+    if (platform === 'android') assert.equal(target.props.style.backgroundColor, 'highlight');
     else assert.ok(row.props.modifiers.some(m => m[0] === 'background' && m[1] === 'secondarySystemFill'));
   }
 });
@@ -56,9 +57,42 @@ test('Android populated feed heading uses V2 titleLarge emphasis', () => {
   const state = { loaded: true, loading: false, error: null, records: [record], highlightedIds: new Set(),
     refresh: async () => {}, markSeen: async () => {}, clearAll: async () => {} };
   const screen = fixture('android', state).CustomerNotificationsScreen({ onOpenDetail() {} });
-  const heading = nodes(screen, n => n.type === 'FlatList')[0].props.ListHeaderComponent;
+  const heading = nodes(nodes(screen, n => n.type === 'FlatList')[0].props.ListHeaderComponent, n => n.type === 'Text')[0];
   assert.equal(heading.props.children, 'shipmentsFlowTitle');
   assert.equal(heading.props.style.fontSize, 20); assert.equal(heading.props.style.fontWeight, '700');
+});
+
+test('Android feed groups heading and rows with source corners and inset dividers', async () => {
+  const records = [0, 1, 2].map(index => ({ ...record, id: `dn-${index}` })), calls = [];
+  const state = { loaded: true, loading: false, error: null, records, highlightedIds: new Set([records[1].id]),
+    refresh: async () => {}, markSeen: async id => calls.push(['seen', id]), clearAll: async () => {} };
+  const screen = fixture('android', state, false, 'ur-PK').CustomerNotificationsScreen({ onOpenDetail: id => calls.push(['open', id]) });
+  const list = nodes(screen, n => n.type === 'FlatList')[0], header = list.props.ListHeaderComponent;
+  assert.equal(header.props.testID, 'customer-feed-heading'); assert.equal(header.props.style.backgroundColor, 'bg');
+  assert.equal(header.props.style.paddingTop, 16); assert.equal(header.props.style.borderTopLeftRadius, 28); assert.equal(header.props.style.borderTopRightRadius, 28);
+  const title = nodes(header, n => n.type === 'Text')[0]; assert.equal(title.props.style.marginHorizontal, 16); assert.equal(title.props.style.marginBottom, 14);
+  for (let index = 0; index < records.length; index++) {
+    const item = records[index], row = list.props.renderItem({ item, index });
+    const outer = nodes(row, n => n.props.testID === 'customer-feed-card')[0];
+    const fill = nodes(row, n => n.props.testID === 'customer-feed-fill')[0];
+    const target = nodes(row, n => n.type === 'Pressable')[0];
+    assert.equal(outer.props.style.backgroundColor, 'bg'); assert.equal(outer.props.style.direction, 'rtl');
+    assert.equal(outer.props.style.borderBottomLeftRadius, index === 2 ? 28 : 0);
+    assert.equal(outer.props.style.borderBottomRightRadius, index === 2 ? 28 : 0);
+    assert.equal(fill.props.style.backgroundColor, 'card'); assert.equal(fill.props.style.borderTopLeftRadius, index === 0 ? 24 : 0);
+    assert.equal(fill.props.style.borderTopRightRadius, index === 0 ? 24 : 0);
+    assert.equal(fill.props.style.borderBottomLeftRadius, index === 2 ? 24 : 0);
+    assert.equal(fill.props.style.borderBottomRightRadius, index === 2 ? 24 : 0);
+    assert.equal(target.props.accessibilityRole, 'button'); assert.equal(target.props.style.backgroundColor, index === 1 ? 'highlight' : 'transparent');
+    target.props.onPress(); await Promise.resolve(); await Promise.resolve();
+    const dividers = nodes(row, n => n.props.testID === 'customer-feed-divider'); assert.equal(dividers.length, index === 2 ? 0 : 1);
+    if (dividers.length) assert.deepEqual(dividers[0].props.style, { height: 1, marginHorizontal: 16, backgroundColor: 'outline', opacity: 0.55 });
+  }
+  assert.deepEqual(calls, records.flatMap(item => [['seen', item.id], ['open', item.id]]));
+  const single = fixture('android', { ...state, records: [records[0]] }).CustomerNotificationsScreen({ onOpenDetail() {} });
+  const row = nodes(single, n => n.type === 'FlatList')[0].props.renderItem({ item: records[0], index: 0 });
+  const fill = nodes(row, n => n.props.testID === 'customer-feed-fill')[0].props.style;
+  assert.equal(fill.borderTopLeftRadius, 24); assert.equal(fill.borderBottomLeftRadius, 24);
 });
 test('clear action presents V2 confirmation and only its confirm callback clears', async () => {
   for (const platform of ['ios', 'android']) {
@@ -174,7 +208,8 @@ test('notification rows preserve icon boxes, top-aligned timestamps and one real
     const screen = fixture(platform, state, false, 'ur-PK').CustomerNotificationsScreen({ onOpenDetail() {} });
     const row = platform === 'ios' ? nodes(screen, n => n.type === 'Button')[0]
       : nodes(screen, n => n.type === 'FlatList')[0].props.renderItem({ item, index: 0 });
-    assert.equal(typeof row.props.onPress, 'function');
+    const target = platform === 'ios' ? row : nodes(row, n => n.type === 'Pressable')[0];
+    assert.equal(typeof target.props.onPress, 'function');
     const name = nodes(row, n => n.type === 'Text' && n.props.children === item.item_name)[0];
     const code = nodes(row, n => n.type === 'Text' && n.props.children === item.item_code)[0];
     const body = nodes(row, n => n.type === 'Text' && n.props.children === '3 kg jo‘natildi')[0];
@@ -196,14 +231,15 @@ test('notification rows preserve icon boxes, top-aligned timestamps and one real
       assert.ok(body.props.modifiers.some(m => m[0] === 'padding' && m[1].top === 8));
       assert.equal(nodes(row.props.children, n => n.type === 'Button').length, 0);
     } else {
-      const layout = row.props.children; assert.equal(layout.props.style.alignItems, 'flex-start'); assert.equal(layout.props.style.direction, 'rtl');
-      assert.equal(layout.props.style.paddingHorizontal, 8); assert.equal(layout.props.style.paddingVertical, 10);
+      const layout = target.props.children; assert.equal(layout.props.style.alignItems, 'flex-start');
+      assert.equal(row.props.style.direction, 'rtl');
+      assert.equal(target.props.style.paddingHorizontal, 16); assert.equal(target.props.style.paddingVertical, 16);
       const icon = nodes(row, n => n.type === 'SymbolView')[0]; assert.equal(icon.props.name.android, expected); assert.equal(icon.props.size, 20);
       assert.equal(icon.props.accessible, false);
       const box = nodes(row, n => n.type === 'View' && n.props.style?.width === 40)[0];
       assert.equal(box.props.style.height, 40); assert.equal(box.props.style.borderRadius, 12);
       assert.equal(box.props.style.backgroundColor, highlighted ? 'highlight' : 'icon-bg');
-      assert.equal(row.props.backgroundColor, highlighted ? 'highlight' : 'card');
+      assert.equal(target.props.style.backgroundColor, highlighted ? 'highlight' : 'transparent');
       assert.equal(name.props.style.fontWeight, '500'); assert.equal(code.props.style.marginTop, 4); assert.equal(body.props.style.marginTop, 8);
     }
   }
