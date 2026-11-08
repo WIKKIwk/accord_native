@@ -17,6 +17,7 @@ import { adminWorkMapDetailHeader } from './adminWorkMapDetailHeader';
 import { AdminWorkMapCombo } from './AdminWorkMapCombo';
 import { adminWorkMapComboPresentation } from './adminWorkMapComboPresentation';
 import { AdminWorkMapPending } from './AdminWorkMapPending';
+import { AdminWorkMapControlNotice } from './AdminWorkMapControlNotice';
 import { adminWorkMapPendingPresentation } from './adminWorkMapPendingPresentation';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -46,6 +47,8 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
       <Text style={[styles.title, { color: colors.text }]}>{header.code}</Text>
       <Text style={[styles.title, { color: colors.text }]}>{header.label}</Text></View>
       : <Text style={[styles.title, styles.pendingTitle, { color: colors.text }]}>{pending?.title ?? [row.code || row.id, title || row.title].filter(Boolean).join(' • ')}</Text>}
+    {value?.kind === 'order' && (value.orderControl === 'frozen' || value.orderControl === 'freeze_requested') &&
+      <AdminWorkMapControlNotice text={productionText(value.orderControl === 'frozen' ? 'worker.freeze.active' : 'worker.freeze.requested', locale)} />}
     {showSummary && value?.kind === 'order' && value.qolipInRework && <View testID="admin-qolip-rework-notice" style={[styles.notice, { backgroundColor: colors.field }]}>
       <Text style={[styles.noticeText, { color: colors.muted }]}>{extensionText('qolipReworkText', 'order_unavailable', locale)}</Text></View>}
     {detail.loading && <ActivityIndicator />}

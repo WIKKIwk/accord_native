@@ -28,7 +28,7 @@ function fixture() {
     '../pendingOrderApi': { pendingOrderDetail: async (s, id, guard) => { calls.push(['pending', s, id]); guard(); duringRead(); guard(); return { id, template: { product: 'P' }, manager_name: 'Manager' }; } },
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile, value.capabilities]) },
     '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, '../shared/mobileApiException': exception, './adminProductionRequest': adminGuard,
-    './adminWorkMapMetadataModel': metadata, './adminWorkMapOrderWeight': weight,
+    './adminWorkMapMetadataModel': metadata, './adminWorkMapOrderWeight': weight, './dartJsonString': load('admin/dartJsonString'),
     './adminOrderSummaryApi': { adminProductionMapOrderSummary: async (s, id, guard) => { calls.push(['summary', s, id]); guard(); duringRead(); guard(); return { source_map_id: id }; } },
   };
   const api = load('admin/adminWorkMapReader', apis);
@@ -139,6 +139,20 @@ test('legacy full Orders detail does not use the compact summary template-metric
   const result = await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4 });
   assert.equal(result.orderWeight, null);
 });
+test('compact Orders retains only its own hydrated global control; other ticket kinds do not expose it', async () => {
+  for (const state of ['active', 'frozen', 'freeze_requested', null]) {
+    const f = fixture(); f.setSnapshot({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }],
+      order_controls: state == null ? {} : { o: state } });
+    const read = f.api.adminWorkMapDetailReader(f.session, f.witness), ticket = { kind: 'order', id: 'o', epoch: 'e', revision: 4 };
+    assert.equal((await read({ ...ticket, ordersSummary: true })).orderControl, state);
+    assert.equal((await read(ticket)).orderControl, null);
+    assert.equal((await read({ ...ticket, apparatus: 'apparatus:default:asset-005' })).orderControl, null);
+  }
+  const f = fixture(); f.setSnapshot({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: '__proto__' } }], order_controls: {} });
+  assert.equal((await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: '__proto__', epoch: 'e', revision: 4, ordersSummary: true })).orderControl, null);
+  const unrelated = fixture(); unrelated.setSnapshot({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }], order_controls: { other: 'frozen' } });
+  assert.equal((await unrelated.api.adminWorkMapDetailReader(unrelated.session, unrelated.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4, ordersSummary: true })).orderControl, null);
+});
 
 test('real catalog callback wrapper accepts the checked Admin guard and rejects a body-time witness transition', async () => {
   for (const invalidate of [false, true]) {
@@ -177,7 +191,7 @@ test('actual pending detail decodes manager and template under the original witn
 test('actual detail decoder supplies metadata, rework flag and template weight only while the opening scope is current', async () => {
   for (const invalidate of [false, true]) {
     const f = fixture(), requests = [], raw = { epoch: 'e', scope: 's', rev: 5, sequences: {}, visible_order_ids: {},
-      queue_states: {}, queue_policies: [], order_controls: {}, stage_states: {}, queue_action_controls: {}, frozen_orders_by_apparatus: {},
+      queue_states: {}, queue_policies: [], order_controls: { o: { state: 'freeze_requested' } }, stage_states: {}, queue_action_controls: {}, frozen_orders_by_apparatus: {},
       maps: [{ map: { id: 'o', title: 'Film', order_kg: 0, width_mm: 100, nodes: [], edges: [] }, program: {}, qolip_in_rework: true, created_at_unix: 1700000000,
         created_by: { role: 'brigader', display_name: 'Ana', ref: 'ignored' } }],
       calculation_templates: { o: { source_map_id: 'o', kg: 42.5, width_mm: 100 } } };
@@ -188,7 +202,7 @@ test('actual detail decoder supplies metadata, rework flag and template weight o
     const pending = reader({ kind: 'order', id: 'o', epoch: 'e', revision: 4, ordersSummary: true });
     if (invalidate) await assert.rejects(pending, /session changed/);
     else { const detail = await pending; assert.deepEqual(detail.metadata, { createdAtUnix: 1700000000, creator: { role: 'brigader', displayName: 'Ana' } });
-      assert.equal(detail.qolipInRework, true); assert.equal(detail.orderWeight, 42.5);
+      assert.equal(detail.qolipInRework, true); assert.equal(detail.orderWeight, 42.5); assert.equal(detail.orderControl, 'freeze_requested');
       const localization = load('shared/localization/index', { './catalog.json': require('../src/shared/localization/catalog.json') });
       const present = load('admin/adminWorkMapSummaryPresentation', { '../shared/localization': localization, './dartJsonString': load('admin/dartJsonString') }).adminWorkMapSummaryPresentation;
       const summary = present({ ...detail.map, order_kg: detail.orderWeight ?? detail.map.order_kg }, { expanded: true, canExpand: true, loading: true, failed: false }, 'en');

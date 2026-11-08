@@ -12,6 +12,7 @@ import type { AdminWorkMapDetailTicket, AdminWorkMapPage } from './adminWorkMapC
 import { adminWorkMapMetadataFromSaved } from './adminWorkMapMetadataModel';
 import { adminProductionMapOrderSummary } from './adminOrderSummaryApi';
 import { adminWorkMapOrderWeight } from './adminWorkMapOrderWeight';
+import { dartTrim } from './dartJsonString';
 
 /** Capture one witness and one read scope for this screen; never recapture a stale operation. */
 function adminWorkMapGuard(session: Session, isWitnessCurrent: () => boolean) {
@@ -64,7 +65,10 @@ export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () 
         guard();
         // Compact Orders detail computes this fallback from its hydrated templates; Sequence and legacy full pages use different metric flows.
         const orderWeight = ticket.ordersSummary ? adminWorkMapOrderWeight(map, Object.values(snapshot.calculation_templates ?? {})) : null;
-        return { kind: 'order' as const, map, metadata, orderWeight, qolipInRework: saved.qolip_in_rework === true,
+        // All-order compact detail has a global control and no apparatus-specific control.
+        const controls = snapshot.order_controls ?? {}, id = dartTrim(ticket.id);
+        const orderControl = ticket.ordersSummary && Object.hasOwn(controls, id) ? controls[id] : null;
+        return { kind: 'order' as const, map, metadata, orderWeight, orderControl, qolipInRework: saved.qolip_in_rework === true,
           customer: Object.hasOwn(customers, ticket.id) ? customers[ticket.id] : map.customer_name };
       }
     }

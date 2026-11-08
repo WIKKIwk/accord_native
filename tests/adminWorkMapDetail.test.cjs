@@ -24,6 +24,8 @@ test('rework notice uses the source localization for all supported languages', (
     ru: 'Формы заказа на переделке. Начать работу можно после возврата всех необходимых форм.',
     ur: 'This order has molds in rework. Work cannot start until all required molds return.' };
   for (const [locale, text] of Object.entries(expected)) assert.equal(local.extensionText('qolipReworkText', 'order_unavailable', locale), text);
+  assert.equal(local.productionText('worker.freeze.active', 'en'), 'The order is frozen. Please contact an admin and ask them to unfreeze it before continuing.');
+  assert.equal(local.productionText('worker.freeze.requested', 'en'), 'An admin requested a freeze. Safely remove the roll first, or enter the issue reason.');
 });
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 function fixture(readers) {
@@ -76,6 +78,7 @@ test('actual detail hook/reader composition accepts a valid ticket and rejects t
     '../shared/appRoutes': load('shared/appRoutes.ts'), '../shared/profileSessionGuard': guard,
     '../shared/mobileApiException': load('shared/mobileApiException.ts'), './adminProductionRequest': adminGuard,
     './adminWorkMapMetadataModel': metadata, './adminWorkMapOrderWeight': load('admin/adminWorkMapOrderWeight.ts', { './dartJsonString': load('admin/dartJsonString.ts') }),
+    './dartJsonString': load('admin/dartJsonString.ts'),
   });
   const f = fixture(readers); f.args.session = { token: 'token', profile: { role: 'admin', ref: 'me' }, capabilities: ['admin.access'] };
   assert.equal(f.render().valid, true); assert.equal(sent.length, 1);
@@ -151,7 +154,7 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
     './useAdminWorkMapDetail': { useAdminWorkMapDetail: () => ({ ...detail, retry }) },
     './AdminWorkMapMetadata': { AdminWorkMapMetadata: 'Metadata' }, './adminWorkMapMetadataModel': metadata,
     './AdminWorkMapSummary': { AdminWorkMapSummary: 'Summary' }, './AdminWorkMapCombo': { AdminWorkMapCombo: 'Combo' },
-    './AdminWorkMapPending': { AdminWorkMapPending: 'Pending' },
+    './AdminWorkMapPending': { AdminWorkMapPending: 'Pending' }, './AdminWorkMapControlNotice': { AdminWorkMapControlNotice: 'ControlNotice' },
     './adminWorkMapPendingPresentation': load('admin/adminWorkMapPendingPresentation.ts', { './adminDartDouble': load('admin/adminDartDouble.ts') }),
     './adminWorkMapComboPresentation': { adminWorkMapComboPresentation: (combo, products) => ({ combo, products }) },
     './adminWorkMapDetailHeader': load('admin/adminWorkMapDetailHeader.ts', { './dartJsonString': load('admin/dartJsonString.ts') }),
@@ -169,13 +172,25 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   assert.equal(nodes(View(props)).find(node => node.type === 'Summary').props.model.map.order_kg, 42.5);
   assert.equal(detail.value.map.order_kg, 12, 'the hydrated snapshot itself is not mutated');
   assert.equal(tree.some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
+  for (const [state, key] of [['frozen', 'worker.freeze.active'], ['freeze_requested', 'worker.freeze.requested']]) {
+    detail.value.orderControl = state;
+    const notice = nodes(View(props)).find(node => node.type === 'ControlNotice');
+    assert.equal(notice.props.text, key);
+  }
+  for (const state of ['active', null]) {
+    detail.value.orderControl = state; assert.equal(nodes(View(props)).some(node => node.type === 'ControlNotice'), false);
+  }
+  detail.value.orderControl = 'frozen';
   detail.value.qolipInRework = true;
   for (const role of ['admin', 'brigader']) {
     const notice = nodes(View({ ...props, session: { profile: { role } } })).find(node => node.props.testID === 'admin-qolip-rework-notice');
     assert.equal(notice.props.children.props.children, 'qolipReworkText.order_unavailable');
+    const both = nodes(View({ ...props, session: { profile: { role } } })).filter(node => node.type === 'ControlNotice' || node.props.testID === 'admin-qolip-rework-notice');
+    assert.deepEqual(both.map(node => node.type === 'ControlNotice' ? node.type : node.props.testID), ['ControlNotice', 'admin-qolip-rework-notice']);
   }
   assert.equal(nodes(View({ ...props, session: { profile: { role: 'sales_manager' } } })).some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
   detail.value.qolipInRework = false;
+  detail.value.orderControl = null;
   assert.equal(nodes(View(props)).some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
   detail.value.map.combo = { name: 'C' }; detail.value.map.products = [{ product: 'P' }];
   assert.equal(nodes(View(props)).find(node => node.type === 'Combo').props.model.combo.name, 'C');
@@ -203,5 +218,18 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   assert.equal(hydratedPending.find(node => node.type === 'Pending').props.rows.at(-1).value, 'Manager');
   assert.equal(hydratedPending.some(node => node.type === 'Summary' || node.type === 'Combo'), false);
   assert.equal(hydratedPending.some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
+  assert.equal(hydratedPending.some(node => node.type === 'ControlNotice'), false);
   detail = { valid: false }; assert.equal(View(props).type, 'View'); assert.equal(nodes(View(props)).length, 1);
+});
+
+for (const platform of ['ios', 'android']) test(`${platform} control notice renders passive native error colors and text`, () => {
+  const Component = load(`admin/AdminWorkMapControlNotice.${platform}.tsx`, {
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ errorContainer: 'error-bg', onErrorContainer: 'error-fg' }) },
+    'react-native': { PlatformColor: value => value, StyleSheet: { create: x => x }, Text: 'Text', View: 'View' },
+  }).AdminWorkMapControlNotice;
+  const row = Component({ text: 'Frozen' });
+  assert.equal(row.props.testID, 'admin-order-control-notice'); assert.equal(row.props.children.props.children, 'Frozen');
+  assert.equal(row.props.style[1].backgroundColor, platform === 'ios' ? 'secondarySystemBackground' : 'error-bg');
+  assert.equal(row.props.children.props.style[1].color, platform === 'ios' ? 'systemRed' : 'error-fg');
+  assert.equal(row.props.onPress, undefined);
 });
