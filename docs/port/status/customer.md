@@ -29,6 +29,9 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 
 ## Verification
 
+- f119 V2 oracle: `test/customer_delivery_runtime_store_test.dart` passed 1 test from a temporary export; no contract fixture was written. Both the original V2 checkout and the isolated snapshot stayed clean at the selected SHA. The role ledger found no Customer HTTP contract tests.
+- Customer UI contract is recorded in `docs/port/roles/customer.md`; it lists source screens, state, actions, texts and shared dependencies and is not a parity claim.
+
 - Shared Android bottom bar adds optional `RoleNavigationItem.showBadge`; when absent or false the existing icon, labels, selection and interaction stay unchanged. `node --test tests/customerRoleBottomBar.test.cjs`: 2 passed. Android typecheck has the same nine pre-existing worker errors; no worker or preparation file was edited.
 
 - Customer API checkpoint: `node --test tests/customerApi.test.cjs tests/customerLogic.test.cjs tests/customerStore.test.cjs tests/customerDispatchTimestamp.test.cjs tests/baseNotificationApi.test.cjs tests/baseDispatchRuntimeStores.test.cjs` passed 32 tests. These cover all four source-derived request paths, parameters, bodies, status handling and parsing; no V2 Customer HTTP recording was found. The Supplier parser file remains byte-identical to its checkpoint. iOS typecheck and Expo lint passed; Android retained the same nine pre-existing worker errors.
