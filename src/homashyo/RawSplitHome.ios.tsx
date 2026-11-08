@@ -1,6 +1,6 @@
 import { Button, Host, HStack, Image, Menu, ScrollView, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { accessibilityLabel, buttonStyle, disabled, foregroundStyle, frame, id, keyboardType, labelStyle, lineLimit, onSubmit, padding, scrollPosition, scrollTargetLayout, strokeBorder, submitLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { PlatformColor } from 'react-native';
 import { usePreparationText } from '../preparation/PreparationUI';
 import { rawSplitBalance, rawSplitNetLabel, rawSplitSourceSummary, rawSplitWasteWidthLabel, rawSplitWidthSummary } from './rawSplitHomePresentation';
@@ -11,8 +11,8 @@ function Input({ label, value, enabled, onChange, decimal = false, onDone, searc
   const native = useNativeState(value);
   useEffect(() => { if (native.get() !== value) native.set(value); }, [native, value]);
   return <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity })]}><Text>{label}</Text>
-    <TextField text={native} placeholder={label} onTextChange={onChange} axis={multiline ? 'vertical' : 'horizontal'}
-      maxLength={multiline ? 1000 : undefined} modifiers={[disabled(!enabled), textFieldStyle('roundedBorder'),
+    <TextField text={native} onTextChange={onChange} axis={multiline ? 'vertical' : 'horizontal'}
+      maxLength={multiline ? 1000 : undefined} modifiers={[accessibilityLabel(label), disabled(!enabled), textFieldStyle('roundedBorder'),
         ...(decimal ? [keyboardType('decimal-pad')] : []), ...(multiline ? [lineLimit({ min: 2, max: 3 })] : []),
         ...(enabled && error ? [strokeBorder({ content: PlatformColor('systemRed'), shape: 'roundedRectangle', style: { lineWidth: 1 } })] : []),
         ...(onDone ? [submitLabel(search ? 'search' : 'done'), onSubmit(onDone)] : [])]} />
@@ -21,7 +21,8 @@ function Input({ label, value, enabled, onChange, decimal = false, onDone, searc
 
 export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplitHomeViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), t = usePreparationText();
-  useEffect(() => { void controller.reload(); }, [controller]);
+  // V2 starts the first reload in initState, before the initial frame.
+  useLayoutEffect(() => { void controller.reload(); }, [controller]);
   const locked = controller.locked, plan = controller.widthPlan, check = controller.wasteCheck, source = state.source;
   const widthLabel = plan ? rawSplitWasteWidthLabel(plan) : null;
   const issueVisible = !!(source && plan && state.showIssue && check && check.kind !== null);

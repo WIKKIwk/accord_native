@@ -44,6 +44,18 @@ test('initial reload locks input for pending stock and issue commands', async ()
   await h.controller.reload(); assert.equal(h.controller.locked, true); assert.equal(h.controller.getSnapshot().snapshot.warehouses[0], 'Raw W');
   h.controller.setBarcode('ignored'); assert.equal(h.controller.getSnapshot().barcode, '');
 });
+test('initial reload locks immediately while the durable pending command is being read', async () => {
+  let resolvePending, sourceCalls = 0;
+  const h = setup({ rawSplitPending: () => new Promise(resolve => { resolvePending = resolve; }),
+    rawSplitSource: async () => { sourceCalls++; return source; } });
+  const loading = h.controller.reload();
+  assert.equal(h.controller.getSnapshot().busy, true); assert.equal(h.controller.locked, true);
+  h.controller.setBarcode('ignored'); await h.controller.lookup('parent'); await h.controller.save();
+  assert.equal(h.controller.getSnapshot().barcode, ''); assert.equal(sourceCalls, 0); assert.deepEqual(h.stockCalls, []);
+  resolvePending({ request_id: 'old' }); await loading;
+  assert.equal(h.controller.getSnapshot().busy, false); assert.equal(h.controller.locked, true);
+  assert.equal(h.controller.getSnapshot().pending.request_id, 'old');
+});
 test('lookup and width actions preserve partial rows, but remove empty excess rows only', async () => {
   const { controller: c } = setup(); await c.lookup(' parent '); assert.equal(c.getSnapshot().source.barcode, 'parent');
   c.setOutput(0, 'width', '600'); c.addRoll(); assert.equal(c.getSnapshot().outputs.length, 2);

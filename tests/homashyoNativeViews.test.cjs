@@ -129,7 +129,7 @@ const width = load('rawSplitWidthPlan.ts', { './rawSplitModel': model });
 const draft = load('rawSplitDraft.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
 const homePresentation = load('rawSplitHomePresentation.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, './rawSplitDraft': draft });
 function home(platform, translate = value => value) {
-  const calls = [], output1 = { id: '1', width: '400', gross: '40', bobina: '1', length: '1000' };
+  const calls = [], layoutEffects = [], output1 = { id: '1', width: '400', gross: '40', bobina: '1', length: '1000' };
   const output2 = { id: '2', width: '600', gross: '60', bobina: '1', length: '1500' };
   const state = { snapshot: { warehouses: ['Raw W'] }, barcode: 'parent', source: new model.RawSplitRoll(source), outputs: [output1, output2],
     waste: '2', issueNote: '', issueError: null, error: null, pending: null, pendingIssue: null, printer: null,
@@ -145,7 +145,8 @@ function home(platform, translate = value => value) {
   const compose = new Proxy({ useNativeState: value => ({ get: () => value, set() {} }),
     OutlinedTextField: Object.assign('OutlinedTextField', { Label: 'OutlinedTextField.Label' }),
     useMaterialColors: () => ({ error: 'error', surface: 'surface', onSurfaceVariant: 'muted' }) }, { get: (o, name) => o[name] ?? name });
-  const react = { useEffect() {}, useRef: value => ({ current: value }), useState: value => [value, () => {}], useSyncExternalStore: (_subscribe, get) => get() };
+  const react = { useEffect() {}, useLayoutEffect: effect => layoutEffects.push(effect), useRef: value => ({ current: value }),
+    useState: value => [value, () => {}], useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ modifier: name, args }) }),
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View', PlatformColor: name => `native(${name})` },
@@ -153,9 +154,14 @@ function home(platform, translate = value => value) {
     '../preparation/PreparationUI': { usePreparationText: () => translate },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitHomePresentation': homePresentation };
   const component = load(`RawSplitHome.${platform}.tsx`, mocks, true).RawSplitHome;
-  return { state, controller, calls, render: () => component({ controller, onScan: () => calls.push('scan') }) };
+  return { state, controller, calls, render: () => { layoutEffects.length = 0; return component({ controller, onScan: () => calls.push('scan') }); },
+    runLayoutEffects: () => { while (layoutEffects.length) layoutEffects.shift()(); } };
 }
 for (const platform of ['ios', 'android']) {
+  test(`${platform} home starts its initial reload in the layout phase`, () => {
+    const h = home(platform); h.state.snapshot = null; h.render();
+    assert.deepEqual(h.calls, []); h.runLayoutEffects(); assert.deepEqual(h.calls, ['reload']);
+  });
   test(`${platform} home exposes measured fields, source, balance and real actions`, () => {
     const h = home(platform), tree = h.render(); assert.match(text(tree), /Ombor: Raw W/); assert.match(text(tree), /Hisob teng ✓/);
     for (const label of ['Rulon QR / shtrix-kodi', 'Eni (mm)', 'Og‘irlik (kg)', 'Babina (kg)', 'Metraj (m)', 'Atxot (kg) *'])
@@ -179,6 +185,17 @@ for (const platform of ['ios', 'android']) {
     assert.equal(find(tree, n => n.props?.label === 'Eni (mm)')[0].props.enabled, false);
   });
 }
+test('iOS home keeps one visible field label and names the native input for accessibility', () => {
+  const h = home('ios', value => `translated(${value})`); h.state.showIssue = true; h.state.waste = '1';
+  const tree = h.render();
+  for (const label of ['Rulon QR / shtrix-kodi', 'Eni (mm)', 'Og‘irlik (kg)', 'Babina (kg)', 'Metraj (m)', 'Atxot (kg) *', 'translated(Farq sababi)']) {
+    const input = find(tree, n => typeof n.type === 'function' && n.type.name === 'Input' && n.props.label === label)[0];
+    const rendered = input.type(input.props), field = find(rendered, n => n.type === 'TextField')[0];
+    assert.equal(find(rendered, n => n.type === 'Text' && text(n) === label).length, 1);
+    assert.equal(field.props.placeholder, undefined);
+    assert.ok(field.props.modifiers.some(m => m.modifier === 'accessibilityLabel' && m.args[0] === label));
+  }
+});
 // raw_material_split_screen.dart:318–349, 462–484, 513–532, 559–583, 619–620, 657–676.
 for (const platform of ['ios', 'android']) {
   const buttonType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';

@@ -1,7 +1,7 @@
 import { Host, IconButton, OutlinedTextField, RNHostView, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { PreparationText, usePreparationText } from '../preparation/PreparationUI.android';
@@ -24,7 +24,8 @@ function Input({ label, value, enabled, onChange, decimal = false, onDone, searc
 
 export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplitHomeViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), colors = useMaterialColors(), t = usePreparationText();
-  useEffect(() => { void controller.reload(); }, [controller]);
+  // V2 starts the first reload in initState, before the initial frame.
+  useLayoutEffect(() => { void controller.reload(); }, [controller]);
   const locked = controller.locked, plan = controller.widthPlan, check = controller.wasteCheck, source = state.source;
   const widthLabel = plan ? rawSplitWasteWidthLabel(plan) : null;
   const issueVisible = !!(source && plan && state.showIssue && check && check.kind !== null);
