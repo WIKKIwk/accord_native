@@ -43,7 +43,8 @@ export function rawMaterialEvent(raw: unknown): AdminRawMaterialEvent {
 }
 
 /** @v2 adminRawMaterialHistory */
-export async function adminRawMaterialHistory(session: Session, options: { warehouse?: string; eventType?: string; limit?: number } = {}) {
+export async function adminRawMaterialHistory(session: Session, options: { warehouse?: string; eventType?: string; limit?: number } = {},
+  beforeSend?: () => void) {
   const query = new URLSearchParams(), warehouse = dartTrim(options.warehouse ?? ''), eventType = dartTrim(options.eventType ?? '');
   const limit = options.limit ?? 50;
   if (warehouse) query.set('warehouse', warehouse);
@@ -52,7 +53,8 @@ export async function adminRawMaterialHistory(session: Session, options: { wareh
   await Promise.resolve();
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 10_000);
   try {
-    const response = await authorizedFetch(session, `/v1/mobile/admin/raw-material-history?${query}`, { signal: controller.signal });
+    const path = `/v1/mobile/admin/raw-material-history?${query}`, init = { signal: controller.signal };
+    const response = beforeSend ? await authorizedFetch(session, path, init, beforeSend) : await authorizedFetch(session, path, init);
     if (response.status === 404) throw new MobileApiException({ code: 'raw_material_history_not_found', message: 'Serverda tarix endpointi yo‘q', statusCode: 404 });
     if (response.status !== 200) {
       let payload: unknown; try { payload = await response.json(); } catch { payload = null; }

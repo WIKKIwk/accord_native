@@ -50,3 +50,18 @@ test('characterization: scope-only changes without a reset event leave old data 
   assert.equal(state.getSnapshot().events[0].event_id, 'old-scope');
   state.invalidate(); assert.deepEqual(state.getSnapshot().events, []);
 });
+
+
+test('request lifetime guards expire on a newer refresh, invalidate or dispose', async () => {
+  const first = deferred(), second = deferred(), catalog = deferred(); const historyGuards = []; let catalogGuard;
+  const state = new MaterialHistoryState({ history: current => { historyGuards.push(current); return historyGuards.length === 1 ? first.promise : second.promise; },
+    apparatus: current => { catalogGuard = current; return catalog.promise; }, isCurrent: () => true });
+  await state.loadCatalog(); assert.equal(catalogGuard, undefined);
+  state.activate(); const a = state.load(), c = state.loadCatalog();
+  assert.equal(historyGuards[0](), true); assert.equal(catalogGuard(), true);
+  const b = state.load(true); assert.equal(historyGuards[0](), false); assert.equal(historyGuards[1](), true);
+  state.invalidate(); assert.equal(historyGuards[1](), false); assert.equal(catalogGuard(), false);
+  state.activate(); assert.equal(historyGuards[1](), false); assert.equal(catalogGuard(), false);
+  first.resolve([]); second.resolve([]); catalog.resolve([]); await Promise.all([a, b, c]);
+  state.dispose();
+});

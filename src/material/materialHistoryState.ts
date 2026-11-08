@@ -3,7 +3,8 @@ import type { AdminRawMaterialEvent } from './materialHistoryApi';
 import { materialHistoryErrorMessage } from './materialHistoryPresentation';
 
 type HistoryState = { events: AdminRawMaterialEvent[]; apparatus: AdminApparatus[]; loading: boolean; refreshing: boolean; error: string | null };
-type HistoryReads = { history(): Promise<AdminRawMaterialEvent[]>; apparatus(): Promise<AdminApparatus[]>; isCurrent(): boolean };
+type HistoryReads = { history(isCurrent: () => boolean): Promise<AdminRawMaterialEvent[]>;
+  apparatus(isCurrent: () => boolean): Promise<AdminApparatus[]>; isCurrent(): boolean };
 
 /** FutureBuilder follows the newest history future; the apparatus catalog loads independently. */
 export class MaterialHistoryState {
@@ -20,7 +21,9 @@ export class MaterialHistoryState {
   activate() { this.active = true; }
   async loadCatalog() {
     const generation = this.generation;
-    try { const apparatus = await this.reads.apparatus(); if (this.current(generation)) this.update({ apparatus }); }
+    const current = () => this.current(generation);
+    if (!current()) return;
+    try { const apparatus = await this.reads.apparatus(current); if (current()) this.update({ apparatus }); }
     catch { /* V2 keeps the exact ID hidden if the catalog cannot be loaded. */ }
   }
   async load(refresh = false) {
@@ -28,7 +31,7 @@ export class MaterialHistoryState {
     const generation = this.generation, request = ++this.historyRequest;
     const current = () => this.current(generation) && request === this.historyRequest;
     this.update({ loading: true, refreshing: refresh, error: null });
-    try { const events = await this.reads.history(); if (current()) this.update({ events, loading: false, refreshing: false }); }
+    try { const events = await this.reads.history(current); if (current()) this.update({ events, loading: false, refreshing: false }); }
     catch (error) { if (current()) this.update({ events: [], loading: false, refreshing: false, error: materialHistoryErrorMessage(error) }); }
   }
   invalidate() {
