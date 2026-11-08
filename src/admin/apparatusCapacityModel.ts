@@ -58,7 +58,7 @@ export function apparatusCapacityProfileFromJson(value: unknown): AdminApparatus
     const normalized = dartPartialLower(trimmed), index = isArrayIndexKey(key), previous = seen.get(normalized);
     if (previous !== undefined && (index || previous)) throw new TypeError('Ambiguous capability level key order');
     levels[normalized] = integer(value, 1);
-    seen.set(normalized, index || previous === true);
+    seen.set(normalized, index);
   }
   return { apparatus_id: id, apparatus: name, source_revision: revision, source_aasx_sha256: hash, capacity_slots: slots,
     setup_minutes: setup, cleanup_minutes: cleanup, efficiency_percent: efficiency, finite_capacity: finite,
