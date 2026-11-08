@@ -2,7 +2,7 @@ import { activeSessionEpoch, activeSessionToken, type Session } from '../../auth
 import { sessionReadScope } from '../../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../appRoutes';
 import { isSynchronouslyTrue } from '../camera/synchronousGuard';
-import { dartTrim, isAscii } from '../dartApparatus';
+import { dartTrim } from '../dartApparatus';
 import type { SupplyTaskKind, SupplyTaskWindow } from './supplyTaskModels';
 
 export type SupplyTasksQuery = Readonly<{ kind: SupplyTaskKind; apparatus: string; limit: number; search: string }>;
@@ -117,11 +117,9 @@ export class SupplyTasksController {
     if (![5, 10, 20, 50].includes(limit)) return Promise.resolve();
     return this.changeQuery({ limit });
   }
-  /** Returns false when Unicode search is withheld pending Dart/Hermes case-mapping parity. */
   setSearchInput(value: string): boolean {
     if (!this.current() || typeof value !== 'string') return false;
     if (this.searchTimer !== null) { this.cancel(this.searchTimer); this.searchTimer = null; }
-    if (!isAscii(dartTrim(value))) return false;
     this.update({ searchInput: value });
     this.searchTimer = this.schedule(() => {
       this.searchTimer = null;

@@ -134,7 +134,7 @@ test('same-scope 401 refresh retains a single safe GET retry', async () => {
   } finally { h.restore(); }
 });
 
-test('scope, capability, argument and unsupported Unicode failures send no requests', () => {
+test('scope, capability, argument and unsupported apparatus ID failures send no requests', () => {
   const h = setup([]);
   try {
     assert.throws(() => h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, () => false), /Hisob o‘zgardi/);
@@ -142,11 +142,29 @@ test('scope, capability, argument and unsupported Unicode failures send no reque
     assert.throws(() => h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, () => true), /Hisob o‘zgardi/);
     h.session.capabilities = ['raw_material.assign'];
     for (const input of [{ kind: 'admin' }, { kind: 'material', limit: 11 }, { kind: 'material', apparatus: 'Bosma' },
-      { kind: 'material', search: 'o‘rik' }, { kind: 'material', apparatus: 'apparatus:default:\u037f' }]) {
+      { kind: 'material', apparatus: 'apparatus:default:\u037f' }]) {
       assert.throws(() => h.api.readSupplyTaskWindow(h.session, input, () => true), /Invalid supply task window/);
     }
     assert.equal(h.calls.length, 0);
   } finally { h.restore(); }
+});
+
+test('Unicode search corpus is normalized and transmitted as UTF-8 query text', async () => {
+  // Node expectations for common user input, not a new Dart or Hermes oracle claim.
+  const cases = [
+    ['  O‘ZBEK  ', 'o‘zbek'], ['  OʻZBEK  ', 'oʻzbek'],
+    ['  ЎЗБЕК ҚИЁС ҒОЗ ҲАҚ ЁШ  ', 'ўзбек қиёс ғоз ҳақ ёш'],
+    ['  ПЛЁНКА ИЗДЕЛИЕ  ', 'плёнка изделие'], ['  CAFÉ  ', 'café'],
+    ['\u0085ИШ № 1\u0085', 'иш № 1'],
+  ];
+  for (const [input, expected] of cases) {
+    const reply = structuredClone(wire); reply.search = expected; const h = setup([response(reply)]);
+    try {
+      const result = await h.api.readSupplyTaskWindow(h.session, { kind: 'material', search: input }, () => true);
+      assert.equal(result.search, expected); assert.equal(new URL(h.calls[0].url).searchParams.get('search'), expected);
+      assert.equal(h.calls.length, 1);
+    } finally { h.restore(); }
+  }
 });
 
 test('wrong query response, malformed JSON and denied HTTP do not produce a ready window', async () => {
