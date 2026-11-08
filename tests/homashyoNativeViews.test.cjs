@@ -17,7 +17,7 @@ const output = { ...source, stock_id: 'child', barcode: 'child', kg: '98', gross
 const result = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2', issue_id: 'issue', issue_note: 'note', outputs: [output] });
 const issue = new model.RawSplitIssue({ id: 'issue', request_id: 'id', source, source_kg: '100', output_kg: '98.000000', entered_waste_kg: '1',
   waste_kg: '1.000000', difference_kg: '1.000000', kind: 'missing_weight', outputs: [output], note: 'note', actor_ref: 'a', actor_name: 'Cutter', created_at: '2026-09-08T12:00:00Z' });
-function history(platform) {
+function history(platform, translate = value => value) {
   let effects = [], loads = 0, selectedResult, selectedIssue;
   const state = { snapshot: null, printer: null, wifiPrinter: 'godex', error: null, busy: false };
   const controller = { getSnapshot: () => state, subscribe: () => () => {}, reload: async () => { loads++; } };
@@ -27,7 +27,8 @@ function history(platform) {
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'NativeText', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
-    '../preparation/PreparationUI': { PreparationList: 'PreparationList' }, './rawSplitHistoryPresentation': presentation };
+    '../preparation/PreparationUI': { PreparationList: 'PreparationList', usePreparationText: () => translate },
+    '../preparation/PreparationUI.android': { usePreparationText: () => translate }, './rawSplitHistoryPresentation': presentation };
   const component = load(`RawSplitHistory.${platform}.tsx`, mocks, true).RawSplitHistory;
   const render = () => { effects = []; const tree = component({ controller, onResult: value => { selectedResult = value; },
     onIssue: (value, linked) => { selectedIssue = [value, linked]; } }); effects.forEach(effect => effect()); return tree; };
@@ -57,7 +58,7 @@ for (const platform of ['ios', 'android']) {
 const width = load('rawSplitWidthPlan.ts', { './rawSplitModel': model });
 const draft = load('rawSplitDraft.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
 const homePresentation = load('rawSplitHomePresentation.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, './rawSplitDraft': draft });
-function home(platform) {
+function home(platform, translate = value => value) {
   const calls = [], output1 = { id: '1', width: '400', gross: '40', bobina: '1', length: '1000' };
   const output2 = { id: '2', width: '600', gross: '60', bobina: '1', length: '1500' };
   const state = { snapshot: { warehouses: ['Raw W'] }, barcode: 'parent', source: new model.RawSplitRoll(source), outputs: [output1, output2],
@@ -76,7 +77,8 @@ function home(platform) {
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }),
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View' },
-    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText' },
+    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => translate },
+    '../preparation/PreparationUI': { usePreparationText: () => translate },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitHomePresentation': homePresentation };
   const component = load(`RawSplitHome.${platform}.tsx`, mocks, true).RawSplitHome;
   return { state, controller, calls, render: () => component({ controller, onScan: () => calls.push('scan') }) };
@@ -105,14 +107,15 @@ for (const platform of ['ios', 'android']) {
     assert.equal(find(tree, n => n.props?.label === 'Eni (mm)')[0].props.enabled, false);
   });
 }
-function details(platform, printerLabel = null) {
+function details(platform, printerLabel = null, translate = value => value) {
   const calls = [], react = { useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => { fn(); } };
   const swift = new Proxy({}, { get: (_, name) => name });
   const compose = new Proxy({ useMaterialColors: () => ({ onSurface: 'text', onSurfaceVariant: 'muted', surface: 'surface' }) }, { get: (o, name) => o[name] ?? name });
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }),
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View' },
-    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText' },
+    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => translate },
+    '../preparation/PreparationUI': { usePreparationText: () => translate },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitModel': model, './rawSplitHistoryPresentation': presentation };
   const views = load(`RawSplitDetails.${platform}.tsx`, mocks, true);
   const props = { result, printerLabel, showWifiSelector: printerLabel === 'wifi', wifiPrinter: 'zebra', onSelectPrinter: () => calls.push('picker'),
@@ -184,3 +187,21 @@ for (const platform of ['ios', 'android']) {
     assert.match(text(h.tree), /Kamera ochilmadi/); assert.ok(find(h.tree, n => n.type === 'WorkerSheetButton' && n.props.label === 'OK').length);
   });
 }
+
+const localeFile = path.resolve(__dirname, '../src/shared/localization/index.ts'), localeModule = new Module(localeFile, module);
+localeModule.filename = localeFile; localeModule.paths = module.paths;
+localeModule._compile(ts.transpileModule(fs.readFileSync(localeFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, localeFile);
+const translateUrdu = value => localeModule.exports.uiText(value, 'ur');
+for (const platform of ['ios', 'android']) test(`${platform} reuses actual Urdu translations where V2 uses UrduAwareText`, () => {
+  const homeView = home(platform, translateUrdu), homeTree = homeView.render();
+  const buttonType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
+  assert.ok(find(homeTree, n => n.type === buttonType && n.props.label === translateUrdu('Skanerlash')).length);
+  assert.ok(find(homeTree, n => n.type === buttonType && n.props.label === translateUrdu('Saqlash va chop etish')).length);
+  // V2 leaves ordinary numeric field labels as TextField labels, not UrduAwareText.
+  assert.ok(find(homeTree, n => n.props?.label === 'Eni (mm)').length);
+  const h = history(platform, translateUrdu); h.state.snapshot = { warehouses: [], history: [], issues: [issue] }; const historyTree = h.render();
+  assert.ok(platform === 'ios' ? find(historyTree, n => n.type === 'Section' && n.props.title === translateUrdu('Muammolar')).length
+    : text(historyTree).includes(translateUrdu('Muammolar')));
+  const d = details(platform, null, translateUrdu); assert.ok(find(d.resultTree(), n => n.type === buttonType && n.props.label === translateUrdu('Printer tanlash')).length);
+  assert.notEqual(translateUrdu('Skanerlash'), 'Skanerlash'); assert.notEqual(translateUrdu('Muammolar'), 'Muammolar');
+});

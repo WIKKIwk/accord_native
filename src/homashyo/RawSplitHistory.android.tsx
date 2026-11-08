@@ -3,6 +3,7 @@ import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
+import { usePreparationText } from '../preparation/PreparationUI.android';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { rawSplitHistorySubtitle, rawSplitHistoryTime, rawSplitHistoryTitle, rawSplitIssueTime } from './rawSplitHistoryPresentation';
 import type { RawSplitHistoryViewProps } from './rawSplitHistoryViewTypes';
@@ -10,7 +11,7 @@ import type { RawSplitHistoryViewProps } from './rawSplitHistoryViewTypes';
 const passthrough = () => true;
 export function RawSplitHistory({ controller, onResult, onIssue }: RawSplitHistoryViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const colors = useMaterialColors(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
+  const colors = useMaterialColors(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), t = usePreparationText();
   useEffect(() => { void controller.reload(); }, [controller]);
   const history = state.snapshot?.history ?? [], issues = state.snapshot?.issues ?? [];
   const isEmpty = history.length === 0 && issues.length === 0;
@@ -33,11 +34,11 @@ export function RawSplitHistory({ controller, onResult, onIssue }: RawSplitHisto
     </View><Text style={secondary}>{rawSplitHistoryTime(result.createdAt)}</Text></WorkerQueueCard>));
   }
   if (issues.length) rows.push(<View key="issues" style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 }}>
-    <Text style={primary}>Muammolar</Text></View>);
+    <Text style={primary}>{t('Muammolar')}</Text></View>);
   rows.push(...issues.map((issue, index) => <WorkerQueueCard key={`issue:${issue.id}`} first={index === 0} last={index === issues.length - 1}
     backgroundColor={colors.surface} onPress={() => onIssue(issue, history.some(result => result.issueId === issue.id))}>
     <View style={{ flex: 1, padding: 8 }}><Text style={primary}>{issue.source.itemName}</Text><Text style={secondary}>{issue.check.message}</Text></View>
-    <Text style={secondary}>{rawSplitIssueTime(issue)}</Text>
+    <Text style={secondary}>{t(rawSplitIssueTime(issue))}</Text>
   </WorkerQueueCard>));
   return <OrdersList onRefresh={() => controller.reload()} active headerOffset={headerOffset} headerHeight={headerHeight} topInset={8}
     passthrough={passthrough}>{rows}</OrdersList>;
