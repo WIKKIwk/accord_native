@@ -5,6 +5,6 @@ import { useBoyoqchiContext } from '../../../boyoqchi/BoyoqchiContext';
 export default function BoyoqchiProfile() {
   const { session, onLogout } = useBoyoqchiContext();
   return <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: PlatformColor('systemGroupedBackground') }}>
-    <ProfileScreen session={session} onLogout={onLogout} />
+    <ProfileScreen session={session} onLogout={onLogout} showDirectLogout={false} />
   </SafeAreaView>;
 }

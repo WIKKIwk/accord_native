@@ -21,7 +21,7 @@ export default function BoyoqchiProfile() {
   }, [focused, profileNavigation, session]);
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
     <RoleHeader title={getter('profileTitle')} navigation={{ icon: 'menu', label: t('Bo‘yoqchi bo‘limlari'), onPress: drawer.open }} />
-    <View style={{ flex: 1 }}><ProfileScreen session={session} onLogout={onLogout} /></View>
+    <View style={{ flex: 1 }}><ProfileScreen session={session} onLogout={onLogout} showDirectLogout={false} /></View>
     <BoyoqchiDock active="profile" />
   </View>;
 }

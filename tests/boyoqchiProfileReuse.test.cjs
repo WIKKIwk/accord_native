@@ -41,6 +41,7 @@ test('Android Boyoqchi reuses shared Profile without an unrelated daily-work act
   assert.equal(profiles[0].props.session, session);
   assert.equal(profiles[0].props.onLogout, onLogout);
   assert.equal(Object.hasOwn(profiles[0].props, 'onDailyWork'), false);
+  assert.equal(profiles[0].props.showDirectLogout, false);
 });
 
 test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
@@ -55,4 +56,5 @@ test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action'
   assert.equal(profiles[0].props.session, session);
   assert.equal(profiles[0].props.onLogout, onLogout);
   assert.equal(Object.hasOwn(profiles[0].props, 'onDailyWork'), false);
+  assert.equal(profiles[0].props.showDirectLogout, false);
 });
