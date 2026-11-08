@@ -82,6 +82,8 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 
 - Session-switch safety test: a response arriving after reset cannot report success or mutate a newly opened session, and the old controller cannot reactivate or send another write. This does not determine whether the server accepted an already-sent request. Before exposing a retry in a new session, require an authoritative refresh after the uncertain request settles; the cross-session retry gate is not yet wired.
 
+- Home grid native-view checkpoint: added separate SwiftUI and Compose fixed A–Z/1–13 grid views on the shared grid model, reusing `OrdersList` and the Android card. Static component tests cover loading/retry, cached data, stats, unplaced rows, match counts, cell callbacks and pinned-header horizontal dragging. All 246 Qolip tests, iOS typecheck and lint passed; Android still has only the nine prior worker errors. The ledger resolves 655 source and 72 test tags with zero drift; its eight non-Qolip endpoint warnings remain. The callbacks must be supplied by a real home flow; grid-to-attach wiring, occupied-cell actions and printing are not yet connected. No phone, simulator or backend was used; gesture arbitration, native layout and accessibility still need a real-phone check.
+
 ## Deviations candidates
 
 - Grid statistics count nonempty location labels outside the fixed visible grid, which can yield occupied cells that are not displayed; f119 behavior is retained.

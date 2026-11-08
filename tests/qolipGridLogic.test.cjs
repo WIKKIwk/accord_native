@@ -38,3 +38,19 @@ test('selection uses identity set and keeps original order including duplicate I
   assert.deepEqual(grid.qolipCellSelection(entries, new Set(['missing'])), { selectionMode: true, selectedItems: [] });
   assert.deepEqual(grid.qolipCellSelection(entries, new Set()), { selectionMode: false, selectedItems: [] });
 });
+
+test('home grid supplies fixed row-major cells with first title, summed quantities and current match badges', () => {
+  const entries = [{ ...item('a', ' a1 ', 2), item_name: 'First' }, { ...item('b', 'A1', 3), item_name: 'Second' },
+    { ...item('c', 'Z13', 4), item_name: 'Last' }, { ...item('outside', 'B99', 8), item_name: 'Hidden' }];
+  const data = grid.qolipGridCells(entries, { A1: 2, Z13: 1, B1: 9 });
+  assert.equal(data.rows.length, 13); assert.equal(data.rows[0].length, 26);
+  assert.deepEqual(data.rows[0][0], { label: 'A1', letter: 'A', row: 1, items: entries.slice(0, 2), quantity: 5, title: 'First', matchCount: 2 });
+  assert.deepEqual(data.rows[0][1], { label: 'B1', letter: 'B', row: 1, items: [], quantity: 0, title: '', matchCount: 9 });
+  assert.equal(data.rows[12][25].label, 'Z13'); assert.equal(data.occupiedCells, 3); assert.equal(data.totalQuantity, 17);
+});
+
+test('search-match overlay uses the V2 green at 22 percent over a Material container', () => {
+  assert.equal(grid.qolipGridMatchBackground('#FFFFFFFF'), '#D1E2D2FF');
+  assert.equal(grid.qolipGridMatchBackground('#000000FF'), '#0A1C0BFF');
+  assert.equal(grid.qolipGridMatchBackground('unknown'), 'unknown');
+});
