@@ -1,7 +1,7 @@
 # customer
 
 Status: part 1 of 1 in progress
-Stopped at: connect CustomerStore to the Customer API and session lifecycle, then port the Customer screens, navigation and surface audit on both platforms.
+Stopped at: integrate the reviewed shared Chat unread runtime and Supplier notification detail, implement the V2 home/notifications swipe, then complete the text and surface audits on both platforms.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -10,12 +10,13 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 | Customer summary integer precision | `app_models_models_part_04.dart` `CustomerHomeSummary.fromJson` | V2 accepts signed 64-bit integer counts. JavaScript cannot represent all of them exactly; the current decoder rejects counts outside its safe-integer range instead of silently rounding. |
 | Shared dispatch status trim | `app_models_declarations_part_08.dart` `parseDispatchStatus`; `src/shared/notificationApi.ts` | Customer calls normalize native Dart U+0085 whitespace before using the unchanged shared parser. Other consumers of the shared parser still differ for that edge and need an integrator-owned fix. |
 | Large Customer status lists | `json_payload_decoder.dart` `decodeJsonListPayload` | V2 decodes lists of at least 128 KiB in a background isolate. The React Native path currently decodes on the JavaScript thread; assess responsiveness on a real phone with a representative large payload. |
-| Customer session wiring | `customer_store.dart`, `app_runtime_reset.dart` | A role context now binds one store and notifications controller to the current session and registers their reset path. Role routes and real-device account-switch verification remain open. |
+| Customer session wiring | `customer_store.dart`, `app_runtime_reset.dart` | A role context binds one store and notifications controller to the current session and registers their reset path. The role routes mount it on both platforms; account-switch verification on real phones remains open. |
 | In-flight refresh at account reset | `customer_store.dart` `clear`, `refresh` | V2 clears its singleton without explicitly cancelling an already pending refresh. Confirm whether an old response can update shared runtime state after an account switch before declaring that lifecycle fully audited. |
 | Timestamp ties | `customer_store.dart` `_mergeHistoryItems`, `customer_delivery_runtime_store.dart` `_sorted` | V2 Dart sorting does not guarantee tie order; JavaScript sorting is stable. Exact visible ordering of records with identical timestamps remains unverified. |
 | Return dialogs | `customer_delivery_detail_screen__CustomerDeliveryDetailScreenState_methods_01.dart` `_showReturnDialog` | Native centered return/partial/claim dialogs are implemented on both platforms; verify keyboard, outside/back dismissal, focus, resizing and accessibility on real phones. |
-| Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home, status, notifications and delivery content now have iOS and Android views. Routes, shells, shared NotificationDetailScreen integration, text and surface audits remain open; the discussion action is intentionally unavailable until that real destination is connected. |
-| Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | Connect a shared live chat unread total and initialized push delivery; neither is established by this checkpoint. |
+| Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home, status, notifications, delivery, shared profile and shared Chat are routed on both platforms using the existing drawer, bottom controls and shared screens. Shared NotificationDetailScreen integration, text and surface audits remain open; the discussion action is intentionally unavailable until that real destination is connected. Both platforms still need the V2 home/notifications horizontal swipe. |
+| iOS native tabs on secondary screens | `customer_dock.dart`, `customer_status_detail_screen.dart`, `customer_delivery_detail_screen.dart`, `profile_screen.dart` | V2 shows no selected dock destination on status, detail and profile. Expo native tabs keep the containing tab selected; resolve with supported native controls or explicitly defer after real-phone review. Android passes no selection for these screens. |
+| Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | Connect the reviewed shared live chat unread hook after integrating main. Initialized push delivery remains unverified. |
 
 ## Baseline evidence
 
@@ -30,6 +31,8 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Customer shell/routes: `tests/customerNavigation.test.cjs` covers both home targets, destination mapping, notification badge suppression, role guards, status/detail transitions, refresh-after-return and shared profile reuse. The existing drawer, profile and chat components are reused; the shared Chat unread hook and notification detail remain explicitly pending. iOS typecheck and lint passed; Android has the same nine baseline worker type errors. Offline iOS and Android JavaScript exports passed, without a simulator or device. Native tab selection, drawer navigation, hardware back and the badge require real-phone checks.
 
 - Customer delivery content: `tests/customerDeliveryViews.test.cjs`, `tests/customerReturnDialogViews.test.cjs` and `tests/customerLogic.test.cjs` passed 12 source-derived tests for permissions, action order, confirmations, response parameters, discussion callback and retry. iOS typecheck and Expo lint passed; Android has the same nine worker baseline errors. Snackbar and native interaction still require real-phone checks.
 
@@ -61,9 +64,9 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 - iOS typecheck and Expo lint passed after regenerating ignored Expo route types with an offline dev-server start; no simulator or device was used.
 - Android typecheck reports the same nine pre-existing errors in `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx`, with no Customer errors.
 
-## Deviations candidates
+## Deviation candidates
 
-None recorded by this checkpoint.
+- The iOS native tab bar keeps a visible tab selected on Customer status, detail and profile, unlike V2; the Android bar supports no active item. Horizontal home/notifications swipe is not wired yet. These remain open rather than claimed as parity.
 
 ## Test mode pending
 
