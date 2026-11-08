@@ -27,8 +27,8 @@ function base64(bytes: Uint8Array): string {
   chunks.push(part);
   return chunks.join('');
 }
-export function BoyoqchiImage({ session, image, allowDownload = false }: {
-  session: Session; image: ReturnedPaintImage; allowDownload?: boolean;
+export function BoyoqchiImage({ session, image, allowDownload = false, disabled = false, isLocked }: {
+  session: Session; image: ReturnedPaintImage; allowDownload?: boolean; disabled?: boolean; isLocked?: () => boolean;
 }) {
   const colors = useWorkerColors(), t = useBoyoqchiText(), insets = useSafeAreaInsets(), { width, height } = useWindowDimensions();
   const [result, setResult] = useState<{ key: string; data: string; broken: boolean } | null>(null), [visible, setVisible] = useState(false);
@@ -91,7 +91,8 @@ export function BoyoqchiImage({ session, image, allowDownload = false }: {
   };
   const icon = broken ? 'broken_image' : 'image';
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel={t('Rasmni to‘liq ko‘rish')} onPress={() => { previewGeneration.current++; setVisible(true); }}
+    <Pressable accessibilityRole="button" accessibilityLabel={t('Rasmni to‘liq ko‘rish')} disabled={disabled}
+      onPress={() => { if (disabled || isLocked?.()) return; previewGeneration.current++; setVisible(true); }}
       style={[styles.thumbnail, { backgroundColor: colors.field }]}>
       {data ? <Image source={{ uri: data }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" onError={() => setResult({ key: sourceKey, data: '', broken: true })} />
         : <SymbolView name={{ ios: broken ? 'photo.badge.exclamationmark' : 'photo', android: icon }} size={42} tintColor={colors.muted} />}

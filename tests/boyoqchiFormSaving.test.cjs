@@ -25,7 +25,7 @@ function fixture() {
   const mocks = {
     'react/jsx-runtime': jsx, react,
     '@expo/ui': { Host: 'Host', Button: 'Button', RNHostView: 'RNHostView', TextInput: 'TextInput', useNativeState: value => ({ value, set() {} }) },
-    'react-native': { ActivityIndicator: 'ActivityIndicator', BackHandler: { addEventListener: (_event, callback) => { back = callback; return { remove() {} }; } },
+    'react-native': { ActivityIndicator: 'ActivityIndicator', Keyboard: { dismiss() {} }, BackHandler: { addEventListener: (_event, callback) => { back = callback; return { remove() {} }; } },
       Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View', StyleSheet: { create: value => value, absoluteFill: {} } },
     '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../components/useWorkerColors': { useWorkerColors: () => ({}) },

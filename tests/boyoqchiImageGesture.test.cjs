@@ -10,12 +10,12 @@ function nodes(node, predicate) {
   if (Array.isArray(node)) return node.flatMap(child => nodes(child, predicate));
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
-function fixture() {
+function fixture(options = {}) {
   const filename = path.resolve(__dirname, '../src/boyoqchi/BoyoqchiImage.tsx'), loaded = new Module(filename, module);
-  const values = []; let pinch, pan;
+  const values = [], writes = []; let pinch, pan;
   const makeValue = initial => { let value = initial; const item = { get: () => value, set: next => { value = next; } }; values.push(item); return item; };
   const mocks = {
-    'react/jsx-runtime': jsx, react: { useEffect() {}, useRef: value => ({ current: value }), useState: value => [value, () => {}] },
+    'react/jsx-runtime': jsx, react: { useEffect() {}, useRef: value => ({ current: value }), useState: value => [value, next => writes.push(next)] },
     'expo-image': { Image: 'Image' }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Modal: 'Modal', Pressable: 'Pressable', Text: 'Text', View: 'View',
       useWindowDimensions: () => ({ width: 200, height: 400 }), StyleSheet: { create: value => value, absoluteFill: {} } },
@@ -33,8 +33,9 @@ function fixture() {
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
-  const tree = loaded.exports.BoyoqchiImage({ session: { imageCacheScope: 's' }, image: { image_url: '', image_mime: '' } });
-  return { pinch, pan, values, close: () => nodes(tree, node => node.type === 'Modal')[0].props.onRequestClose() };
+  const tree = loaded.exports.BoyoqchiImage({ session: { imageCacheScope: 's' }, image: { image_url: '', image_mime: '' }, ...options });
+  return { pinch, pan, values, writes, open: () => nodes(tree, node => node.type === 'Pressable')[0].props.onPress(),
+    close: () => nodes(tree, node => node.type === 'Modal')[0].props.onRequestClose() };
 }
 
 test('pinch zoom-out reclamps prior pan offsets to the new bounds and reset clears the transform', () => {
@@ -49,4 +50,12 @@ test('pinch zoom-out reclamps prior pan offsets to the new bounds and reset clea
   f.pinch.onActivate(); f.pinch.onUpdate({ scale: 3 });
   f.pan.onActivate(); f.pan.onUpdate({ translationX: -60, translationY: 90 });
   f.close(); assert.equal(scale.get(), 1); assert.equal(x.get(), 0); assert.equal(y.get(), 0);
+});
+
+
+test('locked or disabled preview cannot open, including a stale callback', () => {
+  let locked = false; const f = fixture({ isLocked: () => locked });
+  f.open(); assert.deepEqual(f.writes, [true]);
+  locked = true; f.open(); assert.deepEqual(f.writes, [true]);
+  const disabled = fixture({ disabled: true }); disabled.open(); assert.deepEqual(disabled.writes, []);
 });

@@ -1,10 +1,16 @@
 import type { ReturnedPaintCompleteSubmission, ReturnedPaintItem } from './returnedPaintModel';
+import type { ReturnedPaintDraft } from './returnedPaintDraft';
 
 export class ReturnedPaintReconciliationError extends Error {
   constructor() {
     super('Saqlash natijasi aniq emas. Ro‘yxatni yangilab, hisobotni tekshiring.');
     this.name = 'ReturnedPaintReconciliationError';
   }
+}
+
+/** Data-only snapshot: changing the selected tab does not change the submitted draft. */
+export function returnedPaintDraftContentSnapshot(draft: ReturnedPaintDraft): string {
+  return JSON.stringify([draft.values, draft.dynamic_field_labels, draft.image]);
 }
 
 type Json = Record<string, unknown>;

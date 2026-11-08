@@ -25,13 +25,16 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; };
 
 function fixture(fetch, refreshSession = async () => false) {
-  const session = { baseUrl: 'https://one.invalid', token: 'old-token' }, opened = [], cleared = [], refreshed = [];
-  let active = session, epoch = 1, scope = 'original', failClear = false, failRefresh = false;
+  const session = { baseUrl: 'https://one.invalid', token: 'old-token' }, opened = [], cleared = [], refreshed = [], flushed = [];
+  const draft = { values: {}, dynamic_field_labels: {}, image: null }, files = { current: 'original' };
+  let active = session, epoch = 1, scope = 'original', failClear = false, failRefresh = false, clearWait = null, clearStarted = null;
   const auth = { activeSessionToken: value => value === active ? value.token : null, refreshSession };
   const transport = compile('authorizedFetch.ts', { './auth': auth });
   const api = compile('boyoqchi/returnedPaintApi.ts', { '../authorizedFetch': transport, '../workerControlsApi': controls, './returnedPaintModel': model });
-  const store = { isCurrent: () => active === session && epoch === 1 && scope === 'original', load: async () => ({}),
-    clear: async id => { if (!store.isCurrent()) throw new Error('stale'); if (failClear) throw new Error('disk'); cleared.push(id); } };
+  const store = { isCurrent: () => active === session && epoch === 1 && scope === 'original', load: async () => draft,
+    clear: async id => { if (!store.isCurrent()) throw new Error('stale'); if (failClear) throw new Error('disk');
+      clearStarted?.resolve(); if (clearWait) await clearWait.promise; files.current = null; cleared.push(id); },
+    flush: async id => { flushed.push(id); files.current = JSON.stringify(draft.values); } };
   const sheet = { isOpen: () => false, open: value => opened.push(value), close() {}, update() {} };
   const { useReturnedPaintForm } = compile('boyoqchi/useReturnedPaintForm.tsx', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
@@ -41,7 +44,8 @@ function fixture(fetch, refreshSession = async () => false) {
   });
   const originalFetch = global.fetch; global.fetch = fetch;
   const open = useReturnedPaintForm(session, { refresh: async () => { refreshed.push(true); if (failRefresh) throw new Error('offline'); } });
-  return { session, opened, cleared, refreshed, open: () => open({ id: 'request', image: null }),
+  return { session, opened, cleared, refreshed, flushed, draft, files, open: () => open({ id: 'request', image: null }),
+    deferClear: () => { clearWait = deferred(); clearStarted = deferred(); return { wait: clearWait, started: clearStarted }; },
     changeScope: () => { scope = 'changed'; }, rollbackEpoch: () => { epoch++; active = {}; active = session; },
     failClear: () => { failClear = true; }, failRefresh: () => { failRefresh = true; }, restore: () => { global.fetch = originalFetch; } };
 }
@@ -112,4 +116,25 @@ test('a refresh failure after confirmed save does not falsely report that the wr
 test('exact decimal comparison does not collapse distinct large values into one JS double', () => {
   const submission = { request_id: 'request', items: [{ usage: 'rasxot', category: 'colors', name: 'Oq', values: { Mix: '999999999999999998' } }] };
   assert.throws(() => verifier.verifyReturnedPaintCompletion(response({ items: [{ ...submission.items[0], values: { Mix: '999999999999999999' } }] }), submission), isReconciliation);
+});
+
+
+test('draft changed during a pending POST is not cleared after the original response succeeds', async () => {
+  const pending = deferred(), f = fixture(async () => pending.promise);
+  try { const save = await prepare(f), saving = save(input); await tick();
+    f.draft.values['rasxot:Oq'] = ['new value'];
+    pending.resolve(new Response(JSON.stringify(response()), { status: 200 }));
+    await assert.rejects(saving, isReconciliation); assert.deepEqual(f.cleared, []);
+    assert.deepEqual(f.draft.values['rasxot:Oq'], ['new value']); assert.equal(f.files.current, 'original');
+  } finally { f.restore(); }
+});
+
+test('draft changed while clear is pending is flushed again and requires reconciliation', async () => {
+  const f = fixture(async () => new Response(JSON.stringify(response()), { status: 200 })), gate = f.deferClear();
+  try { const save = await prepare(f), saving = save(input); await gate.started.promise;
+    f.draft.values['rasxot:Oq'] = ['later edit']; gate.wait.resolve();
+    await assert.rejects(saving, isReconciliation); assert.deepEqual(f.cleared, ['request']);
+    assert.deepEqual(f.flushed, ['request']); assert.equal(f.files.current, JSON.stringify(f.draft.values));
+    assert.deepEqual(f.refreshed, []);
+  } finally { f.restore(); }
 });
