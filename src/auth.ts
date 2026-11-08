@@ -340,6 +340,15 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
 
 export function currentSession(): Session | null { return activeSession; }
 
+/**
+ * Read the existing in-memory epoch only for the currently active session.
+ * Combine this snapshot with identity and read-scope checks. It is not a
+ * subscription and does not detect every same-epoch saveSession transition.
+ */
+export function activeSessionEpoch(session: Session): number | null {
+  return activeSession === session ? sessionEpoch : null;
+}
+
 /** Returns a token only while this exact login session is still active. */
 export function activeSessionToken(session: Session): string | null {
   return activeSession === session ? session.token : null;
