@@ -10,8 +10,9 @@ const base = path.resolve(__dirname, '../src');
 const fakeSession = ref => ({baseUrl:'https://example.invalid',token:`fake-${ref}`,profile:{role:'werka',ref},
   capabilities:['werka.access'],assigned_apparatus:[],assigned_item_groups:[],assigned_warehouses:[]});
 function setup(onRefresh) {
-  let active=fakeSession('A'), refreshes=0;
-  const auth={currentSession:()=>active,activeSessionToken:session=>session===active?session.token:null,
+  let active=fakeSession('A'), refreshes=0, epoch=0;
+  const auth={currentSession:()=>active,activeSessionEpoch:session=>session===active?epoch:null,
+    activeSessionToken:session=>session===active?session.token:null,
     refreshSession:async session=>{refreshes++;onRefresh?.(session);return true;}};
   const cache=new Map();
   function load(file) {
@@ -21,7 +22,7 @@ function setup(onRefresh) {
     loaded._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,filename);
     cache.set(filename,loaded.exports);return loaded.exports;
   }
-  return {get session(){return active;},switchTo:value=>{active=value;},get refreshes(){return refreshes;},api:load(`${base}/werka/werkaPaddonApi.ts`),
+  return {get session(){return active;},switchTo:value=>{active=value;},advanceEpoch:()=>{epoch++;},get refreshes(){return refreshes;},api:load(`${base}/werka/werkaPaddonApi.ts`),
     scanner:load(`${base}/werka/werkaScannerFlow.ts`), scope:load(`${base}/sessionReadScope.ts`)};
 }
 const valid = JSON.stringify({kind:'paddon',paddon:{id:'p',code:'00002'},items:[],warehouses:[],snapshot_token:'',can_receive:false});
@@ -66,5 +67,19 @@ test('scanner flow suppresses stale 401 refresh outcomes without stock fallback'
       stopCamera:async()=>{},startCamera:async()=>{events.push('restart');return 'running';},preview:code=>h.api.werkaQrPreview(session,code),
       onState:()=>{},onNotice:message=>events.push(message),onResult:result=>events.push(result.kind)});
     await flow.handleCode('00002'); assert.equal(sends,1); assert.deepEqual(events,[]);
+  } finally {globalThis.fetch=saved;}
+});
+test('same-object epoch change on 401 prevents a QR preview retry', async () => {
+  const saved=globalThis.fetch;let sends=0;const h=setup(()=>h.advanceEpoch());
+  try {globalThis.fetch=async()=>{sends++;return new Response('{}',{status:401});};
+    await assert.rejects(h.api.werkaQrPreview(h.session,'00002'),error=>error.code==='session_scope_changed');
+    assert.equal(sends,1);assert.equal(h.refreshes,1);
+  } finally {globalThis.fetch=saved;}
+});
+test('same-object epoch change during body decoding suppresses the old QR result', async () => {
+  const saved=globalThis.fetch,h=setup();let resolve,signal;const started=new Promise(yes=>{signal=yes;}),body=new Promise(yes=>{resolve=yes;});
+  try {globalThis.fetch=async()=>({status:200,json:()=>{signal();return body;}});
+    const pending=h.api.werkaQrPreview(h.session,'00002');await started;h.advanceEpoch();resolve(JSON.parse(valid));
+    await assert.rejects(pending,error=>error.code==='session_scope_changed');
   } finally {globalThis.fetch=saved;}
 });

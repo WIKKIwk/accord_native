@@ -1,4 +1,4 @@
-import { currentSession, type Session } from '../auth';
+import { activeSessionEpoch, currentSession, type Session } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { MobileApiException } from '../shared/mobileApiException';
 
@@ -11,10 +11,11 @@ export class WerkaMutationScopeError extends MobileApiException {
 
 /** Capture permission and identity before a mutation, then check both before every send and after awaits. */
 export function werkaMutationScope(session: Session) {
-  const scope = sessionReadScope(session);
+  const epoch = activeSessionEpoch(session), scope = sessionReadScope(session);
   let mayHaveBeenSent = false;
   const check = () => {
-    if (currentSession() !== session || sessionReadScope(session) !== scope || !session.capabilities.includes('werka.access')) {
+    if (epoch === null || activeSessionEpoch(session) !== epoch || currentSession() !== session ||
+        sessionReadScope(session) !== scope || !session.capabilities.includes('werka.access')) {
       throw new WerkaMutationScopeError(mayHaveBeenSent);
     }
   };

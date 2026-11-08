@@ -9,8 +9,9 @@ const src = path.resolve(__dirname, '../src');
 const fakeSession = ref => ({ baseUrl: 'https://example.invalid', token: `fake-${ref}`, profile: { role: 'werka', ref },
   capabilities: ['werka.access'], assigned_apparatus: [], assigned_item_groups: [], assigned_warehouses: [], imageCacheScope: ref });
 function setup(changeOnRefresh) {
-  let active = fakeSession('A'), refreshes = 0;
-  const auth = { currentSession: () => active, activeSessionToken: session => session === active ? session.token : null,
+  let active = fakeSession('A'), refreshes = 0, epoch = 0;
+  const auth = { currentSession: () => active, activeSessionEpoch: session => session === active ? epoch : null,
+    activeSessionToken: session => session === active ? session.token : null,
     refreshSession: async session => { refreshes++; changeOnRefresh?.(session); return true; } };
   const cache = new Map();
   function load(file) {
@@ -22,7 +23,7 @@ function setup(changeOnRefresh) {
     module._compile(ts.transpileModule(fs.readFileSync(resolved, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, resolved);
     cache.set(resolved, module.exports); return module.exports;
   }
-  return { get session() { return active; }, switchTo: value => { active = value; }, get refreshes() { return refreshes; },
+  return { get session() { return active; }, switchTo: value => { active = value; }, advanceEpoch: () => { epoch++; }, get refreshes() { return refreshes; },
     issue: load(`${src}/werka/werkaIssueApi.ts`), records: load(`${src}/werka/werkaRecordApi.ts`), paddon: load(`${src}/werka/werkaPaddonApi.ts`) };
 }
 const operations = [
@@ -92,5 +93,15 @@ test('account switch during response decoding rejects the old result as potentia
     await started; api.switchTo(fakeSession('B')); resolveBody({ id: 'r' });
     await assert.rejects(pending, error => error.code === 'session_scope_changed' && error.requestMayHaveBeenSent === true);
     assert.equal(sends, 1);
+  } finally { globalThis.fetch = original; }
+});
+test('epoch change on 401 refresh blocks a retry even when the same session object remains active', async () => {
+  const original = globalThis.fetch; let sends = 0;
+  const api = setup(() => { api.advanceEpoch(); });
+  try {
+    globalThis.fetch = async () => { sends++; return new Response('{}', { status: 401 }); };
+    await assert.rejects(api.issue.createWerkaCustomerIssue(api.session, { customerRef: 'c', itemCode: 'i', qty: 1 }),
+      error => error.code === 'session_scope_changed' && error.requestMayHaveBeenSent === true);
+    assert.equal(sends, 1); assert.equal(api.refreshes, 1);
   } finally { globalThis.fetch = original; }
 });
