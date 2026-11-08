@@ -40,7 +40,11 @@ export async function adminStartBackup(session: Session): Promise<AdminServerMon
 /** @v2 adminServerMonitorLiveUri */
 export function adminServerMonitorLiveUri(session: Session): URL {
   const uri = new URL(session.baseUrl);
-  uri.protocol = uri.protocol === 'https:' ? 'wss:' : 'ws:';
+  // Match authorizedFetch's authenticated-origin and HTTPS checks before putting a token in the URI.
+  if (uri.protocol !== 'https:' || uri.origin !== session.baseUrl || uri.username || uri.password) {
+    throw new Error('API manzili noto‘g‘ri.');
+  }
+  uri.protocol = 'wss:';
   uri.pathname = '/v1/mobile/admin/system/monitor/live';
   uri.search = '';
   uri.searchParams.set('token', requireToken(session));

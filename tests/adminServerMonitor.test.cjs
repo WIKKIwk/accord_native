@@ -88,7 +88,10 @@ test('backup start sends a bodyless POST and parses 202, malformed and error res
 
 test('monitor live URI replaces the path and query, and requires a session token', () => {
   const api = fixture();
-  const url = api.adminServerMonitorLiveUri({ baseUrl: 'https://example.invalid/old?q=x', token: ' abc xyz ' });
+  const url = api.adminServerMonitorLiveUri({ baseUrl: 'https://example.invalid', token: ' abc xyz ' });
   assert.equal(url.toString(), 'wss://example.invalid/v1/mobile/admin/system/monitor/live?token=abc+xyz');
   assert.throws(() => api.adminServerMonitorLiveUri({ baseUrl: 'https://example.invalid', token: ' ' }), /No session token/);
+  for (const baseUrl of ['http://example.invalid', 'https://other@example.invalid', 'https://example.invalid/old?q=x']) {
+    assert.throws(() => api.adminServerMonitorLiveUri({ baseUrl, token: 'test' }), /API manzili noto‘g‘ri/);
+  }
 });
