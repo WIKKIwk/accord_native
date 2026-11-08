@@ -32,11 +32,11 @@ test('role home mapping leaves Worker and Preparation unchanged and rejects unau
 });
 function gateHarness(value, platform = 'ios', epoch = true, deferred) {
   const h = hooks(); let reset;
-  let logoutCalls = 0, clearCalls = 0, redirects = 0, captures = 0, witnessValid = true, captureAllowed = true, current = value, logoutImpl;
+  let logoutCalls = 0, clearCalls = 0, redirects = 0, captures = 0, witnessValid = true, captureAllowed = true, transitioning = false, current = value, logoutImpl;
   const alerts = [];
   const auth = { loadSession: () => deferred ?? Promise.resolve(value), registerSessionResetHook: fn => { reset = fn; return () => {}; },
     currentSession: () => current, logout: async () => { logoutCalls++; if (logoutImpl) await logoutImpl(); else current = null; }, clearSession: async () => { clearCalls++; }, captureSessionWitness: () => { captures++; return captureAllowed ? {} : null; },
-    isSessionWitnessCurrent: () => witnessValid, subscribeSessionWitness: () => () => {}, sessionWitnessVersion: () => 0,
+    isSessionWitnessCurrent: () => witnessValid, subscribeSessionWitness: () => () => {}, sessionWitnessVersion: () => 0, sessionWitnessTransitioning: () => transitioning,
     ...(epoch ? { activeSessionEpoch: () => 0 } : {}) };
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'expo-router': { Redirect: 'Redirect', router: { replace() { redirects++; } } },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Alert: { alert: (...args) => alerts.push(args) }, Platform: { OS: platform }, Text: 'Text', View: 'View' },
@@ -48,7 +48,7 @@ function gateHarness(value, platform = 'ios', epoch = true, deferred) {
   const Gate = load('homashyo/RawSplitSessionGate.tsx', mocks, true).RawSplitSessionGate;
   return { render: () => h.render(() => Gate({ platform: 'ios', children: 'route' })), reset: () => reset(), unmount: h.unmount,
     logoutCalls: () => logoutCalls, clearCalls: () => clearCalls, redirects: () => redirects, alerts, captures: () => captures,
-    setCurrent: next => { current = next; }, setLogout: fn => { logoutImpl = fn; },
+    setCurrent: next => { current = next; }, setLogout: fn => { logoutImpl = fn; }, setTransitioning: next => { transitioning = next; },
     setWitness: value => { witnessValid = value; }, setCaptureAllowed: value => { captureAllowed = value; },
     activate: element => { h.fresh(); return () => h.render(() => element.type(element.props)); } };
 }
@@ -176,15 +176,17 @@ test('late cancellation or dismiss from an old confirmation cannot close the nex
   oldAlert[2][0].onPress(); oldAlert[3].onDismiss(); flow = h.render(); assert.equal(flow.isScannerCurrent(), true); assert.equal(flow.visible, true); h.unmount();
 });
 test('both profile routes reuse the shared Profile without a worker daily-work callback', () => {
-  const context = { session: { profile: { role: 'homashyo_rezkachi' } }, onLogout() {} }, ProfileScreen = () => null;
+  const context = { session: { profile: { role: 'homashyo_rezkachi' } }, onLogout() {} }, ProfileScreen = () => null, guard = () => true;
   for (const platform of ['ios', 'android']) {
     const mocks = { 'react/jsx-runtime': jsx, 'react-native': { PlatformColor: value => value },
       'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' }, '../components/ProfileScreen': { ProfileScreen },
-      '../preparation/PreparationUI.android': { usePreparationText: () => value => value }, './RawSplitContext': { useRawSplitContext: () => context },
+      '../preparation/PreparationUI.android': { usePreparationText: () => value => value }, '../preparation/PreparationUI': { usePreparationText: () => value => value },
+      './useRawSplitProfileGuard': { useRawSplitProfileGuard: () => guard }, './RawSplitContext': { useRawSplitContext: () => context },
       './RawSplitFrame.android': { RawSplitFrame: 'RawSplitFrame' } };
     const Screen = load(`homashyo/RawSplitProfileScreen.${platform}.tsx`, mocks, true).RawSplitProfileScreen;
     const profile = Screen().props.children; assert.equal(profile.type, ProfileScreen); assert.equal(profile.props.session, context.session);
     assert.equal(profile.props.onLogout, context.onLogout); assert.equal('onDailyWork' in profile.props, false);
+    assert.equal(profile.props.isCurrent, guard); assert.equal(profile.props.settingsUnavailableMessage, 'Profil sozlamalari hozircha mavjud emas.');
   }
 });
 
@@ -236,4 +238,16 @@ test('logout completion does not redirect when a different account became curren
   const renderAuthorized = h.activate(h.render()), tree = renderAuthorized(); let finish; h.setLogout(() => new Promise(done => { finish = done; }));
   tree.props.onLogout(); h.setCurrent(session('customer', ['customer.access'])); finish(); await flush();
   assert.equal(h.logoutCalls(), 1); assert.equal(h.clearCalls(), 0); assert.equal(h.redirects(), 0); h.unmount();
+});
+
+test('logout completion cannot redirect while a new login is pending, even with no current session', async () => {
+  const h = gateHarness(session('homashyo_rezkachi', ['raw_material.split'])); h.render(); await flush();
+  const renderAuthorized = h.activate(h.render()), tree = renderAuthorized(); let finish; h.setLogout(() => new Promise(done => { finish = done; }));
+  tree.props.onLogout(); h.setCurrent(null); h.setTransitioning(true); finish(); await flush();
+  assert.equal(h.logoutCalls(), 1); assert.equal(h.clearCalls(), 0); assert.equal(h.redirects(), 0); h.unmount();
+});
+test('ordinary logout completion redirects when no other session or login exists', async () => {
+  const h = gateHarness(session('homashyo_rezkachi', ['raw_material.split'])); h.render(); await flush();
+  const renderAuthorized = h.activate(h.render()), tree = renderAuthorized(); tree.props.onLogout(); await flush();
+  assert.equal(h.logoutCalls(), 1); assert.equal(h.redirects(), 1); h.unmount();
 });

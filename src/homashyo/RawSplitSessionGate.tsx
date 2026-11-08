@@ -28,7 +28,7 @@ export function RawSplitSessionGate({ platform, children }: { platform: 'ios' | 
   if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   if (session.token === 'test-mode-token') return <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16 }}>
     <Text>Demo/test rejimi hozir mavjud emas.</Text></View>;
-  const onSignedOut = () => { if (auth.currentSession() === null) { setSession(null); router.replace('/'); } };
+  const onSignedOut = () => { if (auth.currentSession() === null && !auth.sessionWitnessTransitioning()) { setSession(null); router.replace('/'); } };
   // Main supplies these APIs. Missing bindings fail closed; no substitute or identity-only fallback exists.
   const bindings = auth as unknown as Partial<WitnessBindings>;
   if (typeof bindings.activeSessionEpoch !== 'function' || typeof bindings.captureSessionWitness !== 'function' ||

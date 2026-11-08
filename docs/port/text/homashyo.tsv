@@ -57,3 +57,4 @@ both	GoDEX qo‘llab-quvvatlanmaydi. Wi-Fi Zebra tanlang.	PORT.md D13 excludes G
 both	USB printer qurilmasini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.	The iOS role blocks USB and Bluetooth until exact printer identity is checked, leaving Wi-Fi Zebra as the available choice.
 both	Boshqa bo‘lish natijasi olindi. Natijani qayta tekshiring.	RawSplitResultMatch.ts rejects a response that does not match the saved stock command and keeps its pending key to prevent printing the wrong roll.
 both	Chiqib bo‘lmadi	RawSplitSessionGate.tsx reports a failed explicit logout without redirecting or claiming success.
+both	Profil sozlamalari hozircha mavjud emas.	The role opts into the shared Profile guard while Settings/PIN remains unavailable until those security-sensitive actions have their own session guard.
