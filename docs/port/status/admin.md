@@ -5,6 +5,11 @@ Stopped at: Continue part 1 and implement the remaining reachable Admin surfaces
 
 The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. An isolated clean clone was used for ledger and oracle reads. The original source and the clone were both clean at that SHA before and after those operations. The ledger reports 8 parts, 275 public API entries (including already-tagged imports) and 112 surface entries; runtime reachability and existing tags still require review. The historical 61 top-level contract files are from `7c87a54e` and were not overwritten.
 
+## Dependency checkpoint: guarded apparatus catalog reads
+
+- Sequence's catalog bootstrap needs the same original-session check as its paged read. The existing shared `adminApparatus` / `readApparatus` now accept an optional callback, forward it to the existing `authorizedFetch` before initial/401 sends, and recheck after deferred entry, response/body, model and transient retry delay. Omitting it preserves the legacy three-argument transport invocation, requests, parsers, retry limits and protected-role defaults. No Worker/Preparation, auth or notification file changed.
+- Eleven focused catalog/default/guard tests pass, including the historical V2 catalog replay and mocked 401/token-refresh, late success/error and transient-delay invalidation. iOS typecheck, lint and diff-check pass. These are not new f119 recordings, do not prove native dispatch/redirect-hop isolation and do not fix the parser's existing Unicode/number/error differences. The consumer is not enabled by this dependency checkpoint alone.
+
 ## Checkpoint: Work Map detail hydration and dismissal (partial)
 
 - Compared the f119 `_readOrdersListDetail` / `_showOrdersListDetail` and pending-sheet source directly. Opened-order hydration now retries exactly once for a stale epoch/revision snapshot, keeps the same ID/session/list ticket, then throws the source `order_page_changed` code and text. HTTP/read errors are not automatically retried. The full reader still reuses the existing optional guarded API; no authentication or transport default changed.
