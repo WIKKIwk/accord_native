@@ -40,6 +40,11 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - The selected f119 mock V2 widget test `admin home defers summary load until after first frame` failed: immediately after `pumpWidget` it expected no summary request, but the source's post-frame callback had already issued `GET /v1/mobile/admin/suppliers/summary`. Do not use that failed test as a behavioral specification. It uses a custom HttpClient, not an instrumented MockClient; no f119 HTTP recording is claimed.
 - As a deliberate account-safety difference, `AdminStore.clear()` increments an epoch so old pending responses cannot refill a newly cleared account's state. V2's `clear()` resets flags but does not invalidate in-flight reads. The app must invoke clear on account change and logout; neither runtime integration nor the Admin home/activity screens are connected yet.
 
+## Checkpoint: Admin home behavior and partial contract
+
+- `adminHomeModel.ts` captures the f119 screen's capability-filtered action order, four summary shortcuts, role-specific labels and icons, and loading/error branches. `docs/port/roles/admin.md` records the home surface's partial UI contract. This is logic and documentation only: no route or platform view is added, and the rest of the role contract remains unfinished.
+- Two f119 mock V2 widget tests for action and shortcut localization passed independently; four native model tests and iOS typecheck passed. The separate first-frame test failure is retained below. Shared `canOpenRoute` and localization are reused, not reimplemented.
+
 ## Open items
 
 | Where | V2 reference | What is needed |
@@ -83,4 +88,8 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 
 ## Surface audit
 
-No surface is marked `ok`. The V2 ledger inventories 112 surfaces; reachability, both-platform views and each listed sheet/dialog are still pending. Run the f119 ledger again and compare every relevant source location and V4 implementation side by side before replacing this statement with individual audit rows.
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| `AdminHomeScreen`, `admin_home_screen.dart:20` | `src/admin/adminHomeModel.ts` (logic only) | pending | pending | Action/shortcut rules compared with source and two V2 localization tests; neither platform view, shell/dock, routes nor navigation/refresh lifecycle is implemented. |
+
+The remaining V2 ledger surfaces have not been audited. Run the f119 ledger again and compare each relevant source location and V4 implementation side by side; no surface is marked `ok`.
