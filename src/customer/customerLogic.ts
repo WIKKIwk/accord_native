@@ -1,5 +1,5 @@
 // Dart's native String.trim includes U+0085 in addition to JavaScript whitespace.
-const trimCustomerInput = (value: string): string => value.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');
+export const trimCustomerInput = (value: string): string => value.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');
 
 /** @v2 CustomerDeliveryResponseMode */
 export type CustomerDeliveryResponseMode = 'acceptAll' | 'acceptPartial' | 'rejectAll' | 'claimAfterAccept';

@@ -1,29 +1,34 @@
 # customer
 
 Status: part 1 of 1 in progress
-Stopped at: connect CustomerStore to the Customer API and session lifecycle, then port the screens, navigation and surface audit after the V2 baseline is pinned.
+Stopped at: connect CustomerStore to the Customer API and session lifecycle, then port the screens, navigation and surface audit after the integrator aligns the V2 baseline.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Shared dispatch timestamp parsing edges | `app_models_declarations_part_01.dart` `compareCreatedLabelsDesc`; Dart `DateTime.parse` | The comparator now preserves six fractional digits, but extreme date/offset overflows and platform-local daylight-saving transitions remain unverified against Dart. The exported millisecond parser retains its prior behavior. |
-| Customer APIs and records | `mobile_api_customer.dart`, `app_models_declarations_part_05.dart` | Port the requests and detail/summary parsers, reusing the shared `dispatchRecordFromJson` extraction copied from Supplier commit `a947a1a`. |
+| Customer summary integer precision | `app_models_models_part_04.dart` `CustomerHomeSummary.fromJson` | V2 accepts signed 64-bit integer counts. JavaScript cannot represent all of them exactly; the current decoder rejects counts outside its safe-integer range instead of silently rounding. |
+| Shared dispatch status trim | `app_models_declarations_part_08.dart` `parseDispatchStatus`; `src/shared/notificationApi.ts` | Customer calls normalize native Dart U+0085 whitespace before using the unchanged shared parser. Other consumers of the shared parser still differ for that edge and need an integrator-owned fix. |
+| Large Customer status lists | `json_payload_decoder.dart` `decodeJsonListPayload` | V2 decodes lists of at least 128 KiB in a background isolate. The React Native path currently decodes on the JavaScript thread; assess responsiveness on a real phone with a representative large payload. |
 | Customer store wiring | `customer_store.dart`, `app_runtime_reset.dart` | The source-derived store class is implemented but not yet connected to a real session, APIs or account reset. Verify that the application uses one store and clears its state on account change. |
 | Timestamp ties | `customer_store.dart` `_mergeHistoryItems`, `customer_delivery_runtime_store.dart` `_sorted` | V2 Dart sorting does not guarantee tie order; JavaScript sorting is stable. Exact visible ordering of records with identical timestamps remains unverified. |
 | Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Port Customer home, notifications, status and delivery detail on iOS and Android; connect Supplier's shared NotificationDetailScreen, existing profile and chat, and complete the text and surface audits. |
 | Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | Connect a shared live chat unread total and initialized push delivery; neither is established by this checkpoint. |
-| Wider V2 pin | `docs/port/V2_BASELINE` | The repository baseline still points to 7c87a54; the integrator must resolve the complete drift before the rest of this role is implemented. |
+| Wider V2 pin | `docs/port/V2_BASELINE` | The user selected f11910bb; the integrator is aligning the repository baseline and documenting the remaining drift before the rest of this role is implemented. |
 
 ## Baseline evidence
 
-- `lib/src/core/api/customer/mobile_api_customer.dart` is byte-identical at V2 7c87a54 and f11910bb (blob `bef012db96c456b6e880b65207d70ceee213a72b`).
+- `lib/src/core/api/customer/mobile_api_customer.dart` is byte-identical at V2 7c87a54 and f11910bb (blob `bef012db96c456b6e880b65207d70ceee213a72b`). The four role-ledger methods are now source-ported. `customerHistory` is not included: a pinned-source search found no call sites and the Customer store merges the three status lists instead.
 - `lib/src/features/customer/state/customer_store.dart` is byte-identical at both commits (blob `7b499b8a3d5a59c3d4b60e9bd350658ea9ef900c`); `lib/src/core/notifications/store/customer_delivery_runtime_store.dart` is also byte-identical (blob `5e1357676c76e9e2c988c4286a67209e61126d33`). The existing V4 runtime store is reused.
 - `lib/src/features/shared/models/app_models_models_part_04.dart` is byte-identical at both commits (blob `5195b5f226bac05657aeb821d33c32cb7e9fc55f`), including the response-mode mapping.
 - The diff for the two `customer_delivery_detail_screen` files adds only an `_applyStateChange` wrapper around `setState` and substitutes that wrapper at four calls. Quantity parsing, dialog enable rules, and the four response actions are unchanged between the commits. The installed Dart VM native string implementation includes U+0085 as whitespace; Customer input trimming covers it explicitly.
-- `lib/src/core/api/mobile_api.dart` differs only by removal of an unrelated `dart:math` import; the Customer transport helper definitions are otherwise unchanged. This checkpoint does not yet implement a Customer HTTP operation.
+- `lib/src/core/api/mobile_api.dart` differs only by removal of an unrelated `dart:math` import; Customer transport helper definitions are otherwise unchanged. `json_payload_decoder.dart`, `mobile_http_client.dart`, `api_transport_policy.dart`, `server_endpoint_store.dart`, `session.dart`, and `saved_account_runtime.dart` are byte-identical across the two pins. The API reuses `authorizedFetch`; existing shared transport and device-verification limitations remain in `PORT.md`.
+- The shared record model file is byte-identical across both commits (blob `83b6cfb0f0d1e6929f2d56f9e92d7aa02b17143d`), and the dispatch status parser file is byte-identical (blob `691faac9c83227d17a43a8c835cf08db2c263268`).
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Customer API checkpoint: `node --test tests/customerApi.test.cjs tests/customerLogic.test.cjs tests/customerStore.test.cjs tests/customerDispatchTimestamp.test.cjs tests/baseNotificationApi.test.cjs tests/baseDispatchRuntimeStores.test.cjs` passed 32 tests. These cover all four source-derived request paths, parameters, bodies, status handling and parsing; no V2 Customer HTTP recording was found. The Supplier parser file remains byte-identical to its checkpoint. iOS typecheck and Expo lint passed; Android retained the same nine pre-existing worker errors.
 
 - Supplier dependency: `src/shared/notificationApi.ts` matches Supplier commit `a947a1a46ff32a8afb0be3e6d25da8a71afa355c` byte-for-byte. Existing notification/runtime tests passed 8/8; 66 source-derived mock outcomes matched the original notification API, including malformed data and non-200 responses. iOS typecheck passed.
 
@@ -44,5 +49,5 @@ No Customer test-mode branch was identified in the inspected response methods.
 
 ## Needs from the integrator
 
-- Resolve and pin the wider V2 drift before the remaining Customer work.
+- Align and pin the user-selected f11910bb source and document the wider drift before the remaining Customer work.
 - Integrate Supplier's shared NotificationDetailScreen when its checkpoint is ready. The record parser extraction in this branch is byte-identical to Supplier's checkpoint and will need its identical shared diff reconciled on merge.
