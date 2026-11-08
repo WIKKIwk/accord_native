@@ -15,7 +15,7 @@ function load(file, mocks = {}) {
 }
 const route = '/admin-production-map-orders';
 for (const platform of ['ios', 'android']) test(`${platform} Work Map gates direct entry and binds real list handlers`, async () => {
-  const calls = [], row = { kind: 'order', id: 'zakaz-1', code: '1', title: 'Order', customer: 'Client', imageId: 'i', displayState: 'paused', kg: null };
+  const calls = [], row = { kind: 'order', id: 'zakaz-1', code: '1', title: 'Order', customer: 'Client', imageId: 'i', displayState: 'paused', kg: null, position: 13 };
   let current = true, permitted = true;
   const shell = { session: {}, isCurrent: () => current, destination: value => permitted && value === route ? `/${platform}-admin/work-map` : null };
   const view = { shell, locale: 'uz', state: { query: '', rows: [row], loading: false, loaded: true, error: null, hasMore: true },
@@ -29,10 +29,10 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route } }, '../shared/localization': { adminText: key => key, localizedGetter: key => key, productionText: key => key },
     '../components/BaseHost': { BaseHost: 'BaseHost' }, '../shared/orders/OrderListItem': { OrderListItem: 'OrderListItem' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
-    './AdminWorkMapMove': { AdminWorkMapMove: 'AdminWorkMapMove' }, './AdminWorkMapPendingRow': { AdminWorkMapPendingRow: 'AdminWorkMapPendingRow' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
+    './AdminWorkMapMove': { AdminWorkMapMove: 'AdminWorkMapMove' }, './AdminWorkMapPendingRow': { AdminWorkMapPendingRow: 'AdminWorkMapPendingRow' }, './AdminWorkMapSequenceRow': { AdminWorkMapSequenceRow: 'AdminWorkMapSequenceRow' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
     './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' }, './AdminShellContext': { useAdminShell: () => shell },
     './useAdminWorkMapView': { useAdminWorkMapView: () => view }, './adminWorkMapText': { adminWorkMapText: () => ({ partial: 'partial', more: 'more' }) },
-    './adminWorkMapPresentation': { adminWorkMapPresentation: value => ({ headline: value.title, supporting: value.customer, tone: 'paused' }) } };
+    './adminWorkMapPresentation': { adminWorkMapPresentation: value => ({ headline: `${value.position == null ? '' : `${value.position}. `}${value.title}`, supporting: value.customer, tone: 'paused' }) } };
   const component = load(`admin/AdminWorkMapRoute.${platform}.tsx`, mocks).AdminWorkMapRoute;
   current = false; assert.equal(component().type, 'View'); current = true; permitted = false; assert.equal(component().type, 'Redirect'); permitted = true;
   const bound = component(), tree = bound.type(); let list;
@@ -49,11 +49,18 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   assert.equal(list.type, 'OrdersList'); await list.props.onRefresh();
   const listChildren = list.props.children.flat(Infinity).filter(Boolean);
   assert.equal(listChildren.some(value => value.type === 'ListItem' && value.props.children === 'partial'), false);
-  const renderedRow = listChildren.find(value => value.type === 'OrderListItem');
-  assert.equal(renderedRow.props.imageActive, false); renderedRow.props.onPress();
+  const renderedRow = listChildren.find(value => value.type === 'AdminWorkMapSequenceRow');
+  assert.equal(renderedRow.props.position, 13); assert.equal(renderedRow.props.tone, 'paused'); assert.equal(renderedRow.props.headline, 'Order');
+  assert.equal(renderedRow.props.imageId, undefined); renderedRow.props.onPress();
+  if (platform === 'android') assert.equal(list.props.passthrough(renderedRow), true);
   const more = listChildren.at(-1); more.props.onPress(); await Promise.resolve();
   assert.deepEqual(calls, [['search', 'abc'], 'back', 'profile', 'reload', ['open', 'zakaz-1'], 'next']);
-  view.controls.module = 'orders'; const pending = { ...row, kind: 'pending', id: 'pending-1' }; view.state.rows = [pending];
+  view.controls.module = 'orders'; view.state.rows = [row];
+  const orderTree = bound.type(), orderBody = platform === 'ios' ? orderTree.props.children.find(value => value?.type === 'View') : orderTree;
+  const orderList = platform === 'ios' ? orderBody.props.children.find(value => value?.type === 'BaseHost' && value.props.children?.type === 'OrdersList').props.children
+    : orderBody.props.children.find(value => value?.type === 'OrdersList');
+  assert.equal(orderList.props.children.flat(Infinity).filter(Boolean).find(value => value.type === 'OrderListItem').props.imageActive, false);
+  const pending = { ...row, kind: 'pending', id: 'pending-1' }; view.state.rows = [pending];
   const pendingTree = bound.type(), pendingBody = platform === 'ios' ? pendingTree.props.children.find(value => value?.type === 'View') : pendingTree;
   const pendingList = platform === 'ios' ? pendingBody.props.children.find(value => value?.type === 'BaseHost' && value.props.children?.type === 'OrdersList').props.children
     : pendingBody.props.children.find(value => value?.type === 'OrdersList');

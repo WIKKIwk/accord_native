@@ -14,6 +14,7 @@ import { OrdersList } from '../shared/orders/OrdersList';
 import { AdminBottomBar } from './AdminBottomBar.android';
 import { AdminWorkMapMove } from './AdminWorkMapMove';
 import { AdminWorkMapPendingRow } from './AdminWorkMapPendingRow';
+import { AdminWorkMapSequenceRow } from './AdminWorkMapSequenceRow';
 import { AdminWorkMapClosedRow } from './AdminWorkMapClosedRow';
 import { AdminWorkMapAudit } from './AdminWorkMapAudit';
 import { AdminWorkMapApparatusFilter, AdminWorkMapModules } from './AdminWorkMapControls';
@@ -30,12 +31,14 @@ function BoundWorkMap() {
     <BaseHost matchContents={{ vertical: true }}><AdminWorkMapModules {...view.controls} /></BaseHost>
     {view.controls.module === 'move' ? <AdminWorkMapMove {...view.move} /> : <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} onRefresh={view.refresh}
       onEndReached={() => { if (state.hasMore && !view.error) void controller.next(); }}
-      passthrough={element => isValidElement(element) && element.type === AdminWorkMapPendingRow}>
+      passthrough={element => isValidElement(element) && (element.type === AdminWorkMapPendingRow || element.type === AdminWorkMapSequenceRow)}>
       {view.controls.module === 'sequence' && <AdminWorkMapApparatusFilter {...view.controls} />}
       {view.controls.module !== 'audit' && !!view.error && <ListItem supportingText={view.error} onPress={() => { void view.refresh(); }}>{localizedGetter('retry', locale)}</ListItem>}
       {!!view.emptyText && <ListItem>{view.emptyText}</ListItem>}
       {view.controls.module === 'audit' && <AdminWorkMapAudit model={view.audit} onRefresh={view.refresh} />}
-      {state.rows.map((row, index) => { const item = adminWorkMapPresentation(row, locale);
+      {state.rows.map((row, index) => { const item = adminWorkMapPresentation(view.controls.module === 'sequence' ? { ...row, position: undefined } : row, locale);
+          if (view.controls.module === 'sequence') return <AdminWorkMapSequenceRow key={`${row.kind}:${row.id}`} headline={item.headline} supportingText={item.supporting}
+            position={row.position ?? index + 1} tone={item.tone} first={index === 0} last={index === state.rows.length - 1} onPress={() => view.open(row)} />;
           if (row.kind === 'pending') return <AdminWorkMapPendingRow key={`${row.kind}:${row.id}`} headline={item.headline} supportingText={item.supporting} infoLabel={productionText('worker.order.info', locale)}
             first={index === 0} last={index === state.rows.length - 1} onPress={() => view.open(row)} />;
           return <OrderListItem key={`${row.kind}:${row.id}`}

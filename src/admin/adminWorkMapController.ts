@@ -32,7 +32,7 @@ export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: Admin
   // V2 collects snapshot customers in revision order. Only the current window's
   // guarded snapshots are available here; other retained module windows remain open parity work.
   const customers = new Map<string, string>();
-  if (view === 'orders') for (const snapshot of pages.flatMap(page => page.snapshot ? [page.snapshot] : [])
+  if (view === 'orders' || view === 'sequence') for (const snapshot of pages.flatMap(page => page.snapshot ? [page.snapshot] : [])
     .sort((a, b) => (a.revision ?? 0) - (b.revision ?? 0))) {
     for (const [id, name] of Object.entries(snapshot.order_customers ?? {})) customers.set(id, name);
   }
@@ -44,7 +44,8 @@ export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: Admin
         const row = page.sequence_rows?.[id], position = page.sequence_positions?.[id];
         if (!row || !Number.isSafeInteger(position) || position! < 1) throw new Error(readError);
         orders.push({ kind: 'order', id, code: codeOf(row), title: text(row.title), customer: text(row.customer_name),
-          imageId: text(row.image_id), displayState: text(row.display_state), kg: null, position });
+          imageId: text(row.image_id), displayState: text(row.display_state), kg: null, position,
+          opened: { secondary: dartTrim(text(row.customer_name)), apparatusCount: 0 } });
       }
     } else if (page.projection === 'orders_list_v1') {
       if (view !== 'orders') throw new Error(readError);
@@ -69,13 +70,13 @@ export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: Admin
       for (const id of page.order_ids) {
         const saved = page.snapshot?.maps.find(item => item.map.id === id), map = saved?.map;
         if (!map) throw new Error(readError);
-        const product = view === 'move' || view === 'orders' ? text(map.nodes?.find((node: any) => node.kind === 'end' && dartTrim(text(node.title)) && dartTrim(text(node.title)) !== dartTrim(text(map.title)))?.title) : '';
-        const customer = view === 'orders' ? dartTrim(customers.get(dartTrim(text(map.id))) ?? '') || dartTrim(text(map.customer_name)) : text(map.customer_name);
-        orders.push({ kind: 'order', id, code: codeOf(map), title: view === 'move' || view === 'orders' ? dartTrim(text(map.title)) || dartTrim(product) : text(map.title),
+        const product = text(map.nodes?.find((node: any) => node.kind === 'end' && dartTrim(text(node.title)) && dartTrim(text(node.title)) !== dartTrim(text(map.title)))?.title);
+        const customer = view === 'orders' || view === 'sequence' ? dartTrim(customers.get(dartTrim(text(map.id))) ?? '') || dartTrim(text(map.customer_name)) : text(map.customer_name);
+        orders.push({ kind: 'order', id, code: codeOf(map), title: dartTrim(text(map.title)) || dartTrim(product),
           customer: view === 'move' ? dartTrim(text(map.customer_name)) || dartTrim(text(map.product_code)) || dartTrim(product) : customer,
           imageId: text(map.image_id), displayState: '', kg: null,
-          ...(view === 'orders' ? { opened: { secondary: customer || dartTrim(text(map.product_code)) || dartTrim(product),
-            apparatusCount: Array.isArray(map.nodes) ? map.nodes.filter((node: any) => node.kind === 'apparatus').length : 0 } } : {}),
+          ...(view === 'orders' || view === 'sequence' ? { opened: { secondary: customer || dartTrim(text(map.product_code)) || dartTrim(product),
+            apparatusCount: view === 'orders' && Array.isArray(map.nodes) ? map.nodes.filter((node: any) => node.kind === 'apparatus').length : 0 } } : {}),
           ...(view === 'sequence' ? { position: page.sequence_positions?.[id] ?? orders.length + 1 } : view === 'move' ? { position: orders.length + 1 } : {}) });
       }
     } else throw new Error(readError);

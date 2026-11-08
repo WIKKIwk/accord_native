@@ -144,6 +144,26 @@ test('Sequence summaries preserve server order, absolute positions, display stat
   c.start(); await tick(); assert.equal(c.getSnapshot().total, 27); assert.deepEqual(calls[0], { view: 'sequence', apparatus: 'apparatus:a', search: '' });
   assert.equal(c.detailTicket(c.getSnapshot().rows[0]).apparatus, 'apparatus:a'); c.dispose();
 });
+test('Sequence compact and full rows use source title and subtitle fallbacks without an apparatus count', () => {
+  const localization = load('shared/localization/index', { './catalog.json': require('../src/shared/localization/catalog.json') });
+  const presentation = load('admin/adminWorkMapPresentation', { '../shared/localization': localization,
+    '../workerOrderAppearance': { workerOrderTone: () => 'neutral' }, './adminWorkMapText': { adminWorkMapText: () => ({ pending: 'Chala buyurtma' }) },
+    './adminDartDouble': load('admin/adminDartDouble'), './dartJsonString': dart }).adminWorkMapPresentation;
+  const compact = summary({ projection: 'sequence_list_v1', pending_ids: [], pending_rows: {}, length: 1, order_rows: {}, next_cursor: null,
+    sequence_rows: { 'zakaz-1': { id: 'zakaz-1', code: ' 17 ', title: '\u0085 Film \u0085', customer_name: '\u0085 Ana \u0085', display_state: 'pending' } },
+    sequence_positions: { 'zakaz-1': 13 } });
+  const item = rows([compact], 'sequence')[0];
+  assert.deepEqual(presentation({ ...item, position: undefined }, 'en'), { headline: '17 • Film', supporting: 'Ana', tone: 'neutral' });
+  const full = summary({ projection: '', length: 1, next_cursor: null, pending_ids: [], pending_rows: {}, order_rows: {}, pending_orders: [], order_ids: ['o'],
+    sequence_positions: { o: 9 }, snapshot: { revision: 4, order_customers: { o: ' Canonical ' }, maps: [{ map: { id: 'o', code: '7', title: '', product_code: 'P', customer_name: 'Old',
+      nodes: [{ kind: 'end', title: ' Roll ' }, { kind: 'apparatus', title: 'A' }, { kind: 'apparatus', title: 'B' }] } }] } });
+  const legacy = rows([full], 'sequence')[0]; assert.equal(legacy.position, 9);
+  assert.deepEqual(presentation({ ...legacy, position: undefined }, 'en'), { headline: '7 • Roll', supporting: 'Canonical', tone: 'neutral' });
+  full.snapshot.order_customers = {}; full.snapshot.maps[0].map.customer_name = '';
+  assert.equal(presentation({ ...rows([full], 'sequence')[0], position: undefined }, 'en').supporting, 'P');
+  full.snapshot.maps[0].map.product_code = '';
+  assert.equal(presentation({ ...rows([full], 'sequence')[0], position: undefined }, 'en').supporting, 'Roll');
+});
 test('configuring another module/apparatus invalidates rows, old reads and old detail tickets', async () => {
   const pending = [], calls = [], c = new Controller({ isCurrent: () => true, request: null, read: request => { calls.push(request); const d = deferred(); pending.push(d); return d.promise; } });
   c.start(); await tick(); assert.equal(calls.length, 0);

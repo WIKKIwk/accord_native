@@ -292,3 +292,28 @@ test('real guarded legacy Orders page supplies passive subtitle fields without s
     assert.equal(requests.length, 1);
   }
 });
+
+test('real guarded Sequence summary preserves its server rank and source row text', async () => {
+  const dart = load('admin/dartJsonString'), audit = load('admin/adminWorkMapAuditModel', { './dartJsonString': dart });
+  const closed = load('admin/adminWorkMapClosedModel', { './dartJsonString': dart });
+  const project = load('admin/adminWorkMapController', { './dartJsonString': dart, './adminWorkMapAuditModel': audit, './adminWorkMapClosedModel': closed }).adminWorkMapRows;
+  const localization = load('shared/localization/index', { './catalog.json': require('../src/shared/localization/catalog.json') });
+  const present = load('admin/adminWorkMapPresentation', { '../shared/localization': localization, '../workerOrderAppearance': load('workerOrderAppearance'),
+    './adminWorkMapText': { adminWorkMapText: () => ({ pending: 'Chala buyurtma' }) }, './adminDartDouble': load('admin/adminDartDouble'), './dartJsonString': dart }).adminWorkMapPresentation;
+  for (const invalidate of [false, true]) {
+    const f = fixture(), requests = [], machine = 'apparatus:default:asset-005', id = 'zakaz-17';
+    const raw = { projection: 'sequence_list_v1', version: 'v', epoch: 'e', scope: 's', rev: 5, offset: 0, total: 1, next_cursor: null,
+      order_ids: [id], sequence_positions: { [id]: 13 }, sequence_versions: { [machine]: 's1' }, sequence_revisions: { [machine]: 5 },
+      queue_policies: [{ apparatus_id: machine, policy: 'strict_sequence' }], rows: { [id]: { id, code: '17', title: ' Film ', customer_name: ' Ana ',
+        image_id: 'held-image', queue_state: 'pending', display_state: 'paused', can_reorder: true } } };
+    const pageApi = loadRoot('productionOrderPageApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
+      requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
+    } } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderPageApi': pageApi }).adminWorkMapReader(f.session, f.witness);
+    const result = reader({ view: 'sequence', apparatus: machine });
+    if (invalidate) await assert.rejects(result, /session changed/);
+    else { const row = project([await result], 'sequence')[0], card = present({ ...row, position: undefined }, 'en');
+      assert.equal(row.position, 13); assert.deepEqual(card, { headline: '17 • Film', supporting: 'Ana', tone: 'paused' }); }
+    assert.equal(requests.length, 1);
+  }
+});
