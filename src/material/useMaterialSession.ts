@@ -1,24 +1,22 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { captureSessionWitness, isSessionWitnessCurrent, loadSession, logout, registerSessionResetHook,
-  sessionWitnessVersion, subscribeSessionWitness, type Session, type SessionWitness } from '../auth';
+import { isSessionWitnessCurrent, logout, registerSessionResetHook,
+  sessionWitnessVersion, subscribeSessionWitness } from '../auth';
 import { clearAppLock } from '../appLock';
+import { startMaterialSessionBootstrap, type MaterialSession } from './materialSessionBootstrap';
 
-type MaterialSession = { session: Session; witness: SessionWitness };
 export function useMaterialSession() {
   const [entry, setEntry] = useState<MaterialSession | null | undefined>();
-  const generation = useRef(0);
+  const settled = useRef(false), retry = useRef<() => void>(() => {});
   // React subscribes and rechecks the version after subscription, closing the render/subscribe gap.
   useSyncExternalStore(subscribeSessionWitness, sessionWitnessVersion, sessionWitnessVersion);
   useEffect(() => {
-    let mounted = true; const request = generation.current;
-    void loadSession().then(session => {
-      if (!mounted || request !== generation.current) return;
-      const witness = captureSessionWitness(session);
-      setEntry(session && witness && isSessionWitnessCurrent(witness) ? { session, witness } : null);
-    }).catch(() => { if (mounted && request === generation.current) setEntry(null); });
-    return () => { mounted = false; };
+    const bootstrap = startMaterialSessionBootstrap(value => { settled.current = true; setEntry(value); });
+    retry.current = bootstrap.retry;
+    return () => { retry.current = () => {}; bootstrap.stop(); };
   }, []);
-  useEffect(() => registerSessionResetHook(async () => { generation.current++; setEntry(null); }), []);
+  useEffect(() => registerSessionResetHook(async () => {
+    if (settled.current) setEntry(null); else retry.current();
+  }), []);
   // Never recapture a stale entry after a transition, including a transition that rolls back.
   const current = entry && isSessionWitnessCurrent(entry.witness) ? entry : null;
   const onLogout = () => {
