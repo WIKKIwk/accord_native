@@ -107,8 +107,12 @@ export class QolipCheckoutSelectionState {
   }
   longPress(entry: QolipCheckoutEntry) {
     if (!this.lifetime.canChoose() || !this.visible.includes(entry)) return;
+    const hadExpansion = this.expanded !== null;
     this.expanded = null;
     if (this.toggle(entry)) this.publish();
+    // V2 clears the list's local expansion even when the parent refuses a locked selection.
+    // That path sends no setState, so expose it only on the next independent read/rebuild.
+    else if (hadExpansion) this.dirty = true;
   }
   cancel() {
     if (!this.lifetime.canChoose() || this.locks.bulkReturning) return;

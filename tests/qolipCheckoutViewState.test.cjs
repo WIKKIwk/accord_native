@@ -119,6 +119,21 @@ test('list unmount after no matches or error clears local expansion; pending ref
   assert.equal(h.owner.getSnapshot().selection.rows[0].expanded, false); stop();
 });
 
+test('locked long press silently clears source expansion, visible on the next independent rebuild', async () => {
+  for (const held of ['returning', 'bulk']) {
+    const h = harness(), stop = h.owner.activate(), a = row('a'); h.reads[0].resolve([a]); await tick();
+    h.owner.getSnapshot().actions.tap(a, false, false); h.owner.updateLocks({
+      returningIds: new Set(held === 'returning' ? ['a'] : []), bulkReturning: held === 'bulk',
+    });
+    const rendered = h.owner.getSnapshot(), notifications = []; h.owner.subscribe(() => notifications.push('change'));
+    assert.equal(rendered.selection.rows[0].expanded, true); rendered.actions.longPress(a);
+    assert.equal(notifications.length, 0, 'the locked source parent never calls setState');
+    assert.equal(rendered.selection.rows[0].expanded, true, 'the previously rendered closure is unchanged');
+    assert.equal(h.owner.getSnapshot().selection.rows[0].expanded, false, 'a later independent rebuild sees the silent clear');
+    assert.equal(h.owner.getSnapshot().selection.selectionMode, false); stop();
+  }
+});
+
 test('original boundary invalidation blocks late old/new results and every stale action through ABA', async () => {
   const h = harness(), stop = h.owner.activate(), a = row('a'); h.reads[0].resolve([a]); await tick();
   const actions = h.owner.getSnapshot().actions; actions.longPress(a); const old = h.read.reload(), recent = h.read.reload();
