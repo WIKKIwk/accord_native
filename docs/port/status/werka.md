@@ -51,10 +51,10 @@ The isolated f119 oracle passed all five `werka_paddon_api_test.dart` cases and 
 ## Verification at this checkpoint
 
 - V2 original and the isolated ledger clone both remained clean at `f11910bb2c8c7081ce26770e69811b03fd0739ed` after the work. The ledger finds all 26 role API tags, but this is not proof of parity or of completed views.
-- `node --test tests/werka*.test.cjs`: 131 passed, including source-based success/WIP content, shared receive footer, scanner/receive flows, guard regressions and QR-preview scope tests with fake accounts and mocked camera/network callbacks. A temporary f119 Dart oracle matched ten WIP quantity cases; broader numeric and platform formatting remain open. Before the latest scanner, receive-guard, stock-issue, store, UI-content and mutation-safety changes, the full suite with concurrency 2 had 1,233 passed and six known Preparation Android Expo UI ESM-resolution failures. No real credentials or live backend mutation were used.
+- `node --test tests/werka*.test.cjs`: 131 passed, including source-based success/WIP content, shared receive footer, scanner/receive flows, guard regressions and QR-preview scope tests with fake accounts and mocked camera/network callbacks. A temporary f119 Dart oracle matched ten WIP quantity cases; broader numeric and platform formatting remain open. The full suite at `bcfb522`, with concurrency 2, had 1,326 passed and the same six known Preparation Android Expo UI ESM-resolution failures. No real credentials or live backend mutation were used.
 - iOS typecheck and Expo lint passed. Android typecheck reported the same nine pre-existing Worker errors in `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx`; no new Werka errors appeared.
-- Offline Expo iOS and Android JS exports passed before the latest unconnected content bodies were added. Since Werka has no routes yet, these exports do not verify the new role's runtime views.
-- `port_ledger.mjs check` passed its tag checks with eight existing unrelated endpoint warnings. The text gate failed: iOS has 150 V2 texts missing and 48 V4-only texts; Android has 149 missing and 59 V4-only texts. Zero text exceptions were accepted. The surface audit and all 28 native surfaces remain open.
+- Offline Expo iOS and Android JS exports passed at `bcfb522`. Since Werka has no routes yet, these exports do not verify the new role's runtime views or a native build.
+- `port_ledger.mjs check` passed its tag checks with eight existing unrelated endpoint warnings. The text gate failed: iOS has 102 V2 texts missing and 48 V4-only texts; Android has 102 missing and 59 V4-only texts. Zero text exceptions were accepted. The surface audit and all 28 native surfaces remain open.
 
 ## Needs from the integrator
 
