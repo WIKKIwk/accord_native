@@ -55,6 +55,9 @@ test('pending and accepted categories retain V2 event and note distinctions', ()
   assert.deepEqual(model.supplierCategoryItems(rows, 'pendingUnannounced').map(row => row.id), ['b']);
   assert.deepEqual(model.supplierCategoryItems(rows, 'acceptedByWerka').map(row => row.id), ['c']);
   assert.deepEqual(model.supplierCategoryItems(rows, 'approvedUnannounced').map(row => row.id), ['d', 'e']);
+  assert.deepEqual(['pending', 'submitted', 'returned'].map(model.supplierStatusTitleKey), ['pendingStatus', 'submittedStatus', 'returnedStatus']);
+  assert.equal(model.supplierCategoryTitleKey('pendingUnannounced'), 'supplierPendingUnannouncedTitle');
+  assert.equal(model.supplierCategoryTitleKey('approvedUnannounced'), 'supplierAcceptedUnannouncedTitle');
 });
 
 test('recent records prefill the product with no warehouse and notifications retain unread-first ordering', () => {

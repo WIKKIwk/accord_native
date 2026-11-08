@@ -4,6 +4,17 @@ import { trimNotificationText } from '../shared/notification/notificationDetailM
 import { searchMatches } from '../shared/searchNormalizer';
 
 export type SupplierCategory = 'pendingDispatches' | 'pendingUnannounced' | 'acceptedByWerka' | 'approvedUnannounced';
+export function supplierStatusTitleKey(kind: 'pending' | 'submitted' | 'returned'): string {
+  return kind === 'pending' ? 'pendingStatus' : kind === 'submitted' ? 'submittedStatus' : 'returnedStatus';
+}
+export function supplierCategoryTitleKey(category: SupplierCategory): string {
+  switch (category) {
+    case 'pendingDispatches': return 'supplierPendingDispatchesTitle';
+    case 'pendingUnannounced': return 'supplierPendingUnannouncedTitle';
+    case 'acceptedByWerka': return 'supplierAcceptedByWerkaTitle';
+    case 'approvedUnannounced': return 'supplierAcceptedUnannouncedTitle';
+  }
+}
 
 /** Product picker loads the full assignment and filters locally by name and code. */
 export function supplierVisibleItems(items: readonly SupplierItem[], query: string): SupplierItem[] {

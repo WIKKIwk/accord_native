@@ -27,7 +27,7 @@ export function SupplierItemPickerScreen(props: SupplierPickerProps) {
   const { controller, state, items } = useSupplierPicker(props), t = usePreparationText();
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), input = useNativeState('');
   return <View style={{ flex: 1 }}><Header title="Mahsulot tanlash" onBack={props.onBack} />
-    <PreparationList refresh={() => controller.reload()}>
+    <PreparationList refresh={!state.loading ? () => controller.reload() : undefined}>
       <Section><HStack><TextField text={input} placeholder={t('Nom bo‘yicha qidiring')} onTextChange={value => controller.setQuery(value)} />
         {!!trimNotificationText(state.query) && <Button label="" systemImage="xmark.circle.fill"
           modifiers={[accessibilityLabel(localizedGetter('clearTitle', locale))]}
