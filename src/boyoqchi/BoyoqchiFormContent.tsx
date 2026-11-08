@@ -8,6 +8,7 @@ import { useWorkerColors } from '../components/useWorkerColors';
 import { paintOptions } from '../workerOrderLogic';
 import { BoyoqchiImage } from './BoyoqchiImage';
 import { BoyoqchiPaintPalette } from './BoyoqchiPaintPalette';
+import { BoyoqchiUsageSwipe } from './BoyoqchiUsageSwipe';
 import { boyoqchiInputAllowed, boyoqchiSaveInput } from './boyoqchiLogic';
 import type { ReturnedPaintDraft } from './returnedPaintDraft';
 import { returnedPaintDouble, type ReturnedPaintItem } from './returnedPaintModel';
@@ -64,7 +65,7 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
   const colors = useWorkerColors(), t = useBoyoqchiText(), [paint, setPaint] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{ paint: string; key: string; base: string[] } | null>(null);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [, redraw] = useState(0);
-  const busyRef = useRef(false), mounted = useRef(true);
+  const busyRef = useRef(false), mounted = useRef(true), selectedPaint = useRef<string | null>(null);
   const usage = draft.selectedUsageIndex === 1 ? 'astatka' : 'rasxot';
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
@@ -73,6 +74,10 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
   }, []);
   const isLocked = () => !mounted.current || busyRef.current;
   const changed = () => { setError(''); redraw(value => value + 1); };
+  const changeUsage = (value: 'rasxot' | 'astatka') => {
+    if (isLocked() || selectedPaint.current !== null) return;
+    draft.setUsage(value === 'astatka' ? 1 : 0); changed();
+  };
   const option = paintOptions.find(item => item.name === paint);
   const optionKey = `${usage}:${paint ?? ''}`;
   const fields = option ? draft.fieldLabelsFor(optionKey, option.fields) : [];
@@ -111,13 +116,17 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
   return <View style={[styles.root, { backgroundColor: colors.background }]}>
     <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.content}>
       <View style={styles.heading}><View pointerEvents={busy ? 'none' : 'auto'} style={{ opacity: busy ? 0.4 : 1 }}>
-        <WorkerIconButton icon="back" label={t('Orqaga')} onPress={() => { if (isLocked()) return; if (paint) { setPaint(null); return; } close(); }} />
+        <WorkerIconButton icon="back" label={t('Orqaga')} onPress={() => { if (isLocked()) return; if (paint) { selectedPaint.current = null; setPaint(null); return; } close(); }} />
       </View><Text style={[styles.headingText, { color: colors.text }]}>{t('Qaytarilgan bo‘yoq')}</Text></View>
       {draft.image && <BoyoqchiImage session={session} image={draft.image} disabled={busy} isLocked={isLocked} />}
       {!!error && <View style={[styles.error, { backgroundColor: colors.field }]}><Text style={{ color: colors.text }}>{t(error)}</Text></View>}
-      {!paint ? <View pointerEvents={busy ? 'none' : 'auto'}><BoyoqchiPaintPalette draft={draft} usage={usage} onUsage={(value: 'rasxot' | 'astatka') => {
-        if (isLocked()) return; draft.setUsage(value === 'astatka' ? 1 : 0); changed(); }}
-        onSelect={(value: string) => { if (isLocked()) return; setPaint(value); setError(''); }} /></View> : <View pointerEvents={busy ? 'none' : 'auto'} style={styles.fields}>
+      {!paint ? <View pointerEvents={busy ? 'none' : 'auto'}><BoyoqchiUsageSwipe usage={usage} disabled={busy} onUsage={changeUsage}>
+        <BoyoqchiPaintPalette draft={draft} usage={usage} onUsage={changeUsage}
+          onSelect={(value: string) => {
+            if (isLocked() || selectedPaint.current !== null) return;
+            selectedPaint.current = value; setPaint(value); setError('');
+          }} />
+      </BoyoqchiUsageSwipe></View> : <View pointerEvents={busy ? 'none' : 'auto'} style={styles.fields}>
         {fields.map((label, index) => <Field key={`${optionKey}:${index}:${label}`} label={label} decimal paintField disabled={busy} isLocked={isLocked} initial={values[index]}
           onChange={value => update(optionKey, index, value, fields.length)} />)}
         {mixFields.map((label, index) => <Field key={`${mixKey}:${index}:${label}`} label={label} decimal paintField disabled={busy} isLocked={isLocked} initial={mixValues[index]}
