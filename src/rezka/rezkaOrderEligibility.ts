@@ -8,7 +8,7 @@ export type RezkaOrderMap = { id: string; nodes: readonly RezkaOrderMapNode[];
 export type RezkaOrderEntry =
   | { kind: 'watch'; workerMode: boolean; isWorkerListPresentationOrder: boolean; apparatus: { id: string; operation: string };
       frozen: boolean; lifecycleStatus: string | null }
-  | { kind: 'completed'; apparatus: { operation: string } | null };
+  | { kind: 'completed'; isWorkerListPresentationOrder: boolean; apparatus: { operation: string } | null };
 
 /** @v2 productionMapLinearWorkStages: only the apparatus identities needed by the master permission check. */
 export function rezkaLinearStageApparatus(map: RezkaOrderMap): string[] {
@@ -62,7 +62,7 @@ export function rezkaOrderSettingsVisibility(map: RezkaOrderMap, entry: RezkaOrd
   if (role !== 'rezka_master' || id.startsWith('training-') || id.startsWith('template-') ||
       !rezkaLinearStageApparatus(map).some(stage => assignedApparatus.includes(stage))) return hidden;
   if (entry.kind === 'completed') {
-    return entry.apparatus?.operation.trim() === 'cut' ? { showPrintSide: true, showWorkOptions: false } : hidden;
+    return !entry.isWorkerListPresentationOrder && entry.apparatus?.operation.trim() === 'cut' ? { showPrintSide: true, showWorkOptions: false } : hidden;
   }
   const apparatusId = entry.apparatus.id.trim();
   if (!entry.workerMode || entry.isWorkerListPresentationOrder || !apparatusId ||

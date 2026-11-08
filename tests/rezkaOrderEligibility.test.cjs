@@ -48,7 +48,8 @@ test('f119 frozen or finished orders permit only print side, and completed histo
   for (const lifecycleStatus of ['production_completed', ' CLOSED ', 'Cancelled'])
     assert.deepEqual(visible(map, { ...watch, lifecycleStatus }, 'rezka_master', [a]), printOnly);
   assert.deepEqual(visible(map, { ...watch, lifecycleStatus: 'in_progress' }, 'rezka_master', [a]), yes);
-  assert.deepEqual(visible(map, { kind: 'completed', apparatus: { operation: ' cut ' } }, 'rezka_master', [a]), printOnly);
-  assert.deepEqual(visible(map, { kind: 'completed', apparatus: { operation: 'CUT' } }, 'rezka_master', [a]), no);
-  assert.deepEqual(visible(map, { kind: 'completed', apparatus: null }, 'rezka_master', [a]), no);
+  assert.deepEqual(visible(map, { kind: 'completed', isWorkerListPresentationOrder: false, apparatus: { operation: ' cut ' } }, 'rezka_master', [a]), printOnly);
+  assert.deepEqual(visible(map, { kind: 'completed', isWorkerListPresentationOrder: false, apparatus: { operation: 'CUT' } }, 'rezka_master', [a]), no);
+  assert.deepEqual(visible(map, { kind: 'completed', isWorkerListPresentationOrder: false, apparatus: null }, 'rezka_master', [a]), no);
+  assert.deepEqual(visible(map, { kind: 'completed', isWorkerListPresentationOrder: true, apparatus: { operation: 'cut' } }, 'rezka_master', [a]), no);
 });
