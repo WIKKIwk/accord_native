@@ -16,9 +16,9 @@ const { ChatUnreadState } = loaded.exports;
 
 // Derived directly from f11910bb ChatStore.totalUnread, markRead and
 // _acceptMessage; no recorded or historical fixture is used.
-const conversation = (id, unreadCount, lastMessageSequence = 1) => ({ id, unreadCount, lastMessageSequence });
+const conversation = (id, unreadCount, lastMessageSequence = 1) => ({ id, title: id, peer: null, preview: '', unreadCount, lastMessageSequence, updatedAt: 1, timestamp: 1 });
 const message = (id, conversationId, overrides = {}) => ({
-  id, conversationId, sequence: 2, senderRole: 'customer', senderRef: 'other', ...overrides,
+  id, conversationId, sequence: 2, timestamp: 10, senderRole: 'customer', senderRef: 'other', ...overrides,
 });
 const state = () => new ChatUnreadState({ role: 'customer', ref: 'me' });
 
@@ -92,4 +92,21 @@ test('a closed session clears its total and ignores late refreshes and messages'
   const next = new ChatUnreadState({ role: 'supplier', ref: 'next' });
   next.replaceConversations([conversation('a', 7)]);
   assert.equal(next.value, 7);
+});
+
+test('newest message updates the cache ordering time and returned snapshots cannot mutate state', () => {
+  const store = state();
+  const input = { ...conversation('a', 0, 5), peer: { role: 'customer', ref: 'other', displayName: 'Ali', avatarUrl: '' } };
+  store.replaceConversations([input]);
+  input.peer.displayName = 'Changed outside';
+  store.acceptMessage(message('older', 'a', { sequence: 4, timestamp: 20 }));
+  assert.equal(store.snapshot()[0].updatedAt, 1);
+  store.acceptMessage(message('newer', 'a', { sequence: 6, timestamp: 30 }));
+  const snapshot = store.snapshot();
+  assert.equal(snapshot[0].updatedAt, 30);
+  snapshot[0].unreadCount = 900;
+  snapshot[0].peer.displayName = 'Changed snapshot';
+  assert.equal(store.value, 2);
+  assert.equal(store.snapshot()[0].unreadCount, 2);
+  assert.equal(store.snapshot()[0].peer.displayName, 'Ali');
 });

@@ -9,7 +9,7 @@ type ReceiptFlusherDependencies = {
   acknowledge: (conversationId: string, deliveredSequence: number, readSequence: number) => Promise<void>;
 };
 
-/** @v2 ChatStore._flushPendingReceipts */
+/** Source: V2 ChatStore._flushPendingReceipts. */
 export class ChatReceiptFlusher {
   private running: Promise<void> | null = null;
   private requested = false;
