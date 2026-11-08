@@ -8,6 +8,7 @@ Status: shared parser extraction in progress; role and notification routes remai
 |---|---|---|
 | Dispatch status edge cases | `parseDispatchStatus`, `DispatchRecord.fromJson` | This extraction deliberately retains the existing native notification parser's JavaScript trim/lowercase behavior. Dart handles U+0085 at string edges and U+0130 lowercase differently; for example, the native parser maps `\u0085ACCEPTED\u0085` to pending while V2 maps it to accepted. Resolve the difference without silently changing existing notification behavior. |
 | Malformed record validation order | `DispatchRecord.fromJson` | The extracted function keeps the old native detail parser's status-first validation, while V2 reads the record fields in declaration order. Compare malformed payload/error behavior before claiming full parser parity. |
+| Extreme JSON numbers | `DispatchRecord.fromJson` numeric fields | JavaScript and Dart decoding/conversion at very large numeric boundaries have not been compared; the available mocked cases do not prove parity there. |
 | Account changes and notification routes | Supplier and Customer role status files | This extraction does not connect or clear any notification store, action or screen. Separate account-switch and Chat transport holds remain open. |
 
 ## Checkpoint
