@@ -116,3 +116,25 @@ test('an old cache read cannot overwrite a newly restarted notification controll
   assert.deepEqual(f.controller.items.map(item => item.id), ['new']);
   f.controller.stop();
 });
+
+test('a feed left mounted under a delivery detail still receives its Customer refresh', async () => {
+  const f = fixture(), effects = [];
+  f.store.loaded = true; f.store.historyItems = [record('before')];
+  const hooks = loadTs('customer/useCustomerScreens.ts', {
+    react: { useCallback: fn => fn, useEffect: fn => effects.push(fn), useRef: value => ({ current: value }),
+      useState: value => [value, () => {}], useSyncExternalStore() {} },
+    './customerApi': api, './customerLogic': logic,
+    './CustomerContext': { useCustomerContext: () => ({ notifications: f.controller, store: f.store }) },
+    '../shared/notificationStoresRuntime': { refreshHub: f.refreshHub },
+  });
+  hooks.useCustomerNotifications();
+  const unmount = effects[0](); await tick();
+  // A child detail does not unmount this screen. Its successful response emits this event.
+  f.store.historyItems = [record('after')];
+  f.refreshHub.emit('customer'); assert.equal(f.scheduled.length, 1);
+  f.scheduled.shift()(); await tick();
+  assert.equal(f.store.refreshes, 1);
+  assert.deepEqual(f.controller.items.map(item => item.id), ['after']);
+  assert.deepEqual(JSON.parse(f.values.get(CUSTOMER_NOTIFICATIONS_CACHE)).map(item => item.id), ['after']);
+  unmount(); f.refreshHub.emit('customer'); assert.equal(f.scheduled.length, 0);
+});

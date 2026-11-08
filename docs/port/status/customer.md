@@ -33,6 +33,10 @@ Stopped at: integrate Supplier notification detail, complete the text and surfac
 
 ## Verification
 
+- Full Node suite after integrating Chat and the shared dock extension: 1,227 passed and six failed, all six the pre-existing preparation Android Expo UI modifier ESM import failures. No Customer test failed.
+- The independent f119 text gate still exits 1: 23 missing V2 literals on each platform are attributed to the not-yet-integrated shared notification detail; it also scans 30 iOS and 41 Android extra literals, most from unrelated preparation and others from developer/accessibility strings. No exceptions have been added solely to green the gate.
+- Feed integration regression: a mounted notifications screen receives a Customer refresh after a pushed delivery response and updates the visible records and cache; 18 focused navigation/feed tests passed.
+
 - Customer home pending row: retained V2’s highlighted pending state using the existing platform list/card styling. Focused home, presentation and navigation tests passed (15 total); iOS typecheck and uncached lint passed. Android typecheck retained the nine baseline worker errors. Visual rendering has not been checked on a phone.
 
 - Notification feed lifecycle: kept its store and RefreshHub listeners through pushed detail screens, as V2 does, rather than stopping on blur. The listener stops on unmount or account reset. 21 focused lifecycle, feed and navigation tests passed; iOS typecheck and uncached lint passed. Real-phone tab retention remains open.
@@ -47,15 +51,15 @@ Stopped at: integrate Supplier notification detail, complete the text and surfac
 
 - Customer return dialogs: `tests/customerReturnDialogViews.test.cjs` and `tests/customerLogic.test.cjs` passed 8 tests for reason order, quantity validation, cancel/confirm labels and response data. iOS typecheck and Expo lint passed; Android retained the same nine worker errors. No phone was used.
 
-- Customer notification content: `tests/customerNotificationViews.test.cjs` and `tests/customerNotifications.test.cjs` passed 10 tests for loading, retry, empty, unread highlight, mark-seen-before-open and clear confirmation. iOS typecheck and lint passed; Android retained the nine existing worker errors. Views are not routed or device-tested.
+- Customer notification content: `tests/customerNotificationViews.test.cjs` and `tests/customerNotifications.test.cjs` passed 10 tests for loading, retry, empty, unread highlight, mark-seen-before-open and clear confirmation. iOS typecheck and lint passed; Android retained the nine existing worker errors. At that checkpoint the views were not yet routed; they are now routed, but remain device-untested.
 
-- Customer home and status content: `tests/customerHomeViews.test.cjs` and `tests/customerPresentation.test.cjs` passed 6 source-derived tests across both platform implementations. iOS typecheck and Expo lint passed; Android retained the same nine pre-existing worker errors. These views are not routed or device-tested yet.
+- Customer home and status content: `tests/customerHomeViews.test.cjs` and `tests/customerPresentation.test.cjs` passed 6 source-derived tests across both platform implementations. iOS typecheck and Expo lint passed; Android retained the same nine pre-existing worker errors. At that checkpoint the views were not yet routed; they are now routed, but remain device-untested.
 
 - `tests/customerPresentation.test.cjs`: 2 source-derived tests passed for status order, quantities, note visibility and notification fallback text. iOS typecheck passed.
 
-- Customer context and session binding: `tests/customerRuntime.test.cjs`, the store lifecycle and notification controller tests passed. iOS typecheck passed. The new provider is not yet mounted in routes.
+- Customer context and session binding: `tests/customerRuntime.test.cjs`, the store lifecycle and notification controller tests passed. iOS typecheck passed. The provider was not yet mounted at that checkpoint; both platform routes now mount it.
 
-- Customer notifications/controller checkpoint: 15 focused tests passed for cache, hidden/unread ordering, clear/seen behavior, refresh coalescing, reset write ordering and store lifecycle. The role routes do not yet mount the controller.
+- Customer notifications/controller checkpoint: 15 focused tests passed for cache, hidden/unread ordering, clear/seen behavior, refresh coalescing, reset write ordering and store lifecycle. The controller was not yet mounted at that checkpoint; the notification routes now mount it.
 
 - f119 V2 oracle: `test/customer_delivery_runtime_store_test.dart` passed 1 test from a temporary export; no contract fixture was written. Both the original V2 checkout and the isolated snapshot stayed clean at the selected SHA. The role ledger found no Customer HTTP contract tests.
 - Customer UI contract is recorded in `docs/port/roles/customer.md`; it lists source screens, state, actions, texts and shared dependencies and is not a parity claim.
@@ -72,6 +76,20 @@ Stopped at: integrate Supplier notification detail, complete the text and surfac
 - `node --test tests/customerLogic.test.cjs`: 5 passed, including native Dart U+0085 trimming for quantity, reason and comment. These are source-derived rule and request-body tests; no V2 Customer HTTP recording was found and no oracle was run.
 - iOS typecheck and Expo lint passed after regenerating ignored Expo route types with an offline dev-server start; no simulator or device was used.
 - Android typecheck reports the same nine pre-existing errors in `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx`, with no Customer errors.
+
+## Surface audit
+
+Source and native code were compared without a device; “partial” means an open behavior or verification item remains.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Home, `customer_home_screen_widgets_part_01.dart:20–135` and part 02 | `CustomerHome.*`, `CustomerRoutes.*`, `customerPresentation.ts` | partial | partial | Status, shipment and refresh rules are implemented; inactive iOS tabs can retain listeners. Phone rendering and navigation remain unverified. |
+| Status list, `customer_status_detail_screen.dart:25–140` | `CustomerHome.*`, `CustomerRoutes.*` | partial | partial | Data, empty state, row order and return refresh are implemented. Native iOS tabs cannot currently show no selected item on this secondary screen; phone checks remain open. |
+| Notifications and clear confirmation, `customer_notifications_screen_widgets_part_01.dart:27–130,215–311` | `CustomerNotificationsView.*`, `customerNotifications.ts`, `CustomerRoutes.*` | partial | partial | Cache, unread order, seen/clear and dialog actions are implemented; feed listeners stay active under details. Native tab retention and phone checks remain open. |
+| Delivery detail and response snackbar, `customer_delivery_detail_screen.dart:32–233`, methods part 01:12–69 | `CustomerDelivery.*`, `useCustomerScreens.ts`, `CustomerSnackbar.*` | partial | partial | Loading, retry, fields, response order and snackbar are implemented. Discussion is intentionally absent until the reviewed shared destination can be safely integrated; iOS selection and phone checks remain open. |
+| Approve confirmation and return/partial/claim dialogs, methods part 01:75–240 | `CustomerReturnDialog.*`, `customerLogic.ts`, `CustomerDelivery.*` | partial | partial | Reason/quantity rules, order, cancel/confirm and requests are source-tested; keyboard, dismissal and accessibility need real-device checks. |
+| Shared notification detail, `notification_detail_screen.dart:30–171,302–372`, methods part 01 | Supplier `NotificationDetailScreen.*` (not integrated) | pending | pending | Shared screen is blocked pending account-switch review. Customer must omit its dock footer and replace the shared route for `MAT-DN-` redirects. |
+| Shared profile and Chat, `profile_screen.dart:162–198`, `role_dock.dart` | `CustomerRoutes.*`, `CustomerShell.*`, `CustomerDock.android.tsx` | partial | partial | Existing profile/Chat and reviewed unread hook are reused; iOS selection and live/device/account-switch checks remain open. |
 
 ## Deviation candidates
 
