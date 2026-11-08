@@ -38,6 +38,11 @@
       "count": 84,
       "seed": null,
       "sha256": "88871de4f045df7f7cb941435e17a80059e280848707673a7f689d214d120e44"
+    },
+    "independent": {
+      "count": 30000,
+      "seed": "0x9637ca12",
+      "sha256": "f6dda41f08063091e73f0201838dd6b2d80225b9f8a8737c88c9f1b9b397e029"
     }
   },
   "samples": [

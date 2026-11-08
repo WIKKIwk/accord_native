@@ -3,7 +3,9 @@ const assert = require('node:assert/strict'); const fs = require('node:fs'); con
 const path = require('node:path'); const test = require('node:test'); const ts = require('typescript');
 const fixture = require('./contracts/f11910bb/homashyo_barcode_oracle.json');
 const sharedFixture = require('./contracts/f11910bb/raw_material_barcode_shared_oracle.json');
-const { generators } = require('./oracles/generateRawMaterialBarcodeCorpus.cjs');
+const { generators: originalGenerators } = require('./oracles/generateRawMaterialBarcodeCorpus.cjs');
+const { independent } = require('./oracles/generateRawMaterialBarcodeIndependent.cjs');
+const generators = { ...originalGenerators, independent };
 const crypto = require('node:crypto');
 const { generateInputs } = require('./oracles/generateHomashyoBarcodeInputs.cjs');
 function load(file, mocks = {}) { const filename = path.resolve(__dirname, `../src/${file}.ts`), m = new Module(filename, module);
