@@ -14,6 +14,7 @@ Stopped at: Port the remaining Werka API, store, UI contract, both platform view
 | Issue API verification | `createWerkaUnannouncedDraft`, `createWerkaCustomerIssue`, `createWerkaCustomerIssueBatch` | V2 has no direct HTTP recordings. Source-derived mock tests cover request bodies, result decoding and the two conflict codes; screens and account-safe action wiring remain open. |
 | Archive API verification | `werkaArchive`, `downloadWerkaArchivePdf` | V2 has no direct HTTP recordings. Source-derived tests cover request dates, basic response parsing and PDF bytes. The shared date helper uses JS millisecond precision and Date has no Dart `isUtc` flag; verify timezone/UTC and microsecond edge cases before claiming exact parity. Native PDF viewing, sharing and saving remain open. |
 | Directory and catalog API verification | `werkaSuppliers`, `werkaCustomers`, `werkaSupplierItems`, `werkaCustomerItems`, `werkaCustomerItemOptions`, `werkaCustomersForItem` | V2 has no direct HTTP recordings. Source-derived tests cover pagination, typing, fallback and ordering. The shared item parser still has documented U+0085 trim, Dart/JS collection-string and malformed validation-order differences. Shared search activity is asynchronous and must be reviewed for account-switch races before wiring it to a screen. |
+| Pending projections | `WerkaStore._pendingBreakdownItems`, `_pendingDetailItems` | Pure projections are ported and source-tested. Equal-date ordering can differ from Dart's sort and shared timestamp parsing has millisecond precision. Store lifecycle, refresh, runtime reconciliation and account scoping are not connected. |
 | Archive QR UI | `test/werka_archive_batch_qr_test.dart` | Five pure logic cases are ported, but the widget case and runtime flow still need native UI and device verification. |
 | Shared routes and subscriptions | `NotificationDetailScreen`, RoleDock chat | Shared notification, hidden/unread and Customer runtime account-switch races remain open. Existing RN Chat redirect/cookie and login cross-origin 307/308 risks are under security hold. Do not expose new-role Chat or unsafe shared routes or invent unread counts. |
 | Test mode | `TestModeController` | Implement role test-mode behavior in the coordinated final test-mode pass. |
@@ -21,7 +22,7 @@ Stopped at: Port the remaining Werka API, store, UI contract, both platform view
 
 ## Deviations candidates
 
-None identified yet.
+`WerkaStore._pendingBreakdownItems` groups records with an empty supplier reference by trimmed supplier name, but `_pendingDetailItems` filters only by reference. Selecting one blank-reference group can therefore show all blank-reference records. Kept as V2 behavior; do not change without direction.
 
 ## Test mode pending
 
