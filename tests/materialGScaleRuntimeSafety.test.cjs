@@ -35,8 +35,8 @@ function harness(role = 'material_taminotchi', restricted = true) {
     '../preparationReadApi': {}, '../preparation/preparationCommandApi': {}, '../printing/printService': { PrintService: {} }, '../profileApi': {},
     '../shared/catalogApi': { adminWarehouseAssignments: async () => [], gscaleItemsPage: async () => [] },
     './gscaleBatchState': { GScaleBatchStateStore: FakeBatch }, './gscaleBatchApi': {
-      gscaleRpsBatchState: async () => ({}), gscaleRpsBatchStop: async () => { calls.push('stop-post'); },
-      gscaleRpsBatchStart: async () => { calls.push('start-post'); return {}; },
+      gscaleRpsBatchState: async () => ({}), gscaleRpsBatchStop: async (_s, _id, _revision, guard) => { if (guard) calls.push(['stop-guard', guard]); calls.push('stop-post'); },
+      gscaleRpsBatchStart: async (_s, _request, guard) => { if (guard) calls.push(['start-guard', guard]); calls.push('start-post'); return {}; },
     }, './gscaleBatchPrintRuntime': { printGScaleBatch: async (_s, _c, _refresh, guard) => {
       await pending.promise; guard?.(); calls.push('print-post'); return {};
     } },
@@ -105,4 +105,15 @@ test('policy is not enabled by default and Preparation retains the old write pat
   assert.deepEqual(h.calls, ['start-post']);
   const other = harness('tayyorlov_masteri', false);
   assert.throws(() => other.runtime.createGScaleOperatorStore(other.session, {}, { materialPrinterSafety: true }), /requires Material role/);
+});
+
+
+test('restricted start and automatic stop pass the same current-scope guard to the API retry boundary', async () => {
+  const start = harness(), work = start.store.deps.startBatch(startContext, () => null); start.pending.resolve(); await work;
+  const startGuard = start.calls.find(item => Array.isArray(item) && item[0] === 'start-guard')?.[1];
+  assert.equal(typeof startGuard, 'function'); start.switchAccount(); assert.throws(startGuard, /Sessiya tugagan/);
+  const stop = harness(); stop.store.state.batch.batch = activeBatch;
+  const autoGuard = stop.batch.options.prepareAutomaticStop(activeBatch); assert.equal(autoGuard(), true);
+  await stop.batch.api.stop('b', 3); const stopGuard = stop.calls.find(item => Array.isArray(item) && item[0] === 'stop-guard')?.[1];
+  assert.equal(typeof stopGuard, 'function'); stop.changeScope(); assert.equal(autoGuard(), false); assert.throws(stopGuard, /Sessiya tugagan/);
 });

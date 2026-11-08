@@ -49,8 +49,9 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
   const storage = policy ? materialPreferenceOverlay(appPreferences) : appPreferences;
   let store: GScaleOperatorStore;
   const batch = new GScaleBatchStateStore({ state: () => gscaleRpsBatchState(session), stop: (id, rev) => {
-    policy?.assertOperation('stop', store.getSnapshot(), { batchId: id, batchRevision: rev });
-    return gscaleRpsBatchStop(session, id, rev);
+    const selection = policy ? materialPrinterSelectionKey(store.getSnapshot().device.selection) ?? '' : '';
+    const guard = policy ? () => policy.assertOperation('stop', store.getSnapshot(), { selection, batchId: id, batchRevision: rev }) : undefined;
+    guard?.(); return gscaleRpsBatchStop(session, id, rev, guard);
   } }, policy ? { prepareAutomaticStop: expected => {
     const selection = materialPrinterSelectionKey(store.getSnapshot().device.selection) ?? '';
     return () => {
@@ -98,8 +99,9 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
       current: () => { const state = store.getSnapshot(); return { mounted: store.isActive(), linkedOrderId: store.currentArgs().order?.id ?? '',
         draftOrderId: state.draft.order_id, batchResolved: state.batch.resolved, batchActive: state.batch.batch?.active === true }; },
       start: request => {
-        policy?.assertOperation('start', store.getSnapshot(), { selection: expectedSelection, requestPrinter: request.printer, requestDriverUrl: request.driver_url });
-        return gscaleRpsBatchStart(session, request);
+        const guard = policy ? () => policy.assertOperation('start', store.getSnapshot(), { selection: expectedSelection,
+          requestPrinter: request.printer, requestDriverUrl: request.driver_url }) : undefined;
+        guard?.(); return gscaleRpsBatchStart(session, request, guard);
       },
     }); },
     printBatch: context => {

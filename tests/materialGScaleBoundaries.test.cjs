@@ -79,3 +79,23 @@ test('account change after a physical print blocks the later confirmation', asyn
   await new Promise(resolve => setImmediate(resolve)); assert.deepEqual(calls, ['prepare', 'print']);
   current = false; pending.resolve({ ok: true }); await assert.rejects(work, /stale/); assert.deepEqual(calls, ['prepare', 'print']);
 });
+
+
+test('batch and stock reprint adapters forward the guard into authorized retry APIs', async () => {
+  const received = [], guard = () => {};
+  const batch = compile('gscale/gscaleBatchPrintRuntime', { '../printing/printService': { PrintService: { printRps: async () => ({ ok: true }) } },
+    './gscaleBatchApi': { gscaleRpsBatchPrint: async (_s, _r, before) => received.push(before),
+      gscaleRpsBatchClientPrintPrepare: async (_s, _r, before) => { received.push(before); return {}; },
+      gscaleRpsBatchClientPrintConfirm: async (_s, _r, _epc, before) => received.push(before) },
+    './gscaleBatchPrint': { printActiveGScaleBatch: async (_context, api) => { await api.printRemote({}); await api.prepare({}); await api.confirm({}, 'E'); } },
+  });
+  await batch.printGScaleBatch({}, {}, async () => {}, guard);
+  const archive = compile('gscale/gscaleArchiveRuntime', { '../printing/printService': { PrintService: { printRps: async () => ({ ok: true }) } },
+    '../shared/printApi': { adminPrepareRawMaterialStockReprint: async (_s, _epc, _order, before) => { received.push(before); return {}; },
+      adminConfirmRawMaterialStockReprint: async (_s, _epc, _id, before) => received.push(before) },
+    './gscaleArchive': { reprintArchiveReceipt: async (_entry, _printer, api) => { await api.prepare('E'); await api.confirm('E', 'id'); } },
+    './gscaleBatchApi': {}, './gscaleControlLogic': { normalizePrinterChoice: value => value } });
+  await archive.reprintGScaleArchiveReceipt({}, { transport: 'offline', selection: { transport: 'offline', offlinePrinter: { printer: 'zebra' } },
+    monitor: {}, batchPrinter: 'zebra' }, { epc: 'E' }, guard);
+  assert.equal(received.length, 5); assert.ok(received.every(item => item === guard));
+});

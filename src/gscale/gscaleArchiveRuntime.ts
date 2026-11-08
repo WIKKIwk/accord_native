@@ -84,8 +84,8 @@ export async function printGScaleArchiveSession(context: GScaleArchiveContext, s
 export function reprintGScaleArchiveReceipt(session: Session, context: GScaleArchiveContext, entry: ArchivePrintEntry, beforeWrite?: () => void): Promise<string | null> {
   const printer = currentArchivePrinterChoice(context);
   return reprintArchiveReceipt(entry, printer, {
-    prepare: epc => { beforeWrite?.(); return adminPrepareRawMaterialStockReprint(session, epc); },
-    confirm: (barcode, id) => { beforeWrite?.(); return adminConfirmRawMaterialStockReprint(session, barcode, id); },
+    prepare: epc => { beforeWrite?.(); return adminPrepareRawMaterialStockReprint(session, epc, '', beforeWrite); },
+    confirm: (barcode, id) => { beforeWrite?.(); return adminConfirmRawMaterialStockReprint(session, barcode, id, beforeWrite); },
     print: async label => {
       beforeWrite?.();
       if (context.transport !== 'wifi') return PrintService.printRps(label, { transport: context.transport,

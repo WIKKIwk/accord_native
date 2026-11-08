@@ -5,9 +5,9 @@ import { printActiveGScaleBatch, type GScalePrintContext } from './gscaleBatchPr
 
 export function printGScaleBatch(session: Session, context: GScalePrintContext, refreshBatch: () => Promise<unknown>, beforeWrite?: () => void) {
   return printActiveGScaleBatch(context, {
-    printRemote: request => { beforeWrite?.(); return gscaleRpsBatchPrint(session, request); },
-    prepare: request => { beforeWrite?.(); return gscaleRpsBatchClientPrintPrepare(session, request); },
-    confirm: (request, epc) => { beforeWrite?.(); return gscaleRpsBatchClientPrintConfirm(session, request, epc); },
+    printRemote: request => { beforeWrite?.(); return gscaleRpsBatchPrint(session, request, beforeWrite); },
+    prepare: request => { beforeWrite?.(); return gscaleRpsBatchClientPrintPrepare(session, request, beforeWrite); },
+    confirm: (request, epc) => { beforeWrite?.(); return gscaleRpsBatchClientPrintConfirm(session, request, epc, beforeWrite); },
     printLocal: (request, options) => { beforeWrite?.(); return PrintService.printRps(request, options); },
     refreshBatch,
   });
