@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { currentSession, isSessionWitnessCurrent, logout, registerSessionResetHook,
-  sessionWitnessVersion, subscribeSessionWitness } from '../auth';
+  sessionWitnessTransitioning, sessionWitnessVersion, subscribeSessionWitness } from '../auth';
 import { startMaterialSessionBootstrap, type MaterialSession } from './materialSessionBootstrap';
 import { isMaterialTestSession } from './materialTestSession';
 
@@ -25,7 +25,7 @@ export function useMaterialSession() {
     const owner = current.session;
     void logout(owner).catch(() => {}).finally(() => {
       const active = currentSession();
-      if (mounted.current && (active === owner || active === null)) setEntry(value => value?.session === owner ? null : value);
+      if (mounted.current && !sessionWitnessTransitioning() && (active === owner || active === null)) setEntry(value => value?.session === owner ? null : value);
     });
   };
   return { session: entry === undefined ? undefined : current?.session ?? null, witness: current?.witness ?? null, onLogout };
