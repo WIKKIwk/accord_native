@@ -37,7 +37,8 @@ function resultError(error: unknown): RezkaOrderError {
   return { kind: 'uncertain', key: '' };
 }
 
-/** @v2 _RezkaOrderQuickSettings. The host owns the surrounding existing worker sheet. */
+/** @v2 _RezkaOrderQuickSettings */
+// The host owns the surrounding existing worker sheet.
 export class RezkaOrderSettingsController {
   private state: RezkaOrderSettingsState;
   private listeners = new Set<() => void>();

@@ -709,6 +709,10 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
 };
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
+  if (session.profile.role === 'rezka_master') {
+    if (homeRoute(session) !== appRoutes.apparatusQueue || !canOpenRoute(session, appRoutes.apparatusQueue)) return null;
+    return platform === 'ios' ? '/ios-rezka' as Href : platform === 'android' ? '/android-rezka' as Href : null;
+  }
   const entry = homeTargets[homeRoute(session)];
   return platform === 'ios' ? entry?.ios ?? null : platform === 'android' ? entry?.android ?? null : null;
 }

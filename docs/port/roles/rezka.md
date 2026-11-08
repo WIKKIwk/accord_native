@@ -8,7 +8,7 @@ Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is a working contrac
 
 ## Master workers and apparatus
 
-V2: `AdminWorkerSettingsScreen`, `admin_worker_settings_screen.dart:62–96`, `_methods_01.dart:22–185`, `_methods_02.dart:145–220`, `_widgets_part_06.dart`, `widgets/admin_apparatus_scope_picker.dart`. Hook/controller: `src/rezka/useRezkaWorkerSettings.ts`, `rezkaWorkerController.ts`. Route and platform screens are pending.
+V2: `AdminWorkerSettingsScreen`, `admin_worker_settings_screen.dart:62–96`, `_methods_01.dart:22–185`, `_methods_02.dart:145–220`, `_widgets_part_06.dart`, `widgets/admin_apparatus_scope_picker.dart`. Hook/controller: `src/rezka/useRezkaWorkerSettings.ts`, `rezkaWorkerController.ts`. The platform views and real assignment handler are connected through the guarded master-only shell; device testing and authoritative unknown-write reconciliation remain open.
 
 - Master sees the operator shell, `worker.title`, no admin tabs or creation actions. The existing Aparatchi drawer and dock are reused; dock has `activeTab: null` and `showPrimaryFab: false`.
 - Initial load and pull refresh start `rezkaMasterWorkers()` and `adminApparatus(limit: 500)` together. Show a loading indicator until both complete, `worker.load_failed` if either fails, `worker.empty` for an empty team, otherwise preserve the server's worker order. One card expands at a time.
