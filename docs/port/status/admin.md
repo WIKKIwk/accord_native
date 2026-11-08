@@ -43,7 +43,7 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 ## Checkpoint: Admin home behavior and partial contract
 
 - `adminHomeModel.ts` captures the f119 screen's capability-filtered action order, four summary shortcuts, role-specific labels and icons, and loading/error branches. `docs/port/roles/admin.md` records the home surface's partial UI contract. This is logic and documentation only: no route or platform view is added, and the rest of the role contract remains unfinished.
-- Two f119 mock V2 widget tests for action and shortcut localization passed independently; four native model tests and iOS typecheck passed. The separate first-frame test failure is retained below. Shared `canOpenRoute` and localization are reused, not reimplemented.
+- Two f119 mock V2 widget tests for action and shortcut localization passed independently; four native model tests and iOS typecheck passed. The separate first-frame test failure is retained below. Shared `canOpenRoute` and localization are reused, not reimplemented. The route-capability inventory below compares the Admin-actor guard subset to f119.
 
 ## Checkpoint: Admin drawer behavior
 
@@ -53,6 +53,11 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 ## Checkpoint: Admin dock and default FAB actions
 
 - `adminDockModel.ts` records V2's filtered dock destinations, primary visibility, selection decisions and default five create-overlay actions. Four V4 model tests, iOS typecheck and the selected f119 V2 sales-home mock widget test passed. No native dock or overlay is connected, and custom FAB actions and dismissal/animation behavior remain open.
+
+## Checkpoint: home and drawer route guard comparison
+
+- Generated `tests/contracts/f11910bb/admin_home_route_guards.json` directly from the isolated f119 `AppRoutes` and route-capability source. It is explicitly a source-derived inventory, not an HTTP recording. The focused test compares all 40 relevant paths and each capability alternative against the reused V4 guard for an Admin actor; it passed, as did iOS typecheck. Both V2 source checkouts remained clean at f119 before and after extraction.
+- This comparison does not prove role-specific branches, UI behavior, or the broader 7c87-to-f119 drift; those remain open.
 
 ## Open items
 
