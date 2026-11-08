@@ -20,13 +20,15 @@ const location = (id, blockName, label, name = 'Hotlunch') => ({ id, block: bloc
   item_name: name, qolip_code: 'Q', size: 42, quantity: 1, row_letter: 'A', column_number: 1, location_label: label });
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const states = [];
+test.afterEach(() => { for (const state of states.splice(0)) state.dispose(); });
 function harness(overrides = {}) {
   const calls = []; let scope = 'one', valid = true;
   const deps = { blocks: async () => { calls.push(['blocks', scope]); return result([block('A'), block('B'), block(' ')]); },
     locations: async name => { calls.push(['locations', name]); return [location('1', name, 'A1')]; },
     readOrder: async () => ['b'], saveOrder: async keys => { calls.push(['saveOrder', keys]); },
-    scope: () => scope, valid: () => valid, ...overrides };
-  const state = new QolipHomeState(deps);
+    scope: () => scope, valid: () => valid, afterFrame: callback => queueMicrotask(callback), ...overrides };
+  const state = new QolipHomeState(deps); states.push(state);
   return { state, calls, setScope: value => { scope = value; }, setValid: value => { valid = value; } };
 }
 
@@ -86,4 +88,78 @@ test('dispose cancels delayed search and rejects stale responses from view state
   const wait = deferred(), h = harness({ blocks: () => wait.promise });
   const pending = h.state.start(); h.state.setQuery('hotlunch'); h.state.dispose(); wait.resolve(result([block('A')])); await pending;
   await delay(175); assert.equal(h.state.getSnapshot().snapshot, null); assert.deepEqual(h.state.getSnapshot().blockCounts, {});
+});
+
+
+test('forced location revision quietly updates blocks and preserves selected block', async () => {
+  let reads = 0;
+  const h = harness({ blocks: async () => ++reads === 1 ? result([block('A'), block('B')]) : result([block('B'), block('C')]),
+    locations: async name => [location(`new-${name}`, name, 'A1')] });
+  await h.state.start(); await h.state.locationsFor('A'); await h.state.locationsFor('B'); h.state.select(0);
+  h.state.locationsChanged(); await delay(10);
+  assert.deepEqual(h.state.displayBlocks.map(item => item.name), ['B', 'C']);
+  assert.equal(h.state.getSnapshot().selectedIndex, 0); assert.equal(h.state.resolvedFor('A'), null);
+  assert.equal(h.state.resolvedFor('B')[0].id, 'new-B'); assert.equal(h.state.resolvedFor('C')[0].id, 'new-C');
+  assert.equal(reads, 2);
+  h.state.routeChanged(true); h.state.routeChanged(false); h.state.routeChanged(true); await delay(10);
+  assert.equal(reads, 2, 'ordinary return is suppressed during the 30-second cooldown');
+});
+
+test('a failed quiet block location read keeps old rows and clears the cooldown for the next return', async () => {
+  let reads = 0, locationReads = 0;
+  const h = harness({ blocks: async () => { reads++; return result([block('A')]); },
+    locations: async () => { if (++locationReads === 2) throw new Error('offline'); return [location(`loc-${locationReads}`, 'A', 'A1')]; } });
+  await h.state.start(); await h.state.locationsFor('A'); h.state.locationsChanged(); await delay(10);
+  assert.equal(h.state.resolvedFor('A')[0].id, 'loc-1');
+  h.state.routeChanged(true); h.state.routeChanged(false); h.state.routeChanged(true); await delay(10);
+  assert.equal(reads, 3); assert.equal(h.state.resolvedFor('A')[0].id, 'loc-3');
+});
+
+test('forced revisions while a quiet refresh is running queue exactly one newer refresh', async () => {
+  const slow = deferred(); let reads = 0;
+  const h = harness({ blocks: () => { reads++; return reads === 2 ? slow.promise : Promise.resolve(result([block(`B${reads}`)])); } });
+  await h.state.start(); h.state.locationsChanged(); h.state.locationsChanged(); h.state.locationsChanged();
+  assert.equal(reads, 2); slow.resolve(result([block('stale')])); await delay(15);
+  assert.equal(reads, 3); assert.deepEqual(h.state.displayBlocks.map(x => x.name), ['B3']);
+});
+
+test('a later manual location refresh wins over an older quiet read', async () => {
+  const quiet = deferred(); let locationReads = 0;
+  const h = harness({ blocks: async () => result([block('A')]), locations: () => {
+    locationReads++; if (locationReads === 2) return quiet.promise;
+    return Promise.resolve([location(`loc-${locationReads}`, 'A', 'A1')]);
+  } });
+  await h.state.start(); await h.state.locationsFor('A'); h.state.locationsChanged(); await delay(0);
+  await h.state.refreshBlock('A'); quiet.resolve([location('stale', 'A', 'A1')]); await delay(10);
+  assert.equal(h.state.resolvedFor('A')[0].id, 'loc-3');
+});
+
+
+test('route return requests refresh only after the provided frame callback and only if still current', async () => {
+  const callbacks = []; let reads = 0, locationReads = 0;
+  const h = harness({ afterFrame: callback => callbacks.push(callback), blocks: async () => { reads++; return result([block('A')]); },
+    locations: async () => { if (++locationReads === 1) throw new Error('offline'); return []; } });
+  await h.state.start(); h.state.locationsChanged(); await delay(10);
+  h.state.routeChanged(true); h.state.routeChanged(false); h.state.routeChanged(true);
+  assert.equal(reads, 2); assert.equal(callbacks.length, 1);
+  h.state.routeChanged(false); callbacks.shift()(); await delay(0); assert.equal(reads, 2);
+  h.state.routeChanged(true); callbacks.shift()(); await delay(10); assert.equal(reads, 3);
+});
+
+test('a failed quiet block list keeps the existing snapshot and retries on return', async () => {
+  let reads = 0;
+  const h = harness({ blocks: async () => { if (++reads === 2) throw new Error('offline'); return result([block('A')]); } });
+  await h.state.start(); h.state.locationsChanged(); await delay(10);
+  assert.deepEqual(h.state.displayBlocks.map(x => x.name), ['A']); assert.equal(h.state.getSnapshot().error, false);
+  h.state.routeChanged(true); h.state.routeChanged(false); h.state.routeChanged(true); await delay(10);
+  assert.equal(reads, 3); assert.equal(h.state.getSnapshot().error, false);
+});
+
+test('account switch discards a late quiet response from the previous account', async () => {
+  const oldQuiet = deferred(); let reads = 0;
+  const h = harness({ blocks: () => { reads++; return reads === 2 ? oldQuiet.promise
+    : Promise.resolve(result([block(reads === 1 ? 'Old' : 'New')])); } });
+  await h.state.start(); h.state.locationsChanged(); h.setScope('two'); h.state.handleSessionChange();
+  await delay(10); oldQuiet.resolve(result([block('Stale')])); await delay(10);
+  assert.deepEqual(h.state.displayBlocks.map(x => x.name), ['New']);
 });
