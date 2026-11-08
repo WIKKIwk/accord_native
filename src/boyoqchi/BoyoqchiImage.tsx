@@ -1,10 +1,7 @@
-import * as Crypto from 'expo-crypto';
-import { Directory, File, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
-import { Asset, requestPermissionsAsync } from 'expo-media-library';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView, usePanGesture, usePinchGesture, useSimultaneousGestures } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +9,7 @@ import type { Session } from '../auth';
 import { cachedOrderImageBytes } from '../orderImageApi';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { WorkerControlException } from '../workerControlsApi';
-import { downloadReturnedPaintImage } from './returnedPaintApi';
+import { saveReturnedPaintImageToPhotos } from './returnedPaintPhoto';
 import type { ReturnedPaintImage } from './returnedPaintModel';
 import { useBoyoqchiText } from './useBoyoqchiText';
 
@@ -30,13 +27,6 @@ function base64(bytes: Uint8Array): string {
   chunks.push(part);
   return chunks.join('');
 }
-function downloadName(image: ReturnedPaintImage): string {
-  const name = image.image_name.trim().split(/[\\/]/).pop()?.replace(/[\x00-\x1f\x7f]/g, '') ?? '';
-  if (name && name !== '.' && name !== '..') return name;
-  const ext = ({ 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif' } as Record<string, string>)[image.image_mime.trim().toLowerCase()] ?? 'jpg';
-  return `qaytarilgan-boyoq.${ext}`;
-}
-
 export function BoyoqchiImage({ session, image, allowDownload = false }: {
   session: Session; image: ReturnedPaintImage; allowDownload?: boolean;
 }) {
@@ -77,24 +67,12 @@ export function BoyoqchiImage({ session, image, allowDownload = false }: {
   const download = async () => {
     if (downloading) return;
     setDownloading(true); setNotice('');
-    let directory: Directory | null = null;
     try {
-      const bytes = await downloadReturnedPaintImage(session, image);
-      // The existing iOS build currently omits NSPhotoLibraryAddUsageDescription. The integrator owns this config.
-      if (Platform.OS === 'ios') throw new Error('photo_add_permission_config_missing');
-      const permission = await requestPermissionsAsync(true);
-      if (!permission.granted) throw new Error('photo_permission_denied');
-      directory = new Directory(Paths.cache, `returned-paint-${Crypto.randomUUID()}`);
-      directory.create({ intermediates: true, idempotent: true });
-      const file = new File(directory, downloadName(image));
-      file.create({ overwrite: true });
-      await file.write(bytes);
-      await Asset.create(file.uri);
+      await saveReturnedPaintImageToPhotos(session, image);
       setNotice(t('Rasm Photos ga saqlandi.'));
     } catch (error) {
       setNotice(error instanceof WorkerControlException ? error.message : t('Rasm yuklab olinmadi'));
     } finally {
-      if (directory?.exists) { try { directory.delete(); } catch { /* Temporary cache may already be gone. */ } }
       setDownloading(false);
     }
   };
