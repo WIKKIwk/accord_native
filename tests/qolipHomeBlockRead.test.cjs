@@ -71,6 +71,23 @@ test('a false, throwing or async current predicate fails closed before a subscri
     assert.equal(state.getSnapshot().invalid, true); state.activate(); assert.equal(subscriptions, 0); assert.equal(state.canAct(), false);
   }
 });
+test('a reentrant current predicate is latched invalid before any subscription', () => {
+  let state, subscriptions = 0;
+  state = new QolipHomeBlockReadState(rows('private'), { current: () => { state.getSnapshot(); return true; },
+    subscribe: () => { subscriptions++; return () => {}; } });
+  assert.equal(state.getSnapshot().invalid, true); state.activate(); assert.equal(state.canAct(), false); assert.equal(subscriptions, 0);
+});
+test('throwing or asynchronous cleanup and observers cannot suppress other invalidation observers', async () => {
+  for (const asyncFailure of [false, true]) {
+    let current = true, signal, notified = 0;
+    const state = new QolipHomeBlockReadState(rows('private'), { current: () => current, subscribe: listener => {
+      signal = listener; return asyncFailure ? async () => { throw new Error('cleanup'); } : () => { throw new Error('cleanup'); };
+    } });
+    state.subscribe(asyncFailure ? async () => { throw new Error('observer'); } : () => { throw new Error('observer'); });
+    state.subscribe(() => notified++); state.activate(); current = false; signal();
+    assert.equal(state.getSnapshot().invalid, true); assert.equal(notified, 1); state.suspend(); await tick();
+  }
+});
 test('subscription exceptions and async subscriptions cannot leave an actionable unguarded body', () => {
   for (const subscribe of [() => { throw new Error('subscription'); }, async () => () => {}, async () => { throw new Error('async subscription'); }]) {
     const state = new QolipHomeBlockReadState(rows('private'), { current: () => true, subscribe });

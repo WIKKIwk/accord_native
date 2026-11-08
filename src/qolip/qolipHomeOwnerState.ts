@@ -33,6 +33,13 @@ export type QolipHomeOwnerSnapshot = {
 const invalidSnapshot: QolipHomeOwnerSnapshot = Object.freeze({
   home: { kind: 'invalid' as const }, search: '', blocks: [], boundary: null, actions: null,
 });
+function safelyInvoke(callback: () => unknown) {
+  try {
+    const result = callback();
+    if (result && (typeof result === 'object' || typeof result === 'function') &&
+        typeof (result as { then?: unknown }).then === 'function') void Promise.resolve(result).catch(() => {});
+  } catch { /* Other observers and cleanup must still run. */ }
+}
 type Run = {
   active: boolean;
   suspended: boolean;
@@ -59,7 +66,7 @@ export class QolipHomeOwnerState {
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = (): QolipHomeOwnerSnapshot => this.run.suspended || !this.originalCurrent() ? invalidSnapshot : this.value;
-  private notify() { for (const listener of [...this.listeners]) listener(); }
+  private notify() { for (const listener of [...this.listeners]) safelyInvoke(listener); }
   private originalCurrent(): boolean {
     if (this.expired) return false;
     if (this.checking) { this.expired = true; return false; }
@@ -134,11 +141,11 @@ export class QolipHomeOwnerState {
     try { stop = this.originalBoundary.subscribe(() => { if (!this.originalCurrent()) this.invalidate(); }); }
     catch { this.invalidate(); return null; }
     if (typeof stop !== 'function') {
-      void Promise.resolve(stop).then(cleanup => { if (typeof cleanup === 'function') cleanup(); }).catch(() => {});
+      void Promise.resolve(stop).then(cleanup => { if (typeof cleanup === 'function') return cleanup(); }).catch(() => {});
       this.invalidate(); return null;
     }
-    if (!this.runCurrent(run)) { stop(); return null; }
-    run.stopBoundary = () => { stop(); };
+    if (!this.runCurrent(run)) { safelyInvoke(stop as () => unknown); return null; }
+    run.stopBoundary = () => { safelyInvoke(stop as () => unknown); };
     run.stopHome = run.controller.subscribe(() => this.publishController(run));
     this.publishController(run);
     if (this.runCurrent(run)) void run.controller.start().catch(() => {});
@@ -148,10 +155,10 @@ export class QolipHomeOwnerState {
     run.active = false; run.suspended = true;
     const stopBoundary = run.stopBoundary, stopHome = run.stopHome; run.stopBoundary = null; run.stopHome = null;
     // Cleanup must not prevent the controller and every retained body being invalidated.
-    try { stopBoundary?.(); } catch { /* Boundary is already closed. */ }
-    try { stopHome?.(); } catch { /* Controller is disposed below. */ }
-    run.controller.invalidateSession(); run.controller.dispose();
-    for (const listener of [...run.listeners]) listener();
+    if (stopBoundary) safelyInvoke(stopBoundary);
+    if (stopHome) safelyInvoke(stopHome);
+    safelyInvoke(() => run.controller.invalidateSession()); safelyInvoke(() => run.controller.dispose());
+    for (const listener of [...run.listeners]) safelyInvoke(listener);
     run.listeners.clear();
   }
   private invalidate() {

@@ -117,6 +117,31 @@ test('owner invalidates immediately on the original witness event, clearing raw 
   h.revive(); assert.equal(h.owner.activate(), null); assert.equal(h.boundary.current(), false); assert.equal(h.owner.getSnapshot().home.kind, 'invalid');
 });
 
+test('failing observers cannot suppress retained-body or owner invalidation notifications', async () => {
+  const h = harness(), changes = [], bodyChanges = [], actions = h.owner.activate(); await tick();
+  const before = h.owner.getSnapshot();
+  h.owner.subscribe(() => { throw new Error('owner observer'); });
+  h.owner.subscribe(async () => { throw new Error('async owner observer'); });
+  h.owner.subscribe(() => changes.push(h.owner.getSnapshot().home.kind));
+  before.boundary.subscribe(() => { throw new Error('body observer'); });
+  before.boundary.subscribe(async () => { throw new Error('async body observer'); });
+  before.boundary.subscribe(() => bodyChanges.push('invalid'));
+  h.invalidate(); await tick(); assert.equal(h.owner.getSnapshot().home.kind, 'invalid');
+  assert.deepEqual(bodyChanges, ['invalid']); assert.equal(changes.at(-1), 'invalid'); assert.equal(actions.current(), false);
+});
+
+test('throwing boundary/controller cleanup cannot prevent body and owner invalidation', () => {
+  const h = harness(), { QolipHomeOwnerState } = h.load('qolip/qolipHomeOwnerState.ts');
+  let valid = true, signal, disposed = 0, bodyNotified = 0, ownerNotified = 0;
+  const boundary = { current: () => valid, subscribe: listener => { signal = listener; return () => { throw new Error('boundary cleanup'); }; } };
+  const controller = { getSnapshot: () => ({ invalid: false, loading: true, snapshot: null }), subscribe: () => () => { throw new Error('home cleanup'); },
+    start: async () => {}, invalidateSession: () => { throw new Error('controller invalidation'); }, dispose: () => { disposed++; } };
+  const owner = new QolipHomeOwnerState(boundary, () => controller); owner.subscribe(() => ownerNotified++);
+  const actions = owner.activate(), retained = owner.getSnapshot().boundary; retained.subscribe(() => bodyNotified++);
+  valid = false; signal(); assert.equal(owner.getSnapshot().home.kind, 'invalid'); assert.equal(actions.current(), false);
+  assert.equal(disposed, 1); assert.equal(bodyNotified, 1); assert.ok(ownerNotified > 0);
+});
+
 test('a witness invalidated while blocks are pending cannot read preferences or launch location futures on completion', async () => {
   const pending = deferred(), h = harness({ blocksResponse: () => pending.promise }); h.owner.activate(); await tick(); h.invalidate();
   pending.resolve(json({ blocks, warehouses: ['W'] })); await tick(); assert.equal(h.prefs.length, 0); assert.equal(h.calls.length, 1); assert.equal(h.owner.getSnapshot().home.kind, 'invalid');
