@@ -61,6 +61,9 @@ test('issue validates returned exact totals, note and kind before allowing compl
     note: 'Tarozi', actor_ref: 'split-1', actor_name: 'Cutter', created_at: '2026-09-08T12:00:00+00:00' };
   const parsed = new Issue(issue); assert.equal(parsed.check.difference, 1000000n);
   assert.notEqual(parsed.outputs[0], issue.outputs[0]);
+  const invalidWaste = { ...issue, entered_waste_kg: '', kind: 'invalid_waste' };
+  delete invalidWaste.difference_kg; delete invalidWaste.waste_kg;
+  assert.equal(new Issue(invalidWaste).check.waste, null);
   for (const change of [{ difference_kg: '2.000000' }, { kind: 'excess_weight' }, { output_kg: '98' }, { note: '' }])
     assert.throws(() => new Issue({ ...issue, ...change }));
 });

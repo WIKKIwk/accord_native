@@ -20,6 +20,8 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot
 - `tests/contracts/f11910bb/raw_material_split_test.json` is a new f119 recording; prior historical fixtures remain untouched. The file includes requests from the three failed V2 widget tests, which must not be treated as specifications.
 - `npx tsc --noEmit -p tsconfig.ios.json`: passed after regenerating the worktree’s stale ignored Expo Router types.
 - Selected-baseline Flutter oracle: 16 passed, 3 failed; no simulator or device.
+- Ledger `role homashyo 1`: 8 API tags resolve; both routes and all four platform surfaces remain unchecked. `text homashyo both`: 82 V2 texts missing per platform, 0 invented V4 texts; 8 dialogs/sheets/feedback sites need comparison. No text exceptions accepted.
+- Ledger `check`: all tags resolve, with 9 global endpoint warnings. This role’s `/v1/mobile/raw-material-split/{}{} ` is the dynamic `snapshot`/`source` read plus query in `rawSplitApi.ts`; both paths are present in the V2 source. Other warnings are outside this role.
 - Full `node --test tests/*.test.cjs`: 1203 passed, 6 failed due to the known Preparation Android Expo UI ESM-resolution baseline.
 - Android typecheck: the same 9 known Worker errors; no Homashyo errors. iOS typecheck and `npx expo lint` passed. Offline Expo JS exports passed for both iOS and Android.
 

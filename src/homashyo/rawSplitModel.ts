@@ -145,7 +145,7 @@ export class RawSplitIssue {
     const delta = this.check.difference, expected = delta === null ? null : rawSplitDecimal(delta);
     if (!this.outputs.length || this.outputs.length > 100 || this.check.kind === null || row.kind !== this.check.kind ||
       rawSplitQuantity(required(row, 'source_kg')) !== this.check.source || row.output_kg !== rawSplitDecimal(sum) ||
-      row.difference_kg !== expected || row.waste_kg !== (this.check.waste === null ? null : rawSplitDecimal(this.check.waste))) {
+      (row.difference_kg ?? null) !== expected || (row.waste_kg ?? null) !== (this.check.waste === null ? null : rawSplitDecimal(this.check.waste))) {
       throw new Error('Muammo hisobining javobi noto‘g‘ri');
     }
   }

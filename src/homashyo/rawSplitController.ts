@@ -26,7 +26,7 @@ export type RawSplitControllerOptions = {
 const emptyOutput = (): RawSplitOutputDraft => ({ width: '', gross: '', bobina: '', length: '' });
 const message = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
 
-/** Shared state transitions from @v2 _RawMaterialSplitScreenState. */
+/** Shared state transitions from V2 _RawMaterialSplitScreenState. */
 export class RawSplitController {
   private readonly ops: Operations; private readonly scope: string; private active = true;
   private readonly listeners = new Set<() => void>();
@@ -103,7 +103,7 @@ export class RawSplitController {
   }
   private async payload(issue: boolean): Promise<Json> {
     const source = this.state.source;
-    if (!source) throw new Error('Source is required');
+    if (!source) throw new TypeError();
     const requestId = await (this.options.requestId ?? newRawSplitRequestId)();
     return buildRawSplitPayload({ source, outputs: this.state.outputs, waste: this.state.waste, issue,
       issueSaved: this.state.issueSaved, savedIssueId: this.state.savedIssueId, requestId });
