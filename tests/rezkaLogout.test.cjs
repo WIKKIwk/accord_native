@@ -11,7 +11,10 @@ function setup() {
   const mocks = { react: {}, '../auth': { currentSession: () => current, sessionWitnessTransitioning: () => transition,
       logout: s => { calls.push(['logout', s]); return new Promise(resolve => { release = resolve; }); } },
     '../shared/localization/runtime': { localeController: {} }, './rezkaSessionGuard': { isRezkaSessionCurrent: s => valid && s === snapshot },
-    './rezkaShellModel': {} };
+    './rezkaShellModel': {},
+    // The split-session hook imports these, but logout must not consult route permissions.
+    '../shared/appRoutes': { appRoutes: { rezkaSplit: '/rezka-split' },
+      canOpenRoute: () => assert.fail('Logout must not check split-route permissions') } };
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return { start: () => mod.exports.logoutRezkaSession(snapshot, () => calls.push('finished')), calls,
