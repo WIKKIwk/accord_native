@@ -8,11 +8,13 @@ public class AccordChatSecureModule: Module {
   public func definition() -> ModuleDefinition {
     Name("AccordChatSecure")
     Events("onChatSocket")
-    Function("open") { (id: Int, origin: String, ticket: String) in
+    Function("open") { (origin: String, ticket: String) -> String in
+      let id = try ChatSocketIds.next()
       try self.sockets.open(id: id, origin: origin, ticket: ticket)
+      return id
     }
-    Function("send") { (id: Int, value: String) in self.sockets.send(id: id, value: value) }
-    Function("stop") { (id: Int) in self.sockets.stop(id: id) }
+    Function("send") { (id: String, value: String) in self.sockets.send(id: id, value: value) }
+    Function("stop") { (id: String) in self.sockets.stop(id: id) }
     OnDestroy { self.sockets.shutdown() }
   }
 }

@@ -18,6 +18,7 @@ async function run() {
   let redirected = 0;
   try {
     const targetPort = await listen(destination);
+    source.on('clientError', (_error, socket) => socket.destroy());
     destination.on('upgrade', (_request, socket) => { redirected++; socket.destroy(); });
     destination.on('request', (_request, response) => { redirected++; response.end(); });
     source.on('upgrade', (request, socket) => {

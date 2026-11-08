@@ -120,6 +120,26 @@ test('a stale session cannot replace the current account runtime', async () => {
   await f.reset();
 });
 
+test('a secure role cannot reuse a legacy runtime for the same session', async () => {
+  const f = fixture();
+  const legacy = f.chatUnreadRuntimeFor(f.session);
+  await legacy.start();
+  assert.equal(f.existingChatUnreadRuntimeFor(f.session, 'secure'), null);
+  let secureStarts = 0, secureStops = 0;
+  const secure = f.chatUnreadRuntimeFor(f.session, { policy: 'secure',
+    subscribeLive: () => { secureStarts++; return () => secureStops++; },
+    onConversationsLoaded: () => {}, onConversationsFailed: () => {} });
+  await secure.start();
+  await tick();
+  assert.notEqual(secure, legacy);
+  assert.equal(f.existingChatUnreadRuntimeFor(f.session), null);
+  assert.equal(f.existingChatUnreadRuntimeFor(f.session, 'secure'), secure);
+  assert.equal(f.liveStops(), 1);
+  assert.equal(secureStarts, 1);
+  await f.reset();
+  assert.equal(secureStops, 1);
+});
+
 test('background and foreground lifecycle stop and restart the real live adapter', async () => {
   const f = fixture();
   const runtime = f.chatUnreadRuntimeFor(f.session);

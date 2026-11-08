@@ -11,9 +11,13 @@ class AccordChatSecureModule : Module() {
         Events("onChatSocket")
         // Starting and cancelling enqueue native work synchronously so a stop cannot be
         // overtaken by a delayed bridge call. Actual network I/O remains asynchronous.
-        Function("open") { id: Int, origin: String, ticket: String -> sockets.open(id, origin, ticket) }
-        Function("send") { id: Int, value: String -> sockets.send(id, value) }
-        Function("stop") { id: Int -> sockets.stop(id) }
-        OnDestroy { sockets.stopAll() }
+        Function("open") { origin: String, ticket: String ->
+            val id = ChatSocketIds.next()
+            sockets.open(id, origin, ticket)
+            id
+        }
+        Function("send") { id: String, value: String -> sockets.send(id, value) }
+        Function("stop") { id: String -> sockets.stop(id) }
+        OnDestroy { sockets.shutdown() }
     }
 }

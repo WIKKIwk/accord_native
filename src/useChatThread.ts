@@ -9,16 +9,21 @@ import { mergeChatMessages, reconcileChatRefresh, type ChatMessage } from './cha
 import { chatDeviceId, pendingChatTexts, queueChatText, type PendingChatText } from './chatOutbox';
 import { flushChatOutbox } from './chatOutboxDelivery';
 import { existingChatUnreadRuntimeFor, subscribeChatUnreadRuntimeChanges } from './shared/chat/chatUnreadRuntime';
+import { useChatLivePolicy } from './shared/chat/ChatLivePolicy';
+import { SECURE_CHAT_UNAVAILABLE } from './shared/chat/chatSecureSocket';
+import { subscribeSecureChatLive } from './shared/chat/secureChatLive';
 
 const noUnreadRuntime = () => null;
 
 export function useChatThread(session: Session, conversationId: string) {
-  const unreadRuntime = useSyncExternalStore(subscribeChatUnreadRuntimeChanges, () => existingChatUnreadRuntimeFor(session), noUnreadRuntime);
+  const policy = useChatLivePolicy();
+  const unreadRuntime = useSyncExternalStore(subscribeChatUnreadRuntimeChanges, () => existingChatUnreadRuntimeFor(session, policy), noUnreadRuntime);
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [pending, setPending] = useState<PendingChatText[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [liveError, setLiveError] = useState('');
   const [sendError, setSendError] = useState('');
   const [queueing, setQueueing] = useState(false);
   const [sending, setSending] = useState(false);
@@ -229,7 +234,19 @@ export function useChatThread(session: Session, conversationId: string) {
     restoreStorage.current = () => { void restore(); };
     void restore();
     const onInvalidate = () => { void refresh(); void drain(); };
-    const stopLive = unreadRuntime ? unreadRuntime.subscribeInvalidation(onInvalidate) : subscribeChatLive(session, onInvalidate);
+    let stopLive = () => {};
+    if (policy === 'secure') setLiveError('');
+    if (unreadRuntime) stopLive = unreadRuntime.subscribeInvalidation(onInvalidate);
+    else if (policy === 'secure') {
+      try {
+        stopLive = subscribeSecureChatLive(session, onInvalidate, undefined, state => {
+          if (state === 'ready') setLiveError('');
+          else if (state === 'unavailable') setLiveError('Chat aloqasi ochilmadi.');
+        });
+      } catch (reason) {
+        setLiveError(reason instanceof Error && reason.message === SECURE_CHAT_UNAVAILABLE ? reason.message : 'Chat aloqasi ochilmadi.');
+      }
+    } else stopLive = subscribeChatLive(session, onInvalidate);
     const timer = setInterval(() => { void refresh(); void drain(); }, 30000);
     const appState = AppState.addEventListener('change', state => {
       if (state === 'active') {
@@ -262,13 +279,13 @@ export function useChatThread(session: Session, conversationId: string) {
       appState.remove();
       stopLive();
     };
-  }, [conversationId, drain, refresh, session, unreadRuntime, visible]));
+  }, [conversationId, drain, policy, refresh, session, unreadRuntime, visible]));
 
   const retry = useCallback(() => {
     if (!storageReadyRef.current) { restoreStorage.current?.(); return; }
     void drain(true);
   }, [drain]);
 
-  return { messages, pending, hasMore, loadingMore, error, sendError, queueing, sending, storageReady, lastQueuedId,
+  return { messages, pending, hasMore, loadingMore, error: (policy === 'secure' && liveError) || error, sendError, queueing, sending, storageReady, lastQueuedId,
     mediaSending, mediaProgress, mediaError, sendMedia, clearMediaError, refresh, loadOlder, send, retry };
 }

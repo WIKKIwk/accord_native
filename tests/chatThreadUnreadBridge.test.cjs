@@ -9,11 +9,11 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 const message = sequence => ({ id: `m${sequence}`, conversationId: 'c1', sequence, clientMessageId: '',
   senderRole: 'customer', senderRef: 'other', body: 'Hello', timestamp: sequence });
 
-function fixture(runtime = null, role = 'customer') {
+function fixture(runtime = null, role = 'customer', policy = 'legacy', nativeAvailable = true) {
   const effects = [], focusEffects = [], calls = [];
   const appState = { currentState: 'active', addEventListener: () => ({ remove() {} }) };
   const react = {
-    useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
+    useState: initial => [typeof initial === 'function' ? initial() : initial, value => calls.push(['setState', value])],
     useRef: initial => ({ current: initial }),
     useCallback: callback => callback,
     useEffect: callback => { effects.push(callback); },
@@ -39,6 +39,12 @@ function fixture(runtime = null, role = 'customer') {
     './chatOutboxDelivery': { flushChatOutbox: async () => {} },
     './shared/chat/chatUnreadRuntime': { existingChatUnreadRuntimeFor: () => runtime,
       subscribeChatUnreadRuntimeChanges: () => () => {} },
+    './shared/chat/ChatLivePolicy': { useChatLivePolicy: () => policy },
+    './shared/chat/chatSecureSocket': { SECURE_CHAT_UNAVAILABLE: 'development build required' },
+    './shared/chat/secureChatLive': { subscribeSecureChatLive: () => {
+      if (!nativeAvailable) throw new Error('development build required');
+      calls.push(['secureLive']); return () => calls.push(['stopSecureLive']);
+    } },
   };
   loaded.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
@@ -64,6 +70,20 @@ test('without an opted-in runtime, the existing thread and direct read receipt r
       assert.equal(read[4], 'device-1');
       assert.ok(f.calls.some(call => call[0] === 'existingLive'));
     } finally { f.unmount(); }
+  }
+});
+
+test('a secure thread never starts the legacy socket before runtime startup or in Expo Go', async () => {
+  for (const available of [true, false]) {
+    const f = fixture(null, 'customer', 'secure', available);
+    f.mount();
+    try {
+      await tick(); await tick();
+      assert.ok(!f.calls.some(call => call[0] === 'existingLive'));
+      assert.equal(f.calls.some(call => call[0] === 'secureLive'), available);
+      if (!available) assert.ok(f.calls.some(call => call[0] === 'setState' && call[1] === 'development build required'));
+    } finally { f.unmount(); }
+    if (available) assert.ok(f.calls.some(call => call[0] === 'stopSecureLive'));
   }
 });
 

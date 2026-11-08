@@ -1,7 +1,24 @@
 import Foundation
 
 private enum ChatSocketError: Error {
-  case invalidOrigin, invalidTicket, duplicateSession, closed
+  case invalidOrigin, invalidTicket, duplicateSession, closed, idsExhausted
+}
+
+private final class ChatSocketIdSource: @unchecked Sendable {
+  private let lock = NSLock()
+  private var value: UInt64 = 0
+  func next() throws -> String {
+    lock.lock(); defer { lock.unlock() }
+    guard value < UInt64.max else { throw ChatSocketError.idsExhausted }
+    value += 1
+    return String(value)
+  }
+}
+
+/// Shared across Expo module instances in this process; IDs never wrap or repeat.
+enum ChatSocketIds {
+  private static let source = ChatSocketIdSource()
+  static func next() throws -> String { try source.next() }
 }
 
 /// Construct only the Chat endpoint on the current authenticated server origin.
@@ -38,7 +55,7 @@ func chatSocketSessionConfiguration() -> URLSessionConfiguration {
 final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked Sendable {
   private let lock = NSLock()
   private let emit: ([String: Any]) -> Void
-  private var entries: [Int: URLSessionWebSocketTask] = [:]
+  private var entries: [String: URLSessionWebSocketTask] = [:]
   private var closed = false
   private lazy var session: URLSession = {
     let queue = OperationQueue()
@@ -48,7 +65,7 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
 
   init(emit: @escaping ([String: Any]) -> Void) { self.emit = emit }
 
-  func open(id: Int, origin: String, ticket: String) throws {
+  func open(id: String, origin: String, ticket: String) throws {
     let request = try chatSocketRequest(origin: origin, ticket: ticket)
     lock.lock()
     defer { lock.unlock() }
@@ -59,7 +76,7 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
     task.resume()
   }
 
-  func send(id: Int, value: String) -> Bool {
+  func send(id: String, value: String) -> Bool {
     lock.lock()
     let task = entries[id]
     lock.unlock()
@@ -70,7 +87,7 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
     return true
   }
 
-  func stop(id: Int) {
+  func stop(id: String) {
     lock.lock()
     let task = entries.removeValue(forKey: id)
     lock.unlock()
@@ -88,23 +105,21 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
     session.invalidateAndCancel()
   }
 
-  private func id(for task: URLSessionTask) -> Int? {
+  private func id(for task: URLSessionTask) -> String? {
     entries.first { $0.value === task }?.key
   }
 
   private func event(task: URLSessionTask, type: String, value: String = "") {
     lock.lock()
-    let id = id(for: task)
-    lock.unlock()
-    if let id { emit(["session": id, "type": type, "value": value]) }
+    defer { lock.unlock() }
+    if let id = id(for: task) { emit(["session": id, "type": type, "value": value]) }
   }
 
   private func finish(task: URLSessionTask, error: Bool) {
     lock.lock()
-    let id = id(for: task)
-    if let id { entries.removeValue(forKey: id) }
-    lock.unlock()
-    guard let id else { return }
+    defer { lock.unlock() }
+    guard let id = id(for: task) else { return }
+    entries.removeValue(forKey: id)
     if error { emit(["session": id, "type": "error", "value": ""]) }
     emit(["session": id, "type": "close", "value": ""])
   }

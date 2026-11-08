@@ -10,8 +10,12 @@ import {
   saveCachedChatSyncCursor, savePendingChatReceipt,
 } from './chatLocalStore';
 import { ChatSessionRuntime } from './chatSessionRuntime';
+import type { ChatLivePolicy } from './ChatLivePolicy';
 
-type CurrentRuntime = { session: Session; scope: string; runtime: ChatSessionRuntime; unregister: () => void; removeAppState: () => void };
+export type ChatUnreadTransport = { policy: 'secure';
+  subscribeLive: (onEvent: (payload: Record<string, unknown>) => void, onInvalidate: () => void) => () => void;
+  onConversationsLoaded: () => void; onConversationsFailed: () => void };
+type CurrentRuntime = { session: Session; scope: string; policy: ChatLivePolicy; runtime: ChatSessionRuntime; unregister: () => void; removeAppState: () => void };
 let current: CurrentRuntime | null = null;
 const runtimeListeners = new Set<() => void>();
 
@@ -33,10 +37,11 @@ function disposeCurrent(): void {
 }
 
 /** Reuses one runtime per active login; logout or account change closes it. */
-export function chatUnreadRuntimeFor(session: Session): ChatSessionRuntime {
+export function chatUnreadRuntimeFor(session: Session, transport?: ChatUnreadTransport): ChatSessionRuntime {
   const scope = chatCacheScope(session);
+  const policy = transport?.policy ?? 'legacy';
   if (!activeSessionToken(session)) throw new Error('Sessiya tugagan.');
-  if (current?.session === session && current.scope === scope) return current.runtime;
+  if (current?.session === session && current.scope === scope && current.policy === policy) return current.runtime;
   disposeCurrent();
   const controller = new AbortController();
   let runtime!: ChatSessionRuntime;
@@ -49,6 +54,8 @@ export function chatUnreadRuntimeFor(session: Session): ChatSessionRuntime {
     loadConversations: () => loadCachedChatConversations(session),
     saveConversations: items => saveCachedChatConversations(session, items),
     fetchConversations: () => loadChatConversations(session, controller.signal),
+    onConversationsLoaded: transport?.onConversationsLoaded,
+    onConversationsFailed: transport?.onConversationsFailed,
     loadCursor: () => loadCachedChatSyncCursor(session),
     saveCursor: cursor => saveCachedChatSyncCursor(session, cursor),
     loadSync: cursor => loadChatSync(session, cursor, controller.signal),
@@ -67,7 +74,8 @@ export function chatUnreadRuntimeFor(session: Session): ChatSessionRuntime {
       const conversationId = (raw as Record<string, unknown>).conversation_id;
       return parseChatMessage(raw, typeof conversationId === 'string' ? conversationId.trim() : '');
     },
-    subscribeLive: (onEvent, onInvalidate) => subscribeChatLive(session, onInvalidate, onEvent),
+    subscribeLive: (onEvent, onInvalidate) => transport
+      ? transport.subscribeLive(onEvent, onInvalidate) : subscribeChatLive(session, onInvalidate, onEvent),
     scheduleRecovery: callback => {
       const timer = setInterval(callback, 30000);
       return () => clearInterval(timer);
@@ -79,15 +87,15 @@ export function chatUnreadRuntimeFor(session: Session): ChatSessionRuntime {
     else if (state === 'background') runtime.pause();
   });
   const unregister = registerSessionResetHook(async () => { if (current?.runtime === runtime) disposeCurrent(); });
-  current = { session, scope, runtime, unregister, removeAppState: () => listener.remove() };
+  current = { session, scope, policy, runtime, unregister, removeAppState: () => listener.remove() };
   notifyRuntimeChange();
   return runtime;
 }
 
 /** Does not start a service for roles that are not using the shared badge. */
-export function existingChatUnreadRuntimeFor(session: Session): ChatSessionRuntime | null {
+export function existingChatUnreadRuntimeFor(session: Session, policy: ChatLivePolicy = 'legacy'): ChatSessionRuntime | null {
   try {
-    return current?.session === session && current.scope === chatCacheScope(session) && activeSessionToken(session)
+    return current?.session === session && current.scope === chatCacheScope(session) && current.policy === policy && activeSessionToken(session)
       ? current.runtime : null;
   } catch { return null; }
 }

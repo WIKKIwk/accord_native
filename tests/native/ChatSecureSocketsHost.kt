@@ -68,6 +68,10 @@ private fun isRejected(origin: String) = runCatching { chatSocketRequest(origin,
 fun main(args: Array<String>) {
     check(args.size == 1)
     val (tls, manager) = sslContexts(args[0])
+    val first = ChatSocketIds.next()
+    val second = ChatSocketIds.next()
+    val third = ChatSocketIds.next()
+    check(setOf(first, second, third).size == 3)
     val request = chatSocketRequest("https://example.test", "synthetic&ticket")
     check(request.url.toString() == "https://example.test/v1/mobile/chat/live?ticket=synthetic%26ticket")
     listOf("http://example.test", "wss://example.test", "https://user@example.test", "https://example.test/",
@@ -90,7 +94,7 @@ fun main(args: Array<String>) {
                 val ended = CountDownLatch(1)
                 val events = mutableListOf<Map<String, Any>>()
                 val sockets = ChatSecureSockets({ event -> synchronized(events) { events.add(event) }; if (event["type"] == "close") ended.countDown() }, client)
-                sockets.open(1, "https://localhost:${source.port}", "synthetic-ticket")
+                sockets.open(first, "https://localhost:${source.port}", "synthetic-ticket")
                 check(source.arrived.await(3, TimeUnit.SECONDS))
                 check(ended.await(3, TimeUnit.SECONDS))
                 check(!destination.arrived.await(800, TimeUnit.MILLISECONDS)) { "redirect followed" }
@@ -109,23 +113,29 @@ fun main(args: Array<String>) {
             val opened = CountDownLatch(1)
             val events = mutableListOf<Map<String, Any>>()
             val sockets = ChatSecureSockets({ event -> synchronized(events) { events.add(event) }; if (event["type"] == "open") opened.countDown() }, client)
-            sockets.open(2, "https://localhost:${source.port}", "synthetic-ticket")
+            sockets.open(second, "https://localhost:${source.port}", "synthetic-ticket")
             check(opened.await(3, TimeUnit.SECONDS))
-            check(sockets.send(2, "synthetic-ping"))
-            sockets.stop(2)
+            check(sockets.send(second, "synthetic-ping"))
+            sockets.stop(second)
             Thread.sleep(300)
-            check(!sockets.send(2, "after-stop"))
+            check(!sockets.send(second, "after-stop"))
             check(synchronized(events) { events.map { it["type"] } } == listOf("open"))
             sockets.stopAll()
         }
         FixtureServer(tls) { Thread.sleep(500); null }.use { source ->
             val events = mutableListOf<Map<String, Any>>()
             val sockets = ChatSecureSockets({ event -> synchronized(events) { events.add(event) } }, client)
-            sockets.open(3, "https://localhost:${source.port}", "synthetic-ticket")
+            val otherClient = newChatSocketClient().newBuilder().sslSocketFactory(tls.socketFactory, manager).build()
+            val otherSockets = ChatSecureSockets({}, otherClient)
+            sockets.open(third, "https://localhost:${source.port}", "synthetic-ticket")
             check(source.arrived.await(3, TimeUnit.SECONDS))
-            sockets.stop(3)
+            sockets.shutdown()
             Thread.sleep(700)
             check(synchronized(events) { events.isEmpty() }) { "cancelled socket emitted an event" }
+            check(client.dispatcher.executorService.isShutdown)
+            check(!otherClient.dispatcher.executorService.isShutdown) { "shutdown affected another module client" }
+            check(runCatching { sockets.open(ChatSocketIds.next(), "https://localhost:${source.port}", "synthetic-ticket") }.isFailure)
+            otherSockets.shutdown()
         }
     } finally {
         CookieHandler.setDefault(oldHandler)

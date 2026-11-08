@@ -10,6 +10,19 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
+
+/** Process-wide IDs never repeat, even when the Expo module is recreated. */
+internal object ChatSocketIds {
+    private val value = AtomicLong(0)
+    fun next(): String {
+        while (true) {
+            val current = value.get()
+            check(current < Long.MAX_VALUE) { "Chat socket IDs exhausted" }
+            if (value.compareAndSet(current, current + 1)) return (current + 1).toString()
+        }
+    }
+}
 
 /** A separate client: no RN cookie handler, credentials, or redirect following. */
 internal fun newChatSocketClient(): OkHttpClient = OkHttpClient.Builder()
@@ -40,14 +53,16 @@ internal class ChatSecureSockets(
     private val emit: (Map<String, Any>) -> Unit,
     private val client: OkHttpClient = newChatSocketClient(),
 ) {
-    private class Entry(val id: Int) { var socket: WebSocket? = null }
+    private class Entry(val id: String) { var socket: WebSocket? = null }
     private val lock = Any()
-    private val entries = mutableMapOf<Int, Entry>()
+    private val entries = mutableMapOf<String, Entry>()
+    private var closed = false
 
-    fun open(id: Int, origin: String, ticket: String) {
+    fun open(id: String, origin: String, ticket: String) {
         val request = chatSocketRequest(origin, ticket)
         val entry = Entry(id)
         synchronized(lock) {
+            check(!closed) { "Chat socket transport closed" }
             require(!entries.containsKey(id)) { "Chat socket already exists" }
             entries[id] = entry
         }
@@ -63,11 +78,11 @@ internal class ChatSecureSockets(
         }
     }
 
-    fun send(id: Int, value: String): Boolean = synchronized(lock) {
+    fun send(id: String, value: String): Boolean = synchronized(lock) {
         entries[id]?.socket?.send(value) ?: false
     }
 
-    fun stop(id: Int) {
+    fun stop(id: String) {
         val socket = synchronized(lock) { entries.remove(id)?.socket }
         socket?.cancel()
     }
@@ -79,6 +94,21 @@ internal class ChatSecureSockets(
             current
         }
         sockets.forEach { it.cancel() }
+    }
+
+    /** This client is private to this module instance, including its dispatcher and pool. */
+    fun shutdown() {
+        val sockets = synchronized(lock) {
+            if (closed) return
+            closed = true
+            val current = entries.values.mapNotNull { it.socket }
+            entries.clear()
+            current
+        }
+        sockets.forEach { it.cancel() }
+        client.dispatcher.cancelAll()
+        client.connectionPool.evictAll()
+        client.dispatcher.executorService.shutdown()
     }
 
     private inner class Listener(private val entry: Entry) : WebSocketListener() {

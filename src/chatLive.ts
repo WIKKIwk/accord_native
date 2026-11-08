@@ -3,17 +3,25 @@ import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 
 /** Chat uses its own short-lived socket ticket, separate from the worker stream. */
-export function subscribeChatLive(session: Session, onInvalidate: () => void, onEvent?: (event: Record<string, unknown>) => void): () => void {
+export type ChatLiveState = 'connecting' | 'ready' | 'unavailable' | 'paused';
+export type ChatLiveSocket = { readonly readyState: number; onopen: ((event: Event) => void) | null;
+  onmessage: ((event: MessageEvent) => void) | null; onerror: ((event: Event) => void) | null;
+  onclose: ((event: CloseEvent) => void) | null; send: (data: string) => void; close: () => void };
+type ChatLiveOptions = { socketFactory?: (url: string) => ChatLiveSocket; onStateChange?: (state: ChatLiveState) => void };
+
+export function subscribeChatLive(session: Session, onInvalidate: () => void, onEvent?: (event: Record<string, unknown>) => void,
+  options?: ChatLiveOptions): () => void {
   let stopped = false;
   let foreground = AppState.currentState == null || AppState.currentState === 'active';
   let generation = 0;
   let attempts = 0;
-  let socket: WebSocket | null = null;
+  let socket: ChatLiveSocket | null = null;
   let ticketRequest: AbortController | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let readyTimer: ReturnType<typeof setTimeout> | undefined;
   let notifyTimer: ReturnType<typeof setTimeout> | undefined;
   let heartbeat: ReturnType<typeof setInterval> | undefined;
+  const state = (value: ChatLiveState) => { try { options?.onStateChange?.(value); } catch { /* Observers cannot interrupt cleanup. */ } };
 
   const invalidate = () => {
     if (notifyTimer !== undefined) clearTimeout(notifyTimer);
@@ -32,6 +40,7 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
   };
   const connect = async () => {
     if (stopped || !foreground || socket || ticketRequest || !activeSessionToken(session)) return;
+    state('connecting');
     const current = generation;
     const controller = new AbortController();
     ticketRequest = controller;
@@ -49,7 +58,7 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
       url.pathname = '/v1/mobile/chat/live';
       url.search = '';
       url.searchParams.set('ticket', ticket);
-      const ws = new WebSocket(url.toString());
+      const ws = options?.socketFactory ? options.socketFactory(url.toString()) : new WebSocket(url.toString());
       socket = ws;
       readyTimer = setTimeout(() => { if (socket === ws) ws.close(); }, 10000);
       ws.onopen = () => {
@@ -72,6 +81,7 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
           if (readyTimer !== undefined) clearTimeout(readyTimer);
           readyTimer = undefined;
           attempts = 0;
+          state('ready');
           onEvent?.(payload);
           invalidate();
         } else if (payload.event === 'chat.resync_required' || payload.event === 'chat.message.created' || payload.event === 'chat.message.updated') {
@@ -79,15 +89,16 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
           invalidate();
         }
       };
-      ws.onerror = () => { if (socket === ws) ws.close(); };
+      ws.onerror = () => { if (socket === ws) { state('unavailable'); ws.close(); } };
       ws.onclose = () => {
         if (socket !== ws) return;
         socket = null;
         clearSocketTimers();
+        state('unavailable');
         reconnect();
       };
     } catch {
-      if (!stopped && foreground && current === generation) reconnect();
+      if (!stopped && foreground && current === generation) { state('unavailable'); reconnect(); }
     } finally {
       clearTimeout(timeout);
       if (ticketRequest === controller) ticketRequest = null;
@@ -105,6 +116,7 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
     const old = socket;
     socket = null;
     old?.close();
+    state('paused');
   };
   const subscription = AppState.addEventListener('change', (state: AppStateStatus) => {
     const next = state === 'active';

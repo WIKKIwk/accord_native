@@ -7,7 +7,7 @@ const ts = require('typescript');
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function fixture(runtime = null, role = 'customer') {
+function fixture(runtime = null, role = 'customer', policy = 'legacy', nativeAvailable = true) {
   let focusEffect, appStateListener, liveInvalidation, runtimeInvalidation;
   const calls = [];
   const appState = { currentState: 'active', addEventListener: (_, callback) => {
@@ -15,7 +15,7 @@ function fixture(runtime = null, role = 'customer') {
     return { remove: () => { appStateListener = undefined; } };
   } };
   const react = {
-    useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
+    useState: initial => [typeof initial === 'function' ? initial() : initial, value => calls.push(['setState', value])],
     useRef: initial => ({ current: initial }), useCallback: callback => callback,
     useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot(),
   };
@@ -37,6 +37,13 @@ function fixture(runtime = null, role = 'customer') {
     } },
     '../../components/ChatMetadata': { useChatMetadata: () => ({ remember: () => {} }) },
     './chatUnreadRuntime': { existingChatUnreadRuntimeFor: () => runtime, subscribeChatUnreadRuntimeChanges: () => () => {} },
+    './ChatLivePolicy': { useChatLivePolicy: () => policy },
+    './chatSecureSocket': { SECURE_CHAT_UNAVAILABLE: 'development build required' },
+    './secureChatLive': { subscribeSecureChatLive: (_session, callback) => {
+      if (!nativeAvailable) throw new Error('development build required');
+      calls.push(['secureLive']); liveInvalidation = callback;
+      return () => { calls.push(['stopSecureLive']); liveInvalidation = undefined; };
+    } },
   };
   loaded.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
@@ -62,6 +69,20 @@ test('non-opted worker and preparation list paths retain their existing live sub
       assert.ok(!f.calls.some(call => call[0] === 'runtimeSubscribe'));
     } finally { f.blur(); }
     assert.ok(f.calls.some(call => call[0] === 'stopExistingLive'));
+  }
+});
+
+test('a secure list never starts the legacy socket before its runtime exists or in Expo Go', async () => {
+  for (const available of [true, false]) {
+    const f = fixture(null, 'customer', 'secure', available);
+    f.focus();
+    try {
+      await tick();
+      assert.ok(!f.calls.some(call => call[0] === 'existingLive'));
+      assert.equal(f.calls.some(call => call[0] === 'secureLive'), available);
+      if (!available) assert.ok(f.calls.some(call => call[0] === 'setState' && call[1] === 'development build required'));
+    } finally { f.blur(); }
+    if (available) assert.ok(f.calls.some(call => call[0] === 'stopSecureLive'));
   }
 });
 

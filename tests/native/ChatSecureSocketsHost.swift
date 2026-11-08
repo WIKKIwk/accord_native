@@ -7,6 +7,8 @@ private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
 @main struct ChatSecureSocketsHost {
   static func main() throws {
     let port = CommandLine.arguments[1]
+    let first = try ChatSocketIds.next(), second = try ChatSocketIds.next()
+    require(first != second, "socket IDs must not repeat")
     let request = try chatSocketRequest(origin: "https://example.test", ticket: "synthetic&ticket")
     require(request.url?.absoluteString == "wss://example.test/v1/mobile/chat/live?ticket=synthetic%26ticket", "endpoint")
     require(!request.httpShouldHandleCookies, "request cookies must be off")
@@ -35,6 +37,23 @@ private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
     }
     session.invalidateAndCancel()
     delegate.shutdown()
+    let eventLock = NSLock()
+    var eventsA = 0
+    let firstModule = ChatSecureSockets { _ in eventLock.lock(); eventsA += 1; eventLock.unlock() }
+    let secondModule = ChatSecureSockets { _ in }
+    let firstID = try ChatSocketIds.next(), secondID = try ChatSocketIds.next()
+    let localOrigin = "https://127.0.0.1:\(port)"
+    try firstModule.open(id: firstID, origin: localOrigin, ticket: "synthetic-ticket")
+    firstModule.shutdown()
+    eventLock.lock(); let afterShutdown = eventsA; eventLock.unlock()
+    // A separate module instance still owns a separate URLSession.
+    try secondModule.open(id: secondID, origin: localOrigin, ticket: "synthetic-ticket")
+    secondModule.shutdown()
+    Thread.sleep(forTimeInterval: 0.2)
+    eventLock.lock(); let finalEvents = eventsA; eventLock.unlock()
+    require(finalEvents == afterShutdown, "callbacks continued after shutdown")
+    require((try? firstModule.open(id: try ChatSocketIds.next(), origin: localOrigin, ticket: "synthetic-ticket")) == nil,
+            "destroyed module must not reopen")
     print("macOS Foundation host tests passed: request, configuration, redirect delegate, and loopback")
   }
 }

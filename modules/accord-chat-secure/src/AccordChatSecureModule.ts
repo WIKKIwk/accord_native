@@ -1,11 +1,11 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
 
-export type NativeChatSocketEvent = { session: number; type: 'open' | 'message' | 'error' | 'close'; value: string };
+export type NativeChatSocketEvent = { session: string; type: 'open' | 'message' | 'error' | 'close'; value: string };
 
 declare class NativeAccordChatSecure extends NativeModule<{ onChatSocket: (event: NativeChatSocketEvent) => void }> {
-  open(id: number, origin: string, ticket: string): void;
-  send(id: number, value: string): boolean;
-  stop(id: number): void;
+  open(origin: string, ticket: string): string;
+  send(id: string, value: string): boolean;
+  stop(id: string): void;
 }
 
 export function chatSecureNativeModule(): NativeAccordChatSecure | null {
