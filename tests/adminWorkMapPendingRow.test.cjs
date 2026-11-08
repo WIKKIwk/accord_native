@@ -16,7 +16,7 @@ function load(file, mocks = {}) {
 const numeric = load('admin/adminDartDouble.ts');
 const present = load('admin/adminWorkMapPresentation.ts', { '../shared/localization': { productionText: () => 'Order' },
   '../workerOrderAppearance': { workerOrderTone: state => state || 'neutral' }, './adminWorkMapText': { adminWorkMapText: () => ({ pending: 'Chala buyurtma' }) },
-  './adminDartDouble': numeric }).adminWorkMapPresentation;
+  './adminDartDouble': numeric, './dartJsonString': load('admin/dartJsonString.ts') }).adminWorkMapPresentation;
 test('pending list title always preserves raw code, separator and title without invented fallback', () => {
   const row = { kind: 'pending', code: '', title: '', customer: '', kg: -0, displayState: 'pending' };
   assert.equal(present(row, 'en').headline, ' • '); assert.equal(present(row, 'en').supporting, ' · -0.0 kg · Chala buyurtma');

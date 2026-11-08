@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import type { Session } from '../auth';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { WorkerIconButton } from '../components/WorkerIconButton';
-import { adminText, localizedGetter, productionText } from '../shared/localization';
+import { adminText, extensionText, localizedGetter, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import type { AdminWorkMapController, AdminWorkMapDetailTicket, AdminWorkMapRow } from './adminWorkMapController';
 import { useAdminWorkMapDetail } from './useAdminWorkMapDetail';
@@ -46,6 +46,8 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
       <Text style={[styles.title, { color: colors.text }]}>{header.code}</Text>
       <Text style={[styles.title, { color: colors.text }]}>{header.label}</Text></View>
       : <Text style={[styles.title, styles.pendingTitle, { color: colors.text }]}>{pending?.title ?? [row.code || row.id, title || row.title].filter(Boolean).join(' • ')}</Text>}
+    {showSummary && value?.kind === 'order' && value.qolipInRework && <View testID="admin-qolip-rework-notice" style={[styles.notice, { backgroundColor: colors.field }]}>
+      <Text style={[styles.noticeText, { color: colors.muted }]}>{extensionText('qolipReworkText', 'order_unavailable', locale)}</Text></View>}
     {detail.loading && <ActivityIndicator />}
     {detail.error && <><Text accessibilityRole="alert" style={{ color: colors.text }}>{detail.error}</Text>
       <Host matchContents={{ vertical: true }}><Button label={localizedGetter('retry', locale)} onPress={detail.retry} /></Host></>}
@@ -62,4 +64,5 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
   </ScrollView><View style={styles.openedClose}><WorkerIconButton icon="close" label={productionText('worker.action.close', locale)} tonal={ticket.kind === 'order'} onPress={close} /></View></View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { padding: 16, gap: 12 }, openedContent: { paddingTop: 56 },
-  openedClose: { position: 'absolute', top: 4, right: 4 }, title: { fontSize: 20, fontWeight: '700' }, pendingTitle: { paddingRight: 48 } });
+  openedClose: { position: 'absolute', top: 4, right: 4 }, title: { fontSize: 20, fontWeight: '700' }, pendingTitle: { paddingRight: 48 },
+  notice: { padding: 12, borderRadius: 12 }, noticeText: { fontWeight: '700' } });

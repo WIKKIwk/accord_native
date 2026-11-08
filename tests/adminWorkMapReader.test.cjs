@@ -46,7 +46,8 @@ test('witness transition during page read cannot publish a result', async () => 
 test('order detail hydrates the exact ID and rejects stale epoch or revision', async () => {
   const f = fixture(), read = f.api.adminWorkMapDetailReader(f.session, f.witness);
   const ticket = { kind: 'order', id: 'o', epoch: 'e', revision: 4 };
-  assert.equal((await read(ticket)).map.id, 'o'); assert.deepEqual(f.calls[0][2], { apparatus: '', order_id: 'o' });
+  const first = await read(ticket); assert.equal(first.map.id, 'o'); assert.equal(first.qolipInRework, false);
+  assert.deepEqual(f.calls[0][2], { apparatus: '', order_id: 'o' });
   f.setSnapshot({ epoch: 'new', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }] }); await assert.rejects(read(ticket), /yangilandi/);
   f.setSnapshot({ epoch: 'e', revision: 3, scope: 's', maps: [{ map: { id: 'o' } }] }); await assert.rejects(read(ticket), /yangilandi/);
 });
@@ -163,11 +164,11 @@ test('actual pending detail decodes manager and template under the original witn
     assert.equal(query.pathname, '/v1/mobile/admin/pending-orders'); assert.deepEqual(Object.fromEntries(query.searchParams), { id: 'p' });
   }
 });
-test('actual detail decoder supplies creation metadata only while the opening scope is still current', async () => {
+test('actual detail decoder supplies creation metadata and rework flag only while the opening scope is still current', async () => {
   for (const invalidate of [false, true]) {
     const f = fixture(), requests = [], raw = { epoch: 'e', scope: 's', rev: 5, sequences: {}, visible_order_ids: {},
       queue_states: {}, queue_policies: [], order_controls: {}, stage_states: {}, queue_action_controls: {}, frozen_orders_by_apparatus: {},
-      maps: [{ map: { id: 'o', title: 'Film', nodes: [], edges: [] }, program: {}, created_at_unix: 1700000000,
+      maps: [{ map: { id: 'o', title: 'Film', nodes: [], edges: [] }, program: {}, qolip_in_rework: true, created_at_unix: 1700000000,
         created_by: { role: 'brigader', display_name: 'Ana', ref: 'ignored' } }] };
     const detailApi = loadRoot('productionOrderDetailApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
       requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
@@ -175,7 +176,8 @@ test('actual detail decoder supplies creation metadata only while the opening sc
     const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderDetailApi': detailApi }).adminWorkMapDetailReader(f.session, f.witness);
     const pending = reader({ kind: 'order', id: 'o', epoch: 'e', revision: 4 });
     if (invalidate) await assert.rejects(pending, /session changed/);
-    else assert.deepEqual((await pending).metadata, { createdAtUnix: 1700000000, creator: { role: 'brigader', displayName: 'Ana' } });
+    else { const detail = await pending; assert.deepEqual(detail.metadata, { createdAtUnix: 1700000000, creator: { role: 'brigader', displayName: 'Ana' } });
+      assert.equal(detail.qolipInRework, true); }
     assert.equal(requests.length, 1);
   }
 });
@@ -234,5 +236,30 @@ test('real guarded Move page sends only its ordered source/target scope and reje
     assert.equal(requests.length, 1); const requested = new URL(requests[0], f.session.baseUrl);
     assert.equal(requested.pathname, '/v1/mobile/admin/production-maps/order-page');
     assert.deepEqual(Object.fromEntries(requested.searchParams), { view: 'move', limit: '20', apparatus, target, search: 'Film' });
+  }
+});
+
+test('real guarded legacy Orders page supplies passive subtitle fields without surviving a body-time account change', async () => {
+  const dart = load('admin/dartJsonString'), audit = load('admin/adminWorkMapAuditModel', { './dartJsonString': dart });
+  const closed = load('admin/adminWorkMapClosedModel', { './dartJsonString': dart });
+  const project = load('admin/adminWorkMapController', { './dartJsonString': dart, './adminWorkMapAuditModel': audit, './adminWorkMapClosedModel': closed }).adminWorkMapRows;
+  const localization = load('shared/localization/index', { './catalog.json': require('../src/shared/localization/catalog.json') });
+  const present = load('admin/adminWorkMapPresentation', { '../shared/localization': localization, '../workerOrderAppearance': { workerOrderTone: () => 'neutral' },
+    './adminWorkMapText': { adminWorkMapText: () => ({ pending: 'Chala buyurtma' }) }, './adminDartDouble': load('admin/adminDartDouble'), './dartJsonString': dart }).adminWorkMapPresentation;
+  for (const invalidate of [false, true]) {
+    const f = fixture(), requests = [], machine = 'apparatus:default:asset-005';
+    const raw = { version: 'v', epoch: 'e', scope: 's', rev: 5, offset: 0, total: 1, next_cursor: null, order_ids: ['o'],
+      sequences: {}, visible_order_ids: {}, queue_states: {}, queue_policies: [], order_controls: {}, stage_states: {}, queue_action_controls: {}, frozen_orders_by_apparatus: {},
+      order_customers: { o: ' Buyer ' }, maps: [{ map: { id: 'o', code: '17', title: '', product_code: 'P', customer_name: 'Old',
+        nodes: [{ kind: 'end', title: ' Film ' }, { kind: 'apparatus', apparatus_id: machine }], edges: [] }, program: {} }] };
+    const pageApi = loadRoot('productionOrderPageApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
+      requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
+    } } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderPageApi': pageApi }).adminWorkMapReader(f.session, f.witness);
+    const result = reader({ view: 'orders' });
+    if (invalidate) await assert.rejects(result, /session changed/);
+    else { const page = await result, card = present(project([page], 'orders')[0], 'en');
+      assert.deepEqual(card, { headline: '17 • Film', supporting: 'Buyer • 1 machines', tone: 'neutral' }); }
+    assert.equal(requests.length, 1);
   }
 });

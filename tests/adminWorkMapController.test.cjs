@@ -79,7 +79,7 @@ test('card formatting retains V2 pending label and a Dart-like decimal for ordin
   const tone = { workerOrderTone: state => state || 'neutral' };
   const presentation = load('admin/adminWorkMapPresentation', { '../shared/localization': localization, '../workerOrderAppearance': tone,
     './adminWorkMapText': { adminWorkMapText: () => ({ pending: 'Chala buyurtma' }) },
-    './adminDartDouble': load('admin/adminDartDouble') }).adminWorkMapPresentation;
+    './adminDartDouble': load('admin/adminDartDouble'), './dartJsonString': dart }).adminWorkMapPresentation;
   assert.deepEqual(presentation({ kind: 'pending', code: 'P', title: 'Product', customer: 'Client', kg: 10, displayState: 'pending' }, 'uz'),
     { headline: 'P • Product', supporting: 'Client · 10.0 kg · Chala buyurtma', tone: 'pending' });
   assert.equal(presentation({ kind: 'order', code: '1', title: '', customer: 'Client', kg: null, displayState: '' }, 'en').headline, '1 • Order');
@@ -88,6 +88,42 @@ test('card formatting retains V2 pending label and a Dart-like decimal for ordin
   const legacy = rows([summary({ projection: '', length: 1, next_cursor: null, order_ids: [], pending_ids: [], order_rows: {}, pending_rows: {},
     pending_orders: [{ id: 'p', template: { order_number: '', product: '', customer: '', image_id: '', kg: 4 } }], snapshot: { maps: [] } })])[0];
   assert.deepEqual(presentation(legacy, 'en'), { headline: ' • ', supporting: ' · 4.0 kg · Chala buyurtma', tone: 'pending' });
+});
+
+test('opened summary and full cards use source title, customer, product and apparatus-count fallbacks', () => {
+  const localization = load('shared/localization/index', { './catalog.json': require('../src/shared/localization/catalog.json') });
+  const presentation = load('admin/adminWorkMapPresentation', { '../shared/localization': localization,
+    '../workerOrderAppearance': { workerOrderTone: () => 'neutral' }, './adminWorkMapText': { adminWorkMapText: () => ({ pending: 'Chala buyurtma' }) },
+    './adminDartDouble': load('admin/adminDartDouble'), './dartJsonString': dart }).adminWorkMapPresentation;
+  const compact = rows([summary({ pending_ids: [], pending_rows: {}, order_rows: { 'zakaz-1': { id: 'zakaz-1', code: '',
+    title: '\u0085 Film \u0085', customer_name: '\u0085 Ana \u0085', image_id: '', display_state: 'pending' } } })])[0];
+  assert.deepEqual(presentation(compact, 'en'), { headline: '1 • Film', supporting: 'Ana', tone: 'neutral' });
+  const full = (map, orderCustomers = {}) => summary({ projection: '', length: 1, next_cursor: null, order_ids: ['o'], pending_ids: [], order_rows: {}, pending_rows: {}, pending_orders: [],
+    snapshot: { revision: 4, order_customers: orderCustomers, maps: [{ map: { id: 'o', code: '17', title: '', customer_name: '', product_code: '', nodes: [], ...map } }] } });
+  const base = { title: ' ', product_code: ' Product code ', customer_name: ' Map customer ', nodes: [
+    { kind: 'end', title: ' ' }, { kind: 'apparatus', title: 'A' }, { kind: 'end', title: ' Film ' }, { kind: 'apparatus', title: 'B' }] };
+  const projected = rows([full(base, { o: ' Canonical ' })])[0];
+  assert.equal(projected.customer, 'Canonical'); assert.equal(projected.title, 'Film');
+  assert.deepEqual(presentation(projected, 'en'), { headline: '17 • Film', supporting: 'Canonical • 2 machines', tone: 'neutral' });
+  assert.equal(presentation(projected, 'uz').supporting, 'Canonical • 2 ta aparat');
+  assert.equal(presentation(projected, 'ru').supporting, 'Canonical • 2 аппарата');
+  assert.equal(presentation(projected, 'ur').supporting, 'Canonical • 2 مشینیں');
+  assert.equal(presentation(rows([full(base, { o: ' ' })])[0], 'en').supporting, 'Map customer • 2 machines');
+  assert.equal(presentation(rows([full({ ...base, customer_name: '' })])[0], 'en').supporting, 'Product code • 2 machines');
+  assert.equal(presentation(rows([full({ ...base, customer_name: '', product_code: '' })])[0], 'en').supporting, 'Film • 2 machines');
+  assert.equal(presentation(rows([full({ title: '', customer_name: '', product_code: '', nodes: [] })])[0], 'en').supporting, '');
+  assert.equal(presentation(rows([full({ title: '', customer_name: '', product_code: '', nodes: [] })])[0], 'en').headline, '17 • Order');
+  const equalTitle = rows([full({ title: 'Film', nodes: [{ kind: 'end', title: ' Film ' }, { kind: 'end', title: 'Roll' }] })])[0];
+  assert.equal(presentation(equalTitle, 'en').supporting, 'Roll');
+});
+
+test('legacy order customers from available snapshots follow revision order', () => {
+  const page = (id, revision, customers) => summary({ projection: '', length: 1, next_cursor: null, order_ids: [id], pending_ids: [], order_rows: {}, pending_rows: {}, pending_orders: [],
+    snapshot: { revision, order_customers: customers, maps: [{ map: { id, title: '', customer_name: 'Fallback', nodes: [] } }] } });
+  const values = rows([page('o', 9, { o: 'Newest' }), page('p', 2, { o: 'Older' })]);
+  assert.equal(values[0].customer, 'Newest'); assert.equal(values[1].customer, 'Fallback');
+  const proto = JSON.parse('{"__proto__":"Stored"}');
+  assert.equal(rows([page('__proto__', 1, proto)])[0].customer, 'Stored');
 });
 
 test('Sequence summaries preserve server order, absolute positions, display states and count', async () => {

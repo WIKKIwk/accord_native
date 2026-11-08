@@ -61,7 +61,8 @@ export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () 
         const saved = snapshot.maps[0], map = saved.map, customers = snapshot.order_customers ?? {};
         const metadata = adminWorkMapMetadataFromSaved(saved);
         guard();
-        return { kind: 'order' as const, map, metadata, customer: Object.hasOwn(customers, ticket.id) ? customers[ticket.id] : map.customer_name };
+        return { kind: 'order' as const, map, metadata, qolipInRework: saved.qolip_in_rework === true,
+          customer: Object.hasOwn(customers, ticket.id) ? customers[ticket.id] : map.customer_name };
       }
     }
     throw new MobileApiException({ code: 'order_page_changed', message: 'Buyurtma yangilandi. Qayta oching.' });

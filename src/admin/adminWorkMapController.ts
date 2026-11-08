@@ -5,12 +5,12 @@ import { dartTrim } from './dartJsonString';
 export type AdminWorkMapModule = 'sequence' | 'orders' | 'move' | 'closed' | 'audit';
 export type AdminWorkMapRequest = { view: AdminWorkMapModule; apparatus?: string; target?: string };
 export type AdminWorkMapRow = { kind: 'pending' | 'order'; id: string; code: string; title: string; customer: string; imageId: string;
-  displayState: string; kg: number | null; position?: number };
+  displayState: string; kg: number | null; position?: number; opened?: { secondary: string; apparatusCount: number } };
 export type AdminWorkMapPage = { projection: string; version: string; epoch: string; scope: string; revision: number | null;
   total?: number; sequence_rows?: Record<string, any>; sequence_positions?: Record<string, number>;
   offset: number; length: number; next_cursor: string | null; order_ids: string[]; pending_ids: string[];
   order_rows: Record<string, any>; pending_rows: Record<string, any>; pending_orders: any[]; closed_orders: AdminWorkMapClosedOrder[];
-  workflow_audit: AdminWorkMapAuditReport | null; snapshot: { maps: any[] } | null };
+  workflow_audit: AdminWorkMapAuditReport | null; snapshot: { maps: any[]; revision?: number | null; order_customers?: Record<string, string> } | null };
 export type AdminWorkMapDetailTicket = { generation: number; id: string; kind: 'pending' | 'order'; epoch: string; revision: number | null; apparatus?: string };
 export type AdminWorkMapState = { query: string; rows: readonly AdminWorkMapRow[]; loading: boolean; loaded: boolean; error: string | null; hasMore: boolean; total: number; audit: AdminWorkMapAuditReport | null; closed: readonly AdminWorkMapClosedOrder[] };
 type Dependencies = { isCurrent: () => boolean; request?: AdminWorkMapRequest | null;
@@ -28,6 +28,13 @@ export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: Admin
   if (view === 'closed') { adminWorkMapClosedPages(pages); return []; }
   if (view === 'audit') { adminWorkMapAuditPages(pages); return []; }
   const pending: AdminWorkMapRow[] = [], orders: AdminWorkMapRow[] = [];
+  // V2 collects snapshot customers in revision order. Only the current window's
+  // guarded snapshots are available here; other retained module windows remain open parity work.
+  const customers = new Map<string, string>();
+  if (view === 'orders') for (const snapshot of pages.flatMap(page => page.snapshot ? [page.snapshot] : [])
+    .sort((a, b) => (a.revision ?? 0) - (b.revision ?? 0))) {
+    for (const [id, name] of Object.entries(snapshot.order_customers ?? {})) customers.set(id, name);
+  }
   for (const page of pages) {
     if (page.closed_orders.length || page.workflow_audit) throw new Error(readError);
     if (page.projection === 'sequence_list_v1') {
@@ -48,7 +55,8 @@ export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: Admin
       for (const id of page.order_ids) {
         const row = page.order_rows[id];
         orders.push({ kind: 'order', id, code: codeOf(row), title: text(row.title), customer: text(row.customer_name),
-          imageId: text(row.image_id), displayState: text(row.display_state), kg: null });
+          imageId: text(row.image_id), displayState: text(row.display_state), kg: null,
+          opened: { secondary: dartTrim(text(row.customer_name)), apparatusCount: 0 } });
       }
     } else if (page.projection === '') {
       if ((view === 'sequence' || view === 'move') && page.pending_orders.length) throw new Error(readError);
@@ -60,10 +68,13 @@ export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: Admin
       for (const id of page.order_ids) {
         const saved = page.snapshot?.maps.find(item => item.map.id === id), map = saved?.map;
         if (!map) throw new Error(readError);
-        const product = view === 'move' ? text(map.nodes?.find((node: any) => node.kind === 'end' && dartTrim(text(node.title)) && dartTrim(text(node.title)) !== dartTrim(text(map.title)))?.title) : '';
-        orders.push({ kind: 'order', id, code: codeOf(map), title: view === 'move' ? dartTrim(text(map.title)) || dartTrim(product) : text(map.title),
-          customer: view === 'move' ? dartTrim(text(map.customer_name)) || dartTrim(text(map.product_code)) || dartTrim(product) : text(map.customer_name),
+        const product = view === 'move' || view === 'orders' ? text(map.nodes?.find((node: any) => node.kind === 'end' && dartTrim(text(node.title)) && dartTrim(text(node.title)) !== dartTrim(text(map.title)))?.title) : '';
+        const customer = view === 'orders' ? dartTrim(customers.get(dartTrim(text(map.id))) ?? '') || dartTrim(text(map.customer_name)) : text(map.customer_name);
+        orders.push({ kind: 'order', id, code: codeOf(map), title: view === 'move' || view === 'orders' ? dartTrim(text(map.title)) || dartTrim(product) : text(map.title),
+          customer: view === 'move' ? dartTrim(text(map.customer_name)) || dartTrim(text(map.product_code)) || dartTrim(product) : customer,
           imageId: text(map.image_id), displayState: '', kg: null,
+          ...(view === 'orders' ? { opened: { secondary: customer || dartTrim(text(map.product_code)) || dartTrim(product),
+            apparatusCount: Array.isArray(map.nodes) ? map.nodes.filter((node: any) => node.kind === 'apparatus').length : 0 } } : {}),
           ...(view === 'sequence' ? { position: page.sequence_positions?.[id] ?? orders.length + 1 } : view === 'move' ? { position: orders.length + 1 } : {}) });
       }
     } else throw new Error(readError);

@@ -17,6 +17,14 @@ const guard = load('shared/profileSessionGuard.ts');
 const metadata = load('admin/adminWorkMapMetadataModel.ts', { './dartJsonString': load('admin/dartJsonString.ts'),
   './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel.ts', { './dartJsonString': load('admin/dartJsonString.ts') }) });
 const tick = () => new Promise(resolve => setImmediate(resolve));
+test('rework notice uses the source localization for all supported languages', () => {
+  const local = load('shared/localization/index.ts', { './catalog.json': require('../src/shared/localization/catalog.json') });
+  const expected = { uz: 'Buyurtma qoliplari peredelkada. Barcha kerakli qoliplar qaytmaguncha ishni boshlash mumkin emas.',
+    en: 'This order has molds in rework. Work cannot start until all required molds return.',
+    ru: 'Формы заказа на переделке. Начать работу можно после возврата всех необходимых форм.',
+    ur: 'This order has molds in rework. Work cannot start until all required molds return.' };
+  for (const [locale, text] of Object.entries(expected)) assert.equal(local.extensionText('qolipReworkText', 'order_unavailable', locale), text);
+});
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 function fixture(readers) {
   let current = true, ticketCurrent = true, stateIndex = 0, effectIndex = 0, writes = 0, closes = 0;
@@ -138,7 +146,7 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
     'react-native': { ActivityIndicator: 'ActivityIndicator', ScrollView: 'ScrollView', StyleSheet: { create: x => x }, Text: 'Text', View: 'View' },
     '../components/useWorkerColors': { useWorkerColors: () => ({ text: '#000', field: '#fff' }) },
     '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' },
-    '../shared/localization': { localizedGetter: key => key, productionText: key => key, adminText: key => key },
+    '../shared/localization': { localizedGetter: key => key, productionText: key => key, adminText: key => key, extensionText: (method, key) => `${method}.${key}` },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './useAdminWorkMapDetail': { useAdminWorkMapDetail: () => ({ ...detail, retry }) },
     './AdminWorkMapMetadata': { AdminWorkMapMetadata: 'Metadata' }, './adminWorkMapMetadataModel': metadata,
@@ -156,6 +164,15 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   assert.deepEqual(tree.filter(node => node.type === 'Text').slice(0, 3).map(node => node.props.children), ['worker.order.code', '-', 'Canonical • Hydrated']);
   assert.deepEqual(tree.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_missing']);
   assert.equal(tree.find(node => node.type === 'Summary').props.model.canExpand, true);
+  assert.equal(tree.some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
+  detail.value.qolipInRework = true;
+  for (const role of ['admin', 'brigader']) {
+    const notice = nodes(View({ ...props, session: { profile: { role } } })).find(node => node.props.testID === 'admin-qolip-rework-notice');
+    assert.equal(notice.props.children.props.children, 'qolipReworkText.order_unavailable');
+  }
+  assert.equal(nodes(View({ ...props, session: { profile: { role: 'sales_manager' } } })).some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
+  detail.value.qolipInRework = false;
+  assert.equal(nodes(View(props)).some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
   detail.value.map.combo = { name: 'C' }; detail.value.map.products = [{ product: 'P' }];
   assert.equal(nodes(View(props)).find(node => node.type === 'Combo').props.model.combo.name, 'C');
   detail.value.map.products = []; assert.equal(nodes(View(props)).some(node => node.type === 'Combo'), false);
@@ -181,5 +198,6 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   assert.equal(hydratedPending.find(node => node.type === 'Text').props.children, '№17 · Chala buyurtma');
   assert.equal(hydratedPending.find(node => node.type === 'Pending').props.rows.at(-1).value, 'Manager');
   assert.equal(hydratedPending.some(node => node.type === 'Summary' || node.type === 'Combo'), false);
+  assert.equal(hydratedPending.some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
   detail = { valid: false }; assert.equal(View(props).type, 'View'); assert.equal(nodes(View(props)).length, 1);
 });
