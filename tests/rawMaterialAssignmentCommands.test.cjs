@@ -23,15 +23,18 @@ function setup(responses) {
     refreshSession: async () => { refreshes++; session.token = 'new'; return true; } };
   const scope = compile('sessionReadScope'), authorized = compile('authorizedFetch', { './auth': auth });
   const controls = compile('workerControlsApi', { './authorizedFetch': authorized, './sessionReadScope': scope });
+  const rawMaterials = { rawMaterialAssignment: value => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid material assignment');
+    return value;
+  } };
+  const unlink = compile('rawMaterialUnlinkApi', { './authorizedFetch': authorized, './workerControlsApi': controls,
+    './workerRawMaterials': rawMaterials });
   const prep = compile('preparation/preparationInventoryAssignment', { '../apparatusApi': {}, '../authorizedFetch': authorized,
-    '../rawMaterialLookupApi': {}, '../rawMaterialUnlinkApi': {}, '../workerControlsApi': controls,
-    '../workerProductionMapSaved': {}, '../workerRawMaterials': { rawMaterialAssignment: value => {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid material assignment');
-      return value;
-    } } });
+    '../rawMaterialLookupApi': {}, '../rawMaterialUnlinkApi': unlink, '../workerControlsApi': controls,
+    '../workerProductionMapSaved': {}, '../workerRawMaterials': rawMaterials });
   const errors = compile('shared/mobileApiException'), routes = compile('shared/appRoutes');
   const { RawMaterialAssignmentCommands } = compile('shared/rawMaterialAssignmentCommands', {
-    '../auth': auth, '../preparation/preparationInventoryAssignment': prep, '../sessionReadScope': scope,
+    '../auth': auth, '../preparation/preparationInventoryAssignment': prep, '../rawMaterialUnlinkApi': unlink, '../sessionReadScope': scope,
     '../workerControlsApi': controls, './appRoutes': routes, './mobileApiException': errors,
   });
   const original = global.fetch, calls = [];
@@ -143,6 +146,7 @@ test('a command instance serializes assignments and discards late success after 
     await assert.rejects(h.command.assignScanned('order', 'OTHER', opts(async () => a)), /Amal bajarilmoqda/);
     h.setCurrent(false); pendingResponse.resolve(success);
     await assert.rejects(first, /Sessiya o‘zgardi/); assert.equal(h.calls.length, 1);
+    assert.equal(h.command.needsReconciliation, true);
   } finally { h.restore(); }
 });
 
@@ -161,4 +165,93 @@ test('ambiguous response without usable options is not repeated', async () => {
       assert.equal(opened, false); assert.equal(h.calls.length, 1);
     } finally { h.restore(); }
   }
+});
+
+const candidate = options => ({ barcode: 'ROLL', apparatus_options: options });
+const linked = (status = 'available', consumed = 0) => ({ order_id: 'order', barcode: 'ROLL', stock_status: status, consumed_qty: consumed });
+const manual = { kind: 'manual' }, scan = detailStatus => ({ kind: 'scan', detailStatus });
+
+test('manual candidate requires confirmation, uses the sole apparatus directly, and preserves the V2 request', async () => {
+  const h = setup([success]); let selections = 0;
+  try {
+    assert.equal(await h.command.assignCandidate('order', candidate([a]), async () => false, async () => { selections++; return a; }), null);
+    assert.equal(h.calls.length, 0);
+    await h.command.assignCandidate(' order ', candidate([a]), async () => true, async () => { selections++; return a; });
+    assert.equal(selections, 0);
+    assert.deepEqual(h.calls.map(call => [call.method, call.body]), [['POST', { order_id: 'order', barcode: 'ROLL', apparatus: a }]]);
+  } finally { h.restore(); }
+});
+
+test('manual candidate with multiple choices permits only an offered, explicitly chosen apparatus', async () => {
+  const h = setup([success]); let shown;
+  try {
+    assert.equal(await h.command.assignCandidate('order', candidate([a, b]), async () => true, async options => {
+      shown = options; return null;
+    }), null);
+    assert.deepEqual(shown, [a, b]); assert.equal(h.calls.length, 0);
+    await assert.rejects(h.command.assignCandidate('order', candidate([a, b]), async () => true,
+      async () => 'apparatus:default:not-offered'), /Invalid apparatus choice/);
+    assert.equal(h.calls.length, 0);
+    await h.command.assignCandidate('order', candidate([a, b]), async () => true, async () => b);
+    assert.equal(h.calls[0].body.apparatus, b);
+  } finally { h.restore(); }
+});
+
+for (const during of ['confirmation', 'apparatus choice']) {
+  test(`manual candidate cannot send after scope changes during ${during}`, async () => {
+    const h = setup([]), gate = deferred(), shown = deferred();
+    try {
+      const pending = h.command.assignCandidate('order', candidate([a, b]),
+        async () => { if (during === 'confirmation') { shown.resolve(); return gate.promise; } return true; },
+        async () => { shown.resolve(); return gate.promise; });
+      await shown.promise; h.setCurrent(false); gate.resolve(during === 'confirmation' ? true : a);
+      await assert.rejects(pending, /Sessiya o‘zgardi/); assert.equal(h.calls.length, 0);
+    } finally { h.restore(); }
+  });
+}
+
+test('manual candidate 401 is not retried and requires reconciliation', async () => {
+  const h = setup([{ status: 401, body: { error: 'expired' } }, success]);
+  try { await assert.rejects(h.command.assignCandidate('order', candidate([a]), async () => true, async () => a), /Natijani tekshirib/);
+    assert.equal(h.calls.length, 1); assert.equal(h.command.needsReconciliation, true);
+    await assert.rejects(h.command.assignCandidate('order', candidate([a]), async () => true, async () => a), /Natijani tekshirib/);
+    assert.equal(h.calls.length, 1);
+  } finally { h.restore(); }
+});
+
+test('manual and scanned unlinkability preserve their distinct f119 status rules', async () => {
+  for (const [assignment, source] of [[linked('in_use'), manual], [linked('consumed'), manual],
+    [linked('available', 1), scan('available')], [linked('', 0), scan('reserved')]]) {
+    const h = setup([]); let confirmed = false;
+    try { await assert.rejects(h.command.unlink(assignment, source, async () => { confirmed = true; return true; }), /uzib bo‘lmaydi/);
+      assert.equal(confirmed, false); assert.equal(h.calls.length, 0);
+    } finally { h.restore(); }
+  }
+  // Manual list uses stock status alone; scanned details also check consumed quantity.
+  const h = setup([success, success]);
+  try { await h.command.unlink(linked(' AVAILABLE ', 1), manual, async () => true);
+    await h.command.unlink(linked('', 0), scan('available'), async () => true);
+    assert.deepEqual(h.calls.map(call => [call.method, call.body]), [
+      ['DELETE', { order_id: 'order', barcode: 'ROLL' }], ['DELETE', { order_id: 'order', barcode: 'ROLL' }],
+    ]);
+  } finally { h.restore(); }
+});
+
+test('unlink cancel and stale confirmation never send DELETE', async () => {
+  const h = setup([]), gate = deferred(), shown = deferred();
+  try {
+    assert.equal(await h.command.unlink(linked(), manual, async () => false), null);
+    const pending = h.command.unlink(linked(), manual, async () => { shown.resolve(); return gate.promise; });
+    await shown.promise; h.session.capabilities = []; gate.resolve(true);
+    await assert.rejects(pending, /Sessiya o‘zgardi/); assert.equal(h.calls.length, 0);
+  } finally { h.restore(); }
+});
+
+test('unlink 401 is not retried and requires reconciliation', async () => {
+  const h = setup([{ status: 401, body: { error: 'expired' } }, success]);
+  try { await assert.rejects(h.command.unlink(linked(), manual, async () => true), /Natijani tekshirib/);
+    assert.equal(h.calls.length, 1); assert.equal(h.command.needsReconciliation, true);
+    await assert.rejects(h.command.unlink(linked(), manual, async () => true), /Natijani tekshirib/);
+    assert.equal(h.calls.length, 1);
+  } finally { h.restore(); }
 });
