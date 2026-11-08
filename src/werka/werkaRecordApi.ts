@@ -2,6 +2,7 @@ import type { Session } from '../auth';
 import { werkaHomeFromJson } from '../authenticateAccount';
 import { authorizedFetch } from '../authorizedFetch';
 import { dispatchRecordFromJson, type DispatchRecord } from '../shared/notificationApi';
+import { werkaMutationScope } from './werkaMutationScope';
 
 type Obj = Record<string, unknown>;
 export type WerkaStatusKind = 'pending' | 'confirmed' | 'returned';
@@ -82,9 +83,13 @@ export async function werkaNotifications(session: Session): Promise<DispatchReco
 /** @v2 confirmReceipt */
 export async function confirmReceipt(session: Session, input: { receiptID: string; acceptedQty: number; returnedQty?: number;
   returnReason?: string; returnComment?: string }): Promise<DispatchRecord> {
+  const scope = werkaMutationScope(session);
   const response = await authorizedFetch(session, '/v1/mobile/werka/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ receipt_id: input.receiptID, accepted_qty: input.acceptedQty, returned_qty: input.returnedQty ?? 0,
-      return_reason: input.returnReason ?? '', return_comment: input.returnComment ?? '' }) });
+      return_reason: input.returnReason ?? '', return_comment: input.returnComment ?? '' }) }, scope.beforeSend);
+  scope.afterResponse();
   if (response.status !== 200) throw new Error('Confirm receipt failed');
-  return dispatchRecordFromJson(await response.json());
+  let data: unknown;
+  try { data = await response.json(); } finally { scope.afterResponse(); }
+  return dispatchRecordFromJson(data);
 }

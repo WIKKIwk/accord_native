@@ -2,6 +2,7 @@ import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
 import { dispatchRecordFromJson } from '../shared/notificationApi';
+import { werkaMutationScope } from './werkaMutationScope';
 
 type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -49,38 +50,50 @@ export function werkaCustomerIssueBatchResultFromJson(value: unknown) {
 
 /** @v2 createWerkaUnannouncedDraft */
 export async function createWerkaUnannouncedDraft(session: Session, input: { supplierRef: string; itemCode: string; qty: number }) {
+  const scope = werkaMutationScope(session);
   const response = await authorizedFetch(session, '/v1/mobile/werka/unannounced/create', { method: 'POST', headers: jsonHeaders,
-    body: JSON.stringify({ supplier_ref: input.supplierRef, item_code: input.itemCode, qty: input.qty }) });
+    body: JSON.stringify({ supplier_ref: input.supplierRef, item_code: input.itemCode, qty: input.qty }) }, scope.beforeSend);
+  scope.afterResponse();
   if (response.status !== 200) throw new Error('Werka unannounced create failed');
-  return dispatchRecordFromJson(await response.json());
+  let data: unknown;
+  try { data = await response.json(); } finally { scope.afterResponse(); }
+  return dispatchRecordFromJson(data);
 }
 
 /** @v2 createWerkaCustomerIssue */
 export async function createWerkaCustomerIssue(session: Session, input: { customerRef: string; itemCode: string; qty: number;
   sourceBarcode?: string; sourceStockEntryName?: string; sourceLineIndex?: number }) {
+  const scope = werkaMutationScope(session);
   const body: Obj = { customer_ref: input.customerRef, item_code: input.itemCode, qty: input.qty };
   if (input.sourceBarcode?.trim()) body.source_barcode = input.sourceBarcode.trim();
   if (input.sourceStockEntryName?.trim()) body.source_stock_entry = input.sourceStockEntryName.trim();
   if ((input.sourceLineIndex ?? 0) > 0) body.source_line_index = input.sourceLineIndex;
   const response = await authorizedFetch(session, '/v1/mobile/werka/customer-issue/create', { method: 'POST', headers: jsonHeaders,
-    body: JSON.stringify(body) });
+    body: JSON.stringify(body) }, scope.beforeSend);
+  scope.afterResponse();
   if (response.status !== 200) {
     let raw: unknown;
-    try { raw = await response.json(); } catch { raw = null; }
+    try { raw = await response.json(); } catch { raw = null; } finally { scope.afterResponse(); }
     const code = string(object(raw)?.error_code).trim();
     if (code === 'insufficient_stock') throw new MobileApiException({ code, message: 'Insufficient stock', statusCode: 409 });
     if (code === 'duplicate_customer_issue_source') throw new MobileApiException({ code, message: 'QR already dispatched', statusCode: 409 });
     throw new Error('Werka customer issue create failed');
   }
-  return werkaCustomerIssueRecordFromJson(await response.json());
+  let data: unknown;
+  try { data = await response.json(); } finally { scope.afterResponse(); }
+  return werkaCustomerIssueRecordFromJson(data);
 }
 
 /** @v2 createWerkaCustomerIssueBatch */
 export async function createWerkaCustomerIssueBatch(session: Session, clientBatchID: string,
   lines: readonly { customerRef: string; itemCode: string; qty: number }[]) {
+  const scope = werkaMutationScope(session);
   const response = await authorizedFetch(session, '/v1/mobile/werka/customer-issue/batch-create', { method: 'POST', headers: jsonHeaders,
     body: JSON.stringify({ client_batch_id: clientBatchID,
-      lines: lines.map(line => ({ customer_ref: line.customerRef, item_code: line.itemCode, qty: line.qty })) }) });
+      lines: lines.map(line => ({ customer_ref: line.customerRef, item_code: line.itemCode, qty: line.qty })) }) }, scope.beforeSend);
+  scope.afterResponse();
   if (response.status !== 200) throw new Error('Werka customer issue batch create failed');
-  return werkaCustomerIssueBatchResultFromJson(await response.json());
+  let data: unknown;
+  try { data = await response.json(); } finally { scope.afterResponse(); }
+  return werkaCustomerIssueBatchResultFromJson(data);
 }

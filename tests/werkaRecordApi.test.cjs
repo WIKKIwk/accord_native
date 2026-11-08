@@ -11,6 +11,7 @@ function load(file, fetch, cache = new Map()) {
   const module = new Module(resolved); module.filename = resolved; module.paths = require.main.paths;
   cache.set(resolved, module.exports);
   module.require = name => {
+    if (name === './werkaMutationScope') return { werkaMutationScope: () => ({ beforeSend() {}, afterResponse() {} }) };
     if (name.endsWith('/authorizedFetch') || name === './authorizedFetch') return { authorizedFetch: fetch };
     if (name.startsWith('.')) return load(path.resolve(path.dirname(resolved), name), fetch, cache);
     return require(name);

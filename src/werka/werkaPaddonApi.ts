@@ -4,6 +4,7 @@ import { paddonSnapshotFromJson } from '../paddonModels';
 import { MobileApiException } from '../shared/mobileApiException';
 import { productionMapResponseError } from '../workerControlsApi';
 import { progressBatchFromJson } from '../workerProgressBatch';
+import { werkaMutationScope } from './werkaMutationScope';
 
 type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -46,14 +47,17 @@ export function werkaQrPreviewFromJson(code: string, value: unknown) {
   throw new MobileApiException({ code: 'qr_preview_invalid', message: 'QR javobi noto‘g‘ri' });
 }
 
-async function payload(response: Response, fallback: string): Promise<Obj> {
+async function payload(response: Response, fallback: string, afterRead?: () => void): Promise<Obj> {
   if (response.status !== 200) {
     let value: unknown;
     try { value = await response.json(); } catch { value = null; }
+    afterRead?.();
     // This shared mapper currently has documented gaps relative to the complete V2 mapper.
     throw productionMapResponseError(response.status, value, fallback);
   }
-  const value = object(await response.json());
+  let raw: unknown;
+  try { raw = await response.json(); } finally { afterRead?.(); }
+  const value = object(raw);
   if (!value) throw new TypeError('Invalid Werka response');
   return value;
 }
@@ -72,10 +76,13 @@ export async function werkaPaddonPreview(session: Session, code: string): Promis
 
 /** @v2 werkaReceivePaddon */
 export async function werkaReceivePaddon(session: Session, preview: WerkaPaddonPreview, warehouse: string): Promise<Obj> {
+  const scope = werkaMutationScope(session);
   const response = await authorizedFetch(session, '/v1/mobile/werka/paddons/receive', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: preview.snapshot.paddon.code, warehouse,
-      expected_batch_ids: preview.snapshot.items.map(item => item.batch_id), snapshot_token: preview.snapshotToken }) });
-  return receipt(await payload(response, 'paddon_receive_failed'));
+      expected_batch_ids: preview.snapshot.items.map(item => item.batch_id), snapshot_token: preview.snapshotToken }) }, scope.beforeSend);
+  scope.afterResponse();
+  const data = await payload(response, 'paddon_receive_failed', scope.afterResponse);
+  return receipt(data);
 }
 
 /** @v2 werkaQrPreview */
@@ -87,8 +94,11 @@ export async function werkaQrPreview(session: Session, rawCode: string) {
 
 /** @v2 werkaReceiveWip */
 export async function werkaReceiveWip(session: Session, preview: WerkaWipPreview, warehouse: string): Promise<Obj> {
+  const scope = werkaMutationScope(session);
   const response = await authorizedFetch(session, '/v1/mobile/werka/wip/receive', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progress_batch_id: preview.batch.batch_id,
-      qr_payload: preview.batch.qr_payload, warehouse, snapshot_token: preview.snapshotToken }) });
-  return receipt(await payload(response, 'wip_receive_failed'));
+      qr_payload: preview.batch.qr_payload, warehouse, snapshot_token: preview.snapshotToken }) }, scope.beforeSend);
+  scope.afterResponse();
+  const data = await payload(response, 'wip_receive_failed', scope.afterResponse);
+  return receipt(data);
 }

@@ -9,7 +9,8 @@ function load(file, fetch, cache = new Map()) {
   const resolved = path.resolve(file.endsWith('.ts') ? file : `${file}.ts`);
   if (cache.has(resolved)) return cache.get(resolved);
   const module = new Module(resolved); module.filename = resolved; module.paths = require.main.paths; cache.set(resolved, module.exports);
-  module.require = name => name.endsWith('/authorizedFetch') ? { authorizedFetch: fetch }
+  module.require = name => name === './werkaMutationScope' ? { werkaMutationScope: () => ({ beforeSend() {}, afterResponse() {} }) }
+    : name.endsWith('/authorizedFetch') ? { authorizedFetch: fetch }
     : name.startsWith('.') ? load(path.resolve(path.dirname(resolved), name), fetch, cache) : require(name);
   module._compile(ts.transpileModule(fs.readFileSync(resolved, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, resolved);
   cache.set(resolved, module.exports); return module.exports;
