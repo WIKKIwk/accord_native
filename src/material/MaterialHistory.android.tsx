@@ -1,5 +1,6 @@
 import { Column, Host, Text as ComposeText, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { router, type Href } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -12,6 +13,7 @@ import { OrdersList } from '../shared/orders/OrdersList';
 import type { AdminApparatus } from '../apparatusApi';
 import type { AdminRawMaterialEvent } from './materialHistoryApi';
 import { materialHistoryDetails, materialHistorySubtitle, materialHistoryTime, materialHistoryTitle } from './materialHistoryPresentation';
+import { materialHistorySymbol } from './materialHistorySymbols';
 import { useMaterialContext } from './MaterialContext';
 import { useMaterialHistory } from './useMaterialHistory';
 
@@ -49,9 +51,11 @@ export function MaterialHistory() {
         history.events.slice(0, 100).map((event, index, events) => <WorkerQueueCard key={`${event.event_id}:${index}`}
           backgroundColor={colors.surface} first={index === 0} last={index === events.length - 1}
           onPress={() => sheet.open(<MaterialHistoryDetails event={event} catalog={history.apparatus} session={session} />, { dismissible: true, compact: true, fitContent: true })}>
+          <SymbolView name={materialHistorySymbol(event.event_type)} size={22} tintColor={colors.primary} />
           <View style={{ flex: 1, padding: 8 }}><Text style={{ color: colors.onSurface, fontWeight: '700' }} numberOfLines={1}>{materialHistoryTitle(event)}</Text>
             <Text style={{ color: colors.onSurfaceVariant }} numberOfLines={2}>{materialHistorySubtitle(event, history.apparatus)}</Text></View>
-          <Text style={{ color: colors.onSurfaceVariant }}>{materialHistoryTime(event.occurred_at_unix)}</Text>
+          <View style={{ alignItems: 'flex-end' }}><Text style={{ color: colors.onSurfaceVariant }}>{materialHistoryTime(event.occurred_at_unix)}</Text>
+            <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right' }} size={20} tintColor={colors.onSurfaceVariant} /></View>
         </WorkerQueueCard>)}
     </OrdersList>
   </View>;

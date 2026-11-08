@@ -1,13 +1,15 @@
-import { Button, Host, List, ProgressView, Section, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, Host, HStack, Image, List, ProgressView, Section, Text, VStack } from '@expo/ui/swift-ui';
+import { font, foregroundStyle, frame, lineLimit } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { PlatformColor, View } from 'react-native';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { PreparationList } from '../preparation/PreparationUI';
 import type { AdminApparatus } from '../apparatusApi';
 import type { AdminRawMaterialEvent } from './materialHistoryApi';
 import { materialHistoryDetails, materialHistorySubtitle, materialHistoryTime, materialHistoryTitle } from './materialHistoryPresentation';
+import { materialHistorySymbol } from './materialHistorySymbols';
 import { useMaterialContext } from './MaterialContext';
 import { useMaterialHistory } from './useMaterialHistory';
 
@@ -25,6 +27,8 @@ function MaterialHistoryDetails({ event, catalog, session }: { event: AdminRawMa
   </VStack></Host>;
 }
 
+const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
+
 // @v2 MaterialTaminotchiHistoryScreen
 export function MaterialHistory() {
   const { session } = useMaterialContext(), history = useMaterialHistory(session), sheet = useNativeSheet();
@@ -36,8 +40,13 @@ export function MaterialHistory() {
       </Button></Section> : !history.events.length ? <Section><Text>Harakatlar hali yo‘q</Text></Section> :
         <Section>{history.events.slice(0, 100).map((event, index) => <Button key={`${event.event_id}:${index}`}
           onPress={() => sheet.open(<MaterialHistoryDetails event={event} catalog={history.apparatus} session={session} />, { dismissible: true })}>
-          <VStack alignment="leading"><Text>{materialHistoryTitle(event)}</Text>
-            <Text>{materialHistorySubtitle(event, history.apparatus)}</Text><Text>{materialHistoryTime(event.occurred_at_unix)}</Text></VStack>
+          <HStack alignment="top" spacing={12}><Image systemName={materialHistorySymbol(event.event_type).ios} size={22} color={PlatformColor('systemBlue')} />
+            <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+              <Text modifiers={[font({ textStyle: 'subheadline', weight: 'bold' }), lineLimit(1)]}>{materialHistoryTitle(event)}</Text>
+              <Text modifiers={[font({ textStyle: 'caption' }), secondary, lineLimit(2)]}>{materialHistorySubtitle(event, history.apparatus)}</Text>
+            </VStack><VStack alignment="trailing" spacing={3}><Text modifiers={[font({ textStyle: 'caption2' }), secondary]}>
+              {materialHistoryTime(event.occurred_at_unix)}</Text><Image systemName="chevron.right" size={16} modifiers={[secondary]} /></VStack>
+          </HStack>
         </Button>)}</Section>}
     </PreparationList>
   </View>;
