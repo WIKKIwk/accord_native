@@ -33,6 +33,10 @@ function localDate(year: number, month: number, day: number): Date {
 export function werkaArchiveMonthRange(year: number, month: number) {
   return { from: localDate(year, month, 1), to: localDate(year, month + 1, 0) };
 }
+export function werkaArchiveDayRange(year: number, month: number, day: number) {
+  const from = localDate(year, month, day);
+  return { from, to: new Date(from.getTime()) };
+}
 export function werkaArchiveYearRange(year: number) {
   return { from: localDate(year, 1, 1), to: localDate(year, 12, 31) };
 }

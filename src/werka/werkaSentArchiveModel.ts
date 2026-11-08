@@ -1,5 +1,5 @@
 import { localizedGetter } from '../shared/localization';
-import { werkaArchiveMonthRange, werkaArchiveYearPageRange, werkaArchiveYearRange } from './werkaArchiveCalendar';
+import { werkaArchiveDayRange, werkaArchiveMonthRange, werkaArchiveYearPageRange, werkaArchiveYearRange } from './werkaArchiveCalendar';
 import type { WerkaArchivePeriod, WerkaArchiveQuery } from './werkaArchiveApi';
 
 export type SentArchivePanel = 'daily' | 'monthly' | 'yearly';
@@ -31,8 +31,7 @@ export function werkaSentArchiveQueries(state: SentArchiveState): [WerkaArchiveQ
 export function werkaSentArchiveSelection(period: SentArchivePanel, year: number, month = 1, day = 1): WerkaArchiveQuery {
   if (period === 'yearly') return { kind: 'sent', period, ...werkaArchiveYearRange(year) };
   if (period === 'monthly') return { kind: 'sent', period, ...werkaArchiveMonthRange(year, month) };
-  const date = werkaArchiveMonthRange(year, month).from; date.setDate(day);
-  return { kind: 'sent', period, from: date, to: new Date(date.getTime()) };
+  return { kind: 'sent', period, ...werkaArchiveDayRange(year, month, day) };
 }
 
 /** Source hides the entire body on the first loading/error when all three sets are empty. */
