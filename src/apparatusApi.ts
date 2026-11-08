@@ -117,6 +117,45 @@ export function apparatusUsesLaminationWorkflow(operation: string): boolean {
   return ['laminate', 'glue'].includes(operation.trim().toLowerCase());
 }
 
+type ApparatusReadGuard = { check: () => void; failed: () => boolean };
+// Only prepared wrappers are indexed: each new public read gets its own failure latch.
+const preparedApparatusGuards = new WeakMap<() => void, ApparatusReadGuard>();
+let checkingApparatusGuard: { reentered: boolean } | null = null;
+function suppressGuardRejection(value: object | Function): void {
+  try {
+    const handled = Promise.prototype.then.call(value, undefined, () => {});
+    void Promise.prototype.then.call(handled, undefined, () => {});
+  } catch {
+    try { const handled = Promise.resolve(value); void Promise.prototype.then.call(handled, undefined, () => {}); }
+    catch { /* Invalid guards still fail closed if a hostile Promise cannot be observed. */ }
+  }
+}
+function prepareApparatusGuard(guard?: () => void): ApparatusReadGuard | undefined {
+  if (guard == null) return undefined;
+  if (typeof guard !== 'function') throw new TypeError('Invalid apparatus guard');
+  const existing = preparedApparatusGuards.get(guard);
+  if (existing) return existing;
+  let failed = false, failure: unknown;
+  const fail = (error: unknown): never => { if (!failed) { failed = true; failure = error; } throw failure; };
+  const check = () => {
+    if (failed) throw failure;
+    if (checkingApparatusGuard) { checkingApparatusGuard.reentered = true; return fail(new TypeError('Invalid apparatus guard')); }
+    const frame = { reentered: false }; checkingApparatusGuard = frame;
+    try {
+      const result: unknown = guard();
+      if (result !== undefined) {
+        if (result !== null && (typeof result === 'object' || typeof result === 'function')) suppressGuardRejection(result);
+        return fail(new TypeError('Invalid apparatus guard'));
+      }
+      if (frame.reentered) return fail(new TypeError('Invalid apparatus guard'));
+    } catch (error) { return fail(error); }
+    finally { checkingApparatusGuard = null; }
+  };
+  const prepared = { check, failed: () => failed };
+  preparedApparatusGuards.set(check, prepared);
+  return prepared;
+}
+
 class ReadTimeout extends Error {}
 class ApparatusException extends WorkerControlException {
   constructor(code: string, message: string, statusCode?: number, readonly details: string[] = []) {
@@ -148,14 +187,15 @@ async function readAttempt(session: Session, path: string, timeoutMs: number, si
 }
 
 export async function readApparatus(session: Session, path: string, retryTransient: boolean, signal?: AbortSignal, beforeSend?: () => void) {
+  const guard = prepareApparatusGuard(beforeSend), check = guard?.check;
   const start = Date.now(), attempts = retryTransient ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt++) {
-    beforeSend?.();
+    check?.();
     const remaining = retryTransient ? 15_000 - (Date.now() - start) : 10_000;
     if (remaining <= 0) throw new ReadTimeout('API read deadline exceeded');
     try {
-      const result = await readAttempt(session, path, Math.min(10_000, remaining), signal, beforeSend);
-      beforeSend?.();
+      const result = await readAttempt(session, path, Math.min(10_000, remaining), signal, check);
+      check?.();
       if (!retryTransient) return result;
       const contentType = result.response.headers.get('content-type')?.toLowerCase() ?? '';
       const html = result.response.status >= 200 && result.response.status < 300 &&
@@ -164,7 +204,8 @@ export async function readApparatus(session: Session, path: string, retryTransie
       if (!html && ![502, 503, 504].includes(result.response.status)) return result;
       if (!html && attempt === attempts - 1) return result;
     } catch (error) {
-      beforeSend?.();
+      if (guard?.failed()) throw error;
+      check?.();
       const message = error instanceof Error ? error.message.toLowerCase() : '';
       const terminal = signal?.aborted || /require https|too many api redirects|certificate|handshake/.test(message);
       const transient = error instanceof ReadTimeout || error instanceof TypeError ||
@@ -180,13 +221,14 @@ export async function readApparatus(session: Session, path: string, retryTransie
 /** @v2 adminApparatus */
 export async function adminApparatus(session: Session, options: { query?: string; limit?: number; retryTransient?: boolean;
   signal?: AbortSignal; beforeSend?: () => void } = {}): Promise<AdminApparatus[]> {
+  const check = prepareApparatusGuard(options.beforeSend)?.check;
   const query = new URLSearchParams(), value = (options.query ?? '').trim(), limit = options.limit ?? 50;
   if (value) query.set('q', value);
   if (limit > 0) query.set('limit', String(limit));
   await Promise.resolve();
-  options.beforeSend?.();
-  const { response, body } = await readApparatus(session, `/v1/mobile/admin/apparatus?${query}`, options.retryTransient === true, options.signal, options.beforeSend);
-  options.beforeSend?.();
+  check?.();
+  const { response, body } = await readApparatus(session, `/v1/mobile/admin/apparatus?${query}`, options.retryTransient === true, options.signal, check);
+  check?.();
   if (response.status !== 200) {
     let payload: Obj | null = null;
     try { payload = object(JSON.parse(body)); } catch { /* Use the fallback error. */ }
@@ -199,7 +241,7 @@ export async function adminApparatus(session: Session, options: { query?: string
     const message = serverCode ? messages[code.toLowerCase()] ?? code : `Aparatlar yuklanmadi (HTTP ${response.status})`;
     const details = code === 'rezka_worker_has_open_run' && Array.isArray(payload?.blocked_apparatus_ids)
       ? payload.blocked_apparatus_ids.filter((item): item is string => typeof item === 'string') : [];
-    options.beforeSend?.();
+    check?.();
     throw new ApparatusException(code, message, response.status, details);
   }
   const decoded: unknown = JSON.parse(body);
@@ -212,6 +254,6 @@ export async function adminApparatus(session: Session, options: { query?: string
         [`item_index=${index + 1}`, ...(object(item) ? [`error=${String(error)}`] : [])]);
     }
   });
-  options.beforeSend?.();
+  check?.();
   return result;
 }

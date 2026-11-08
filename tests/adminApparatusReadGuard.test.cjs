@@ -67,3 +67,37 @@ test('a guard invalidated during the transient-retry delay prevents the second a
   try { await assert.rejects(f.api.adminApparatus(f.session, { retryTransient: true, beforeSend: () => { if (!current) throw new Error('changed'); } }), /changed/);
     assert.equal(calls, 1); } finally { global.fetch = previous; }
 });
+
+test('one-shot TypeError thrown by the guard after response/body is terminal, never a transport retry', async () => {
+  for (const failAt of ['response', 'body']) {
+    const f = fixture(), previous = global.fetch, failure = new TypeError('guard failed once');
+    let stage = '', calls = 0, thrown = false;
+    const guard = () => { if (stage === failAt && !thrown) { thrown = true; throw failure; } };
+    global.fetch = async () => { calls++; stage = 'response'; return { status: 200, headers: new Headers(), text: async () => { stage = 'body'; return body; } }; };
+    try {
+      await assert.rejects(f.api.adminApparatus(f.session, { retryTransient: true, beforeSend: guard }), error => error === failure);
+      assert.equal(calls, 1);
+      // A deliberate new public operation is independent of the failed operation's latch.
+      assert.equal((await f.api.adminApparatus(f.session, { beforeSend: guard }))[0].id, station); assert.equal(calls, 2);
+    } finally { global.fetch = previous; }
+  }
+});
+test('async, rejected Promise/thenable, value-returning and non-function guards fail closed without unhandled rejection', async () => {
+  const f = fixture(), previous = global.fetch; let calls = 0;
+  global.fetch = async () => { calls++; return new Response(body); };
+  try {
+    for (const beforeSend of [async () => {}, async () => { throw new Error('async guard'); }, () => Promise.reject(new Error('rejected guard')),
+      () => ({ then(_yes, no) { no(new Error('thenable guard')); } }), () => true, () => null, () => 1, 42]) {
+      await assert.rejects(f.api.adminApparatus(f.session, { retryTransient: true, beforeSend }), /Invalid apparatus guard/);
+    }
+    await new Promise(resolve => setImmediate(resolve)); assert.equal(calls, 0);
+    await assert.rejects(f.api.readApparatus(f.session, '/v1/mobile/admin/apparatus', true, undefined, async () => {}), /Invalid apparatus guard/);
+    assert.equal(calls, 0);
+  } finally { global.fetch = previous; }
+});
+test('valid synchronous guard preserves an opted-in transient network retry', async () => {
+  const f = fixture(), previous = global.fetch; let calls = 0;
+  global.fetch = async () => { if (++calls === 1) throw new TypeError('network request failed'); return new Response(body); };
+  try { assert.equal((await f.api.adminApparatus(f.session, { retryTransient: true, beforeSend() {} }))[0].id, station); assert.equal(calls, 2); }
+  finally { global.fetch = previous; }
+});

@@ -5,6 +5,11 @@ Stopped at: Continue part 1 and implement the remaining reachable Admin surfaces
 
 The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. An isolated clean clone was used for ledger and oracle reads. The original source and the clone were both clean at that SHA before and after those operations. The ledger reports 8 parts, 275 public API entries (including already-tagged imports) and 112 surface entries; runtime reachability and existing tags still require review. The historical 61 top-level contract files are from `7c87a54e` and were not overwritten.
 
+## Dependency follow-up: terminal catalog guard failures
+
+- Review of `3191135` found that a one-shot callback `TypeError` after a response could be misclassified as a retryable transport failure if a later callback invocation returned normally. Before exposing Sequence, each public guarded catalog read now validates a synchronous void callback and latches its first failure. Callback exceptions are terminal regardless of type; a deliberate new public read gets a new latch. The existing callback is not repeatedly asked to authorize recovery after it failed.
+- Accidental async, rejected Promise/thenable, value-returning and non-function callbacks fail closed; rejected returns are observed to avoid an unhandled rejection. Fourteen catalog/default/guard tests pass, including one-shot failures at response/body, independent fresh operations, valid network retry and the legacy unguarded replay. iOS typecheck, lint and diff-check pass. Omitted-guard transport arguments/behavior and protected callers remain unchanged; native dispatch, redirect-hop and broader parser gaps remain open.
+
 ## Dependency checkpoint: guarded apparatus catalog reads
 
 - Sequence's catalog bootstrap needs the same original-session check as its paged read. The existing shared `adminApparatus` / `readApparatus` now accept an optional callback, forward it to the existing `authorizedFetch` before initial/401 sends, and recheck after deferred entry, response/body, model and transient retry delay. Omitting it preserves the legacy three-argument transport invocation, requests, parsers, retry limits and protected-role defaults. No Worker/Preparation, auth or notification file changed.
