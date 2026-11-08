@@ -23,9 +23,22 @@ test('Boyoqchi session routes to the correct native role tree on each platform',
 test('role route trees reuse shared profile and chat pages on both platforms', () => {
   for (const platform of ['ios', 'android']) {
     const root = path.resolve(__dirname, `../src/app/${platform}-boyoqchi`);
-    for (const relative of ['_layout.tsx', 'chat/_layout.tsx', 'chat/index.tsx', 'chat/new.tsx', 'chat/[conversationId].tsx']) {
+    const chat = platform === 'ios' ? '(tabs)/chat' : 'chat';
+    for (const relative of ['_layout.tsx', `${chat}/_layout.tsx`, `${chat}/index.tsx`, `${chat}/new.tsx`, `${chat}/[conversationId].tsx`]) {
       assert.equal(fs.existsSync(path.join(root, relative)), true, `${platform} ${relative}`);
     }
-    assert.match(fs.readFileSync(path.join(root, 'chat/_layout.tsx'), 'utf8'), /ChatRouteProvider/);
+    assert.match(fs.readFileSync(path.join(root, chat, '_layout.tsx'), 'utf8'), /ChatRouteProvider/);
   }
+});
+
+test('the shared role dock appends Chat after Profile and starts session-wide unread state', () => {
+  const android = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiDock.android.tsx'), 'utf8');
+  const ios = fs.readFileSync(path.resolve(__dirname, '../src/app/ios-boyoqchi/(tabs)/_layout.tsx'), 'utf8');
+  const context = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiContext.tsx'), 'utf8');
+  assert.ok(android.indexOf("id: 'home'") < android.indexOf("id: 'astatka'"));
+  assert.ok(android.indexOf("id: 'astatka'") < android.indexOf("id: 'profile'"));
+  assert.ok(android.indexOf("id: 'profile'") < android.indexOf("id: 'chat'"));
+  assert.ok(ios.indexOf('name="profile"') < ios.indexOf('name="chat"'));
+  assert.match(ios, /NativeTabs\.Trigger\.Badge hidden=\{unread <= 0\}/);
+  assert.match(context, /useChatUnreadCount\(session\)/);
 });
