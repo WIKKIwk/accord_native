@@ -6,6 +6,38 @@ The spec is the commit in `V2_BASELINE`. Generated numbers come from
 Sessions write to `docs/port/status/<name>.md`. Only the integrator edits this file, and folds their rows in when
 merging a branch.
 
+## Selected source and historical drift
+
+The user selected V2 commit `f11910bb2c8c7081ce26770e69811b03fd0739ed` as the source for new port work, with remaining shortcomings to be addressed later. This source selection does **not** mean that the changes since the previous baseline `7c87a54e78fa99eb89b7342101f6ec468ecf2e19` have been ported or audited. The exact historical diff is available with:
+
+```sh
+git --no-optional-locks -C ../accord_mobile_v2 diff --name-status 7c87a54e78fa99eb89b7342101f6ec468ecf2e19 f11910bb2c8c7081ce26770e69811b03fd0739ed
+```
+
+It spans 208 files, including 206 under `lib/` and `test/`. Much is `setState` wrapper churn, but the entire relevant diff still needs case-by-case comparison; a tag or a zero result from `port_ledger.mjs drift` after the pin is not proof of parity. Known pending changes and protected-role dependencies are listed in `status/baseline-sync.md`. Do not change worker or preparation code as part of this alignment.
+
+By default the ledger reads the live V2 working tree, while the contract recorder, oracle and localization generator read `V2_BASELINE`. Before and after each session's ledger work, require the V2 checkout to have clean Git status and HEAD exactly equal to the selected full SHA above; stop and notify the integrator if either changes. A clean status alone does not pin the ledger's input, and generated or ignored files must not contaminate its source scan.
+
+To isolate ledger scans from ignored or live edits, each role can create its own source clone inside the ignored `.expo/` folder and treat it as read-only. From that role's worktree:
+
+```sh
+set -eu
+base=$(cat docs/port/V2_BASELINE)
+source=../accord_mobile_v2
+export ACCORD_V2="$PWD/.expo/accord-v2-baseline"
+test "$(git --no-optional-locks -C "$source" rev-parse HEAD)" = "$base"
+test -z "$(git --no-optional-locks -C "$source" status --porcelain=v1)"
+git --no-optional-locks clone --no-local --no-checkout --depth=1 --single-branch "$source" "$ACCORD_V2"
+git --no-optional-locks -C "$ACCORD_V2" checkout --detach "$base"
+test "$(git --no-optional-locks -C "$ACCORD_V2" rev-parse HEAD)" = "$base"
+test -z "$(git --no-optional-locks -C "$ACCORD_V2" status --porcelain=v1)"
+node .agents/skills/accord-port/scripts/port_ledger.mjs role <id> <part> --v2 "$ACCORD_V2"
+```
+
+Before each use verify the clone's HEAD and clean status, and do not add ignored or generated files to its source tree. `ACCORD_V2` also selects it for the contract recorder and oracle. Separately check the original V2 HEAD and status for new drift before and after work; if the source moves, stop rather than silently changing the snapshot. This copy is not technically immutable and is not evidence that historical drift was re-ported.
+
+The 61 existing `tests/contracts/*.json` files, containing 822 records, remain historical recordings of `7c87a54e78fa99eb89b7342101f6ec468ecf2e19`. The replay helper does not check baseline metadata, so a passing historical replay is not proof of parity at `f11910bb`. For each selected V2 contract test used by a new role, regenerate its fixture at the selected baseline once and verify its metadata and the V2 test independently with `v2_oracle.sh`; do not silently reuse a historical fixture. The recorder can collect requests from failed Flutter tests, so failed cases are not specifications and must be investigated and recorded as open items. Roles can share fixture filenames: coordinate ownership and reconcile results rather than overwrite each other's recordings. Do not relabel historical fixtures without regeneration.
+
 ## Decisions
 
 These are defaults, and the user can change any of them.
@@ -181,3 +213,4 @@ API functions whose V2 version has a test-mode branch. The test mode step clears
 
 | Date | From | To | What was re-ported |
 |---|---|---|---|
+| 2026-11-08 | `7c87a54e` | `f11910bb` | Source selection only; no behavioral drift is claimed as re-ported. See `status/baseline-sync.md`. |
