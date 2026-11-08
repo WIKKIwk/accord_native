@@ -7,6 +7,7 @@ Stopped at: Port the remaining Werka API, store, UI contract, both platform view
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Werka screens and routes | `.port/role-werka.md`: 28 surfaces, 24 routes | Port each reachable screen, sheet, dialog and navigation edge on iOS and Android. No role entry has been wired. |
+| Initial native menu content | `WerkaCreateHubScreen`, `WerkaArchiveScreen`, `WerkaArchivePeriodScreen` | iOS and Android content bodies reuse the existing preparation native list/rows and expose the source-ordered actions. They are not full screens: native headers, dock, back behavior, route wiring, icons, end-to-end tests and surface audit remain open. No view coverage tag is claimed. |
 | UI contract | `docs/port/roles/werka.md` | Home, status, create index, archive index and shell have partial source notes. Complete every other surface and its dialogs, text, states and navigation before using it as a finished UI contract. |
 | Werka APIs and stores | `.port/role-werka.md`: 26 methods; `werka_store.dart`, `werka_notification_store.dart` | Port and test remaining API, model, state and account-reset behavior. Reuse existing shared parsers and components where appropriate; check their documented parity limits. |
 | Shared Paddon and WIP models/errors | `AdminPaddonSnapshot`, `AdminProgressBatch`, `_adminProductionMapException` | Werka reuses existing shared decoders and error mapper. Complete their documented cross-role parsing and error-field parity before exposing the receiving flow. |
