@@ -25,7 +25,7 @@ function Field({ label, placeholder, initial = '', decimal = false, autoFocus = 
 }) {
   const colors = useWorkerColors(), native = useNativeState(initial), last = useRef(initial), t = useBoyoqchiText();
   const [focused, setFocused] = useState(false);
-  return <View style={styles.field}><Text style={{ color: colors.muted }}>{t(label)}</Text>
+  return <View style={[styles.field, paintField && styles.paintField]}><Text style={{ color: colors.muted }}>{t(label)}</Text>
     <Host matchContents={{ vertical: true }} style={styles.host}><TextInput value={native} placeholder={placeholder === undefined ? undefined : t(placeholder)}
       accessibilityLabel={t(label)} autoFocus={autoFocus} keyboardType={decimal ? 'decimal-pad' : 'default'} autoCapitalize={decimal ? 'none' : 'words'}
       style={paintField ? { width: '100%', height: 56, borderRadius: 12, borderWidth: focused ? 1.8 : 1.2,
@@ -113,10 +113,10 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
           onChange={value => update(optionKey, index, value, fields.length)} />)}
         {mixFields.map((label, index) => <Field key={`${mixKey}:${index}:${label}`} label={label} decimal paintField initial={mixValues[index]}
           onChange={value => update(mixKey, index, value, mixFields.length)} />)}
-        {paint === 'Pantone' && <WorkerSheetButton label="Pantone+" onPress={() => setDialog({ paint: 'Pantone', key: optionKey, base: [] })} />}
-        {paint === 'Pantone' && <WorkerSheetButton label="Mix+" onPress={() => setDialog({ paint: 'Mix', key: mixKey, base: [] })} />}
-        {paint === 'Mix' && <WorkerSheetButton label="Mix+" onPress={() => setDialog({ paint, key: optionKey, base: option?.fields ?? [] })} />}
-        {option?.fields.includes('1w Oq') && <WorkerSheetButton label="Pantone+" onPress={() => setDialog({ paint: paint ?? '', key: optionKey, base: option.fields })} />}
+        {paint === 'Pantone' && <View style={styles.paintField}><WorkerSheetButton label="Pantone+" height={56} onPress={() => setDialog({ paint: 'Pantone', key: optionKey, base: [] })} /></View>}
+        {paint === 'Pantone' && <View style={styles.paintField}><WorkerSheetButton label="Mix+" height={56} onPress={() => setDialog({ paint: 'Mix', key: mixKey, base: [] })} /></View>}
+        {paint === 'Mix' && <View style={styles.paintField}><WorkerSheetButton label="Mix+" height={56} onPress={() => setDialog({ paint, key: optionKey, base: option?.fields ?? [] })} /></View>}
+        {option?.fields.includes('1w Oq') && <View style={styles.paintField}><WorkerSheetButton label="Pantone+" height={56} onPress={() => setDialog({ paint: paint ?? '', key: optionKey, base: option.fields })} /></View>}
       </View>}
       <View style={[styles.divider, { backgroundColor: colors.field }]} />
       {busy ? <Host matchContents={{ vertical: true }} style={styles.host}><Button disabled variant="filled" style={{ height: 50 }}>
@@ -129,7 +129,7 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
 const styles = StyleSheet.create({
   root: { flex: 1 }, content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 14 },
   heading: { flexDirection: 'row', alignItems: 'center' }, headingText: { flex: 1, fontSize: 22, fontWeight: '800' },
-  field: { minWidth: '46%', flexGrow: 1, gap: 4 }, host: { width: '100%' }, fields: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  field: { gap: 4 }, paintField: { flexBasis: '46%', flexGrow: 1, maxWidth: '50%' }, host: { width: '100%' }, fields: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   divider: { height: StyleSheet.hairlineWidth, width: '100%' }, error: { borderRadius: 12, padding: 10 },
   backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,0.32)' },
   dialog: { borderRadius: 24, padding: 24, gap: 12 }, title: { fontSize: 20, fontWeight: '700' },
