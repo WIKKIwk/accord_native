@@ -60,7 +60,9 @@ export function useCustomerDelivery(deliveryNoteID: string, onChanged: () => voi
     try {
       const result = await customerDeliveryDetail(session, deliveryNoteID);
       if (mounted.current && request === generation.current) setDetail(result);
-    } catch (failure) { if (mounted.current && request === generation.current) setError(failure); }
+    } catch (failure) {
+      if (mounted.current && request === generation.current) setError(failure == null ? { cause: failure } : failure);
+    }
     finally { if (mounted.current && request === generation.current) setLoading(false); }
   }, [deliveryNoteID, session]);
   useEffect(() => {

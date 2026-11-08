@@ -86,7 +86,8 @@ export class CustomerStore {
       this.runtime.setStatusSnapshot('confirmed', this._confirmedItems);
       this.runtime.setStatusSnapshot('rejected', this._rejectedItems);
     } catch (error) {
-      this._error = error;
+      // Null means no failure in the view; retain a nullish rejection with its original cause.
+      this._error = error == null ? { cause: error } : error;
       if (!this._loaded) {
         this._pendingItems = [];
         this._confirmedItems = [];

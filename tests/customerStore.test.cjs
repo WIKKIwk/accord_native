@@ -113,6 +113,24 @@ test('refresh waits for all requests and keeps the first error by completion tim
   assert.equal(f.store.error, firstFailure); assert.equal(f.store.loading, false);
 });
 
+test('a nullish rejection remains a real failure and a later refresh clears it', async () => {
+  for (const reason of [null, undefined]) {
+    const f = fixture(); f.api.customerSummary = async () => { throw reason; };
+    await f.store.refresh();
+    assert.notEqual(f.store.error, null); assert.notEqual(f.store.error, undefined);
+    assert.equal(f.store.error.cause, reason); assert.equal(f.store.loaded, false);
+    f.api.customerSummary = async () => f.source.summary;
+    await f.store.refresh(); assert.equal(f.store.error, null); assert.equal(f.store.loaded, true);
+  }
+});
+
+test('non-null rejection values remain unchanged, even when falsy', async () => {
+  for (const reason of [false, 0, '']) {
+    const f = fixture(); f.api.customerSummary = async () => { throw reason; };
+    await f.store.refresh(); assert.equal(f.store.error, reason); assert.equal(f.store.loaded, false);
+  }
+});
+
 test('version is stable between changes and dispose detaches the shared runtime listener', async () => {
   const f = fixture(); const initial = f.store.version; let calls = 0;
   f.store.subscribe(() => calls++); await f.store.bootstrap();
