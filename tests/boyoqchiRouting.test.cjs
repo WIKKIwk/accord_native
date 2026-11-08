@@ -38,6 +38,7 @@ test('the shared role dock appends Chat after Profile and starts session-wide un
   assert.ok(android.indexOf("id: 'home'") < android.indexOf("id: 'astatka'"));
   assert.ok(android.indexOf("id: 'astatka'") < android.indexOf("id: 'profile'"));
   assert.ok(android.indexOf("id: 'profile'") < android.indexOf("id: 'chat'"));
+  assert.match(android, /showBadge: unread > 0/);
   assert.ok(ios.indexOf('name="profile"') < ios.indexOf('name="chat"'));
   assert.match(ios, /NativeTabs\.Trigger\.Badge hidden=\{unread <= 0\}/);
   assert.match(context, /useChatUnreadCount\(session\)/);
