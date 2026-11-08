@@ -8,6 +8,7 @@ import { RoleDrawer } from '../shared/navigation/RoleDrawer';
 import { useRoleDrawerState } from '../shared/navigation/roleDrawerContext';
 import { confirmRoleDrawerLogout } from '../shared/navigation/roleDrawerLogout';
 import { adminDrawerDestinations } from './adminDrawerModel';
+import { adminHomeSymbol } from './adminHomeSymbols';
 import { useAdminShell } from './AdminShellContext';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -21,6 +22,7 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
   const items = adminDrawerDestinations(session, locale).filter(item => item.routeName === home || !!destination(item.routeName, Platform.OS))
     .map(item => ({ id: item.routeName, label: item.label, symbol: item.routeName === home ? { ios: 'house' as const, android: 'home' as const }
       : item.routeName === appRoutes.profile ? { ios: 'person' as const, android: 'person' as const }
+        : item.routeName === appRoutes.adminProductionMapOrders ? adminHomeSymbol(item.materialIcon)
         : { ios: 'scalemass' as const, android: 'scale' as const } }));
   const select = (id: string) => {
     if (id === 'logout') {
@@ -31,7 +33,7 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
     if (!path) return;
     timers.current.push(setTimeout(() => { if (isCurrent() && destination(id, Platform.OS) === path) router.push(path as Href); }, 220));
   };
-  const active = pathname.endsWith('/profile') ? appRoutes.profile : home;
+  const active = pathname.endsWith('/profile') ? appRoutes.profile : pathname.endsWith('/work-map') ? appRoutes.adminProductionMapOrders : home;
   return <RoleDrawer {...state} title={localizedGetter('adminDrawerSections', locale)} items={items} active={active} onSelect={select}
     closeAccessibilityLabel={localizedGetter('closeAction', locale)}
     footerAction={{ id: 'logout', label: localizedGetter('logoutTitle', locale), destructive: true }}>

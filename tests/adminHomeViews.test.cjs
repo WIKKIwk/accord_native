@@ -59,6 +59,15 @@ for (const platform of ['ios', 'android']) {
       ['Factory map', 'Quick orders', 'Open order', 'Work map']);
     rows[0].props.onPress(); assert.deepEqual(calls, [['open', routes.appRoutes.adminFactoryMap]]);
   });
+  test(`${platform} real partial shell exposes the Work Map shortcut and its actual route`, () => {
+    const access = load('admin/adminShellAccess.ts', { '../shared/appRoutes': routes });
+    const enabled = new Set([routes.appRoutes.profile, routes.appRoutes.adminProductionMapOrders]);
+    const available = route => !!access.adminDestinationPath(admin, route, platform, enabled);
+    const { tree, calls } = render(platform, admin, baseState, 'menu', available);
+    const rows = nodes(tree, node => node.type === rowType); assert.equal(rows.length, 1);
+    assert.equal(nodes(rows[0], n => (n.type === 'Text' || n.type === 'NativeText') && typeof n.props.children === 'string')[0].props.children, 'Work map');
+    rows[0].props.onPress(); assert.deepEqual(calls, [['open', routes.appRoutes.adminProductionMapOrders]]);
+  });
   test(`${platform} omits unavailable destinations rather than opening placeholders`, () => {
     const { tree } = render(platform, admin, baseState, 'menu', route => route === routes.appRoutes.adminCalculateOrders);
     const rows = nodes(tree, node => node.type === rowType); assert.equal(rows.length, 1);

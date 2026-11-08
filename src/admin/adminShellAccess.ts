@@ -13,7 +13,8 @@ export function adminDestinationPath(session: Session, route: string, platform: 
   if (!adminShellMayEnter(session) || !enabled.has(route) || !canOpenRoute(session, route)) return null;
   if (platform !== 'ios' && platform !== 'android') return null;
   // This legacy token is not a test-mode flag; prevent real Profile/GScale writes with it.
-  if (session.token === 'test-mode-token' && (route === appRoutes.profile || route === appRoutes.gscaleMode)) return null;
+  if (session.token === 'test-mode-token' && (route === appRoutes.profile || route === appRoutes.gscaleMode || route === appRoutes.adminProductionMapOrders)) return null;
+  if (route === appRoutes.adminProductionMapOrders) return `/${platform}-admin/work-map`;
   if (route === appRoutes.profile) return `/${platform}-admin/profile`;
   if (route === appRoutes.adminActivity) return `/${platform}-admin/activity`;
   if (route === appRoutes.gscaleMode) return `/${platform}-gscale`;

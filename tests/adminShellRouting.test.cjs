@@ -44,11 +44,16 @@ test('shell and login reject missing session, unauthorized capabilities and role
   assert.equal(routes.homeTarget(session('brigader', ['admin.access']), 'android'), null);
 });
 test('destination requires shell access, current route permission, explicit integration enablement and platform', () => {
-  const enabled = new Set([r.profile, r.gscaleMode]), held = new Set(), activityEnabled = new Set([r.adminActivity]);
+  const enabled = new Set([r.profile, r.gscaleMode, r.adminProductionMapOrders]), held = new Set(), activityEnabled = new Set([r.adminActivity]);
   for (const platform of ['ios', 'android']) {
     assert.equal(access.adminDestinationPath(admin, r.profile, platform, held), null);
     assert.equal(access.adminDestinationPath(admin, r.profile, platform, enabled), `/${platform}-admin/profile`);
     assert.equal(access.adminDestinationPath(admin, r.gscaleMode, platform, enabled), `/${platform}-gscale`);
+    assert.equal(access.adminDestinationPath(admin, r.adminProductionMapOrders, platform, enabled), `/${platform}-admin/work-map`);
+    assert.equal(access.adminDestinationPath(session('customer', ['catalog.item.read', 'production.map.read']), r.adminProductionMapOrders, platform, enabled), `/${platform}-admin/work-map`);
+    assert.equal(access.adminDestinationPath(session('customer', ['catalog.item.read']), r.adminProductionMapOrders, platform, enabled), null);
+    assert.equal(access.adminDestinationPath(session('admin', ['admin.roles.read']), r.adminProductionMapOrders, platform, enabled), null);
+    assert.equal(access.adminDestinationPath(worker, r.adminProductionMapOrders, platform, enabled), null);
     assert.equal(access.adminDestinationPath(worker, r.profile, platform, enabled), null);
     assert.equal(access.adminDestinationPath(sales, r.gscaleMode, platform, enabled), null);
     assert.equal(access.adminDestinationPath(admin, r.adminActivity, platform, enabled), null);
@@ -58,6 +63,7 @@ test('destination requires shell access, current route permission, explicit inte
   const token = session('admin', ['admin.access', 'gscale.print'], { token: 'test-mode-token' });
   assert.equal(access.adminDestinationPath(token, r.profile, 'ios', enabled), null);
   assert.equal(access.adminDestinationPath(token, r.gscaleMode, 'android', enabled), null);
+  assert.equal(access.adminDestinationPath(token, r.adminProductionMapOrders, 'ios', enabled), null);
 });
 
 test('session hook captures once and rejects stale loads, inactive and unauthorized sessions', async () => {
@@ -167,7 +173,7 @@ test('drawer shows only reviewed destinations, delays navigation/logout and rech
       '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
       '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({}) },
       '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: callback => { calls.push('prompt'); callback(); } },
-      './adminDrawerModel': drawerModel, './AdminShellContext': { useAdminShell: () => shell } }).AdminDrawer;
+      './adminDrawerModel': drawerModel, './adminHomeSymbols': { adminHomeSymbol: () => ({ ios: 'x', android: 'x' }) }, './AdminShellContext': { useAdminShell: () => shell } }).AdminDrawer;
     const tree = Drawer({ children: 'child' }); assert.deepEqual(tree.props.items.map(item => item.id), [r.adminHome, r.gscaleMode]);
     tree.props.onSelect(r.gscaleMode); assert.equal(scheduled.at(-1).delay, 220); current = false; scheduled.at(-1).callback(); assert.deepEqual(calls, []);
     current = true; tree.props.onSelect(r.gscaleMode); path = null; scheduled.at(-1).callback(); assert.deepEqual(calls, []);
@@ -201,7 +207,7 @@ test('test token notice is explicit in all supported languages and has no action
   }
 });
 
-test('real shell enables only guarded Profile and blocks test-token, stale and held routes', () => {
+test('real shell enables guarded Profile and Work Map and blocks test-token, stale and held routes', () => {
   let valid = true; const witness = {}, cleanups = [];
   const react = { createContext: () => ({ Provider: 'Provider' }), useCallback: fn => fn, useMemo: fn => fn(), useEffect: fn => cleanups.push(fn()) };
   class Store { constructor(summary, activity) { this.summary = summary; this.activity = activity; } clear() {} }
@@ -213,10 +219,12 @@ test('real shell enables only guarded Profile and blocks test-token, stale and h
   const account = { ...admin, baseUrl: 'https://server.example' }, result = Provider({ session: account, witness, onLogout() {}, children: 'home' });
   const shell = result.props.value;
   assert.equal(shell.destination(r.profile, 'ios'), '/ios-admin/profile'); assert.equal(shell.destination(r.profile, 'android'), '/android-admin/profile');
+  assert.equal(shell.destination(r.adminProductionMapOrders, 'ios'), '/ios-admin/work-map');
+  assert.equal(shell.destination(r.adminProductionMapOrders, 'android'), '/android-admin/work-map');
   assert.equal(shell.destination(r.gscaleMode, 'ios'), null); assert.equal(shell.destination(r.adminActivity, 'ios'), null);
-  assert.equal(shell.activityBinding, null); valid = false; assert.equal(shell.destination(r.profile, 'ios'), null);
+  assert.equal(shell.activityBinding, null); valid = false; assert.equal(shell.destination(r.profile, 'ios'), null); assert.equal(shell.destination(r.adminProductionMapOrders, 'ios'), null);
   valid = true; const demo = Provider({ session: { ...account, token: 'test-mode-token' }, witness, onLogout() {}, children: 'notice' }).props.value;
-  assert.equal(demo.destination(r.profile, 'ios'), null); cleanups.filter(fn => typeof fn === 'function').forEach(fn => fn());
+  assert.equal(demo.destination(r.profile, 'ios'), null); assert.equal(demo.destination(r.adminProductionMapOrders, 'ios'), null); cleanups.filter(fn => typeof fn === 'function').forEach(fn => fn());
 });
 
 test('Admin drawer opens the real Profile route after its delay only while the witness remains current', () => {
@@ -231,6 +239,7 @@ test('Admin drawer opens the real Profile route after its delay only while the w
       '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({}) },
       '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout() {} },
       './adminDrawerModel': { adminDrawerDestinations: () => [{ routeName: r.adminHome, label: 'Home' }, { routeName: r.profile, label: 'Profile' }] },
+      './adminHomeSymbols': { adminHomeSymbol: () => ({ ios: 'x', android: 'x' }) },
       './AdminShellContext': { useAdminShell: () => shell } }).AdminDrawer;
     const tree = Drawer({ children: 'child' }); assert.deepEqual(tree.props.items.map(item => item.id), [r.adminHome, r.profile]);
     tree.props.onSelect(r.profile); assert.equal(timer.ms, 220); timer.fn(); assert.deepEqual(calls, ['/ios-admin/profile']);

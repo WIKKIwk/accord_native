@@ -12,8 +12,8 @@ type AdminShell = { session: Session; store: AdminStore; onLogout: () => void; i
   destination: (route: string, platform: string) => string | null; isRouteAvailable: (route: string) => boolean;
   activityBinding: AdminActivityBinding | null };
 const Context = createContext<AdminShell | null>(null);
-// Profile is opt-in guarded; Activity and GScale remain held for their own dependencies.
-const enabledDestinations: ReadonlySet<string> = new Set([appRoutes.profile]);
+// Profile and Work Map reads are opt-in guarded; Activity and GScale remain held.
+const enabledDestinations: ReadonlySet<string> = new Set([appRoutes.profile, appRoutes.adminProductionMapOrders]);
 const activityBinding: AdminActivityBinding | null = null;
 export function AdminShellProvider({ session, witness, onLogout, children }: { session: Session; witness: SessionWitness; onLogout: () => void; children: ReactNode }) {
   const scope = useMemo(() => sessionReadScope(session), [session]);
