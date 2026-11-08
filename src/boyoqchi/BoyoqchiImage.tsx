@@ -41,7 +41,13 @@ export function BoyoqchiImage({ session, image, allowDownload = false }: {
   const scale = useSharedValue(1), initialScale = useSharedValue(1), x = useSharedValue(0), y = useSharedValue(0);
   const initialX = useSharedValue(0), initialY = useSharedValue(0);
   const pinch = usePinchGesture({ onActivate: () => { 'worklet'; initialScale.set(scale.get()); },
-    onUpdate: event => { 'worklet'; scale.set(Math.max(0.8, Math.min(4, initialScale.get() * event.scale))); } });
+    onUpdate: event => { 'worklet';
+      const next = Math.max(0.8, Math.min(4, initialScale.get() * event.scale));
+      const maxX = Math.max(0, (next - 1) * width / 2), maxY = Math.max(0, (next - 1) * height / 2);
+      scale.set(next);
+      x.set(maxX === 0 ? 0 : Math.max(-maxX, Math.min(maxX, x.get())));
+      y.set(maxY === 0 ? 0 : Math.max(-maxY, Math.min(maxY, y.get())));
+    } });
   const pan = usePanGesture({ averageTouches: true, onActivate: () => { 'worklet'; initialX.set(x.get()); initialY.set(y.get()); },
     onUpdate: event => { 'worklet';
       const maxX = Math.max(0, (scale.get() - 1) * width / 2), maxY = Math.max(0, (scale.get() - 1) * height / 2);
