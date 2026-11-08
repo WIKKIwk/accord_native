@@ -45,11 +45,11 @@ test('Android Boyoqchi reuses shared Profile without an unrelated daily-work act
 });
 
 test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
-  const Profile = load('app/ios-boyoqchi/(tabs)/profile', {
+  const Profile = load('app/ios-boyoqchi/(tabs)/profile/index', {
     'expo-router': { router: { navigate() {} } }, 'react-native': { PlatformColor: value => value },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
-    '../../../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },
-    '../../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => context },
+    '../../../../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },
+    '../../../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => context },
   }).default;
   const profiles = nodes(Profile(), 'ProfileScreen');
   assert.equal(profiles.length, 1);
