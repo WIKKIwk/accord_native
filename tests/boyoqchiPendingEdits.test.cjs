@@ -39,7 +39,7 @@ function fixture() {
       StyleSheet: { create: value => value, absoluteFill: {} } },
     '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../components/useWorkerColors': { useWorkerColors: () => ({}) }, '../workerOrderLogic': { paintOptions },
-    './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' }, './BoyoqchiImage': {},
+    './BoyoqchiUsageSwipe': { BoyoqchiUsageSwipe: 'BoyoqchiUsageSwipe' }, './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' }, './BoyoqchiImage': {},
     './boyoqchiLogic': { boyoqchiInputAllowed: () => true, boyoqchiSaveInput: () => ({ items: [{ name: 'paint' }], error: '' }) },
     './returnedPaintModel': { returnedPaintDouble: value => Number(value) }, './useBoyoqchiText': { useBoyoqchiText: () => value => value },
   }, '\nmodule.exports.__Field = Field; module.exports.__NamedFieldDialog = NamedFieldDialog;');
@@ -52,13 +52,15 @@ function fixture() {
 const button = (tree, label) => nodes(tree, n => n.type === 'WorkerSheetButton' && n.props.label === label)[0];
 
 test('pending save blocks stale field, tab, add and back handlers until successful completion', async () => {
-  const f = fixture(), initial = f.render(), palette = nodes(initial, n => n.type === 'BoyoqchiPaintPalette')[0];
+  const f = fixture(), initial = f.render(), palette = nodes(initial, n => n.type === 'BoyoqchiPaintPalette')[0],
+    swipe = nodes(initial, n => n.type === 'BoyoqchiUsageSwipe')[0];
   palette.props.onSelect('Oq'); let tree = f.render();
   const first = nodes(tree, n => n.type === f.Field)[0], input = nodes(f.Field(first.props), n => n.type === 'TextInput')[0];
   input.props.onChangeText('2'); assert.equal(f.draft.valuesFor('rasxot:Oq', 8)[0], '2');
   tree = f.render(); const add = button(tree, 'Pantone+'), backButton = nodes(tree, n => n.type === 'WorkerIconButton')[0];
   button(tree, 'Saqlash').props.onPress(); assert.equal(f.saves(), 1); assert.equal(f.keyboard(), 1); assert.equal(f.back(), true);
-  input.props.onChangeText('99'); palette.props.onUsage('astatka'); palette.props.onSelect('Mix'); add.props.onPress(); backButton.props.onPress();
+  input.props.onChangeText('99'); palette.props.onUsage('astatka'); swipe.props.onUsage('astatka');
+  palette.props.onSelect('Mix'); add.props.onPress(); backButton.props.onPress();
   assert.equal(f.draft.valuesFor('rasxot:Oq', 8)[0], '2'); assert.equal(f.resets.at(-1), '2');
   assert.equal(f.draft.selectedUsageIndex, 0); assert.equal(f.closes(), 0);
   const busy = f.render(); assert.equal(nodes(busy, n => n.type === f.NamedFieldDialog).length, 0);
@@ -159,4 +161,15 @@ test('callbacks retained after form unmount cannot start a save or mutate the dr
   const save = button(tree, 'Saqlash').props.onPress, back = nodes(tree, n => n.type === 'WorkerIconButton')[0].props.onPress;
   f.unmount(); save(); back(); palette.props.onUsage('astatka'); palette.props.onSelect('Oq');
   assert.equal(f.saves(), 0); assert.equal(f.closes(), 0); assert.equal(f.draft.selectedUsageIndex, 0);
+});
+
+
+test('a queued palette swipe cannot change usage after selecting a paint before the next render', () => {
+  const f = fixture(), initial = f.render(), palette = nodes(initial, n => n.type === 'BoyoqchiPaintPalette')[0],
+    swipe = nodes(initial, n => n.type === 'BoyoqchiUsageSwipe')[0];
+  palette.props.onSelect('Oq'); swipe.props.onUsage('astatka');
+  assert.equal(f.draft.selectedUsageIndex, 0); assert.ok(nodes(f.render(), n => n.type === f.Field).length);
+  nodes(f.render(), n => n.type === 'WorkerIconButton')[0].props.onPress();
+  const restored = nodes(f.render(), n => n.type === 'BoyoqchiUsageSwipe')[0]; restored.props.onUsage('astatka');
+  assert.equal(f.draft.selectedUsageIndex, 1); f.unmount();
 });
