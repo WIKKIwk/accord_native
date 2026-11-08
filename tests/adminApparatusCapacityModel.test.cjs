@@ -40,6 +40,17 @@ test('capacity profile handles defaults, trimmed canonical ID and invalid number
   assert.throws(() => model.apparatusCapacityProfileFromJson({ apparatus_id: id, capability_levels: { print: '2' } }), TypeError);
   assert.equal(model.apparatusCapacityProfileFromJson({ apparatus_id: id, capability_levels: { print: null } }).capability_levels.print, 1);
 });
+test('ambiguous integer-index normalization collisions fail closed in either wire order', () => {
+  for (const levels of ['{" 1 ":7,"1":9}', '{"1":9," 1 ":7}',
+    '{" 4294967294 ":7,"4294967294":9}', '{"4294967294":9," 4294967294 ":7}']) {
+    const input = JSON.parse(`{"apparatus_id":"${id}","capability_levels":${levels}}`);
+    assert.throws(() => model.apparatusCapacityProfileFromJson(input), /Ambiguous capability level key order/);
+  }
+  // Non-index string keys retain JSON insertion order and the source's last-value rule.
+  const ordinary = JSON.parse(`{"apparatus_id":"${id}","capability_levels":{" 4294967295 ":7,"4294967295":9,"PRINT":2,"print":4}}`);
+  assert.equal(model.apparatusCapacityProfileFromJson(ordinary).capability_levels['4294967295'], 9);
+  assert.equal(model.apparatusCapacityProfileFromJson(ordinary).capability_levels.print, 4);
+});
 test('canonical capacity serializes only capacity and availability, not notes or capability metadata', () => {
   const profile = model.apparatusCapacityProfileFromJson({ apparatus_id: id, apparatus: ' A ', capacity_slots: 3,
     setup_minutes: 4, cleanup_minutes: 5, efficiency_percent: 90, capabilities: ['print'], capability_levels: { print: 3 }, notes: 'secret note',

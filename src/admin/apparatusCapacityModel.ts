@@ -16,13 +16,18 @@ function integer(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError('Invalid apparatus capacity number');
   return Math.trunc(value);
 }
-function requireApparatusId(value: unknown): string {
+export function requireCapacityApparatusId(value: unknown): string {
   const id = dartTrim(text(value));
   if (!isCanonicalApparatusId(id)) throw new MobileApiException({ code: 'apparatus_id_invalid', message: 'Canonical apparatus ID noto‘g‘ri' });
   return id;
 }
 function objects<T>(value: unknown, parse: (item: unknown) => T): T[] {
   return Array.isArray(value) ? value.filter(item => object(item) !== null).map(parse) : [];
+}
+// JSON.parse loses the relative wire order of array-index keys and other keys.
+function isArrayIndexKey(key: string): boolean {
+  const number = Number(key);
+  return Number.isInteger(number) && number >= 0 && number < 0xffffffff && String(number) === key;
 }
 
 /** Partial source-derived AdminApparatusWorkingWindow model; parity gaps are tracked in the Admin status. */
@@ -40,16 +45,20 @@ export type AdminApparatusCapacityProfile = { apparatus_id: string; apparatus: s
   capacity_slots: number; setup_minutes: number; cleanup_minutes: number; efficiency_percent: number; finite_capacity: boolean;
   working_windows: AdminApparatusWorkingWindow[]; capabilities: string[]; capability_levels: Record<string, number>; notes: string; updated_at_unix: number };
 export function apparatusCapacityProfileFromJson(value: unknown): AdminApparatusCapacityProfile {
-  const row = requiredObject(value), id = requireApparatusId(row.apparatus_id), name = dartTrim(text(row.apparatus)),
+  const row = requiredObject(value), id = requireCapacityApparatusId(row.apparatus_id), name = dartTrim(text(row.apparatus)),
     revision = integer(row.source_revision, 0), hash = dartTrim(text(row.source_aasx_sha256)),
     slots = integer(row.capacity_slots, 1), setup = integer(row.setup_minutes, 0), cleanup = integer(row.cleanup_minutes, 0),
     efficiency = integer(row.efficiency_percent, 100), finite = row.finite_capacity !== false,
     windows = objects(row.working_windows, apparatusWorkingWindowFromJson);
   const capabilities = Array.isArray(row.capabilities) ? row.capabilities.map(dartJsonString).map(dartTrim).filter(Boolean).map(dartPartialLower) : [];
-  const levels: Record<string, number> = Object.create(null), rawLevels = object(row.capability_levels);
+  const levels: Record<string, number> = Object.create(null), rawLevels = object(row.capability_levels), seen = new Map<string, boolean>();
   if (rawLevels) for (const [key, value] of Object.entries(rawLevels)) {
-    const normalized = dartTrim(key);
-    if (normalized) levels[dartPartialLower(normalized)] = integer(value, 1);
+    const trimmed = dartTrim(key);
+    if (!trimmed) continue;
+    const normalized = dartPartialLower(trimmed), index = isArrayIndexKey(key), previous = seen.get(normalized);
+    if (previous !== undefined && (index || previous)) throw new TypeError('Ambiguous capability level key order');
+    levels[normalized] = integer(value, 1);
+    seen.set(normalized, index || previous === true);
   }
   return { apparatus_id: id, apparatus: name, source_revision: revision, source_aasx_sha256: hash, capacity_slots: slots,
     setup_minutes: setup, cleanup_minutes: cleanup, efficiency_percent: efficiency, finite_capacity: finite,
@@ -74,7 +83,7 @@ export type AdminApparatusDowntime = { id: string; apparatus_id: string; apparat
   reason: string; active: boolean; actor: { role: string; ref: string; display_name: string }; created_at_unix: number };
 export function apparatusDowntimeFromJson(value: unknown): AdminApparatusDowntime {
   const row = requiredObject(value), actor = object(row.actor) ?? {};
-  return { id: text(row.id), apparatus_id: requireApparatusId(row.apparatus_id), apparatus: text(row.apparatus),
+  return { id: text(row.id), apparatus_id: requireCapacityApparatusId(row.apparatus_id), apparatus: text(row.apparatus),
     starts_at_unix: integer(row.starts_at_unix, 0), ends_at_unix: integer(row.ends_at_unix, 0), reason: text(row.reason),
     active: row.active !== false, actor: { role: text(actor.role), ref: text(actor.ref), display_name: text(actor.display_name) },
     created_at_unix: integer(row.created_at_unix, 0) };
@@ -99,7 +108,7 @@ export function apparatusCapabilityRequirementToJson(value: AdminApparatusCapabi
 export type AdminApparatusScheduleCandidate = { apparatus_id: string; apparatus: string };
 export function apparatusScheduleCandidateFromJson(value: unknown): AdminApparatusScheduleCandidate {
   const row = requiredObject(value);
-  return { apparatus_id: requireApparatusId(row.apparatus_id), apparatus: dartTrim(text(row.apparatus)) };
+  return { apparatus_id: requireCapacityApparatusId(row.apparatus_id), apparatus: dartTrim(text(row.apparatus)) };
 }
 export function apparatusScheduleCandidateToJson(value: AdminApparatusScheduleCandidate): JsonObject {
   return { apparatus_id: dartTrim(value.apparatus_id), apparatus: dartTrim(value.apparatus) };
@@ -112,7 +121,7 @@ export type AdminApparatusScheduleReservation = { reservation_id: string; idempo
 export function apparatusScheduleReservationFromJson(value: unknown): AdminApparatusScheduleReservation {
   const row = requiredObject(value);
   return { reservation_id: text(row.reservation_id), idempotency_key: text(row.idempotency_key), order_id: text(row.order_id),
-    apparatus_id: requireApparatusId(row.apparatus_id), apparatus: text(row.apparatus), starts_at_unix: integer(row.starts_at_unix, 0),
+    apparatus_id: requireCapacityApparatusId(row.apparatus_id), apparatus: text(row.apparatus), starts_at_unix: integer(row.starts_at_unix, 0),
     ends_at_unix: integer(row.ends_at_unix, 0), requested_duration_minutes: integer(row.requested_duration_minutes, 0),
     reserved_duration_minutes: integer(row.reserved_duration_minutes, 0), status: row.status == null ? 'planned' : text(row.status),
     priority: integer(row.priority, 0), source: text(row.source), reason: text(row.reason),
