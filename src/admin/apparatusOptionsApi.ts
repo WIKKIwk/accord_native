@@ -1,15 +1,11 @@
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { apparatusFamilyForNormalizedOperation, apparatusKindForNormalizedTechnology } from '../apparatusApi';
-import { dartJsonString, dartTrim } from './dartJsonString';
+import { dartJsonString, dartPartialLower, dartTrim } from './dartJsonString';
 
-// Handles Dart's dotted-I and non-contextual sigma cases, but not all Dart/JS Unicode-version differences.
-function lowerVocabulary(value: string): string {
-  return [...value].map(char => char === '\u0130' ? 'i' : char.toLowerCase()).join('');
-}
 function canonicalStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value.map(item => dartTrim(dartJsonString(item))).filter(Boolean).map(lowerVocabulary);
+  return value.map(item => dartTrim(dartJsonString(item))).filter(Boolean).map(dartPartialLower);
 }
 function operationForTechnology(technology: string): string {
   switch (technology) {
@@ -45,12 +41,12 @@ export function adminApparatusMasterOptionsFromJson(value: unknown): AdminAppara
 }
 /** @v2 AdminApparatusMasterOptions.kindsForFamily */
 export function apparatusKindsForFamily(options: AdminApparatusMasterOptions, family: string | null): string[] {
-  const key = lowerVocabulary(dartTrim(family ?? ''));
+  const key = dartPartialLower(dartTrim(family ?? ''));
   return Object.hasOwn(options.kinds_by_family, key) ? options.kinds_by_family[key] : [];
 }
 /** @v2 AdminApparatusMasterOptions.supportsCapability */
 export function apparatusSupportsCapability(options: AdminApparatusMasterOptions, capability: string): boolean {
-  return options.capabilities.includes(lowerVocabulary(dartTrim(capability)));
+  return options.capabilities.includes(dartPartialLower(dartTrim(capability)));
 }
 /** @v2 adminApparatusMasterOptions */
 export async function adminApparatusMasterOptions(session: Session): Promise<AdminApparatusMasterOptions> {

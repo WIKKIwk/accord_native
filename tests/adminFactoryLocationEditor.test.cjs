@@ -24,6 +24,7 @@ test('factory apparatus catalog orders default by catalog order and custom by na
   const groups = model.factoryApparatusPickerGroups([b, a, d, c], ' PRINT ');
   assert.deepEqual(groups.defaults, [b, a]); assert.deepEqual(groups.custom, []);
   assert.deepEqual(model.selectedFactoryApparatus([b, a, d, c], new Set([a.id, 'missing'])), [a]);
+  assert.deepEqual(model.factoryApparatusPickerGroups([{ ...a, name: 'ΟΣ' }], 'οσ').defaults.map(item => item.id), [a.id]);
 });
 test('factory editor requires a name and preserves selected set order', () => {
   assert.deepEqual(model.factoryLocationEditorPlan(null, '\u0085 \u0085', new Set()), { kind: 'nameRequired' });

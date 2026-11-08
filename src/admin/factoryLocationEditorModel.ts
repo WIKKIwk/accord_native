@@ -1,5 +1,5 @@
 import type { AdminApparatus } from '../apparatusApi';
-import { dartTrim } from './dartJsonString';
+import { dartPartialLower, dartTrim } from './dartJsonString';
 import type { AdminFactoryLocation } from './factoryLocationModel';
 
 const defaultApparatus = (item: AdminApparatus) => item.id.startsWith('apparatus:default:');
@@ -7,13 +7,13 @@ const compareText = (left: string, right: string) => left < right ? -1 : left > 
 /** @v2 _orderedApparatus */
 export function orderedFactoryApparatus(apparatus: readonly AdminApparatus[]): AdminApparatus[] {
   const defaults = apparatus.filter(defaultApparatus).sort((left, right) => left.sort_order - right.sort_order);
-  const custom = apparatus.filter(item => !defaultApparatus(item)).sort((left, right) => compareText(left.name.toLowerCase(), right.name.toLowerCase()));
+  const custom = apparatus.filter(item => !defaultApparatus(item)).sort((left, right) => compareText(dartPartialLower(left.name), dartPartialLower(right.name)));
   return [...defaults, ...custom];
 }
 /** @v2 _ApparatusPickerBottomSheetState.build */
 export function factoryApparatusPickerGroups(apparatus: readonly AdminApparatus[], query: string): { defaults: AdminApparatus[]; custom: AdminApparatus[] } {
-  const normalized = dartTrim(query).toLowerCase();
-  const visible = apparatus.filter(item => !normalized || item.name.toLowerCase().includes(normalized));
+  const normalized = dartPartialLower(dartTrim(query));
+  const visible = apparatus.filter(item => !normalized || dartPartialLower(item.name).includes(normalized));
   return { defaults: visible.filter(defaultApparatus), custom: visible.filter(item => !defaultApparatus(item)) };
 }
 export function selectedFactoryApparatus(apparatus: readonly AdminApparatus[], selected: ReadonlySet<string>): AdminApparatus[] {
@@ -34,10 +34,10 @@ export function factoryLocationEditorPlan(location: AdminFactoryLocation | null,
 export function upsertFactoryLocation(locations: readonly AdminFactoryLocation[], saved: AdminFactoryLocation): AdminFactoryLocation[] {
   const updated = [...locations], index = updated.findIndex(item => item.id === saved.id);
   if (index < 0) updated.push(saved); else updated[index] = saved;
-  return updated.sort((left, right) => compareText(left.name.toLowerCase(), right.name.toLowerCase()));
+  return updated.sort((left, right) => compareText(dartPartialLower(left.name), dartPartialLower(right.name)));
 }
 export function replaceFactoryLocation(locations: readonly AdminFactoryLocation[], saved: AdminFactoryLocation,
   sortAfterRename: boolean): AdminFactoryLocation[] {
   const updated = locations.map(item => item.id === saved.id ? saved : item);
-  return sortAfterRename ? updated.sort((left, right) => compareText(left.name.toLowerCase(), right.name.toLowerCase())) : updated;
+  return sortAfterRename ? updated.sort((left, right) => compareText(dartPartialLower(left.name), dartPartialLower(right.name))) : updated;
 }

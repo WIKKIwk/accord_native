@@ -1,3 +1,5 @@
+import { dartPartialLower, dartTrim } from './dartJsonString';
+
 type ObjectValue = Record<string, unknown>;
 function object(value: unknown): ObjectValue {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid item group');
@@ -46,18 +48,18 @@ export function adminItemGroupBulkMoveResultFromJson(value: unknown): AdminItemG
 
 /** @v2 adminItemGroupRequiresCustomer */
 export function adminItemGroupRequiresCustomer(itemGroup: string, groups: readonly AdminItemGroupTreeEntry[]): boolean {
-  let current = itemGroup.trim();
+  let current = dartTrim(itemGroup);
   const seen = new Set<string>();
-  while (current && !seen.has(current.toLowerCase())) {
-    const normalized = current.toLowerCase();
+  while (current && !seen.has(dartPartialLower(current))) {
+    const normalized = dartPartialLower(current);
     seen.add(normalized);
     if (normalized === 'tayyor mahsulot') return true;
     const matched = groups.find(group => {
-      const name = group.item_group_name.trim() || group.name.trim();
-      return name.toLowerCase() === normalized || group.name.trim().toLowerCase() === normalized;
+      const name = dartTrim(group.item_group_name) || dartTrim(group.name);
+      return dartPartialLower(name) === normalized || dartPartialLower(dartTrim(group.name)) === normalized;
     });
     if (!matched) break;
-    current = matched.parent_item_group.trim();
+    current = dartTrim(matched.parent_item_group);
   }
   return false;
 }

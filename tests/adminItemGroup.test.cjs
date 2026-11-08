@@ -11,7 +11,8 @@ function load(file, overrides = {}) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
-const model = load('admin/itemGroupModel');
+const dart = load('admin/dartJsonString');
+const model = load('admin/itemGroupModel', { './dartJsonString': dart });
 function fixture() {
   const requests = [], pages = [];
   let status = 200, payload = [];
@@ -39,6 +40,8 @@ test('finished goods require a customer along the exact parent path and terminat
   assert.equal(model.adminItemGroupRequiresCustomer('A', [row('A', 'B'), row('B', 'A')]), false);
   assert.equal(model.adminItemGroupRequiresCustomer('Alias', [row('Alias', 'Tayyor mahsulot', 'Canonical')]), true);
   assert.equal(model.adminItemGroupRequiresCustomer('Unmatched', groups), false);
+  assert.equal(model.adminItemGroupRequiresCustomer('οσ', [row('ΟΣ', 'Tayyor mahsulot')]), true);
+  assert.equal(model.adminItemGroupRequiresCustomer('\u0085TAYYOR MAHSULOT\u0085', groups), true);
 });
 
 test('group parsers keep defaults and reject incorrect field types', () => {
@@ -62,7 +65,7 @@ test('group and unit reads keep V2 paths, conversion and failure behavior', asyn
     { name: 'A', item_group_name: '', parent_item_group: 'Root', is_group: true },
     { name: '', item_group_name: '', parent_item_group: '', is_group: false },
   ]);
-  api.setResponse([' kg ', '', 12, 'm', ' kg']);
+  api.setResponse([' kg ', '', 12, 'm', ' \u0085kg\u0085 ']);
   assert.deepEqual(await api.adminItemUoms(session), ['kg', 'm', 'kg']);
   assert.deepEqual(api.requests.map(call => call.url), ['/v1/mobile/admin/item-groups', '/v1/mobile/admin/item-groups/tree', '/v1/mobile/admin/items/uoms']);
   api.setResponse({}, 403);
@@ -99,6 +102,8 @@ test('bulk group move keeps codes, counts, response parsing and error fallback',
   assert.deepEqual(JSON.parse(api.requests[0].init.body), { item_codes: [' A ', 'B'], item_group: ' New ' });
   api.setResponse({ error: 'unknown' }, 500);
   await assert.rejects(api.adminMoveItemsToGroup(session, [], ''), e => e.code === 'unknown' && e.message === 'Mahsulotlar groupga ko‘chirilmadi' && e.statusCode === 500);
+  api.setResponse({ error: 'constructor' }, 500);
+  await assert.rejects(api.adminMoveItemsToGroup(session, [], ''), e => e.code === 'constructor' && e.message === 'Mahsulotlar groupga ko‘chirilmadi');
 });
 
 test('adminItems reuses item page reader in 200-record increments including an empty last page', async () => {

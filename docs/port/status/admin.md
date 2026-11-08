@@ -5,6 +5,11 @@ Stopped at: Continue part 1's remaining API families and their V2 tests, then wr
 
 The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. An isolated clean clone was used for ledger and oracle reads. The original source and the clone were both clean at that SHA before and after those operations. The ledger reports 8 parts, 275 public API entries (including already-tagged imports) and 112 surface entries; runtime reachability and existing tags still require review. The historical 61 top-level contract files are from `7c87a54e` and were not overwritten.
 
+## Checkpoint: partial Unicode and item errors
+
+- Item-group ancestry, factory-picker rules and apparatus options now reuse one partial lowercase adapter that handles Dart's non-contextual sigma and U+0130; item-group units and mutation error codes use Dart U+0085 trimming. A f119 source-derived oracle probe confirmed the Greek ancestry and U+0085 cases. Unknown server error `constructor` now takes the V2 fallback instead of an inherited JS object property.
+- This does not solve arbitrary Unicode case mapping: the independently recorded U+0524 example and other Dart/JS differences remain open. Nineteen focused V4 cases passed with one Unicode TODO; iOS typecheck and lint passed.
+
 ## Checkpoint: item groups and item paging
 
 - `src/admin/itemGroupApi.ts` ports the live paths of `adminItemGroups`, `adminItemGroupTree`, `adminCreateItemGroup`, `adminMoveItemGroupParent`, `adminMoveItemsToGroup`, `adminItemUoms` and `adminItems`. The last reuses the existing `adminItemsPage` reader. `itemGroupModel.ts` implements the group/result parsers and the customer-ancestry rule.
@@ -15,7 +20,7 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 ## Checkpoint: factory location editor rules
 
 - `factoryLocationEditorModel.ts` captures default/custom apparatus ordering, picker filtering, selection display, name validation, membership-set comparison, create/edit plans and save/rename/status ordering. The full factory-location surface contract is documented; no dialog, sheet, screen or route is connected. Ten V4 model/API tests, iOS typecheck and lint passed; the full f119 factory locations test had passed 6/6 independently, including picker behavior, earlier in this branch.
-- The picker and name ordering use existing JavaScript `toLowerCase`; Dart differs for U+0130, final sigma and other Unicode scalars, so rare Unicode search/sort behavior is an open parity issue. Dart and JavaScript may also order equal sort keys differently. The async save/load lifecycle and account/session guarding require review during UI integration.
+- The picker and name ordering use a partial Dart-style lowercase adapter for U+0130 and non-contextual sigma; other Dart/JS Unicode-version differences, including U+0524, remain open for rare search/sort inputs. Dart and JavaScript may also order equal sort keys differently. The async save/load lifecycle and account/session guarding require review during UI integration.
 
 ## Gate and source review
 

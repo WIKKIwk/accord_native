@@ -3,7 +3,7 @@ import { authorizedFetch } from '../authorizedFetch';
 import { adminItemsPage } from '../gscale/gscaleAdminApi';
 import type { SupplierItem } from '../shared/catalogApi';
 import { MobileApiException } from '../shared/mobileApiException';
-import { dartJsonString } from './dartJsonString';
+import { dartJsonString, dartTrim } from './dartJsonString';
 import { adminItemGroupBulkMoveResultFromJson, adminItemGroupFromJson,
   type AdminItemGroup, type AdminItemGroupBulkMoveResult, type AdminItemGroupTreeEntry } from './itemGroupModel';
 
@@ -18,7 +18,7 @@ async function mutationError(response: Response, fallbackCode: string, fallbackM
     const payload: unknown = await response.json();
     if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
       const error = (payload as Record<string, unknown>).error;
-      if (typeof error === 'string' && error.trim()) code = error.trim();
+      if (typeof error === 'string' && dartTrim(error)) code = dartTrim(error);
     }
   } catch { /* V2 falls back for a non-JSON response. */ }
   const messages: Record<string, string> = {
@@ -38,7 +38,7 @@ async function mutationError(response: Response, fallbackCode: string, fallbackM
     'item is still referenced': 'Item boshqa ma’lumotlarga bog‘langanligi sababli o‘chirilmadi',
   };
   return new MobileApiException({ code, statusCode: response.status,
-    message: messages[code] ?? (response.status === 403 ? 'Bu amal uchun admin huquqi kerak' : fallbackMessage) });
+    message: Object.hasOwn(messages, code) ? messages[code] : (response.status === 403 ? 'Bu amal uchun admin huquqi kerak' : fallbackMessage) });
 }
 
 /** @v2 adminItemGroups */
@@ -82,7 +82,7 @@ export async function adminItemUoms(session: Session): Promise<string[]> {
   const response = await authorizedFetch(session, '/v1/mobile/admin/items/uoms');
   if (response.status !== 200) throw new Error('Admin item UOMs failed');
   return (await responseList(response)).filter((value): value is string => typeof value === 'string')
-    .map(value => value.trim()).filter(Boolean);
+    .map(dartTrim).filter(Boolean);
 }
 /** @v2 adminItems */
 export async function adminItems(session: Session, query = '', group = ''): Promise<SupplierItem[]> {
