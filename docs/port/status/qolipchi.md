@@ -25,7 +25,7 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 | Set reuse | `_sharedMoldForProduct` | Reused-set `is_in_rework` reflects the deferred V2 test-mode rework store; that in-memory branch remains open. |
 | Shared product cache invalidation | `mobile_api_qolip_reworks.dart` `_qolipProductsSnapshot`, `src/qolipProductsApi.ts`, `src/authorizedFetch.ts` | V2 clears the product snapshot after successful rework mutations. The existing native shared request layer invalidates its read epoch for every mutation, including failures; reconcile without changing worker or preparation behavior. |
 | Shared contract ownership | `admin_sequence_list_widget_test`, `order_image_memory_peek_test`, `order_image_widgets_test`, `tayyorlov_order_sheet_test` | These cross-role fixture stems are owned by the integrator or another role; do not overwrite them here. The Qolip PostgreSQL E2E case writes to a server and was not run. |
-| Full test gate | `tests/preparationHomeDependentPages.test.cjs`, `tests/preparationWarehouse.android.test.cjs` | Six existing preparation Android tests cannot resolve `@expo/ui`'s extensionless `createModifier` import under Node in this fresh install. They do not import this checkpoint's code. |
+| Full test gate | `tests/preparationHomeDependentPages.test.cjs`, `tests/preparationWarehouse.android.test.cjs` | Latest full run: 1,388/1,394 pass. Six existing preparation Android tests cannot resolve `@expo/ui`'s extensionless `createModifier` import under Node in this fresh install; they do not import Qolip code. |
 | Android typecheck | `WorkerOutputProgress.android.tsx`, `WorkerPaintPalette.android.tsx` | Nine existing errors remain in worker components; none points to the Qolip code. |
 
 ## Checkpoint
@@ -69,6 +69,8 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 - Mileage sheet checkpoint: added native iOS/Android sheet views, loading/retry state and exact source-derived date/meter formatting. The f119 oracle provided formatting values in Asia/Tashkent and America/New_York, including DST and negative zero. All 205 Qolip tests plus four shared focus tests passed, as did iOS typecheck and lint; Android has only the nine prior worker errors. The sheets are not wired or device-verified.
 - Reworks native views checkpoint: added iOS and Android list, selection, confirmation, retry and mileage opening on top of the existing controller, shared search/list/card and native sheet. All 212 Qolip tests plus four shared focus tests, iOS typecheck and lint passed; Android typecheck showed only the nine prior worker errors. The mandatory real ID source, role routing, iOS 65% sheet height and phone verification remain open; no route or fallback was added.
 - Grid logic checkpoint: ported fixed A–Z/1–13 grid dimensions, normalized grouping and totals, unplaced/other-cell choices and ID-based multi-selection. Four focused tests derive from f119 source. All 162 Qolip tests, iOS typecheck and Expo lint passed; Android and the full suite were not rerun. No grid UI or hardware was run.
+
+- Latest broad gate after merging local main `b13dfbe`: Node 1,388/1,394 passed, with the same six pre-existing preparation Android import failures. The Android typecheck most recently reported the same nine worker errors. The ledger resolved all 649 tagged symbols and 72 tagged tests; eight warnings concern other domains, not Qolip endpoints. The f119 source snapshot remained clean with zero drift. These checks do not establish role or device parity.
 
 ## Deviations candidates
 
