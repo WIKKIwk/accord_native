@@ -22,6 +22,16 @@ export type RawMaterialStock = {
 };
 export type RawMaterialReprint = { reprint_id: string; stock: RawMaterialStock; print_request: WorkerPrintJob };
 
+/** @v2 AdminRawMaterialStockEntry.fromJson */
+export function rawMaterialStockFromJson(value: unknown): RawMaterialStock {
+  const stock = object(value);
+  return { id: text(stock.id), warehouse: text(stock.warehouse), item_code: text(stock.item_code),
+    item_name: text(stock.item_name), barcode: text(stock.barcode), qty: number(stock.qty, 0)!,
+    width_mm: number(stock.width_mm), micron: number(stock.micron), length_m: number(stock.length_m),
+    uom: text(stock.uom), status: text(stock.status), reserved_order_id: text(stock.reserved_order_id),
+    source_receipt_id: text(stock.source_receipt_id) };
+}
+
 async function reprintException(response: Response): Promise<MobileApiException> {
   let code = 'raw_material_stock_reprint_failed';
   try {
@@ -51,11 +61,7 @@ export async function adminPrepareRawMaterialStockReprint(session: Session, barc
   const print = data.print == null ? {} : object(data.print);
   return {
     reprint_id: text(data.reprint_id),
-    stock: { id: text(stock.id), warehouse: text(stock.warehouse), item_code: text(stock.item_code),
-      item_name: text(stock.item_name), barcode: text(stock.barcode), qty: number(stock.qty, 0)!,
-      width_mm: number(stock.width_mm), micron: number(stock.micron), length_m: number(stock.length_m),
-      uom: text(stock.uom), status: text(stock.status), reserved_order_id: text(stock.reserved_order_id),
-      source_receipt_id: text(stock.source_receipt_id) },
+    stock: rawMaterialStockFromJson(stock),
     print_request: printJobFromJson(print),
   };
 }
