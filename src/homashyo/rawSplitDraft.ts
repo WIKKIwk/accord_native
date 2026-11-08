@@ -2,7 +2,8 @@ import * as Crypto from 'expo-crypto';
 import { RawSplitRoll, RawSplitWasteCheck, rawSplitDecimal, rawSplitQuantity } from './rawSplitModel';
 import { RawSplitWidthPlan, rawSplitMinimumWidth } from './rawSplitWidthPlan';
 
-export type RawSplitOutputDraft = { width: string; gross: string; bobina: string; length: string };
+export type RawSplitOutputField = 'width' | 'gross' | 'bobina' | 'length';
+export type RawSplitOutputDraft = { id?: string; width: string; gross: string; bobina: string; length: string };
 export class RawSplitWasteInputError extends Error {}
 /** @v2 newRawSplitRequestId */
 export async function newRawSplitRequestId(): Promise<string> {

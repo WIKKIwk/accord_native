@@ -3,7 +3,7 @@ import { preparationInventoryBarcode } from '../preparation/preparationInventory
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
 import * as api from './rawSplitApi';
 import { buildRawSplitPayload, newRawSplitRequestId, rawSplitConfirmWidth, rawSplitOutputNet, RawSplitWasteInputError,
-  type RawSplitOutputDraft } from './rawSplitDraft';
+  type RawSplitOutputDraft, type RawSplitOutputField } from './rawSplitDraft';
 import { RawSplitRoll, RawSplitResult, RawSplitSnapshot, RawSplitWasteCheck, rawSplitQuantity } from './rawSplitModel';
 import { RawSplitWidthPlan } from './rawSplitWidthPlan';
 
@@ -23,7 +23,8 @@ export type RawSplitControllerOptions = {
   onMessage: (message: string) => void; onIssueVisible: () => void;
   operations?: Operations; requestId?: () => Promise<string>;
 };
-const emptyOutput = (): RawSplitOutputDraft => ({ width: '', gross: '', bobina: '', length: '' });
+let nextOutputKey = 0;
+const emptyOutput = (): RawSplitOutputDraft => ({ id: String(++nextOutputKey), width: '', gross: '', bobina: '', length: '' });
 const message = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
 
 /** Shared state transitions from V2 _RawMaterialSplitScreenState. */
@@ -68,7 +69,7 @@ export class RawSplitController {
   setWaste(waste: string): void { if (!this.locked) this.update({ waste, issueSaved: false, issueError: null }); }
   setIssueNote(issueNote: string): void { if (!this.locked && !this.state.issueSaved) this.update({ issueNote }); }
   setWifiPrinter(wifiPrinter: string): void { if (!this.state.busy) this.update({ wifiPrinter }); }
-  setOutput(index: number, field: keyof RawSplitOutputDraft, value: string): void {
+  setOutput(index: number, field: RawSplitOutputField, value: string): void {
     if (this.locked || !this.state.outputs[index]) return;
     const outputs = this.state.outputs.map((output, i) => i === index ? { ...output, [field]: value } : output);
     this.update({ outputs, issueSaved: false, issueError: null });

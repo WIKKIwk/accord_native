@@ -44,6 +44,8 @@ test('lookup and width actions preserve partial rows, but remove empty excess ro
   c.setOutput(0, 'width', '700'); c.confirmWidth(); assert.equal(c.getSnapshot().outputs.length, 1);
   c.setOutput(0, 'width', '600'); c.addRoll(); c.setOutput(1, 'gross', '7'); c.setOutput(0, 'width', '700'); c.confirmWidth();
   assert.equal(c.getSnapshot().outputs.length, 2); assert.equal(c.getSnapshot().outputs[1].gross, '7');
+  const secondId = c.getSnapshot().outputs[1].id; c.removeRoll(0);
+  assert.equal(c.getSnapshot().outputs[0].id, secondId); assert.equal(c.getSnapshot().outputs[0].gross, '7');
 });
 test('cancelling printer selection does not mutate stock', async () => {
   const h = setup(); await fill(h.controller); h.setPick(null); await h.controller.save();
