@@ -28,6 +28,7 @@ function fixture() {
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile, value.capabilities]) },
     '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, '../shared/mobileApiException': exception, './adminProductionRequest': adminGuard,
     './adminWorkMapMetadataModel': metadata,
+    './adminOrderSummaryApi': { adminProductionMapOrderSummary: async (s, id, guard) => { calls.push(['summary', s, id]); guard(); duringRead(); guard(); return { source_map_id: id }; } },
   };
   const api = load('admin/adminWorkMapReader', apis);
   return { session, calls, api, dependencies: apis, witness: () => current, invalidate: () => { current = false; }, onRead: fn => { duringRead = fn; }, setSnapshot: value => { snapshot = value; } };
@@ -104,6 +105,12 @@ test('hydrated detail retains creation metadata without another request and fail
   assert.equal(f.calls.length, 1);
   f.setSnapshot({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' }, created_at_unix: 8640000000001 }] });
   await assert.rejects(read(ticket), RangeError); assert.equal(f.calls.length, 2);
+});
+test('saved summary reader keeps the original detail witness, route capability and exact order ID', async () => {
+  const f = fixture(), reader = f.api.adminWorkMapSummaryReader(f.session, f.witness);
+  assert.equal((await reader('o')).source_map_id, 'o'); assert.deepEqual(f.calls[0], ['summary', f.session, 'o']);
+  f.onRead(f.invalidate); await assert.rejects(reader('o'), /session changed/); assert.equal(f.calls.length, 2);
+  await assert.rejects(reader('o'), /session changed/); assert.equal(f.calls.length, 2);
 });
 
 test('Sequence catalog uses the existing guarded limit-200 reader and original witness', async () => {

@@ -9,6 +9,9 @@ import type { AdminWorkMapController, AdminWorkMapDetailTicket, AdminWorkMapRow 
 import { useAdminWorkMapDetail } from './useAdminWorkMapDetail';
 import { AdminWorkMapMetadata } from './AdminWorkMapMetadata';
 import { adminWorkMapMetadataRows } from './adminWorkMapMetadataModel';
+import { useAdminWorkMapSummary } from './useAdminWorkMapSummary';
+import { adminWorkMapSummaryPresentation } from './adminWorkMapSummaryPresentation';
+import { AdminWorkMapSummary } from './AdminWorkMapSummary';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeNow = () => localeController.locale;
@@ -16,6 +19,8 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
   controller: AdminWorkMapController; row: AdminWorkMapRow; ticket: AdminWorkMapDetailTicket; close: () => void }) {
   const colors = useWorkerColors(), locale = useSyncExternalStore(subscribeLocale, localeNow, localeNow);
   const detail = useAdminWorkMapDetail(session, isCurrent, controller, ticket, close);
+  const showSummary = ticket.kind === 'order' && (session.profile.role === 'admin' || session.profile.role === 'brigader');
+  const summary = useAdminWorkMapSummary(session, isCurrent, controller, ticket, showSummary && detail.valid && detail.value?.kind === 'order' ? detail.value : false);
   if (!detail.valid) return <View style={{ flex: 1 }} />;
   const value = detail.value, data = value?.kind === 'order' ? value.map : value?.template;
   const title = value?.kind === 'order' ? value.map.title : value?.template.product;
@@ -33,9 +38,11 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
     {(metadata.length > 0 || data) && <Host matchContents={{ vertical: true }}><Column>
       {!!customer && <ListItem supportingText={customer}>{localizedGetter('customerLabel', locale)}</ListItem>}
       {metadata.length > 0 && <AdminWorkMapMetadata rows={metadata} />}
-      {typeof weight === 'number' && Number.isFinite(weight) && <ListItem supportingText={`${weight} kg`}>{productionText('worker.summary.weight', locale)}</ListItem>}
-      {typeof length === 'number' && Number.isFinite(length) && <ListItem supportingText={`${length} m`}>{productionText('worker.summary.length', locale)}</ListItem>}
-      {typeof width === 'number' && Number.isFinite(width) && <ListItem supportingText={`${width} mm`}>{productionText('worker.summary.material_width', locale)}</ListItem>}
+      {showSummary ? <AdminWorkMapSummary model={adminWorkMapSummaryPresentation(value?.kind === 'order' ? value.map : null, summary, locale)} onToggle={summary.toggle} onRetry={summary.retry} /> : <>
+        {typeof weight === 'number' && Number.isFinite(weight) && <ListItem supportingText={`${weight} kg`}>{productionText('worker.summary.weight', locale)}</ListItem>}
+        {typeof length === 'number' && Number.isFinite(length) && <ListItem supportingText={`${length} m`}>{productionText('worker.summary.length', locale)}</ListItem>}
+        {typeof width === 'number' && Number.isFinite(width) && <ListItem supportingText={`${width} mm`}>{productionText('worker.summary.material_width', locale)}</ListItem>}
+      </>}
     </Column></Host>}
     <Host matchContents={{ vertical: true }}><Button label={localizedGetter('closeAction', locale)} onPress={close} /></Host>
   </ScrollView></View>;

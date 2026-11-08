@@ -18,7 +18,7 @@ const metadata = load('admin/adminWorkMapMetadataModel.ts', { './dartJsonString'
   './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel.ts', { './dartJsonString': load('admin/dartJsonString.ts') }) });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
-function fixture() {
+function fixture(readers) {
   let current = true, ticketCurrent = true, stateIndex = 0, effectIndex = 0, writes = 0, closes = 0;
   const states = [], effects = [], scheduled = [], reads = [];
   const session = {}, ticket = { id: 'o', kind: 'order', generation: 1, epoch: 'e', revision: 4 };
@@ -39,7 +39,9 @@ function fixture() {
     },
   };
   const hook = load('admin/useAdminWorkMapDetail.ts', { react, '../shared/profileSessionGuard': guard,
-    './adminWorkMapReader': { adminWorkMapDetailReader: (captured, isCurrent) => async capturedTicket => {
+    './adminWorkMapDetailWitness': load('admin/adminWorkMapDetailWitness.ts'),
+    './adminWorkMapReader': readers ?? { adminWorkMapDetailReader: (captured, isCurrent) => async capturedTicket => {
+      assert.equal(guard.isProfileSessionCurrent(isCurrent), true, 'the strict reader must accept a valid composed ticket witness');
       const response = deferred(); reads.push({ captured, isCurrent, ticket: capturedTicket, response }); return response.promise;
     } } }).useAdminWorkMapDetail;
   return { args, reads, get writes() { return writes; }, get closes() { return closes; },
@@ -54,6 +56,39 @@ test('detail hook binds the original session and ticket, then shows only its com
   assert.equal(f.reads[0].captured, f.args.session); assert.equal(f.reads[0].ticket, f.args.ticket); assert.equal(f.reads[0].isCurrent(), true);
   const value = { kind: 'order', map: { id: 'o' }, customer: 'Canonical' }; f.reads[0].response.resolve(value); await tick();
   assert.equal(f.render().value, value); assert.equal(f.render().loading, false); f.unmount();
+});
+test('actual detail hook/reader composition accepts a valid ticket and rejects the same ticket after account loss', async () => {
+  const sent = [], waiting = [], adminGuard = load('admin/adminProductionRequest.ts', { '../authorizedFetch': {}, '../shared/mobileApiException': {}, '../workerControlsApi': {} });
+  const readers = load('admin/adminWorkMapReader.ts', {
+    '../auth': { activeSessionToken: session => session.token }, '../apparatusApi': {}, '../productionOrderPageApi': {}, '../pendingOrderApi': {}, './adminOrderSummaryApi': {},
+    '../productionOrderDetailApi': { adminProductionOrderDetail: async (session, input, beforeSend) => {
+      beforeSend(); sent.push({ session, input }); const response = deferred(); waiting.push(response); return response.promise;
+    } },
+    '../sessionReadScope': { sessionReadScope: session => JSON.stringify(session.profile) },
+    '../shared/appRoutes': load('shared/appRoutes.ts'), '../shared/profileSessionGuard': guard,
+    '../shared/mobileApiException': load('shared/mobileApiException.ts'), './adminProductionRequest': adminGuard,
+    './adminWorkMapMetadataModel': metadata,
+  });
+  const f = fixture(readers); f.args.session = { token: 'token', profile: { role: 'admin', ref: 'me' }, capabilities: ['admin.access'] };
+  assert.equal(f.render().valid, true); assert.equal(sent.length, 1);
+  waiting[0].resolve({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }] }); await tick();
+  assert.equal(f.render().value.map.id, 'o'); f.render().retry(); f.render(); assert.equal(sent.length, 2);
+  f.invalidateWitness(); waiting[1].resolve({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }] }); await tick();
+  assert.equal(f.render().value, undefined); assert.equal(sent.length, 2); f.unmount();
+});
+test('raw detail witness composition forwards malformed results to the strict validator without coercion', async () => {
+  const compose = load('admin/adminWorkMapDetailWitness.ts').adminWorkMapDetailWitness, controller = { detailIsCurrent: () => true };
+  assert.equal(guard.isProfileSessionCurrent(compose(() => true, controller, {})), true);
+  for (const raw of [() => 1, () => null, async () => true, async () => { throw Error('invalid asynchronous witness'); }]) {
+    assert.equal(guard.isProfileSessionCurrent(compose(raw, controller, {})), false);
+  }
+  for (const result of [false, 1, null]) {
+    assert.equal(guard.isProfileSessionCurrent(compose(() => true, { detailIsCurrent: () => result }, {})), false);
+  }
+  for (const detailIsCurrent of [async () => true, async () => { throw Error('invalid asynchronous ticket'); }, () => { throw Error('invalid ticket'); }]) {
+    assert.equal(guard.isProfileSessionCurrent(compose(() => true, { detailIsCurrent }, {})), false);
+  }
+  await tick();
 });
 test('retry clears the prior error and waits for a fresh ticket-bound read', async () => {
   const f = fixture(); f.render(); f.reads[0].response.reject(new Error('failed')); await tick();
@@ -72,7 +107,7 @@ for (const invalidate of ['invalidateWitness', 'invalidateTicket']) test(`${inva
 });
 test('unmount never publishes a pending detail or its error', async () => {
   for (const outcome of ['resolve', 'reject']) {
-    const f = fixture(); f.render(); f.unmount(); f.reads[0].response[outcome](outcome === 'resolve' ? {} : new Error('late')); await tick();
+    const f = fixture(); f.render(); f.unmount(); assert.equal(f.reads[0].isCurrent(), false); f.reads[0].response[outcome](outcome === 'resolve' ? {} : new Error('late')); await tick();
     assert.equal(f.writes, 0);
   }
 });
@@ -106,17 +141,22 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './useAdminWorkMapDetail': { useAdminWorkMapDetail: () => ({ ...detail, retry }) },
     './AdminWorkMapMetadata': { AdminWorkMapMetadata: 'Metadata' }, './adminWorkMapMetadataModel': metadata,
+    './AdminWorkMapSummary': { AdminWorkMapSummary: 'Summary' },
+    './adminWorkMapSummaryPresentation': { adminWorkMapSummaryPresentation: (map, state) => ({ map, ...state }) },
+    './useAdminWorkMapSummary': { useAdminWorkMapSummary: (_session, _isCurrent, _controller, _ticket, hydrated) => ({ expanded: false, canExpand: !!hydrated }) },
   }).AdminWorkMapDetail;
   const props = { session: { profile: { role: 'admin' } }, ticket: { kind: 'order' }, row: { code: '1', id: 'o', title: 'Old' }, close };
   const tree = nodes(View(props));
   assert.equal(tree.find(node => node.type === 'ListItem' && node.props.children === 'customerLabel').props.supportingText, 'Canonical');
   assert.equal(tree.find(node => node.type === 'Text').props.children, '1 • Hydrated');
   assert.deepEqual(tree.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_missing']);
+  assert.equal(tree.find(node => node.type === 'Summary').props.model.canExpand, true);
   detail.value.metadata = { createdAtUnix: null, creator: { role: 'telegram', displayName: 'Ana' } };
   assert.deepEqual(nodes(View(props)).find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_role.telegram · Ana']);
   detail = { valid: true, loading: false, error: 'failed' };
   const failed = nodes(View(props)); assert.equal(failed.some(node => node.type === 'ListItem'), false);
   assert.deepEqual(failed.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['loading', 'loading']);
+  assert.equal(failed.find(node => node.type === 'Summary').props.model.canExpand, false);
   assert.equal(nodes(View({ ...props, session: { profile: { role: 'sales_manager' } } })).some(node => node.type === 'Metadata'), false);
   assert.equal(nodes(View({ ...props, ticket: { kind: 'pending' } })).some(node => node.type === 'Metadata'), false);
   assert.equal(failed.find(node => node.type === 'Button' && node.props.label === 'retry').props.onPress, retry);

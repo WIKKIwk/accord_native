@@ -10,6 +10,7 @@ import { MobileApiException } from '../shared/mobileApiException';
 import { checkedAdminGuard } from './adminProductionRequest';
 import type { AdminWorkMapDetailTicket, AdminWorkMapPage } from './adminWorkMapController';
 import { adminWorkMapMetadataFromSaved } from './adminWorkMapMetadataModel';
+import { adminProductionMapOrderSummary } from './adminOrderSummaryApi';
 
 /** Capture one witness and one read scope for this screen; never recapture a stale operation. */
 function adminWorkMapGuard(session: Session, isWitnessCurrent: () => boolean) {
@@ -32,6 +33,12 @@ export function adminWorkMapReader(session: Session, isWitnessCurrent: () => boo
 export function adminWorkMapCatalogReader(session: Session, isWitnessCurrent: () => boolean) {
   const guard = adminWorkMapGuard(session, isWitnessCurrent);
   return async () => { guard(); const rows = await adminApparatus(session, { limit: 200, beforeSend: guard }); guard(); return rows; };
+}
+
+/** A saved calculation read belongs to the same hydrated detail ticket, not a list summary. */
+export function adminWorkMapSummaryReader(session: Session, isWitnessCurrent: () => boolean) {
+  const guard = adminWorkMapGuard(session, isWitnessCurrent);
+  return async (id: string) => { guard(); const value = await adminProductionMapOrderSummary(session, id, guard); guard(); return value; };
 }
 
 /** A list summary never authorizes an editor: hydrate and validate the full response first. */

@@ -3,6 +3,7 @@ import type { Session } from '../auth';
 import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
 import type { AdminWorkMapController, AdminWorkMapDetailTicket } from './adminWorkMapController';
 import { adminWorkMapDetailReader } from './adminWorkMapReader';
+import { adminWorkMapDetailWitness } from './adminWorkMapDetailWitness';
 
 type Detail = Awaited<ReturnType<ReturnType<typeof adminWorkMapDetailReader>>>;
 type Result = { session: Session; ticket: AdminWorkMapDetailTicket; attempt: number; value?: Detail; error?: string };
@@ -18,8 +19,8 @@ export function useAdminWorkMapDetail(session: Session, isCurrent: () => boolean
   useEffect(() => {
     if (!valid) return;
     let mounted = true;
-    const current = () => isProfileSessionCurrent(isCurrent) && controller.detailIsCurrent(ticket);
-    void adminWorkMapDetailReader(session, current)(ticket).then(value => {
+    const rawWitness = adminWorkMapDetailWitness(isCurrent, controller, ticket), witness = () => mounted && rawWitness(), current = () => isProfileSessionCurrent(witness);
+    void adminWorkMapDetailReader(session, witness)(ticket).then(value => {
       if (mounted && current()) setResult({ session, ticket, attempt, value });
     }, error => {
       if (mounted && current()) setResult({ session, ticket, attempt, error: error instanceof Error ? error.message : String(error) });
