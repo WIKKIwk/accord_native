@@ -25,6 +25,8 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 - Reused `src/shared/searchNormalizer.ts`, applying Dart's U+0085 edge trim only within Qolip. `tests/qolipSearch.test.cjs` covers the V2 examples and compares 3,500 generated cases against a separately translated legacy matcher; it is source-derived, not a V2 oracle recording. Keyboard alternatives, variable edit distances, digital identifiers, cancellation, duplicate results and yielding are covered.
 - Rework checkpoint: ported live `qolipReworks`, `qolipSendToRework`, `qolipReturnFromRework` and `qolipMileage`, including session guards, response validation and error codes. The independent f119 V2 oracle passed `qolip_reworks_api_test.dart` (15 tests); an isolated recorder captured 16 requests from its 11 live cases in `tests/contracts/f11910bb/qolip_reworks_api_test.json`. Replays and source-derived edge tests passed. `qolip_product_molds_api_test.dart` also passed separately in the f119 oracle (3 tests), but its historical native fixture has not yet been replaced or claimed as f119 evidence.
 - After the rework checkpoint, `node --test tests/qolip*.test.cjs` passed all 37 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
+- Block checkpoint: ported `qolipBlocks`, `qolipBlocksData`, `qolipCreateBlock`, `qolipUpdateBlock` and `qolipDeleteBlock`, plus the V2 block models. Six source-derived tests cover GET/POST/PUT/DELETE, defaults, trimming, error responses and the deferred test-mode guard; no standalone V2 block wire recording was found. The shared Qolip error and Dart-style string helpers now live in this role's own `qolipApiCommon.ts` and the rework tests still pass.
+- After the block checkpoint, `node --test tests/qolip*.test.cjs` passed all 43 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 
 ## Deviations candidates
 
@@ -32,7 +34,7 @@ None recorded for this narrow checkpoint.
 
 ## Test mode pending
 
-The role-wide test mode is deferred by the port plan. Rework functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` remain to be ported in the shared test-mode pass.
+The role-wide test mode is deferred by the port plan. Rework and block functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the in-memory block operations remain to be ported in the shared test-mode pass.
 
 ## Needs from the integrator
 

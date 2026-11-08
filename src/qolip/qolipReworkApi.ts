@@ -2,21 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { sessionReadScope } from '../sessionReadScope';
 import { MobileApiException } from '../shared/mobileApiException';
-
-type JsonObject = Record<string, unknown>;
-const object = (value: unknown): JsonObject | null => value !== null && typeof value === 'object' && !Array.isArray(value)
-  ? value as JsonObject : null;
-const trim = (value: string) => value.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');
-
-// The JSON fields are normally strings; Dart also calls toString on optional fields.
-function dartString(value: unknown): string {
-  if (value == null) return 'null';
-  if (Array.isArray(value)) return `[${value.map(dartString).join(', ')}]`;
-  const row = object(value);
-  if (row) return `{${Object.entries(row).map(([key, item]) => `${key}: ${dartString(item)}`).join(', ')}}`;
-  return String(value);
-}
-const optionalText = (value: unknown) => value == null ? '' : dartString(value);
+import { jsonObject as object, optionalText, qolipApiResponseError, trimDart as trim, type JsonObject } from './qolipApiCommon';
 function requiredString(value: unknown): string {
   if (typeof value !== 'string') throw new TypeError('Expected string');
   return value;
@@ -93,19 +79,6 @@ function requireScope(session: Session) {
   };
 }
 
-async function responseError(response: Response, fallbackCode: string, fallbackMessage: string): Promise<MobileApiException> {
-  let code = fallbackCode, message = fallbackMessage;
-  try {
-    const row = object(await response.json());
-    if (row) {
-      code = optionalText(row.error ?? row.code ?? fallbackCode);
-      const serverMessage = trim(optionalText(row.message));
-      if (serverMessage) message = serverMessage;
-    }
-  } catch { /* V2 keeps its fallback code and message for an invalid error body. */ }
-  return new MobileApiException({ code, message, statusCode: response.status });
-}
-
 async function request(session: Session, path: string, fallbackCode: string, fallbackMessage: string,
   body?: JsonObject): Promise<JsonObject> {
   const guard = requireScope(session);
@@ -117,7 +90,7 @@ async function request(session: Session, path: string, fallbackCode: string, fal
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }, guard);
   guard();
-  if (response.status !== 200) throw await responseError(response, fallbackCode, fallbackMessage);
+  if (response.status !== 200) throw await qolipApiResponseError(response, fallbackCode, fallbackMessage);
   const data: unknown = await response.json();
   guard();
   const result = object(data);

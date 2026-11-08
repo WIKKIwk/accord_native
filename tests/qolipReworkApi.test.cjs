@@ -15,6 +15,7 @@ function load(relative, dependencies = {}) {
   return loaded.exports;
 }
 const { MobileApiException } = load('shared/mobileApiException.ts');
+const common = load('qolip/qolipApiCommon.ts', { '../shared/mobileApiException': { MobileApiException } });
 const stem = 'f11910bb/qolip_reworks_api_test';
 function harness(testName, options = {}) {
   const replay = contractFetch(stem, testName, { generated: ['request_id'] });
@@ -24,6 +25,7 @@ function harness(testName, options = {}) {
     '../auth': { activeSessionToken: value => value.token || null },
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile, value.capabilities]) },
     '../shared/mobileApiException': { MobileApiException },
+    './qolipApiCommon': common,
     '../authorizedFetch': { authorizedFetch: async (value, target, init = {}, guard) => {
       guard?.();
       const headers = new Headers(init.headers);
