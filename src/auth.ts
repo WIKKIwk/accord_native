@@ -81,9 +81,12 @@ export function captureSessionWitness(session: Session | null | undefined): Sess
   issuedWitnesses.add(snapshot); return snapshot;
 }
 export function isSessionWitnessCurrent(snapshot: SessionWitness | null | undefined): boolean {
-  return !!snapshot && issuedWitnesses.has(snapshot) && !witnessTransitions.size && activeSession === snapshot.session &&
-    !!snapshot.session.token && snapshot.epoch === sessionEpoch && snapshot.generation === witnessGeneration &&
-    witnessScope(snapshot.session) === snapshot.scope;
+  if (!snapshot || !issuedWitnesses.has(snapshot)) return false;
+  const current = !witnessTransitions.size && activeSession === snapshot.session && !!snapshot.session.token &&
+    snapshot.epoch === sessionEpoch && snapshot.generation === witnessGeneration && witnessScope(snapshot.session) === snapshot.scope;
+  // Once a consumer observes an invalid witness, a later ABA must never revive it.
+  if (!current) issuedWitnesses.delete(snapshot);
+  return current;
 }
 /** Subscribers must only invalidate/redraw; their exceptions are isolated from auth. */
 export function subscribeSessionWitness(listener: () => void): () => void {

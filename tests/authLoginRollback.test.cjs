@@ -685,3 +685,11 @@ test('witness capture fails closed for missing or inactive sessions', async () =
   assert.equal(api.captureSessionWitness(session), null); await api.saveSession(session);
   assert.ok(api.captureSessionWitness(session)); await api.clearSession(); assert.equal(api.captureSessionWitness(session), null);
 });
+
+test('observed direct scope loss permanently retires a witness after the scope returns', async () => {
+  const api = auth({}), session = oldSession(); session.capabilities = ['one']; await api.saveSession(session);
+  const old = api.captureSessionWitness(session); assert.equal(api.isSessionWitnessCurrent(old), true);
+  session.capabilities = ['two']; assert.equal(api.isSessionWitnessCurrent(old), false);
+  session.capabilities = ['one']; assert.equal(api.isSessionWitnessCurrent(old), false);
+  const fresh = api.captureSessionWitness(session); assert.ok(fresh); assert.equal(api.isSessionWitnessCurrent(fresh), true);
+});
