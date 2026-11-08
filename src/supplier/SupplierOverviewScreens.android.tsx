@@ -41,7 +41,7 @@ export function SupplierHomeScreen(props: SupplierHomeProps) {
           : kind === 'submitted' ? summary.submittedCount : summary.returnedCount)} onPress={() => props.onStatus(kind)} />)}
       {pending.length > 0 && <><PreparationText title>{l('inProgressItemsTitle')}</PreparationText>
         {pending.map((record, index) => <PreparationRow key={`${record.id}:${index}`} title={record.item_name}
-          subtitle={`${record.item_code}\n${record.sent_qty.toFixed(0)} ${record.uom}\n${record.created_label}`} onPress={() => props.onReceipt(record.id)} />)}</>}
+          subtitle={`${record.item_code}\n${record.sent_qty.toFixed(0)} ${record.uom}\n${record.created_label}`} onPress={props.onReceipt ? () => props.onReceipt?.(record.id) : undefined} />)}</>}
     </>}
   </Page>;
 }
@@ -58,7 +58,7 @@ export function SupplierRecentScreen(props: SupplierRecentProps) {
         const amount = record.amount > 0 ? `\n${trimNotificationText(`${record.amount.toFixed(0)} ${record.currency}`)}` : '';
         return <PreparationRow key={`${record.id}:${index}`} title={trimNotificationText(record.item_name) ? record.item_name : record.item_code}
           subtitle={`${record.sent_qty.toFixed(0)} ${record.uom}${amount}\n${record.created_label}`}
-          onPress={() => props.onRepeat(supplierRecentItem(record), record.sent_qty)} />;
+          onPress={props.onRepeat ? () => props.onRepeat?.(supplierRecentItem(record), record.sent_qty) : undefined} />;
       })}
   </Page>;
 }
@@ -97,7 +97,7 @@ export function SupplierSubmittedCategoryDetailScreen(props: SupplierCategoryPro
       : !items.length ? <PreparationText>{l('noRecordsYet')}</PreparationText> : items.map((record, index) =>
         <PreparationRow key={`${record.id}:${index}`} title={`${record.sent_qty.toFixed(0)} ${record.uom}`}
           subtitle={`${record.created_label}${trimNotificationText(record.note) ? `\n${record.note}` : ''}`}
-          onPress={() => props.onReceipt(record.id)} />)}
+          onPress={props.onReceipt ? () => props.onReceipt?.(record.id) : undefined} />)}
   </Page>;
 }
 
@@ -114,7 +114,7 @@ export function SupplierStatusDetailScreen(props: SupplierStatusDetailProps) {
         const accepted = record.accepted_qty > 0 ? `\n${lm('acceptedQtyLabel', { qty: record.accepted_qty, uom: record.uom })}` : '';
         const note = trimNotificationText(record.note) ? `\n${record.note}` : '';
         return <PreparationRow key={`${record.id}:${index}`} title={`${record.sent_qty.toFixed(0)} ${record.uom}`}
-          subtitle={`${record.created_label}${accepted}${note}`} onPress={() => props.onReceipt(record.id)} />;
+          subtitle={`${record.created_label}${accepted}${note}`} onPress={props.onReceipt ? () => props.onReceipt?.(record.id) : undefined} />;
       })}
   </Page>;
 }

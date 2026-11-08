@@ -1,5 +1,6 @@
 import { Button, HStack, ProgressView, Section, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import { Stack } from 'expo-router';
+import type { ReactElement } from 'react';
 import { PlatformColor, Text as NativeText, View } from 'react-native';
 import { PreparationList } from '../preparation/PreparationUI';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
@@ -22,6 +23,11 @@ function Retry({ onRetry }: { onRetry: () => void }) {
   return <Section><Text>{l('serverDisconnectedRetry')}</Text><Button label={l('retry')} onPress={onRetry} /></Section>;
 }
 
+// In a restricted host, the data remains visible but unavailable receipt/create actions are omitted.
+function OptionalAction({ onPress, children }: { onPress?: () => void; children: ReactElement }) {
+  return onPress ? <Button onPress={onPress}>{children}</Button> : <>{children}</>;
+}
+
 // @v2 SupplierHomeScreen
 export function SupplierHomeScreen(props: SupplierHomeProps) {
   const store = useSupplierStore(props.store), { l } = useSupplierText();
@@ -37,10 +43,10 @@ export function SupplierHomeScreen(props: SupplierHomeProps) {
               : kind === 'submitted' ? summary.submittedCount : summary.returnedCount)}</Text></HStack>
           </Button>)}</Section>
           {pending.length > 0 && <Section><Text>{l('inProgressItemsTitle')}</Text>{pending.map((record, index) =>
-            <Button key={`${record.id}:${index}`} onPress={() => props.onReceipt(record.id)}><VStack alignment="leading" spacing={4}>
+            <OptionalAction key={`${record.id}:${index}`} onPress={props.onReceipt ? () => props.onReceipt?.(record.id) : undefined}><VStack alignment="leading" spacing={4}>
               <Text>{record.item_name}</Text><Text>{record.item_code}</Text>
               <Text>{`${record.sent_qty.toFixed(0)} ${record.uom}`}</Text><Text>{record.created_label}</Text>
-            </VStack></Button>)}</Section>}
+            </VStack></OptionalAction>)}</Section>}
         </>}
     </PreparationList>{props.footer}</View>;
 }
@@ -55,13 +61,13 @@ export function SupplierRecentScreen(props: SupplierRecentProps) {
       {!store.loadedHistory && !store.historyError ? <ProgressView /> : !store.loadedHistory && store.historyError != null
         ? <Retry onRetry={() => { void store.refreshHistory(); }} /> : store.historyItems.length === 0
           ? <Section><Text>{l('noSupplierShipmentsYet')}</Text></Section>
-          : <Section>{store.historyItems.map((record, index) => <Button key={`${record.id}:${index}`}
-            onPress={() => props.onRepeat(supplierRecentItem(record), record.sent_qty)}>
+          : <Section>{store.historyItems.map((record, index) => <OptionalAction key={`${record.id}:${index}`}
+            onPress={props.onRepeat ? () => props.onRepeat?.(supplierRecentItem(record), record.sent_qty) : undefined}>
             <VStack alignment="leading" spacing={4}><Text>{trimNotificationText(record.item_name) ? record.item_name : record.item_code}</Text>
               <Text>{`${record.sent_qty.toFixed(0)} ${record.uom}`}</Text>
               {record.amount > 0 && <Text>{trimNotificationText(`${record.amount.toFixed(0)} ${record.currency}`)}</Text>}
               <Text>{record.created_label}</Text></VStack>
-          </Button>)}</Section>}
+          </OptionalAction>)}</Section>}
     </PreparationList>{props.footer}</View>;
 }
 
@@ -101,10 +107,10 @@ export function SupplierSubmittedCategoryDetailScreen(props: SupplierCategoryPro
       {loading ? <ProgressView /> : failed
         ? <Section><Text>{t(String(store.historyError))}</Text></Section> : items.length === 0
           ? <Section><Text>{l('noRecordsYet')}</Text></Section> : <Section>{items.map((record, index) =>
-            <Button key={`${record.id}:${index}`} onPress={() => props.onReceipt(record.id)}><VStack alignment="leading" spacing={8}>
+            <OptionalAction key={`${record.id}:${index}`} onPress={props.onReceipt ? () => props.onReceipt?.(record.id) : undefined}><VStack alignment="leading" spacing={8}>
               <HStack><Text>{`${record.sent_qty.toFixed(0)} ${record.uom}`}</Text><Spacer /><Text>{record.created_label}</Text></HStack>
               {!!trimNotificationText(record.note) && <Text>{record.note}</Text>}
-            </VStack></Button>)}</Section>}
+            </VStack></OptionalAction>)}</Section>}
     </PreparationList>{props.footer}</View>;
 }
 
@@ -118,11 +124,11 @@ export function SupplierStatusDetailScreen(props: SupplierStatusDetailProps) {
       {waiting ? <ProgressView />
         : error != null && !items.length ? <Section><Text>{t(String(error))}</Text></Section>
           : !items.length ? <Section><Text>{l('noSupplierReceiptsYet')}</Text></Section>
-            : <Section>{items.map((record, index) => <Button key={`${record.id}:${index}`} onPress={() => props.onReceipt(record.id)}>
+            : <Section>{items.map((record, index) => <OptionalAction key={`${record.id}:${index}`} onPress={props.onReceipt ? () => props.onReceipt?.(record.id) : undefined}>
               <VStack alignment="leading" spacing={8}><HStack><Text>{`${record.sent_qty.toFixed(0)} ${record.uom}`}</Text>
                 <Spacer /><Text>{record.created_label}</Text></HStack>
                 {record.accepted_qty > 0 && <Text>{lm('acceptedQtyLabel', { qty: record.accepted_qty, uom: record.uom })}</Text>}
                 {!!trimNotificationText(record.note) && <Text>{record.note}</Text>}
-              </VStack></Button>)}</Section>}
+              </VStack></OptionalAction>)}</Section>}
     </PreparationList>{props.footer}</View>;
 }
