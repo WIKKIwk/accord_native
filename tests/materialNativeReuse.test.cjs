@@ -22,6 +22,7 @@ function load(filename, mocks) {
 function setup() {
   const calls = [], session = {}, state = { groups: [], events: [{ event_id: 'one', event_type: 'receipt_posted' },
     { event_id: 'two', event_type: 'transfer_out' }], error: null, loading: false };
+  state.homeActions = { cards: [], fab: [], select: id => calls.push(['select', id]) };
   const refresh = async () => { calls.push('refresh'); }, sheet = { open: (value, options) => calls.push(['sheet', value, options]), close() {} };
   const react = { useEffect() {}, useState: initial => [initial, () => {}] };
   const mocks = { 'react/jsx-runtime': jsx, react,
@@ -40,10 +41,12 @@ function setup() {
     '../preparation/PreparationUI': { PreparationList: 'PreparationList' },
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText' },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
+    '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     './MaterialContext': { useMaterialContext: () => ({ session }) },
     './useMaterialScope': { useMaterialScope: () => ({ groups: state.groups, refresh }) },
+    './materialHomeActions': { materialHomeActions: () => state.homeActions },
     './useMaterialHistory': { useMaterialHistory: () => ({ events: state.events, apparatus: [], error: state.error,
       loading: state.loading, refreshing: false, refresh, reload: () => calls.push('reload') }) },
     './materialHistoryPresentation': { materialHistoryTitle: event => `title-${event.event_id}`, materialHistorySubtitle: () => 'subtitle',
@@ -61,6 +64,18 @@ test('Android Material shell reuses the existing OrdersList and preparation text
   assert.ok(list); assert.equal(list.props.active, true); assert.equal(list.props.passthrough({}), true);
   assert.equal(nodes(tree, n => n.type === 'PreparationText').length, 2); await list.props.onRefresh();
   assert.deepEqual(h.calls, ['refresh']);
+});
+
+test('home actions compose the existing Android card and FAB and native iOS controls', () => {
+  const h = setup(), item = { id: 'receipt', label: 'Kirim', icon: { ios: 'scalemass', android: 'scale' }, width: 150 };
+  h.state.homeActions.cards = [item]; h.state.homeActions.fab = [item];
+  const android = h.homeAndroid(), cards = nodes(android, n => n.type === 'WorkerQueueCard');
+  const fab = nodes(android, n => n.type === 'RoleFab')[0];
+  assert.equal(cards.length, 1); assert.ok(fab); assert.deepEqual(fab.props.actions, [{ id: 'receipt', label: 'Kirim', icon: 'scale', width: 150 }]);
+  cards[0].props.onPress(); fab.props.onSelect('receipt');
+  const ios = h.homeIos(), buttons = nodes(ios, n => n.type === 'Button');
+  assert.equal(buttons.length, 1); assert.equal(nodes(ios, n => n.type === 'Image')[0].props.systemName, 'scalemass');
+  buttons[0].props.onPress(); assert.deepEqual(h.calls, [['select', 'receipt'], ['select', 'receipt'], ['select', 'receipt']]);
 });
 
 test('Android Material history reuses OrdersList, WorkerQueueCard and the existing native sheet', async () => {
