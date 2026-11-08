@@ -85,13 +85,14 @@ export class FactoryLocationController {
     }
   }
   beginEditor(id: string | null): FactoryLocationTicket | null {
-    if (!this.currentOrInvalidate(this.epoch) || this.state.saving || this.state.status !== 'ready') return null;
+    if (!this.currentOrInvalidate(this.epoch) || this.state.saving || this.state.status === 'forbidden' ||
+      (id !== null && this.state.status !== 'ready')) return null;
     const location = id === null ? null : this.state.locations.find(item => item.id === id);
     if (id !== null && !location) return null;
     return { owner: this.owner, epoch: this.epoch, location: location ?? null };
   }
   private ticketValid(ticket: FactoryLocationTicket): boolean {
-    return ticket.owner === this.owner && this.currentOrInvalidate(ticket.epoch) && !this.state.saving && this.state.status === 'ready';
+    return ticket.owner === this.owner && this.currentOrInvalidate(ticket.epoch) && !this.state.saving && this.state.status !== 'forbidden';
   }
   async saveEditor(ticket: FactoryLocationTicket, name: string, selected: ReadonlySet<string>): Promise<FactorySaveResult> {
     if (!this.ticketValid(ticket)) return 'cancelled';

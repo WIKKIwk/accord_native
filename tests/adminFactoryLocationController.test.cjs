@@ -124,3 +124,32 @@ test('an older notice timer cannot erase a newer failure notice', async () => {
   controller.dismissNotice(first); assert.equal(controller.getSnapshot().notice.serial, second);
   controller.dismissNotice(second); assert.equal(controller.getSnapshot().notice, null);
 });
+
+test('header can open and submit a create editor while the initial list is still loading', async () => {
+  const f = fixture(), pending = deferred(); let first = true;
+  f.deps.readLocations = async guard => { guard(); if (first) { first = false; return pending.promise; } return [{ ...location, id: 'new', name: 'New' }]; };
+  const controller = new FactoryLocationController(f.deps); controller.start(); assert.equal(controller.getSnapshot().status, 'loading');
+  const ticket = controller.beginEditor(null); assert.ok(ticket); assert.equal(await controller.saveEditor(ticket, 'New', new Set()), 'saved');
+  assert.deepEqual(f.calls.at(-1), ['create', 'New', []]); pending.resolve([location]); await tick(); await tick();
+  assert.equal(controller.getSnapshot().status, 'ready'); assert.equal(controller.getSnapshot().locations[0].id, 'new');
+});
+
+test('header create remains available after the initial read fails', async () => {
+  const f = fixture(); f.deps.readLocations = async () => { throw new Error('offline'); };
+  const controller = new FactoryLocationController(f.deps); controller.start(); await tick();
+  assert.equal(controller.getSnapshot().status, 'error'); assert.equal(controller.beginEditor(location.id), null);
+  const ticket = controller.beginEditor(null); assert.ok(ticket);
+  assert.equal(await controller.saveEditor(ticket, 'New', new Set()), 'saved');
+  assert.deepEqual(f.calls.at(-1), ['create', 'New', []]);
+});
+
+test('an already-open editor can finish while a pull refresh is pending', async () => {
+  const f = fixture(), controller = new FactoryLocationController(f.deps); controller.start(); await tick();
+  const ticket = controller.beginEditor(location.id), pending = deferred(); f.deps.readLocations = () => pending.promise;
+  const refresh = controller.load(); assert.equal(controller.getSnapshot().status, 'loading');
+  assert.equal(controller.beginEditor(location.id), null);
+  assert.equal(await controller.saveEditor(ticket, 'State', new Set([b.id])), 'saved');
+  assert.deepEqual(f.calls.at(-1), ['replace', location.id, [b.id]]); pending.resolve([location]);
+  // The controller requests a fresh list when the pending read predates the mutation.
+  await refresh; controller.dispose();
+});
