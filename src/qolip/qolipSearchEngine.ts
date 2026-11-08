@@ -2,7 +2,7 @@ import { normalizeForSearch } from '../shared/searchNormalizer';
 
 // Dart's native trim includes U+0085. Reuse the shared normalizer and apply
 // Dart's final trim without changing search behavior in other roles.
-function normalizeQolipSearch(value: string): string {
+export function normalizeQolipSearch(value: string): string {
   return normalizeForSearch(value).replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');
 }
 
