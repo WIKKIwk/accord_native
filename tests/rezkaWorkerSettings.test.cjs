@@ -86,10 +86,18 @@ test('unknown assignment outcome remains locked across reopened screens and neve
   const deps = { ...locking(locks), isCurrent: () => true, canWrite: () => true,
     loadTeam: async () => ({ workers, assignments: [assignment] }), loadApparatus: async () => apparatus,
     save: async () => { sends++; throw new Error('request timed out'); } };
+  const stale = new RezkaWorkerSettingsController(deps); await stale.load(); stale.openPicker('worker-ali');
   const first = new RezkaWorkerSettingsController(deps); await first.load(); first.openPicker('worker-ali'); first.toggle(b, true); await first.save();
   assert.equal(sends, 1); assert.equal(first.getSnapshot().notice.key, 'scope.outcome_unknown');
   assert.equal(first.getSnapshot().picker.blocked.key, 'scope.outcome_unknown'); assert.equal(first.isWriteLocked('worker-ali'), true);
+  first.toggle(b, false);
+  assert.deepEqual(first.getSnapshot().picker.selected, [a, b], 'an uncertain assignment cannot be edited');
+  assert.equal(first.getSnapshot().picker.blocked.key, 'scope.outcome_unknown', 'the warning stays visible');
   await first.save(); assert.equal(sends, 1);
+  assert.equal(first.getSnapshot().notice.key, 'scope.outcome_unknown', 'locked or stale saves never announce success');
+  await stale.save();
+  assert.equal(stale.getSnapshot().notice.key, 'scope.outcome_unknown', 'unchanged selections cannot mask another screen’s uncertain write');
+  assert.equal(stale.getSnapshot().picker.blocked.key, 'scope.outcome_unknown'); assert.equal(sends, 1);
   const reopened = new RezkaWorkerSettingsController(deps); await reopened.load(); reopened.openPicker('worker-ali');
   assert.equal(reopened.getSnapshot().picker, null); assert.equal(reopened.getSnapshot().notice.key, 'scope.outcome_unknown'); assert.equal(sends, 1);
 });

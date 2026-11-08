@@ -113,7 +113,7 @@ export class RezkaWorkerSettingsController {
   }
   toggle(id: string, selected: boolean) {
     const picker = this.state.picker, team = this.state.team;
-    if (!picker || picker.saving || !team?.apparatus.some(item => item.id === id && !!item.id)) return;
+    if (!picker || picker.saving || this.isWriteLocked(picker.worker.id) || !team?.apparatus.some(item => item.id === id && !!item.id)) return;
     const next = new Set(picker.selected);
     if (selected) next.add(id); else next.delete(id);
     this.update({ picker: { ...picker, selected: [...next], blocked: null } });
@@ -129,6 +129,10 @@ export class RezkaWorkerSettingsController {
     if (!this.active() || !this.deps.canWrite() || !picker || picker.saving || !team || !picker.selected.length) return;
     const workerId = picker.worker.id.trim();
     if (!workerId) return;
+    if (this.isWriteLocked(workerId)) {
+      const blocked: RezkaNotice = { key: 'scope.outcome_unknown', tone: 'error' };
+      this.update({ picker: { ...picker, blocked }, notice: blocked }); return;
+    }
     const values = prepareAssignment(picker.selected, picker.previous, team.apparatus);
     if (values.alreadySaved) {
       this.update({ picker: null, notice: values.ids.length
