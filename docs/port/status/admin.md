@@ -23,6 +23,12 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - An independently authored mock HTTP probe, derived from f119 source rather than a pre-existing V2 test, passed 3/3 in the isolated f119 oracle. Its passing 200 and 500 requests were recorded under `tests/contracts/f11910bb/admin_activity_probe_test.json` after that independent run, and both replays pass. The fixture contains placeholder test data and token only; no backend was contacted. Shared parser, AdminStore and activity tests passed 12/12 together; iOS typecheck and lint pass.
 - This reuse preserves existing native notification behavior but is not fully equivalent to V2: status strings with U+0085 or U+0130, validation order for multiple malformed fields and JSON large-number precision remain shared-parser open items. The f119 probe confirmed V2 accepts NEL-trimmed `ACCEPTED` and Dart-lowercased `PARTİAL`; native currently maps both to pending.
 
+## Checkpoint: production settings
+
+- `productionSettingsApi.ts` ports the paddon management read/update and free-movement wrappers, plus lamination label settings read/update. It reuses the existing Worker lamination model parser and the existing production-map error reader. Required server acknowledgements and submitted switch values are checked before success is returned. The additional-settings screen and its V2 confirmation before enabling free movement remain unported.
+- Two V2 `admin_additional_settings_test.dart` widget cases independently passed in the f119 oracle, then 22 mocked requests were recorded in the separate nested `admin_additional_controls_test.json`; seven relevant GET/PUT requests replay. Eleven V4 additional-settings tests, iOS typecheck and lint passed. No server setting was changed and no device was used.
+- The shared Worker error reader's incomplete V2 messages/diagnostics remain open as described below. When both lamination arguments are absent, V2 throws Dart `ArgumentError` and this TypeScript port throws `TypeError` with the same message; review error-class expectations during integration.
+
 ## Checkpoint: additional settings readers
 
 - `appUpdateSettingsApi.ts` ports `mandatoryAppUpdatesEnabled` and its setter, including exact acknowledgement and saved-value checks. `qolipStartSettingsApi.ts` ports the automatic mold confirmation read/set API and strict nonnegative revision/acknowledgement checks. These are API functions only; no user setting was changed, and the additional-settings screen is unported.
