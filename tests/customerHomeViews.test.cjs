@@ -22,9 +22,11 @@ const logic = load('customerLogic.ts'), presentation = load('customerPresentatio
 const record = { id: 'dn', item_name: 'Product', item_code: 'P1', sent_qty: 3, uom: 'kg', note: 'note', created_label: 'date', status: 'pending' };
 function fixture(platform, state) {
   const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': { ListItem: 'ListItem', Text: 'Text', Host: 'Host', Button: 'Button' },
-    '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
+    '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
     '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f], listRowBackground: v => ['background', v],
-      foregroundStyle: v => ['foregroundStyle', v] },
+      foregroundStyle: v => ['foregroundStyle', v], buttonStyle: v => ['buttonStyle', v], contentShape: v => ['contentShape', v],
+      fixedSize: v => ['fixedSize', v], font: v => ['font', v], frame: v => ['frame', v], lineLimit: () => ['lineLimit'], padding: v => ['padding', v],
+      shapes: { rectangle: () => ['rectangle'] } },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'highlight', onSurface: 'fg', onSurfaceVariant: 'muted' }) },
     'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './CustomerContext': { useCustomerText: () => ({ text: key => key }) },
@@ -62,7 +64,7 @@ test('both platforms show loading before the initial bootstrap and retry after a
 });
 test('status rows open the selected delivery and empty states use the V2 label', () => {
   const calls = [], ios = fixture('ios', state).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail: id => calls.push(id) });
-  nodes(ios, item => item.type === 'ListItem')[0].props.onPress();
+  nodes(ios, item => item.type === 'Button')[0].props.onPress();
   const android = fixture('android', state).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail: id => calls.push(id) });
   android.props.renderItem({ item: record, index: 0 }).props.onPress(); assert.deepEqual(calls, ['dn', 'dn']);
   for (const platform of ['ios', 'android']) {
@@ -95,7 +97,7 @@ test('status detail keeps its name and note unrestricted instead of inheriting p
   const longRecord = { ...record, item_name: 'Mahsulot '.repeat(40), note: 'First line\n'.repeat(10) };
   for (const platform of ['ios', 'android']) {
     const screen = fixture(platform, { ...state, records: [longRecord] }).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
-    const row = platform === 'ios' ? nodes(screen, item => item.type === 'ListItem')[0]
+    const row = platform === 'ios' ? nodes(screen, item => item.type === 'Button')[0]
       : screen.props.renderItem({ item: longRecord, index: 0 });
     const texts = nodes(row, item => item.type === 'Text');
     if (platform === 'ios') texts.push(...nodes(row.props.supportingText, item => item.type === 'Text'));
@@ -134,4 +136,54 @@ test('loaded home and status content remains visible during refresh or a later f
       }
     }
   }
+});
+
+// Source-derived: _CustomerStatusRecordRow's top-aligned name/date header, then full-width quantity/note.
+test('status timestamps share only the header, leaving quantity and notes below at full row width', () => {
+  for (const platform of ['ios', 'android']) {
+    const screen = fixture(platform, state).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
+    const row = platform === 'ios' ? nodes(screen, item => ['ListItem', 'Button'].includes(item.type))[0]
+      : screen.props.renderItem({ item: record, index: 0 });
+    const header = nodes(row, item => item.type === 'HStack' || item.props.style?.flexDirection === 'row')[0];
+    assert.ok(header, `${platform} has a separate header`);
+    assert.deepEqual(nodes(header, item => item.type === 'Text').map(item => item.props.children), [record.item_name, record.created_label]);
+    if (platform === 'ios') { assert.equal(header.props.alignment, 'top'); assert.equal(header.props.spacing, 12); }
+    else { assert.equal(header.props.style.alignItems, 'flex-start'); assert.equal(header.props.style.gap, 12); }
+    const body = row.props.children;
+    assert.ok(body.props.children.some(item => item?.type === 'Text' && item.props.children === '3 kg'));
+    assert.ok(body.props.children.some(item => item?.type === 'Text' && item.props.children === 'note'));
+  }
+});
+
+test('Android status rows preserve source quantity emphasis and body spacing', () => {
+  const screen = fixture('android', state).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
+  const row = screen.props.renderItem({ item: record, index: 0 });
+  const quantity = nodes(row, item => item.type === 'Text' && item.props.children === '3 kg')[0];
+  assert.equal(quantity.props.style.fontSize, 28); assert.equal(quantity.props.style.fontWeight, '700');
+  assert.equal(quantity.props.style.letterSpacing, -0.6); assert.equal(quantity.props.style.marginTop, 10);
+  const note = nodes(row, item => item.type === 'Text' && item.props.children === 'note')[0];
+  assert.equal(note.props.style.fontSize, 12); assert.equal(note.props.style.marginTop, 8);
+});
+
+test('iOS status rows retain one full-width native target, Dynamic Type and verbatim timestamp text', () => {
+  const calls = [], raw = { ...record, item_name: 'Mahsulot نام '.repeat(30), note: 'Izoh\n'.repeat(15),
+    created_label: '2026-11-08T23:59:59.123456+14:00' };
+  const screen = fixture('ios', { ...state, records: [raw] }).CustomerStatusDetailScreen({ kind: 'confirmed', onOpenDetail: id => calls.push(id) });
+  const buttons = nodes(screen, item => item.type === 'Button'); assert.equal(buttons.length, 1);
+  const button = buttons[0]; button.props.onPress(); assert.deepEqual(calls, [raw.id]);
+  assert.deepEqual(button.props.modifiers, [['buttonStyle', 'plain']]);
+  assert.equal(button.props.trailing, undefined); assert.equal(button.props.supportingText, undefined);
+  const body = button.props.children;
+  assert.ok(body.props.modifiers.some(m => m[0] === 'frame' && m[1].maxWidth === Infinity));
+  assert.ok(body.props.modifiers.some(m => m[0] === 'contentShape' && m[1][0] === 'rectangle'));
+  const texts = nodes(body, item => item.type === 'Text');
+  assert.deepEqual(texts.map(item => item.props.children), [raw.item_name, raw.created_label, '3 kg', raw.note]);
+  assert.deepEqual(texts.map(item => item.props.modifiers.find(m => m[0] === 'font')[1]), [
+    { textStyle: 'title3', weight: 'bold' }, { textStyle: 'caption' }, { textStyle: 'title', weight: 'bold' }, { textStyle: 'caption' },
+  ]);
+  for (const text of texts) {
+    assert.equal(text.props.numberOfLines, undefined);
+    assert.ok(text.props.modifiers.some(m => m[0] === 'lineLimit' && m.length === 1));
+  }
+  assert.ok(texts[1].props.modifiers.some(m => m[0] === 'fixedSize' && m[1].horizontal === true));
 });

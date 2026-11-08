@@ -1,6 +1,6 @@
 import { ListItem, Text } from '@expo/ui';
-import { Host, List, Section, VStack } from '@expo/ui/swift-ui';
-import { foregroundStyle, listRowBackground, listStyle, refreshable } from '@expo/ui/swift-ui/modifiers';
+import { Button, Host, HStack, List, Section, VStack } from '@expo/ui/swift-ui';
+import { buttonStyle, contentShape, fixedSize, font, foregroundStyle, frame, lineLimit, listRowBackground, listStyle, padding, refreshable, shapes } from '@expo/ui/swift-ui/modifiers';
 import { PlatformColor } from 'react-native';
 import { useCustomerText } from './CustomerContext';
 import { CustomerEmptyStatusState, CustomerLoadingState, CustomerRetryState } from './CustomerStates';
@@ -37,10 +37,21 @@ export function CustomerStatusDetailScreen({ kind, onOpenDetail }: StatusProps) 
   return <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(state.refresh)]}>
     <Section>{state.records.map(record => {
       const row = customerStatusRecord(record);
-      return <ListItem key={record.id} onPress={() => onOpenDetail(record.id)} trailing={<Text>{row.created}</Text>}
-        supportingText={<VStack alignment="leading"><Text>{row.quantity}</Text>{row.note ? <Text>{row.note}</Text> : null}</VStack>}>
-        <Text>{row.name}</Text>
-      </ListItem>;
+      return <Button key={record.id} onPress={() => onOpenDetail(record.id)} modifiers={[buttonStyle('plain')]}>
+        <VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' }),
+          foregroundStyle(PlatformColor('label')), contentShape(shapes.rectangle())]}>
+          <HStack alignment="top" spacing={12}>
+            <Text modifiers={[font({ textStyle: 'title3', weight: 'bold' }), lineLimit(), fixedSize({ horizontal: false, vertical: true }),
+              frame({ maxWidth: Infinity, alignment: 'leading' })]}>{row.name}</Text>
+            <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle(PlatformColor('secondaryLabel')), lineLimit(),
+              fixedSize({ horizontal: true, vertical: true })]}>{row.created}</Text>
+          </HStack>
+          <Text modifiers={[font({ textStyle: 'title', weight: 'bold' }), lineLimit(), fixedSize({ horizontal: false, vertical: true }),
+            padding({ top: 10 })]}>{row.quantity}</Text>
+          {row.note ? <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle(PlatformColor('secondaryLabel')), lineLimit(),
+            fixedSize({ horizontal: false, vertical: true }), padding({ top: 8 })]}>{row.note}</Text> : null}
+        </VStack>
+      </Button>;
     })}</Section>
   </List></Host>;
 }

@@ -48,12 +48,12 @@ export function CustomerStatusDetailScreen({ kind, onOpenDetail }: StatusProps) 
     renderItem={({ item, index }: { item: DispatchRecord; index: number }) => {
       const row = customerStatusRecord(item);
       return <WorkerQueueCard backgroundColor={colors.surfaceContainerLow} first={index === 0} last={index === state.records.length - 1}
-        onPress={() => onOpenDetail(item.id)}><View style={{ flex: 1, gap: 8 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={{ color: colors.onSurface, fontSize: 20, flex: 1 }}>{row.name}</Text>
+        onPress={() => onOpenDetail(item.id)}><View style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+            <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700', flex: 1 }}>{row.name}</Text>
             <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.created}</Text>
-          </View><Text style={{ color: colors.onSurface, fontSize: 24 }}>{row.quantity}</Text>
-          {row.note ? <Text style={{ color: colors.onSurfaceVariant }}>{row.note}</Text> : null}
+          </View><Text style={{ color: colors.onSurface, fontSize: 28, fontWeight: '700', letterSpacing: -0.6, marginTop: 10 }}>{row.quantity}</Text>
+          {row.note ? <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, marginTop: 8 }}>{row.note}</Text> : null}
         </View></WorkerQueueCard>;
     }} />;
 }
