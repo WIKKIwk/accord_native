@@ -17,7 +17,8 @@ const controls = { isCanonicalApparatusId: value => {
     parts.length >= 3 && parts[0] === 'apparatus' && parts.slice(1).every(Boolean);
 }, WorkerControlException: class extends Error {} };
 const apparatus = load('apparatusApi', { './workerControlsApi': controls, './authorizedFetch': {} });
-const model = load('admin/factoryLocationModel', { '../apparatusApi': apparatus, '../workerControlsApi': controls });
+const dart = load('admin/dartJsonString');
+const model = load('admin/factoryLocationModel', { '../apparatusApi': apparatus, '../workerControlsApi': controls, './dartJsonString': dart });
 const exception = load('shared/mobileApiException');
 const errorApi = load('admin/adminApiError', { '../shared/mobileApiException': exception });
 function fixture() {
@@ -26,7 +27,7 @@ function fixture() {
     '../authorizedFetch': { authorizedFetch: async (session, url, init = {}) => {
       requests.push({ session, url, init }); return new Response(JSON.stringify(payload), { status });
     } },
-    '../shared/mobileApiException': exception, './adminApiError': errorApi, './factoryLocationModel': model,
+    '../shared/mobileApiException': exception, './adminApiError': errorApi, './factoryLocationModel': model, './dartJsonString': dart,
   });
   return { ...api, requests, setResponse(value, code = 200) { payload = value; status = code; } };
 }
@@ -47,6 +48,8 @@ test('factory location accepts compact apparatus snapshots and preserves their i
   assert.equal(parsed.apparatus[0].equipment_class_id, 'equipment-class:lamination');
   assert.equal(parsed.created_at_unix, 100);
   assert.equal(parsed.updated_at_unix, 200);
+  const edge = model.adminFactoryLocationFromJson({ apparatus: [{ ...compact, id: '\u0085' + compact.id + '\u0085', name: { label: 'A' } }] });
+  assert.equal(edge.apparatus[0].id, compact.id); assert.equal(edge.apparatus[0].name, '{label: A}');
   const inactive = model.adminFactoryLocationFromJson({ apparatus: [null, 4, { ...compact, active: false }] });
   assert.equal(inactive.active, true);
   assert.equal(inactive.apparatus.length, 1);
@@ -56,6 +59,7 @@ test('factory location accepts compact apparatus snapshots and preserves their i
     assert.throws(() => model.adminFactoryLocationFromJson({ apparatus: [bad] }), TypeError);
   }
   assert.throws(() => model.adminFactoryLocationFromJson({ apparatus: {} }), TypeError);
+  assert.throws(() => model.adminFactoryLocationFromJson({ id: 1, apparatus: {} }), /Invalid factory location string/);
 });
 
 test('factory location reuses the full canonical apparatus parser', () => {
@@ -86,6 +90,7 @@ test('factory location reads filter non-maps and report V2 errors', async () => 
 test('factory create trims name and deduplicates trimmed apparatus IDs without reordering', async () => {
   const api = fixture(); api.setResponse(location);
   await assert.rejects(api.adminCreateFactoryLocation(session, '  '), e => e.code === 'state_name_required' && e.message === 'State nomini kiriting');
+  await assert.rejects(api.adminCreateFactoryLocation(session, '\u0085 \u0085'), e => e.code === 'state_name_required');
   assert.equal(api.requests.length, 0);
   assert.equal((await api.adminCreateFactoryLocation(session, ' Bosma oldi ', [' a ', '', 'b', 'a', ' b '])).id, location.id);
   const req = api.requests[0];
@@ -93,6 +98,8 @@ test('factory create trims name and deduplicates trimmed apparatus IDs without r
   assert.equal(req.init.method, 'POST');
   assert.deepEqual(req.init.headers, { 'Content-Type': 'application/json' });
   assert.deepEqual(JSON.parse(req.init.body), { name: 'Bosma oldi', apparatus_ids: ['a', 'b'] });
+  await api.adminCreateFactoryLocation(session, '\u0085Name\u0085', ['\u0085a\u0085', 'a']);
+  assert.deepEqual(JSON.parse(api.requests[1].init.body), { name: 'Name', apparatus_ids: ['a'] });
 });
 
 test('factory update preserves optional fields, rejects empty changes and encodes the ID', async () => {
