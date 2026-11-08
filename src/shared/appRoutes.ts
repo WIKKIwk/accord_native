@@ -709,6 +709,7 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
   [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
   [appRoutes.boyoqchiHome]: { ios: '/ios-boyoqchi' as Href, android: '/android-boyoqchi' as Href },
+  [appRoutes.materialHome]: { ios: '/ios-material' as Href, android: '/android-material' as Href },
 };
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
