@@ -13,6 +13,14 @@ V2: `lib/src/features/admin/presentation/admin_home_screen.dart:20`. `AdminShell
 - Each visible card opens its named route and refreshes after return. If a destination is not yet implemented, record it as an Open item rather than inventing a destination. Route capability checks must use the verified shared V2 guard rather than a new approximation. The `adminHomeModel` currently depends on the existing V4 `canOpenRoute`; its f119 drift still needs integrator review.
 - The source has no direct haptic call in this screen. Exact back behavior, drawer destination details, dock primary FAB overlay dismissal and every destination's screen contract remain in the separate shell/overlay audit. Do not mark these as verified based on the home model.
 
+## Admin navigation drawer (partial)
+
+V2: `features/admin/presentation/widgets/admin_navigation_drawer.dart`, `admin_drawer_navigation.dart`, and `core/widgets/navigation/role_navigation_drawer.dart`. `src/admin/adminDrawerModel.ts` contains the ordered candidate destinations, localized labels, icons, push flags and `canOpenRoute` filtering. For a sales manager the Products destination targets item creation; otherwise it targets bulk item move. The selected route defaults to the session home when not supplied.
+
+Reuse the existing native `RoleDrawer`; no Admin drawer view is connected yet. The selected destination closes the drawer without navigating. Other selections close the drawer, wait 220 ms, then: direct-push destinations push; otherwise pop to an existing target, replace the current non-home route when home is below it, or push a new route. V2 logout closes the drawer, waits 120 ms, then opens its logout prompt. The existing shared drawer calls its selection callback immediately, so an Admin coordinator must preserve these delays and route-stack rules. Implement the logout prompt and each destination through existing components rather than substituting a new route. The menu header uses `adminDrawerSections`; the logout label uses `logoutTitle`.
+
+The shared create FAB uses the V2 create overlay; its full open/close, back and action contract is still pending. Do not enable Chat unread live from this shell until the verified no-redirect, no-cookie transport exists.
+
 ## Verification so far
 
 The f119 oracle passed the selected mock widget tests `admin home shortcut labels follow selected language` and `admin home action labels follow selected language`. The separate test `admin home defers summary load until after first frame` failed at f119 because the request was already observed after `pumpWidget`; use source behavior, not that failed assertion, until the test/spec discrepancy is resolved. `tests/adminHomeModel.test.cjs` checks filtering, ordering, loading/error branches and representative localized text. No Admin home view or route has yet been implemented for iOS or Android.

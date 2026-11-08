@@ -45,6 +45,11 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - `adminHomeModel.ts` captures the f119 screen's capability-filtered action order, four summary shortcuts, role-specific labels and icons, and loading/error branches. `docs/port/roles/admin.md` records the home surface's partial UI contract. This is logic and documentation only: no route or platform view is added, and the rest of the role contract remains unfinished.
 - Two f119 mock V2 widget tests for action and shortcut localization passed independently; four native model tests and iOS typecheck passed. The separate first-frame test failure is retained below. Shared `canOpenRoute` and localization are reused, not reimplemented.
 
+## Checkpoint: Admin drawer behavior
+
+- `adminDrawerModel.ts` captures V2 destination order, capability filtering, push flags and the stack navigation decision. It is data/logic only; reuse `RoleDrawer` when wiring the shell, and preserve V2's close-to-navigation and logout delays. No UI or route has been added.
+- Three selected f119 V2 mock drawer widget tests passed independently; three V4 model tests and iOS typecheck passed. Shared `canOpenRoute` and localization were reused. Neither platform's drawer integration is audited or complete.
+
 ## Open items
 
 | Where | V2 reference | What is needed |
@@ -54,6 +59,7 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 | Recorded contracts | `.port/role-admin-tests.md` | Run each relevant V2 test independently first; record successful f119 cases into distinct nested fixtures, never overwrite the historical top-level files, and port the replays. Coordinate shared stems. Do not run a live-backend mutation. |
 | Item groups and paging | `mobile_api_admin_item_groups.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_01.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_04.dart` | No direct V2 HTTP recording was found for the seven checkpoint methods. Source-derived tests cover their requests; add a real f119 recording if a suitable V2 mock test is found. |
 | Role normalization | `userRoleFromJson`, `profileFromLogin` | The 13 canonical values and `omborchi` alias match. V2 Dart trims U+0085 and lowercases U+0130 to ASCII `i`, while current JS login rejects those role strings; V2 preserves raw input in `FormatException`, while native login produces a `TypeError` with normalized input. Do not reuse login normalization as V2 parity or change login behavior while roles are running. |
+| Admin drawer and dock | `admin_navigation_drawer.dart`, `role_navigation_drawer.dart`, `admin_dock.dart` | Destination/stack rules have a source-derived model. Connect the existing shared drawer and dock on both platforms, preserve 220 ms navigation and 120 ms logout delays, primary FAB overlay/back behavior and every destination. The shell is not implemented. |
 | Admin home and activity | `AdminStore`, `AdminHomeScreen`, `AdminActivityScreen` | Summary read/store logic is unconnected; implement home, activity, capability guards, deferred mount timing, hidden activity and refresh, reuse shared shell components, and call `clear` during session reset. The f119 first-frame widget test fails as described above. The shared activity record parser is available in supplier branch `a947a1a` and must be integrated before reuse. |
 | Admin settings | `adminSettings`, `updateAdminSettings`, `AdminSettings` | Live source-derived API and model tests exist but no recorded f119 HTTP replay was found. Settings screen, capability guards, saved/loading/error states and demo branch are still unported. |
 | Server monitor | `mobile_api_admin_settings_monitor_declarations_part_02.dart`, `warehouse_live_client_io.dart`, `admin_server_monitor_screen_*` | Live transport was withheld: RN Android WebSocket can follow redirects, and its final origin/security cannot be checked before connection from JS. Implement a native transport that rejects cross-origin and insecure redirects before transmitting the session token, then port JSON/control pings, watchdog, pause/resume and retry lifecycle. Backup import and download streams, UI and test mode also remain unported; native streaming and real-phone behavior need verification. The independent oracle passed, but the recorder produced zero records for its custom client. |
@@ -90,6 +96,7 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
+| `AdminNavigationDrawer`, `admin_navigation_drawer.dart` | `src/admin/adminDrawerModel.ts` (logic only) | pending | pending | Destination order and navigation plan compared with source and three selected V2 tests; native integration, timing, logout, routes and shell remain open. |
 | `AdminHomeScreen`, `admin_home_screen.dart:20` | `src/admin/adminHomeModel.ts` (logic only) | pending | pending | Action/shortcut rules compared with source and two V2 localization tests; neither platform view, shell/dock, routes nor navigation/refresh lifecycle is implemented. |
 
 The remaining V2 ledger surfaces have not been audited. Run the f119 ledger again and compare each relevant source location and V4 implementation side by side; no surface is marked `ok`.
