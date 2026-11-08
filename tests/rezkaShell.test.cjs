@@ -72,7 +72,7 @@ test('Android shell composes real Worker and settings screens, with no new Chat 
     'react-native': { ActivityIndicator: 'ActivityIndicator', BackHandler: {}, Platform: { OS: 'android' }, View: 'View' },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ bottom: 0 }) },
     '../WorkerScreen': { WorkerScreen: 'WorkerScreen' }, '../components/DailyWorkScreen': { DailyWorkScreen: 'DailyWorkScreen' },
-    '../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' }, '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
+    './RezkaProfile': { RezkaProfile: 'RezkaProfile' }, '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
     '../shared/localization': localization, '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
     '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: fn => fn() },
     './RezkaWorkerSettings': { RezkaWorkerSettingsScreen: 'RezkaWorkerSettingsScreen' }, './RezkaTestSessionUnavailable': { RezkaTestSessionUnavailable: 'TestUnavailable' },

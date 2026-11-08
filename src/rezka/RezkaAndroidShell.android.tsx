@@ -4,7 +4,7 @@ import { ActivityIndicator, BackHandler, Platform, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerScreen } from '../WorkerScreen';
 import { DailyWorkScreen } from '../components/DailyWorkScreen';
-import { ProfileScreen } from '../components/ProfileScreen';
+import { RezkaProfile } from './RezkaProfile';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { RezkaTestSessionUnavailable } from './RezkaTestSessionUnavailable';
 import { RezkaSessionWaiting } from './RezkaSessionWaiting';
@@ -46,7 +46,7 @@ export function RezkaAndroidShell() {
       {section === 'queue' ? <WorkerScreen session={session} onLogout={onLogout} nativeNavigation onOpenDrawer={() => setDrawerOpen(true)}
         onNavigate={destination => { if (destination === 'profile' || destination === 'daily') navigate(destination); }} /> :
         section === 'daily' ? <DailyWorkScreen session={session} onOpenDrawer={() => setDrawerOpen(true)} onBack={() => navigate('queue')} /> :
-          <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => navigate('daily')} />}
+          <RezkaProfile snapshot={snapshot} onLogout={onLogout} onDailyWork={() => navigate('daily')} />}
     </SafeAreaView>;
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
     <RoleDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)}
