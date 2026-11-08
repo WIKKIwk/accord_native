@@ -6,6 +6,9 @@ import { appRoutes } from '../shared/appRoutes';
 import { adminText, localizedGetter, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { AdminWorkMapDetail } from './AdminWorkMapDetail';
+import { AdminWorkMapMovePicker } from './AdminWorkMapMovePicker';
+import { adminWorkMapMoveIsUnassigned, adminWorkMapMoveName, adminWorkMapMoveSame } from './adminWorkMapMoveModel';
+import { dartTrim } from './dartJsonString';
 import { adminWorkMapPresentation } from './adminWorkMapPresentation';
 import { adminWorkMapText } from './adminWorkMapText';
 import type { AdminWorkMapMoveProps } from './adminWorkMapMoveTypes';
@@ -32,6 +35,16 @@ export function useAdminWorkMapView() {
     sheet.open(<AdminWorkMapDetail session={shell.session} isCurrent={shell.isCurrent} controller={controller} row={row} ticket={ticket} close={sheet.close} />,
       { dismissible: row.kind !== 'order' });
   };
+  const openMovePicker = (side: 'top' | 'bottom') => {
+    if (!shell.isCurrent() || !shell.destination(appRoutes.adminProductionMapOrders, Platform.OS)) return;
+    const ticket = workspace.move.picker(side); if (!ticket) return;
+    const rows = ticket.options.map(selection => ({ selection,
+      key: adminWorkMapMoveIsUnassigned(selection) ? 'unassigned' : `apparatus:${selection.id}`,
+      name: adminWorkMapMoveIsUnassigned(selection) ? productionText('worker.queue.filter.unselected', locale) : dartTrim(selection.name),
+      selected: adminWorkMapMoveSame(selection, ticket.selected) }));
+    sheet.open(<AdminWorkMapMovePicker title={productionText('worker.queue.select_apparatus', locale)} rows={rows}
+      onChoose={selection => { workspace.move.choose(ticket, selection); sheet.close(); }} />, { compact: true, dismissible: true });
+  };
   const controls = { module: workspaceState.module, catalog: workspaceState.catalog, selected: workspaceState.selected, expanded: filterExpanded,
     onToggle: () => setFilterExpanded(value => !value),
     onModule: (value: AdminWorkMapModule) => { if (shell.isCurrent()) { sheet.close(); workspace.selectModule(value); setFilterExpanded(false); } },
@@ -52,11 +65,11 @@ export function useAdminWorkMapView() {
     onRetry: () => workspace.reload(), panes: !pair.top || !pair.bottom ? [] : (['top', 'bottom'] as const).map(id => {
       const apparatus = id === 'top' ? pair.top! : pair.bottom!, pane = id === 'top' ? pair.topWindow : pair.bottomWindow,
         controller = id === 'top' ? workspace.move.topWindow : workspace.move.bottomWindow;
-      return { id, name: apparatus.name, loading: pane.loading, loaded: pane.loaded, error: pane.error, hasMore: pane.hasMore,
+      return { id, name: adminWorkMapMoveName(apparatus), loading: pane.loading, loaded: pane.loaded, error: pane.error, hasMore: pane.hasMore,
         rows: pane.rows.map((row, index) => { const display = adminWorkMapPresentation({ ...row, position: undefined }, locale);
           return { id: row.id, position: String(index + 1), headline: display.headline, supporting: display.supporting }; }),
-        empty: `${apparatus.name} uchun zakaz yo‘q`, moreLabel: label.more, retryLabel,
-        onRefresh: () => controller.reload(), onMore: () => controller.next() };
+        empty: adminWorkMapMoveIsUnassigned(apparatus) ? 'Tanlanmagan zakaz yo‘q' : `${apparatus.name} uchun zakaz yo‘q`, moreLabel: label.more, retryLabel,
+        onRefresh: () => controller.reload(), onMore: () => controller.next(), onPick: () => openMovePicker(id) };
     }) };
   return { shell, locale, state, controller, controls, error, loading, emptyText, move, closed: adminWorkMapClosedRows(state.closed ?? []), audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), query, goBack, onProfile, search, open };
 }

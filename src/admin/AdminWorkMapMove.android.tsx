@@ -1,5 +1,6 @@
 import { ListItem } from '@expo/ui';
-import { Text } from '@expo/ui/jetpack-compose';
+import { RNHostView, Text } from '@expo/ui/jetpack-compose';
+import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { BaseHost } from '../components/BaseHost';
@@ -9,7 +10,9 @@ import type { AdminWorkMapMovePane, AdminWorkMapMoveProps } from './adminWorkMap
 function MovePane({ pane }: { pane: AdminWorkMapMovePane }) {
   const offset = useSharedValue(0), height = useSharedValue(0);
   return <View style={{ flex: 1 }}>
-    <BaseHost matchContents={{ vertical: true }}><Text style={{ typography: 'titleMedium' }}>{pane.name}</Text></BaseHost>
+    <BaseHost matchContents={{ vertical: true }}><ListItem testID={`admin-move-${pane.id}-picker`} onPress={pane.onPick}
+      trailing={<RNHostView matchContents><SymbolView name={{ android: 'expand_more' }} size={24} importantForAccessibility="no" /></RNHostView>}>
+      <Text style={{ typography: 'titleMedium' }}>{pane.name}</Text></ListItem></BaseHost>
     <OrdersList active headerOffset={offset} headerHeight={height} topInset={0} onRefresh={pane.onRefresh}>
       {!!pane.error && <ListItem supportingText={pane.error} onPress={() => { void pane.onRefresh(); }}>{pane.retryLabel}</ListItem>}
       {pane.loaded && !pane.loading && !pane.rows.length && <Text>{pane.empty}</Text>}

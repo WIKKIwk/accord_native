@@ -1,6 +1,6 @@
 import { ListItem } from '@expo/ui';
-import { Button, Text } from '@expo/ui/swift-ui';
-import { font } from '@expo/ui/swift-ui/modifiers';
+import { Button, Image, Text } from '@expo/ui/swift-ui';
+import { accessibilityHidden, font } from '@expo/ui/swift-ui/modifiers';
 import { ActivityIndicator, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { BaseHost } from '../components/BaseHost';
@@ -10,7 +10,7 @@ import type { AdminWorkMapMovePane, AdminWorkMapMoveProps } from './adminWorkMap
 function MovePane({ pane }: { pane: AdminWorkMapMovePane }) {
   const offset = useSharedValue(0), height = useSharedValue(0);
   return <View style={{ flex: 1 }}>
-    <BaseHost matchContents={{ vertical: true }}><Text modifiers={[font({ textStyle: 'headline' })]}>{pane.name}</Text></BaseHost>
+    <BaseHost matchContents={{ vertical: true }}><ListItem testID={`admin-move-${pane.id}-picker`} onPress={pane.onPick} trailing={<Image systemName="chevron.down" modifiers={[accessibilityHidden()]} />}><Text modifiers={[font({ textStyle: 'headline' })]}>{pane.name}</Text></ListItem></BaseHost>
     <BaseHost style={{ flex: 1 }}><OrdersList active headerOffset={offset} headerHeight={height} topInset={0} onRefresh={pane.onRefresh}>
       {!!pane.error && <ListItem supportingText={pane.error} onPress={() => { void pane.onRefresh(); }}>{pane.retryLabel}</ListItem>}
       {pane.loaded && !pane.loading && !pane.rows.length && <Text>{pane.empty}</Text>}
@@ -19,7 +19,7 @@ function MovePane({ pane }: { pane: AdminWorkMapMovePane }) {
     </OrdersList></BaseHost>
   </View>;
 }
-/** Static read-only default panes; picker/selection/drag and transfer authority are intentionally absent. */
+/** Read-only panes; order selection, drag and transfer authority are intentionally absent. */
 export function AdminWorkMapMove(props: AdminWorkMapMoveProps) {
   return <View style={{ flex: 1 }}>
     <BaseHost matchContents={{ vertical: true }}><Text>{props.partial}</Text>

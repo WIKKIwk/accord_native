@@ -12,7 +12,7 @@ function load(file, mocks = {}) {
   return mod.exports;
 }
 const controller = load('admin/adminWorkMapController', { './dartJsonString': load('admin/dartJsonString'), './adminWorkMapAuditModel': load('admin/adminWorkMapAuditModel', { './dartJsonString': load('admin/dartJsonString') }), './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel', { './dartJsonString': load('admin/dartJsonString') }) });
-const moveController = load('admin/adminWorkMapMoveController', { './adminWorkMapController': controller, './adminWorkMapMoveModel': load('admin/adminWorkMapMoveModel') });
+const moveController = load('admin/adminWorkMapMoveController', { './adminWorkMapController': controller, './adminWorkMapMoveModel': load('admin/adminWorkMapMoveModel', { './dartJsonString': load('admin/dartJsonString') }) });
 const Workspace = load('admin/adminWorkMapWorkspace', { './adminWorkMapController': controller, './adminWorkMapMoveController': moveController }).AdminWorkMapWorkspace;
 const Store = load('shared/adminSequenceApparatusStore', { '../auth': {}, '../appPreferences': {} }).AdminSequenceApparatusStore;
 const tick = () => new Promise(resolve => setImmediate(resolve));

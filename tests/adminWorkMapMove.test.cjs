@@ -16,7 +16,7 @@ function load(file, mocks = {}) {
 const dart = load('admin/dartJsonString.ts');
 const audit = load('admin/adminWorkMapAuditModel.ts', { './dartJsonString': dart }), closed = load('admin/adminWorkMapClosedModel.ts', { './dartJsonString': dart });
 const window = load('admin/adminWorkMapController.ts', { './dartJsonString': dart, './adminWorkMapAuditModel': audit, './adminWorkMapClosedModel': closed });
-const model = load('admin/adminWorkMapMoveModel.ts');
+const model = load('admin/adminWorkMapMoveModel.ts', { './dartJsonString': dart });
 const Move = load('admin/adminWorkMapMoveController.ts', { './adminWorkMapController': window, './adminWorkMapMoveModel': model }).AdminWorkMapMoveController;
 const a = { id: 'apparatus:default:asset-005', name: 'Pechat A', operation: 'print' }, b = { id: 'apparatus:default:asset-010', name: 'Pechat B', operation: 'print' },
   c = { id: 'apparatus:default:asset-011', name: 'Rezka', operation: 'cut' };
@@ -35,6 +35,49 @@ test('Move defaults follow exact print-first, fallback and retained-choice sourc
   assert.deepEqual(model.adminWorkMapMoveDefaults([c, { ...a, operation: 'Print' }]).top, c);
   // Source retains currentTop before choosing candidates[1], even when that makes an unusual same-ID pair.
   assert.deepEqual(model.adminWorkMapMoveDefaults([a, b], b), { top: b, bottom: b });
+});
+test('Move picker options exclude the opposite apparatus and place unassigned first when allowed', () => {
+  const unassigned = model.adminWorkMapMoveUnassigned;
+  assert.deepEqual(model.adminWorkMapMovePickerOptions([a, b, c], b), [unassigned, a, c]);
+  assert.deepEqual(model.adminWorkMapMovePickerOptions([a, b, c], unassigned), [a, b, c]);
+  assert.deepEqual(model.adminWorkMapMovePickerOptions([a, b], null), [a, b]);
+  assert.equal(model.adminWorkMapMoveScope(unassigned), 'unassigned');
+  assert.equal(model.adminWorkMapMoveScope({ ...a, id: '\u0085apparatus:default:asset-005\u0085' }), a.id);
+});
+test('picker changes the two opposite read scopes and immediately retires the old pair', async () => {
+  const requests = [], pending = [], move = new Move({ isCurrent: () => true, read: request => {
+    requests.push(request); const result = deferred(); pending.push(result); return result.promise;
+  } });
+  move.start(); move.setCatalog([a, b, c]); move.setActive(true);
+  const picker = move.picker('top'); assert.deepEqual(picker.options, [model.adminWorkMapMoveUnassigned, a, c]);
+  assert.equal(move.choose(picker, model.adminWorkMapMoveUnassigned), true);
+  assert.deepEqual(requests.map(({ apparatus, target }) => [apparatus, target]), [[a.id, b.id], [b.id, a.id], ['unassigned', b.id], [b.id, 'unassigned']]);
+  pending[0].resolve(page('old-top')); pending[1].resolve(page('old-bottom')); await tick();
+  assert.equal(move.getSnapshot().topWindow.rows.length, 0); assert.equal(move.getSnapshot().bottomWindow.rows.length, 0);
+  pending[2].resolve(page('new-top')); pending[3].resolve(page('new-bottom')); await tick();
+  assert.equal(move.getSnapshot().topWindow.rows[0].id, 'new-top'); assert.equal(move.getSnapshot().bottomWindow.rows[0].id, 'new-bottom');
+  assert.deepEqual(move.picker('bottom').options, [a, b, c]); move.dispose();
+});
+test('a stale picker, wrong option, inactive module or lost session cannot change scopes or send', async () => {
+  let current = true; const requests = [], move = new Move({ isCurrent: () => current, read: async request => { requests.push(request); return page(); } });
+  move.start(); move.setCatalog([a, b, c]); move.setActive(true); await tick();
+  const old = move.picker('top'); assert.equal(move.choose(old, b), false); assert.equal(move.choose(old, { ...c, id: 'unknown' }), false);
+  assert.equal(requests.length, 2); assert.equal(move.choose(old, c), true); await tick(); assert.equal(requests.length, 4);
+  assert.equal(move.choose(old, a), false); const second = move.picker('bottom'); move.setActive(false);
+  assert.equal(move.choose(second, a), false); move.setActive(true); await tick();
+  const third = move.picker('top'), count = requests.length; current = false; assert.equal(move.choose(third, a), false); assert.equal(requests.length, count);
+  move.invalidate(); move.dispose();
+});
+test('catalog refresh invalidates an open picker before an option can be used', async () => {
+  const requests = [], move = new Move({ isCurrent: () => true, read: async request => { requests.push(request); return page(); } });
+  move.start(); move.setCatalog([a, b, c]); move.setActive(true); await tick(); const picker = move.picker('top'), before = requests.length;
+  move.setCatalog([a, b]); assert.equal(move.choose(picker, c), false); assert.equal(requests.length, before); move.dispose();
+});
+test('reselecting a current Move apparatus refreshes both scopes without changing the pair', async () => {
+  const requests = [], move = new Move({ isCurrent: () => true, read: async request => { requests.push(request); return page(); } });
+  move.start(); move.setCatalog([a, b]); move.setActive(true); await tick(); const picker = move.picker('top');
+  assert.equal(move.choose(picker, a), true); await tick(); assert.equal(requests.length, 4);
+  assert.equal(move.getSnapshot().top, a); assert.equal(move.getSnapshot().bottom, b); move.dispose();
 });
 test('Move summaries retain source display-code, end-product and subtitle precedence in server order', () => {
   const maps = [
@@ -98,20 +141,36 @@ test('changing only Move target invalidates old membership rather than reusing t
 });
 const nodes = tree => tree && typeof tree === 'object' ? [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)] : [];
 for (const platform of ['ios', 'android']) test(`${platform} passive Move panes reuse native lists/summary rows with read-only refresh and pagination`, async () => {
-  const calls = [], native = { Button: 'Button', Text: 'NativeText' };
+  const calls = [], native = { Button: 'Button', Text: 'NativeText', Image: 'Image', RNHostView: 'RNHostView' };
   const component = load(`admin/AdminWorkMapMove.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
     [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
-    '@expo/ui/swift-ui/modifiers': { font: x => x }, 'react-native': { ActivityIndicator: 'ActivityIndicator', View: 'View' },
+    '@expo/ui/swift-ui/modifiers': { font: x => x, accessibilityHidden: () => ({}) }, 'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ActivityIndicator: 'ActivityIndicator', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) }, '../components/BaseHost': { BaseHost: 'BaseHost' },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'ReadOnlyRow' } }).AdminWorkMapMove;
   const pane = { id: 'top', name: 'Pechat A', rows: [{ id: 'o', position: '1', headline: '1 • Film', supporting: 'P' }],
     loading: false, loaded: true, error: null, hasMore: true, empty: 'empty', retryLabel: 'retry', moreLabel: 'more',
-    onRefresh: async () => calls.push('refresh'), onMore: async () => calls.push('more') };
+    onRefresh: async () => calls.push('refresh'), onMore: async () => calls.push('more'), onPick: () => calls.push('pick') };
   const tree = component({ partial: 'partial', loading: false, error: null, empty: '', retryLabel: 'retry', onRetry() {}, panes: [pane] });
   const wrapped = nodes(tree).find(row => typeof row.type === 'function'), rendered = wrapped.type(wrapped.props), all = nodes(rendered);
   const list = all.find(row => row.type === 'OrdersList'); await list.props.onRefresh();
   assert.equal(all.find(row => row.type === 'ReadOnlyRow').props.row, pane.rows[0]);
   assert.equal(all.find(row => row.type === 'ReadOnlyRow').props.onPress, undefined);
-  all.find(row => row.type === (platform === 'ios' ? 'Button' : 'ListItem')).props.onPress(); await tick();
-  assert.deepEqual(calls, ['refresh', 'more']); assert.equal(all.some(row => row.props.onLongPress || row.props.onMove || row.props.onToggleSelect), false);
+  all.find(row => row.props.testID === 'admin-move-top-picker').props.onPress();
+  all.find(row => row.type === (platform === 'ios' ? 'Button' : 'ListItem') && (platform === 'ios' ? row.props.label === 'more' : row.props.children === 'more')).props.onPress(); await tick();
+  assert.deepEqual(calls, ['refresh', 'pick', 'more']); assert.equal(all.some(row => row.props.onLongPress || row.props.onMove || row.props.onToggleSelect), false);
+});
+
+for (const platform of ['ios', 'android']) test(`${platform} Move picker renders source order, selected state and exact choice callbacks`, () => {
+  const native = { Text: 'NativeText', VStack: 'VStack', Column: 'Column' }, calls = [];
+  const View = load(`admin/AdminWorkMapMovePicker.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
+    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
+    '@expo/ui/swift-ui/modifiers': { font: x => x, background: x => ({ background: x }), accessibilityAddTraits: x => ({ traits: x }) },
+    '../components/BaseHost': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { primaryContainer: 'selected' } }) },
+  }).AdminWorkMapMovePicker;
+  const rows = [{ selection: model.adminWorkMapMoveUnassigned, key: 'unassigned', name: 'Tanlanmagan', selected: false },
+    { selection: a, key: 'apparatus:a', name: 'Pechat A', selected: true }];
+  const tree = nodes(View({ title: 'Select', rows, onChoose: value => calls.push(value) }));
+  assert.deepEqual(tree.filter(node => node.type === 'ListItem').map(node => node.props.children), ['Tanlanmagan', 'Pechat A']);
+  const selected = tree.find(node => node.props.testID === 'admin-move-picker-apparatus:a'); selected.props.onPress();
+  assert.deepEqual(calls, [a]); assert.ok(platform === 'ios' ? selected.props.modifiers.some(x => x.background === 'selected') : selected.props.colors.containerColor === 'selected');
 });

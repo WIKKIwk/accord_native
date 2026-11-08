@@ -83,11 +83,42 @@ test('opening a detail requires the current shell, enabled destination and a lis
     '../nativeSheet': { useNativeSheet: () => ({ open: (value, options) => opened.push({ value, options }), close() {} }) },
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route, profile: '/profile' } },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
-    '../shared/localization': { productionText: key => key, adminText: key => key, localizedGetter: key => key }, './AdminWorkMapDetail': { AdminWorkMapDetail: 'Detail' },
+    '../shared/localization': { productionText: key => key, adminText: key => key, localizedGetter: key => key }, './AdminWorkMapDetail': { AdminWorkMapDetail: 'Detail' }, './AdminWorkMapMovePicker': { AdminWorkMapMovePicker: 'Picker' },
     './AdminShellContext': { useAdminShell: () => shell }, './adminWorkMapText': { adminWorkMapText: () => ({ partial: 'partial', more: 'more' }) }, './adminWorkMapPresentation': {}, './adminWorkMapClosedModel': { adminWorkMapClosedRows: () => [] }, './adminWorkMapAuditPresentation': { adminWorkMapAuditPresentation: () => ({}) }, './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: ctrl, workspace: { reload() {}, setQuery() {}, selectModule() {}, selectApparatus() {}, move: {} },
       workspaceState: { module: 'sequence', catalog: [], selected: null, catalogLoaded: false, catalogLoading: false, move: { top: null, bottom: null } } }) } };
   const view = load('admin/useAdminWorkMapView.tsx', mocks).useAdminWorkMapView();
   current = false; view.open(row); current = true; allowed = false; view.open(row); allowed = true; ticket = null; view.open(row); assert.equal(opened.length, 0);
   ticket = { generation: 1, id: 'o' }; view.open(row); assert.equal(opened.length, 1); assert.equal(opened[0].value.props.row, row); assert.equal(opened[0].options.dismissible, false);
   const pending = { id: 'p', kind: 'pending' }; view.open(pending); assert.equal(opened[1].options.dismissible, true);
+});
+
+test('Move headers open the source picker and bind a ticket to each choice', () => {
+  const dart = load('admin/dartJsonString.ts'), model = load('admin/adminWorkMapMoveModel.ts', { './dartJsonString': dart });
+  const a = { id: 'a', name: ' A ' }, b = { id: 'b', name: 'B' }, ticket = { side: 'top', generation: 8, selected: a,
+    options: [model.adminWorkMapMoveUnassigned, a] }, opened = [], chosen = []; let current = true, closes = 0;
+  const shell = { session: {}, isCurrent: () => current, destination: () => '/ios-admin/work-map' };
+  const window = { rows: [], loading: false, loaded: true, error: null, hasMore: false };
+  const move = { picker: side => side === 'top' ? ticket : null, choose: (issued, selection) => { chosen.push([issued, selection]); return true; },
+    topWindow: { reload() {}, next() {} }, bottomWindow: { reload() {}, next() {} } };
+  const workspace = { move, reload() {}, setQuery() {}, selectModule() {}, selectApparatus() {} };
+  const mocks = { react: { useCallback: fn => fn, useState: value => [value, () => {}], useSyncExternalStore: (_s, g) => g() },
+    'expo-router': { router: { canGoBack: () => false, replace() {}, push() {} } }, 'react-native': { Platform: { OS: 'ios' } },
+    '../nativeSheet': { useNativeSheet: () => ({ open: (value, options) => opened.push({ value, options }), close: () => closes++ }) },
+    '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route, profile: '/profile' } },
+    '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
+    '../shared/localization': { productionText: key => key, adminText: key => key, localizedGetter: key => key },
+    './AdminWorkMapDetail': { AdminWorkMapDetail: 'Detail' }, './AdminWorkMapMovePicker': { AdminWorkMapMovePicker: 'Picker' },
+    './adminWorkMapMoveModel': model, './dartJsonString': dart, './AdminShellContext': { useAdminShell: () => shell },
+    './adminWorkMapText': { adminWorkMapText: () => ({ partial: 'partial', more: 'more' }) }, './adminWorkMapPresentation': {},
+    './adminWorkMapClosedModel': { adminWorkMapClosedRows: () => [] }, './adminWorkMapAuditPresentation': { adminWorkMapAuditPresentation: () => ({}) },
+    './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: {}, workspace,
+      workspaceState: { module: 'move', catalog: [a, b], selected: null, catalogLoaded: true, catalogLoading: false,
+        move: { top: a, bottom: b, topWindow: window, bottomWindow: window } } }) } };
+  const view = load('admin/useAdminWorkMapView.tsx', mocks).useAdminWorkMapView();
+  current = false; view.move.panes[0].onPick(); assert.equal(opened.length, 0); current = true;
+  view.move.panes[0].onPick(); assert.equal(opened.length, 1); assert.deepEqual(opened[0].options, { compact: true, dismissible: true });
+  assert.equal(opened[0].value.props.title, 'worker.queue.select_apparatus');
+  assert.deepEqual(opened[0].value.props.rows.map(row => [row.name, row.selected]), [['worker.queue.filter.unselected', false], ['A', true]]);
+  opened[0].value.props.onChoose(model.adminWorkMapMoveUnassigned); assert.deepEqual(chosen, [[ticket, model.adminWorkMapMoveUnassigned]]); assert.equal(closes, 1);
+  view.move.panes[1].onPick(); assert.equal(opened.length, 1);
 });
