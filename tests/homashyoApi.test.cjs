@@ -86,3 +86,21 @@ test('pending commands are account-scoped and unauthorized profiles fail closed'
   setCurrent({ ...session, profile: { ...session.profile, role: 'aparatchi' } }); assert.throws(() => api.rawSplitScope(), /huquqi kerak/);
   replay.assertDone();
 });
+test('parallel stock saves are blocked and auth denial retains the durable key', async () => {
+  const name = 'parallel saves blocked; auth denial keeps retry key';
+  const { api, session, replay } = setup(name); const payload = bodyFor(name, '/split');
+  const first = api.rawSplitSave(session, payload);
+  await assert.rejects(api.rawSplitSave(session, payload), /Saqlash davom etmoqda/);
+  await assert.rejects(first); assert.deepEqual(await api.rawSplitPending(), payload); replay.assertDone();
+});
+test('no request is sent if durable key cannot be written or account changes during persistence', async () => {
+  const name = 'uncertain commands are isolated per account';
+  const h = setup(name); const payload = bodyFor(name, '/split');
+  h.store.setItemAsync = async () => { throw new Error('disk failure'); };
+  await assert.rejects(h.api.rawSplitSave(h.session, payload), /disk failure/);
+  assert.equal(await h.api.rawSplitPending(), null);
+  h.store.setItemAsync = async (key, value) => { h.saved.set(key, value); h.setCurrent({ ...h.session, profile: { ...h.session.profile, ref: 'different' } }); };
+  await assert.rejects(h.api.rawSplitSave(h.session, payload), /Akkaunt o‘zgargan/);
+  h.setCurrent(h.session); assert.deepEqual(await h.api.rawSplitPending(), payload);
+  // Replay is intentionally not consumed: both cases must stop before sending.
+});
