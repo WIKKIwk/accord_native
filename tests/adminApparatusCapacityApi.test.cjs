@@ -99,3 +99,51 @@ test('mutation guard failures stop mocked sends or discard stale success without
   await assert.rejects(f.adminCancelApparatusScheduleReservation(session, 'r', '', guard), /scope changed/);
   assert.equal(f.calls.length, 2); // Post-send failure does not prove whether the server committed.
 });
+
+test('capacity profile PUT uses one supplied V2-shaped key and canonical body, then reconstructs the committed profile', async () => {
+  const f = fixture(); let generated = 0;
+  const profile = model.apparatusCapacityProfileFromJson({ apparatus_id: id, apparatus: 'Machine', source_revision: 4, capacity_slots: 3,
+    capabilities: ['print'], notes: 'local', working_windows: [{ weekday: 1, start_minute: 60, end_minute: 120 }] });
+  f.setResponse(new Response(JSON.stringify({ revision: { aasx_sha256: ' hash ', revision: { apparatus_id: id,
+    revision_metadata: { revision: 5 }, capacity: { capacity_slots: 6, apparatus: 'Server name',
+      availability: { working_windows: [{ weekday: 2, start_minute: 10, end_minute: 30 }] } } } } }), { status: 200 }));
+  const result = await f.adminSaveApparatusCapacityProfile(session, { ...profile, apparatus_id: ` ${id} ` },
+    { capacity: () => { generated++; return 'mobile:canonical-apparatus:capacity:abc-1'; } });
+  assert.equal(generated, 1); assert.equal(f.calls[0].url, '/v1/mobile/admin/production-maps/capacity');
+  assert.equal(f.calls[0].init.method, 'PUT'); assert.equal(f.calls[0].init.headers['idempotency-key'], 'mobile:canonical-apparatus:capacity:abc-1');
+  assert.deepEqual(JSON.parse(f.calls[0].init.body), { apparatus_id: id, expected_revision: 4, capacity: model.apparatusCanonicalCapacityToJson(profile) });
+  assert.equal(result.apparatus, 'Server name'); assert.equal(result.source_revision, 5); assert.equal(result.source_aasx_sha256, 'hash');
+  assert.equal(result.capacity_slots, 6); assert.deepEqual(result.working_windows, [{ weekday: 2, start_minute: 10, end_minute: 30 }]);
+  assert.deepEqual(result.capabilities, []); assert.equal(result.notes, '');
+  f.setResponse(new Response('{}', { status: 200 }));
+  await assert.rejects(f.adminSaveApparatusCapacityProfile(session, profile, { capacity: () => 'mobile:canonical-apparatus:capacity:abc-2' }),
+    error => error.code === 'apparatus_capacity_invalid_response' && error.message === 'Aparat profili saqlanmadi');
+  const sends = f.calls.length;
+  await assert.rejects(f.adminSaveApparatusCapacityProfile(session, profile, { capacity: () => 'bad' }), /idempotency key unavailable/);
+  await assert.rejects(f.adminSaveApparatusCapacityProfile(session, { ...profile, apparatus_id: 'bad' }, { capacity: () => { throw new Error('must not run'); } }),
+    error => error.code === 'apparatus_id_invalid');
+  assert.equal(f.calls.length, sends);
+});
+
+test('schedule creation preserves explicit keys, validates candidates and fails closed when generation is unavailable', async () => {
+  const f = fixture(), input = { order_id: ' order ', apparatus_id: ` ${id} `, apparatus: ' Machine ', earliest_start_unix: 10,
+    duration_minutes: 30, capability_requirements: [{ code: ' PRINT ', min_level: 2 }],
+    candidate_apparatuses: [{ apparatus_id: ` ${id} `, apparatus: ' Candidate ' }] };
+  f.setResponse(new Response(JSON.stringify({ reservation: { apparatus_id: id, order_id: 'order' } }), { status: 200 }));
+  await assert.rejects(f.adminScheduleApparatusOrder(session, input), /Schedule idempotency key unavailable/); assert.equal(f.calls.length, 0);
+  await assert.rejects(f.adminScheduleApparatusOrder(session, { ...input, candidate_apparatuses: [{ apparatus_id: 'bad', apparatus: '' }] },
+    { schedule: () => { throw new Error('must not run'); } }), error => error.code === 'apparatus_id_invalid'); assert.equal(f.calls.length, 0);
+  let generated = 0; const keys = { schedule: order => { generated++; assert.equal(order, 'order'); return 'mobile-schedule:order:123456'; } };
+  const result = await f.adminScheduleApparatusOrder(session, input, keys); assert.equal(result.order_id, 'order'); assert.equal(generated, 1);
+  assert.equal(f.calls[0].url, '/v1/mobile/admin/production-maps/schedule'); assert.deepEqual(JSON.parse(f.calls[0].init.body),
+    { order_id: 'order', apparatus_id: id, apparatus: 'Machine', earliest_start_unix: 10, latest_end_unix: null, duration_minutes: 30,
+      priority: 0, source: 'admin', reason: '', idempotency_key: 'mobile-schedule:order:123456',
+      capability_requirements: [{ code: 'PRINT', min_level: 2 }], candidate_apparatuses: [{ apparatus_id: id, apparatus: 'Candidate' }] });
+  f.setResponse(new Response(JSON.stringify({ reservation: { apparatus_id: id, order_id: 'order' } }), { status: 200 }));
+  await f.adminScheduleApparatusOrder(session, { ...input, idempotency_key: '\u0085 caller-key \u0085' }, keys);
+  assert.equal(generated, 1); assert.equal(JSON.parse(f.calls[1].init.body).idempotency_key, 'caller-key');
+  await assert.rejects(f.adminScheduleApparatusOrder(session, input, { schedule: () => 'wrong-format' }), /Schedule idempotency key unavailable/);
+  f.setResponse(new Response('{}', { status: 200 }));
+  await assert.rejects(f.adminScheduleApparatusOrder(session, { ...input, idempotency_key: 'key' }),
+    error => error.code === 'apparatus_schedule_invalid_response' && error.message === 'Aparat jadvali saqlanmadi');
+});
