@@ -6,15 +6,15 @@ import { BoyoqchiRequestsController } from './boyoqchiController';
 import { boyoqchiReturnedPaintRequests } from './returnedPaintApi';
 
 export function useBoyoqchiRequests(session: Session, home: boolean) {
-  const epoch = activeSessionEpoch(session), token = activeSessionToken(session), scope = sessionReadScope(session);
+  const epoch = activeSessionEpoch(session), scope = sessionReadScope(session);
   const controller = useMemo(() => {
     const isCurrent = () => {
-      try { return epoch !== null && !!token && activeSessionEpoch(session) === epoch && activeSessionToken(session) === token &&
+      try { return epoch !== null && activeSessionEpoch(session) === epoch && !!activeSessionToken(session) &&
         sessionReadScope(session) === scope; } catch { return false; }
     };
     return new BoyoqchiRequestsController(() => boyoqchiReturnedPaintRequests(session, 100),
       home ? () => adminApparatus(session, { limit: 10000 }) : null, isCurrent);
-  }, [session, home, epoch, token, scope]);
+  }, [session, home, epoch, scope]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => {
     void controller.refresh();

@@ -84,3 +84,37 @@ test('epoch rollback and same-object capability changes reject pending results b
   f.requests[2].resolve({ items: [{ id: 'current' }] }); await tick(); assert.equal(third.getSnapshot().items[0].id, 'current');
   f.unmount();
 });
+
+test('same-session 401 refresh publishes the retried response using the new token', async () => {
+  const a = { token: 'old-token', baseUrl: 'https://one.invalid', profile: { role: 'boyoqchi', ref: 'ref' },
+    capabilities: ['boyoqchi.access'], assigned_apparatus: [] }, calls = [], hooks = []; let cursor = 0;
+  const auth = { activeSessionEpoch: session => session === a ? 7 : null,
+    activeSessionToken: session => session === a ? session.token : null,
+    refreshSession: async (session, failed) => { assert.equal(failed, 'old-token'); session.token = 'new-token'; return true; } };
+  const { sessionReadScope } = compile('sessionReadScope');
+  const { BoyoqchiRequestsController } = compile('boyoqchi/boyoqchiController', { './boyoqchiLogic': { boyoqchiRequestKey: item => item.id } });
+  const transport = compile('authorizedFetch', { './auth': auth });
+  const controls = { isCanonicalApparatusId: value => value === 'apparatus:default:bosma_7' };
+  const model = compile('boyoqchi/returnedPaintModel', { '../workerControlsApi': controls });
+  const api = compile('boyoqchi/returnedPaintApi', { '../authorizedFetch': transport, '../workerControlsApi': controls, './returnedPaintModel': model });
+  const equal = (x, y) => x?.length === y?.length && x.every((value, i) => Object.is(value, y[i]));
+  const react = { useMemo: (make, deps) => { const i = cursor++; if (!hooks[i] || !equal(hooks[i].deps, deps)) hooks[i] = { deps, value: make() }; return hooks[i].value; },
+    useSyncExternalStore: (_sub, get) => { cursor++; return get(); }, useEffect: (effect, deps) => { const i = cursor++;
+      if (!hooks[i] || !equal(hooks[i].deps, deps)) { hooks[i]?.cleanup?.(); hooks[i] = { deps, cleanup: effect() }; } } };
+  const { useBoyoqchiRequests } = compile('boyoqchi/useBoyoqchiRequests', { react, '../auth': auth,
+    '../sessionReadScope': { sessionReadScope }, './boyoqchiController': { BoyoqchiRequestsController },
+    './returnedPaintApi': api, '../apparatusApi': {} });
+  const originalFetch = global.fetch;
+  global.fetch = async (_url, init) => {
+    calls.push(init.headers.get('authorization'));
+    return calls.length === 1 ? new Response('{}', { status: 401 }) : new Response(JSON.stringify({ items: [{ id: 'ok',
+      apparatus: 'apparatus:default:bosma_7', sender_role: 'aparatchi', created_at_unix: 100, items: [] }], has_more: false }), { status: 200 });
+  };
+  try {
+    cursor = 0; const first = useBoyoqchiRequests(a, false); await tick(); await tick();
+    assert.deepEqual(calls, ['Bearer old-token', 'Bearer new-token']);
+    assert.equal(first.controller.getSnapshot().phase, 'ready'); assert.equal(first.controller.getSnapshot().items[0].id, 'ok');
+    cursor = 0; const rerender = useBoyoqchiRequests(a, false); assert.equal(rerender.controller, first.controller);
+    for (const item of hooks) item?.cleanup?.();
+  } finally { global.fetch = originalFetch; }
+});
