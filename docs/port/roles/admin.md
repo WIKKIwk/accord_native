@@ -1,6 +1,6 @@
 # Admin UI contract (partial)
 
-Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is an incremental contract for `AdminHomeScreen` only. The other screens, sheets, dialogs, drawer, dock and create overlay still need complete contracts and V2/V4 audits; this file does not establish role completion or authorize a placeholder screen.
+Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is an incremental contract for Admin home, activity, and parts of the drawer and dock only. Other screens, sheets, dialogs and create overlay still need complete contracts and V2/V4 audits; this file does not establish role completion or authorize a placeholder screen.
 
 ## AdminHomeScreen
 
@@ -19,6 +19,14 @@ V2: `features/admin/presentation/widgets/admin_navigation_drawer.dart`, `admin_d
 
 Reuse the existing native `RoleDrawer`; no Admin drawer view is connected yet. The selected destination closes the drawer without navigating. Other selections close the drawer, wait 220 ms, then: direct-push destinations push; otherwise pop to an existing target, replace the current non-home route when home is below it, or push a new route. V2 logout closes the drawer, waits 120 ms, then opens its logout prompt. The existing shared drawer calls its selection callback immediately, so an Admin coordinator must preserve these delays and route-stack rules. Implement the logout prompt and each destination through existing components rather than substituting a new route. The menu header uses `adminDrawerSections`; the logout label uses `logoutTitle`.
 
+## Admin activity
+
+V2: `lib/src/features/admin/presentation/admin_activity_screen.dart`. After the first frame, bootstrap activity and load the existing `NotificationHiddenStore`; listen to `RefreshHub` and refresh only on a new version for topic `admin`. Remove the listener on dispose. Back pops if possible, otherwise clears the stack and opens `adminHome`. The top-bar title is `adminActivityTitle`, with a clear-all icon and no subtitle; the Admin dock selects activity.
+
+The clear-all icon always opens the shared confirmation dialog with `clearTitle`, `clearAllNotificationsPrompt`, `no` and `yes`. Only an affirmative result calls the existing hidden store with *all current activity IDs*, including IDs already hidden, for the active profile. The screen lists records not in that profile's hidden IDs in their original order. A first load shows the loading indicator only when no visible rows exist; the first failed load shows the shared retry state under the same condition. A loaded empty list uses `adminNoActivity`; later refresh errors retain existing rows. The list supports pull-to-refresh.
+
+Each row uses the existing Admin summary card/list treatment, no chevron: supplier name is the title, created label the value, and the subtitle is `activity.sent` with the sent quantity to zero fixed decimal places and UOM. If accepted quantity is positive, wrap that with `activity.accepted` and the accepted quantity, also to zero fixed decimal places. Status icons in enum order are schedule filled, schedule outlined, done-all, check, close and remove, in a 36-point circle with an 18-point icon. `adminActivityModel.ts` captures these decisions; neither platform view nor its lifecycle, confirmation, hidden-store wiring or navigation is implemented yet.
+
 ## Admin dock and default create overlay (partial)
 
 V2: `widgets/admin_dock.dart` and `widgets/admin_create_hub_sheet_models_part_02.dart`. Ordered dock candidates are home, user, primary create and activity, each filtered by `AppRouter.canOpenRoute`; an explicitly supplied primary action keeps create available. The primary action has no selected tab. It is visible only when `showPrimaryFab` is true, the profile overlay does not obscure it, a primary destination exists and its menu is closed. Selecting it opens the create overlay. Selecting the active non-primary tab does nothing, except selecting Home while the current route is not the session home replaces the root with the home route. Other dock selections replace the root.
@@ -28,3 +36,5 @@ The default create overlay lists permitted actions in this order: create user (`
 ## Verification so far
 
 The f119 oracle passed the selected mock widget tests `admin home shortcut labels follow selected language` and `admin home action labels follow selected language`. The separate test `admin home defers summary load until after first frame` failed at f119 because the request was already observed after `pumpWidget`; use source behavior, not that failed assertion, until the test/spec discrepancy is resolved. `tests/adminHomeModel.test.cjs` checks filtering, ordering, loading/error branches and representative localized text. No Admin home view or route has yet been implemented for iOS or Android.
+
+Activity fixed-zero rounding and rendered Uzbek, English, Russian and Urdu metric strings were independently checked with locally authored f119 oracle probes; those probes are not upstream V2 tests.

@@ -17,6 +17,11 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - `src/admin/factoryLocationApi.ts` ports the live paths of `adminFactoryLocations`, `adminCreateFactoryLocation`, `adminUpdateFactoryLocation` and `adminReplaceFactoryLocationApparatus`, including local validation, normalization and V2 error messages. `factoryLocationModel.ts` handles compact backend apparatus snapshots and reuses the existing full canonical apparatus reader.
 - Ran the complete V2 `test/admin_factory_locations_test.dart` independently in the f119 oracle: 6 passed. Its replacement and duplicate-name cases exercise V2 test mode; they are not proof that V4 test mode has been ported. Six source-derived V4 tests passed for live-path requests, parsing, guards and errors, and iOS typecheck passed. No suitable V2 HTTP recording was found for these four methods.
 
+## Checkpoint: admin activity behavior
+
+- `adminActivityModel.ts` captures hidden-ID filtering, loading/error/empty/list decisions, clear-all ID selection, topic/version refresh gating, status icons and localized quantity text. It reuses the existing localization catalog and is not yet connected to a screen or hidden store. The activity UI contract is documented; both platform views, confirmation, lifecycle, navigation and per-session cleanup remain unported.
+- Locally authored f119 oracle probes confirmed Dart fixed-zero output for eleven values, including negative zero and half ties, and confirmed the rendered quantity text in Uzbek, English, Russian and Urdu. Four V4 source-derived model tests, iOS typecheck and lint pass. JS JSON parsing still loses the distinction between integer `-0` and double `-0.0`, which can affect this unusual display edge.
+
 ## Checkpoint: admin activity reader
 
 - `adminActivityApi.ts` now reads `/v1/mobile/admin/activity` and reuses the shared `dispatchRecordFromJson` added to main by `2eaab52`; no duplicate parser or notification screen was added. The returned reader can be injected into `AdminStore`, but no screen or session lifecycle is wired yet.
@@ -148,6 +153,7 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 |---|---|---|---|---|
 | `AdminDock`, `admin_dock.dart` and default create overlay | `src/admin/adminDockModel.ts` (logic only) | pending | pending | Destination and default action decisions compared with source; platform dock, custom actions, overlay, back, motion and routes remain open. |
 | `AdminNavigationDrawer`, `admin_navigation_drawer.dart` | `src/admin/adminDrawerModel.ts` (logic only) | pending | pending | Destination order and navigation plan compared with source and three selected V2 tests; native integration, timing, logout, routes and shell remain open. |
+| `AdminActivityScreen`, `admin_activity_screen.dart:18` | `src/admin/adminActivityModel.ts` (logic only) | pending | pending | V2 list-state, status icon and quantity text rules compared; no native screen, hidden-store integration, dialog, navigation or refresh lifecycle. |
 | `AdminHomeScreen`, `admin_home_screen.dart:20` | `src/admin/adminHomeModel.ts` (logic only) | pending | pending | Action/shortcut rules compared with source and two V2 localization tests; neither platform view, shell/dock, routes nor navigation/refresh lifecycle is implemented. |
 
 The remaining V2 ledger surfaces have not been audited. Run the f119 ledger again and compare each relevant source location and V4 implementation side by side; no surface is marked `ok`.
