@@ -143,3 +143,22 @@ test('logout prevents a pending ticket from opening a socket', async () => {
     assert.equal(f.sockets.length, 0);
   } finally { stop(); f.restore(); }
 });
+
+test('optional realtime events preserve each message payload and stop after logout', async () => {
+  const f = fixture();
+  const events = [];
+  const stop = f.subscribeChatLive(f.session, () => {}, event => events.push(event));
+  try {
+    await sleep(0);
+    const socket = f.sockets[0];
+    const first = { event: 'chat.message.created', message: { message_id: 'm1', conversation_id: 'c1', sequence: 1 } };
+    const second = { event: 'chat.message.updated', message: { message_id: 'm1', conversation_id: 'c1', sequence: 1 } };
+    socket.onmessage({ data: JSON.stringify({ event: 'chat.ready' }) });
+    socket.onmessage({ data: JSON.stringify(first) });
+    socket.onmessage({ data: JSON.stringify(second) });
+    assert.deepEqual(events, [{ event: 'chat.ready' }, first, second]);
+    f.logout();
+    socket.onmessage({ data: JSON.stringify(first) });
+    assert.equal(events.length, 3);
+  } finally { stop(); f.restore(); }
+});
