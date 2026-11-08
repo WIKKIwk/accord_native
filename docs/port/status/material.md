@@ -1,7 +1,7 @@
 # material
 
 Status: in progress
-Stopped at: material history API and presentation logic; implement both platform surfaces and role routing, then audit reachable GScale and shared destinations.
+Stopped at: material history API, display rules and account-safe lifecycle; implement both platform surfaces and role routing, then audit reachable GScale and shared destinations.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -36,3 +36,5 @@ The scoped `order_scan_bootstrap_api_test` f119 fixture is owned by this branch;
 - The source-derived history API and formatting rules have focused tests; no direct V2 HTTP test of `adminRawMaterialHistory` was found. The delivery event model test follows V2 `test/admin_production_map_material_delivery_test_part.dart`.
 - `order_scan_bootstrap_api_test.dart` recorded 16 requests / 13 recording cases into the isolated `tests/contracts/f11910bb/` namespace. Independent V2 oracle: 116 tests passed. Two material-specific recorded request paths replayed.
 - iOS TypeScript passed after replacing the freshly generated incomplete worktree route types with the known-good generated local route types. No device or simulator used.
+
+- History lifecycle tests cover racing refreshes, independent apparatus catalog loading/failure and in-flight account changes; screen and native-sheet behavior still needs verification.
