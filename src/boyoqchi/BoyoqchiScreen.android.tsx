@@ -9,6 +9,7 @@ import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { BoyoqchiDock } from './BoyoqchiDock.android';
 import { BoyoqchiMessage } from './BoyoqchiMessage';
+import { BOYOQCHI_DEMO_UNAVAILABLE } from './returnedPaintDemoGuard';
 import { BoyoqchiRequestContent } from './BoyoqchiRequestContent';
 import { boyoqchiOrderLabel, boyoqchiRequestKey } from './boyoqchiLogic';
 import { useBoyoqchiContext } from './BoyoqchiContext';
@@ -25,7 +26,8 @@ export function BoyoqchiScreen({ home }: { home: boolean }) {
   const title = home ? 'Bo‘yoqchi' : 'Astatka';
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
     <RoleHeader title={t(title)} navigation={{ icon: 'menu', label: t('Bo‘yoqchi bo‘limlari'), onPress: drawer.open }} />
-    {state.phase === 'loading' ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>
+    {session.token === 'test-mode-token' ? <BoyoqchiMessage title={BOYOQCHI_DEMO_UNAVAILABLE} error />
+      : state.phase === 'loading' ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>
       : state.phase === 'error' ? <BoyoqchiMessage title={home ? 'Ma’lumotlar yuklanmadi' : 'Astatka ma’lumotlari yuklanmadi'}
         error onRefresh={() => { void controller.refresh(); }} />
         : !state.items.length ? <BoyoqchiMessage title={home ? 'Qaytarilgan bo‘yoq ma’lumotlari hali yo‘q' : 'Hisoblangan Astatka ma’lumotlari hali yo‘q'}

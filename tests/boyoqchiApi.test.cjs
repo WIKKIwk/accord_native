@@ -14,9 +14,10 @@ function load(relative, mocks = {}) {
 }
 const controls = load('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': {} });
 const model = load('boyoqchi/returnedPaintModel', { '../workerControlsApi': controls });
+const demo = load('boyoqchi/returnedPaintDemoGuard');
 function api(fetch, imageFetch = fetch) {
   return load('boyoqchi/returnedPaintApi', { '../authorizedFetch': { authorizedFetch: fetch, authorizedImageFetch: imageFetch },
-    '../workerControlsApi': controls, './returnedPaintModel': model });
+    '../workerControlsApi': controls, './returnedPaintModel': model, './returnedPaintDemoGuard': demo });
 }
 const session = { baseUrl: 'https://example.test' };
 const request = { id: 'r1', order_id: 'o1', apparatus: 'apparatus:default:bosma_7', sender_role: 'aparatchi',

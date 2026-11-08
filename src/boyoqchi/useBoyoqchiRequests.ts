@@ -9,8 +9,9 @@ export function useBoyoqchiRequests(session: Session, home: boolean) {
   const epoch = activeSessionEpoch(session), scope = sessionReadScope(session);
   const controller = useMemo(() => {
     const isCurrent = () => {
-      try { return epoch !== null && activeSessionEpoch(session) === epoch && !!activeSessionToken(session) &&
-        sessionReadScope(session) === scope; } catch { return false; }
+      try { const token = activeSessionToken(session);
+        return epoch !== null && activeSessionEpoch(session) === epoch && !!token && token !== 'test-mode-token' &&
+          sessionReadScope(session) === scope; } catch { return false; }
     };
     return new BoyoqchiRequestsController(() => boyoqchiReturnedPaintRequests(session, 100),
       home ? () => adminApparatus(session, { limit: 10000 }) : null, isCurrent);

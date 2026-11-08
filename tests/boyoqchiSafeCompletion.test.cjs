@@ -15,6 +15,7 @@ function compile(relative, mocks = {}) {
 const controls = compile('workerControlsApi.ts', { './authorizedFetch': {}, './sessionReadScope': {} });
 const model = compile('boyoqchi/returnedPaintModel.ts', { '../workerControlsApi': controls });
 const verifier = compile('boyoqchi/returnedPaintCompletion.ts');
+const demo = compile('boyoqchi/returnedPaintDemoGuard.ts');
 const input = [{ usage: 'rasxot', category: 'colors', name: 'Oq', values: { Mix: '0001.500', Qora: '0' } },
   { usage: 'astatka', category: 'lacquers', name: 'Lak', values: { 'OPV lak': '0.2500' } }];
 const resultItems = [{ usage: 'rasxot', category: 'colors', name: 'Oq', values: { Qora: '0', Mix: '1.5' } },
@@ -30,7 +31,7 @@ function fixture(fetch, refreshSession = async () => false) {
   let active = session, epoch = 1, scope = 'original', failClear = false, failRefresh = false, clearWait = null, clearStarted = null;
   const auth = { activeSessionToken: value => value === active ? value.token : null, refreshSession };
   const transport = compile('authorizedFetch.ts', { './auth': auth });
-  const api = compile('boyoqchi/returnedPaintApi.ts', { '../authorizedFetch': transport, '../workerControlsApi': controls, './returnedPaintModel': model });
+  const api = compile('boyoqchi/returnedPaintApi.ts', { '../authorizedFetch': transport, '../workerControlsApi': controls, './returnedPaintModel': model, './returnedPaintDemoGuard': demo });
   const store = { isCurrent: () => active === session && epoch === 1 && scope === 'original', load: async () => draft,
     clear: async id => { if (!store.isCurrent()) throw new Error('stale'); if (failClear) throw new Error('disk');
       clearStarted?.resolve(); if (clearWait) await clearWait.promise; files.current = null; cleared.push(id); },
@@ -136,5 +137,22 @@ test('draft changed while clear is pending is flushed again and requires reconci
     await assert.rejects(saving, isReconciliation); assert.deepEqual(f.cleared, ['request']);
     assert.deepEqual(f.flushed, ['request']); assert.equal(f.files.current, JSON.stringify(f.draft.values));
     assert.deepEqual(f.refreshed, []);
+  } finally { f.restore(); }
+});
+
+test('the fake demo token cannot send a real completion and reports demo unavailable', async () => {
+  let calls = 0; const f = fixture(async () => { calls++; return new Response('{}'); });
+  try { f.session.token = 'test-mode-token'; const save = await prepare(f);
+    await assert.rejects(save(input), error => error.name === 'BoyoqchiDemoUnavailableError' && /Demo rejimi/.test(error.message));
+    assert.equal(calls, 0); assert.deepEqual(f.cleared, []); assert.deepEqual(f.refreshed, []);
+  } finally { f.restore(); }
+});
+
+test('a 401 refresh that yields a fake demo token cannot send a second completion', async () => {
+  let calls = 0; const f = fixture(async () => { calls++; return new Response('{}', { status: 401 }); },
+    async session => { session.token = 'test-mode-token'; return true; });
+  try { const save = await prepare(f);
+    await assert.rejects(save(input), error => error.name === 'BoyoqchiDemoUnavailableError');
+    assert.equal(calls, 1); assert.deepEqual(f.cleared, []); assert.deepEqual(f.refreshed, []);
   } finally { f.restore(); }
 });

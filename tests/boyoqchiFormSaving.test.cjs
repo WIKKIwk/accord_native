@@ -78,3 +78,11 @@ test('uncertain completion visibly asks the user to refresh and reconcile withou
   assert.ok(nodes(failed, node => node.type === 'Text' && node.props.children === failure.message).length);
   assert.equal(f.saves(), 1); assert.equal(f.closes(), 0); assert.equal(f.back(), false);
 });
+
+test('demo-unavailable completion error is shown without automatic resubmission', async () => {
+  const f = fixture(), idle = f.render(); saveButton(idle).props.onPress(); f.render();
+  const failure = new Error('Demo rejimi hozircha mavjud emas.'); failure.name = 'BoyoqchiDemoUnavailableError';
+  f.reject(failure); await tick(); const failed = f.render();
+  assert.ok(nodes(failed, node => node.type === 'Text' && node.props.children === failure.message).length);
+  assert.equal(f.saves(), 1); assert.equal(f.closes(), 0);
+});

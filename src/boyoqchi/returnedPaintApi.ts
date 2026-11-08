@@ -1,6 +1,7 @@
 import type { Session } from '../auth';
 import { authorizedFetch, authorizedImageFetch } from '../authorizedFetch';
 import { isCanonicalApparatusId, productionMapResponseError, WorkerControlException } from '../workerControlsApi';
+import { ensureBoyoqchiRealSession } from './returnedPaintDemoGuard';
 import { returnedPaintCompleteToJson, returnedPaintRequestFromJson, returnedPaintRequestPageFromJson,
   returnedPaintImageFromJson, type ReturnedPaintCompleteSubmission, type ReturnedPaintImage,
   type ReturnedPaintRequest, type ReturnedPaintRequestPage } from './returnedPaintModel';
@@ -25,9 +26,11 @@ async function mapBody(response: Response): Promise<Json> {
 
 /** @v2 boyoqchiReturnedPaintRequests */
 export async function boyoqchiReturnedPaintRequests(session: Session, limit = 20, offset = 0): Promise<ReturnedPaintRequestPage> {
+  ensureBoyoqchiRealSession(session);
   const query = new URLSearchParams({ limit: String(limit) });
   if (offset > 0) query.set('offset', String(offset));
-  const response = await authorizedFetch(session, `/v1/mobile/returned-paint/requests?${query}`);
+  const response = await authorizedFetch(session, `/v1/mobile/returned-paint/requests?${query}`, undefined,
+    () => ensureBoyoqchiRealSession(session));
   if (response.status !== 200) {
     throw await returnedPaintException(response, 'returned_paint_load_failed', 'Qaytarilgan bo‘yoq ma’lumotlari yuklanmadi');
   }
@@ -38,9 +41,10 @@ export async function boyoqchiReturnedPaintRequests(session: Session, limit = 20
 export async function completeReturnedPaint(session: Session, input: ReturnedPaintCompleteSubmission, options?: {
   beforeSend?: () => void; verifyResponse?: (body: Record<string, unknown>) => void;
 }): Promise<ReturnedPaintRequest> {
+  ensureBoyoqchiRealSession(session);
   const response = await authorizedFetch(session, '/v1/mobile/returned-paint/requests/complete', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(returnedPaintCompleteToJson(input)),
-  }, options?.beforeSend);
+  }, () => { ensureBoyoqchiRealSession(session); options?.beforeSend?.(); });
   if (response.status !== 200) {
     throw await returnedPaintException(response, 'returned_paint_complete_failed', 'Qaytarilgan bo‘yoq hisoboti saqlanmadi');
   }

@@ -6,6 +6,7 @@ import { WorkerExpansion } from '../components/WorkerExpansion';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { BoyoqchiMessage } from './BoyoqchiMessage';
+import { BOYOQCHI_DEMO_UNAVAILABLE } from './returnedPaintDemoGuard';
 import { BoyoqchiRequestContent } from './BoyoqchiRequestContent';
 import { boyoqchiOrderLabel, boyoqchiRequestKey } from './boyoqchiLogic';
 import { useBoyoqchiContext } from './BoyoqchiContext';
@@ -20,7 +21,8 @@ export function BoyoqchiScreen({ home }: { home: boolean }) {
   const colors = useWorkerColors(), t = useBoyoqchiText(), offset = useSharedValue(0), height = useSharedValue(0);
   const open = useReturnedPaintForm(session, controller);
   return <View style={{ flex: 1, backgroundColor: colors.background }}><Stack.Screen options={{ title: t(home ? 'Bo‘yoqchi' : 'Astatka') }} />
-    {state.phase === 'loading' ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>
+    {session.token === 'test-mode-token' ? <BoyoqchiMessage title={BOYOQCHI_DEMO_UNAVAILABLE} error />
+      : state.phase === 'loading' ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>
       : state.phase === 'error' ? <BoyoqchiMessage title={home ? 'Ma’lumotlar yuklanmadi' : 'Astatka ma’lumotlari yuklanmadi'}
         error onRefresh={() => { void controller.refresh(); }} />
         : !state.items.length ? <BoyoqchiMessage title={home ? 'Qaytarilgan bo‘yoq ma’lumotlari hali yo‘q' : 'Hisoblangan Astatka ma’lumotlari hali yo‘q'}

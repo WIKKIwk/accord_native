@@ -30,6 +30,7 @@ export function useReturnedPaintForm(session: Session, controller: BoyoqchiReque
               verifyResponse: body => verifyReturnedPaintCompletion(body, input) });
           } catch (failure) {
             if (!store.isCurrent()) throw failure;
+            if (failure instanceof Error && failure.name === 'BoyoqchiDemoUnavailableError') throw failure;
             if (failure instanceof Error && failure.name === 'MobileApiException' &&
                 'statusCode' in failure && typeof failure.statusCode === 'number' &&
                 failure.statusCode >= 400 && failure.statusCode < 500 && failure.statusCode !== 408) throw failure;

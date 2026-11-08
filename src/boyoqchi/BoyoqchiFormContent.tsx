@@ -102,7 +102,7 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
     busyRef.current = true; Keyboard.dismiss(); setBusy(true); setError(''); onBusyChange(true);
     try { await save(input.items); close(); }
     catch (failure) {
-      if (mounted.current) setError(failure instanceof Error && (failure.name === 'MobileApiException' || failure.name === 'ReturnedPaintReconciliationError') ? failure.message : 'Qaytarilgan bo‘yoq saqlanmadi');
+      if (mounted.current) setError(failure instanceof Error && (failure.name === 'MobileApiException' || failure.name === 'ReturnedPaintReconciliationError' || failure.name === 'BoyoqchiDemoUnavailableError') ? failure.message : 'Qaytarilgan bo‘yoq saqlanmadi');
     } finally {
       busyRef.current = false; onBusyChange(false);
       if (mounted.current) setBusy(false);

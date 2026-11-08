@@ -96,7 +96,8 @@ test('same-session 401 refresh publishes the retried response using the new toke
   const transport = compile('authorizedFetch', { './auth': auth });
   const controls = { isCanonicalApparatusId: value => value === 'apparatus:default:bosma_7' };
   const model = compile('boyoqchi/returnedPaintModel', { '../workerControlsApi': controls });
-  const api = compile('boyoqchi/returnedPaintApi', { '../authorizedFetch': transport, '../workerControlsApi': controls, './returnedPaintModel': model });
+  const demo = compile('boyoqchi/returnedPaintDemoGuard');
+  const api = compile('boyoqchi/returnedPaintApi', { '../authorizedFetch': transport, '../workerControlsApi': controls, './returnedPaintModel': model, './returnedPaintDemoGuard': demo });
   const equal = (x, y) => x?.length === y?.length && x.every((value, i) => Object.is(value, y[i]));
   const react = { useMemo: (make, deps) => { const i = cursor++; if (!hooks[i] || !equal(hooks[i].deps, deps)) hooks[i] = { deps, value: make() }; return hooks[i].value; },
     useSyncExternalStore: (_sub, get) => { cursor++; return get(); }, useEffect: (effect, deps) => { const i = cursor++;
@@ -117,4 +118,9 @@ test('same-session 401 refresh publishes the retried response using the new toke
     cursor = 0; const rerender = useBoyoqchiRequests(a, false); assert.equal(rerender.controller, first.controller);
     for (const item of hooks) item?.cleanup?.();
   } finally { global.fetch = originalFetch; }
+});
+
+test('the fake demo token cannot start Boyoqchi requests or the apparatus catalog', () => {
+  const f = fixture(), a = f.session(); a.token = 'test-mode-token'; f.setActive(a);
+  f.render(a, true); assert.equal(f.requests.length, 0); assert.equal(f.catalogs.length, 0); f.unmount();
 });
