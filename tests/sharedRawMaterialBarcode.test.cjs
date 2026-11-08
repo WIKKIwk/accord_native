@@ -2,7 +2,9 @@
 const assert = require('node:assert/strict'); const crypto = require('node:crypto'); const fs = require('node:fs');
 const Module = require('node:module'); const path = require('node:path'); const test = require('node:test'); const ts = require('typescript');
 const fixture = require('./contracts/f11910bb/raw_material_barcode_shared_oracle.json');
-const { generators } = require('./oracles/generateRawMaterialBarcodeCorpus.cjs');
+const { generators: originalGenerators } = require('./oracles/generateRawMaterialBarcodeCorpus.cjs');
+const { independent } = require('./oracles/generateRawMaterialBarcodeIndependent.cjs');
+const generators = { ...originalGenerators, independent };
 const file = path.resolve(__dirname, '../src/shared/barcode/rawMaterialBarcode.ts'), m = new Module(file, module);
 m.filename = file; m.paths = module.paths;
 m._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
