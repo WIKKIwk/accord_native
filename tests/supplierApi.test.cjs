@@ -84,6 +84,28 @@ test('item search sends the untrimmed nonempty V2 query and reuses SupplierItem 
     order_apparatus_options: { a: '2' }, order_microns: [3], customer_names: ['C', 'null'] });
 });
 
+test('item search uses Dart VM whitespace including U+0085 only to decide whether to send q', async () => {
+  const f = fixture([]);
+  const whitespace = [
+    ...Array.from({ length: 5 }, (_, offset) => String.fromCodePoint(0x09 + offset)),
+    ' ', '\u0085', '\u00a0', '\u1680',
+    ...Array.from({ length: 11 }, (_, offset) => String.fromCodePoint(0x2000 + offset)),
+    '\u2028', '\u2029', '\u202f', '\u205f', '\u3000', '\ufeff',
+  ];
+  for (const character of whitespace) await f.supplierItems(f.session, character);
+  await f.supplierItems(f.session, ' \u0085\u00a0\n');
+  assert.ok(f.calls.every(call => call.route === '/v1/mobile/supplier/items'));
+
+  await f.supplierItems(f.session, ' \u0085X\u0085 ');
+  await f.supplierItems(f.session, '\u200b');
+  await f.supplierItems(f.session, '\u180e');
+  assert.deepEqual(f.calls.slice(-3).map(call => call.route), [
+    '/v1/mobile/supplier/items?q=+%C2%85X%C2%85+',
+    '/v1/mobile/supplier/items?q=%E2%80%8B',
+    '/v1/mobile/supplier/items?q=%E1%A0%8E',
+  ]);
+});
+
 test('dispatch sends the V2 JSON fields and rejects non-finite quantities before sending', async () => {
   const f = fixture({ id: 'receipt', status: 'draft', sent_qty: 12.25 });
   const record = await f.createDispatch(f.session, 'A +/', 12.25);

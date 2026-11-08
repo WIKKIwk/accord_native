@@ -19,13 +19,13 @@ The live API methods `supplierHistory`, `supplierSummary`, `supplierStatusBreakd
 
 `git diff 7c87a54..f11910bb` also showed no changes in the JSON decoder, `lib/src/core/network/`, `lib/src/core/session/`, `lib/src/core/api/auth/`, `lib/src/core/native_iroh_transport.dart`, `lib/src/core/test_mode/`, `pubspec.yaml` or `pubspec.lock`. The only change in `lib/src/core/api/mobile_api.dart` was removal of an unrelated `dart:math` import; its Supplier transport and authorization helpers were unchanged. Existing `authorizedFetch`, the shared `SupplierItem` and `DispatchRecord` decoders, and `SupplierRuntimeStore` are reused. The two previously private decoders are exposed without changing existing public signatures. Source reads for this checkpoint used the `f11910bb` Git object, not the live V2 tree.
 
-There are no recorded V2 API or logic tests for this role. The six new tests in `tests/supplierApi.test.cjs` derive expectations from the source and are not V2 recordings. No oracle was run.
+There are no recorded V2 API or logic tests for this role. The seven tests in `tests/supplierApi.test.cjs` derive expectations from the source and are not V2 recordings. No oracle was run.
 
 ## Open items
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| `supplierItems` | `mobile_api_supplier_notifications.dart:121-137` | Port the test-mode `TestModeDemoData.itemPage` branch in the deferred shared test-mode pass (D3). The current implementation covers live requests only and is deliberately not tagged complete. |
+| `supplierItems` | `mobile_api_supplier_notifications.dart:121-137` | Port the test-mode `TestModeDemoData.itemPage` branch in the deferred shared test-mode pass (D3). The tagged method currently covers live requests only. |
 | `supplierSummaryFromJson`, `supplierStatusBreakdownEntryFromJson` | `app_models_models_part_04.dart:288-295,376-386` | JavaScript JSON parsing cannot distinguish an integer literal from `1.0` after parsing, whereas Dart's `as int?` rejects a double. Integers beyond JavaScript's safe range can also lose precision; verify or use a lossless decoder if these values occur. |
 | `supplierItemFromJson` | `app_models_declarations_part_01.dart:209-228` | The existing shared parser uses JavaScript `String` for `customer_names` and apparatus-option values. Nested lists/maps and decimal lexical formatting can stringify differently from Dart's `toString`. Resolve without silently changing existing GScale behavior. |
 | `createDispatch` and API errors | `mobile_api_supplier_notifications.dart:140-156`, `supplier_qty_screen.dart:84-101` | Non-finite quantities are rejected before sending, as Dart JSON encoding would reject them, but their exact visible exception text has not been verified. Malformed JSON and transport exception wording also needs comparison when the UI is ported. |
@@ -42,11 +42,12 @@ None proposed in this checkpoint.
 
 ## Checks
 
-- `node --test tests/supplierApi.test.cjs tests/baseNotificationApi.test.cjs tests/baseCatalogApi.test.cjs tests/baseDispatchRuntimeStores.test.cjs`: 17 passed.
-- Full `node --test tests/*.test.cjs`: 1,115 passed, six failed in existing preparation Android tests because Node cannot resolve Expo UI's `jetpack-compose/modifiers/createModifier`; this matches the integrator's pre-existing failure set.
+- Supplier whitespace follow-up: Dart VM `String.trim`'s documented Unicode whitespace set plus BOM, including U+0085, is used only to decide whether a query exists; a nonempty query is sent unchanged. Source: the installed Dart SDK's `lib/core/string.dart` and `lib/_internal/vm/lib/string_patch.dart`. Focused regression tests cover all listed whitespace code points, mixed whitespace, preserved nonempty query text and non-whitespace near neighbors.
+- `node --test tests/supplierApi.test.cjs tests/baseNotificationApi.test.cjs tests/baseCatalogApi.test.cjs tests/baseDispatchRuntimeStores.test.cjs`: 18 passed after the whitespace follow-up.
+- Full `node --test tests/*.test.cjs`: 1,115 passed, six failed in existing preparation Android tests because Node cannot resolve Expo UI's `jetpack-compose/modifiers/createModifier`; this matches the integrator's pre-existing failure set. This full run preceded the whitespace follow-up.
 - `npx tsc --noEmit -p tsconfig.ios.json`: passed.
-- `npx tsc --noEmit -p tsconfig.android.json`: nine pre-existing errors in `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx`; no Supplier errors.
-- `npx expo lint`: passed. No simulator, emulator or device was used.
+- `npx tsc --noEmit -p tsconfig.android.json`: nine pre-existing errors in `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx`; no Supplier errors in the preceding checkpoint.
+- `npx expo lint`: passed after the whitespace follow-up. No simulator, emulator or device was used.
 
 ## Needs from the integrator
 

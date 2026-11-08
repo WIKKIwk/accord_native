@@ -90,9 +90,14 @@ export async function supplierStatusDetails(session: Session, kind: SupplierStat
   return list(await response.json()).map(dispatchRecordFromJson);
 }
 
+// Dart VM String.trim uses Unicode White_Space and BOM, including U+0085.
+const hasNonDartWhitespace = (value: string): boolean =>
+  /[^\u0009-\u000D\u0020\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/.test(value);
+
+/** @v2 supplierItems */
 // The V2 test-mode branch is deferred until the shared test-mode pass (D3).
 export async function supplierItems(session: Session, query = ''): Promise<SupplierItem[]> {
-  const suffix = query.trim() ? `?${new URLSearchParams({ q: query })}` : '';
+  const suffix = hasNonDartWhitespace(query) ? `?${new URLSearchParams({ q: query })}` : '';
   const response = await authorizedFetch(session, `/v1/mobile/supplier/items${suffix}`);
   if (response.status !== 200) throw new SupplierApiException('Supplier items failed');
   return list(await response.json()).map(supplierItemFromJson);
