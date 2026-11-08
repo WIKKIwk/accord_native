@@ -28,7 +28,7 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
     refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}
     contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
     ListHeaderComponent={<View style={{ gap: 2 }}>
-      {rows.map((row, index) => <WorkerQueueCard key={row.kind} backgroundColor={colors.surfaceContainerLow}
+      {rows.map((row, index) => <WorkerQueueCard key={row.kind} backgroundColor={row.kind === 'pending' ? colors.surfaceContainer : colors.surfaceContainerLow}
         first={index === 0} last={index === rows.length - 1} onPress={() => onOpenStatus(row.kind)}>
         <Text style={{ flex: 1, color: colors.onSurface, fontSize: 16 }}>{text(row.titleKey)}</Text>
         <Text style={{ color: colors.onSurface, fontSize: 16 }}>{row.count}</Text>

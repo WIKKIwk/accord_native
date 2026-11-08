@@ -1,6 +1,7 @@
 import { ListItem, Text } from '@expo/ui';
 import { Button, Host, List, ProgressView, Section, VStack } from '@expo/ui/swift-ui';
-import { listStyle, refreshable } from '@expo/ui/swift-ui/modifiers';
+import { listRowBackground, listStyle, refreshable } from '@expo/ui/swift-ui/modifiers';
+import { PlatformColor } from 'react-native';
 import { useCustomerText } from './CustomerContext';
 import { customerHomeRecord, customerStatusRecord, customerStatusRows } from './customerPresentation';
 import type { CustomerStatusKind } from './customerStore';
@@ -22,7 +23,7 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
   if (!state.loaded) return <LoadingOrRetry loading={state.loading || !state.error} retry={state.refresh} />;
   return <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(state.refresh)]}>
     <Section>{customerStatusRows(state.summary).map(row => <ListItem key={row.kind} onPress={() => onOpenStatus(row.kind)}
-      trailing={<Text>{String(row.count)}</Text>}><Text>{text(row.titleKey)}</Text></ListItem>)}</Section>
+      modifiers={row.kind === 'pending' ? [listRowBackground(PlatformColor('secondarySystemFill'))] : undefined} trailing={<Text>{String(row.count)}</Text>}><Text>{text(row.titleKey)}</Text></ListItem>)}</Section>
     <Section title={text('recentShipmentsTitle')}>
       {state.records.length === 0 ? <Text>{text('noShipments')}</Text> : state.records.map(record => {
         const row = customerHomeRecord(record);

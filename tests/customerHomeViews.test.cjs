@@ -22,9 +22,9 @@ const record = { id: 'dn', item_name: 'Product', item_code: 'P1', sent_qty: 3, u
 function fixture(platform, state) {
   const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': { ListItem: 'ListItem', Text: 'Text', Host: 'Host', Button: 'Button' },
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
-    '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f] },
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', onSurface: 'fg', onSurfaceVariant: 'muted' }) },
-    'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View' },
+    '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f], listRowBackground: v => ['background', v] },
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'highlight', onSurface: 'fg', onSurfaceVariant: 'muted' }) },
+    'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './CustomerContext': { useCustomerText: () => ({ text: key => key }) },
     './customerPresentation': presentation, './useCustomerScreens': { useCustomerHome: () => state, useCustomerStatus: () => state } };
   return load(`CustomerHome.${platform}.tsx`, mocks);
@@ -33,6 +33,7 @@ const state = { loading: false, loaded: true, error: null, summary: { pendingCou
 test('iOS home exposes all status destinations and the shipment detail with native list rows', () => {
   const calls = [], screen = fixture('ios', state).CustomerHomeScreen({ onOpenStatus: kind => calls.push(kind), onOpenDetail: id => calls.push(id) });
   const rows = nodes(screen, item => item.type === 'ListItem'); assert.equal(rows.length, 4);
+  assert.deepEqual(rows[0].props.modifiers, [['background', 'secondarySystemFill']]); assert.equal(rows[1].props.modifiers, undefined);
   rows[0].props.onPress(); rows[1].props.onPress(); rows[2].props.onPress(); rows[3].props.onPress();
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);
   assert.equal(rows[3].props.supportingText, 'P1');
@@ -41,6 +42,7 @@ test('Android home reuses queue cards, routes every status and opens shipment', 
   const calls = [], screen = fixture('android', state).CustomerHomeScreen({ onOpenStatus: kind => calls.push(kind), onOpenDetail: id => calls.push(id) });
   assert.equal(screen.type, 'FlatList');
   const cards = nodes(screen.props.ListHeaderComponent, item => item.type === 'WorkerQueueCard'); assert.equal(cards.length, 3);
+  assert.equal(cards[0].props.backgroundColor, 'highlight'); assert.equal(cards[1].props.backgroundColor, 'bg');
   cards.forEach(card => card.props.onPress());
   const shipment = screen.props.renderItem({ item: record, index: 0 }); shipment.props.onPress();
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);

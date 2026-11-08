@@ -33,6 +33,8 @@ Stopped at: integrate Supplier notification detail, complete the text and surfac
 
 ## Verification
 
+- Customer home pending row: retained V2’s highlighted pending state using the existing platform list/card styling. Focused home, presentation and navigation tests passed (15 total); iOS typecheck and uncached lint passed. Android typecheck retained the nine baseline worker errors. Visual rendering has not been checked on a phone.
+
 - Notification feed lifecycle: kept its store and RefreshHub listeners through pushed detail screens, as V2 does, rather than stopping on blur. The listener stops on unmount or account reset. 21 focused lifecycle, feed and navigation tests passed; iOS typecheck and uncached lint passed. Real-phone tab retention remains open.
 
 - Full pinned-source search found `handleCustomerTabSwipe` and `navigateToCustomerTab` only inside their unreferenced helper file; neither Customer screen invokes them. No swipe gesture was invented.
