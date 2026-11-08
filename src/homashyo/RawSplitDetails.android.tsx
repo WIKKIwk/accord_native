@@ -7,7 +7,7 @@ import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { PreparationText, usePreparationText } from '../preparation/PreparationUI.android';
 import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
 import { rawSplitDisplay } from './rawSplitModel';
-import { rawSplitHistorySubtitle, rawSplitHistoryTitle, rawSplitIssueOutputSummary, rawSplitOutputSummary } from './rawSplitHistoryPresentation';
+import { rawSplitHistorySubtitle, rawSplitHistoryTitle, rawSplitIssueFullTime, rawSplitIssueOutputSummary, rawSplitOutputSummary } from './rawSplitHistoryPresentation';
 import type { RawSplitDetailsProps, RawSplitIssueDetailsProps } from './rawSplitDetailsTypes';
 
 export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPrinter, onSelectPrinter, onWifiChanged,
@@ -43,8 +43,7 @@ export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPr
 }
 
 export function RawSplitIssueDetails({ issue, hasResult }: RawSplitIssueDetailsProps) {
-  const t = usePreparationText(), time = issue.createdAt, two = (n: number) => String(n).padStart(2, '0');
-  const date = `${time.getFullYear()}-${two(time.getMonth() + 1)}-${two(time.getDate())} ${two(time.getHours())}:${two(time.getMinutes())}:${two(time.getSeconds())}.${String(time.getMilliseconds()).padStart(3, '0')}`;
+  const t = usePreparationText(), date = rawSplitIssueFullTime(issue);
   return <ScrollView contentContainerStyle={{ padding: 20, gap: 8, paddingBottom: 32 }}>
     <PreparationText title>{issue.source.itemName}</PreparationText><PreparationText>{issue.check.message}</PreparationText>
     <PreparationText>{`QR: ${issue.source.barcode}`}</PreparationText>

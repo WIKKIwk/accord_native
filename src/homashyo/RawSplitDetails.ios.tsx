@@ -3,7 +3,7 @@ import { accessibilityLabel, buttonStyle, disabled, labelStyle, padding, textSel
 import { useEffect, useRef, useState } from 'react';
 import { usePreparationText } from '../preparation/PreparationUI';
 import { rawSplitDisplay } from './rawSplitModel';
-import { rawSplitHistorySubtitle, rawSplitHistoryTitle, rawSplitIssueOutputSummary, rawSplitOutputSummary } from './rawSplitHistoryPresentation';
+import { rawSplitHistorySubtitle, rawSplitHistoryTitle, rawSplitIssueFullTime, rawSplitIssueOutputSummary, rawSplitOutputSummary } from './rawSplitHistoryPresentation';
 import type { RawSplitDetailsProps, RawSplitIssueDetailsProps } from './rawSplitDetailsTypes';
 
 export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPrinter, onSelectPrinter, onWifiChanged,
@@ -38,8 +38,7 @@ export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPr
 }
 
 export function RawSplitIssueDetails({ issue, hasResult }: RawSplitIssueDetailsProps) {
-  const t = usePreparationText(), time = issue.createdAt, two = (n: number) => String(n).padStart(2, '0');
-  const date = `${time.getFullYear()}-${two(time.getMonth() + 1)}-${two(time.getDate())} ${two(time.getHours())}:${two(time.getMinutes())}:${two(time.getSeconds())}.${String(time.getMilliseconds()).padStart(3, '0')}`;
+  const t = usePreparationText(), date = rawSplitIssueFullTime(issue);
   return <Host style={{ minHeight: 300 }}><ScrollView><VStack alignment="leading" spacing={8} modifiers={[padding({ all: 20 })]}>
     <Text>{issue.source.itemName}</Text><Text>{issue.check.message}</Text><Text>QR: {issue.source.barcode}</Text>
     <Text>Asl: {rawSplitDisplay(issue.source.kg)} kg · Atxot: {issue.enteredWaste || 'kiritilmagan'} kg</Text>

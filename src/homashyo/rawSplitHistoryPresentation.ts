@@ -1,4 +1,4 @@
-import { RawSplitIssue, RawSplitResult, RawSplitRoll, rawSplitDisplay } from './rawSplitModel';
+import { RawSplitIssue, RawSplitResult, RawSplitRoll, rawSplitDisplay, rawSplitLocalDateTime, rawSplitParseDateTime } from './rawSplitModel';
 const two = (value: number) => String(value).padStart(2, '0');
 /** @v2 _rawSplitTitle */
 export const rawSplitHistoryTitle = (result: RawSplitResult): string =>
@@ -11,12 +11,14 @@ export function rawSplitHistorySubtitle(result: RawSplitResult): string {
 /** @v2 _rawSplitTime */
 export function rawSplitHistoryTime(raw: string | null, now = new Date()): string {
   if (raw === null || !raw.trim()) return '';
-  const value = raw.trim(), dateOnly = /^(\d{4})-(\d\d)-(\d\d)$/.exec(value);
-  const time = dateOnly ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3])) : new Date(value);
-  if (!Number.isFinite(time.getTime())) return value;
+  const value = raw.trim(); let time: Date;
+  try { time = rawSplitParseDateTime(value).date; } catch { return value; }
   const clock = `${two(time.getHours())}:${two(time.getMinutes())}`;
   return time.getFullYear() === now.getFullYear() && time.getMonth() === now.getMonth() && time.getDate() === now.getDate()
     ? clock : `${two(time.getDate())}.${two(time.getMonth() + 1)} ${clock}`;
+}
+export function rawSplitIssueFullTime(issue: RawSplitIssue): string {
+  return rawSplitLocalDateTime(issue.createdAt, issue.createdAtMicrosecond);
 }
 export function rawSplitIssueTime(issue: RawSplitIssue): string {
   const time = issue.createdAt;

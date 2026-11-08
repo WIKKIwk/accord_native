@@ -20,4 +20,6 @@ test('history time uses local today, otherwise date and original invalid string'
   assert.equal(p.rawSplitHistoryTime(other.toISOString(), now), '07.09 09:03');
   assert.equal(p.rawSplitHistoryTime('garbage', now), 'garbage'); assert.equal(p.rawSplitHistoryTime(null, now), '');
   assert.equal(p.rawSplitHistoryTime('2026-09-08', now), '00:00');
+  assert.equal(p.rawSplitHistoryTime('20260908T120000', now), '12:00');
+  assert.equal(p.rawSplitHistoryTime('09/08/2026', now), '09/08/2026');
 });

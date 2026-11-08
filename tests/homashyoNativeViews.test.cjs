@@ -107,7 +107,7 @@ for (const platform of ['ios', 'android']) {
     assert.equal(find(tree, n => n.props?.label === 'Eni (mm)')[0].props.enabled, false);
   });
 }
-function details(platform, printerLabel = null, translate = value => value) {
+function details(platform, printerLabel = null, translate = value => value, issueValue = issue) {
   const calls = [], react = { useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => { fn(); } };
   const swift = new Proxy({}, { get: (_, name) => name });
   const compose = new Proxy({ useMaterialColors: () => ({ onSurface: 'text', onSurfaceVariant: 'muted', surface: 'surface' }) }, { get: (o, name) => o[name] ?? name });
@@ -121,7 +121,7 @@ function details(platform, printerLabel = null, translate = value => value) {
   const props = { result, printerLabel, showWifiSelector: printerLabel === 'wifi', wifiPrinter: 'zebra', onSelectPrinter: () => calls.push('picker'),
     onWifiChanged: value => calls.push(['wifi', value]), onReprint: async value => { calls.push(['one', value.barcode]); },
     onReprintAll: async () => { calls.push('all'); }, onError: error => { calls.push(['error', error]); } };
-  return { calls, props, resultTree: () => views.RawSplitDetails(props), issueTree: () => views.RawSplitIssueDetails({ issue, hasResult: true }) };
+  return { calls, props, resultTree: () => views.RawSplitDetails(props), issueTree: () => views.RawSplitIssueDetails({ issue: issueValue, hasResult: true }) };
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform} detail sheets show measured data and call reprint handlers`, async () => {
@@ -214,6 +214,13 @@ for (const platform of ['ios', 'android']) test(`${platform} candidate passes ac
   assert.equal(camera.props.active, false); assert.equal(camera.props.torch, false);
   // V2 uses raw when present, even an empty raw string; role gate decides whether it is usable.
   camera.props.onDetection({ raw: '', data: 'display-value' }); assert.deepEqual(h.calls, [['complete', '']]);
+});
+
+for (const platform of ['ios', 'android']) test(`${platform} issue sheet retains V2 microsecond precision`, () => {
+  const previous = process.env.TZ; process.env.TZ = 'UTC';
+  try { const precise = { ...issue, createdAt: new Date('2026-09-08T12:34:56.123Z'), createdAtMicrosecond: 456 };
+    assert.match(text(details(platform, null, value => value, precise).issueTree()), /2026-09-08 12:34:56\.123456/);
+  } finally { if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous; }
 });
 
 for (const platform of ['ios', 'android']) test(`${platform} role scanner rejects async owner guards without authorizing camera`, async () => {

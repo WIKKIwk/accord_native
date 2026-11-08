@@ -1,3 +1,30 @@
+/** Dart DateTime.parse's ISO subset and microsecond truncation, for V2 issue/history dates. */
+export function rawSplitParseDateTime(raw: string): { date: Date; microsecond: number } {
+  const match = /^([+-]?\d{4,6})-?(\d\d)-?(\d\d)(?:[ T](\d\d)(?::?(\d\d)(?::?(\d\d)(?:[.,](\d+))?)?)?( ?[zZ]| ?([-+])(\d\d)(?::?(\d\d))?)?)?$/.exec(raw);
+  if (!match) throw new Error('Invalid date');
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  const hour = Number(match[4] ?? 0), minute = Number(match[5] ?? 0), second = Number(match[6] ?? 0);
+  const fraction = (match[7] ?? '').padEnd(6, '0').slice(0, 6);
+  const milliseconds = Number(fraction.slice(0, 3)), microsecond = Number(fraction.slice(3, 6));
+  const date = new Date(0);
+  if (match[8] !== undefined) {
+    const offset = match[9] === undefined ? 0 : (match[9] === '-' ? -1 : 1) * (Number(match[10]) * 60 + Number(match[11] ?? 0));
+    date.setUTCFullYear(year, month - 1, day); date.setUTCHours(hour, minute - offset, second, milliseconds);
+  } else {
+    date.setFullYear(year, month - 1, day); date.setHours(hour, minute, second, milliseconds);
+  }
+  if (!Number.isFinite(date.getTime()) || (date.getTime() === 8640000000000000 && microsecond !== 0)) throw new Error('Invalid date');
+  return { date, microsecond };
+}
+
+/** Dart DateTime.toLocal().toString() always prints milliseconds and prints extra microseconds only when nonzero. */
+export function rawSplitLocalDateTime(date: Date, microsecond: number): string {
+  const two = (value: number) => String(value).padStart(2, '0'), three = (value: number) => String(value).padStart(3, '0');
+  const year = date.getFullYear(), y = `${year < 0 ? '-' : ''}${String(Math.abs(year)).padStart(4, '0')}`;
+  return `${y}-${two(date.getMonth() + 1)}-${two(date.getDate())} ${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}.` +
+    `${three(date.getMilliseconds())}${microsecond === 0 ? '' : three(microsecond)}`;
+}
+
 const SCALE = 1000000n;
 const MAXIMUM = 999999999999999999n;
 
@@ -125,13 +152,13 @@ export class RawSplitWasteCheck {
 /** @v2 RawSplitIssue */
 export class RawSplitIssue {
   readonly id: string; readonly requestId: string; readonly source: RawSplitRoll; readonly note: string;
-  readonly actorRef: string; readonly actorName: string; readonly createdAt: Date; readonly enteredWaste: string;
+  readonly actorRef: string; readonly actorName: string; readonly createdAt: Date; readonly createdAtMicrosecond: number; readonly enteredWaste: string;
   readonly outputs: Json[]; readonly check: RawSplitWasteCheck;
   constructor(value: unknown) {
     const row = object(value);
     this.id = required(row, 'id'); this.requestId = required(row, 'request_id'); this.source = new RawSplitRoll(row.source);
     this.note = required(row, 'note'); this.actorRef = required(row, 'actor_ref'); this.actorName = required(row, 'actor_name');
-    this.createdAt = new Date(required(row, 'created_at')); if (Number.isNaN(this.createdAt.getTime())) throw new Error('Invalid date');
+    const created = rawSplitParseDateTime(required(row, 'created_at')); this.createdAt = created.date; this.createdAtMicrosecond = created.microsecond;
     if (typeof row.entered_waste_kg !== 'string') throw new TypeError('Invalid entered waste');
     this.enteredWaste = row.entered_waste_kg; this.outputs = list(row.outputs).map(value => ({ ...object(value) }));
     let sum = 0n;
