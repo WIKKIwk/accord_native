@@ -693,3 +693,46 @@ test('observed direct scope loss permanently retires a witness after the scope r
   session.capabilities = ['one']; assert.equal(api.isSessionWitnessCurrent(old), false);
   const fresh = api.captureSessionWitness(session); assert.ok(fresh); assert.equal(api.isSessionWitnessCurrent(fresh), true);
 });
+
+
+test('transition observer reports logged-out, login start and successful completion', async () => {
+  const original = global.fetch; let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  global.fetch = async () => { entered(); await new Promise(resolve => { release = resolve; });
+    return { status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) }; };
+  try {
+    const api = auth({}); assert.equal(api.currentSession(), null); assert.equal(api.sessionWitnessTransitioning(), false);
+    const seen = []; const stop = api.subscribeSessionWitness(() => seen.push(api.sessionWitnessTransitioning()));
+    const pending = api.login('https://example.test', 'one', 'code'); assert.equal(api.sessionWitnessTransitioning(), true);
+    await started; assert.equal(api.sessionWitnessTransitioning(), true); release(); await pending;
+    assert.equal(api.sessionWitnessTransitioning(), false); assert.deepEqual(seen, [true, false]); stop();
+  } finally { global.fetch = original; }
+});
+
+test('transition observer ends on failed login while the prior witness stays retired', async () => {
+  const original = global.fetch; let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  global.fetch = async () => { entered(); await new Promise(resolve => { release = resolve; }); return { status: 401 }; };
+  try {
+    const api = auth({}), old = oldSession(); await api.saveSession(old); const witness = api.captureSessionWitness(old);
+    const pending = api.login('https://example.test', 'one', 'bad'); assert.equal(api.sessionWitnessTransitioning(), true);
+    await started; release(); await assert.rejects(pending, /Login failed/);
+    assert.equal(api.sessionWitnessTransitioning(), false); assert.equal(api.currentSession(), old);
+    assert.equal(api.isSessionWitnessCurrent(witness), false); assert.ok(api.captureSessionWitness(old));
+  } finally { global.fetch = original; }
+});
+
+test('transition observer stays true until all overlapping attempts finish', async () => {
+  const original = global.fetch, started = [], release = [];
+  global.fetch = async () => { const index = release.length; let unblock; const gate = new Promise(resolve => { unblock = resolve; });
+    release[index] = unblock; started[index]?.(); await gate; return { status: 401 }; };
+  const entered = index => new Promise(resolve => { started[index] = resolve; });
+  try {
+    const api = auth({}), firstStarted = entered(0); const first = api.login('https://example.test', 'one', 'bad');
+    first.catch(() => {}); await firstStarted; const secondStarted = entered(1); const second = api.login('https://example.test', 'two', 'bad');
+    second.catch(() => {}); await secondStarted; assert.equal(api.sessionWitnessTransitioning(), true);
+    release[0](); await assert.rejects(first); assert.equal(api.sessionWitnessTransitioning(), true);
+    release[1](); await assert.rejects(second); assert.equal(api.sessionWitnessTransitioning(), false);
+    assert.equal(api.currentSession(), null);
+  } finally { global.fetch = original; }
+});
