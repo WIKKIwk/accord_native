@@ -19,6 +19,7 @@ function fixture() {
   const calls = [];
   const apis = {
     '../auth': { activeSessionToken: value => value.token },
+    '../apparatusApi': { adminApparatus: async (s, options) => { calls.push(['catalog', s, options]); options.beforeSend(); duringRead(); options.beforeSend(); return [{ id: 'apparatus:default:asset-005', name: 'Pechat' }]; } },
     '../productionOrderPageApi': { adminProductionOrderPage: async (s, q, guard) => { calls.push(['page', s, q]); guard(); duringRead(); guard(); return { epoch: 'e' }; } },
     '../productionOrderDetailApi': { adminProductionOrderDetail: async (s, q, guard) => { calls.push(['detail', s, q]); guard(); duringRead(); guard(); return snapshot; } },
     '../pendingOrderApi': { pendingOrderDetail: async (s, id, guard) => { calls.push(['pending', s, id]); guard(); duringRead(); guard(); return { id, template: { product: 'P' } }; } },
@@ -26,7 +27,7 @@ function fixture() {
     '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, '../shared/mobileApiException': exception, './adminProductionRequest': adminGuard,
   };
   const api = load('admin/adminWorkMapReader', apis);
-  return { session, calls, api, witness: () => current, invalidate: () => { current = false; }, onRead: fn => { duringRead = fn; }, setSnapshot: value => { snapshot = value; } };
+  return { session, calls, api, dependencies: apis, witness: () => current, invalidate: () => { current = false; }, onRead: fn => { duringRead = fn; }, setSnapshot: value => { snapshot = value; } };
 }
 test('page reader uses captured witness, scope, route permission and guarded existing API', async () => {
   const f = fixture(), read = f.api.adminWorkMapReader(f.session, f.witness);
@@ -89,5 +90,32 @@ test('detail customer uses own snapshot entry, including empty text, then map fa
       maps: [{ map: { id, customer_name: 'Fallback' } }] });
     const result = await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id, epoch: 'e', revision: 4 });
     assert.equal(result.customer, expected);
+  }
+});
+
+test('Sequence catalog uses the existing guarded limit-200 reader and original witness', async () => {
+  const f = fixture(), read = f.api.adminWorkMapCatalogReader(f.session, f.witness);
+  assert.equal((await read())[0].name, 'Pechat'); assert.equal(f.calls[0][2].limit, 200);
+  assert.equal(f.calls[0][2].retryTransient, undefined); assert.equal(typeof f.calls[0][2].beforeSend, 'function');
+  f.invalidate(); await assert.rejects(read(), /session changed/); assert.equal(f.calls.length, 1);
+});
+test('Sequence catalog cannot return after its witness changes during a read', async () => {
+  const f = fixture(), read = f.api.adminWorkMapCatalogReader(f.session, f.witness); f.onRead(f.invalidate);
+  await assert.rejects(read(), /session changed/); assert.equal(f.calls.length, 1);
+});
+test('Sequence detail keeps the apparatus from its original visible list ticket', async () => {
+  const f = fixture(), apparatus = 'apparatus:default:asset-005';
+  await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4, apparatus });
+  assert.deepEqual(f.calls[0][2], { apparatus, order_id: 'o' });
+});
+
+test('real catalog callback wrapper accepts the checked Admin guard and rejects a body-time witness transition', async () => {
+  for (const invalidate of [false, true]) {
+    const f = fixture();
+    const shared = load('apparatusApi', { './authorizedFetch': { authorizedFetch: async (_session, _path, _init, beforeSend) => {
+      beforeSend(); return { status: 200, text: async () => { if (invalidate) f.invalidate(); return '[]'; } }; } },
+      './workerControlsApi': { isCanonicalApparatusId: id => id.startsWith('apparatus:'), WorkerControlException: class extends Error {} } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../apparatusApi': shared }).adminWorkMapCatalogReader(f.session, f.witness);
+    if (invalidate) await assert.rejects(reader(), /session changed/); else assert.deepEqual(await reader(), []);
   }
 });

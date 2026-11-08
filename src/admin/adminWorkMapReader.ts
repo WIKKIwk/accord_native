@@ -1,4 +1,5 @@
 import { activeSessionToken, type Session } from '../auth';
+import { adminApparatus } from '../apparatusApi';
 import { adminProductionOrderDetail } from '../productionOrderDetailApi';
 import { pendingOrderDetail } from '../pendingOrderApi';
 import { adminProductionOrderPage, type ProductionOrderPageRequest } from '../productionOrderPageApi';
@@ -26,6 +27,12 @@ export function adminWorkMapReader(session: Session, isWitnessCurrent: () => boo
   };
 }
 
+/** V2 bootstraps the ordinary Admin catalog with limit 200 and no transient retry. */
+export function adminWorkMapCatalogReader(session: Session, isWitnessCurrent: () => boolean) {
+  const guard = adminWorkMapGuard(session, isWitnessCurrent);
+  return async () => { guard(); const rows = await adminApparatus(session, { limit: 200, beforeSend: guard }); guard(); return rows; };
+}
+
 /** A list summary never authorizes an editor: hydrate and validate the full response first. */
 export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () => boolean) {
   const guard = adminWorkMapGuard(session, isWitnessCurrent);
@@ -39,7 +46,7 @@ export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () 
     // still belongs to the original list ticket and session witness.
     for (let attempt = 0; attempt < 2; attempt++) {
       guard();
-      const snapshot = await adminProductionOrderDetail(session, { apparatus: '', order_id: ticket.id }, guard);
+      const snapshot = await adminProductionOrderDetail(session, { apparatus: ticket.apparatus ?? '', order_id: ticket.id }, guard);
       guard();
       if (snapshot.epoch === ticket.epoch && snapshot.revision != null && ticket.revision != null && snapshot.revision >= ticket.revision &&
           snapshot.scope && snapshot.maps.length === 1 && snapshot.maps[0].map.id === ticket.id) {

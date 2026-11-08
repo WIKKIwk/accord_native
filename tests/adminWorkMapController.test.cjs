@@ -83,3 +83,24 @@ test('card formatting retains V2 pending label and a Dart-like decimal for ordin
     { headline: 'P • Product', supporting: 'Client · 10.0 kg · Chala buyurtma', tone: 'pending' });
   assert.equal(presentation({ kind: 'order', code: '1', title: '', customer: 'Client', kg: null, displayState: '' }, 'en').headline, '1 • Order');
 });
+
+test('Sequence summaries preserve server order, absolute positions, display states and count', async () => {
+  const page = summary({ projection: 'sequence_list_v1', pending_ids: [], pending_rows: {}, length: 1, total: 27,
+    sequence_rows: { 'zakaz-1': { id: 'zakaz-1', code: '1', title: 'P', customer_name: 'C', display_state: 'frozen' } },
+    sequence_positions: { 'zakaz-1': 13 }, order_rows: {}, next_cursor: 'next' });
+  const actual = rows([page], 'sequence'); assert.equal(actual[0].position, 13); assert.equal(actual[0].displayState, 'frozen');
+  assert.throws(() => rows([page], 'orders')); assert.throws(() => rows([summary()], 'sequence'));
+  assert.throws(() => rows([{ ...page, sequence_positions: {} }], 'sequence'));
+  const calls = [], c = new Controller({ isCurrent: () => true, request: { view: 'sequence', apparatus: 'apparatus:a' }, read: async request => { calls.push(request); return page; } });
+  c.start(); await tick(); assert.equal(c.getSnapshot().total, 27); assert.deepEqual(calls[0], { view: 'sequence', apparatus: 'apparatus:a', search: '' });
+  assert.equal(c.detailTicket(c.getSnapshot().rows[0]).apparatus, 'apparatus:a'); c.dispose();
+});
+test('configuring another module/apparatus invalidates rows, old reads and old detail tickets', async () => {
+  const pending = [], calls = [], c = new Controller({ isCurrent: () => true, request: null, read: request => { calls.push(request); const d = deferred(); pending.push(d); return d.promise; } });
+  c.start(); await tick(); assert.equal(calls.length, 0);
+  c.configure({ view: 'orders' }); pending[0].resolve(summary()); await tick(); const ticket = c.detailTicket(c.getSnapshot().rows[0]);
+  c.configure({ view: 'sequence', apparatus: 'apparatus:a' }); assert.equal(c.detailIsCurrent(ticket), false); assert.equal(c.getSnapshot().rows.length, 0);
+  c.configure({ view: 'orders' }); pending[1].resolve(summary()); await tick(); assert.equal(c.getSnapshot().rows.length, 0);
+  pending[2].resolve(summary()); await tick(); assert.equal(c.getSnapshot().rows.length, 2);
+  c.configure(null); await c.reload(); assert.equal(calls.length, 3); assert.equal(c.getSnapshot().rows.length, 0); c.dispose();
+});
