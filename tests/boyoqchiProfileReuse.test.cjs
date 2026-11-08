@@ -45,7 +45,10 @@ test('Android Boyoqchi reuses shared Profile without an unrelated daily-work act
 });
 
 test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
+  const settings = { register: (value, opener) => { assert.equal(value, session); assert.equal(typeof opener, 'function'); return () => {}; } };
   const Profile = load('held-routes/ios-boyoqchi/(tabs)/profile/index.ios', {
+    react: { useCallback: fn => fn },
+    '../../../../boyoqchi/BoyoqchiProfileSettings.ios': { useBoyoqchiProfileSettings: () => settings },
     'expo-router': { router: { navigate() {} } }, 'react-native': { PlatformColor: value => value },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '../../../../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },
@@ -57,4 +60,5 @@ test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action'
   assert.equal(profiles[0].props.onLogout, onLogout);
   assert.equal(Object.hasOwn(profiles[0].props, 'onDailyWork'), false);
   assert.equal(profiles[0].props.showDirectLogout, false);
+  assert.equal(typeof profiles[0].props.registerSettingsOpener(() => {}), 'function');
 });

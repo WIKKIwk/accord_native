@@ -23,10 +23,13 @@ test('iOS Profile stack uses the localized title and the existing actionable dra
   });
   const Layout = load('held-routes/ios-boyoqchi/(tabs)/profile/_layout.ios.tsx', {
     'expo-router': { Stack: 'Stack' }, '../../../../shared/navigation/RoleDrawerButton': { RoleDrawerButton },
+    '../../../../boyoqchi/BoyoqchiProfileSettings.ios': { BoyoqchiProfileSettingsProvider: 'SettingsProvider', BoyoqchiProfileSettingsButton: 'SettingsButton' },
     '../../../../boyoqchi/useBoyoqchiText': { useBoyoqchiGetter: () => key => key === 'profileTitle' ? 'Profil' : key,
       useBoyoqchiText: () => value => value },
   }).default;
-  const stack = Layout();
+  const provider = Layout(), stack = provider.props.children;
+  assert.equal(provider.type, 'SettingsProvider');
+  assert.equal(stack.props.screenOptions.headerRight().type, 'SettingsButton');
   assert.equal(stack.props.screenOptions.title, 'Profil');
   const button = stack.props.screenOptions.headerLeft();
   assert.equal(button.type, RoleDrawerButton);
