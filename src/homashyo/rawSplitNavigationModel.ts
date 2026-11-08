@@ -15,7 +15,7 @@ export function rawSplitDrawerItems(t: Translate): RoleDrawerItem[] {
   ];
 }
 
-/** Only the non-Chat prefix of the V2 dock. Do not render a role shell until the Chat hold is resolved. */
+/** Only the non-Chat prefix of the V2 dock; the Chat entry remains on security hold. */
 export function rawSplitNonChatDockItems(t: Translate): RawSplitDockItem[] {
   return [
     { id: 'home', label: t('Rezka'), android: 'content_cut', ios: { default: 'scissors', selected: 'scissors' } },
@@ -27,7 +27,7 @@ export const rawSplitDrawerActive = (page: RawSplitPage): RawSplitPage => page;
 /** History uses the home dock destination in V2. */
 export const rawSplitDockActive = (page: RawSplitPage): 'home' | 'profile' => page === 'profile' ? 'profile' : 'home';
 
-/** Header contents for the unconnected role home/history screens; callbacks and routes belong to the future owner. */
+/** Source-derived header state for the role home/history screens. */
 export function rawSplitHeader(page: 'home' | 'history', busy: boolean, t: Translate) {
   return {
     title: t(page === 'home' ? 'Rezka' : 'Rezka tarixi'), navigation: page === 'home' ? 'drawer' : 'back',
