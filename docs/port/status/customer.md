@@ -10,7 +10,7 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 | Customer summary integer precision | `app_models_models_part_04.dart` `CustomerHomeSummary.fromJson` | V2 accepts signed 64-bit integer counts. JavaScript cannot represent all of them exactly; the current decoder rejects counts outside its safe-integer range instead of silently rounding. |
 | Shared dispatch status trim | `app_models_declarations_part_08.dart` `parseDispatchStatus`; `src/shared/notificationApi.ts` | Customer calls normalize native Dart U+0085 whitespace before using the unchanged shared parser. Other consumers of the shared parser still differ for that edge and need an integrator-owned fix. |
 | Large Customer status lists | `json_payload_decoder.dart` `decodeJsonListPayload` | V2 decodes lists of at least 128 KiB in a background isolate. The React Native path currently decodes on the JavaScript thread; assess responsiveness on a real phone with a representative large payload. |
-| Customer session wiring | `customer_store.dart`, `app_runtime_reset.dart` | The session-bound store factory and notifications controller are implemented but are not yet mounted in role routes. Connect one instance per session and invoke the reset path on account change. |
+| Customer session wiring | `customer_store.dart`, `app_runtime_reset.dart` | A role context now binds one store and notifications controller to the current session and registers their reset path. Role routes and real-device account-switch verification remain open. |
 | In-flight refresh at account reset | `customer_store.dart` `clear`, `refresh` | V2 clears its singleton without explicitly cancelling an already pending refresh. Confirm whether an old response can update shared runtime state after an account switch before declaring that lifecycle fully audited. |
 | Timestamp ties | `customer_store.dart` `_mergeHistoryItems`, `customer_delivery_runtime_store.dart` `_sorted` | V2 Dart sorting does not guarantee tie order; JavaScript sorting is stable. Exact visible ordering of records with identical timestamps remains unverified. |
 | Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Port Customer home, notifications, status and delivery detail on iOS and Android; connect Supplier's shared NotificationDetailScreen, existing profile and chat, and complete the text and surface audits. |
@@ -29,6 +29,8 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Customer context and session binding: `tests/customerRuntime.test.cjs`, the store lifecycle and notification controller tests passed. iOS typecheck passed. The new provider is not yet mounted in routes.
 
 - Customer notifications/controller checkpoint: 15 focused tests passed for cache, hidden/unread ordering, clear/seen behavior, refresh coalescing, reset write ordering and store lifecycle. The role routes do not yet mount the controller.
 

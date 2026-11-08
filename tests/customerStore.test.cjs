@@ -120,4 +120,6 @@ test('version is stable between changes and dispose detaches the shared runtime 
   assert.equal(f.store.version, completed); f.store.dispose();
   f.runtime.recordIncoming(record('later', 'pending'));
   assert.equal(f.store.version, completed); assert.equal(calls, 5);
+  f.store.activate(); f.runtime.recordIncoming(record('after-remount', 'pending'));
+  assert.equal(f.store.version, completed + 1);
 });

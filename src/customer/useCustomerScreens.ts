@@ -1,0 +1,82 @@
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { customerDeliveryDetail, customerRespondDelivery, type CustomerDeliveryDetail } from './customerApi';
+import type { CustomerDeliveryResponse } from './customerLogic';
+import { useCustomerContext, useCustomerStore, useCustomerText } from './CustomerContext';
+import { refreshHub } from '../shared/notificationStoresRuntime';
+import type { CustomerStatusKind } from './customerStore';
+
+function useBootstrapAndRefreshTopic() {
+  const store = useCustomerStore();
+  useEffect(() => {
+    void store.bootstrap();
+    let version = 0, mounted = true;
+    const unsubscribe = refreshHub.subscribe(() => {
+      if (!mounted || refreshHub.topic !== 'customer' || version === refreshHub.version) return;
+      version = refreshHub.version;
+      requestAnimationFrame(() => { if (mounted) void store.refresh(); });
+    });
+    return () => { mounted = false; unsubscribe(); };
+  }, [store]);
+  return store;
+}
+
+export function useCustomerHome() {
+  const store = useBootstrapAndRefreshTopic();
+  return { loading: store.loading, loaded: store.loaded, error: store.error, summary: store.summary,
+    records: store.historyItems, refresh: () => store.refresh() };
+}
+
+export function useCustomerStatus(kind: CustomerStatusKind) {
+  const store = useCustomerStore();
+  useEffect(() => { void store.bootstrap(); }, [store]);
+  return { loading: store.loading, loaded: store.loaded, error: store.error, records: store.itemsForKind(kind), refresh: () => store.refresh() };
+}
+
+export function useCustomerNotifications() {
+  const { notifications, store } = useCustomerContext();
+  const subscribe = useCallback((listener: () => void) => notifications.subscribe(listener), [notifications]);
+  const version = useCallback(() => notifications.version, [notifications]);
+  useSyncExternalStore(subscribe, version, version);
+  const storeSubscribe = useCallback((listener: () => void) => store.subscribe(listener), [store]);
+  const storeVersion = useCallback(() => store.version, [store]);
+  useSyncExternalStore(storeSubscribe, storeVersion, storeVersion);
+  useFocusEffect(useCallback(() => { notifications.start(); return () => notifications.stop(); }, [notifications]));
+  return { loading: store.loading, loaded: store.loaded, error: store.error, records: notifications.items,
+    highlightedIds: notifications.highlightedIds, refresh: () => notifications.reload(),
+    markSeen: (id: string) => notifications.markDetailSeen(id), clearAll: () => notifications.clearAll() };
+}
+
+export function useCustomerDelivery(deliveryNoteID: string, onChanged: () => void) {
+  const { session, store } = useCustomerContext();
+  const { method } = useCustomerText();
+  const [detail, setDetail] = useState<CustomerDeliveryDetail | null>(null);
+  const [loading, setLoading] = useState(true), [error, setError] = useState<unknown>(null);
+  const [submitting, setSubmitting] = useState(false), [message, setMessage] = useState('');
+  const generation = useRef(0), mounted = useRef(false), submittingRef = useRef(false);
+  const reload = useCallback(async () => {
+    const request = ++generation.current;
+    setLoading(true); setError(null);
+    try {
+      const result = await customerDeliveryDetail(session, deliveryNoteID);
+      if (mounted.current && request === generation.current) setDetail(result);
+    } catch (failure) { if (mounted.current && request === generation.current) setError(failure); }
+    finally { if (mounted.current && request === generation.current) setLoading(false); }
+  }, [deliveryNoteID, session]);
+  useEffect(() => { mounted.current = true; void reload(); return () => { mounted.current = false; generation.current++; }; }, [reload]);
+  const send = async (reply: CustomerDeliveryResponse) => {
+    if (!detail || submittingRef.current) return;
+    submittingRef.current = true; setSubmitting(true);
+    try {
+      const updated = await customerRespondDelivery(session, reply);
+      if (!mounted.current) return;
+      setDetail(updated);
+      store.applyDetailTransition(detail.record, updated.record);
+      requestAnimationFrame(() => refreshHub.emit('customer'));
+      onChanged();
+    } catch (failure) {
+      if (mounted.current) setMessage(method('responseSendFailed', { error: String(failure) }));
+    } finally { submittingRef.current = false; if (mounted.current) setSubmitting(false); }
+  };
+  return { detail, loading, error, submitting, message, clearMessage: () => setMessage(''), reload, send };
+}
