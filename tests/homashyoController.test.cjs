@@ -163,3 +163,9 @@ test('iOS Bluetooth without native selected-UUID recheck cannot commit stock', a
   const h = setup(); h.setPick({ transport: 'bluetooth', printer: { address: 'A' } }); h.options.printerSupported = runtime.rawSplitPrinterSupported;
   await fill(h.controller); await h.controller.save(); assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []); assert.ok(h.notices.includes('unsupported-printer'));
 });
+
+test('a rejected mismatched stock response cannot start any label printing', async () => {
+  const h = setup(); h.ops.rawSplitSave = async () => { throw new Error('Boshqa bo‘lish natijasi olindi. Natijani qayta tekshiring.'); };
+  await fill(h.controller); await h.controller.save(); assert.deepEqual(h.prints, []);
+  assert.match(h.controller.getSnapshot().error, /Boshqa bo‘lish natijasi/);
+});

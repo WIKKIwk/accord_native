@@ -23,7 +23,7 @@ function setup() {
   const api = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: store, __esModule: true },
     '../auth': { currentSession: () => current }, '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard'), '../authorizedFetch': { authorizedFetch: async (s, url, init, guard) => {
       beforeSend = guard; guard(); calls.push({ s, url, init }); return respond(); } }, '../shared/mobileApiException': load('shared/mobileApiException'),
-    './rawSplitModel': load('homashyo/rawSplitModel') });
+    './rawSplitModel': load('homashyo/rawSplitModel'), './rawSplitResultMatch': load('homashyo/rawSplitResultMatch', { './rawSplitModel': load('homashyo/rawSplitModel') }) });
   const ticket = api.createRawSplitSessionTicket(session, candidate => current === candidate ? epoch : null, () => witnessCurrent);
   return { api, store, saved, calls, session, ticket, replacement, switchSession: () => { current = replacement; epoch++; },
     bumpEpoch: () => { epoch++; }, setWitness: value => { witnessCurrent = value; }, restoreSameObject: () => { current = session; },
@@ -156,4 +156,32 @@ test('the same captured witness guards a later 401 retry before another send', a
   const pending = h.api.rawSplitSave(h.ticket, payload); await reached.promise; h.setWitness(false);
   assert.throws(() => h.retryGuard(), /Akkaunt o‘zgargan/); gate.resolve(); await assert.rejects(pending, /Akkaunt o‘zgargan/);
   assert.equal(h.calls.length, 1); assert.deepEqual(JSON.parse([...h.saved.values()][0]), payload);
+});
+
+test('internally consistent but unrelated split responses keep the exact pending command and never print', async () => {
+  const original = JSON.parse(stockRecord.responseBody.text), payload = JSON.parse(stockRecord.requestBody.text);
+  const variants = [
+    row => { row.source.barcode = 'another-roll'; },
+    row => { row.source.revision = '2.000000'; },
+    row => { row.source.kg = '101'; row.source_kg = '101'; row.waste_kg = '2'; },
+    row => { row.source.width_mm = '1001'; },
+    row => { row.source.micron = '21'; row.outputs.forEach(output => { output.micron = '21'; }); },
+    row => { row.outputs[0].width_mm = '450'; row.outputs[1].width_mm = '550'; },
+    row => { row.outputs[0].gross_kg = '41'; row.outputs[0].bobina_kg = '2'; },
+    row => { row.outputs[0].length_m = '1001'; },
+    row => { row.outputs.reverse(); },
+  ];
+  for (const alter of variants) {
+    const h = setup(), body = structuredClone(original); alter(body); h.setResponse(async () => fakeResponse(body));
+    await assert.rejects(h.api.rawSplitSave(h.ticket, payload), /Boshqa bo‘lish natijasi/);
+    assert.equal(h.calls.length, 1); assert.deepEqual(JSON.parse([...h.saved.values()][0]), payload);
+  }
+});
+test('equivalent decimal precision and ASCII barcode case still match the source command', async () => {
+  const h = setup(), body = JSON.parse(stockRecord.responseBody.text), payload = JSON.parse(stockRecord.requestBody.text);
+  body.source.barcode = 'PARENT'; for (const field of ['kg', 'width_mm', 'micron']) body.source[field] += '.000000';
+  body.source_kg += '.000000'; body.output_kg += '.000000'; body.waste_kg += '.000000';
+  for (const output of body.outputs) for (const field of ['kg', 'width_mm', 'micron', 'gross_kg', 'bobina_kg', 'length_m']) output[field] += '.000000';
+  h.setResponse(async () => fakeResponse(body)); const result = await h.api.rawSplitSave(h.ticket, payload);
+  assert.equal(result.source.barcode, 'PARENT'); assert.equal(h.saved.size, 0); assert.equal(h.calls.length, 1);
 });

@@ -5,6 +5,7 @@ import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { RawSplitIssue, RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitModel';
+import { assertRawSplitResultMatchesPending } from './rawSplitResultMatch';
 
 type Json = Record<string, unknown>;
 function object(value: unknown): Json {
@@ -142,6 +143,7 @@ export async function rawSplitSave(ticket: RawSplitSessionTicket, payload: Json)
     guard(scope, ticket); await clearDefinitiveRejection(response, scope, serialized, scope, ticket); guard(scope, ticket);
     const row = await guardedResponseObject(response, scope, ticket); const result = new RawSplitResult(row);
     if (result.issueId !== (pending.issue_id ?? null)) throw new Error('Muammo qaydi bilan saqlash tasdiqlanmadi');
+    assertRawSplitResultMatchesPending(result, pending);
     if (!await removePending(scope, serialized, scope, ticket)) throw new Error('Operatsiya natijasini qayta tekshiring');
     guard(scope, ticket); return result;
   } finally { saving = false; }

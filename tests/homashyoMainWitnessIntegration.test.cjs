@@ -13,7 +13,7 @@ function setup() {
     removeItemAsync: async key => state.delete(key) };
   const api = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: storage, __esModule: true }, '../auth': auth,
     '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard'), '../authorizedFetch': { authorizedFetch: async (_s, _p, _i, guard) => { guard(); calls++; throw new Error('unexpected request'); } },
-    '../shared/mobileApiException': load('shared/mobileApiException'), './rawSplitModel': load('homashyo/rawSplitModel') });
+    '../shared/mobileApiException': load('shared/mobileApiException'), './rawSplitModel': load('homashyo/rawSplitModel'), './rawSplitResultMatch': load('homashyo/rawSplitResultMatch', { './rawSplitModel': load('homashyo/rawSplitModel') }) });
   const session = { baseUrl: 'https://example.invalid', token: 'not-a-credential', profile: { role: 'homashyo_rezkachi', ref: 'same' },
     capabilities: ['raw_material.split'], assigned_apparatus: [], assigned_apparatus_labels: [], imageCacheScope: 'A' };
   return { auth, api, storage, state, session, calls: () => calls };

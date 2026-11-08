@@ -32,20 +32,23 @@ test('role home mapping leaves Worker and Preparation unchanged and rejects unau
 });
 function gateHarness(value, platform = 'ios', epoch = true, deferred) {
   const h = hooks(); let reset;
-  let logoutCalls = 0, clearCalls = 0, captures = 0, witnessValid = true, captureAllowed = true;
+  let logoutCalls = 0, clearCalls = 0, redirects = 0, captures = 0, witnessValid = true, captureAllowed = true, current = value, logoutImpl;
+  const alerts = [];
   const auth = { loadSession: () => deferred ?? Promise.resolve(value), registerSessionResetHook: fn => { reset = fn; return () => {}; },
-    logout: async () => { logoutCalls++; }, clearSession: async () => { clearCalls++; }, captureSessionWitness: () => { captures++; return captureAllowed ? {} : null; },
+    currentSession: () => current, logout: async () => { logoutCalls++; if (logoutImpl) await logoutImpl(); else current = null; }, clearSession: async () => { clearCalls++; }, captureSessionWitness: () => { captures++; return captureAllowed ? {} : null; },
     isSessionWitnessCurrent: () => witnessValid, subscribeSessionWitness: () => () => {}, sessionWitnessVersion: () => 0,
     ...(epoch ? { activeSessionEpoch: () => 0 } : {}) };
-  const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'expo-router': { Redirect: 'Redirect', router: { replace() {} } },
-    'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: platform }, Text: 'Text', View: 'View' },
+  const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'expo-router': { Redirect: 'Redirect', router: { replace() { redirects++; } } },
+    'react-native': { ActivityIndicator: 'ActivityIndicator', Alert: { alert: (...args) => alerts.push(args) }, Platform: { OS: platform }, Text: 'Text', View: 'View' },
     '../auth': auth, '../appLock': { clearAppLock: async () => {} }, '../components/WorkerSecurity': { WorkerSecurityProvider: 'Security' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../shared/appRoutes': routes, './rawSplitApi': { createRawSplitSessionTicket: (session, _readEpoch, checkWitness) => {
-      if (!checkWitness()) throw new Error('invalid'); return { session, check: () => { if (!checkWitness()) throw new Error('invalid'); } }; } }, './RawSplitContext': { RawSplitProvider: 'Provider' } };
+      if (!checkWitness()) throw new Error('invalid'); return { session, check: () => { if (!checkWitness()) throw new Error('invalid'); } }; },
+      rawSplitSessionIsCurrent: ticket => { try { ticket.check(); return true; } catch { return false; } } }, './RawSplitContext': { RawSplitProvider: 'Provider' } };
   const Gate = load('homashyo/RawSplitSessionGate.tsx', mocks, true).RawSplitSessionGate;
   return { render: () => h.render(() => Gate({ platform: 'ios', children: 'route' })), reset: () => reset(), unmount: h.unmount,
-    logoutCalls: () => logoutCalls, clearCalls: () => clearCalls, captures: () => captures,
+    logoutCalls: () => logoutCalls, clearCalls: () => clearCalls, redirects: () => redirects, alerts, captures: () => captures,
+    setCurrent: next => { current = next; }, setLogout: fn => { logoutImpl = fn; },
     setWitness: value => { witnessValid = value; }, setCaptureAllowed: value => { captureAllowed = value; },
     activate: element => { h.fresh(); return () => h.render(() => element.type(element.props)); } };
 }
@@ -62,7 +65,7 @@ test('missing epoch reader is fail-closed and an old load cannot restore access 
   const blocked = h.render(); assert.equal(blocked.type, 'View'); assert.equal(blocked.props.children.props.children, 'Sessiya xavfsizligi mavjud emas.'); h.unmount();
   let resolve; const deferred = new Promise(done => { resolve = done; }); const old = gateHarness(null, 'ios', true, deferred);
   old.render(); await old.reset(); resolve(session('homashyo_rezkachi', ['raw_material.split'])); await flush();
-  assert.equal(old.render().type, 'Redirect'); old.unmount();
+  assert.equal(old.render().type, 'View'); old.unmount();
 });
 test('both platform layouts guard index, history and profile; no Homashyo Chat route exists', () => {
   for (const platform of ['ios', 'android']) {
@@ -221,4 +224,16 @@ test('provider subscribes then rechecks a witness invalidated before subscriptio
     subscribeWitness: () => { subscribeCalls++; current = false; return () => {}; } };
   const render = () => h.render(() => RawSplitProvider(props)); render(); assert.equal(subscribeCalls, 1); assert.equal(disposals, 1);
   assert.equal(render().type, 'View'); h.unmount();
+});
+
+test('stale logout confirmation neither logs out nor clears the PIN', async () => {
+  const h = gateHarness(session('homashyo_rezkachi', ['raw_material.split'])); h.render(); await flush();
+  const renderAuthorized = h.activate(h.render()), tree = renderAuthorized(); h.setWitness(false); tree.props.onLogout(); await flush();
+  assert.equal(h.logoutCalls(), 0); assert.equal(h.clearCalls(), 0); assert.equal(h.redirects(), 0); h.unmount();
+});
+test('logout completion does not redirect when a different account became current', async () => {
+  const h = gateHarness(session('homashyo_rezkachi', ['raw_material.split'])); h.render(); await flush();
+  const renderAuthorized = h.activate(h.render()), tree = renderAuthorized(); let finish; h.setLogout(() => new Promise(done => { finish = done; }));
+  tree.props.onLogout(); h.setCurrent(session('customer', ['customer.access'])); finish(); await flush();
+  assert.equal(h.logoutCalls(), 1); assert.equal(h.clearCalls(), 0); assert.equal(h.redirects(), 0); h.unmount();
 });
