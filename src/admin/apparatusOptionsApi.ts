@@ -54,3 +54,6 @@ export async function adminApparatusMasterOptions(session: Session): Promise<Adm
   if (response.status !== 200) throw new Error('Admin apparatus options failed');
   return adminApparatusMasterOptionsFromJson(await response.json());
 }
+
+// Reuse the existing normalized vocabulary projection in Admin create logic.
+export { operationForTechnology as apparatusOperationForNormalizedTechnology };
