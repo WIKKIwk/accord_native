@@ -98,6 +98,8 @@ Sources: `werka_stock_entry_lookup_screen_models_part_01.dart`, `werka_stock_ent
 
 Sources: `werka_archive_daily_calendar_screen.dart:34-152`, `werka_archive_monthly_calendar_screen.dart:32-130`, `werka_archive_yearly_calendar_screen.dart:32-130`. Daily loads the displayed month with monthly period and records active day numbers; monthly loads the displayed year with yearly period and records active months; yearly loads a 12-year page and records active years. Selecting a day/month/year opens Archive List with the corresponding inclusive local date range. Year pages move by 12 years.
 
+`werkaArchive` and `downloadWerkaArchivePdf` capture the originating Werka session epoch, read scope and permission and check them before the initial send/401 retry and after response and body decoding. The archive projection is checked again even if synchronous parsing throws; the PDF headers are checked before consuming bytes. Fake-account tests exercise these checks without a backend. This is a safety difference from V2 and does not cancel a sent read, guard every redirect hop in shared `authorizedFetch`, solve same-epoch ABA or provide auth-change notifications. The guarded owner/route hold remains in force.
+
 `werkaArchiveCalendar.ts` ports those pure date projections and ranges, reusing the shared timestamp parser and preserving Dart's UTC calendar fields for explicitly zoned strings. Daily calendar UI, native localized rendering, correct active-page load guards, route wiring, parser edges, timezones/DST and device behavior remain open. The source-equivalent date-label comparison below covers only the declared Flutter/Intl versions.
 
 ### Standalone monthly and yearly calendars

@@ -2,6 +2,7 @@ import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { parseCreatedLabelTimestamp } from '../shared/dispatchRuntimeStores';
 import { dispatchRecordFromJson } from '../shared/notificationApi';
+import { werkaReadScope } from './werkaReadScope';
 
 type Obj = Record<string, unknown>;
 export type WerkaArchiveKind = 'received' | 'sent' | 'returned';
@@ -71,17 +72,34 @@ function archivePath(path: string, input: WerkaArchiveQuery): string {
 
 /** @v2 werkaArchive */
 export async function werkaArchive(session: Session, input: WerkaArchiveQuery) {
-  const response = await authorizedFetch(session, archivePath('/v1/mobile/werka/archive', input));
-  if (response.status !== 200) throw new Error('Werka archive failed');
-  return werkaArchiveResponseFromJson(await response.json());
+  const check = werkaReadScope(session);
+  let response: Response;
+  try { response = await authorizedFetch(session, archivePath('/v1/mobile/werka/archive', input), undefined, check); }
+  finally { check(); }
+  let status: number;
+  try { status = response.status; } finally { check(); }
+  if (status !== 200) throw new Error('Werka archive failed');
+  let raw: unknown;
+  try { raw = await response.json(); } finally { check(); }
+  try { return werkaArchiveResponseFromJson(raw); } finally { check(); }
 }
 
 /** @v2 downloadWerkaArchivePdf */
 export async function downloadWerkaArchivePdf(session: Session, input: WerkaArchiveQuery) {
-  const response = await authorizedFetch(session, archivePath('/v1/mobile/werka/archive/pdf', input));
-  if (response.status !== 200) throw new Error('Werka archive pdf failed');
-  const disposition = response.headers.get('content-disposition') ?? '';
-  const filename = (disposition.match(/filename="?([^";]+)"?/)?.[1] ?? 'werka-archive.pdf').trim();
-  return { filename, contentType: response.headers.get('content-type') ?? 'application/pdf',
-    bytes: new Uint8Array(await response.arrayBuffer()) };
+  const check = werkaReadScope(session);
+  let response: Response;
+  try { response = await authorizedFetch(session, archivePath('/v1/mobile/werka/archive/pdf', input), undefined, check); }
+  finally { check(); }
+  let status: number;
+  try { status = response.status; } finally { check(); }
+  if (status !== 200) throw new Error('Werka archive pdf failed');
+  let filename: string, contentType: string;
+  try {
+    const disposition = response.headers.get('content-disposition') ?? '';
+    filename = (disposition.match(/filename="?([^";]+)"?/)?.[1] ?? 'werka-archive.pdf').trim();
+    contentType = response.headers.get('content-type') ?? 'application/pdf';
+  } finally { check(); }
+  let bytes: Uint8Array;
+  try { bytes = new Uint8Array(await response.arrayBuffer()); } finally { check(); }
+  return { filename, contentType, bytes };
 }

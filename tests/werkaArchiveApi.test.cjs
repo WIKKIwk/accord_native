@@ -10,6 +10,7 @@ function load(file, fetch, cache = new Map()) {
   if (cache.has(resolved)) return cache.get(resolved);
   const module = new Module(resolved); module.filename = resolved; module.paths = require.main.paths; cache.set(resolved, module.exports);
   module.require = name => name.endsWith('/authorizedFetch') ? { authorizedFetch: fetch }
+    : name === './werkaReadScope' ? { werkaReadScope: () => () => {} }
     : name.startsWith('.') ? load(path.resolve(path.dirname(resolved), name), fetch, cache) : require(name);
   module._compile(ts.transpileModule(fs.readFileSync(resolved, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, resolved);
   cache.set(resolved, module.exports); return module.exports;
