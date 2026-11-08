@@ -19,7 +19,7 @@ V2: `AdminWorkerSettingsScreen`, `admin_worker_settings_screen.dart:62–96`, `_
 
 ## Master order options in reused queue
 
-V2 `admin_production_map_orders_helpers.dart:3–45`: only a Rezka master assigned to an apparatus in a map's linear work stages can edit print side; IDs beginning `training-` or `template-` cannot. Additional options are unavailable when lifecycle status is `production_completed`, `closed` or `cancelled`. Save sends new and previous print side / duplicate label / bobina values; conflict errors preserve V2 translations. Native existing `WorkerScreen`/`OrderScreen` and their route implementations are protected. Their full latest-baseline UI and integration are open, not duplicated here.
+V2 `admin_production_map_orders_helpers.dart:3–45`: only a Rezka master assigned to an apparatus in a map's linear work stages can edit print side; IDs beginning `training-` or `template-` cannot. Additional options are unavailable when lifecycle status is `production_completed`, `closed` or `cancelled`. Save sends new and previous print side / duplicate label / bobina values; conflict errors preserve V2 translations. The unconnected `rezkaOrderEligibility.ts` implements linear-stage graph reachability and the distinct watch/completed visibility gates; worker-list presentation orders remain a separate hydration path. Native existing `WorkerScreen`/`OrderScreen` and their route implementations are protected. Their full latest-baseline UI and integration are open, not duplicated here.
 
 ## Additional Settings
 
