@@ -36,6 +36,8 @@ Stopped at: resolve the shared Chat transport security hold, integrate Supplier 
 
 ## Verification
 
+- Final post-navigation and security-hold gates: 1,236 Node tests passed; the same six preparation Android tests failed on the existing Expo UI modifier ESM import. iOS typecheck and uncached lint passed; Android typecheck retained the nine existing worker errors. Offline iOS and Android exports passed. Role ledger reports four Customer routes and screens covered on both platforms, with shared notification detail still open. The text gate remains red: 23 shared-detail literals per platform plus unrelated preparation and developer/accessibility scan results. Both V2 copies remained clean at f119.
+
 - Security hold: removed the Customer `useChatUnreadCount` opt-in and omitted its Chat unread dot until a no-redirect/no-cookie transport is verified. The notification unread dot remains real, and no placeholder Chat count was added. Existing worker/preparation Chat paths were not changed.
 
 - iOS late notification navigation: deferred mark-seen reproduced two failures before the fix. A focus-generation guard now prevents an old tap from opening detail after tab blur, refocus or unmount, while a current tap still opens it. 26 focused feed/navigation tests, iOS typecheck and uncached lint passed; Android remains unchanged with its nine baseline errors.
