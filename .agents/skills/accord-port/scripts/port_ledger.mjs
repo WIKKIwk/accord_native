@@ -676,15 +676,34 @@ function readTextExceptions(id) {
 }
 
 /** V4 files for one platform: the folders holding this scope's @v2 tags, plus shared UI code and the platform's routes. */
-function scopeFiles(scopeNames, platform) {
+function scopeFiles(scopeNames, platform, v4 = scanV4()) {
   const other = platform === 'ios' ? 'android' : 'ios';
   const visible = file => !file.includes(`.${other}.`) && !file.includes(`src/app/${other}-`);
-  const tagged = new Set(scanV4().tags.filter(tag => scopeNames.has(tag.symbol.split('.').pop())).map(tag => tag.file));
+  const tagged = new Set(v4.tags.filter(tag => scopeNames.has(tag.symbol.split('.').pop())).map(tag => tag.file));
   const folders = new Set([...tagged].map(file => path.posix.dirname(file)).filter(folder => !/^src(\/(shared|components|printing|app)(\/|$)|$)/.test(folder)));
   const all = walk(path.join(V4, 'src'), name => /\.(ts|tsx)$/.test(name)).map(file => rel(V4, file)).filter(visible);
   const own = all.filter(file => tagged.has(file) || [...folders].some(folder => file.startsWith(`${folder}/`)));
   const shown = all.filter(file => own.includes(file) || file.startsWith('src/shared/') || file.startsWith('src/components/') || file.startsWith(`src/app/${platform}-`));
   return { own, shown };
+}
+
+// scopeFiles currently selects by short name, not by Dart library or owner. Do
+// not remove a candidate on that basis: a legitimate shared implementation
+// could otherwise disappear. Instead, block the gate when multiple V2
+// declarations can explain a selected tag, and report their locations.
+function ambiguousScopeTags(graph, v4, scopeNames) {
+  const result = [];
+  for (const tag of v4.tags) {
+    if (!tag.file.startsWith('src/')) continue;
+    const name = tag.symbol.split('.').pop();
+    if (!scopeNames.has(name)) continue;
+    const candidates = new Map();
+    for (const node of [...(graph.byName.get(name) ?? []), ...(graph.extensionMembers.get(name) ?? [])]) {
+      candidates.set(`${node.file}:${node.line}`, node);
+    }
+    if (candidates.size > 1) result.push({ tag, candidates: [...candidates.values()] });
+  }
+  return result;
 }
 
 function textReport(scope, which = 'both') {
@@ -719,13 +738,34 @@ function textReport(scope, which = 'both') {
     }
   }
   const v2All = comparable(walk(path.join(V2, 'lib'), name => name.endsWith('.dart')).map(read).join('\n'));
+  // Full reached nodes retain shared code covered by a completed role. The
+  // graph excludes localization and can miss runtime/borrowed edges, so a
+  // global-only match below is an unresolved blocker, not a parity verdict.
+  const scopedV2 = comparable(entry.reach.nodes.map(node => node.source).join('\n'));
+  const v4 = scanV4();
+  const ambiguous = ambiguousScopeTags(graph, v4, scopeNames);
   const exceptions = readTextExceptions(id);
   const accepted = (platform, text) => exceptions.has(`${platform}\t${text}`) || exceptions.has(`both\t${text}`);
   const v2Fragments = [...new Set([...v2Texts.values()].flatMap(row => row.fragments))];
   const result = {};
   for (const platform of platforms) {
-    const { own, shown } = scopeFiles(scopeNames, platform);
+    const { own, shown } = scopeFiles(scopeNames, platform, v4);
     const corpus = comparable(shown.map(file => read(path.join(V4, file))).join('\n'));
+    // scopeFiles promotes whole folders before filtering the other platform.
+    // An opposite-platform tag is relevant only if its folder promotion can
+    // actually pull at least one file into this platform's scope.
+    const platformAmbiguous = ambiguous.filter(({ tag }) => {
+      if (own.includes(tag.file)) return true;
+      const folder = path.posix.dirname(tag.file);
+      return !/^src(\/(shared|components|printing|app)(\/|$)|$)/.test(folder)
+        && own.some(file => file.startsWith(`${folder}/`));
+    });
+    const uncertainDirs = new Set(platformAmbiguous.map(({ tag }) => path.posix.dirname(tag.file))
+      .filter(folder => !/^src(\/(shared|components|printing|app)(\/|$)|$)/.test(folder)));
+    const uncertainFiles = new Set(shown.filter(file => platformAmbiguous.some(({ tag }) => tag.file === file)
+      || [...uncertainDirs].some(folder => file.startsWith(`${folder}/`))));
+    const otherCorpus = comparable(shown.filter(file => !uncertainFiles.has(file)).map(file => read(path.join(V4, file))).join('\n'));
+    const uncertainCorpus = comparable([...uncertainFiles].map(file => read(path.join(V4, file))).join('\n'));
     const v4Strings = new Map();
     for (const file of own) {
       const source = read(path.join(V4, file));
@@ -741,8 +781,17 @@ function textReport(scope, which = 'both') {
       .map(([text, row]) => ({ text, ref: [...row.refs][0], near: nearest(row.fragments.find(part => !corpus.includes(part)), v4Fragments) }));
     const added = [...v4Strings].filter(([text, row]) => !accepted(platform, text) && row.fragments.some(part => !v2All.includes(part)))
       .map(([text, row]) => ({ text, ref: [...row.refs][0], near: nearest(row.fragments.find(part => !v2All.includes(part)), v2Fragments) }));
-    result[platform] = { missing, added, files: own.length };
+    const ambiguousMatches = [...v2Texts].filter(([text, row]) => !accepted(platform, text)
+      && row.fragments.every(part => corpus.includes(part))
+      && row.fragments.some(part => !otherCorpus.includes(part) && uncertainCorpus.includes(part)))
+      .map(([text, row]) => ({ text, ref: [...row.refs][0] }));
+    const globalOnly = [...v4Strings].filter(([text, row]) => !accepted(platform, text)
+      && row.fragments.every(part => v2All.includes(part))
+      && row.fragments.some(part => !scopedV2.includes(part)))
+      .map(([text, row]) => ({ text, ref: [...row.refs][0] }));
+    result[platform] = { missing, added, ambiguous: platformAmbiguous, ambiguousMatches, globalOnly, files: own.length };
   }
+  const selectedAmbiguous = ambiguous.filter(item => platforms.some(platform => result[platform].ambiguous.includes(item)));
 
   const cell = text => text.replace(/\n/g, ' ').replace(/\|/g, '\\|');
   const section = (title, rows, closest) => `### ${title} (${rows.length})
@@ -761,6 +810,24 @@ ${platforms.map(platform => `## ${platform}, ${result[platform].files} V4 files
 
 ${section('V2 text not found in V4', result[platform].missing, 'Closest in V4, maybe reworded')}
 ${section('V4 text not found in V2', result[platform].added, 'Closest in V2, maybe reworded')}`).join('\n')}
+## Scope diagnostics (blocking)
+
+These are unresolved scope risks, not verdicts. Confirm each tag's V2 declaration and each text's actual reachable
+screen, including borrowed screens and translations. The current graph does not resolve every class member, dynamic
+route, or localization key. These diagnostics do not establish that the remaining text comparison is complete.
+
+### Ambiguous selected @v2 tags (${selectedAmbiguous.length})
+
+${selectedAmbiguous.length ? selectedAmbiguous.map(({ tag, candidates }) => `- ${tag.file}:${tag.line} @v2 ${tag.symbol}: ${candidates.map(node => `${node.file}:${node.line}`).join(', ')}`).join('\n') : 'None detected.'}
+
+${platforms.map(platform => `### ${platform}: V2 text matched only through ambiguous native scope (${result[platform].ambiguousMatches.length})
+
+${result[platform].ambiguousMatches.map(row => `- ${cell(row.text)} <- ${row.ref}`).join('\n') || 'None detected.'}
+
+### ${platform}: V4 text matched globally but not in reached V2 declarations (${result[platform].globalOnly.length})
+
+${result[platform].globalOnly.map(row => `- ${cell(row.text)} <- ${row.ref}`).join('\n') || 'None detected.'}`).join('\n\n')}
+
 ## Sheets, dialogs, snackbars and back guards in V2 (${surfaces.size})
 
 Check each one against V4 on every platform you port: when it opens, its words, its buttons and their order, what each button does, whether it can be dismissed.
@@ -768,12 +835,14 @@ Check each one against V4 on every platform you port: when it opens, its words, 
 ${[...grouped].sort(([a], [b]) => a.localeCompare(b)).map(([kind, list]) => `### ${kind} (${list.length})\n\n${list.sort().map(item => `- [ ] ${item}`).join('\n')}`).join('\n\n')}
 `;
   const saved = writeOut(`text-${id}.md`, report);
-  let open = 0;
+  let open = selectedAmbiguous.length;
   for (const platform of platforms) {
-    const { missing, added } = result[platform];
-    open += missing.length + added.length;
+    const { missing, added, ambiguousMatches, globalOnly } = result[platform];
+    open += missing.length + added.length + ambiguousMatches.length + globalOnly.length;
     console.log(`${platform}: ${missing.length} V2 texts not found in V4, ${added.length} V4 texts not found in V2.`);
+    console.log(`${platform}: ${ambiguousMatches.length} texts matched only through ambiguous native scope, ${globalOnly.length} native texts matched only globally in V2.`);
   }
+  console.log(`${selectedAmbiguous.length} ambiguous @v2 tag(s) block the text gate.`);
   console.log(`${surfaces.size} sheets, dialogs, snackbars and back guards listed. Saved: ${saved}`);
   if (open) process.exitCode = 1;
 }
