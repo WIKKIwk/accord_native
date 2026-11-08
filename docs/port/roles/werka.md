@@ -1,6 +1,6 @@
 # Werka UI contract (partial)
 
-Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is a working reading note, not a complete UI contract. No Werka view or route has been implemented yet. Read every remaining V2 surface and complete its states, copy, validation, back behavior, sheets and navigation before marking the contract or either platform done.
+Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is a working reading note, not a complete UI contract. Some content-only view bodies exist, but no Werka screen or route has been completed or wired. Read every remaining V2 surface and complete its states, copy, validation, back behavior, sheets and navigation before marking the contract or either platform done.
 
 ## Entry, shared shell and safety holds
 
@@ -66,6 +66,12 @@ Sources: `werka_stock_entry_lookup_screen_models_part_01.dart`, `werka_stock_ent
 - Each entry asynchronously loads customers for its trimmed item code and item name, with a generation counter so an older result cannot replace a newer entry's selection. It prefers the first customer whose name is not `saidamin`, otherwise the first. Picker is a dismissible, draggable, safe-area bottom sheet using the existing async search picker, with `selectCustomer`, `searchCustomer`, customer name and phone. It is disabled while submitting or for blank item code.
 - The `Customerga jo‘natish` button is enabled for a nonblank item code, positive quantity and a selected customer when not submitting. The submit step additionally validates a nonblank customer reference. It sends the trimmed item code, exact quantity, entry barcode when nonblank otherwise scanned barcode, source stock-entry name and line index. `src/werka/werkaStockIssueLogic.ts` contains the pure payload/record projections. A successful write records item activity, constructs a pending customer-issue dispatch, notifies Werka runtime and navigates to success with `QR scan ga qaytish`; account-safe runtime and route wiring remain open.
 - On failure the source displays insufficient-stock localization, `Bu QR oldin customerga jo‘natilgan.` for duplicate source, `Bu mahsulot uchun customer topilmadi.` for missing customer, or `customerIssueFailed(error)`. The per-entry submitting indicator and duplicate-submit guard must remain active until completion; no fake success or automatic repeat.
+
+## Standalone success (partial content)
+
+Source: `werka_success_screen.dart:8-148`. `customer_issue_pending` shows `sentSuccess`, uses sent quantity in `sentToCustomerLine`, and defaults to `createFlowBack` / Create Hub. `werka_unannounced_pending` shows `createdSuccess`, uses sent quantity in `createdLine`, and has the same default return. Every other event shows `receivedSuccess`, uses accepted quantity in `receivedLine`, and defaults to `pendingListBack` / Home. Explicit return label and route override those defaults, including empty strings. The card contains the record ID and a verified icon; the button uses push-and-remove-until the first route.
+
+`WerkaSuccessContent` provides only the record and return-action body on both platforms, reusing existing native list/card/button components. Its callback does not navigate or imply a write succeeded. A caller must verify the actual successful write, active session and safe route, then implement the source back-stack behavior. The iOS list body does not yet reproduce all source spacing, and the complete shell, title, dock, device accessibility and surface audit remain open.
 
 ## Remaining contract and views
 
