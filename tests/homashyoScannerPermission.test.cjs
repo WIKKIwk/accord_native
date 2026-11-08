@@ -6,7 +6,10 @@ function run(active, permission, error = null, isCurrent = () => true) {
   m.filename = filename; m.paths = module.paths;
   const react = { useState: value => [value, next => calls.push(['state', next])], useRef: value => ({ current: value }),
     useEffect: effect => effects.push(effect), useCallback: fn => fn, useSyncExternalStore: () => 'uz' };
-  const mocks = { react, '../shared/camera/useCameraSurfacePermission': { useCameraSurfacePermission: () => ({ permission, error, checking: false, canUseCamera: () => permission?.granted === true,
+  const guardFile = path.resolve(__dirname, '../src/shared/camera/synchronousGuard.ts'), guardModule = new Module(guardFile, module);
+  guardModule.filename = guardFile; guardModule.paths = module.paths;
+  guardModule._compile(ts.transpileModule(fs.readFileSync(guardFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, guardFile);
+  const mocks = { react, '../shared/camera/synchronousGuard': guardModule.exports, '../shared/camera/useCameraSurfacePermission': { useCameraSurfacePermission: () => ({ permission, error, checking: false, canUseCamera: () => permission?.granted === true,
     requestPermission: async () => { calls.push('request'); return permission; } }) },
     '../shared/localization': { productionText: key => key }, '../shared/localization/runtime': { localeController: {} },
     './rawSplitScanLogic': { RawSplitScanGate: class { accept(value) { return value || null; } } } };
@@ -28,4 +31,11 @@ test('role requests only a known, denied, askable permission and handles initial
 test('role rejects camera or manual completion immediately after owner/session becomes stale', () => {
   let current = true; const h = run(true, { granted: true, canAskAgain: true }, null, () => current);
   current = false; h.state.complete('old'); assert.deepEqual(h.calls, []);
+});
+
+test('async or rejected role owner guard cannot start a prompt or complete a scan', async () => {
+  for (const guard of [() => Promise.resolve(true), () => Promise.reject(new Error('stale'))]) {
+    const h = run(true, { granted: false, canAskAgain: true }, null, guard); h.state.complete('bad');
+    await new Promise(resolve => setImmediate(resolve)); assert.deepEqual(h.calls, []);
+  }
 });

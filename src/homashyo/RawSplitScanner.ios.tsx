@@ -1,6 +1,7 @@
 import { Host, Text as SwiftText, TextField, useNativeState } from '@expo/ui/swift-ui';
 import { frame, onSubmit, submitLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
 import { CameraSurface } from '../shared/camera/CameraSurface';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { useEffect } from 'react';
 import { ActivityIndicator, Modal, PlatformColor, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +20,7 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
       <View style={styles.header}><WorkerIconButton icon="back" label="Orqaga" onPress={onClose} />
         <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><SwiftText>{scan.title}</SwiftText></Host></View>
       <View style={styles.preview}>
-        {scan.permission?.granted && !scan.failed ? <CameraSurface active={active} permission={scan.permission} checking={scan.checking} isCurrent={() => isCurrent() && scan.canUseCamera()} style={StyleSheet.absoluteFill} facing="back" torch={false}
+        {scan.permission?.granted && !scan.failed ? <CameraSurface active={active} permission={scan.permission} checking={scan.checking} isCurrent={() => isSynchronouslyTrue(isCurrent) && isSynchronouslyTrue(scan.canUseCamera)} style={StyleSheet.absoluteFill} facing="back" torch={false}
           barcodeTypes={['qr', 'datamatrix']} sessionKey="homashyo" onMountError={scan.cameraFailed}
           onDetection={event => scan.complete(event.raw ?? event.data)} /> : scan.permission === null && !scan.failed ?
           <ActivityIndicator /> : <Text style={{ color: PlatformColor('label') }}>{scan.unavailable}</Text>}

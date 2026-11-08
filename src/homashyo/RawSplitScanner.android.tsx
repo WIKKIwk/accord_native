@@ -1,6 +1,7 @@
 import { Host, OutlinedTextField, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { CameraSurface } from '../shared/camera/CameraSurface';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { useEffect } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,7 +19,7 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
     <View style={[styles.root, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
       <RoleHeader title={scan.title} navigation={{ icon: 'back', label: 'Orqaga', onPress: onClose }} />
       <View style={styles.preview}>
-        {scan.permission?.granted && !scan.failed ? <CameraSurface active={active} permission={scan.permission} checking={scan.checking} isCurrent={() => isCurrent() && scan.canUseCamera()} style={StyleSheet.absoluteFill} facing="back" torch={false}
+        {scan.permission?.granted && !scan.failed ? <CameraSurface active={active} permission={scan.permission} checking={scan.checking} isCurrent={() => isSynchronouslyTrue(isCurrent) && isSynchronouslyTrue(scan.canUseCamera)} style={StyleSheet.absoluteFill} facing="back" torch={false}
           barcodeTypes={['qr', 'datamatrix']} sessionKey="homashyo" onMountError={scan.cameraFailed}
           onDetection={event => scan.complete(event.raw ?? event.data)} /> : scan.permission === null && !scan.failed ?
           <ActivityIndicator /> : <Text style={{ color: colors.onSurface }}>{scan.unavailable}</Text>}

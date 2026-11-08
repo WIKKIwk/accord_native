@@ -153,7 +153,10 @@ for (const platform of ['ios', 'android']) test(`${platform} reprint errors retu
   else find(tree, n => n.type === 'IconButton')[0].props.onClick();
   await new Promise(resolve => setImmediate(resolve)); assert.deepEqual(h.calls, [['error', error]]);
 });
-function scanner(platform, granted, active = true) {
+function scanner(platform, granted, active = true, isCurrent = () => active) {
+  const guardFile = path.resolve(__dirname, '../src/shared/camera/synchronousGuard.ts'), guardModule = new Module(guardFile, module);
+  guardModule.filename = guardFile; guardModule.paths = module.paths;
+  guardModule._compile(ts.transpileModule(fs.readFileSync(guardFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, guardFile);
   const calls = [], scan = { permission: { granted }, checking: false, canUseCamera: () => granted, failed: false, manual: 'manual-code', setManual: value => calls.push(['manual', value]),
     complete: value => calls.push(['complete', value]), cameraFailed: () => calls.push('camera-failed'), title: 'Homashyo QR',
     manualLabel: 'Barcode', unavailable: 'Kamera ochilmadi. Quyidagi maydonga QR yoki barcode kiriting.', guide: 'QR kodni shu to‘r ichiga olib keling' };
@@ -162,7 +165,7 @@ function scanner(platform, granted, active = true) {
   const compose = new Proxy({ useNativeState: state, useMaterialColors: () => ({ surface: 'surface', onSurface: 'text' }) }, { get: (o, name) => o[name] ?? name });
   const mocks = { 'react/jsx-runtime': jsx, react: { useEffect: fn => fn() }, '@expo/ui/swift-ui': swift,
     '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }), '@expo/ui/jetpack-compose': compose,
-    '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }), '../shared/camera/CameraSurface': { CameraSurface: 'CameraSurface' },
+    '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }), '../shared/camera/CameraSurface': { CameraSurface: 'CameraSurface' }, '../shared/camera/synchronousGuard': guardModule.exports,
     'react-native': { ActivityIndicator: 'ActivityIndicator', Modal: 'Modal', Text: 'NativeText', View: 'View', PlatformColor: x => x,
       StyleSheet: { create: value => value, absoluteFill: {} } }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
     '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
@@ -170,7 +173,7 @@ function scanner(platform, granted, active = true) {
   // Compose slots are components, represented by names in this static render harness.
   mocks['@expo/ui/jetpack-compose'].OutlinedTextField = Object.assign('OutlinedTextField', { Label: 'OutlinedTextField.Label' });
   const component = load(`RawSplitScanner.${platform}.tsx`, mocks, true).RawSplitScanner;
-  const root = component({ visible: true, active, isCurrent: () => active, onClose: () => calls.push('close'), onComplete: () => {} });
+  const root = component({ visible: true, active, isCurrent, onClose: () => calls.push('close'), onComplete: () => {} });
   return { calls, scan, tree: root.type(root.props) };
 }
 for (const platform of ['ios', 'android']) {
@@ -211,4 +214,11 @@ for (const platform of ['ios', 'android']) test(`${platform} candidate passes ac
   assert.equal(camera.props.active, false); assert.equal(camera.props.torch, false);
   // V2 uses raw when present, even an empty raw string; role gate decides whether it is usable.
   camera.props.onDetection({ raw: '', data: 'display-value' }); assert.deepEqual(h.calls, [['complete', '']]);
+});
+
+for (const platform of ['ios', 'android']) test(`${platform} role scanner rejects async owner guards without authorizing camera`, async () => {
+  for (const guard of [() => Promise.resolve(true), () => Promise.reject(new Error('stale'))]) {
+    const h = scanner(platform, true, true, guard), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
+    assert.equal(camera.props.isCurrent(), false); await new Promise(resolve => setImmediate(resolve));
+  }
 });
