@@ -62,10 +62,16 @@ function harness(platform) {
   }, 'tsx');
   const { BoyoqchiDock } = load('boyoqchi/BoyoqchiDock.android', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
-    'expo-router': { router },
+    react: { useRef: value => ({ current: value }), useEffect: effect => { effect(); } },
+    'expo-router': { useNavigation: parent => {
+      assert.equal(parent, '/android-boyoqchi');
+      return { dispatch: event => { events.push(['dock-dispatch', event.payload.name]); action(event); } };
+    } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar() {} },
     './useBoyoqchiText': { useBoyoqchiText: () => value => value, useBoyoqchiGetter: () => value => value },
+    './boyoqchiDockScheduler': { queueBoyoqchiDockNavigation: request => request.dispatch({ type: 'NAVIGATE',
+      payload: { name: request.destination === 'home' ? 'index' : request.destination, pop: true } }) },
   }, 'tsx');
   function select(id) {
     const props = BoyoqchiDrawer({ children: null }).props;
@@ -120,22 +126,26 @@ test('drawer outside Home/Astatka preserves its previous navigation action', () 
   }
 });
 
-test('SDK Android navigate pushes an absent route like V2, but duplicates an existing route instead of popping to it', () => {
-  for (const kind of ['profile drawer', 'dock']) {
-    const nav = harness('android');
-    nav.action(StackActions.push('profile'));
-    const choose = kind === 'profile drawer' ? id => nav.select(id) : id => nav.selectDock(id);
-    choose('astatka');
-    assert.deepEqual(nav.state.routes.map(route => route.name), ['entry', 'index', 'profile', 'astatka']);
+test('SDK Android Profile drawer still pushes an existing route instead of popping to it', () => {
+  const nav = harness('android');
+  nav.action(StackActions.push('profile'));
+  nav.select('astatka');
+  assert.deepEqual(nav.state.routes.map(route => route.name), ['entry', 'index', 'profile', 'astatka']);
 
-    const existing = harness('android');
-    existing.action(StackActions.push('profile'));
-    if (kind === 'profile drawer') existing.select('home'); else existing.selectDock('home');
-    assert.deepEqual(existing.state.routes.map(route => route.name), ['entry', 'index', 'profile', 'index']);
-    // V2 AppRootNavigation pops to the existing index, rather than retaining the duplicate.
-    const v2Equivalent = harness('android');
-    v2Equivalent.action(StackActions.push('profile'));
-    v2Equivalent.action({ type: 'NAVIGATE', payload: { name: 'index', pop: true } });
-    assert.deepEqual(v2Equivalent.state.routes.map(route => route.name), ['entry', 'index']);
-  }
+  const existing = harness('android');
+  existing.action(StackActions.push('profile'));
+  existing.select('home');
+  assert.deepEqual(existing.state.routes.map(route => route.name), ['entry', 'index', 'profile', 'index']);
+  // V2 AppRootNavigation pops to the existing index, rather than retaining the duplicate.
+  const v2Equivalent = harness('android');
+  v2Equivalent.action(StackActions.push('profile'));
+  v2Equivalent.action({ type: 'NAVIGATE', payload: { name: 'index', pop: true } });
+  assert.deepEqual(v2Equivalent.state.routes.map(route => route.name), ['entry', 'index']);
+});
+
+test('Android dock should pop an existing destination without duplicating it', () => {
+  const nav = harness('android');
+  nav.action(StackActions.push('profile'));
+  nav.selectDock('home');
+  assert.deepEqual(nav.state.routes.map(route => route.name), ['entry', 'index']);
 });
