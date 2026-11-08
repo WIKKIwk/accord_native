@@ -98,7 +98,7 @@ function scopeGuard(session: Session, scope: string) {
   };
 }
 
-async function storageRequest(session: Session, path: string, query: Record<string, string> = {}, body?: JsonObject): Promise<JsonObject> {
+export async function storageRequest(session: Session, path: string, query: Record<string, string> = {}, body?: JsonObject): Promise<JsonObject> {
   const scope = sessionReadScope(session), guard = scopeGuard(session, scope), suffix = dartQuery(query);
   const target = `/v1/mobile/qolip/${path}${suffix ? `?${suffix}` : ''}`;
   guard();

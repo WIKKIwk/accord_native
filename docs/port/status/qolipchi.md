@@ -10,7 +10,8 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 | Qolip search on devices | `qolip_search_engine.dart`, `search_normalizer.dart` | Confirm React Native timer slicing and cancellation on both phones. Rare Unicode lowercase mapping differences between the Dart VM and the phone's JavaScript engine have not been verified. |
 | Native scanner | `qolip_cell_qr_scan_screen.dart`, `reliable_mobile_scanner.dart` | The QR lookup/scan APIs exist, but the iOS and Android camera views, lifecycle, permission handling and real-phone scans are not yet ported or verified. |
 | Rework request ID | `qolip_rework_request_id.dart` | Supply the secure 128-bit random ID with V2's microsecond timestamp before connecting rework actions. The API currently accepts the caller's request ID and preserves it across retries. |
-| Pallet printing and retry intent | `qolip_storage_print.dart`, `QolipStorageIntent`, `qolipPrintCellQr` | Port the pallet/cell print requests and platform printer integration, and implement retry-intent keys using the missing secure request ID source. Real-printer verification remains open. |
+| Pallet and cell printing | `qolip_storage_print.dart`, `qolipPrintCellQr` | The server print request and print-job models are ported, but the platform views and real printer selection, cancellation and dispatch flows remain to be connected. Real-printer verification remains open. |
+| Retry intent | `QolipStorageIntent` | Implement retry-intent keys using the missing secure request ID source. |
 | Rework JSON edge values | `QolipReworkEntry.fromJson`, `QolipMileage.fromJson` | JavaScript JSON parsing can lose integer precision above 2^53 or the `.0` spelling of a floating numeric value when V2 converts optional fields with `toString`; no recorded response exercises those edge values. |
 | Shared product parser edge cases | `QolipProduct.fromJson`, `src/qolipCatalogApi.ts` | Existing native `customer_names` handling drops null entries, while V2 converts them to the string `null`; Dart-style trimming and other non-string JSON conversions also need a shared comparison. Leave the protected existing consumers intact until the integrator coordinates a fix. |
 | Set reuse | `_sharedMoldForProduct` | Reused-set `is_in_rework` reflects the deferred V2 test-mode rework store; that in-memory branch remains open. |
@@ -44,6 +45,8 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 - Set search checkpoint: ported `searchQolipSets` and `QolipSetLookup`, reusing the existing Qolip search engine and shared normalizer. Ranking, exact-code priority, cancellation, scoped request reuse, refresh and stale-account rejection have focused tests. The two matching f119 `qolip_set_lookup_test.dart` logic cases passed in the oracle; the lookup case's two mock requests were recorded in the f119 namespace and replayed. Five focused tests and iOS typecheck passed; Expo lint passed before the replay was added. Android typecheck and the full suite were not rerun in this checkpoint.
 - Storage checkpoint: ported pallet and mold models, paged pallet/mold readers, set selection, pallet actions/deletion, archive/actions, local date formatting, typed pallet QR and the old-server archive fallback. The f119 oracle passed 10 selected storage logic/wire cases and both archive compatibility cases. Isolated recordings captured 11 requests from eight storage cases and 11 requests from two compatibility cases; both f119 fixtures were replayed. Qolip URL queries now also preserve Dart's exact empty-value and RFC 3986 encoding behavior.
 - After the storage checkpoint, `node --test tests/qolip*.test.cjs` passed all 111 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
+- Print API checkpoint: ported `qolipPrintCellQr` and `qolipPrintPaddonQr`, reusing the shared print transport and `UsbRpsPrintRequest` model rather than another printer implementation. The independent f119 oracle passed all 13 mock-only cases in `qolip_paddon_print_api_test.dart`; the isolated recorder captured 13 requests, with verified f119 metadata, and all 13 replayed. Cell print tests are source-derived because no corresponding direct V2 wire test was found. No actual printer or backend was contacted.
+- After the print API checkpoint, `node --test tests/qolip*.test.cjs` passed all 137 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 
 ## Deviations candidates
 
@@ -51,7 +54,7 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 
 ## Test mode pending
 
-The role-wide test mode is deferred by the port plan. Rework, block, location, checkout, product-action, QR, set and storage functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the corresponding in-memory operations remain to be ported in the shared test-mode pass.
+The role-wide test mode is deferred by the port plan. Rework, block, location, checkout, product-action, QR, set, storage and print functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the corresponding in-memory operations remain to be ported in the shared test-mode pass.
 
 ## Needs from the integrator
 
