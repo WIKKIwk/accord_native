@@ -1,7 +1,7 @@
 import type { ApparatusCapabilityProfile } from '../apparatusApi';
 import { MobileApiException } from '../shared/mobileApiException';
 import { isCanonicalApparatusId } from '../workerControlsApi';
-import { canonicalOperationForFamily, canonicalOperationForTechnology, canonicalTechnologyForKind } from './apparatusCanonicalDraft';
+import { apparatusColorStations, requiredApparatusInteger, canonicalOperationForFamily, canonicalOperationForTechnology, canonicalTechnologyForKind } from './apparatusCanonicalDraft';
 import { dartPartialLower, dartTrim } from './dartJsonString';
 
 const allowed = new Set(['print', 'laminate', 'cut', 'package', 'glue', 'tooling', 'virtual_task', 'training']);
@@ -14,6 +14,7 @@ export type NormalizedApparatusCreate = { name: string; id: string; family: stri
   factory_map_object_id: string; factory_map_object_id_supplied: boolean; training_enabled: boolean | null };
 /** Pure f119 validation/normalization only; test-mode persistence, API, keys and Unicode parity remain open. */
 export function normalizeApparatusCreate(input: ApparatusCreateInput, testMode: boolean): NormalizedApparatusCreate {
+  const colorStations = apparatusColorStations(input.color_stations);
   const name = dartTrim(input.name);
   if (!name) throw new MobileApiException({ code: 'apparatus_display_name_required', message: 'Aparat nomi kiritilmadi' });
   const id = dartTrim(input.id ?? '');
@@ -26,8 +27,7 @@ export function normalizeApparatusCreate(input: ApparatusCreateInput, testMode: 
   const profiles: ApparatusCapabilityProfile[] = [];
   for (const profile of input.capability_profiles ?? []) {
     const code = normalize(profile.code);
-    if (!Number.isInteger(profile.level)) throw new TypeError('Invalid apparatus capability level');
-    const level = Math.max(1, Math.min(100, profile.level));
+    const level = Math.max(1, Math.min(100, requiredApparatusInteger(profile.level, 'apparatus capability level')));
     if (profile.enabled && allowed.has(code)) profiles.push({ code, level, valid_from_unix: profile.valid_from_unix,
       valid_to_unix: profile.valid_to_unix, enabled: profile.enabled });
   }
@@ -37,6 +37,6 @@ export function normalizeApparatusCreate(input: ApparatusCreateInput, testMode: 
   capabilities.add(operation);
   if (input.training_enabled === true) capabilities.add('training');
   return { name, id, family, kind, operation, technology, capabilities: [...capabilities].sort(), capability_profiles: profiles,
-    color_stations: input.color_stations ?? null, factory_map_object_id: mapId,
+    color_stations: colorStations, factory_map_object_id: mapId,
     factory_map_object_id_supplied: input.factory_map_object_id != null, training_enabled: input.training_enabled ?? null };
 }

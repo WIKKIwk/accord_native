@@ -53,3 +53,21 @@ test('draft keeps empty placement null, excludes implicit training and handles p
   assert.equal(value.placement, null); assert.deepEqual(value.capabilities, [{ code: '__proto__', level: 9 }, { code: 'constructor', level: 4 }, { code: 'cut', level: 1 }]);
   assert.deepEqual(value.training, { enabled: false, queue_enabled: false, material_tracking_enabled: false });
 });
+
+test('draft color stations accept only null or safe integers without a new business range', () => {
+  const input = { name: 'Press', operation: 'print', technology: 'rotogravure', capabilities: [], capability_codes: [],
+    color_stations: null, factory_map_object_id: '', training_enabled: false, opaque_key: 'k' };
+  for (const value of [NaN, Infinity, -Infinity, 1.5, '2', true, {}, 1n, Number.MAX_SAFE_INTEGER + 1])
+    assert.throws(() => model.canonicalApparatusDraft({ ...input, color_stations: value }), /Invalid apparatus color stations/);
+  for (const value of [null, -1000, -1, 0, 1, Number.MAX_SAFE_INTEGER])
+    assert.equal(model.canonicalApparatusDraft({ ...input, color_stations: value }).execution_profile.color_station_count, value);
+});
+
+test('direct draft rejects non-integer or unsafe capability levels before JSON can silently change them', () => {
+  const input = { name: 'Press', operation: 'print', technology: 'rotogravure', capability_codes: ['print'],
+    color_stations: null, factory_map_object_id: '', training_enabled: false, opaque_key: 'k' };
+  for (const value of [NaN, Infinity, -Infinity, 1.5, '2', true, null, 1n, Number.MAX_SAFE_INTEGER + 1])
+    assert.throws(() => model.canonicalApparatusDraft({ ...input, capabilities: [{ code: 'print', level: value }] }), /Invalid apparatus capability level/);
+  for (const value of [-1000, -1, 0, 1, Number.MAX_SAFE_INTEGER])
+    assert.equal(model.canonicalApparatusDraft({ ...input, capabilities: [{ code: 'print', level: value }] }).capabilities[0].level, value);
+});

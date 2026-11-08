@@ -57,3 +57,17 @@ test('null/empty optional values and Unicode trim/casing remain explicit', () =>
   assert.equal(empty.factory_map_object_id_supplied, true); assert.equal(empty.training_enabled, false);
   assert.throws(() => model.normalizeApparatusCreate({ ...input, capability_profiles: [profile('print', 1.5)] }, false), TypeError);
 });
+
+test('normalization rejects unsafe color-station numbers rather than silently serializing null', () => {
+  for (const value of [NaN, Infinity, -Infinity, 1.5, '2', true, {}, 1n, Number.MAX_SAFE_INTEGER + 1])
+    assert.throws(() => model.normalizeApparatusCreate({ ...input, color_stations: value }, false), /Invalid apparatus color stations/);
+  for (const value of [null, -1000, -1, 0, 1, Number.MAX_SAFE_INTEGER])
+    assert.equal(model.normalizeApparatusCreate({ ...input, color_stations: value }, false).color_stations, value);
+});
+
+test('normalization rejects unsafe capability levels while preserving normal V2 clamping', () => {
+  for (const value of [NaN, Infinity, -Infinity, 1.5, '2', true, null, 1n, Number.MAX_SAFE_INTEGER + 1])
+    assert.throws(() => model.normalizeApparatusCreate({ ...input, capability_profiles: [profile('print', value)] }, false), /Invalid apparatus capability level/);
+  for (const [value, expected] of [[-1000, 1], [0, 1], [1, 1], [101, 100], [Number.MAX_SAFE_INTEGER, 100]])
+    assert.equal(model.normalizeApparatusCreate({ ...input, capability_profiles: [profile('print', value)] }, false).capability_profiles[0].level, expected);
+});
