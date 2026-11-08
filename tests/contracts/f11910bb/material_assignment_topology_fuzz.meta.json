@@ -1,0 +1,9 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "oracle": "oracles/material_assignment_fuzz_test.dart",
+  "description": "Seeded synthetic ASCII production-map inputs evaluated by the V2 Dart helper in a temporary export.",
+  "seed": 750109,
+  "cases": 3500,
+  "uncompressed_sha256": "3a82b1b05deb8ba2f9f78a44ecdf461a771738ba0c711713301d3fbedc306e7f",
+  "gzip_sha256": "6e84b4f9bfe53b808f353e995cf6df928d6e96e676cea54af7d02107ecea36e9"
+}

@@ -4,9 +4,24 @@ import type { productionMapDefinitionFromJson } from '../workerProductionMapSave
 type ProductionMap = ReturnType<typeof productionMapDefinitionFromJson>;
 type Node = ProductionMap['nodes'][number];
 
+// Dart's String.trim includes U+0085, which ECMAScript trim does not. This
+// table is checked against all Unicode code points in the isolated f119 oracle.
+const dartEdgeWhitespace = /^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+|[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$/g;
+const dartTrim = (value: string): string => value.replace(dartEdgeWhitespace, '');
+const ascii = (value: string): boolean => /^[\x00-\x7f]*$/.test(value);
+
+// Dart, Node and Hermes may use different Unicode lowercase tables. Until
+// their canonical-ID behavior is verified, deny non-ASCII IDs rather than
+// exposing an ID that V2 might reject. This intentionally has false negatives.
+function safeCanonicalId(value: string): boolean {
+  const normalized = dartTrim(value);
+  return ascii(normalized) && isCanonicalApparatusId(normalized);
+}
+
 function routeBranchAllowed(node: Node, branch: string): boolean {
   if (node.kind !== 'condition') return true;
-  return ['ha', 'yes', 'true', '1', "yo'q", 'yoq', 'no', 'false', '0'].includes(branch.trim().toLowerCase());
+  const normalized = dartTrim(branch);
+  return ascii(normalized) && ['ha', 'yes', 'true', '1', "yo'q", 'yoq', 'no', 'false', '0'].includes(normalized.toLowerCase());
 }
 
 /**
@@ -15,10 +30,10 @@ function routeBranchAllowed(node: Node, branch: string): boolean {
  *
  * @v2 productionMapAuthorizedOrderApparatus
  */
-export function productionMapAuthorizedOrderApparatus(map: ProductionMap, assignedApparatus: readonly string[]): string[] {
-  const assigned = new Set(assignedApparatus.filter(isCanonicalApparatusId).map(value => value.trim()));
+export function productionMapAuthorizedOrderApparatus(map: ProductionMap, assignedApparatus: readonly string[]): readonly string[] {
+  const assigned = new Set(assignedApparatus.filter(safeCanonicalId).map(dartTrim));
   const firstStart = map.nodes.find(node => node.kind === 'start');
-  if (!firstStart) return [];
+  if (!firstStart) return Object.freeze([]);
 
   // V2's reachability walk uses the first node with an id, but its stage lookup
   // uses the last node with that id. Preserve those distinctions for malformed maps.
@@ -34,21 +49,21 @@ export function productionMapAuthorizedOrderApparatus(map: ProductionMap, assign
     visited.add(id);
     const node = byId.get(id);
     if (node && (node.kind === 'apparatus' || (node.kind === 'task' && encounteredApparatus))) {
-      const group = node.kind === 'apparatus' ? node.alternative_group_id.trim() : '';
+      const group = node.kind === 'apparatus' ? dartTrim(node.alternative_group_id) : '';
       const stages: { nodeId: string; apparatusId: string | null }[] = group
-        ? map.nodes.filter(candidate => candidate.kind === 'apparatus' && candidate.alternative_group_id.trim() === group &&
-            isCanonicalApparatusId(candidate.apparatus_id))
-          .map(candidate => ({ nodeId: candidate.id, apparatusId: candidate.apparatus_id.trim() }))
+        ? map.nodes.filter(candidate => candidate.kind === 'apparatus' && dartTrim(candidate.alternative_group_id) === group &&
+            safeCanonicalId(candidate.apparatus_id))
+          .map(candidate => ({ nodeId: candidate.id, apparatusId: dartTrim(candidate.apparatus_id) }))
         : node.kind === 'apparatus'
           ? (() => {
-              const assignedId = node.alternative_assigned_apparatus_id.trim();
-              const apparatusId = assignedId || node.apparatus_id.trim();
-              return isCanonicalApparatusId(apparatusId) ? [{ nodeId: node.id, apparatusId }] : [];
+              const assignedId = dartTrim(node.alternative_assigned_apparatus_id);
+              const apparatusId = assignedId || dartTrim(node.apparatus_id);
+              return safeCanonicalId(apparatusId) ? [{ nodeId: node.id, apparatusId }] : [];
             })()
           : [{ nodeId: node.id, apparatusId: null }];
       if (node.kind === 'apparatus' && stages.length) encounteredApparatus = true;
       for (const stage of stages) {
-        const occurrence = stage.nodeId.trim();
+        const occurrence = dartTrim(stage.nodeId);
         if (occurrences.has(occurrence)) continue;
         occurrences.add(occurrence);
         if (stage.apparatusId && assigned.has(stage.apparatusId) && !seenApparatusIds.has(stage.apparatusId)) {
@@ -57,9 +72,9 @@ export function productionMapAuthorizedOrderApparatus(map: ProductionMap, assign
         }
       }
     }
-    const group = source.kind === 'apparatus' ? source.alternative_group_id.trim() : '';
+    const group = source.kind === 'apparatus' ? dartTrim(source.alternative_group_id) : '';
     const operation = new Set(group
-      ? map.nodes.filter(candidate => candidate.kind === 'apparatus' && candidate.alternative_group_id.trim() === group)
+      ? map.nodes.filter(candidate => candidate.kind === 'apparatus' && dartTrim(candidate.alternative_group_id) === group)
         .map(candidate => candidate.id)
       : [source.id]);
     for (const edge of map.edges) {
@@ -68,5 +83,5 @@ export function productionMapAuthorizedOrderApparatus(map: ProductionMap, assign
       if (from && routeBranchAllowed(from, edge.branch)) queue.push(edge.to);
     }
   }
-  return result;
+  return Object.freeze(result);
 }

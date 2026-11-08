@@ -367,6 +367,150 @@
         "apparatus:default:asset-008",
         "apparatus:default:asset-010"
       ]
+    },
+    "next_line_is_an_empty_group": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "a",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-007",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "b",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-008",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "a",
+          "branch": ""
+        }
+      ],
+      "assigned": [
+        "apparatus:default:asset-007",
+        "apparatus:default:asset-008"
+      ],
+      "expected": [
+        "apparatus:default:asset-007"
+      ]
+    },
+    "next_line_trims_from_branch": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "choice",
+          "kind": "condition",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "a",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-007",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "choice",
+          "branch": ""
+        },
+        {
+          "from": "choice",
+          "to": "a",
+          "branch": "yes"
+        }
+      ],
+      "assigned": [
+        "apparatus:default:asset-007"
+      ],
+      "expected": [
+        "apparatus:default:asset-007"
+      ]
+    },
+    "next_line_trims_from_assigned_id": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "a",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-007",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "a",
+          "branch": ""
+        }
+      ],
+      "assigned": [
+        "apparatus:default:asset-007"
+      ],
+      "expected": [
+        "apparatus:default:asset-007"
+      ]
+    },
+    "non_ascii_dart_canonical_id": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "a",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:Ϳ",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "a",
+          "branch": ""
+        }
+      ],
+      "assigned": [
+        "apparatus:default:Ϳ"
+      ],
+      "expected": [
+        "apparatus:default:Ϳ"
+      ]
     }
   }
 }
