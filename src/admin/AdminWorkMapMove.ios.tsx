@@ -22,10 +22,10 @@ function MovePane({ pane }: { pane: AdminWorkMapMovePane }) {
 /** Read-only panes; order selection, drag and transfer authority are intentionally absent. */
 export function AdminWorkMapMove(props: AdminWorkMapMoveProps) {
   return <View style={{ flex: 1 }}>
-    <BaseHost matchContents={{ vertical: true }}><Text>{props.partial}</Text>
+    {(!!props.error || !!props.empty) && <BaseHost matchContents={{ vertical: true }}>
       {!!props.error && <ListItem supportingText={props.error} onPress={() => { void props.onRetry(); }}>{props.retryLabel}</ListItem>}
       {!!props.empty && <Text>{props.empty}</Text>}
-    </BaseHost>
+    </BaseHost>}
     {props.loading && !props.panes.length && <ActivityIndicator />}
     {props.panes.map(pane => <MovePane key={pane.id} pane={pane} />)}
   </View>;

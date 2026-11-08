@@ -60,7 +60,7 @@ export function useAdminWorkMapView() {
     : workspaceState.module === 'closed' ? state.loaded && !loading && !state.closed.length ? adminText('production.closed_empty', locale) : ''
     : workspaceState.module === 'orders' && state.loaded && !loading && !state.rows.length ? adminText(state.query ? 'production.search_empty' : 'production.open_empty', locale) : '';
   const pair = workspaceState.move, label = adminWorkMapText(locale), retryLabel = localizedGetter('retry', locale);
-  const move: AdminWorkMapMoveProps = { partial: label.partial, loading: workspaceState.catalogLoading, error: workspaceState.catalogError,
+  const move: AdminWorkMapMoveProps = { loading: workspaceState.catalogLoading, error: workspaceState.catalogError,
     empty: workspaceState.catalogLoaded && (!pair.top || !pair.bottom) ? adminText('production.move.no_equipment', locale) : '', retryLabel,
     onRetry: () => workspace.reload(), panes: !pair.top || !pair.bottom ? [] : (['top', 'bottom'] as const).map(id => {
       const apparatus = id === 'top' ? pair.top! : pair.bottom!, pane = id === 'top' ? pair.topWindow : pair.bottomWindow,

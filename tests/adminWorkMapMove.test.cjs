@@ -150,7 +150,8 @@ for (const platform of ['ios', 'android']) test(`${platform} passive Move panes 
   const pane = { id: 'top', name: 'Pechat A', rows: [{ id: 'o', position: '1', headline: '1 • Film', supporting: 'P' }],
     loading: false, loaded: true, error: null, hasMore: true, empty: 'empty', retryLabel: 'retry', moreLabel: 'more',
     onRefresh: async () => calls.push('refresh'), onMore: async () => calls.push('more'), onPick: () => calls.push('pick') };
-  const tree = component({ partial: 'partial', loading: false, error: null, empty: '', retryLabel: 'retry', onRetry() {}, panes: [pane] });
+  const tree = component({ loading: false, error: null, empty: '', retryLabel: 'retry', onRetry() {}, panes: [pane] });
+  assert.equal(nodes(tree).some(row => row.type === 'NativeText' && row.props.children === 'partial'), false);
   const wrapped = nodes(tree).find(row => typeof row.type === 'function'), rendered = wrapped.type(wrapped.props), all = nodes(rendered);
   const list = all.find(row => row.type === 'OrdersList'); await list.props.onRefresh();
   assert.equal(all.find(row => row.type === 'ReadOnlyRow').props.row, pane.rows[0]);

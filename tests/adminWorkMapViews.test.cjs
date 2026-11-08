@@ -48,6 +48,7 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   }
   assert.equal(list.type, 'OrdersList'); await list.props.onRefresh();
   const listChildren = list.props.children.flat(Infinity).filter(Boolean);
+  assert.equal(listChildren.some(value => value.type === 'ListItem' && value.props.children === 'partial'), false);
   const renderedRow = listChildren.find(value => value.type === 'OrderListItem');
   assert.equal(renderedRow.props.imageActive, false); renderedRow.props.onPress();
   const more = listChildren.at(-1); more.props.onPress(); await Promise.resolve();
@@ -58,15 +59,18 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   const auditList = platform === 'ios' ? auditBody.props.children.find(value => value?.type === 'BaseHost' && value.props.children?.type === 'OrdersList').props.children
     : auditBody.props.children.find(value => value?.type === 'OrdersList');
   const auditChildren = auditList.props.children.flat(Infinity).filter(Boolean), auditContent = auditChildren.find(value => value.type === 'AdminWorkMapAudit');
+  assert.equal(auditChildren.some(value => value.type === 'ListItem' && value.props.children === 'partial'), false);
   assert.equal(auditContent.props.model, view.audit); assert.equal(auditContent.props.onRefresh, view.refresh);
   assert.equal(auditChildren.some(value => value.type === 'OrderListItem' || value.type === 'ListItem' && value.props.supportingText === 'failed'), false);
   view.controls.module = 'closed'; view.closed = [{ id: 'closed', headline: 'Closed summary' }]; view.error = null;
   const closedTree = bound.type(), closedBody = platform === 'ios' ? closedTree.props.children.find(value => value?.type === 'View') : closedTree;
   const closedList = platform === 'ios' ? closedBody.props.children.find(value => value?.type === 'BaseHost' && value.props.children?.type === 'OrdersList').props.children
     : closedBody.props.children.find(value => value?.type === 'OrdersList');
-  const closedRow = closedList.props.children.flat(Infinity).filter(Boolean).find(value => value.type === 'AdminWorkMapClosedRow');
+  const closedChildren = closedList.props.children.flat(Infinity).filter(Boolean);
+  assert.equal(closedChildren.some(value => value.type === 'ListItem' && value.props.children === 'partial'), false);
+  const closedRow = closedChildren.find(value => value.type === 'AdminWorkMapClosedRow');
   assert.equal(closedRow.props.row, view.closed[0]); assert.equal(closedRow.props.onPress, undefined);
-  view.controls.module = 'move'; view.move = { panes: [], partial: 'read-only' };
+  view.controls.module = 'move'; view.move = { panes: [] };
   const moveTree = bound.type(), moveBody = platform === 'ios' ? moveTree.props.children.find(value => value?.type === 'View') : moveTree;
   const moveContent = moveBody.props.children.find(value => value?.type === 'AdminWorkMapMove'); assert.deepEqual(moveContent.props, view.move);
 

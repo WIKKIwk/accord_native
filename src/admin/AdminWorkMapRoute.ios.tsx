@@ -30,7 +30,6 @@ function BoundWorkMap() {
       {view.controls.module === 'move' ? <AdminWorkMapMove {...view.move} /> : <BaseHost style={{ flex: 1 }}><OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0}
         onRefresh={view.refresh}>
         {view.controls.module === 'sequence' && <AdminWorkMapApparatusFilter {...view.controls} />}
-        <ListItem>{label.partial}</ListItem>
         {view.controls.module !== 'audit' && !!view.error && <ListItem supportingText={view.error} onPress={() => { void view.refresh(); }}>{localizedGetter('retry', locale)}</ListItem>}
         {!!view.emptyText && <ListItem>{view.emptyText}</ListItem>}
         {view.controls.module === 'audit' && <AdminWorkMapAudit model={view.audit} onRefresh={view.refresh} />}
