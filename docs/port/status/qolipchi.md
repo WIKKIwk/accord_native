@@ -1,7 +1,7 @@
 # qolipchi
 
 Status: part 1 of 2 in progress; role port incomplete
-Stopped at: resume the remaining part 1 UI contract and source-ordered screens after the placement-gate checkpoint; keep scanner and placement routes closed until their shared dependencies are verified.
+Stopped at: implement the bounded unwired Home outer content on both platforms from the new presentation contract; preserve every existing scanner, placement, printing and Chat hold. The full role remains incomplete.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -97,6 +97,11 @@ Stopped at: resume the remaining part 1 UI contract and source-ordered screens a
 - Home saved order keys use only trimmed lowercased block names, so duplicate names in different warehouses collapse to the last value. The f119 V2 behavior is preserved and needs product review after parity.
 
 - `qolipTransferProducts` validates a set of returned codes, not the returned list length. A response containing extra duplicate rows for the same requested code is accepted by V2; this behavior is preserved for the parity pass.
+
+## Home outer-presentation checkpoint
+
+- Specified the bounded Home outer-content contract from f119 `qolip_home_screen_models_resplit_part_01.dart:91–266` and the block-tab parts. `qolipHomePresentation.ts` reuses existing Home state/order keys for invalid, loading, retry, the two empty states and selected/matched tabs. `qolipBlockTabDrag.ts` ports frozen measured-center hit testing and preview/release rules without persisting or calling a backend. It does not replace the existing reorder/persistence state.
+- Thirty focused Home projection, geometry, logic and existing state tests passed; iOS typecheck passed. These are source-derived Node tests, not new Flutter recordings, native gestures or device evidence. The SQLite native-asset integrity failure was not retried or bypassed. Native content, full gates and actual screen wiring remain open in this intermediate checkpoint.
 
 ## Test mode pending
 
