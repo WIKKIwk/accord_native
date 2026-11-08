@@ -16,6 +16,7 @@ function load(file, replay, cache = new Map()) {
   cache.set(resolved, module.exports);
   module.require = name => {
     if (name === './werkaMutationScope') return { werkaMutationScope: () => ({ beforeSend() {}, afterResponse() {} }) };
+    if (name === './werkaReadScope') return { werkaReadScope: () => () => {} };
     if (name.endsWith('/authorizedFetch') || name === './authorizedFetch') return { authorizedFetch: (session, url, init = {}) => {
       const headers = new Headers(init.headers); headers.set('Authorization', `Bearer ${session.token}`);
       return replay(new URL(url, session.baseUrl), { ...init, headers });

@@ -5,6 +5,7 @@ import { MobileApiException } from '../shared/mobileApiException';
 import { productionMapResponseError } from '../workerControlsApi';
 import { progressBatchFromJson } from '../workerProgressBatch';
 import { werkaMutationScope } from './werkaMutationScope';
+import { werkaReadScope } from './werkaReadScope';
 
 type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -87,9 +88,10 @@ export async function werkaReceivePaddon(session: Session, preview: WerkaPaddonP
 
 /** @v2 werkaQrPreview */
 export async function werkaQrPreview(session: Session, rawCode: string) {
-  const code = rawCode.trim(), query = new URLSearchParams({ qr_payload: code });
-  const response = await authorizedFetch(session, `/v1/mobile/werka/qr/preview?${query}`);
-  return werkaQrPreviewFromJson(code, await payload(response, 'qr_preview_failed'));
+  const check = werkaReadScope(session), code = rawCode.trim(), query = new URLSearchParams({ qr_payload: code });
+  const response = await authorizedFetch(session, `/v1/mobile/werka/qr/preview?${query}`, undefined, check);
+  check();
+  return werkaQrPreviewFromJson(code, await payload(response, 'qr_preview_failed', check));
 }
 
 /** @v2 werkaReceiveWip */
