@@ -1,12 +1,10 @@
 import { useLayoutEffect, useMemo, useSyncExternalStore } from 'react';
-import { QolipCellDetailState, type QolipCellDetailChoice, type QolipCellDetailOptions } from './qolipCellDetailState';
-import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
+import { QolipCellDetailState, type QolipCellDetailChoice } from './qolipCellDetailState';
+import type { QolipCellDetailProps } from './qolipCellDetailProps';
 import type { QolipLocationEntry } from './qolipLocationsApi';
 
-type Props = QolipCellDetailOptions & { boundary: QolipHomeReadBoundary; choose: (choice: QolipCellDetailChoice) => void };
-
 /** Unmounted presentation hook. Its callback returns a source sheet choice, never dispatches the corresponding action. */
-export function useQolipCellDetail(props: Props) {
+export function useQolipCellDetail(props: QolipCellDetailProps) {
   // The source sheet captures its original item/alternative lists when it opens.
   const controller = useMemo(() => new QolipCellDetailState(props, props.boundary), [props.boundary, props.cellLabel]); // eslint-disable-line react-hooks/exhaustive-deps
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
