@@ -215,3 +215,33 @@ test('History known switches retain source labels and exact event-title matching
     assert.deepEqual(api.materialHistoryDetails(api.rawMaterialEvent({ [field]: ` ${name.toUpperCase()} ` }), []), [{ label, value }], `${field}: ${name}`);
   }
 });
+
+// f119 declarations_part_03.dart:258-290 calls DateTime.fromMillisecondsSinceEpoch.
+// Read-only SDK evidence: core/date_time.dart:398,450-457 and
+// _internal/vm_shared/lib/date_patch.dart:49-56,92-98 validate the inclusive range.
+// These are source-derived range checks, not a Flutter oracle or a time-zone-table comparison.
+test('History dates keep the nonpositive shortcut and accept the inclusive positive date limit', () => {
+  const api = setup(() => {}), maximumSeconds = 8_640_000_000_000;
+  for (const seconds of [0, -1, -maximumSeconds - 1]) {
+    assert.equal(api.materialHistoryTime(seconds), ''); assert.equal(api.materialHistoryDateTime(seconds), '');
+  }
+  for (const seconds of [1, maximumSeconds - 1, maximumSeconds]) {
+    assert.ok(Number.isSafeInteger(seconds * 1000));
+    for (const formatted of [api.materialHistoryTime(seconds), api.materialHistoryDateTime(seconds)]) {
+      assert.ok(formatted.length > 0); assert.ok(!formatted.includes('NaN'));
+    }
+  }
+});
+
+test('History rejects positive dates outside the source constructor range instead of rendering NaN', () => {
+  const api = setup(() => {});
+  for (const seconds of [8_640_000_000_001, 8_640_000_000_123]) {
+    assert.ok(Number.isSafeInteger(seconds * 1000)); // No lost JSON integer or multiply-overflow inference.
+    const occurred = api.rawMaterialEvent({ occurred_at_unix: seconds });
+    assert.equal(occurred.occurred_at_unix, seconds);
+    assert.throws(() => api.materialHistoryTime(occurred.occurred_at_unix), RangeError);
+    assert.throws(() => api.materialHistoryDateTime(occurred.occurred_at_unix), RangeError);
+    assert.throws(() => api.materialHistoryDetails(occurred, []), RangeError);
+    assert.throws(() => api.materialHistoryDetails(api.rawMaterialEvent({ recorded_at_unix: seconds }), []), RangeError);
+  }
+});

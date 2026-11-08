@@ -24,6 +24,12 @@ const sourceLabels: Record<string, string> = { gscale_receipt: 'Tarozi kirimi', 
   material_delivery: 'Apparat oldiga yetkazish', system: 'Tizim' };
 const two = (n: number) => String(n).padStart(2, '0');
 const reference = (value: string) => { const name = dartTrim(value); return name && !name.includes(':') ? name : ''; };
+const historyDate = (unix: number): Date => {
+  const date = new Date(unix * 1000);
+  // Dart's DateTime constructor throws for an out-of-range epoch, rather than formatting NaN.
+  if (Number.isNaN(date.getTime())) throw new RangeError();
+  return date;
+};
 
 /** @v2 _materialFriendlyApparatus */
 export function materialFriendlyApparatus(id: string, catalog: Pick<AdminApparatus, 'id' | 'name'>[]): string {
@@ -53,14 +59,14 @@ export function materialHistorySubtitle(event: AdminRawMaterialEvent, catalog: P
 /** @v2 _materialHistoryTime */
 export function materialHistoryTime(unix: number, now = new Date()): string {
   if (unix <= 0) return '';
-  const date = new Date(unix * 1000), clock = `${two(date.getHours())}:${two(date.getMinutes())}`;
+  const date = historyDate(unix), clock = `${two(date.getHours())}:${two(date.getMinutes())}`;
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate()
     ? clock : `${two(date.getDate())}.${two(date.getMonth() + 1)} ${clock}`;
 }
 /** @v2 _materialHistoryDateTime */
 export function materialHistoryDateTime(unix: number): string {
   if (unix <= 0) return '';
-  const date = new Date(unix * 1000);
+  const date = historyDate(unix);
   return `${two(date.getDate())}.${two(date.getMonth() + 1)}.${date.getFullYear()} ${two(date.getHours())}:${two(date.getMinutes())}`;
 }
 /** @v2 _materialHistoryDetails */
