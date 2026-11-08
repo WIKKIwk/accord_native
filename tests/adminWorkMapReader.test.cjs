@@ -29,6 +29,7 @@ function fixture() {
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile, value.capabilities]) },
     '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, '../shared/mobileApiException': exception, './adminProductionRequest': adminGuard,
     './adminWorkMapMetadataModel': metadata, './adminWorkMapOrderWeight': weight, './dartJsonString': load('admin/dartJsonString'),
+    './adminClosedOrderDetailApi': { adminClosedOrderDetail: async (s, id, guard) => { calls.push(['closed-detail', s, id]); guard(); duringRead(); guard(); return { order_id: id }; } },
     './adminOrderSummaryApi': { adminProductionMapOrderSummary: async (s, id, guard) => { calls.push(['summary', s, id]); guard(); duringRead(); guard(); return { source_map_id: id }; } },
   };
   const api = load('admin/adminWorkMapReader', apis);
@@ -113,6 +114,12 @@ test('saved summary reader keeps the original detail witness, route capability a
   assert.equal((await reader('o')).source_map_id, 'o'); assert.deepEqual(f.calls[0], ['summary', f.session, 'o']);
   f.onRead(f.invalidate); await assert.rejects(reader('o'), /session changed/); assert.equal(f.calls.length, 2);
   await assert.rejects(reader('o'), /session changed/); assert.equal(f.calls.length, 2);
+});
+test('Closed detail reader retains its original session, route and raw ID while rejecting a changed witness', async () => {
+  const f = fixture(), read = f.api.adminWorkMapClosedDetailReader(f.session, f.witness);
+  assert.equal((await read(' a&b ')).order_id, ' a&b '); assert.deepEqual(f.calls[0], ['closed-detail', f.session, ' a&b ']);
+  f.onRead(f.invalidate); await assert.rejects(read('o'), /session changed/); assert.equal(f.calls.length, 2);
+  await assert.rejects(read('o'), /session changed/); assert.equal(f.calls.length, 2);
 });
 
 test('Sequence catalog uses the existing guarded limit-200 reader and original witness', async () => {

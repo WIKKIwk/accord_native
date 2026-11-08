@@ -13,6 +13,7 @@ import { adminWorkMapMetadataFromSaved } from './adminWorkMapMetadataModel';
 import { adminProductionMapOrderSummary } from './adminOrderSummaryApi';
 import { adminWorkMapOrderWeight } from './adminWorkMapOrderWeight';
 import { dartTrim } from './dartJsonString';
+import { adminClosedOrderDetail } from './adminClosedOrderDetailApi';
 
 /** Capture one witness and one read scope for this screen; never recapture a stale operation. */
 function adminWorkMapGuard(session: Session, isWitnessCurrent: () => boolean) {
@@ -41,6 +42,12 @@ export function adminWorkMapCatalogReader(session: Session, isWitnessCurrent: ()
 export function adminWorkMapSummaryReader(session: Session, isWitnessCurrent: () => boolean) {
   const guard = adminWorkMapGuard(session, isWitnessCurrent);
   return async (id: string) => { guard(); const value = await adminProductionMapOrderSummary(session, id, guard); guard(); return value; };
+}
+
+/** Closed history remains unconnected until a version-bound row lifecycle and complete log surfaces exist. */
+export function adminWorkMapClosedDetailReader(session: Session, isWitnessCurrent: () => boolean) {
+  const guard = adminWorkMapGuard(session, isWitnessCurrent);
+  return async (id: string) => { guard(); const detail = await adminClosedOrderDetail(session, id, guard); guard(); return detail; };
 }
 
 /** A list summary never authorizes an editor: hydrate and validate the full response first. */

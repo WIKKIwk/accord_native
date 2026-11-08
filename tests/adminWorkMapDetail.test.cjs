@@ -78,7 +78,7 @@ test('actual detail hook/reader composition accepts a valid ticket and rejects t
     '../shared/appRoutes': load('shared/appRoutes.ts'), '../shared/profileSessionGuard': guard,
     '../shared/mobileApiException': load('shared/mobileApiException.ts'), './adminProductionRequest': adminGuard,
     './adminWorkMapMetadataModel': metadata, './adminWorkMapOrderWeight': load('admin/adminWorkMapOrderWeight.ts', { './dartJsonString': load('admin/dartJsonString.ts') }),
-    './dartJsonString': load('admin/dartJsonString.ts'),
+    './dartJsonString': load('admin/dartJsonString.ts'), './adminClosedOrderDetailApi': {},
   });
   const f = fixture(readers); f.args.session = { token: 'token', profile: { role: 'admin', ref: 'me' }, capabilities: ['admin.access'] };
   assert.equal(f.render().valid, true); assert.equal(sent.length, 1);
