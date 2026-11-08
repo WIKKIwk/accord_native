@@ -29,7 +29,7 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route } }, '../shared/localization': { adminText: key => key, localizedGetter: key => key, productionText: key => key },
     '../components/BaseHost': { BaseHost: 'BaseHost' }, '../shared/orders/OrderListItem': { OrderListItem: 'OrderListItem' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
-    './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
+    './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
     './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' }, './AdminShellContext': { useAdminShell: () => shell },
     './useAdminWorkMapView': { useAdminWorkMapView: () => view }, './adminWorkMapText': { adminWorkMapText: () => ({ partial: 'partial', more: 'more' }) },
     './adminWorkMapPresentation': { adminWorkMapPresentation: value => ({ headline: value.title, supporting: value.customer, tone: 'paused' }) } };
@@ -60,6 +60,13 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   const auditChildren = auditList.props.children.flat(Infinity).filter(Boolean), auditContent = auditChildren.find(value => value.type === 'AdminWorkMapAudit');
   assert.equal(auditContent.props.model, view.audit); assert.equal(auditContent.props.onRefresh, view.refresh);
   assert.equal(auditChildren.some(value => value.type === 'OrderListItem' || value.type === 'ListItem' && value.props.supportingText === 'failed'), false);
+  view.controls.module = 'closed'; view.closed = [{ id: 'closed', headline: 'Closed summary' }]; view.error = null;
+  const closedTree = bound.type(), closedBody = platform === 'ios' ? closedTree.props.children.find(value => value?.type === 'View') : closedTree;
+  const closedList = platform === 'ios' ? closedBody.props.children.find(value => value?.type === 'BaseHost' && value.props.children?.type === 'OrdersList').props.children
+    : closedBody.props.children.find(value => value?.type === 'OrdersList');
+  const closedRow = closedList.props.children.flat(Infinity).filter(Boolean).find(value => value.type === 'AdminWorkMapClosedRow');
+  assert.equal(closedRow.props.row, view.closed[0]); assert.equal(closedRow.props.onPress, undefined);
+
 
 });
 
@@ -73,7 +80,7 @@ test('opening a detail requires the current shell, enabled destination and a lis
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route, profile: '/profile' } },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     '../shared/localization': { productionText: key => key, adminText: key => key }, './AdminWorkMapDetail': { AdminWorkMapDetail: 'Detail' },
-    './AdminShellContext': { useAdminShell: () => shell }, './adminWorkMapAuditPresentation': { adminWorkMapAuditPresentation: () => ({}) }, './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: ctrl, workspace: { reload() {}, selectModule() {}, selectApparatus() {} },
+    './AdminShellContext': { useAdminShell: () => shell }, './adminWorkMapClosedModel': { adminWorkMapClosedRows: () => [] }, './adminWorkMapAuditPresentation': { adminWorkMapAuditPresentation: () => ({}) }, './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: ctrl, workspace: { reload() {}, selectModule() {}, selectApparatus() {} },
       workspaceState: { module: 'sequence', catalog: [], selected: null, catalogLoaded: false, catalogLoading: false } }) } };
   const view = load('admin/useAdminWorkMapView.tsx', mocks).useAdminWorkMapView();
   current = false; view.open(row); current = true; allowed = false; view.open(row); allowed = true; ticket = null; view.open(row); assert.equal(opened.length, 0);

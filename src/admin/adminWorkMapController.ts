@@ -1,21 +1,22 @@
 import { adminWorkMapAuditPages, type AdminWorkMapAuditReport } from './adminWorkMapAuditModel';
+import { adminWorkMapClosedPages, type AdminWorkMapClosedOrder } from './adminWorkMapClosedModel';
 import { dartTrim } from './dartJsonString';
 
-export type AdminWorkMapModule = 'sequence' | 'orders' | 'audit';
+export type AdminWorkMapModule = 'sequence' | 'orders' | 'closed' | 'audit';
 export type AdminWorkMapRequest = { view: AdminWorkMapModule; apparatus?: string };
 export type AdminWorkMapRow = { kind: 'pending' | 'order'; id: string; code: string; title: string; customer: string; imageId: string;
   displayState: string; kg: number | null; position?: number };
 export type AdminWorkMapPage = { projection: string; version: string; epoch: string; scope: string; revision: number | null;
   total?: number; sequence_rows?: Record<string, any>; sequence_positions?: Record<string, number>;
   offset: number; length: number; next_cursor: string | null; order_ids: string[]; pending_ids: string[];
-  order_rows: Record<string, any>; pending_rows: Record<string, any>; pending_orders: any[]; closed_orders: any[];
+  order_rows: Record<string, any>; pending_rows: Record<string, any>; pending_orders: any[]; closed_orders: AdminWorkMapClosedOrder[];
   workflow_audit: AdminWorkMapAuditReport | null; snapshot: { maps: any[] } | null };
 export type AdminWorkMapDetailTicket = { generation: number; id: string; kind: 'pending' | 'order'; epoch: string; revision: number | null; apparatus?: string };
-export type AdminWorkMapState = { query: string; rows: readonly AdminWorkMapRow[]; loading: boolean; loaded: boolean; error: string | null; hasMore: boolean; total: number; audit: AdminWorkMapAuditReport | null };
+export type AdminWorkMapState = { query: string; rows: readonly AdminWorkMapRow[]; loading: boolean; loaded: boolean; error: string | null; hasMore: boolean; total: number; audit: AdminWorkMapAuditReport | null; closed: readonly AdminWorkMapClosedOrder[] };
 type Dependencies = { isCurrent: () => boolean; request?: AdminWorkMapRequest | null;
   read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }) => Promise<AdminWorkMapPage | null> };
 const readError = 'Buyurtmalar sahifasi noto‘g‘ri. Qayta yuklang.';
-const emptyState = (): AdminWorkMapState => ({ query: '', rows: [], loading: false, loaded: false, error: null, hasMore: false, total: 0, audit: null });
+const emptyState = (): AdminWorkMapState => ({ query: '', rows: [], loading: false, loaded: false, error: null, hasMore: false, total: 0, audit: null, closed: [] });
 const text = (value: unknown): string => typeof value === 'string' ? value : '';
 function codeOf(value: { code?: unknown; order_number?: unknown; id?: unknown }) {
   const code = dartTrim(text(value.code)), number = dartTrim(text(value.order_number)), id = dartTrim(text(value.id));
@@ -24,6 +25,7 @@ function codeOf(value: { code?: unknown; order_number?: unknown; id?: unknown })
 export function adminWorkMapSearch(value: string): string { return Array.from(dartTrim(value)).slice(0, 120).join(''); }
 /** Summary rows are display-only. Actions must hydrate their full detail. */
 export function adminWorkMapRows(pages: readonly AdminWorkMapPage[], view: AdminWorkMapModule = 'orders'): AdminWorkMapRow[] {
+  if (view === 'closed') { adminWorkMapClosedPages(pages); return []; }
   if (view === 'audit') { adminWorkMapAuditPages(pages); return []; }
   const pending: AdminWorkMapRow[] = [], orders: AdminWorkMapRow[] = [];
   for (const page of pages) {
@@ -113,7 +115,7 @@ export class AdminWorkMapController {
     this.timer = null;
     if (next === this.state.query && this.state.loaded) return;
     this.generation++; this.pages = [];
-    this.publish({ query: next, rows: [], loading: this.request != null, loaded: false, error: null, hasMore: false, total: 0, audit: null });
+    this.publish({ query: next, rows: [], loading: this.request != null, loaded: false, error: null, hasMore: false, total: 0, audit: null, closed: [] });
     this.timer = setTimeout(() => { this.timer = null; void this.reload(); }, 350);
   }
   async reload() { if (this.timer) clearTimeout(this.timer); this.timer = null; return this.load(false); }
@@ -129,9 +131,11 @@ export class AdminWorkMapController {
       if (!page) throw new Error(readError);
       const first = previous[0], expected = previous.reduce((sum, item) => sum + item.length, 0);
       if (page.offset !== expected || (first && (page.version !== first.version || page.epoch !== first.epoch || page.scope !== first.scope))) throw new Error(readError);
-      const pages = [...previous, page], rows = adminWorkMapRows(pages, request.view);
+      const pages = [...previous, page], audit = request.view === 'audit' ? adminWorkMapAuditPages(pages) : null,
+        closed = request.view === 'closed' ? adminWorkMapClosedPages(pages) : [],
+        rows = request.view === 'audit' || request.view === 'closed' ? [] : adminWorkMapRows(pages, request.view);
       this.pages = pages;
-      this.publish({ rows, loading: false, loaded: true, error: null, hasMore: page.next_cursor != null, total: page.total ?? rows.length, audit: request.view === 'audit' ? adminWorkMapAuditPages(pages) : null });
+      this.publish({ rows, loading: false, loaded: true, error: null, hasMore: page.next_cursor != null, total: page.total ?? rows.length, audit, closed });
     } catch (error) {
       if (!this.current(ticket)) return;
       this.publish({ loading: false, loaded: !append && !previous.length ? false : this.state.loaded,

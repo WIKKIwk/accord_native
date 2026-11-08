@@ -11,7 +11,7 @@ function load(file, mocks = {}) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
-const controller = load('admin/adminWorkMapController', { './dartJsonString': load('admin/dartJsonString'), './adminWorkMapAuditModel': load('admin/adminWorkMapAuditModel', { './dartJsonString': load('admin/dartJsonString') }) });
+const controller = load('admin/adminWorkMapController', { './dartJsonString': load('admin/dartJsonString'), './adminWorkMapAuditModel': load('admin/adminWorkMapAuditModel', { './dartJsonString': load('admin/dartJsonString') }), './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel', { './dartJsonString': load('admin/dartJsonString') }) });
 const Workspace = load('admin/adminWorkMapWorkspace', { './adminWorkMapController': controller }).AdminWorkMapWorkspace;
 const Store = load('shared/adminSequenceApparatusStore', { '../auth': {}, '../appPreferences': {} }).AdminSequenceApparatusStore;
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -92,6 +92,19 @@ test('Audit opens independently of catalog, retains report state and never admit
       violations: [{ code: 'invalid_queue_state', order_id: 'o', subject: 'queue', detail: '' }] } };
   f.reads[0].response.resolve(auditPage); await tick(); f.catalog.resolve([a, b]); await tick();
   assert.equal(f.workspace.getSnapshot().module, 'audit'); assert.equal(f.workspace.getSnapshot().list.audit.checked_order_count, 12); assert.equal(f.reads.length, 1);
-  f.workspace.selectModule('closed'); f.workspace.selectApparatus(b.id); assert.equal(f.workspace.getSnapshot().module, 'audit'); assert.equal(f.reads.length, 1);
+  f.workspace.selectModule('move'); f.workspace.selectApparatus(b.id); assert.equal(f.workspace.getSnapshot().module, 'audit'); assert.equal(f.reads.length, 1);
   f.workspace.selectModule('sequence'); assert.equal(f.workspace.getSnapshot().list.audit, null); assert.equal(f.reads[1].request.apparatus, a.id); f.workspace.dispose();
+});
+
+test('Closed reads without waiting for catalog and cannot install live order or Audit authority', async () => {
+  const f = fixture(); f.workspace.start(); f.workspace.selectModule('closed');
+  assert.deepEqual(f.reads[0].request, { view: 'closed', search: '' });
+  const closedPage = { ...page('orders'), projection: '', order_ids: [], order_rows: {},
+    closed_orders: [{ order_id: 'zakaz-1', order_number: '', title: 'Film', product_code: '', history_version: 'h1', completed_at_unix: 0,
+      closed_by_display_name: '', closed_by_ref: '', closed_by_role: '', logs: [], progress_batches: [] }] };
+  f.reads[0].response.resolve(closedPage); await tick(); f.catalog.resolve([a]); await tick();
+  assert.equal(f.workspace.getSnapshot().module, 'closed'); assert.equal(f.workspace.getSnapshot().list.closed[0].history_version, 'h1');
+  assert.deepEqual(f.workspace.getSnapshot().list.rows, []); assert.equal(f.workspace.getSnapshot().list.audit, null); assert.equal(f.reads.length, 1);
+  f.workspace.selectModule('move'); assert.equal(f.reads.length, 1);
+  f.workspace.selectModule('orders'); assert.equal(f.workspace.getSnapshot().list.closed.length, 0); f.workspace.dispose();
 });

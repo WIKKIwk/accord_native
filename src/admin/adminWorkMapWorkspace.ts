@@ -33,7 +33,7 @@ export class AdminWorkMapWorkspace {
       : this.state.selected ? { view: 'sequence', apparatus: this.state.selected.id } : null);
   }
   selectModule(module: AdminWorkMapModule) {
-    if (!this.current() || !['sequence', 'orders', 'audit'].includes(module) || this.state.module === module) return;
+    if (!this.current() || !['sequence', 'orders', 'closed', 'audit'].includes(module) || this.state.module === module) return;
     this.state = { ...this.state, module }; this.configure(); this.publish({});
   }
   selectApparatus(id: string) {

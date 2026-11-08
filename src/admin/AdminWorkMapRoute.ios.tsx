@@ -10,6 +10,7 @@ import { localizedGetter, productionText } from '../shared/localization';
 import { OrderListItem } from '../shared/orders/OrderListItem';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
 import { OrdersList } from '../shared/orders/OrdersList';
+import { AdminWorkMapClosedRow } from './AdminWorkMapClosedRow';
 import { AdminWorkMapAudit } from './AdminWorkMapAudit';
 import { AdminWorkMapApparatusFilter, AdminWorkMapModules } from './AdminWorkMapControls';
 import { adminWorkMapPresentation } from './adminWorkMapPresentation';
@@ -35,6 +36,7 @@ function BoundWorkMap() {
         {state.rows.map((row, index) => { const item = adminWorkMapPresentation(row, locale); return <OrderListItem key={`${row.kind}:${row.id}`}
           session={shell.session} orderId={row.id} imageId={row.imageId} imageActive={false} headline={item.headline} supportingText={item.supporting}
           cardTone={item.tone} first={index === 0} last={index === state.rows.length - 1} onPress={() => view.open(row)} />; })}
+        {view.closed?.map(row => <AdminWorkMapClosedRow key={row.id} row={row} />)}
         {state.hasMore && !view.error && <Button label={label.more} onPress={() => { void controller.next(); }} />}
       </OrdersList></BaseHost>
       {view.controls.module !== 'audit' && view.loading && !state.loaded && <ActivityIndicator style={{ position: 'absolute', alignSelf: 'center', top: insets.top + 80 }} />}

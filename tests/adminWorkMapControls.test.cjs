@@ -29,7 +29,7 @@ for (const platform of ['ios', 'android']) test(`${platform} native module/filte
     onModule: id => calls.push(['module', id]), onApparatus: id => calls.push(['apparatus', id]), onToggle: () => calls.push('toggle'),
     apparatusLabel: 'Apparat', unselectedLabel: 'Tanlanmagan', countText: '7 ta buyurtma' };
   const modules = nodes(exports.AdminWorkMapModules(props));
-  assert.deepEqual(modules.filter(node => node.type === 'NativeText').map(node => node.props.children), ['Ketma-ketlik', 'Buyurtmalar', 'Tekshiruv']);
+  assert.deepEqual(modules.filter(node => node.type === 'NativeText').map(node => node.props.children), ['Ketma-ketlik', 'Buyurtmalar', 'Yopilgan', 'Tekshiruv']);
   if (platform === 'ios') modules[0].props.onSelectionChange('orders');
   else modules.find(node => node.type === segmented && !node.props.selected).props.onClick();
   const filter = nodes(exports.AdminWorkMapApparatusFilter(props));
@@ -42,6 +42,9 @@ for (const platform of ['ios', 'android']) test(`${platform} native module/filte
     chips[1].props.onClick(); chips[0].props.onClick();
   }
   assert.deepEqual(calls, [['module', 'orders'], ['apparatus', 'a'], 'toggle']);
+  if (platform === 'ios') modules[0].props.onSelectionChange('closed');
+  else modules.find(node => node.type === segmented && node.props.modifiers?.some(modifier => modifier.name === 'testID' && modifier.value === 'admin-work-map-module-closed')).props.onClick();
+  assert.deepEqual(calls.at(-1), ['module', 'closed']);
   assert.ok(filter.some(node => node.type === 'NativeText' && node.props.children === props.countText));
   const collapsed = nodes(exports.AdminWorkMapApparatusFilter({ ...props, expanded: false }));
   assert.equal(collapsed.some(node => node.props.label === 'Pechat' || node.type === 'NativeText' && node.props.children === 'Pechat'), false);

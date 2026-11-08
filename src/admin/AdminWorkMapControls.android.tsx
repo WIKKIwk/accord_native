@@ -1,11 +1,12 @@
 import { Column, FilterChip, Row, SegmentedButton, SingleChoiceSegmentedButtonRow, Text } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, padding, semantics } from '@expo/ui/jetpack-compose/modifiers';
+import { fillMaxWidth, padding, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import type { AdminWorkMapControlsProps } from './adminWorkMapControlsTypes';
 
 export function AdminWorkMapModules(props: AdminWorkMapControlsProps) {
   return <SingleChoiceSegmentedButtonRow modifiers={[fillMaxWidth(), padding(12, 4, 12, 4)]}>
     <SegmentedButton selected={props.module === 'sequence'} onClick={() => props.onModule('sequence')}><SegmentedButton.Label><Text>Ketma-ketlik</Text></SegmentedButton.Label></SegmentedButton>
     <SegmentedButton selected={props.module === 'orders'} onClick={() => props.onModule('orders')}><SegmentedButton.Label><Text>Buyurtmalar</Text></SegmentedButton.Label></SegmentedButton>
+    <SegmentedButton selected={props.module === 'closed'} onClick={() => props.onModule('closed')} modifiers={[testID('admin-work-map-module-closed')]}><SegmentedButton.Label><Text>Yopilgan</Text></SegmentedButton.Label></SegmentedButton>
     <SegmentedButton selected={props.module === 'audit'} onClick={() => props.onModule('audit')}><SegmentedButton.Label><Text>Tekshiruv</Text></SegmentedButton.Label></SegmentedButton>
   </SingleChoiceSegmentedButtonRow>;
 }

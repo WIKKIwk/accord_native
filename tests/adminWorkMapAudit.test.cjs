@@ -16,7 +16,7 @@ function load(file, mocks = {}) {
 }
 const dart = load('admin/dartJsonString.ts');
 const audit = load('admin/adminWorkMapAuditModel.ts', { './dartJsonString': dart });
-const { AdminWorkMapController: Controller } = load('admin/adminWorkMapController.ts', { './dartJsonString': dart, './adminWorkMapAuditModel': audit });
+const { AdminWorkMapController: Controller } = load('admin/adminWorkMapController.ts', { './dartJsonString': dart, './adminWorkMapAuditModel': audit, './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel.ts', { './dartJsonString': dart }) });
 const localize = { adminText: (key, _locale, values) => values ? `${key}:${values.value}` : key };
 const present = load('admin/adminWorkMapAuditPresentation.ts', { '../shared/localization': localize, './adminWorkMapAuditModel': audit }).adminWorkMapAuditPresentation;
 const tick = () => new Promise(resolve => setImmediate(resolve));

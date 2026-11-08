@@ -144,3 +144,23 @@ test('real paged Audit reader keeps complete counts for twenty findings and rech
     assert.deepEqual(Object.fromEntries(new URL(requests[0], f.session.baseUrl).searchParams), { view: 'audit', limit: '20', search: 'query' });
   }
 });
+
+test('real guarded Closed page decodes summary/history metadata without using the unguarded detail endpoint', async () => {
+  for (const invalidate of [false, true]) {
+    const f = fixture(), requests = [];
+    const raw = { version: 'closed-1', epoch: 'server', rev: 1, offset: 0, total: 2, next_cursor: null,
+      closed_orders: [{ order_id: 'zakaz-42', history_version: 'h1', title: 'Film', completed_at_unix: 1700000000,
+        closed_by_display_name: 'Ana', early_close: { closed_at_unix: 1700000000, comment: 'early' } }, { order_id: 'opaque', history_version: 'h2' }] };
+    const pageApi = loadRoot('productionOrderPageApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
+      requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
+    } } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderPageApi': pageApi }).adminWorkMapReader(f.session, f.witness);
+    const result = reader({ view: 'closed', search: 'Ana' });
+    if (invalidate) await assert.rejects(result, /session changed/);
+    else { const page = await result; assert.equal(page.length, 2); assert.equal(page.closed_orders[0].history_version, 'h1');
+      assert.equal(page.closed_orders[0].logs[0].action, 'close_early'); }
+    assert.equal(requests.length, 1); const requested = new URL(requests[0], f.session.baseUrl);
+    assert.equal(requested.pathname, '/v1/mobile/admin/production-maps/order-page');
+    assert.deepEqual(Object.fromEntries(requested.searchParams), { view: 'closed', limit: '20', search: 'Ana' });
+  }
+});
