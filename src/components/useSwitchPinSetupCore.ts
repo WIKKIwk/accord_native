@@ -6,7 +6,7 @@ import { switchPinStore } from '../shared/switchPinRuntime';
 type Stage = 'entry' | 'confirm' | null;
 
 export function useSwitchPinSetupCore<T extends { set: (value: string) => void }>(
-  session: Session, field: T, text: (key: string) => string,
+  session: Session, field: T, text: (key: string) => string, enabled = true,
 ) {
   const [hasPin, setHasPin] = useState<boolean | null>(null);
   const [stage, setStage] = useState<Stage>(null);
@@ -18,6 +18,7 @@ export function useSwitchPinSetupCore<T extends { set: (value: string) => void }
   const mounted = useRef(false);
 
   useEffect(() => {
+    if (!enabled) return;
     mounted.current = true;
     void switchPinStore.has(session).then(value => { if (mounted.current) setHasPin(value); }, () => {
       if (mounted.current) Alert.alert(text('switchPinTitle'), text('pinSaveFailed'));
@@ -25,7 +26,7 @@ export function useSwitchPinSetupCore<T extends { set: (value: string) => void }
     return () => { mounted.current = false; };
     // The session identity owns this state; language changes do not reload the PIN.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [session, enabled]);
 
   const clearInput = () => { current.current = ''; field.set(''); setError(''); };
   const change = (value: string) => {
