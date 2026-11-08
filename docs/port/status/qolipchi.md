@@ -8,6 +8,7 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 |---|---|---|
 | Role-wide logic and surfaces | `lib/src/features/qolip/`, `lib/src/core/api/qolip/` | Except for the checkpoints below, the role logic, iOS and Android views, navigation, text gate and surface audit remain to be completed. The text gate currently reports 143 missing iOS and 141 missing Android V2 strings, plus unmatched existing V4 strings. |
 | Qolip search on devices | `qolip_search_engine.dart`, `search_normalizer.dart` | Confirm React Native timer slicing and cancellation on both phones. Rare Unicode lowercase mapping differences between the Dart VM and the phone's JavaScript engine have not been verified. |
+| Native scanner | `qolip_cell_qr_scan_screen.dart`, `reliable_mobile_scanner.dart` | The QR lookup/scan APIs exist, but the iOS and Android camera views, lifecycle, permission handling and real-phone scans are not yet ported or verified. |
 | Rework request ID | `qolip_rework_request_id.dart` | Supply the secure 128-bit random ID with V2's microsecond timestamp before connecting rework actions. The API currently accepts the caller's request ID and preserves it across retries. |
 | Rework JSON edge values | `QolipReworkEntry.fromJson`, `QolipMileage.fromJson` | JavaScript JSON parsing can lose integer precision above 2^53 or the `.0` spelling of a floating numeric value when V2 converts optional fields with `toString`; no recorded response exercises those edge values. |
 | Shared product parser edge cases | `QolipProduct.fromJson`, `src/qolipCatalogApi.ts` | Existing native `customer_names` handling drops null entries, while V2 converts them to the string `null`; Dart-style trimming and other non-string JSON conversions also need a shared comparison. Leave the protected existing consumers intact until the integrator coordinates a fix. |
@@ -35,6 +36,7 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 - After the checkout checkpoint, `node --test tests/qolip*.test.cjs` passed all 64 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 - Product actions checkpoint: ported live `qolipSaveProductSpec`, `qolipSaveProductSpecsBatch`, `qolipDeleteProductSpecs` and `qolipTransferProducts`, reusing the existing Qolip product parser and scoped catalog store. The f119 oracle passed the single/batch warehouse contract case and the incomplete-transfer contract case separately. Their 3 and 1 requests were recorded in separate f119 fixtures and replayed; no widget or server-writing test was used.
 - After the product actions checkpoint, `node --test tests/qolip*.test.cjs` passed all 74 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
+- QR API checkpoint: ported `qolipCellQrLookup`, `qolipScanQr`, `qolipProductByQr` and their result models; product lookup reuses the existing Qolip products API. The f119 oracle passed three corresponding `HttpOverrides` cases without a camera or backend. Six source-derived native tests passed, as did iOS typecheck and Expo lint. Android typecheck and the full suite were not rerun for this checkpoint.
 
 ## Deviations candidates
 
@@ -42,7 +44,7 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 
 ## Test mode pending
 
-The role-wide test mode is deferred by the port plan. Rework, block, location, checkout and product-action functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the corresponding in-memory operations remain to be ported in the shared test-mode pass.
+The role-wide test mode is deferred by the port plan. Rework, block, location, checkout, product-action and QR functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the corresponding in-memory operations remain to be ported in the shared test-mode pass.
 
 ## Needs from the integrator
 
