@@ -62,7 +62,7 @@ export function ProfileView(props: ProfileViewProps) {
           </Column> : null}
         </FieldGroup.Section>
         <FieldGroup.Section>
-          <Button label="Kunlik ish" variant="text" onPress={onDailyWork} />
+          {onDailyWork ? <Button label="Kunlik ish" variant="text" onPress={onDailyWork} /> : null}
           <Button label="Sozlamalar" variant="text" onPress={() => setSettingsOpen(true)} />
         </FieldGroup.Section>
         <FieldGroup.Section>
