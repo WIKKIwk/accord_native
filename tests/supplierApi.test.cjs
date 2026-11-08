@@ -35,6 +35,7 @@ function fixture(body = [], status = 200) {
     '../authorizedFetch': { authorizedFetch: fetch },
     '../shared/catalogApi': catalog,
     '../shared/notificationApi': notifications,
+    '../shared/notification/notificationDetailModel': loadTs('shared/notification/notificationDetailModel.ts'),
   });
   return { ...api, catalog, notifications, calls, session: { token: 'test' } };
 }
@@ -200,4 +201,41 @@ test('Node and the installed React Native URL parser preserve Supplier query byt
       assert.equal(parsed.toString(), `https://example.test${route}`);
     }
   }
+});
+
+// Recorded by the local Dart VM oracle. Numeric and object conversion still
+// require lexical provenance and are intentionally not claimed by these cases.
+test('Supplier item text preserves Dart trimming and nonnumeric list stringification', async () => {
+  const oracle = require('./support/supplierItemStringOracle.json'), f = fixture([oracle.input]);
+  const [item] = await f.supplierItems(f.session);
+  assert.deepEqual(item.customer_names, oracle.customer_names);
+  assert.deepEqual(item.order_apparatus_options, oracle.order_apparatus_options);
+  const shared = f.catalog.supplierItemFromJson(oracle.input);
+  assert.notDeepEqual(shared.customer_names, oracle.customer_names);
+  assert.notDeepEqual(shared.order_apparatus_options, oracle.order_apparatus_options);
+});
+
+test('Supplier leaves unresolved numeric and object stringification on the shared parser behavior', async () => {
+  const row = { customer_names: [1, 1.5, [1, 'x'], { x: true }],
+    order_apparatus_options: { numeric: 1, decimal: 1.5, list: [1, 'x'], object: { x: true } } };
+  const f = fixture([row]);
+  assert.deepEqual(await f.supplierItems(f.session), [f.catalog.supplierItemFromJson(row)]);
+});
+
+test('Supplier customer-name trimming follows Dart whitespace without changing nearby characters', async () => {
+  const whitespace = [...Array.from({ length: 5 }, (_, index) => String.fromCodePoint(0x09 + index)),
+    ' ', '\u0085', '\u00a0', '\u1680', ...Array.from({ length: 11 }, (_, index) => String.fromCodePoint(0x2000 + index)),
+    '\u2028', '\u2029', '\u202f', '\u205f', '\u3000', '\ufeff'];
+  const names = whitespace.flatMap(character => [`${character}Name${character}`, character]);
+  const f = fixture([{ customer_names: [...names, '\u200b', '\u180e'] }]);
+  const [item] = await f.supplierItems(f.session);
+  assert.deepEqual(item.customer_names, [...whitespace.map(() => 'Name'), '\u200b', '\u180e']);
+});
+
+test('Supplier applies the safe text subset independently among unresolved values', async () => {
+  const row = { customer_names: [['a'], [1, 'a'], '\u0085', { x: true }],
+    order_apparatus_options: { simple: ['a'], numeric: [1, 'a'], object: { x: true } } };
+  const f = fixture([row]), [item] = await f.supplierItems(f.session);
+  assert.deepEqual(item.customer_names, ['[a]', '1,a', '[object Object]']);
+  assert.deepEqual(item.order_apparatus_options, { simple: '[a]', numeric: '1,a', object: '[object Object]' });
 });

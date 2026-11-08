@@ -3,6 +3,7 @@ import { authorizedFetch } from '../authorizedFetch';
 import { supplierItemFromJson, type SupplierItem } from '../shared/catalogApi';
 import type { SupplierSummary } from '../shared/dispatchRuntimeStores';
 import { dispatchRecordFromJson, type DispatchRecord } from '../shared/notificationApi';
+import { trimNotificationText } from '../shared/notification/notificationDetailModel';
 
 export type SupplierStatusKind = 'pending' | 'submitted' | 'returned';
 export type SupplierStatusBreakdownEntry = {
@@ -38,6 +39,35 @@ function integer(value: unknown): number {
 function list(value: unknown): unknown[] {
   if (!Array.isArray(value)) throw new TypeError('Invalid supplier list');
   return value;
+}
+
+// List.toString is unambiguous for these JSON values. Numbers and maps need
+// lexical/order provenance, so keep the existing shared behavior for them.
+function simpleDartText(value: unknown): string | undefined {
+  if (value === null) return 'null';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (!Array.isArray(value)) return undefined;
+  const parts: string[] = [];
+  for (const child of value) {
+    const text = simpleDartText(child);
+    if (text === undefined) return undefined;
+    parts.push(text);
+  }
+  return `[${parts.join(', ')}]`;
+}
+function supplierItemForSupplier(value: unknown): SupplierItem {
+  const item = supplierItemFromJson(value), row = object(value);
+  const names = (row.customer_names ?? []) as unknown[];
+  const options = (row.order_apparatus_options ?? {}) as JsonObject;
+  return { ...item,
+    customer_names: names.map(entry => {
+      const text = simpleDartText(entry);
+      return text === undefined ? String(entry).trim() : trimNotificationText(text);
+    }).filter(Boolean),
+    order_apparatus_options: Object.fromEntries(Object.entries(item.order_apparatus_options)
+      .map(([key, fallback]) => [key, simpleDartText(options[key]) ?? fallback])),
+  };
 }
 
 // Dart Uri.queryParameters uses UTF-8 form encoding with RFC 3986's unreserved
@@ -120,7 +150,7 @@ export async function supplierItems(session: Session, query = ''): Promise<Suppl
   const suffix = hasNonDartWhitespace(query) ? `?${queryParameters([['q', query]])}` : '';
   const response = await authorizedFetch(session, `/v1/mobile/supplier/items${suffix}`);
   if (response.status !== 200) throw new SupplierApiException('Supplier items failed');
-  return list(await response.json()).map(supplierItemFromJson);
+  return list(await response.json()).map(supplierItemForSupplier);
 }
 
 /** @v2 createDispatch */
