@@ -20,7 +20,8 @@ export function BoyoqchiDrawer({ children }: { children: ReactNode }) {
   const select = (id: string) => {
     if (id === 'logout') { confirmRoleDrawerLogout(onLogout); return; }
     const target = id === 'home' ? base : `${base}/${id}`;
-    router.navigate(target as Href);
+    if (active === 'home' || active === 'astatka') router.replace(target as Href);
+    else router.navigate(target as Href);
   };
   return <RoleDrawer {...state} title={t('Bo‘yoqchi bo‘limlari')} items={items} active={active} onSelect={select}
     closeAccessibilityLabel={t('Menyuni yopish')}
