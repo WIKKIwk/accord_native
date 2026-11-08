@@ -47,6 +47,14 @@ export async function adminItemsPage(session: Session, options: { query?: string
 }
 
 export type GScaleAdminWarehouse = { warehouse: string; company: string; is_group: boolean; parent_warehouse: string };
+
+/** @v2 AdminWarehouse.fromJson */
+export function adminWarehouseFromJson(value: unknown): GScaleAdminWarehouse {
+  const row = object(value);
+  return { warehouse: string(row.warehouse), company: string(row.company), is_group: row.is_group === true,
+    parent_warehouse: string(row.parent_warehouse ?? row.parent) };
+}
+
 /** @v2 adminWarehouses */
 export async function adminWarehouses(session: Session, options: { query?: string; parent?: string; limit?: number } = {}): Promise<GScaleAdminWarehouse[]> {
   const query = new URLSearchParams(), limit = options.limit ?? 50;
@@ -56,11 +64,7 @@ export async function adminWarehouses(session: Session, options: { query?: strin
   const path = '/v1/mobile/admin/warehouses', suffix = query.toString();
   const response = await authorizedFetch(session, suffix ? `${path}?${suffix}` : path);
   if (response.status !== 200) throw new Error('Admin warehouses failed');
-  return (await responseList(response)).map(value => {
-    const row = object(value);
-    return { warehouse: string(row.warehouse), company: string(row.company), is_group: row.is_group === true,
-      parent_warehouse: string(row.parent_warehouse ?? row.parent) };
-  });
+  return (await responseList(response)).map(adminWarehouseFromJson);
 }
 
 /** @v2 adminRawMaterialAssignmentOrders */
