@@ -24,7 +24,7 @@ export function customerStatusRecord(record: DispatchRecord) {
   return { name: record.item_name, created: record.created_label, quantity: `${record.sent_qty.toFixed(0)} ${record.uom}`,
     note: trimCustomerInput(record.note) ? record.note : '' };
 }
-export function customerNotificationRecord(record: DispatchRecord) {
+export function customerNotificationRecord(record: DispatchRecord): { name: string; code: string; created: string; body: string; icon: 'done' | 'close' | 'schedule' } {
   return { name: record.item_name, code: record.item_code, created: record.created_label,
     body: trimCustomerInput(record.note) ? record.note : `${record.sent_qty.toFixed(0)} ${record.uom} jo‘natildi`,
     icon: record.status === 'accepted' ? 'done' : record.status === 'rejected' ? 'close' : 'schedule' };

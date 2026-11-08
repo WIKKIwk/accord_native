@@ -13,7 +13,7 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 | Customer session wiring | `customer_store.dart`, `app_runtime_reset.dart` | A role context now binds one store and notifications controller to the current session and registers their reset path. Role routes and real-device account-switch verification remain open. |
 | In-flight refresh at account reset | `customer_store.dart` `clear`, `refresh` | V2 clears its singleton without explicitly cancelling an already pending refresh. Confirm whether an old response can update shared runtime state after an account switch before declaring that lifecycle fully audited. |
 | Timestamp ties | `customer_store.dart` `_mergeHistoryItems`, `customer_delivery_runtime_store.dart` `_sorted` | V2 Dart sorting does not guarantee tie order; JavaScript sorting is stable. Exact visible ordering of records with identical timestamps remains unverified. |
-| Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home and status content now have iOS and Android views, but routes, shells, notification and delivery views, shared NotificationDetailScreen integration, text and surface audits remain open. |
+| Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home, status and notifications content now have iOS and Android views, but routes, shells, delivery view, shared NotificationDetailScreen integration, text and surface audits remain open. |
 | Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | Connect a shared live chat unread total and initialized push delivery; neither is established by this checkpoint. |
 
 ## Baseline evidence
@@ -29,6 +29,8 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Customer notification content: `tests/customerNotificationViews.test.cjs` and `tests/customerNotifications.test.cjs` passed 10 tests for loading, retry, empty, unread highlight, mark-seen-before-open and clear confirmation. iOS typecheck and lint passed; Android retained the nine existing worker errors. Views are not routed or device-tested.
 
 - Customer home and status content: `tests/customerHomeViews.test.cjs` and `tests/customerPresentation.test.cjs` passed 6 source-derived tests across both platform implementations. iOS typecheck and Expo lint passed; Android retained the same nine pre-existing worker errors. These views are not routed or device-tested yet.
 
