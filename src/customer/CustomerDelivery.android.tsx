@@ -27,7 +27,7 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
   }, [deliveryNoteID, onOpenDiscussion]);
   useFocusEffect(useCallback(() => { if (returningFromDiscussion.current) { returningFromDiscussion.current = false; void reload(); } }, [reload]));
   if (state.loading) return <CustomerLoadingState />;
-  if (state.error || !state.detail) return <CustomerRetryState retry={state.reload} />;
+  if (state.error != null || !state.detail) return <CustomerRetryState retry={state.reload} />;
   const detail = state.detail, record = detail.record;
   const actions = customerDeliveryResponseActions(detail, state.submitting);
   const hasDiscussion = ['accepted', 'partial', 'rejected'].includes(record.status);

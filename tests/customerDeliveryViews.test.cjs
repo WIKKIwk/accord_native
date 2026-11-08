@@ -106,6 +106,14 @@ test('loading and retry states use the existing V2 texts', () => {
   }
 });
 
+test('delivery treats every non-null failure as retry even with prior detail', () => {
+  for (const platform of ['ios', 'android']) for (const error of [false, 0, '']) {
+    const snapshot = state([], { error, loading: false });
+    const screen = fixture(platform, snapshot).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
+    assert.equal(screen.type.name, 'CustomerRetryState'); assert.equal(screen.props.retry, snapshot.reload);
+  }
+});
+
 // Source-derived: customer_delivery_detail_screen.dart and _DetailLine in widgets_part_01.dart.
 test('read-only delivery rows preserve field order, quantity precision and accepted quantity visibility', () => {
   const text = key => `localized:${key}`;

@@ -75,12 +75,12 @@ test('clear action presents V2 confirmation and only its confirm callback clears
 });
 // Source-derived: customer_notifications_screen_widgets_part_01.dart loading, retry and empty branches.
 test('initial feed loading takes priority, uses the common centered native state, and leaves the clear dialog mounted', () => {
-  for (const platform of ['ios', 'android']) for (const error of [null, Error('offline')]) {
-    const state = { loaded: false, loading: true, error, records: [], highlightedIds: new Set(), refresh: async () => {}, markSeen: async () => {}, clearAll: async () => {} };
+  for (const platform of ['ios', 'android']) for (const [loading, error] of [[true, null], [true, Error('offline')], [false, null]]) {
+    const state = { loaded: false, loading, error, records: [], highlightedIds: new Set(), refresh: async () => {}, markSeen: async () => {}, clearAll: async () => {} };
     const screen = fixture(platform, state, true).CustomerNotificationsScreen({ onOpenDetail() {} });
-    const loading = nodes(screen, n => n.type?.name === 'CustomerLoadingState')[0]; assert.ok(loading);
+    const loadingView = nodes(screen, n => n.type?.name === 'CustomerLoadingState')[0]; assert.ok(loadingView);
     assert.equal(nodes(screen, n => n.type === 'FlatList' || n.type === 'ScrollView' || n.type === 'List').length, 0);
-    assert.ok(nodes(loading.type(loading.props), n => n.type === (platform === 'ios' ? 'ProgressView' : 'LoadingIndicator')).length);
+    assert.ok(nodes(loadingView.type(loadingView.props), n => n.type === (platform === 'ios' ? 'ProgressView' : 'LoadingIndicator')).length);
     assert.equal(nodes(screen, n => n.type === 'WorkerAlert')[0].props.alert.title, 'clearTitle');
   }
 });
@@ -88,7 +88,8 @@ test('initial feed loading takes priority, uses the common centered native state
 test('failed and empty feeds use source state priority, retain refresh and the real retry callback', async () => {
   for (const platform of ['ios', 'android']) for (const [loaded, loading, error, expected] of [
     [false, false, Error('offline'), 'CustomerRetryState'], [true, false, null, 'CustomerEmptyFeedState'],
-    [false, false, null, 'CustomerEmptyFeedState'], [true, true, Error('old'), 'CustomerEmptyFeedState'],
+    [false, false, false, 'CustomerRetryState'], [false, false, 0, 'CustomerRetryState'], [false, false, '', 'CustomerRetryState'],
+    [true, true, Error('old'), 'CustomerEmptyFeedState'],
   ]) {
     let refreshes = 0;
     const state = { loaded, loading, error, records: [], highlightedIds: new Set(), refresh: async () => { refreshes++; }, markSeen: async () => {}, clearAll: async () => {} };

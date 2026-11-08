@@ -15,7 +15,7 @@ type StatusProps = { kind: CustomerStatusKind; onOpenDetail: (id: string) => voi
 // @v2 CustomerHomeScreen
 export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
   const state = useCustomerHome(), colors = useMaterialColors(), { locale, text } = useCustomerText();
-  if (!state.loaded) return state.loading || !state.error ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
+  if (!state.loaded) return state.loading || state.error == null ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
   const direction = customerLayoutDirection(locale) === 'rightToLeft' ? 'rtl' : 'ltr';
   return <FlatList data={state.records} keyExtractor={item => item.id}
     refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}
@@ -56,7 +56,7 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
 // @v2 CustomerStatusDetailScreen
 export function CustomerStatusDetailScreen({ kind, onOpenDetail }: StatusProps) {
   const state = useCustomerStatus(kind), colors = useMaterialColors();
-  if (!state.loaded) return state.loading || !state.error ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
+  if (!state.loaded) return state.loading || state.error == null ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
   if (!state.records.length) return <CustomerEmptyStatusState />;
   return <FlatList data={state.records} keyExtractor={item => item.id} contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
     refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}

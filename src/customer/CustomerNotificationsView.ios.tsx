@@ -29,8 +29,8 @@ export function CustomerNotificationsScreen({ onOpenDetail, onClearActionChanged
     await state.markSeen(id);
     if (mounted.current && generation === focusGeneration.current) onOpenDetail(id);
   };
-  const showLoading = !state.loaded && state.records.length === 0 && state.loading;
-  const showRetry = !state.loaded && state.records.length === 0 && !!state.error;
+  const showLoading = !state.loaded && state.records.length === 0 && (state.loading || state.error == null);
+  const showRetry = !state.loaded && state.records.length === 0 && !state.loading && state.error != null;
   return <>
     {showLoading ? <CustomerLoadingState /> : state.records.length === 0
       ? <ScrollView alwaysBounceVertical contentContainerStyle={{ flexGrow: 1, paddingTop: 8, paddingBottom: 24 }}

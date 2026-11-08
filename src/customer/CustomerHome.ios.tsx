@@ -15,7 +15,7 @@ type StatusProps = { kind: CustomerStatusKind; onOpenDetail: (id: string) => voi
 // @v2 CustomerHomeScreen
 export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
   const state = useCustomerHome(), { locale, text } = useCustomerText();
-  if (!state.loaded) return state.loading || !state.error ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
+  if (!state.loaded) return state.loading || state.error == null ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
   return <Host style={{ flex: 1 }} layoutDirection={customerLayoutDirection(locale)}><List modifiers={[listStyle('insetGrouped'), refreshable(state.refresh)]}>
     <CustomerStatusPanel summary={state.summary} onOpenStatus={onOpenStatus} />
     <Section title={text('recentShipmentsTitle')}>
@@ -41,7 +41,7 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
 // @v2 CustomerStatusDetailScreen
 export function CustomerStatusDetailScreen({ kind, onOpenDetail }: StatusProps) {
   const state = useCustomerStatus(kind);
-  if (!state.loaded) return state.loading || !state.error ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
+  if (!state.loaded) return state.loading || state.error == null ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
   if (!state.records.length) return <CustomerEmptyStatusState />;
   return <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(state.refresh)]}>
     <Section>{state.records.map(record => {

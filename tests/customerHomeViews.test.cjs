@@ -107,6 +107,16 @@ test('both platforms show loading before the initial bootstrap and retry after a
     assert.equal(failed.type.name, 'CustomerRetryState'); assert.equal(failed.props.retry, state.refresh);
   }
 });
+
+test('Home and status treat every non-null initial failure as a retry, including falsy values', () => {
+  for (const platform of ['ios', 'android']) for (const error of [false, 0, '']) {
+    const views = fixture(platform, { ...state, loaded: false, loading: false, error });
+    for (const screen of [views.CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} }),
+      views.CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} })]) {
+      assert.equal(screen.type.name, 'CustomerRetryState'); assert.equal(screen.props.retry, state.refresh);
+    }
+  }
+});
 test('status rows open the selected delivery and empty states use the V2 label', () => {
   const calls = [], ios = fixture('ios', state).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail: id => calls.push(id) });
   nodes(ios, item => item.type === 'Button')[0].props.onPress();

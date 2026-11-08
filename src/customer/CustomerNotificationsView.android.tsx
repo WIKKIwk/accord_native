@@ -20,8 +20,8 @@ export function CustomerNotificationsScreen({ onOpenDetail, onClearActionChanged
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { onClearActionChanged?.(openClear); return () => { onClearActionChanged?.(null); }; }, [onClearActionChanged, openClear]);
   const open = async (id: string) => { await state.markSeen(id); if (mounted.current) onOpenDetail(id); };
-  const showLoading = !state.loaded && state.records.length === 0 && state.loading;
-  const showRetry = !state.loaded && state.records.length === 0 && !!state.error;
+  const showLoading = !state.loaded && state.records.length === 0 && (state.loading || state.error == null);
+  const showRetry = !state.loaded && state.records.length === 0 && !state.loading && state.error != null;
   return <>
     {showLoading ? <CustomerLoadingState /> : <FlatList data={state.records} keyExtractor={item => item.id} contentContainerStyle={{ flexGrow: 1, paddingTop: 8, paddingBottom: 24 }}
       refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}
