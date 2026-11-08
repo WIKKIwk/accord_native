@@ -33,7 +33,7 @@ function fixture() {
     for (const id of unread) if (!values.includes(id)) unread.delete(id);
   } };
   const controller = new SupplierNotificationsController(session, store, hiddenStore, unreadStore, id => calls.push(['open', id]));
-  return { controller, calls, hidden, unread, store, listeners };
+  return { controller, calls, hidden, unread, store, listeners, unreadStore };
 }
 
 test('history synchronization marks hidden IDs seen, retains current IDs and lists unread first', async () => {
@@ -65,4 +65,20 @@ test('refresh synchronizes history and a stopped screen does not navigate after 
   assert.equal(f.listeners.size, 0);
   await f.controller.open('first');
   assert.ok(!f.calls.some(call => call[0] === 'open'));
+});
+
+test('a missing receipt destination fails closed before marking an item seen', async () => {
+  const f = fixture(); f.controller.setOnOpenReceipt(undefined); f.controller.start(); await wait();
+  f.calls.length = 0;
+  await assert.rejects(f.controller.open('second'), /destination is unavailable/);
+  assert.deepEqual(f.calls, []); assert.equal(f.unread.has('second'), true);
+  f.controller.stop();
+});
+
+test('withdrawing the receipt destination while mark-seen is pending prevents navigation', async () => {
+  const f = fixture(); f.controller.start(); await wait(); let finish;
+  f.unreadStore.markSeen = () => new Promise(resolve => { finish = resolve; });
+  const pending = f.controller.open('second'); f.controller.setOnOpenReceipt(undefined);
+  finish(); await pending;
+  assert.ok(!f.calls.some(call => call[0] === 'open')); f.controller.stop();
 });

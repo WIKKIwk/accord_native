@@ -14,3 +14,10 @@ test('both native notification lists use shared unread state, clear confirmation
     }
   }
 });
+
+test('restricted host omits receipt button without a navigation callback', () => {
+  for (const platform of ['ios', 'android']) {
+    const source = fs.readFileSync(path.resolve(__dirname, '../src/supplier', `SupplierNotificationsScreen.${platform}.tsx`), 'utf8');
+    assert.ok(source.includes('props.onReceipt ? () => { void controller.open(record.id); } : undefined'));
+  }
+});

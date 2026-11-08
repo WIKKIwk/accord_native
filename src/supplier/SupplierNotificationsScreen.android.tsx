@@ -40,7 +40,8 @@ export function SupplierNotificationsScreen(props: SupplierNotificationsProps) {
         : !items.length ? <PreparationText>{l('noNotifications')}</PreparationText> : items.map((record, index) => {
           const selected = highlighted.has(record.id), foreground = selected ? colors.onSecondaryContainer : colors.onSurface;
           return <WorkerQueueCard key={`${record.id}:${index}`} first={index === 0} last={index === items.length - 1}
-            backgroundColor={selected ? colors.secondaryContainer : colors.surfaceContainerLow} onPress={() => { void controller.open(record.id); }}>
+            backgroundColor={selected ? colors.secondaryContainer : colors.surfaceContainerLow}
+            onPress={props.onReceipt ? () => { void controller.open(record.id); } : undefined}>
             <View style={{ flex: 1, gap: 6 }}><View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ flex: 1, color: foreground, fontSize: 18 }}>{record.item_code}</Text>
               <SymbolView name={{ android: icons[supplierNotificationStatusIcon(record)] }} size={18} tintColor={foreground} /></View>

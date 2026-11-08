@@ -21,6 +21,7 @@ class ConfirmController {
 }
 class NotificationsController {
   constructor(_session, _store, _hidden, _unread, onReceipt) { this.onReceipt = onReceipt; }
+  setOnOpenReceipt(callback) { this.onReceipt = callback; }
   subscribe() { return () => {}; } getSnapshot() { return 0; }
   get visibleItems() { return []; } get highlightedIds() { return new Set(); }
 }

@@ -25,10 +25,10 @@ export class SupplierNotificationsController {
   private unsubscribeStore: (() => void) | null = null;
   constructor(private readonly session: Session, private readonly store: SupplierStore,
     private readonly hidden: HiddenNotifications, private readonly unread: UnreadNotifications,
-    private onOpenReceipt: (id: string) => void) {}
+    private onOpenReceipt?: (id: string) => void) {}
   subscribe = (listener: Listener): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   getSnapshot = (): number => this.version;
-  setOnOpenReceipt(callback: (id: string) => void): void { this.onOpenReceipt = callback; }
+  setOnOpenReceipt(callback?: (id: string) => void): void { this.onOpenReceipt = callback; }
   private notify(): void { this.version++; for (const listener of this.listeners) listener(); }
   get highlightedIds(): ReadonlySet<string> { return this.highlighted; }
   get visibleItems(): DispatchRecord[] {
@@ -64,8 +64,10 @@ export class SupplierNotificationsController {
     this.highlighted = new Set(); this.notify();
   }
   async open(id: string): Promise<void> {
+    const onOpenReceipt = this.onOpenReceipt;
+    if (!onOpenReceipt) throw new Error('Supplier receipt destination is unavailable');
     await this.unread.markSeen(this.session, [id]);
-    if (!this.active) return;
-    this.highlighted.delete(id); this.notify(); this.onOpenReceipt(id);
+    if (!this.active || this.onOpenReceipt !== onOpenReceipt) return;
+    this.highlighted.delete(id); this.notify(); onOpenReceipt(id);
   }
 }

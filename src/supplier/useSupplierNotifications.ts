@@ -7,13 +7,18 @@ import type { SupplierNotificationsProps } from './supplierNotificationsTypes';
 export function useSupplierNotifications(props: SupplierNotificationsProps) {
   const [callback] = useState(() => {
     let current = props.onReceipt;
-    return { set: (next: (id: string) => void) => { current = next; }, open: (id: string) => current(id) };
+    const open = (id: string) => {
+      if (!current) throw new Error('Supplier receipt destination is unavailable');
+      current(id);
+    };
+    return { set: (next?: (id: string) => void) => { current = next; }, open, initial: current ? open : undefined };
   });
   const controller = useMemo(() => new SupplierNotificationsController(props.session, props.store,
-    notificationHiddenStore, notificationUnreadStore, callback.open), [props.session, props.store, callback]);
+    notificationHiddenStore, notificationUnreadStore, callback.initial), [props.session, props.store, callback]);
   useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useSyncExternalStore(props.store.subscribe, props.store.getSnapshot, props.store.getSnapshot);
-  useEffect(() => { callback.set(props.onReceipt); }, [callback, props.onReceipt]);
+  useEffect(() => { callback.set(props.onReceipt); controller.setOnOpenReceipt(props.onReceipt ? callback.open : undefined); },
+    [callback, controller, props.onReceipt]);
   useEffect(() => {
     void props.store.bootstrapHistory();
     controller.start();
