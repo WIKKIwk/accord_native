@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
-import { activeSessionToken, type Session } from '../auth';
+import { activeSessionEpoch, activeSessionToken, type Session } from '../auth';
+import { sessionReadScope } from '../sessionReadScope';
 import { boyoqchiDraftAccount, boyoqchiDraftAccountKey, boyoqchiDraftKey } from './boyoqchiDraftScope';
 import type { ReturnedPaintImage } from './returnedPaintModel';
 import { ReturnedPaintDraftStore, type ReturnedPaintDraftStorage } from './returnedPaintDraft';
@@ -84,13 +85,14 @@ export class BoyoqchiSessionDraftStore {
   private readonly account: ReturnType<typeof boyoqchiDraftAccount>;
   private readonly accountKey: string;
   private readonly store: ReturnedPaintDraftStore;
-  constructor(private readonly session: Session) {
+  constructor(private readonly session: Session, private readonly epoch: number, private readonly readScope: string) {
     this.account = boyoqchiDraftAccount(session);
     this.accountKey = boyoqchiDraftAccountKey(this.account);
     this.store = new ReturnedPaintDraftStore(new ReturnedPaintDraftFileStorage(() => this.isCurrent()));
   }
   isCurrent(): boolean {
-    try { return !!activeSessionToken(this.session) && boyoqchiDraftAccountKey(boyoqchiDraftAccount(this.session)) === this.accountKey; }
+    try { return !!activeSessionToken(this.session) && activeSessionEpoch(this.session) === this.epoch &&
+      sessionReadScope(this.session) === this.readScope && boyoqchiDraftAccountKey(boyoqchiDraftAccount(this.session)) === this.accountKey; }
     catch { return false; }
   }
   private key(requestId: string): string {
@@ -105,12 +107,14 @@ export class BoyoqchiSessionDraftStore {
   async clear(requestId: string): Promise<void> { const key = this.key(requestId); await this.store.clear(key); this.key(requestId); }
   flush(requestId: string): Promise<void> { return this.store.flush(this.key(requestId)); }
 }
-const sessionStores = new WeakMap<Session, { accountKey: string; store: BoyoqchiSessionDraftStore }>();
+const sessionStores = new WeakMap<Session, { accountKey: string; epoch: number; readScope: string; store: BoyoqchiSessionDraftStore }>();
 export function returnedPaintDraftStoreFor(session: Session): BoyoqchiSessionDraftStore {
   const accountKey = boyoqchiDraftAccountKey(boyoqchiDraftAccount(session));
+  const epoch = activeSessionEpoch(session), readScope = sessionReadScope(session);
+  if (epoch === null || !activeSessionToken(session)) throw new Error('Sessiya tugagan. Qayta kiring.');
   let entry = sessionStores.get(session);
-  if (!entry || entry.accountKey !== accountKey) {
-    entry = { accountKey, store: new BoyoqchiSessionDraftStore(session) };
+  if (!entry || entry.accountKey !== accountKey || entry.epoch !== epoch || entry.readScope !== readScope) {
+    entry = { accountKey, epoch, readScope, store: new BoyoqchiSessionDraftStore(session, epoch, readScope) };
     sessionStores.set(session, entry);
   }
   if (!entry.store.isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.');

@@ -17,6 +17,7 @@ const controls = load('workerControlsApi', { './authorizedFetch': {}, './session
 const model = load('boyoqchi/returnedPaintModel', { '../workerControlsApi': controls });
 const draft = load('boyoqchi/returnedPaintDraft', { './returnedPaintModel': model });
 const scopes = load('boyoqchi/boyoqchiDraftScope');
+const sessionScope = load('sessionReadScope');
 const cryptoApi = { CryptoDigestAlgorithm: { SHA256: 'sha256' }, digestStringAsync: async (_, value) =>
   crypto.createHash('sha256').update(value).digest('hex') };
 
@@ -25,7 +26,7 @@ const cryptoApi = { CryptoDigestAlgorithm: { SHA256: 'sha256' }, digestStringAsy
 function createBackend() {
   const files = new Map(), moves = [], waiting = [];
   const deletions = [], copies = [], waitingCopies = [], reads = [], waitingReads = [];
-  let failCopy = false, pauseCopy = false, pauseRead = false, beforeRead = null, active = null;
+  let failCopy = false, pauseCopy = false, pauseRead = false, beforeRead = null, active = null, epoch = 1;
   class Directory {
     constructor(parent, name) { this.uri = `${parent.uri}/${name}`; }
     create() {}
@@ -87,10 +88,13 @@ function createBackend() {
   const backend = { Directory, File, Paths: { document: { uri: 'file:///documents' } } };
   const runtime = load('boyoqchi/returnedPaintDraftRuntime', {
     'expo-crypto': cryptoApi, 'expo-file-system': backend, './returnedPaintDraft': draft, './boyoqchiDraftScope': scopes,
-    '../auth': { activeSessionToken: session => active === session ? session.token : null },
+    '../auth': { activeSessionToken: session => active === session ? session.token : null,
+      activeSessionEpoch: session => active === session ? epoch : null },
+    '../sessionReadScope': sessionScope,
   });
   return { files, deletions, storage: () => new runtime.ReturnedPaintDraftFileStorage(() => true),
-    activate: session => { active = session; }, sessionStore: session => runtime.returnedPaintDraftStoreFor(session),
+    activate: session => { active = session; }, advanceEpoch: () => { epoch++; },
+    sessionStore: session => runtime.returnedPaintDraftStoreFor(session),
     failNextCopy: () => { failCopy = true; }, beforeNextRead: callback => { beforeRead = callback; },
     pauseNextCopy: () => { pauseCopy = true; }, pendingMoves: () => moves.length,
     pauseNextRead: () => { pauseRead = true; },
@@ -547,4 +551,41 @@ test('a delayed read from the prior login rejects after the active server change
   read.resume();
   await assert.rejects(pending, /Sessiya tugagan/);
   assert.equal((await backend.sessionStore(otherServer).load('request')).image, null);
+});
+
+test('failed-login rollback with the same session object invalidates the prior draft store', async () => {
+  const backend = createBackend(), session = account('https://alpha.invalid');
+  backend.activate(session);
+  const stale = backend.sessionStore(session), draft = await stale.load('request');
+  draft.setValue('rasxot:Oq', 0, 'saved', 1);
+  const move = await backend.nextMove(); move.succeed(); await stale.flush('request');
+  backend.advanceEpoch(); // Login starts, fails, and auth restores this exact session object.
+  backend.activate(session);
+  assert.equal(stale.isCurrent(), false);
+  await assert.rejects(stale.load('request'), /Sessiya tugagan/);
+  await assert.rejects(stale.clear('request'), /Sessiya tugagan/);
+  const current = backend.sessionStore(session);
+  assert.notEqual(current, stale);
+  assert.equal((await current.load('request')).valuesFor('rasxot:Oq', 1)[0], 'saved');
+});
+
+test('same-object capability and assignment changes invalidate old stores without poisoning a new scope', async () => {
+  const backend = createBackend(), session = account('https://alpha.invalid');
+  session.capabilities = ['paint.read']; session.assigned_apparatus = ['apparatus-a'];
+  backend.activate(session);
+  const before = backend.sessionStore(session), initial = await before.load('request');
+  initial.setValue('rasxot:Oq', 0, 'saved', 1);
+  const move = await backend.nextMove(); move.succeed(); await before.flush('request');
+  session.capabilities.push('paint.write');
+  assert.equal(before.isCurrent(), false);
+  await assert.rejects(before.load('request'), /Sessiya tugagan/);
+  const changed = backend.sessionStore(session);
+  assert.notEqual(changed, before);
+  assert.equal((await changed.load('request')).valuesFor('rasxot:Oq', 1)[0], 'saved');
+  session.assigned_apparatus = ['apparatus-b'];
+  assert.equal(changed.isCurrent(), false);
+  await assert.rejects(changed.clear('request'), /Sessiya tugagan/);
+  const next = backend.sessionStore(session);
+  assert.notEqual(next, changed);
+  assert.equal((await next.load('request')).valuesFor('rasxot:Oq', 1)[0], 'saved');
 });
