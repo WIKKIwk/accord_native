@@ -21,7 +21,7 @@ export type RawSplitControllerOptions = {
   ticket: api.RawSplitSessionTicket; canMutate: () => boolean; selectPrinter: () => Promise<Device | null>;
   print: (result: RawSplitResult, printer: Device, wifiPrinter: string, guard: () => void) => Promise<void>;
   onMessage: (message: string) => void; onIssueVisible: () => void;
-  printerSupported: (printer: Device, wifiPrinter: string) => boolean; onUnsupportedPrinter: () => void;
+  printerSupported: (printer: Device, wifiPrinter: string) => boolean; onUnsupportedPrinter: (printer: Device, wifiPrinter: string) => void;
   operations?: Operations; requestId?: () => Promise<string>;
 };
 let nextOutputKey = 0;
@@ -129,7 +129,7 @@ export class RawSplitController {
       if (!payload) return;
       this.checkWriteScope();
       if (!this.state.printer && !await this.selectPrinter()) return;
-      if (!this.options.printerSupported(this.state.printer!, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
+      if (!this.options.printerSupported(this.state.printer!, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(this.state.printer!, this.state.wifiPrinter); return; }
       this.checkWriteScope();
       const result = await this.ops.rawSplitSave(this.options.ticket, payload); this.checkScope();
       this.update({ saved: result, source: null, pending: null, barcode: '' });

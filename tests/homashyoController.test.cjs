@@ -148,3 +148,18 @@ test('read-only mode still performs local waste validation and reveals the issue
   assert.equal(h.controller.getSnapshot().showIssue, true); assert.ok(h.notices.includes('issue-visible'));
   assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.issueCalls, []); assert.deepEqual(h.prints, []);
 });
+
+test('same-kind USB Zebra replacement cannot reach stock save or a print bridge', async () => {
+  const runtime = load('homashyo/rawSplitPrintRuntime', { 'react-native': { Platform: { OS: 'android' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
+  for (const deviceName of ['Zebra-A', 'Zebra-B']) {
+    const h = setup(); h.setPick({ transport: 'offline', printer: { kind: 'zebra', deviceName } });
+    h.options.printerSupported = runtime.rawSplitPrinterSupported; await fill(h.controller); await h.controller.save();
+    assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []); assert.ok(h.notices.includes('unsupported-printer'));
+  }
+});
+
+test('iOS Bluetooth without native selected-UUID recheck cannot commit stock', async () => {
+  const runtime = load('homashyo/rawSplitPrintRuntime', { 'react-native': { Platform: { OS: 'ios' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
+  const h = setup(); h.setPick({ transport: 'bluetooth', printer: { address: 'A' } }); h.options.printerSupported = runtime.rawSplitPrinterSupported;
+  await fill(h.controller); await h.controller.save(); assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []); assert.ok(h.notices.includes('unsupported-printer'));
+});

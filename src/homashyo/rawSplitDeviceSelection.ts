@@ -1,7 +1,7 @@
 import { driverUrlForRs, type DiscoveredServer } from '../gscale/gscaleDiscovery';
 import type { PrintDeviceSelection } from '../gscale/gscalePreferences';
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
-import { RawSplitUnsupportedPrinter, rawSplitPrinterSupported } from './rawSplitPrintRuntime';
+import { RawSplitUnsupportedPrinter, rawSplitPrinterSupported, rawSplitUnsupportedReason } from './rawSplitPrintRuntime';
 
 /** Carry the entire V2 server handshake; driver routing depends on server_ref and server_name. */
 export type RawSplitDeviceSelection = PreparationDeviceSelection | (Extract<PreparationDeviceSelection, { transport: 'wifi' }> & { server: DiscoveredServer });
@@ -14,10 +14,12 @@ export function rawSplitDeviceSelection(selection: PrintDeviceSelection): RawSpl
   return { transport: 'offline', printer: selection.offlinePrinter };
 }
 
-/** D13 rejects unsupported USB devices in the sheet, before a selection or stock write.
- * Wi-Fi is allowed here so the operator can choose Zebra in the screen's printer selector. */
+/** USB detection only preserves printer kind, not an exact identity at native dispatch. */
 export function validateRawSplitDeviceSelection(selection: PrintDeviceSelection): void {
+  if (selection.transport === 'offline') {
+    throw new RawSplitUnsupportedPrinter(rawSplitUnsupportedReason('offline'));
+  }
   if (!rawSplitPrinterSupported(rawSplitDeviceSelection(selection), 'zebra')) {
-    throw new RawSplitUnsupportedPrinter('Bu USB printer qo‘llab-quvvatlanmaydi. Zebra yoki Bluetooth printerni tanlang.');
+    throw new RawSplitUnsupportedPrinter(rawSplitUnsupportedReason(selection.transport));
   }
 }

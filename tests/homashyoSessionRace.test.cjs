@@ -16,18 +16,18 @@ const printRecord = record('printer failure and reprint do not submit stock agai
 function setup() {
   const session = { baseUrl: 'https://example.invalid', token: 'not-a-credential', profile: { role: 'homashyo_rezkachi', ref: 'same' },
     capabilities: ['raw_material.split'] }, replacement = { ...session, profile: { ...session.profile } }, saved = new Map(), calls = [];
-  let current = session, epoch = 0, respond = async () => { throw new Error('No fake response provided'); };
+  let current = session, epoch = 0, witnessCurrent = true, beforeSend, respond = async () => { throw new Error('No fake response provided'); };
   const store = { getItemAsync: async key => saved.get(key) ?? null,
     setItemAsync: async (key, value) => { saved.set(key, typeof value === 'function' ? value(saved.get(key) ?? null) : value); },
     removeItemAsync: async key => saved.delete(key) };
   const api = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: store, __esModule: true },
-    '../auth': { currentSession: () => current }, '../authorizedFetch': { authorizedFetch: async (s, url, init, guard) => {
-      guard(); calls.push({ s, url, init }); return respond(); } }, '../shared/mobileApiException': load('shared/mobileApiException'),
+    '../auth': { currentSession: () => current }, '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard'), '../authorizedFetch': { authorizedFetch: async (s, url, init, guard) => {
+      beforeSend = guard; guard(); calls.push({ s, url, init }); return respond(); } }, '../shared/mobileApiException': load('shared/mobileApiException'),
     './rawSplitModel': load('homashyo/rawSplitModel') });
-  const ticket = api.createRawSplitSessionTicket(session, candidate => current === candidate ? epoch : null);
+  const ticket = api.createRawSplitSessionTicket(session, candidate => current === candidate ? epoch : null, () => witnessCurrent);
   return { api, store, saved, calls, session, ticket, replacement, switchSession: () => { current = replacement; epoch++; },
-    bumpEpoch: () => { epoch++; }, restoreSameObject: () => { current = session; },
-    setResponse: fn => { respond = fn; } };
+    bumpEpoch: () => { epoch++; }, setWitness: value => { witnessCurrent = value; }, restoreSameObject: () => { current = session; },
+    setResponse: fn => { respond = fn; }, retryGuard: () => beforeSend() };
 }
 const fakeResponse = body => ({ status: 200, json: async () => body });
 for (const kind of ['stock', 'issue']) test(`same-account new login during ${kind} pending storage read cannot return old data`, async () => {
@@ -94,8 +94,8 @@ test('same-account new login during a failed response parse does not expose the 
 test('epoch zero is valid; missing, invalid, inactive and forged tickets fail closed', async () => {
   const h = setup(); assert.ok(h.api.rawSplitSessionIsCurrent(h.ticket));
   for (const value of [null, undefined, NaN, -1, 1.5])
-    assert.throws(() => h.api.createRawSplitSessionTicket(h.session, () => value), /Akkaunt o‘zgargan/);
-  assert.throws(() => h.api.createRawSplitSessionTicket(h.replacement, () => 0), /Akkaunt o‘zgargan/);
+    assert.throws(() => h.api.createRawSplitSessionTicket(h.session, () => value, () => true), /Akkaunt o‘zgargan/);
+  assert.throws(() => h.api.createRawSplitSessionTicket(h.replacement, () => 0, () => true), /Akkaunt o‘zgargan/);
   await assert.rejects(h.api.rawSplitPending({ session: h.session, check() {} }), /Sessiya tekshiruvi kerak/);
 });
 test('a login attempt epoch change invalidates an old ticket even if the same object stays active or returns after rollback', async () => {
@@ -113,4 +113,47 @@ test('epoch change during storage deletion preserves the exact sent command with
   const pending = h.api.rawSplitSave(h.ticket, payload); await reached.promise; h.bumpEpoch(); gate.resolve();
   await assert.rejects(pending, /Akkaunt o‘zgargan/); assert.deepEqual(JSON.parse([...h.saved.values()][0]), payload);
   assert.equal(h.calls.length, 1);
+});
+
+test('witness transition with the same session object stops a pending send and permanently retires the ticket', async () => {
+  const h = setup(), gate = deferred(), reached = deferred(), payload = JSON.parse(stockRecord.requestBody.text);
+  const save = h.store.setItemAsync; h.store.setItemAsync = async (key, value) => { await save(key, value); reached.resolve(); await gate.promise; };
+  const pending = h.api.rawSplitSave(h.ticket, payload); await reached.promise; h.setWitness(false); gate.resolve();
+  await assert.rejects(pending, /Akkaunt o‘zgargan/); assert.equal(h.calls.length, 0);
+  assert.deepEqual(JSON.parse([...h.saved.values()][0]), payload); h.setWitness(true);
+  assert.equal(h.api.rawSplitSessionIsCurrent(h.ticket), false); await assert.rejects(h.api.rawSplitPending(h.ticket), /Akkaunt o‘zgargan/);
+});
+test('witness change during a response parse preserves the sent command and never retries', async () => {
+  const h = setup(), gate = deferred(), reached = deferred(), payload = JSON.parse(stockRecord.requestBody.text);
+  h.setResponse(async () => ({ status: 200, json: async () => { reached.resolve(); await gate.promise; return JSON.parse(stockRecord.responseBody.text); } }));
+  const pending = h.api.rawSplitSave(h.ticket, payload); await reached.promise; h.setWitness(false); gate.resolve();
+  await assert.rejects(pending, /Akkaunt o‘zgargan/); assert.equal(h.calls.length, 1); assert.deepEqual(JSON.parse([...h.saved.values()][0]), payload);
+});
+test('missing or asynchronous witness fails closed without unhandled rejections', async () => {
+  const h = setup(); for (const witness of [undefined, () => false, () => Promise.resolve(true), () => Promise.reject(new Error('no'))])
+    assert.throws(() => h.api.createRawSplitSessionTicket(h.session, () => 0, witness), /Akkaunt o‘zgargan/);
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(h.calls.length, 0);
+});
+test('demo token blocks stock, issue and remote print before storage or network', async () => {
+  const h = setup(); h.session.token = 'test-mode-token'; let storageCalls = 0;
+  h.store.getItemAsync = async () => { storageCalls++; return null; };
+  await assert.rejects(h.api.rawSplitSave(h.ticket, {}), /Demo\/test/);
+  await assert.rejects(h.api.rawSplitReportIssue(h.ticket, {}), /Demo\/test/);
+  await assert.rejects(h.api.rawSplitPrint(h.ticket, { splitId: 'x', barcode: 'x', driverUrl: 'x', printer: 'zebra', printMode: 'label' }), /Demo\/test/);
+  assert.equal(storageCalls, 0); assert.deepEqual(h.calls, []);
+});
+test('demo token introduced during key removal restores the sent command without another send', async () => {
+  const h = setup(), gate = deferred(), reached = deferred(), payload = JSON.parse(stockRecord.requestBody.text);
+  h.setResponse(async () => fakeResponse(JSON.parse(stockRecord.responseBody.text)));
+  h.store.removeItemAsync = async key => { const removed = h.saved.delete(key); reached.resolve(); await gate.promise; return removed; };
+  const pending = h.api.rawSplitSave(h.ticket, payload); await reached.promise; h.session.token = 'test-mode-token'; gate.resolve();
+  await assert.rejects(pending, /Demo\/test/); assert.deepEqual(JSON.parse([...h.saved.values()][0]), payload); assert.equal(h.calls.length, 1);
+});
+
+test('the same captured witness guards a later 401 retry before another send', async () => {
+  const h = setup(), gate = deferred(), reached = deferred(), payload = JSON.parse(stockRecord.requestBody.text);
+  h.setResponse(async () => { reached.resolve(); await gate.promise; return fakeResponse(JSON.parse(stockRecord.responseBody.text)); });
+  const pending = h.api.rawSplitSave(h.ticket, payload); await reached.promise; h.setWitness(false);
+  assert.throws(() => h.retryGuard(), /Akkaunt o‘zgargan/); gate.resolve(); await assert.rejects(pending, /Akkaunt o‘zgargan/);
+  assert.equal(h.calls.length, 1); assert.deepEqual(JSON.parse([...h.saved.values()][0]), payload);
 });

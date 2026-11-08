@@ -12,9 +12,9 @@ function hooks() { const slots = [], pending = []; let cursor = 0, alive = true;
       return [slots[i], value => { if (alive) slots[i] = typeof value === 'function' ? value(slots[i]) : value; }]; },
     useEffect: (effect, deps) => { const i = cursor++, previous = slots[i];
       if (!previous || !deps || deps.some((v, j) => v !== previous.deps[j])) pending.push(() => { previous?.cleanup?.(); slots[i] = { deps, cleanup: effect() }; }); },
-    useCallback: fn => { cursor++; return fn; } };
+    useCallback: fn => { cursor++; return fn; }, useSyncExternalStore: (_subscribe, get) => { cursor++; return get(); } };
   return { react, render: fn => { cursor = 0; const result = fn(); while (pending.length) pending.shift()(); return result; },
-    unmount: () => { alive = false; slots.forEach(value => value?.cleanup?.()); } };
+    unmount: () => { alive = false; slots.forEach(value => value?.cleanup?.()); }, fresh: () => { slots.length = 0; pending.length = 0; alive = true; } };
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const routes = load('shared/appRoutes.ts');
@@ -32,14 +32,22 @@ test('role home mapping leaves Worker and Preparation unchanged and rejects unau
 });
 function gateHarness(value, platform = 'ios', epoch = true, deferred) {
   const h = hooks(); let reset;
+  let logoutCalls = 0, clearCalls = 0, captures = 0, witnessValid = true, captureAllowed = true;
   const auth = { loadSession: () => deferred ?? Promise.resolve(value), registerSessionResetHook: fn => { reset = fn; return () => {}; },
-    logout: async () => {}, ...(epoch ? { activeSessionEpoch: () => 0 } : {}) };
+    logout: async () => { logoutCalls++; }, clearSession: async () => { clearCalls++; }, captureSessionWitness: () => { captures++; return captureAllowed ? {} : null; },
+    isSessionWitnessCurrent: () => witnessValid, subscribeSessionWitness: () => () => {}, sessionWitnessVersion: () => 0,
+    ...(epoch ? { activeSessionEpoch: () => 0 } : {}) };
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'expo-router': { Redirect: 'Redirect', router: { replace() {} } },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: platform }, Text: 'Text', View: 'View' },
     '../auth': auth, '../appLock': { clearAppLock: async () => {} }, '../components/WorkerSecurity': { WorkerSecurityProvider: 'Security' },
-    '../shared/appRoutes': routes, './rawSplitApi': { createRawSplitSessionTicket: () => ({}) }, './RawSplitContext': { RawSplitProvider: 'Provider' } };
+    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
+    '../shared/appRoutes': routes, './rawSplitApi': { createRawSplitSessionTicket: (session, _readEpoch, checkWitness) => {
+      if (!checkWitness()) throw new Error('invalid'); return { session, check: () => { if (!checkWitness()) throw new Error('invalid'); } }; } }, './RawSplitContext': { RawSplitProvider: 'Provider' } };
   const Gate = load('homashyo/RawSplitSessionGate.tsx', mocks, true).RawSplitSessionGate;
-  return { render: () => h.render(() => Gate({ platform: 'ios', children: 'route' })), reset: () => reset(), unmount: h.unmount };
+  return { render: () => h.render(() => Gate({ platform: 'ios', children: 'route' })), reset: () => reset(), unmount: h.unmount,
+    logoutCalls: () => logoutCalls, clearCalls: () => clearCalls, captures: () => captures,
+    setWitness: value => { witnessValid = value; }, setCaptureAllowed: value => { captureAllowed = value; },
+    activate: element => { h.fresh(); return () => h.render(() => element.type(element.props)); } };
 }
 test('each direct role entry waits for session and rejects wrong role, missing capability, or wrong platform', async () => {
   for (const [value, platform] of [[null, 'ios'], [session('customer', ['raw_material.split']), 'ios'],
@@ -106,8 +114,8 @@ test('scanner rejects background, lost session, and confirmation after the sessi
   h.invalidate(); h.alert()[2][1].onPress(); await flush(); assert.deepEqual(h.lookups, []); h.unmount();
 });
 test('history detail reuses native sheet and defers printer picker until sheet dismissal', async () => {
-  let current = true, opened, options, closes = 0, selections = 0;
-  const controller = { selectPrinter: async () => { selections++; } }, sheet = { isOpen: () => false,
+  let current = true, opened, options, closes = 0, selections = 0, reprints = 0;
+  const controller = { selectPrinter: async () => { selections++; }, getSnapshot: () => ({ printer: null }), reprint: async () => { reprints++; } }, sheet = { isOpen: () => false,
     open: (node, nextOptions) => { opened = node; options = nextOptions; }, close: () => { closes++; } };
   const ctx = { ticket: {}, runtime: { history: controller } };
   const mocks = { 'react/jsx-runtime': jsx, 'react-native': { Alert: { alert() {} } }, '../nativeSheet': { useNativeSheet: () => sheet },
@@ -116,6 +124,8 @@ test('history detail reuses native sheet and defers printer picker until sheet d
   const { useRawSplitHistoryActions } = load('homashyo/useRawSplitHistoryActions.tsx', mocks, true), flow = useRawSplitHistoryActions();
   flow.onResult({ id: 'result' }); assert.equal(opened.type, 'ResultBinding'); assert.equal(options.dismissible, true);
   opened.props.onSelectPrinterAfterDismiss(); assert.equal(closes, 1); assert.equal(selections, 0); options.onDismiss(); await flush(); assert.equal(selections, 1);
+  flow.onResult({ id: 'reprint' }); await opened.props.onReprintRequest(); await opened.props.onReprintRequest();
+  assert.equal(reprints, 0); options.onDismiss(); await flush(); assert.equal(reprints, 1);
   flow.onResult({ id: 'second' }); opened.props.onSelectPrinterAfterDismiss(); current = false; options.onDismiss(); await flush(); assert.equal(selections, 1);
   current = true; const issue = { id: 'issue' }; flow.onIssue(issue, true); assert.equal(opened.type, 'IssueDetails'); assert.equal(opened.props.issue, issue);
 });
@@ -134,25 +144,27 @@ test('repeated camera events cannot complete or look up a second detection', () 
   const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); flow.complete('ONE'); flow.complete('TWO');
   assert.deepEqual(h.values, ['ONE']); assert.equal(h.alert()[1], 'ONE'); assert.deepEqual(h.lookups, []); h.unmount();
 });
-test('provider composes the real picker owner, keeps writes disabled, and cancels on session reset', async () => {
-  const h = hooks(); h.react.createContext = () => ({ Provider: 'ContextProvider' }); let reset, runtimeOptions, disposals = 0, renderedRequest;
+test('provider composes the real picker owner, enables only a current witness, and cancels on transition', async () => {
+  const h = hooks(); h.react.createContext = () => ({ Provider: 'ContextProvider' }); let reset, witnessListener, runtimeOptions, disposals = 0, renderedRequest, current = true;
   const discovery = load('gscale/gscaleDiscovery.ts');
   const { createTransientDevicePicker } = load('shared/printing/transientDevicePicker.ts', { '../../gscale/gscaleDiscovery': discovery });
   const { RawSplitPickerCoordinator } = load('homashyo/rawSplitPickerCoordinator.ts');
-  const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View' },
+  const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
+    'expo-router': { router: { replace() {} } }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../auth': { registerSessionResetHook: fn => { reset = fn; return () => {}; } },
     '../preparation/PreparationNotice': { PreparationNotice: 'Notice' }, '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
     '../shared/printing/transientDevicePickerRuntime': { createNativeTransientDevicePicker: isCurrent => {
       renderedRequest = createTransientDevicePicker({ isCurrent, scan: async () => ({ servers: [], candidateCount: 0 }), probe: async () => null }); return renderedRequest; } },
-    './rawSplitApi': { rawSplitSessionIsCurrent: () => true }, './rawSplitDeviceSelection': { rawSplitDeviceSelection: value => value, validateRawSplitDeviceSelection() {} },
+    './rawSplitApi': { rawSplitSessionIsCurrent: () => current }, './rawSplitDeviceSelection': { rawSplitDeviceSelection: value => value, validateRawSplitDeviceSelection() {} },
     './RawSplitPickerOverlay': { RawSplitPickerOverlay: 'Overlay' }, './rawSplitPickerCoordinator': { RawSplitPickerCoordinator },
-    './rawSplitRuntime': { createRawSplitRuntime: options => { runtimeOptions = options; return { dispose() { disposals++; } }; } } };
-  const { RawSplitProvider } = load('homashyo/RawSplitContext.tsx', mocks, true), props = { session: {}, ticket: {}, onLogout() {}, children: 'screen' };
-  const render = () => h.render(() => RawSplitProvider(props)); render(); assert.equal(runtimeOptions.canMutate(), false);
+    './rawSplitPrintRuntime': { rawSplitUnsupportedReason: () => 'blocked' }, './rawSplitRuntime': { createRawSplitRuntime: options => { runtimeOptions = options; return { dispose() { disposals++; } }; } } };
+  const { RawSplitProvider } = load('homashyo/RawSplitContext.tsx', mocks, true), props = { session: { token: 'real-session-placeholder' }, ticket: {}, onLogout() {}, children: 'screen',
+    subscribeWitness: listener => { witnessListener = listener; return () => {}; }, witnessVersion: () => 0 };
+  const render = () => h.render(() => RawSplitProvider(props)); render(); assert.equal(runtimeOptions.canMutate(), true);
   const pending = runtimeOptions.selectPrinter(); const tree = render(); const content = tree.props.children.props.children;
   assert.equal(content[0].props.importantForAccessibility, 'no-hide-descendants'); assert.equal(content[2].type, 'Overlay');
-  assert.equal(content[2].props.request, renderedRequest); await reset(); assert.equal(await pending, null); assert.equal(disposals, 1);
-  assert.equal(render(), null); h.unmount(); await flush();
+  assert.equal(content[2].props.request, renderedRequest); current = false; witnessListener(); assert.equal(await pending, null); assert.equal(disposals, 1);
+  assert.equal(runtimeOptions.canMutate(), false); assert.equal(render().type, 'View'); h.unmount(); await flush();
 });
 
 test('late cancellation or dismiss from an old confirmation cannot close the next scanner', () => {
@@ -171,4 +183,42 @@ test('both profile routes reuse the shared Profile without a worker daily-work c
     const profile = Screen().props.children; assert.equal(profile.type, ProfileScreen); assert.equal(profile.props.session, context.session);
     assert.equal(profile.props.onLogout, context.onLogout); assert.equal('onDailyWork' in profile.props, false);
   }
+});
+
+test('demo-token home shows a stable non-redirect warning without backend, print or unverified logout', async () => {
+  const demo = session('homashyo_rezkachi', ['raw_material.split'], 'test-mode-token');
+  assert.equal(routes.homeTarget(demo, 'ios'), '/ios-homashyo'); const h = gateHarness(demo); h.render(); await flush();
+  const tree = h.render(); assert.equal(tree.type, 'View'); assert.equal(tree.props.children.props.children, 'Demo/test rejimi hozir mavjud emas.');
+  assert.equal(h.render().type, 'View'); assert.equal(h.logoutCalls(), 0); assert.equal(h.clearCalls(), 0); h.unmount();
+});
+
+test('authorized shell captures one witness and never recaptures the same stale owner', async () => {
+  const h = gateHarness(session('homashyo_rezkachi', ['raw_material.split'])); h.render(); await flush();
+  const element = h.render(), renderAuthorized = h.activate(element); let tree = renderAuthorized();
+  assert.equal(tree.type, 'Security'); assert.equal(h.captures(), 1); const ticket = tree.props.children.props.ticket; ticket.check();
+  h.setWitness(false); assert.throws(() => ticket.check(), /invalid/); tree = renderAuthorized(); assert.equal(h.captures(), 1);
+  h.setWitness(true); renderAuthorized(); assert.equal(h.captures(), 1); h.unmount();
+});
+test('a shell that cannot capture a witness stays on the explanation instead of looping or silently recapturing', async () => {
+  const h = gateHarness(session('homashyo_rezkachi', ['raw_material.split'])); h.render(); await flush(); const element = h.render();
+  h.setCaptureAllowed(false); const renderAuthorized = h.activate(element); let tree = renderAuthorized();
+  assert.equal(tree.type, 'View'); assert.match(tree.props.children[0].props.children, /Sessiya o‘zgargan/); assert.equal(h.captures(), 1);
+  h.setCaptureAllowed(true); tree = renderAuthorized(); assert.equal(tree.type, 'View'); assert.equal(h.captures(), 1); h.unmount();
+});
+
+test('provider subscribes then rechecks a witness invalidated before subscription completed', () => {
+  const h = hooks(); h.react.createContext = () => ({ Provider: 'ContextProvider' }); let current = true, disposals = 0, subscribeCalls = 0;
+  class Picker { dispose() {} }
+  const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
+    'expo-router': { router: { replace() {} } }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
+    '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' },
+    '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
+    '../shared/printing/transientDevicePickerRuntime': {}, './rawSplitApi': { rawSplitSessionIsCurrent: () => current },
+    './rawSplitDeviceSelection': {}, './RawSplitPickerOverlay': { RawSplitPickerOverlay: 'Overlay' }, './rawSplitPickerCoordinator': { RawSplitPickerCoordinator: Picker },
+    './rawSplitPrintRuntime': { rawSplitUnsupportedReason: () => 'blocked' }, './rawSplitRuntime': { createRawSplitRuntime: () => ({ dispose() { disposals++; } }) } };
+  const { RawSplitProvider } = load('homashyo/RawSplitContext.tsx', mocks, true);
+  const props = { session: { token: 'real-placeholder' }, ticket: {}, onLogout() {}, children: 'screen', witnessVersion: () => 0,
+    subscribeWitness: () => { subscribeCalls++; current = false; return () => {}; } };
+  const render = () => h.render(() => RawSplitProvider(props)); render(); assert.equal(subscribeCalls, 1); assert.equal(disposals, 1);
+  assert.equal(render().type, 'View'); h.unmount();
 });

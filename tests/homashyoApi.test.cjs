@@ -19,10 +19,10 @@ function setup(name, options = {}) {
     removeItemAsync: async key => saved.delete(key) };
   const replay = contractFetch(stem, name, options);
   const raw = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: store, __esModule: true },
-    '../auth': { currentSession: () => current }, '../authorizedFetch': { authorizedFetch: (s, p, init = {}, guard) => {
+    '../auth': { currentSession: () => current }, '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard'), '../authorizedFetch': { authorizedFetch: (s, p, init = {}, guard) => {
       guard?.(); return replay(new URL(p, s.baseUrl), { ...init, headers: { ...(init.headers ?? {}), Authorization: `Bearer ${s.token}` } });
     } }, '../shared/mobileApiException': load('shared/mobileApiException'), './rawSplitModel': load('homashyo/rawSplitModel') });
-  const ticket = candidate => raw.createRawSplitSessionTicket(candidate, value => current === value ? epoch : null);
+  const ticket = candidate => raw.createRawSplitSessionTicket(candidate, value => current === value ? epoch : null, () => true);
   const api = { ...raw, rawSplitPending: () => raw.rawSplitPending(ticket(current)),
     rawSplitIssuePending: () => raw.rawSplitIssuePending(ticket(current)),
     rawSplitSnapshot: s => raw.rawSplitSnapshot(ticket(s)), rawSplitSource: (s, value) => raw.rawSplitSource(ticket(s), value),

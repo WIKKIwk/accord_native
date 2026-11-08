@@ -4,10 +4,13 @@ import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import * as auth from '../auth';
 import { clearAppLock } from '../appLock';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
+import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { createRawSplitSessionTicket, type RawSplitEpochReader } from './rawSplitApi';
 import { RawSplitProvider } from './RawSplitContext';
 
+type WitnessBindings = { activeSessionEpoch: RawSplitEpochReader; captureSessionWitness(session: auth.Session): unknown;
+  isSessionWitnessCurrent(witness: unknown): boolean; subscribeSessionWitness(listener: () => void): () => void; sessionWitnessVersion(): number };
 /** Each native entry and deep link goes through the role/capability and exact-session gate. */
 export function RawSplitSessionGate({ platform, children }: { platform: 'ios' | 'android'; children: ReactNode }) {
   const [session, setSession] = useState<auth.Session | null | undefined>();
@@ -21,17 +24,27 @@ export function RawSplitSessionGate({ platform, children }: { platform: 'ios' | 
   useEffect(() => auth.registerSessionResetHook(async () => { generation.current++; setSession(null); }), []);
   if (Platform.OS !== platform || session === null || (session && !canOpenRoute(session, appRoutes.rawMaterialSplit))) return <Redirect href="/" />;
   if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
-  // This accessor is present on integration main. Missing is a hard failure, never an identity-only fallback.
-  const readEpoch = (auth as typeof auth & { activeSessionEpoch?: RawSplitEpochReader }).activeSessionEpoch;
-  if (typeof readEpoch !== 'function') return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Sessiya xavfsizligi mavjud emas.</Text></View>;
+  if (session.token === 'test-mode-token') return <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16 }}>
+    <Text>Demo/test rejimi hozir mavjud emas.</Text></View>;
   const onLogout = () => { void Promise.all([auth.logout(session).catch(() => {}), clearAppLock(session).catch(() => {})])
     .finally(() => { setSession(null); router.replace('/'); }); };
-  return <Authorized key={session.imageCacheScope} session={session} readEpoch={readEpoch} onLogout={onLogout}>{children}</Authorized>;
+  // Main supplies these APIs. Missing bindings fail closed; no substitute or identity-only fallback exists.
+  const bindings = auth as unknown as Partial<WitnessBindings>;
+  if (typeof bindings.activeSessionEpoch !== 'function' || typeof bindings.captureSessionWitness !== 'function' ||
+      typeof bindings.isSessionWitnessCurrent !== 'function' || typeof bindings.subscribeSessionWitness !== 'function' ||
+      typeof bindings.sessionWitnessVersion !== 'function') return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>Sessiya xavfsizligi mavjud emas.</Text></View>;
+  return <Authorized key={session.imageCacheScope} session={session} bindings={bindings as WitnessBindings} onLogout={onLogout}>{children}</Authorized>;
 }
-function Authorized({ session, readEpoch, onLogout, children }: { session: auth.Session; readEpoch: RawSplitEpochReader; onLogout(): void; children: ReactNode }) {
-  const [ticket] = useState(() => { try { return createRawSplitSessionTicket(session, readEpoch); } catch { return null; } });
-  if (!ticket) return <Redirect href="/" />;
-  return <WorkerSecurityProvider session={session} onLogout={onLogout}><RawSplitProvider session={session} ticket={ticket} onLogout={onLogout}>
-    {children}</RawSplitProvider></WorkerSecurityProvider>;
+function Authorized({ session, bindings, onLogout, children }: { session: auth.Session; bindings: WitnessBindings; onLogout(): void; children: ReactNode }) {
+  const [ticket] = useState(() => {
+    try {
+      const witness = bindings.captureSessionWitness(session); if (witness == null) return null;
+      return createRawSplitSessionTicket(session, bindings.activeSessionEpoch, () => bindings.isSessionWitnessCurrent(witness));
+    } catch { return null; }
+  });
+  if (!ticket) return <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16 }}>
+    <Text>Sessiya o‘zgargan. Sahifani qayta oching.</Text><WorkerSheetButton label="Bosh sahifa" onPress={() => router.replace('/')} /></View>;
+  return <WorkerSecurityProvider session={session} onLogout={onLogout}><RawSplitProvider session={session} ticket={ticket} onLogout={onLogout}
+    subscribeWitness={bindings.subscribeSessionWitness} witnessVersion={bindings.sessionWitnessVersion}>{children}</RawSplitProvider></WorkerSecurityProvider>;
 }

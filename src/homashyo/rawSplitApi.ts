@@ -3,6 +3,7 @@ import type { Session } from '../auth';
 import { currentSession } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { RawSplitIssue, RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitModel';
 
 type Json = Record<string, unknown>;
@@ -19,19 +20,31 @@ function currentScope(): string {
 }
 /** @v2 rawSplitScope */
 export function rawSplitScope(): string { return currentScope(); }
-/** The integrator must inject the active auth epoch reader; there is no identity-only fallback. */
+/** Capture one exact login and one issued witness for the lifetime of this role owner. */
 export type RawSplitSessionTicket = { readonly session: Session; check(): void };
 export type RawSplitEpochReader = (session: Session) => number | null;
 const issuedTickets = new WeakSet<RawSplitSessionTicket>();
-export function createRawSplitSessionTicket(session: Session, readEpoch: RawSplitEpochReader): RawSplitSessionTicket {
-  const epoch = readEpoch(session), scope = rawSplitScope();
-  if (typeof epoch !== 'number' || !Number.isSafeInteger(epoch) || epoch < 0 || currentSession() !== session) throw new Error('Akkaunt o‘zgargan');
-  const ticket: RawSplitSessionTicket = { session, check: () => {
-    if (currentSession() !== session || readEpoch(session) !== epoch) throw new Error('Akkaunt o‘zgargan');
-    try { if (rawSplitScope() === scope) return; } catch { /* Account was removed or lost permission. */ }
-    throw new Error('Akkaunt o‘zgargan');
-  } };
+export function createRawSplitSessionTicket(session: Session, readEpoch: RawSplitEpochReader, isWitnessCurrent: () => boolean): RawSplitSessionTicket {
+  const epoch = readEpoch(session), scope = rawSplitScope(); let retired = false;
+  const checkWitness = () => {
+    if (retired || !isSynchronouslyTrue(isWitnessCurrent)) { retired = true; throw new Error('Akkaunt o‘zgargan'); }
+  };
+  const check = () => {
+    if (session.token === 'test-mode-token') { retired = true; throw new Error('Demo/test rejimi hozir mavjud emas.'); }
+    checkWitness();
+    if (currentSession() !== session || readEpoch(session) !== epoch || typeof epoch !== 'number' || !Number.isSafeInteger(epoch) || epoch < 0) {
+      retired = true; throw new Error('Akkaunt o‘zgargan');
+    }
+    try { if (rawSplitScope() !== scope) throw new Error('Akkaunt o‘zgargan'); } catch { retired = true; throw new Error('Akkaunt o‘zgargan'); }
+    checkWitness();
+    if (currentSession() !== session || readEpoch(session) !== epoch) { retired = true; throw new Error('Akkaunt o‘zgargan'); }
+  };
+  check(); const ticket: RawSplitSessionTicket = { session, check };
   issuedTickets.add(ticket); return Object.freeze(ticket);
+}
+/** Native has no full V2 test-mode store yet. Never transmit a demo-token mutation or print. */
+export function requireRawSplitRealAccount(ticket: RawSplitSessionTicket): void {
+  if (ticket.session.token === 'test-mode-token') throw new Error('Demo/test rejimi hozir mavjud emas.');
 }
 export function rawSplitSessionIsCurrent(ticket: RawSplitSessionTicket): boolean {
   try { if (!issuedTickets.has(ticket)) return false; ticket.check(); return currentSession() === ticket.session; } catch { return false; }
@@ -113,7 +126,7 @@ async function clearDefinitiveRejection(response: Response, key: string, seriali
 let saving = false, issueSaving = false;
 /** @v2 rawSplitSave */
 export async function rawSplitSave(ticket: RawSplitSessionTicket, payload: Json): Promise<RawSplitResult> {
-  const { session } = ticket;
+  requireRawSplitRealAccount(ticket); const { session } = ticket;
   if (saving) throw new Error('Saqlash davom etmoqda');
   saving = true;
   try {
@@ -135,7 +148,7 @@ export async function rawSplitSave(ticket: RawSplitSessionTicket, payload: Json)
 }
 /** @v2 rawSplitReportIssue */
 export async function rawSplitReportIssue(ticket: RawSplitSessionTicket, payload: Json): Promise<RawSplitIssue> {
-  const { session } = ticket;
+  requireRawSplitRealAccount(ticket); const { session } = ticket;
   if (issueSaving) throw new Error('Muammo saqlanmoqda');
   issueSaving = true;
   try {
@@ -162,7 +175,7 @@ export async function rawSplitReportIssue(ticket: RawSplitSessionTicket, payload
 /** @v2 rawSplitPrint */
 export async function rawSplitPrint(ticket: RawSplitSessionTicket, input: { splitId: string; barcode: string; driverUrl: string;
   printer: string; printMode: string }): Promise<void> {
-  const { session } = ticket, scope = rawSplitScope(); guard(scope, ticket);
+  requireRawSplitRealAccount(ticket); const { session } = ticket, scope = rawSplitScope(); guard(scope, ticket);
   const response = await authorizedFetch(session, '/v1/mobile/raw-material-split/print', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ split_id: input.splitId,
       barcode: input.barcode, driver_url: input.driverUrl, printer: input.printer, print_mode: input.printMode }),

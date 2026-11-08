@@ -5,7 +5,7 @@ function load(file, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return m.exports; }
 const discovery = load('gscale/gscaleDiscovery');
-const printRuntime = load('homashyo/rawSplitPrintRuntime', { '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
+const printRuntime = load('homashyo/rawSplitPrintRuntime', { 'react-native': { Platform: { OS: 'android' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
 const { rawSplitDeviceSelection, validateRawSplitDeviceSelection } = load('homashyo/rawSplitDeviceSelection',
   { '../gscale/gscaleDiscovery': discovery, './rawSplitPrintRuntime': printRuntime });
 function server(ref, name = 'Scale', port = 39117) { return { endpoint: { host: '192.168.1.10', port, baseUrl: `http://192.168.1.10:${port}` },
@@ -24,14 +24,13 @@ test('Bluetooth and USB profiles are carried through without lookup, persistence
   assert.deepEqual(rawSplitDeviceSelection({ transport: 'offline', offlinePrinter: usb }), { transport: 'offline', printer: usb });
 });
 
-test('D13 rejects GoDEX and unknown USB while allowing Zebra, Wi-Fi selection and Bluetooth', () => {
-  for (const kind of ['godex', 'unknown']) assert.throws(() => validateRawSplitDeviceSelection({ transport: 'offline', offlinePrinter: { kind } }), /qo‘llab-quvvatlanmaydi/);
-  assert.doesNotThrow(() => validateRawSplitDeviceSelection({ transport: 'offline', offlinePrinter: { kind: 'zebra' } }));
+test('all USB kinds are rejected before selection; Wi-Fi and Bluetooth remain available', () => {
+  for (const kind of ['godex', 'unknown', 'zebra']) assert.throws(() => validateRawSplitDeviceSelection({ transport: 'offline', offlinePrinter: { kind } }), /USB printer qurilmasini/);
   assert.doesNotThrow(() => validateRawSplitDeviceSelection({ transport: 'bluetooth', bluetoothPrinter: { address: 'AA' } }));
   assert.doesNotThrow(() => validateRawSplitDeviceSelection({ transport: 'wifi', server: server('5070') }));
   for (const wifiKind of ['godex', 'unknown', '']) assert.equal(printRuntime.rawSplitPrinterSupported(rawSplitDeviceSelection({ transport: 'wifi', server: server('5070') }), wifiKind), false);
 });
-test('GoDEX or unrecognized USB does not close the native picker; Zebra can then be selected', async () => {
+test('GoDEX, unknown and Zebra USB keep the picker open; Bluetooth remains selectable', async () => {
   const { createTransientDevicePicker } = load('shared/printing/transientDevicePicker', { '../../gscale/gscaleDiscovery': discovery });
   let detected = { kind: 'godex' }, closed = 0, errors = [];
   const request = createTransientDevicePicker({ isCurrent: () => true, scan: async () => ({ servers: [], candidateCount: 0 }),
@@ -44,8 +43,16 @@ test('GoDEX or unrecognized USB does not close the native picker; Zebra can then
     '../../printing/printService': { PrintService: { detectOfflinePrinter: async () => {
       if (detected.kind === 'unknown') throw new Error('USB printer is neither GoDEX nor Zebra'); return detected; } } } });
   const picker = useDevicePicker(request.adapter, () => closed++, true); picker.choose('usb');
-  await picker.selectUsb(); assert.equal(closed, 0); assert.ok(errors.some(e => e.includes('qo‘llab-quvvatlanmaydi')));
+  await picker.selectUsb(); assert.equal(closed, 0); assert.ok(errors.some(e => e.includes('USB printer qurilmasini')));
   detected = { kind: 'unknown' }; await picker.selectUsb(); assert.equal(closed, 0); assert.ok(errors.some(e => e.includes('neither GoDEX nor Zebra')));
-  detected = { kind: 'zebra' }; await picker.selectUsb(); assert.equal(closed, 1);
-  request.onDismiss(); const selected = await request.result; assert.equal(selected.transport, 'offline'); assert.equal(selected.offlinePrinter.kind, 'zebra');
+  detected = { kind: 'zebra' }; await picker.selectUsb(); assert.equal(closed, 0);
+  picker.choose('bluetooth'); await picker.selectBluetooth({ address: 'AA' }); assert.equal(closed, 1);
+  request.onDismiss(); const selected = await request.result; assert.equal(selected.transport, 'bluetooth');
+});
+
+test('iOS rejects Bluetooth before picker selection while Android Bluetooth remains available', () => {
+  const iosPrint = load('homashyo/rawSplitPrintRuntime', { 'react-native': { Platform: { OS: 'ios' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
+  const iosSelection = load('homashyo/rawSplitDeviceSelection', { '../gscale/gscaleDiscovery': discovery, './rawSplitPrintRuntime': iosPrint });
+  assert.throws(() => iosSelection.validateRawSplitDeviceSelection({ transport: 'bluetooth', bluetoothPrinter: { address: 'A' } }), /iOS Bluetooth/);
+  assert.doesNotThrow(() => validateRawSplitDeviceSelection({ transport: 'bluetooth', bluetoothPrinter: { address: 'A' } }));
 });

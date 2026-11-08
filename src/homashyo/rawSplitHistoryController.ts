@@ -9,7 +9,7 @@ export type RawSplitHistoryState = { snapshot: RawSplitSnapshot | null; printer:
 export type RawSplitHistoryOptions = { ticket: RawSplitSessionTicket; canMutate: () => boolean; selectPrinter: () => Promise<Device | null>;
   printOne: (result: RawSplitResult, output: RawSplitRoll, printer: Device, wifiPrinter: string, guard: () => void) => Promise<void>;
   onMessage: (message: string) => void; printerSupported: (printer: Device, wifiPrinter: string) => boolean;
-  onUnsupportedPrinter: () => void; snapshot?: typeof rawSplitSnapshot; scope?: () => string };
+  onUnsupportedPrinter: (printer: Device, wifiPrinter: string) => void; snapshot?: typeof rawSplitSnapshot; scope?: () => string };
 const message = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
 
 /** State transitions from V2 _RawMaterialSplitHistoryScreenState. */
@@ -59,7 +59,7 @@ export class RawSplitHistoryController {
     try {
       if (!this.state.printer) { await this.selectPrinter(); if (!this.state.printer) return; }
       const printer = this.state.printer;
-      if (!this.options.printerSupported(printer, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
+      if (!this.options.printerSupported(printer, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(printer, this.state.wifiPrinter); return; }
       for (const output of only ? [only] : result.outputs) {
         if (!this.isCurrent()) return;
         this.checkWriteScope();

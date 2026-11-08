@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Alert, View } from 'react-native';
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Alert, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { registerSessionResetHook, type Session } from '../auth';
 import { PreparationNotice } from '../preparation/PreparationNotice';
 import { usePreparationNotice } from '../preparation/usePreparationNotice';
@@ -9,34 +11,40 @@ import { rawSplitDeviceSelection, validateRawSplitDeviceSelection } from './rawS
 import { RawSplitPickerOverlay } from './RawSplitPickerOverlay';
 import { RawSplitPickerCoordinator } from './rawSplitPickerCoordinator';
 import { createRawSplitRuntime } from './rawSplitRuntime';
+import { rawSplitUnsupportedReason } from './rawSplitPrintRuntime';
 
 type Request = ReturnType<typeof createNativeTransientDevicePicker>;
 type Runtime = ReturnType<typeof createRawSplitRuntime>;
 type Context = { session: Session; ticket: RawSplitSessionTicket; runtime: Runtime; onLogout(): void; issueRevision: number };
 const RawSplitContext = createContext<Context | null>(null);
 
-export function RawSplitProvider({ session, ticket, onLogout, children }: { session: Session; ticket: RawSplitSessionTicket;
-  onLogout(): void; children: ReactNode }) {
+export function RawSplitProvider({ session, ticket, onLogout, subscribeWitness, witnessVersion, children }: { session: Session; ticket: RawSplitSessionTicket;
+  onLogout(): void; subscribeWitness(listener: () => void): () => void; witnessVersion(): number; children: ReactNode }) {
   const [picker, setPicker] = useState<Request | null>(null), [issueRevision, setIssueRevision] = useState(0);
   const [invalidated, setInvalidated] = useState(false), notice = usePreparationNotice(), lifetime = useRef({ mounts: 0 });
+  useSyncExternalStore(subscribeWitness, witnessVersion, witnessVersion);
   const [owner] = useState(() => {
     const pickerOwner = new RawSplitPickerCoordinator({ isCurrent: () => rawSplitSessionIsCurrent(ticket),
       create: () => createNativeTransientDevicePicker(() => rawSplitSessionIsCurrent(ticket), validateRawSplitDeviceSelection),
       convert: rawSplitDeviceSelection, render: setPicker });
-    const runtime = createRawSplitRuntime({ ticket, canMutate: () => false, selectPrinter: () => pickerOwner.select(), onMessage: notice.show,
+    const runtime = createRawSplitRuntime({ ticket, canMutate: () => session.token !== 'test-mode-token' && rawSplitSessionIsCurrent(ticket), selectPrinter: () => pickerOwner.select(), onMessage: notice.show,
       onIssueVisible: () => setIssueRevision(value => value + 1),
-      onUnsupportedPrinter: () => Alert.alert('Printer ulanmagan', 'Zebra yoki Bluetooth printerni tanlang.') });
+      onUnsupportedPrinter: printer => Alert.alert('Printer ulanmagan', rawSplitUnsupportedReason(printer.transport)) });
     return { ticket, pickerOwner, runtime, dispose() { pickerOwner.dispose(); runtime.dispose(); } };
   });
   useEffect(() => {
     const scope = lifetime.current; scope.mounts++;
-    const unregister = registerSessionResetHook(async () => { owner.dispose(); setPicker(null); setInvalidated(true); });
+    const invalidate = () => { owner.dispose(); setPicker(null); setInvalidated(true); };
+    const unregister = registerSessionResetHook(async () => { invalidate(); });
+    const unsubscribe = subscribeWitness(() => { if (!rawSplitSessionIsCurrent(ticket)) invalidate(); });
+    if (!rawSplitSessionIsCurrent(ticket)) invalidate();
     return () => {
-      unregister(); scope.mounts--;
+      unsubscribe(); unregister(); scope.mounts--;
       queueMicrotask(() => { if (scope.mounts === 0) owner.dispose(); });
     };
-  }, [owner]);
-  if (invalidated || !rawSplitSessionIsCurrent(owner.ticket)) return null;
+  }, [owner, subscribeWitness, ticket]);
+  if (invalidated || !rawSplitSessionIsCurrent(owner.ticket)) return <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16 }}>
+    <Text>Sessiya o‘zgargan. Sahifani qayta oching.</Text><WorkerSheetButton label="Bosh sahifa" onPress={() => router.replace('/')} /></View>;
   return <RawSplitContext.Provider value={{ session, ticket: owner.ticket, runtime: owner.runtime, onLogout, issueRevision }}>
     <View style={{ flex: 1 }}><View style={{ flex: 1 }} accessibilityElementsHidden={picker !== null}
       importantForAccessibility={picker ? 'no-hide-descendants' : 'auto'}>{children}</View><PreparationNotice message={notice.message} />
