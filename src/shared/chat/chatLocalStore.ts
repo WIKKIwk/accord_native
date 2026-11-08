@@ -3,6 +3,8 @@ import type { Session } from '../../auth';
 import type { ChatConversation, ChatMessage } from '../../chatModel';
 
 type ConversationRow = { payload_json: string };
+type ReceiptRow = { conversation_id: string; delivered_sequence: number; read_sequence: number };
+export type PendingChatReceipt = { conversationId: string; deliveredSequence: number; readSequence: number };
 let database: Promise<SQLite.SQLiteDatabase> | undefined;
 let operationQueue: Promise<void> = Promise.resolve();
 
@@ -40,6 +42,11 @@ function openDatabase(): Promise<SQLite.SQLiteDatabase> {
       CREATE TABLE IF NOT EXISTS chat_sync_state (
         account_scope TEXT PRIMARY KEY NOT NULL, event_cursor INTEGER NOT NULL DEFAULT 0,
         updated_at_unix INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS chat_pending_receipts (
+        account_scope TEXT NOT NULL, conversation_id TEXT NOT NULL,
+        delivered_sequence INTEGER NOT NULL DEFAULT 0, read_sequence INTEGER NOT NULL DEFAULT 0,
+        updated_at_unix INTEGER NOT NULL, PRIMARY KEY (account_scope, conversation_id)
       );`);
       return db;
     });
@@ -63,13 +70,14 @@ export async function loadCachedChatConversations(session: Session): Promise<Cha
 /** @v2 ChatLocalStore.saveConversations */
 export async function saveCachedChatConversations(session: Session, items: readonly ChatConversation[]): Promise<void> {
   const scope = chatCacheScope(session);
+  const rows = items.map(item => ({ id: item.id, updatedAt: item.updatedAt, payload: JSON.stringify(item) }));
   await inDatabaseOrder(async () => {
     const db = await openDatabase();
     await db.withExclusiveTransactionAsync(async transaction => {
-      for (const item of items) {
+      for (const row of rows) {
         await transaction.runAsync(`INSERT OR REPLACE INTO chat_conversations
           (account_scope, conversation_id, updated_at_unix, payload_json) VALUES (?, ?, ?, ?)`,
-        scope, item.id, item.updatedAt, JSON.stringify(item));
+        scope, row.id, row.updatedAt, row.payload);
       }
     });
   });
@@ -89,13 +97,14 @@ export async function loadCachedChatMessages(session: Session, conversationId: s
 /** @v2 ChatLocalStore.saveMessages */
 export async function saveCachedChatMessages(session: Session, items: readonly ChatMessage[]): Promise<void> {
   const scope = chatCacheScope(session);
+  const rows = items.map(item => ({ id: item.id, conversationId: item.conversationId, sequence: item.sequence, payload: JSON.stringify(item) }));
   await inDatabaseOrder(async () => {
     const db = await openDatabase();
     await db.withExclusiveTransactionAsync(async transaction => {
-      for (const item of items) {
+      for (const row of rows) {
         await transaction.runAsync(`INSERT OR REPLACE INTO chat_messages
           (account_scope, conversation_id, message_sequence, message_id, payload_json) VALUES (?, ?, ?, ?, ?)`,
-        scope, item.conversationId, item.sequence, item.id, JSON.stringify(item));
+        scope, row.conversationId, row.sequence, row.id, row.payload);
       }
     });
   });
@@ -131,5 +140,58 @@ export async function saveCachedChatSyncCursor(session: Session, cursor: number)
     const db = await openDatabase();
     await db.runAsync('INSERT OR REPLACE INTO chat_sync_state (account_scope, event_cursor, updated_at_unix) VALUES (?, ?, ?)',
       scope, cursor, Math.floor(Date.now() / 1000));
+  });
+}
+
+/** @v2 ChatLocalStore.loadPendingReceipts */
+export async function loadPendingChatReceipts(session: Session): Promise<PendingChatReceipt[]> {
+  const scope = chatCacheScope(session);
+  return inDatabaseOrder(async () => {
+    const db = await openDatabase();
+    const rows = await db.getAllAsync<ReceiptRow>(`SELECT conversation_id, delivered_sequence, read_sequence
+      FROM chat_pending_receipts WHERE account_scope = ? ORDER BY updated_at_unix ASC`, scope);
+    return rows.map(row => ({ conversationId: row.conversation_id, deliveredSequence: row.delivered_sequence, readSequence: row.read_sequence }));
+  });
+}
+
+/** @v2 ChatLocalStore.savePendingReceipt */
+export async function savePendingChatReceipt(session: Session, receipt: PendingChatReceipt): Promise<void> {
+  const scope = chatCacheScope(session);
+  const { conversationId, deliveredSequence, readSequence } = receipt;
+  await inDatabaseOrder(async () => {
+    const db = await openDatabase();
+    await db.runAsync(`INSERT INTO chat_pending_receipts
+      (account_scope, conversation_id, delivered_sequence, read_sequence, updated_at_unix) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(account_scope, conversation_id) DO UPDATE SET
+        delivered_sequence = MAX(delivered_sequence, excluded.delivered_sequence),
+        read_sequence = MAX(read_sequence, excluded.read_sequence), updated_at_unix = excluded.updated_at_unix`,
+    scope, conversationId, deliveredSequence, readSequence, Math.floor(Date.now() / 1000));
+  });
+}
+
+/** @v2 ChatLocalStore.removePendingReceipt */
+export async function removePendingChatReceipt(session: Session, conversationId: string): Promise<void> {
+  const scope = chatCacheScope(session);
+  await inDatabaseOrder(async () => {
+    const db = await openDatabase();
+    await db.runAsync('DELETE FROM chat_pending_receipts WHERE account_scope = ? AND conversation_id = ?', scope, conversationId);
+  });
+}
+
+/** @v2 ChatLocalStore.acknowledgePendingReceipt */
+export async function acknowledgePendingChatReceipt(
+  session: Session, conversationId: string, deliveredSequence = 0, readSequence = 0,
+): Promise<void> {
+  const scope = chatCacheScope(session);
+  await inDatabaseOrder(async () => {
+    const db = await openDatabase();
+    await db.withExclusiveTransactionAsync(async transaction => {
+      await transaction.runAsync(`UPDATE chat_pending_receipts SET
+        delivered_sequence = CASE WHEN delivered_sequence <= ? THEN 0 ELSE delivered_sequence END,
+        read_sequence = CASE WHEN read_sequence <= ? THEN 0 ELSE read_sequence END
+        WHERE account_scope = ? AND conversation_id = ?`, deliveredSequence, readSequence, scope, conversationId);
+      await transaction.runAsync(`DELETE FROM chat_pending_receipts WHERE account_scope = ? AND conversation_id = ?
+        AND delivered_sequence = 0 AND read_sequence = 0`, scope, conversationId);
+    });
   });
 }

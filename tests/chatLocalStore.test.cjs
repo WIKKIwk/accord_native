@@ -125,3 +125,49 @@ test('concurrent operations are serialized and a read observes the preceding com
   await Promise.all([first, second]);
   assert.deepEqual((await read).map(item => item.id), ['second', 'first']);
 });
+
+test('pending receipts preserve the greatest delivery and read sequences for each account', async () => {
+  const f = fixture();
+  const other = { ...f.session, profile: { role: 'customer', ref: 'other' } };
+  await f.savePendingChatReceipt(f.session, { conversationId: 'a', deliveredSequence: 5, readSequence: 2 });
+  await f.savePendingChatReceipt(f.session, { conversationId: 'a', deliveredSequence: 4, readSequence: 7 });
+  await f.savePendingChatReceipt(other, { conversationId: 'a', deliveredSequence: 3, readSequence: 1 });
+  assert.deepEqual(await f.loadPendingChatReceipts(f.session), [{ conversationId: 'a', deliveredSequence: 5, readSequence: 7 }]);
+  assert.deepEqual(await f.loadPendingChatReceipts(other), [{ conversationId: 'a', deliveredSequence: 3, readSequence: 1 }]);
+  const next = fixture(f.connection);
+  assert.deepEqual(await next.loadPendingChatReceipts(f.session), [{ conversationId: 'a', deliveredSequence: 5, readSequence: 7 }]);
+});
+
+test('receipt acknowledgments cannot erase a newer pending sequence', async () => {
+  const f = fixture();
+  await f.savePendingChatReceipt(f.session, { conversationId: 'a', deliveredSequence: 9, readSequence: 8 });
+  await f.acknowledgePendingChatReceipt(f.session, 'a', 7, 8);
+  assert.deepEqual(await f.loadPendingChatReceipts(f.session), [{ conversationId: 'a', deliveredSequence: 9, readSequence: 0 }]);
+  await f.acknowledgePendingChatReceipt(f.session, 'a', 9);
+  assert.deepEqual(await f.loadPendingChatReceipts(f.session), []);
+});
+
+test('receipt removal is account scoped and a failed read acknowledgment retains pending work', async () => {
+  const f = fixture();
+  const other = { ...f.session, profile: { role: 'customer', ref: 'other' } };
+  await f.savePendingChatReceipt(f.session, { conversationId: 'a', deliveredSequence: 5, readSequence: 4 });
+  await f.savePendingChatReceipt(other, { conversationId: 'a', deliveredSequence: 2, readSequence: 2 });
+  await f.acknowledgePendingChatReceipt(f.session, 'a', 5);
+  assert.deepEqual(await f.loadPendingChatReceipts(f.session), [{ conversationId: 'a', deliveredSequence: 0, readSequence: 4 }]);
+  await f.removePendingChatReceipt(f.session, 'a');
+  assert.deepEqual(await f.loadPendingChatReceipts(f.session), []);
+  assert.equal((await f.loadPendingChatReceipts(other))[0].readSequence, 2);
+});
+
+test('queued writes capture their values before the caller can mutate an object', async () => {
+  const f = fixture();
+  const item = conversation('a', 1, 2);
+  const receipt = { conversationId: 'a', deliveredSequence: 5, readSequence: 4 };
+  const saveConversation = f.saveCachedChatConversations(f.session, [item]);
+  const saveReceipt = f.savePendingChatReceipt(f.session, receipt);
+  item.unreadCount = 99;
+  receipt.readSequence = 99;
+  await Promise.all([saveConversation, saveReceipt]);
+  assert.equal((await f.loadCachedChatConversations(f.session))[0].unreadCount, 2);
+  assert.equal((await f.loadPendingChatReceipts(f.session))[0].readSequence, 4);
+});
