@@ -13,6 +13,8 @@ import { useAdminWorkMapSummary } from './useAdminWorkMapSummary';
 import { adminWorkMapSummaryPresentation } from './adminWorkMapSummaryPresentation';
 import { AdminWorkMapSummary } from './AdminWorkMapSummary';
 import { adminWorkMapDetailHeader } from './adminWorkMapDetailHeader';
+import { AdminWorkMapCombo } from './AdminWorkMapCombo';
+import { adminWorkMapComboPresentation } from './adminWorkMapComboPresentation';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeNow = () => localeController.locale;
@@ -31,6 +33,8 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
   const weight = value?.kind === 'order' ? value.map.order_kg : value?.template.kg;
   const length = value?.kind === 'order' ? value.map.base_length : null;
   const width = data?.width_mm;
+  const combo = showSummary && value?.kind === 'order' && value.map.combo && value.map.products.length
+    ? adminWorkMapComboPresentation(value.map.combo, value.map.products, locale) : null;
   const metadata = adminWorkMapMetadataRows(value?.kind === 'order' ? value.metadata : null, session.profile.role, ticket.kind,
     { admin: key => adminText(key, locale), loading: localizedGetter('loading', locale) });
   return <View style={[styles.screen, { backgroundColor: colors.field }]}><ScrollView contentContainerStyle={styles.content}>
@@ -44,6 +48,7 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
     {(metadata.length > 0 || data) && <Host matchContents={{ vertical: true }}><Column>
       {!header && !!customer && <ListItem supportingText={customer}>{localizedGetter('customerLabel', locale)}</ListItem>}
       {metadata.length > 0 && <AdminWorkMapMetadata rows={metadata} />}
+      {combo && <AdminWorkMapCombo key={value?.kind === 'order' ? value.map.id : undefined} model={combo} />}
       {showSummary ? <AdminWorkMapSummary model={adminWorkMapSummaryPresentation(value?.kind === 'order' ? value.map : null, summary, locale)} onToggle={summary.toggle} onRetry={summary.retry} /> : <>
         {typeof weight === 'number' && Number.isFinite(weight) && <ListItem supportingText={`${weight} kg`}>{productionText('worker.summary.weight', locale)}</ListItem>}
         {typeof length === 'number' && Number.isFinite(length) && <ListItem supportingText={`${length} m`}>{productionText('worker.summary.length', locale)}</ListItem>}

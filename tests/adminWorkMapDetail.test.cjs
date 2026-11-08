@@ -130,7 +130,7 @@ function nodes(tree) {
 }
 test('basic detail view delegates lifecycle/retry and displays the canonical hydrated customer', () => {
   let detail = { valid: true, loading: false, value: { kind: 'order', customer: 'Canonical', metadata: { createdAtUnix: null, creator: null },
-    map: { title: 'Hydrated', customer_name: 'Old', order_kg: 12 } } };
+    map: { title: 'Hydrated', customer_name: 'Old', order_kg: 12, combo: null, products: [] } } };
   const retry = () => {}, close = () => {};
   const View = load('admin/AdminWorkMapDetail.tsx', {
     '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host', ListItem: 'ListItem' },
@@ -141,7 +141,8 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './useAdminWorkMapDetail': { useAdminWorkMapDetail: () => ({ ...detail, retry }) },
     './AdminWorkMapMetadata': { AdminWorkMapMetadata: 'Metadata' }, './adminWorkMapMetadataModel': metadata,
-    './AdminWorkMapSummary': { AdminWorkMapSummary: 'Summary' },
+    './AdminWorkMapSummary': { AdminWorkMapSummary: 'Summary' }, './AdminWorkMapCombo': { AdminWorkMapCombo: 'Combo' },
+    './adminWorkMapComboPresentation': { adminWorkMapComboPresentation: (combo, products) => ({ combo, products }) },
     './adminWorkMapDetailHeader': load('admin/adminWorkMapDetailHeader.ts', { './dartJsonString': load('admin/dartJsonString.ts') }),
     './adminWorkMapSummaryPresentation': { adminWorkMapSummaryPresentation: (map, state) => ({ map, ...state }) },
     './useAdminWorkMapSummary': { useAdminWorkMapSummary: (_session, _isCurrent, _controller, _ticket, hydrated) => ({ expanded: false, canExpand: !!hydrated }) },
@@ -152,6 +153,11 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   assert.deepEqual(tree.filter(node => node.type === 'Text').slice(0, 3).map(node => node.props.children), ['worker.order.code', '-', 'Canonical • Hydrated']);
   assert.deepEqual(tree.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_missing']);
   assert.equal(tree.find(node => node.type === 'Summary').props.model.canExpand, true);
+  detail.value.map.combo = { name: 'C' }; detail.value.map.products = [{ product: 'P' }];
+  assert.equal(nodes(View(props)).find(node => node.type === 'Combo').props.model.combo.name, 'C');
+  detail.value.map.products = []; assert.equal(nodes(View(props)).some(node => node.type === 'Combo'), false);
+  detail.value.map.products = [{ product: 'P' }];
+  assert.equal(nodes(View({ ...props, session: { profile: { role: 'sales_manager' } } })).some(node => node.type === 'Combo'), false);
   detail.value.metadata = { createdAtUnix: null, creator: { role: 'telegram', displayName: 'Ana' } };
   assert.deepEqual(nodes(View(props)).find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_role.telegram · Ana']);
   detail = { valid: true, loading: false, error: 'failed' };
