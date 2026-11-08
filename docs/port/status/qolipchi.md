@@ -28,6 +28,8 @@ Stopped at: continue the remaining Qolip API and UI contracts, then both platfor
 - Block checkpoint: ported `qolipBlocks`, `qolipBlocksData`, `qolipCreateBlock`, `qolipUpdateBlock` and `qolipDeleteBlock`, plus the V2 block models. Six source-derived tests cover GET/POST/PUT/DELETE, defaults, trimming, error responses and the deferred test-mode guard; no standalone V2 block wire recording was found. The shared Qolip error and Dart-style string helpers now live in this role's own `qolipApiCommon.ts` and the rework tests still pass.
 - After the block checkpoint, `node --test tests/qolip*.test.cjs` passed all 43 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 - Product molds baseline checkpoint: reused existing `qolipProductMolds` rather than duplicating it. The independent f119 oracle passed `qolip_product_molds_api_test.dart` (3 tests), and the isolated recorder's three requests were saved under `tests/contracts/f11910bb/`. All four new metadata and replay tests passed, including the 150-mold response and both server-error cases; iOS typecheck and Expo lint passed. The historical fixture remains unchanged.
+- Location checkpoint: ported live `qolipLocations`, `qolipSaveLocation`, `qolipMoveLocation`, `qolipMoveLocations`, their model, target filtering and stale-response confirmation rules. The f119 oracle passed `qolip_move_contract_test.dart` (3 tests) and the isolated location-save case in `qolip_cell_qr_flow_test.dart` (1 test). That case uses `HttpOverrides`, not the MockClient recorder, so its request assertions were translated directly rather than presented as a recorded replay. Nine source-derived tests cover reads, save fallbacks, single and batch moves, errors, target confirmation and the test-mode guard.
+- After the location checkpoint, `node --test tests/qolip*.test.cjs` passed all 56 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 
 ## Deviations candidates
 
@@ -35,7 +37,7 @@ None recorded for this narrow checkpoint.
 
 ## Test mode pending
 
-The role-wide test mode is deferred by the port plan. Rework and block functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the in-memory block operations remain to be ported in the shared test-mode pass.
+The role-wide test mode is deferred by the port plan. Rework, block and location functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` and the in-memory block/location operations remain to be ported in the shared test-mode pass.
 
 ## Needs from the integrator
 
