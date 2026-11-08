@@ -2,7 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { sessionReadScope } from '../sessionReadScope';
 import { MobileApiException } from '../shared/mobileApiException';
-import { dartQuery, jsonObject as object, optionalText, qolipApiResponseError, trimDart as trim, type JsonObject } from './qolipApiCommon';
+import { dartQuery, jsonObject as object, optionalText, parseDartDateTime, qolipApiResponseError, trimDart as trim, type JsonObject } from './qolipApiCommon';
 function requiredString(value: unknown): string {
   if (typeof value !== 'string') throw new TypeError('Expected string');
   return value;
@@ -13,21 +13,6 @@ function nullableString(value: unknown): string | null {
 function requiredNumber(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError('Expected number');
   return value;
-}
-
-// DateTime.tryParse accepts Dart's ISO-8601 forms and normalizes overflow.
-function isDartDateTime(value: string): boolean {
-  const match = /^([+-]?\d{4,6})-?(\d\d)-?(\d\d)(?:[ T](\d\d)(?::?(\d\d)(?::?(\d\d)(?:[.,](\d+))?)?)?( ?[zZ]| ?([-+])(\d\d)(?::?(\d\d))?)?)?$/.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]), month = Number(match[2]) - 1, day = Number(match[3]);
-  const hour = Number(match[4] ?? 0), second = Number(match[6] ?? 0);
-  const fraction = Number((match[7] ?? '').slice(0, 3).padEnd(3, '0'));
-  let minute = Number(match[5] ?? 0);
-  if (match[9]) minute -= (match[9] === '-' ? -1 : 1) * (Number(match[10]) * 60 + Number(match[11] ?? 0));
-  const date = new Date(0);
-  date.setUTCFullYear(year, month, day);
-  date.setUTCHours(hour, minute, second, fraction);
-  return Number.isFinite(date.getTime());
 }
 
 /** @v2 QolipReworkEntry */
@@ -42,7 +27,7 @@ export function qolipReworkEntryFromJson(value: unknown): QolipReworkEntry {
   if (!row) throw new TypeError('Invalid mold rework record');
   const id = requiredString(row.id), code = requiredString(row.qolip_code), sentAt = requiredString(row.sent_at);
   const returnedAt = nullableString(row.returned_at);
-  if (!trim(id) || !trim(code) || !isDartDateTime(sentAt) || (returnedAt !== null && !isDartDateTime(returnedAt))) {
+  if (!trim(id) || !trim(code) || !parseDartDateTime(sentAt) || (returnedAt !== null && !parseDartDateTime(returnedAt))) {
     throw new TypeError('Invalid mold rework record');
   }
   return {

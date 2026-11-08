@@ -15,6 +15,23 @@ export function dartQuery(values: Record<string, string>): string {
   }).join('&');
 }
 
+// Dart DateTime.tryParse treats date-only and offset-free values as local time.
+export function parseDartDateTime(value: string): Date | null {
+  const match = /^([+-]?\d{4,6})-?(\d\d)-?(\d\d)(?:[ T](\d\d)(?::?(\d\d)(?::?(\d\d)(?:[.,](\d+))?)?)?( ?[zZ]| ?([-+])(\d\d)(?::?(\d\d))?)?)?$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]), month = Number(match[2]) - 1, day = Number(match[3]), hour = Number(match[4] ?? 0);
+  let minute = Number(match[5] ?? 0);
+  const second = Number(match[6] ?? 0), millisecond = Number((match[7] ?? '').slice(0, 3).padEnd(3, '0'));
+  const date = new Date(0);
+  if (match[8]) {
+    if (match[9]) minute -= (match[9] === '-' ? -1 : 1) * (Number(match[10]) * 60 + Number(match[11] ?? 0));
+    date.setUTCFullYear(year, month, day); date.setUTCHours(hour, minute, second, millisecond);
+  } else {
+    date.setFullYear(year, month, day); date.setHours(hour, minute, second, millisecond);
+  }
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
 // The JSON fields are normally strings; Dart also calls toString on optional fields.
 export function dartString(value: unknown): string {
   if (value == null) return 'null';

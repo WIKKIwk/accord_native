@@ -45,7 +45,7 @@ When open rows are selected, show `return_selected` (`Tanlanganlar qaytdi ({coun
 
 Mileage sheet displays `mileage` (`Probeg tarixi`) and the selected mold code, loads `qolipMileage`, shows loading or retry, then `current` (`Joriy probeg: {meter} m`) only when tracking is enabled and current meter is present, otherwise `not_started` (`Probeg hisobi hali boshlanmagan`). Show cycles in reverse source order; each has `cycle` (`{meter} m`) and local start/end date, or `active_cycle` (`Joriy davr`) for no end. Date format is `dd.MM.yyyy HH:mm` in local time; invalid input is shown unchanged. Format meter to two fixed decimal places then strip trailing zeroes and the decimal point. Sheet drag/back behavior is normal; V2 lists no custom haptic.
 
-The controller exists, but the native screens, mileage sheet and real request-ID source are not wired. The injected ID factory is mandatory and has no production fallback.
+The controller and two platform mileage sheet views exist, but the reworks screens, sheet openers and real request-ID source are not wired. The injected ID factory is mandatory and has no production fallback.
 
 ## Surface inventory awaiting contracts
 
