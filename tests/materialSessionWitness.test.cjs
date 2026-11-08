@@ -30,7 +30,7 @@ function setup(initialTransition = false) {
     './materialSessionBootstrap': bootstrap, './materialTestSession': { isMaterialTestSession: value => value.token === 'test-mode-token' } }).useMaterialSession;
   const render = () => { slot = 0; return hook(); };
   return { session, render, effects, captures: () => captures, logouts: () => logouts, lockClears: () => lockClears, writes: () => writes,
-    delayLogout: () => { let resolve; const promise = new Promise(done => { resolve = done; }); logoutGate = { promise, resolve }; return logoutGate; },
+    setActive: value => { active = value; }, delayLogout: () => { let resolve; const promise = new Promise(done => { resolve = done; }); logoutGate = { promise, resolve }; return logoutGate; },
     start: () => { transition = true; version++; listeners.forEach(listener => listener()); },
     finish: (next = active) => { active = next; transition = false; version++; listeners.forEach(listener => listener()); }, reset: () => reset() };
 }
@@ -92,4 +92,10 @@ test('Material logout never clears the account lock, including after same-accoun
   const h = setup(); await mount(h); const gate = h.delayLogout(); h.render().onLogout();
   const sameAccount = { token: 'new', profile: { ...h.session.profile } }; h.start(); h.finish(sameAccount);
   gate.resolve(); await tick(); assert.equal(h.logouts(), 1); assert.equal(h.lockClears(), 0);
+});
+
+
+test('old logout completion during pending login with no active session does not clear state', async () => {
+  const h = setup(); await mount(h); const gate = h.delayLogout(); h.render().onLogout();
+  h.start(); h.setActive(null); const writes = h.writes(); gate.resolve(); await tick(); assert.equal(h.writes(), writes);
 });
