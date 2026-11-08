@@ -10,8 +10,6 @@ export type AdminHomeDependencies = {
   canLoadSummary: () => boolean;
   canOpen: (route: string) => boolean;
   afterFrame: () => Promise<void>;
-  /** Must resolve only when the opened destination has actually closed. */
-  openRoute: (route: string) => Promise<void>;
 };
 
 /** @v2 _AdminHomeScreenState */
@@ -48,14 +46,15 @@ export class AdminHomeController {
   async reload(): Promise<void> {
     if (this.valid() && this.deps.canLoadSummary()) await this.deps.store.refreshSummary();
   }
-  async openAndReload(route: string): Promise<void> {
+  /** The supplied opener must resolve only when the destination actually closes. */
+  async openAndReload(route: string, openRoute: (route: string) => Promise<void>): Promise<void> {
     if (!this.valid() || this.opening || !this.deps.canOpen(route)) return;
     this.opening = true;
     const epoch = this.epoch, openingId = ++this.openingId;
     try {
       await this.deps.afterFrame();
       if (!this.valid(epoch) || !this.deps.canOpen(route)) return;
-      await this.deps.openRoute(route);
+      await openRoute(route);
       if (this.valid(epoch)) await this.reload();
     } finally {
       if (openingId === this.openingId) this.opening = false;

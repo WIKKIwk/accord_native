@@ -17,8 +17,8 @@ function fixture() {
   let open = async route => { calls.push(['open', route]); };
   const deps = { hub, store: { bootstrapSummary: async () => { calls.push('bootstrap'); }, refreshSummary: async () => { calls.push('refresh'); } },
     isCurrent: () => current, scope: () => scope, canLoadSummary: () => canRead, canOpen: () => canOpen,
-    afterFrame: () => { const frame = deferred(); frames.push(frame); return frame.promise; }, openRoute: route => open(route) };
-  return { deps, hub, calls, frames, listeners, setCurrent: value => { current = value; }, setScope: value => { scope = value; },
+    afterFrame: () => { const frame = deferred(); frames.push(frame); return frame.promise; } };
+  return { deps, hub, calls, frames, listeners, openRoute: route => open(route), setCurrent: value => { current = value; }, setScope: value => { scope = value; },
     setCanRead: value => { canRead = value; }, setCanOpen: value => { canOpen = value; }, setOpen: value => { open = value; } };
 }
 test('home bootstraps only after its first frame and only with summary permission', async () => {
@@ -36,25 +36,25 @@ test('refresh hub reloads only new admin versions and unsubscribes on dispose', 
 test('opening waits for a frame, blocks duplicate taps, then refreshes after the destination closes', async () => {
   const f = fixture(), child = deferred(); f.setOpen(async route => { f.calls.push(['open', route]); await child.promise; });
   const controller = new AdminHomeController(f.deps); controller.start(); f.frames.shift().resolve(); await tick();
-  const first = controller.openAndReload('/target'), second = controller.openAndReload('/other'); assert.equal(f.frames.length, 1);
+  const first = controller.openAndReload('/target', f.openRoute), second = controller.openAndReload('/other', f.openRoute); assert.equal(f.frames.length, 1);
   f.frames.shift().resolve(); await tick(); assert.deepEqual(f.calls, ['bootstrap', ['open', '/target']]);
   child.resolve(); await Promise.all([first, second]); assert.deepEqual(f.calls, ['bootstrap', ['open', '/target'], 'refresh']);
 });
 test('session, scope and route access are rechecked after the frame and after a child returns', async () => {
   for (const mutate of [f => f.setCurrent(false), f => f.setScope('B'), f => f.setCanOpen(false)]) {
     const f = fixture(), controller = new AdminHomeController(f.deps); controller.start(); f.frames.shift().resolve(); await tick();
-    const pending = controller.openAndReload('/target'); mutate(f); f.frames.shift().resolve(); await pending;
+    const pending = controller.openAndReload('/target', f.openRoute); mutate(f); f.frames.shift().resolve(); await pending;
     assert.deepEqual(f.calls, ['bootstrap']);
   }
   const f = fixture(), child = deferred(); f.setOpen(async route => { f.calls.push(['open', route]); await child.promise; });
   const controller = new AdminHomeController(f.deps); controller.start(); f.frames.shift().resolve(); await tick();
-  const pending = controller.openAndReload('/target'); f.frames.shift().resolve(); await tick(); f.setScope('B'); child.resolve(); await pending;
+  const pending = controller.openAndReload('/target', f.openRoute); f.frames.shift().resolve(); await tick(); f.setScope('B'); child.resolve(); await pending;
   assert.deepEqual(f.calls, ['bootstrap', ['open', '/target']]);
 });
 test('disposed and restarted controllers ignore earlier frame and child work', async () => {
   const f = fixture(), controller = new AdminHomeController(f.deps); controller.start(); const first = f.frames.shift();
   controller.dispose(); controller.start(); const second = f.frames.shift(); first.resolve(); second.resolve(); await tick();
   assert.deepEqual(f.calls, ['bootstrap']);
-  const pending = controller.openAndReload('/target'); controller.dispose(); f.frames.shift().resolve(); await pending;
+  const pending = controller.openAndReload('/target', f.openRoute); controller.dispose(); f.frames.shift().resolve(); await pending;
   assert.deepEqual(f.calls, ['bootstrap']);
 });
