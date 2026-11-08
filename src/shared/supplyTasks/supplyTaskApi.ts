@@ -4,7 +4,7 @@ import { sessionReadScope } from '../../sessionReadScope';
 import { productionMapResponseError } from '../../workerControlsApi';
 import { appRoutes, canOpenRoute } from '../appRoutes';
 import { isSynchronouslyTrue } from '../camera/synchronousGuard';
-import { dartTrim, isAscii, isAsciiCanonicalApparatusId } from '../dartApparatus';
+import { dartTrim, isAsciiCanonicalApparatusId } from '../dartApparatus';
 import { MobileApiException } from '../mobileApiException';
 import { supplyTaskWindowFromJson, type SupplyTaskKind, type SupplyTaskWindow } from './supplyTaskModels';
 
@@ -24,8 +24,8 @@ const invalid = () => new MobileApiException({ code: 'supply_tasks_invalid', mes
 export function readSupplyTaskWindow(session: Session, input: SupplyTaskRequest, isCurrent: () => boolean): Promise<SupplyTaskWindow> {
   const kind = input.kind, apparatus = input.apparatus ?? '', limit = input.limit ?? 10, search = dartTrim(input.search ?? '');
   if ((kind !== 'material' && kind !== 'qolip') || ![5, 10, 20, 50].includes(limit) ||
-      (apparatus !== '' && !isAsciiCanonicalApparatusId(apparatus)) || !isAscii(search)) throw new TypeError('Invalid supply task window');
-  // Non-ASCII search is withheld until Dart/Node/Hermes lowercase parity is verified.
+      (apparatus !== '' && !isAsciiCanonicalApparatusId(apparatus))) throw new TypeError('Invalid supply task window');
+  // Dart and JS Unicode case tables can differ; the user may search in their language rather than having input silently rejected.
   const normalizedSearch = search.toLowerCase();
   const scope = sessionReadScope(session), route = kind === 'material' ? appRoutes.materialTasks : appRoutes.qolipTasks;
   const guard = () => {

@@ -68,10 +68,13 @@ test('ASCII search debounces 250ms, cancels earlier input and submits Dart-trimm
   assert.equal(seen.length, 2); assert.equal(seen[1].search, 'next'); assert.equal(h.controller.getSnapshot().searchInput, '  NEXT  '); h.controller.dispose();
 });
 
-test('Unicode search is withheld and cancels pending ASCII search without invoking reader', async () => {
-  const h = setup(); await h.controller.activate(); assert.equal(h.controller.setSearchInput('safe'), true);
-  assert.equal(h.controller.setSearchInput('o‘xshash'), false); assert.equal(h.timers[0].cancelled, true); assert.equal(h.calls(), 1);
-  h.controller.dispose();
+test('Unicode search debounces and retains Uzbek and Cyrillic input', async () => {
+  const seen = [], h = setup({ loadWindow: async query => { seen.push(query); return windowFor(query); } });
+  await h.controller.activate(); assert.equal(h.controller.setSearchInput('safe'), true);
+  assert.equal(h.controller.setSearchInput('  O‘ZBEK ЎЗБЕК ҚИЁС ҒОЗ ҲАҚ ЁШ  '), true);
+  assert.equal(h.timers[0].cancelled, true); assert.equal(h.timers[1].ms, 250); h.timers[1].callback(); await h.controller.refresh();
+  assert.equal(seen[1].search, 'o‘zbek ўзбек қиёс ғоз ҳақ ёш');
+  assert.equal(h.controller.getSnapshot().searchInput, '  O‘ZBEK ЎЗБЕК ҚИЁС ҒОЗ ҲАҚ ЁШ  '); h.controller.dispose();
 });
 
 test('401/403 clear visible rows; other failures preserve the previous window and allow retry', async () => {
@@ -141,7 +144,7 @@ test('characterization: unobserved same-snapshot ABA remains undetected', async 
   assert.equal(h.controller.getSnapshot().window.rows[0].id, 'order-a'); h.controller.dispose();
 });
 
-test('Dart edge whitespace is removed before the conservative ASCII search check', async () => {
+test('Dart edge whitespace is removed before search normalization', async () => {
   const seen = [], h = setup({ loadWindow: async query => { seen.push(query); return windowFor(query); } });
   await h.controller.activate(); assert.equal(h.controller.setSearchInput('\u0085 NEXT \u0085'), true);
   h.timers[0].callback(); await h.controller.refresh(); assert.equal(seen[1].search, 'next'); h.controller.dispose();
