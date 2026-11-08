@@ -17,6 +17,12 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - `src/admin/factoryLocationApi.ts` ports the live paths of `adminFactoryLocations`, `adminCreateFactoryLocation`, `adminUpdateFactoryLocation` and `adminReplaceFactoryLocationApparatus`, including local validation, normalization and V2 error messages. `factoryLocationModel.ts` handles compact backend apparatus snapshots and reuses the existing full canonical apparatus reader.
 - Ran the complete V2 `test/admin_factory_locations_test.dart` independently in the f119 oracle: 6 passed. Its replacement and duplicate-name cases exercise V2 test mode; they are not proof that V4 test mode has been ported. Six source-derived V4 tests passed for live-path requests, parsing, guards and errors, and iOS typecheck passed. No suitable V2 HTTP recording was found for these four methods.
 
+## Checkpoint: apparatus collections
+
+- `apparatusCollection.ts` ports the live list/create/update/delete paths and `AdminApparatusCollection.fromJson`, reusing the existing canonical apparatus-ID validator. It preserves list 404 fallback, member deduplication/sorting, rune-length validation and revision-based mutations; source-derived tests use mocked requests only.
+- Selected V2 `test/admin_apparatus_master_data_test.dart`, `custom apparatus collections CRUD does not mutate canonical apparatus` passed in the isolated f119 oracle (1/1); it exercises V2 test mode, not live HTTP. Four V4 source-derived tests and iOS typecheck pass. Test-mode CRUD and the apparatus settings screen remain unported; no f119 HTTP recordings were found.
+- The JSON-to-JavaScript parser loses exact large integers and distinctions such as integer-valued double tokens before the collection model sees them. The existing canonical-ID helper also uses JavaScript case and whitespace rules; unusual Unicode identifiers require comparison before claiming complete V2 parity.
+
 ## Checkpoint: server monitor reads and backup start
 
 - `serverMonitorModel.ts` ports report, backup, runtime and live-event parsers, including Dart-style rounding and pong latency. `serverMonitorApi.ts` ports the live `adminServerMonitor`, `adminStartBackup` and `adminServerMonitorLiveUri`; no backup request was sent to a backend. The item-group and monitor models share one Dart-style JSON string helper.
@@ -89,6 +95,7 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 | V4 function | V2 symbol |
 |---|---|
 | `adminItemGroups`, `adminItemGroupTree`, `adminItemUoms`, `adminItems` | Their namesakes read or derive test-mode demo data; this shared mode is deferred and has not been added to the live-path functions. |
+| `adminApparatusCollections`, `adminCreateApparatusCollection`, `adminUpdateApparatusCollection`, `adminDeleteApparatusCollection` | V2 sorts its demo collection list and mutates the in-memory catalog with member, duplicate-name and revision checks; those branches remain unported. |
 | `adminFactoryLocations`, `adminCreateFactoryLocation`, `adminUpdateFactoryLocation`, `adminReplaceFactoryLocationApparatus` | Their namesakes read or mutate the in-memory factory-location catalog in test mode, including duplicate-name and apparatus membership checks. |
 | `adminServerMonitor`, `adminStartBackup`, `adminServerMonitorLiveEvents` | V2 reads and updates in-memory demo backup data, and completes the live event stream without opening a socket, in test mode. |
 | `adminSettings` | V2 returns demo admin settings in test mode. |
