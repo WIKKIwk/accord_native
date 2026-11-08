@@ -13,15 +13,15 @@ both	Etil	Reused field label is defined in src/workerOrderLogic.ts:12 and render
 both	Metoxil	Reused field label is defined in src/workerOrderLogic.ts:12 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
 both	Rasvavitel	Reused field label is defined in src/workerOrderLogic.ts:12 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
 both	Izopropel	Reused field label is defined in src/workerOrderLogic.ts:12 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
-ios	Qora	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:13-15.
-ios	Sariq	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:13-15.
-ios	Qizil	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:13-15.
-ios	Ko‘k	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:13-15.
-ios	Tilla	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:13-15.
-ios	Kumush	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:13-15.
+ios	Qora	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Sariq	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Qizil	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Ko‘k	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Tilla	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Kumush	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
 both	[A-Za-z0-9._ -]	V2 uses this as an internal filename-filter regular expression, not visible text: mobile_api_boyoqchi.dart:288-296.
-both	Boyoqchi session unavailable	This is a programming error thrown only outside the required provider, not screen text: src/boyoqchi/BoyoqchiContext.tsx:7-10.
-both	Menyuni yopish	Nonvisual accessibility label for the dismissible drawer overlay: src/boyoqchi/BoyoqchiDrawer.tsx:27; V2 drawer dismissal is in role_navigation_drawer.dart:49-62.
+both	Boyoqchi session unavailable	This is a programming error thrown only outside the required provider, not screen text: src/boyoqchi/BoyoqchiContext.tsx:10-12.
+both	Menyuni yopish	Nonvisual accessibility label for the dismissible drawer overlay: src/boyoqchi/BoyoqchiDrawer.tsx:26; V2 drawer dismissal is in role_navigation_drawer.dart:49-62.
 both	#ffffffb3	Color literal used by the image-preview icon, not text: src/boyoqchi/BoyoqchiImage.tsx.
 both	#fff	Color literal used in preview styling, not text: src/boyoqchi/BoyoqchiImage.tsx.
 both	Qaytarilgan bo‘yoq qiymatlari kiritilmagan. Rasmdagi qiymatlarni Bo‘yoqchi to‘ldirishi kerak.	This exactly joins the adjacent V2 string literals in boyoqchi_astatka_screen.dart:273-274; rendered in src/boyoqchi/BoyoqchiRequestContent.tsx:46.
