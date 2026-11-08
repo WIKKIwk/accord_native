@@ -52,10 +52,11 @@ export function rawMaterialAssignmentDiagnostic(raw: unknown): RawMaterialAssign
     minimum_width_mm: number(row.minimum_width_mm), maximum_width_mm: number(row.maximum_width_mm) };
 }
 
-async function read(session: Session, path: string, fallback: string): Promise<unknown> {
+async function read(session: Session, path: string, fallback: string, beforeSend?: () => void): Promise<unknown> {
   // V2 uses an ordinary GET here, without transient retries.
   await Promise.resolve();
-  const { response, body } = await readApparatus(session, path, false);
+  const { response, body } = beforeSend ? await readApparatus(session, path, false, undefined, beforeSend)
+    : await readApparatus(session, path, false);
   if (response.status !== 200) {
     let payload: unknown; try { payload = JSON.parse(body); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, fallback);
@@ -64,21 +65,21 @@ async function read(session: Session, path: string, fallback: string): Promise<u
 }
 
 /** @v2 adminRawMaterialAssignmentCandidates */
-export async function adminRawMaterialAssignmentCandidates(session: Session, orderId: string, apparatus = '') {
+export async function adminRawMaterialAssignmentCandidates(session: Session, orderId: string, apparatus = '', beforeSend?: () => void) {
   const machine = apparatusId(apparatus, true), query = new URLSearchParams({ order_id: orderId.trim() });
   if (machine) query.set('apparatus', machine);
-  const payload = await read(session, `/v1/mobile/admin/raw-material-assignments/candidates?${query}`, 'raw_material_assignment_candidates');
+  const payload = await read(session, `/v1/mobile/admin/raw-material-assignments/candidates?${query}`, 'raw_material_assignment_candidates', beforeSend);
   if (!Array.isArray(payload)) throw new TypeError('Invalid raw material assignment candidates');
   return payload.map(rawMaterialAssignmentCandidate);
 }
 
 /** @v2 adminRawMaterialAssignmentDiagnostics */
-export async function adminRawMaterialAssignmentDiagnostics(session: Session, barcode: string, orderId = '', apparatus = '') {
+export async function adminRawMaterialAssignmentDiagnostics(session: Session, barcode: string, orderId = '', apparatus = '', beforeSend?: () => void) {
   const code = barcode.trim(), order = orderId.trim(), machine = apparatusId(apparatus, true);
   if (!code) throw new MobileApiException({ code: 'raw_material_invalid_input', message: 'Homashyo QR noto‘g‘ri' });
   const query = new URLSearchParams({ barcode: code });
   if (order) query.set('order_id', order);
   if (machine) query.set('apparatus', machine);
   return rawMaterialAssignmentDiagnostic(await read(session, `/v1/mobile/admin/raw-material-assignments/diagnostics?${query}`,
-    'raw_material_assignment_diagnostics'));
+    'raw_material_assignment_diagnostics', beforeSend));
 }
