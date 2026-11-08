@@ -1,0 +1,372 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "source": "test/production_map_chain_test.dart and lib/src/features/admin/logic/production_map_chain.dart",
+  "oracle": "oracles/material_assignment_apparatus_golden_test.dart",
+  "cases": {
+    "canonical_topology": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "order",
+          "kind": "task",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "print",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-005",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "note",
+          "kind": "task",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "cut",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-010",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "order",
+          "branch": ""
+        },
+        {
+          "from": "order",
+          "to": "print",
+          "branch": ""
+        },
+        {
+          "from": "print",
+          "to": "note",
+          "branch": ""
+        },
+        {
+          "from": "note",
+          "to": "cut",
+          "branch": ""
+        },
+        {
+          "from": "cut",
+          "to": "end",
+          "branch": ""
+        }
+      ],
+      "assigned": [
+        "apparatus:default:asset-010",
+        "apparatus:default:asset-005",
+        "Flexo pechat",
+        " apparatus:default:asset-005 "
+      ],
+      "expected": [
+        "apparatus:default:asset-005",
+        "apparatus:default:asset-010"
+      ]
+    },
+    "representative_alternatives": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "print",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-005",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "a",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-007",
+          "alternative_group_id": "lam",
+          "alternative_assigned_apparatus_id": "apparatus:default:asset-007"
+        },
+        {
+          "id": "b",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-008",
+          "alternative_group_id": "lam",
+          "alternative_assigned_apparatus_id": "apparatus:default:asset-007"
+        },
+        {
+          "id": "cut",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-010",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "end",
+          "kind": "end",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "print",
+          "branch": ""
+        },
+        {
+          "from": "print",
+          "to": "a",
+          "branch": ""
+        },
+        {
+          "from": "a",
+          "to": "cut",
+          "branch": ""
+        },
+        {
+          "from": "cut",
+          "to": "end",
+          "branch": ""
+        }
+      ],
+      "assigned": [
+        "apparatus:default:asset-010",
+        "apparatus:default:asset-008",
+        "apparatus:default:asset-007",
+        "apparatus:default:asset-005"
+      ],
+      "expected": [
+        "apparatus:default:asset-005",
+        "apparatus:default:asset-007",
+        "apparatus:default:asset-008",
+        "apparatus:default:asset-010"
+      ]
+    },
+    "assigned_identity_and_deduplicate": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "first",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-005",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": "apparatus:default:asset-007"
+        },
+        {
+          "id": "again",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-007",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "unreachable",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-010",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "first",
+          "branch": ""
+        },
+        {
+          "from": "first",
+          "to": "again",
+          "branch": ""
+        }
+      ],
+      "assigned": [
+        "apparatus:default:asset-005",
+        "apparatus:default:asset-007",
+        "apparatus:default:asset-010"
+      ],
+      "expected": [
+        "apparatus:default:asset-007"
+      ]
+    },
+    "conditions_cycles_and_missing_targets": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "choice",
+          "kind": "condition",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "yes",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-005",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "no",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-010",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "ignored",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-007",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "choice",
+          "branch": ""
+        },
+        {
+          "from": "choice",
+          "to": "yes",
+          "branch": "YES"
+        },
+        {
+          "from": "choice",
+          "to": "ignored",
+          "branch": "other"
+        },
+        {
+          "from": "choice",
+          "to": "no",
+          "branch": "yo'q"
+        },
+        {
+          "from": "yes",
+          "to": "choice",
+          "branch": ""
+        },
+        {
+          "from": "no",
+          "to": "missing",
+          "branch": ""
+        }
+      ],
+      "assigned": [
+        "apparatus:default:asset-007",
+        "apparatus:default:asset-010",
+        "apparatus:default:asset-005"
+      ],
+      "expected": [
+        "apparatus:default:asset-005",
+        "apparatus:default:asset-010"
+      ]
+    },
+    "no_start": {
+      "nodes": [
+        {
+          "id": "only",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-005",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [],
+      "assigned": [
+        "apparatus:default:asset-005"
+      ],
+      "expected": []
+    },
+    "alternative_without_outgoing_edge": {
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "start",
+          "apparatus_id": "",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "a",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-007",
+          "alternative_group_id": "g",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "b",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-008",
+          "alternative_group_id": "g",
+          "alternative_assigned_apparatus_id": ""
+        },
+        {
+          "id": "cut",
+          "kind": "apparatus",
+          "apparatus_id": "apparatus:default:asset-010",
+          "alternative_group_id": "",
+          "alternative_assigned_apparatus_id": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "b",
+          "branch": ""
+        },
+        {
+          "from": "a",
+          "to": "cut",
+          "branch": ""
+        }
+      ],
+      "assigned": [
+        "apparatus:default:asset-008",
+        "apparatus:default:asset-007",
+        "apparatus:default:asset-010"
+      ],
+      "expected": [
+        "apparatus:default:asset-007",
+        "apparatus:default:asset-008",
+        "apparatus:default:asset-010"
+      ]
+    }
+  }
+}
