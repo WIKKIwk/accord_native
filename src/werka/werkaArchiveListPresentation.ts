@@ -2,10 +2,19 @@ import { localizedMethod } from '../shared/localization';
 import type { DispatchRecord } from '../shared/notificationApi';
 import type { WerkaArchiveKind, werkaArchiveResponseFromJson } from './werkaArchiveApi';
 import { werkaDeliveryQuantity } from './werkaDeliveryPresentation';
+import type { ReactNode } from 'react';
 
 type ArchiveData = ReturnType<typeof werkaArchiveResponseFromJson>;
+/** Supply only for a daily list. Calendar selection/loading remains the guarded owner's responsibility. */
+export type WerkaArchiveListDailyFilter = {
+  selectedDateLabel: string;
+  calendarOpen: boolean;
+  /** Keep the child type/key stable and pass enabled to its own callbacks. */
+  renderCalendar: (enabled: boolean) => ReactNode;
+  onToggle: () => void;
+};
 export type WerkaArchiveListContentProps = { kind: WerkaArchiveKind; data: ArchiveData | null; loading: boolean; error: unknown | null;
-  locale: string; onRefresh: () => Promise<void> };
+  locale: string; onRefresh: () => Promise<void>; dailyFilter?: WerkaArchiveListDailyFilter };
 /** Source's loose Paddon identity extraction; actual Paddon route remains held. */
 export function werkaArchivePaddonCode(item: DispatchRecord): string {
   const ref = item.supplier_ref.trim();

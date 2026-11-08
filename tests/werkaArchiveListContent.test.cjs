@@ -34,6 +34,7 @@ test('summary reuses localized count and source numeric formatter',()=>{
 });
 for(const platform of ['ios','android'])test(`${platform} archive list distinguishes loading/error/empty and has no held Paddon action`,async()=>{
   const mocks={'react/jsx-runtime':jsx,'./werkaArchiveListPresentation':model,'../shared/localization':localization,
+    [`./WerkaArchiveListDateFilter.${platform}`]:{WerkaArchiveListDateFilter:'ArchiveFilter'},
     '@expo/ui/swift-ui':Object.fromEntries(['Button','HStack','ProgressView','Section','Spacer','Text','VStack'].map(x=>[x,x])),
     '@expo/ui/jetpack-compose':{useMaterialColors:()=>({onSurfaceVariant:'muted'})},
     'react-native':{ActivityIndicator:'ActivityIndicator',Text:'RNText',View:'View'},'react-native-reanimated':{useSharedValue:v=>({value:v})},
