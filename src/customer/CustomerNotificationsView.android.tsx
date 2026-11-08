@@ -38,8 +38,8 @@ export function CustomerNotificationsScreen({ onOpenDetail, onClearActionChanged
           <SymbolView name={{ android: row.icon }} size={20} tintColor={highlighted ? colors.onSecondaryContainer : colors.onSurfaceVariant} />
           <View style={{ flex: 1, gap: 4, marginHorizontal: 12 }}>
             <Text style={{ color: colors.onSurface, fontSize: 16 }}>{row.name}</Text>
-            <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.code}</Text>
-            <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }} numberOfLines={2}>{row.body}</Text>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.code}</Text>
+            <Text numberOfLines={2} ellipsizeMode="tail" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.body}</Text>
           </View><Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.created}</Text>
         </WorkerQueueCard>;
       }} />

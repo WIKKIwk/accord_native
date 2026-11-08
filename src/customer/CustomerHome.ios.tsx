@@ -1,6 +1,6 @@
 import { ListItem, Text } from '@expo/ui';
 import { Button, Host, List, ProgressView, Section, VStack } from '@expo/ui/swift-ui';
-import { listRowBackground, listStyle, refreshable } from '@expo/ui/swift-ui/modifiers';
+import { foregroundStyle, listRowBackground, listStyle, refreshable } from '@expo/ui/swift-ui/modifiers';
 import { PlatformColor } from 'react-native';
 import { useCustomerText } from './CustomerContext';
 import { customerHomeRecord, customerStatusRecord, customerStatusRows } from './customerPresentation';
@@ -27,8 +27,9 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
     <Section title={text('recentShipmentsTitle')}>
       {state.records.length === 0 ? <Text>{text('noShipments')}</Text> : state.records.map(record => {
         const row = customerHomeRecord(record);
-        return <ListItem key={record.id} onPress={() => onOpenDetail(record.id)} supportingText={row.code}
-          trailing={<Text>{row.quantity}</Text>}><Text>{row.name}</Text></ListItem>;
+        return <ListItem key={record.id} onPress={() => onOpenDetail(record.id)}
+          supportingText={<Text numberOfLines={1} modifiers={[foregroundStyle({ type: 'color', color: 'secondaryLabel' })]}>{row.code}</Text>}
+          trailing={<Text>{row.quantity}</Text>}><Text numberOfLines={1}>{row.name}</Text></ListItem>;
       })}
     </Section>
   </List></Host>;

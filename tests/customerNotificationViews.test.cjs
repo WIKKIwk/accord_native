@@ -70,3 +70,24 @@ test('empty, loading and retry feed states preserve the V2 labels', () => {
     else assert.ok(nodes(content, item => item.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length);
   }
 });
+
+// Source-derived: customer_notifications_screen_widgets_part_02.dart _CustomerFeedRow.
+test('notification content keeps the V2 code and body line limits, with an unrestricted name', () => {
+  for (const platform of ['ios', 'android']) for (const note of ['', 'Izoh نام\n'.repeat(20)]) {
+    const longRecord = { ...record, item_name: 'Mahsulot نام '.repeat(40), item_code: 'PRODUCT-'.repeat(40), note };
+    const state = { loaded: true, loading: false, error: null, records: [longRecord], highlightedIds: new Set(),
+      refresh: async () => {}, markSeen: async () => {}, clearAll: async () => {} };
+    const screen = fixture(platform, state).CustomerNotificationsScreen({ onOpenDetail() {} });
+    const row = platform === 'ios' ? nodes(screen, item => item.type === 'ListItem')[0]
+      : nodes(screen, item => item.type === 'FlatList')[0].props.renderItem({ item: longRecord, index: 0 });
+    const texts = nodes(row, item => item.type === 'Text');
+    if (platform === 'ios') texts.push(...nodes(row.props.supportingText, item => item.type === 'Text'));
+    for (const [value, lines] of [[longRecord.item_name, undefined], [longRecord.item_code, 1],
+      [note || '3 kg jo‘natildi', 2]]) {
+      const text = texts.find(item => item.props.children === value);
+      assert.ok(text, `${platform} retains the complete source content`);
+      assert.equal(text.props.numberOfLines, lines, `${platform} limit for ${value.slice(0, 20)}`);
+      if (platform === 'android' && lines) assert.equal(text.props.ellipsizeMode, 'tail');
+    }
+  }
+});

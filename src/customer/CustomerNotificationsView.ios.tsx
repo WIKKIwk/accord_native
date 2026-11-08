@@ -41,7 +41,7 @@ export function CustomerNotificationsScreen({ onOpenDetail, onClearActionChanged
             return <ListItem key={record.id} onPress={() => { void open(record.id); }}
               modifiers={highlighted ? [listRowBackground(PlatformColor('secondarySystemFill'))] : undefined}
               leading={<SymbolView name={{ ios: symbol }} size={20} />} trailing={<Text>{row.created}</Text>}
-              supportingText={<VStack alignment="leading"><Text>{row.code}</Text><Text>{row.body}</Text></VStack>}>
+              supportingText={<VStack alignment="leading"><Text numberOfLines={1}>{row.code}</Text><Text numberOfLines={2}>{row.body}</Text></VStack>}>
               <Text>{row.name}</Text></ListItem>;
           })}</Section>}
     </List></Host>

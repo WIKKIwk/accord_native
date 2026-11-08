@@ -40,8 +40,8 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
       const row = customerHomeRecord(item);
       return <WorkerQueueCard backgroundColor={colors.surfaceContainerLow} first={index === 0} last={index === state.records.length - 1}
         onPress={() => onOpenDetail(item.id)}><View style={{ flex: 1 }}>
-          <Text style={{ color: colors.onSurface, fontSize: 16 }}>{row.name}</Text>
-          <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.code}</Text>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurface, fontSize: 16 }}>{row.name}</Text>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.code}</Text>
         </View><Text style={{ color: colors.onSurfaceVariant }}>{row.quantity}</Text></WorkerQueueCard>;
     }} />;
 }

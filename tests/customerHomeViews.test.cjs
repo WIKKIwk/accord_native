@@ -22,7 +22,8 @@ const record = { id: 'dn', item_name: 'Product', item_code: 'P1', sent_qty: 3, u
 function fixture(platform, state) {
   const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': { ListItem: 'ListItem', Text: 'Text', Host: 'Host', Button: 'Button' },
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
-    '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f], listRowBackground: v => ['background', v] },
+    '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f], listRowBackground: v => ['background', v],
+      foregroundStyle: v => ['foregroundStyle', v] },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'highlight', onSurface: 'fg', onSurfaceVariant: 'muted' }) },
     'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './CustomerContext': { useCustomerText: () => ({ text: key => key }) },
@@ -36,7 +37,7 @@ test('iOS home exposes all status destinations and the shipment detail with nati
   assert.deepEqual(rows[0].props.modifiers, [['background', 'secondarySystemFill']]); assert.equal(rows[1].props.modifiers, undefined);
   rows[0].props.onPress(); rows[1].props.onPress(); rows[2].props.onPress(); rows[3].props.onPress();
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);
-  assert.equal(rows[3].props.supportingText, 'P1');
+  assert.equal(rows[3].props.supportingText.props.children, 'P1');
 });
 test('Android home reuses queue cards, routes every status and opens shipment', () => {
   const calls = [], screen = fixture('android', state).CustomerHomeScreen({ onOpenStatus: kind => calls.push(kind), onOpenDetail: id => calls.push(id) });
@@ -65,5 +66,41 @@ test('status rows open the selected delivery and empty states use the V2 label',
   for (const platform of ['ios', 'android']) {
     const empty = fixture(platform, { ...state, records: [] }).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
     assert.ok(nodes(empty, item => item.type === 'Text').some(item => item.props.children === 'noRecordsYet'));
+  }
+});
+
+// Source-derived: customer_home_screen_widgets_part_02.dart _CustomerPreviewRow.
+test('home previews keep V2 one-line name and code limits without changing content', () => {
+  const longRecord = { ...record, item_name: 'Mahsulot نام '.repeat(40), item_code: 'PRODUCT-'.repeat(40) };
+  for (const platform of ['ios', 'android']) {
+    const screen = fixture(platform, { ...state, records: [longRecord] }).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
+    const row = platform === 'ios' ? nodes(screen, item => item.type === 'ListItem')[3]
+      : screen.props.renderItem({ item: longRecord, index: 0 });
+    const texts = nodes(row, item => item.type === 'Text');
+    if (platform === 'ios') texts.push(...nodes(row.props.supportingText, item => item.type === 'Text'));
+    for (const value of [longRecord.item_name, longRecord.item_code]) {
+      const text = texts.find(item => item.props.children === value);
+      assert.ok(text, `${platform} retains the complete input for native truncation`);
+      assert.equal(text.props.numberOfLines, 1, `${platform} preview limit`);
+      if (platform === 'android') assert.equal(text.props.ellipsizeMode, 'tail');
+      else if (value === longRecord.item_code) assert.deepEqual(text.props.modifiers, [['foregroundStyle', { type: 'color', color: 'secondaryLabel' }]]);
+    }
+  }
+});
+
+// Source-derived: customer_status_detail_screen.dart _CustomerStatusRecordRow.
+test('status detail keeps its name and note unrestricted instead of inheriting preview limits', () => {
+  const longRecord = { ...record, item_name: 'Mahsulot '.repeat(40), note: 'First line\n'.repeat(10) };
+  for (const platform of ['ios', 'android']) {
+    const screen = fixture(platform, { ...state, records: [longRecord] }).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
+    const row = platform === 'ios' ? nodes(screen, item => item.type === 'ListItem')[0]
+      : screen.props.renderItem({ item: longRecord, index: 0 });
+    const texts = nodes(row, item => item.type === 'Text');
+    if (platform === 'ios') texts.push(...nodes(row.props.supportingText, item => item.type === 'Text'));
+    for (const value of [longRecord.item_name, longRecord.note]) {
+      const text = texts.find(item => item.props.children === value);
+      assert.ok(text, `${platform} keeps the full status content`);
+      assert.equal(text.props.numberOfLines, undefined);
+    }
   }
 });
