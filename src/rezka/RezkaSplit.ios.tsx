@@ -10,7 +10,7 @@ import { RezkaItemPicker } from './RezkaItemPicker';
 import { formatRezkaQty, type RezkaDraft } from './rezkaSplitLogic';
 import { isExcludedRezkaPrinter, rezkaSplitNoticeText } from './rezkaSplitController';
 import type { RezkaSplitScreenProps } from './rezkaSplitScreenTypes';
-import { useRezkaSplit, useRezkaText } from './useRezkaSplit';
+import { useRezkaPrintUnavailableText, useRezkaSplit, useRezkaText } from './useRezkaSplit';
 
 type FieldProps = { label: string; value: string; change(value: string): void; submit?: () => void; decimal?: boolean; multiline?: boolean };
 function Field({ label, value, change, submit, decimal, multiline }: FieldProps) {
@@ -33,9 +33,10 @@ function RemainderDialog({ sourceQty, total, remainder, uom, choose }: { sourceQ
   </Host>;
 }
 
-// V2 RezkaSplitScreen. Requires a real printer bridge; no route is enabled here.
-export function RezkaSplitScreen({ session, printer, scan, onBack }: RezkaSplitScreenProps) {
-  const { controller, state, device, snapshot, choosePrinter, scan: scanCode, isCurrent } = useRezkaSplit(session, printer);
+// A missing reviewed printer bridge leaves the source and form available but prevents every mutation.
+export function RezkaSplitScreen({ snapshot, printer, scan, onBack }: RezkaSplitScreenProps) {
+  const { controller, state, device, choosePrinter, scan: scanCode, isCurrent } = useRezkaSplit(snapshot, printer);
+  const printerUnavailable = useRezkaPrintUnavailableText();
   const t = useRezkaText(), itemSheet = useNativeSheet();
   const openItem = (index: number) => {
     if (!isCurrent()) return;
@@ -61,7 +62,7 @@ export function RezkaSplitScreen({ session, printer, scan, onBack }: RezkaSplitS
   if (!isCurrent()) return null;
   const notice = state.notice ? rezkaSplitNoticeText(state.notice) : null;
   return <View style={{ flex: 1, backgroundColor: PlatformColor('systemGroupedBackground') }}>
-    <Stack.Screen options={{ title: 'Rezka', headerLeft: () => <RoleHeaderButton icon="back" label={t('Orqaga')} onPress={onBack} tintColor={PlatformColor('label')} /> }} />
+    <Stack.Screen options={{ headerShown: true, title: 'Rezka', headerLeft: onBack ? () => <RoleHeaderButton icon="back" label={t('Orqaga')} onPress={onBack} tintColor={PlatformColor('label')} /> : undefined }} />
     <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped')]}>
       <Section><Text>{t('Mahsulotni bo‘lish')}</Text>
         <HStack><Field label="Source QR" value={state.barcode} change={value => controller.setBarcode(value)} submit={() => { void controller.loadSource(); }} />
@@ -69,19 +70,19 @@ export function RezkaSplitScreen({ session, printer, scan, onBack }: RezkaSplitS
         <Button modifiers={[buttonStyle('borderedProminent'), disabled(state.loadingSource), accessibilityIdentifier('rezka-check-source')]}
           onPress={() => { void controller.loadSource(); }}><HStack>{state.loadingSource ? <ProgressView /> : null}<Text>{t('QR ni tekshirish')}</Text></HStack></Button>
       </Section>
-      <Section><Button onPress={() => { void choosePrinter(); }}><VStack alignment="leading"><Text>{t(device.title)}</Text><Text>{t(device.subtitle)}</Text></VStack></Button></Section>
+      <Section>{printer ? <Button onPress={() => { void choosePrinter(); }}><VStack alignment="leading"><Text>{t(device.title)}</Text><Text>{t(device.subtitle)}</Text></VStack></Button> : <Text>{printerUnavailable}</Text>}</Section>
       {source ? <>
         <Section><VStack alignment="leading"><Text>{source.item_name.trim() ? source.item_name : source.item_code}</Text>
           <Text>{source.item_code}</Text><Text>{`${formatRezkaQty(source.qty)} ${source.uom}`}</Text><Text>{source.warehouse}</Text></VStack></Section>
         <Section><Text>{t('Bo‘laklar')}</Text></Section>{state.outputs.map(renderOutput)}
         <Section><Button label={t('Bo‘lak qo‘shish')} systemImage="plus" onPress={() => controller.addOutput()} />
           <Field label={t('Sabab')} value={state.reason} multiline change={value => controller.setReason(value)} />
-          <DisclosureGroup label={t('Printer')}>
+          {printer ? <DisclosureGroup label={t('Printer')}>
             <Field label={t('Driver URL')} value={state.driverUrl} change={value => controller.setPrinter({ driverUrl: value })} />
             <Field label={t('Printer')} value={state.printer} change={value => controller.setPrinter({ printer: value })} />
             <Field label={t('Mode')} value={state.printMode} change={value => controller.setPrinter({ printMode: value })} />
-          </DisclosureGroup>
-          {!state.uncertain && !state.blockedPrinter && !device.excluded && !(state.transport === 'wifi' && isExcludedRezkaPrinter(state.printer)) ? <Button modifiers={[buttonStyle('borderedProminent'), disabled(state.submitting), accessibilityIdentifier('rezka-submit-split')]}
+          </DisclosureGroup> : null}
+          {printer && !state.uncertain && !state.blockedPrinter && !device.excluded && !(state.transport === 'wifi' && isExcludedRezkaPrinter(state.printer)) ? <Button modifiers={[buttonStyle('borderedProminent'), disabled(state.submitting), accessibilityIdentifier('rezka-submit-split')]}
             onPress={() => { void controller.submit(); }}><HStack>{state.submitting ? <ProgressView /> : null}<Text>{t('Bo‘lish va QR chiqarish')}</Text></HStack></Button> : null}
         </Section>
       </> : null}

@@ -706,6 +706,7 @@ export function canOpenRoute(session: Session | null, routeName: string | null):
 const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
   [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
+  [appRoutes.rezkaSplit]: { ios: '/rezka-split' as Href, android: '/rezka-split' as Href },
 };
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
@@ -713,6 +714,8 @@ export function homeTarget(session: Session, platform: string): Href | 'worker' 
     if (homeRoute(session) !== appRoutes.apparatusQueue || !canOpenRoute(session, appRoutes.apparatusQueue)) return null;
     return platform === 'ios' ? '/ios-rezka' as Href : platform === 'android' ? '/android-rezka' as Href : null;
   }
-  const entry = homeTargets[homeRoute(session)];
+  const home = homeRoute(session);
+  if (home === appRoutes.rezkaSplit && !canOpenRoute(session, home)) return null;
+  const entry = homeTargets[home];
   return platform === 'ios' ? entry?.ios ?? null : platform === 'android' ? entry?.android ?? null : null;
 }

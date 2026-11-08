@@ -1,4 +1,4 @@
-import type { Session } from '../auth';
+import type { RezkaSessionSnapshot } from './rezkaSessionGuard';
 import type { RezkaOutput } from './rezkaSplitApi';
 import type { RezkaPrinterTarget, RezkaSplitState, RezkaTransport } from './rezkaSplitController';
 
@@ -10,8 +10,8 @@ export type RezkaPrinterBridge = {
   resolve(state: RezkaSplitState): Promise<RezkaPrinterTarget | null>;
   print(output: RezkaOutput, target: RezkaPrinterTarget): Promise<{ ok: boolean }>;
 };
-export type RezkaSplitScreenProps = { session: Session; printer: RezkaPrinterBridge;
+export type RezkaSplitScreenProps = { snapshot: RezkaSessionSnapshot; printer: RezkaPrinterBridge | null;
   /** The reviewed full-screen QR/Data Matrix scanner; omitted until available. */
   scan?: () => Promise<string | null>;
-  onBack(): void;
+  onBack?: () => void;
 };

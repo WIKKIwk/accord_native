@@ -43,8 +43,8 @@ function shellHook(loaded, options = {}) {
     isRezkaSessionCurrent: () => valid && options.current !== false };
   const exports = compile('rezka/useRezkaShell.ts', { react, '../auth': auth,
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener: () => () => {} } },
-    './rezkaSessionGuard': guard, './rezkaShellModel': model });
-  exports.useRezkaShellSession(); const cleanup = effect();
+    './rezkaSessionGuard': guard, './rezkaShellModel': model, '../shared/appRoutes': route });
+  exports.useRezkaShellSession(options.access); const cleanup = effect();
   return { state: () => state, changes: () => change, calls, cleanup, invalidate: () => { valid = false; watch?.(); },
     reset: () => reset(), resolve: value => resolveLoad(value), transition: value => { options.transitioning = value; if (value && state && typeof state === 'object') valid = false; watch?.(); } };
 }
@@ -123,4 +123,18 @@ test('iOS worker home reuses WorkerScreen and never adds a Chat route', () => {
     '../../../rezka/RezkaShellContext': { useRezkaShellContext: () => ({ snapshot, openDrawer() {}, onLogout() {}, navigate: id => calls.push(id) }) } }).default;
   const view = Component(); assert.equal(view.type, 'WorkerScreen'); assert.equal(view.props.session, snapshot.session); assert.equal(view.props.nativeNavigation, true);
   view.props.onNavigate('profile'); view.props.onNavigate('daily'); view.props.onNavigate('chat'); assert.deepEqual(calls, ['profile', 'daily']);
+});
+
+
+test('split shell authorizes the selected capability and excludes master role, with one captured witness', async () => {
+  const allowed = shellHook(session('customer', ['rezka.split.manage']), { access: 'split' });
+  await flush(); assert.equal(allowed.state().session.profile.role, 'customer');
+  assert.equal(allowed.calls.filter(x => x === 'capture').length, 1);
+  allowed.invalidate(); assert.equal(allowed.state(), null); allowed.cleanup();
+  for (const user of [session('rezka_master', ['rezka.master.access', 'rezka.split.manage']), session('brigader', ['rezka.split.manage']),
+    session('customer', [])]) {
+    const denied = shellHook(user, { access: 'split' }); await flush(); assert.equal(denied.state(), null); assert.ok(!denied.calls.includes('capture')); denied.cleanup();
+  }
+  const fake = session('customer', ['rezka.split.manage']); fake.token = 'test-mode-token';
+  const blocked = shellHook(fake, { access: 'split' }); await flush(); assert.equal(blocked.state(), 'test-token-unavailable'); assert.ok(!blocked.calls.includes('capture')); blocked.cleanup();
 });

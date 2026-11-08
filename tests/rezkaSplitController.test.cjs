@@ -22,7 +22,7 @@ const label = (epc, print_qr = true) => ({ epc, item_code: 'item', item_name: 'F
 const reply = outputs => ({ ok: true, status: 'ok', stock_entry_name: 's', source_barcode: 'barcode', outputs });
 function setup(overrides = {}) {
   const calls = []; let current = true;
-  const deps = { isCurrent: () => current, loadSource: async barcode => { calls.push(['source', barcode]); return { ok: true, source }; },
+  const deps = { isCurrent: () => current, canSubmit: () => true, loadSource: async barcode => { calls.push(['source', barcode]); return { ok: true, source }; },
     resolvePrinter: async () => target, split: async req => { calls.push(['split', req]); return reply([label('e')]); },
     prepare: async req => { calls.push(['prepare', req]); return reply([label('e1'), label('e2')]); },
     print: async output => { calls.push(['print', output.epc]); return { ok: true }; }, confirm: async req => { calls.push(['confirm', req]); return reply([label('e1'), label('e2')]); }, ...overrides };
@@ -143,4 +143,13 @@ test('incomplete or inconsistent prepared labels stop before physical printing a
     await fill(t.controller); await t.controller.submit();
     assert.equal(prints, 0); assert.equal(confirms, 0); assert.equal(t.controller.getSnapshot().uncertain, true);
   }
+});
+
+
+test('unreviewed printer bridge blocks all mutation paths even for valid Wi-Fi form', async () => {
+  const t = setup({ canSubmit: () => false }); await fill(t.controller);
+  t.controller.setPrinter({ transport: 'wifi', driverUrl: 'http://printer/', printer: 'zebra', printMode: 'label' });
+  await t.controller.submit();
+  assert.deepEqual(t.calls.map(x => x[0]), ['source']);
+  assert.equal(t.controller.getSnapshot().uncertain, false); assert.equal(t.controller.getSnapshot().notice, null);
 });

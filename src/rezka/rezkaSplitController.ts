@@ -18,6 +18,7 @@ export type RezkaSplitState = { barcode: string; reason: string; driverUrl: stri
   remainder: { source: RezkaSource; total: number; difference: number } | null; notice: RezkaSplitNotice | null };
 export type RezkaSplitDependencies = {
   isCurrent(): boolean;
+  canSubmit(): boolean;
   loadSource(barcode: string): Promise<RezkaSourceResponse>;
   resolvePrinter(state: RezkaSplitState): Promise<RezkaPrinterTarget | null>;
   split(request: RezkaSplitInput): Promise<RezkaSplitResponse>;
@@ -115,7 +116,7 @@ export class RezkaSplitController {
       notice: { kind: 'remainderAdded', quantity: remainder.difference, uom: remainder.source.uom, scrap } });
   }
   async submit() {
-    if (!this.active() || this.state.submitting || this.state.uncertain || this.state.blockedPrinter || !this.state.source) return;
+    if (!this.active() || !this.deps.canSubmit() || this.state.submitting || this.state.uncertain || this.state.blockedPrinter || !this.state.source) return;
     const source = this.state.source, snapshot = this.state;
     if (snapshot.transport === 'wifi' && (!snapshot.driverUrl.trim() || !snapshot.printer.trim() || !snapshot.printMode.trim())) {
       this.update({ notice: { kind: 'printerConfig' } }); return;
