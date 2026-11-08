@@ -1,5 +1,5 @@
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
-import { router, useIsFocused, useNavigation, type Href } from 'expo-router';
+import { useIsFocused, useNavigation } from 'expo-router';
 import { useLayoutEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,7 +21,7 @@ export default function BoyoqchiProfile() {
   }, [focused, profileNavigation, session]);
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
     <RoleHeader title={getter('profileTitle')} navigation={{ icon: 'menu', label: t('Bo‘yoqchi bo‘limlari'), onPress: drawer.open }} />
-    <View style={{ flex: 1 }}><ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => router.navigate('/android-boyoqchi' as Href)} /></View>
+    <View style={{ flex: 1 }}><ProfileScreen session={session} onLogout={onLogout} /></View>
     <BoyoqchiDock active="profile" />
   </View>;
 }
