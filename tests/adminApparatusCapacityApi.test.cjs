@@ -19,7 +19,7 @@ function fixture() {
   let response = new Response('{}', { status: 200 }), onSend; const calls = [];
   const api = load('admin/apparatusCapacityApi', { '../authorizedFetch': { authorizedFetch: async (account, url, init, guard) => {
     calls.push({ account, url, init, guard }); guard?.(); if (onSend) await onSend(guard); return response;
-  } }, '../workerControlsApi': controls, '../shared/mobileApiException': exception, './apparatusCapacityModel': model });
+  } }, '../workerControlsApi': controls, '../shared/mobileApiException': exception, './apparatusCapacityModel': model, './dartJsonString': dart });
   return { ...api, calls, setResponse: value => { response = value; }, onSend: value => { onSend = value; } };
 }
 // Mock-only source audit: the f119 Flutter capacity oracle did not run due the documented native-asset hash mismatch.
@@ -63,4 +63,39 @@ test('optional guard reaches the transport and rejects account/scope changes aft
   await assert.rejects(f.adminApparatusCapacitySnapshot(session, guard), /scope changed/);
   allowed = true; f.onSend(async retryGuard => { allowed = false; retryGuard(); });
   await assert.rejects(f.adminApparatusCapacitySnapshot(session, guard), /scope changed/);
+});
+
+
+test('downtime mutation validates first and sends the complete V2-shaped body without changing ID spelling', async () => {
+  const f = fixture(), downtime = model.apparatusDowntimeFromJson({ id: 'd', apparatus_id: id, apparatus: 'Machine', starts_at_unix: 10,
+    ends_at_unix: 20, reason: ' reason ', active: false, actor: { role: 'admin', ref: 'u', display_name: 'User' }, created_at_unix: 5 });
+  const invalid = { ...downtime, apparatus_id: 'bad' };
+  await assert.rejects(f.adminSaveApparatusDowntime(session, invalid), e => e.code === 'apparatus_id_invalid'); assert.equal(f.calls.length, 0);
+  f.setResponse(new Response(JSON.stringify({ downtime: { ...model.apparatusDowntimeToJson(downtime), apparatus_id: id } }), { status: 200 }));
+  const saved = await f.adminSaveApparatusDowntime(session, { ...downtime, apparatus_id: ` ${id} ` });
+  assert.equal(saved.apparatus_id, id); assert.equal(f.calls[0].url, '/v1/mobile/admin/production-maps/capacity/downtime');
+  assert.equal(f.calls[0].init.method, 'POST'); assert.equal(f.calls[0].init.headers['Content-Type'], 'application/json');
+  assert.deepEqual(JSON.parse(f.calls[0].init.body), { ...model.apparatusDowntimeToJson(downtime), apparatus_id: ` ${id} ` });
+  f.setResponse(new Response('{}', { status: 200 }));
+  await assert.rejects(f.adminSaveApparatusDowntime(session, downtime), e => e.code === 'apparatus_downtime_invalid_response' && e.message === 'Aparat downtime saqlanmadi');
+});
+test('schedule cancellation trims only the reservation ID and parses the returned reservation', async () => {
+  const f = fixture(); f.setResponse(new Response(JSON.stringify({ reservation: { apparatus_id: id, reservation_id: 'r', status: 'cancelled' } }), { status: 200 }));
+  const result = await f.adminCancelApparatusScheduleReservation(session, '\u0085 r \u0085', ' reason ');
+  assert.equal(result.status, 'cancelled'); assert.equal(f.calls[0].url, '/v1/mobile/admin/production-maps/schedule/cancel');
+  assert.deepEqual(JSON.parse(f.calls[0].init.body), { reservation_id: 'r', reason: ' reason ' });
+  f.setResponse(new Response('{}', { status: 200 }));
+  await assert.rejects(f.adminCancelApparatusScheduleReservation(session, ''), e => e.code === 'apparatus_schedule_invalid_response' && e.message === 'Jadval bandi bekor qilinmadi');
+  assert.deepEqual(JSON.parse(f.calls.at(-1).init.body), { reservation_id: '', reason: '' });
+});
+
+test('mutation guard failures stop mocked sends or discard stale success without pretending it was not sent', async () => {
+  const f = fixture(); let allowed = false; const guard = () => { if (!allowed) throw new Error('scope changed'); };
+  await assert.rejects(f.adminCancelApparatusScheduleReservation(session, 'r', '', guard), /scope changed/);
+  // The mock transport receives the request but invokes the guard before any network send.
+  assert.equal(f.calls.length, 1);
+  allowed = true; f.onSend(async () => { allowed = false; });
+  f.setResponse(new Response(JSON.stringify({ reservation: { apparatus_id: id, reservation_id: 'r' } }), { status: 200 }));
+  await assert.rejects(f.adminCancelApparatusScheduleReservation(session, 'r', '', guard), /scope changed/);
+  assert.equal(f.calls.length, 2); // Post-send failure does not prove whether the server committed.
 });
