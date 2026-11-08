@@ -16,7 +16,8 @@ function load(relative, mocks = {}) {
 }
 const exception = class extends Error { constructor(code, message, statusCode) { super(message); this.code = code; this.statusCode = statusCode; } };
 const canonical = value => { const id = value.trim(), parts = id.split(':'); return !!id && id.length <= 128 && id === id.toLowerCase() && !/\s/.test(id) && parts.length >= 3 && parts[0] === 'apparatus' && parts.slice(1).every(Boolean); };
-const deps = { '../workerControlsApi': { WorkerControlException: exception, isCanonicalApparatusId: canonical } };
+const deps = { '../workerControlsApi': { WorkerControlException: exception, isCanonicalApparatusId: canonical },
+  './rezkaSessionGuard': { currentRezkaScope: () => 'scope', guardedRezkaRequest: (_s, _access, _scope, _mutation, send) => send(() => {}) } };
 const stem = 'f11910bb/rezka_master_role_test';
 const name = 'master can move or add cutting apparatus and cannot save none';
 
