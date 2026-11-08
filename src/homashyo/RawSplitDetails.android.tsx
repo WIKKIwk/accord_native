@@ -43,12 +43,12 @@ export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPr
           <SymbolView name={{ android: 'print' }} size={22} tintColor={colors.onSurfaceVariant} />
         </RNHostView></IconButton></Host>
     </View>)}
-    {printerLabel === null ? <WorkerSheetButton label={t('Printer tanlash')} disabled={printing} onPress={onSelectPrinter} /> :
+    {printerLabel === null ? <WorkerSheetButton label={t('Printer tanlash')} icon={{ android: 'print' }} disabled={printing} onPress={onSelectPrinter} /> :
       <><View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><SymbolView name={{ android: 'print' }} size={20} tintColor={colors.onSurfaceVariant} />
         <View style={{ flex: 1 }}><PreparationText>{t(`Printer: ${printerLabel}`)}</PreparationText></View></View>{showWifiSelector &&
         <DropdownFilter label="" selectedLabel={t(wifiPrinter === 'godex' ? 'GoDEX' : 'Zebra')} backgroundColor={colors.surface}
           enabled={!printing} options={[{ value: 'godex', label: t('GoDEX') }, { value: 'zebra', label: t('Zebra') }]} onChange={onWifiChanged} />}</>}
-    <WorkerSheetButton label={t('Barchasini qayta chop etish')} variant="filled" disabled={printing} onPress={() => { void run(onReprintAll); }} />
+    <WorkerSheetButton label={t('Barchasini qayta chop etish')} icon={{ android: 'print' }} variant="filled" disabled={printing} onPress={() => { void run(onReprintAll); }} />
   </ScrollView>;
 }
 

@@ -420,6 +420,23 @@ function reprintButtons(tree, platform) {
       : button.type === 'IconButton' ? button.props.enabled === false : button.props.disabled === true };
 }
 for (const platform of ['ios', 'android']) {
+  test(`${platform} detail printer actions keep source icons and disable during a print`, async () => {
+    const hooks = mountedHooks(), h = details(platform, null, value => value, issue, hooks.react); let resolve;
+    h.props.onReprint = () => new Promise(done => { resolve = done; });
+    const actionType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
+    const actions = tree => ['Printer tanlash', 'Barchasini qayta chop etish'].map(label =>
+      find(tree, n => n.type === actionType && n.props.label === label)[0]);
+    const idle = hooks.render(h.resultTree);
+    for (const button of actions(idle)) {
+      assert.equal(platform === 'ios' ? button.props.systemImage : button.props.icon.android, platform === 'ios' ? 'printer' : 'print');
+      assert.equal(reprintButtons(idle, platform).isDisabled(button), false);
+    }
+    reprintButtons(idle, platform).clickOne(); const busy = hooks.render(h.resultTree);
+    assert.ok(actions(busy).every(button => reprintButtons(busy, platform).isDisabled(button)));
+    resolve(); await new Promise(done => setImmediate(done));
+    assert.ok(actions(hooks.render(h.resultTree)).every(button => !reprintButtons(idle, platform).isDisabled(button)));
+    hooks.unmount();
+  });
   test(`${platform} reprint waits for a deferred job and suppresses rapid repeated taps`, async () => {
     const hooks = mountedHooks(), h = details(platform, null, value => value, issue, hooks.react); let resolve;
     h.props.onReprint = value => { h.calls.push(['started', value.barcode]); return new Promise(done => { resolve = done; }); };
