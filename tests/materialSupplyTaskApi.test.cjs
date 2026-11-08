@@ -35,7 +35,8 @@ function setup(plan, change = '') {
     '../dartApparatus': dart, '../mobileApiException': errors });
   const api = compile('shared/supplyTasks/supplyTaskApi', { '../../auth': auth, '../../authorizedFetch': authorized,
     '../../sessionReadScope': scope, '../../workerControlsApi': controls, '../appRoutes': compile('shared/appRoutes'),
-    '../dartApparatus': dart, '../mobileApiException': errors, './supplyTaskModels': model });
+    '../dartApparatus': dart, '../mobileApiException': errors, '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'),
+    './supplyTaskModels': model });
   const original = global.fetch;
   global.fetch = async (url, init) => {
     calls.push({ url: String(url), init }); const next = plan.shift();
@@ -166,4 +167,39 @@ test('7.0 raw revision remains an explicit unported lexical-validation blocker',
   const h = setup([{ status: 200, body: raw }]);
   try { assert.equal((await h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, () => true)).revision, 7); }
   finally { h.restore(); }
+});
+
+test('supply reader rejects async, truthy non-boolean and throwing guards before network', async () => {
+  for (const guard of [() => Promise.resolve(true), () => Promise.reject(Error('async guard')), () => 1, () => 'yes',
+    () => { throw Error('guard threw'); }]) {
+    const h = setup([]);
+    try { assert.throws(() => h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, guard), /Hisob o‘zgardi/);
+      assert.equal(h.calls.length, 0);
+    } finally { h.restore(); }
+  }
+  await new Promise(resolve => setImmediate(resolve));
+});
+
+test('supply reader detects scope, token or account changes made inside a true guard', () => {
+  const changes = [h => { h.session.profile.role = 'admin'; }, h => { h.session.profile.ref = 'other'; },
+    h => { h.session.capabilities = []; }, h => { h.session.assigned_item_groups = ['other']; },
+    h => { h.session.token = 'different-token'; }, h => { h.setActive(false); }];
+  for (const change of changes) {
+    const h = setup([]);
+    try { assert.throws(() => h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, () => { change(h); return true; }), /Hisob o‘zgardi/);
+      assert.equal(h.calls.length, 0);
+    } finally { h.restore(); }
+  }
+});
+
+test('reentrant supply guard at beforeSend blocks the GET, and after response blocks its data', async () => {
+  for (const changeAt of [2, 3]) {
+    const h = setup(changeAt === 3 ? [response(wire)] : []); let checks = 0;
+    try {
+      const pending = h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, () => {
+        if (++checks === changeAt) h.session.profile.ref = 'other'; return true;
+      });
+      await assert.rejects(pending, /Hisob o‘zgardi/); assert.equal(h.calls.length, changeAt === 2 ? 0 : 1);
+    } finally { h.restore(); }
+  }
 });

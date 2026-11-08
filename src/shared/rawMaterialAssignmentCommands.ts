@@ -5,6 +5,7 @@ import { sessionReadScope } from '../sessionReadScope';
 import { isCanonicalApparatusId, WorkerControlException } from '../workerControlsApi';
 import type { AdminRawMaterialAssignment } from '../workerRawMaterials';
 import { appRoutes, canOpenRoute } from './appRoutes';
+import { isSynchronouslyTrue } from './camera/synchronousGuard';
 import { MobileApiException } from './mobileApiException';
 import type { RawMaterialAssignmentCandidate } from './rawMaterialAssignmentApi';
 
@@ -39,8 +40,9 @@ export class RawMaterialAssignmentCommands {
   get needsReconciliation(): boolean { return this.reconciliationRequired; }
 
   private assertCurrent() {
-    if (!activeSessionToken(this.session) || sessionReadScope(this.session) !== this.scope || !this.isCurrent() ||
-        !canOpenRoute(this.session, appRoutes.adminRawMaterialAssignments)) {
+    const token = activeSessionToken(this.session);
+    const allowed = () => sessionReadScope(this.session) === this.scope && canOpenRoute(this.session, appRoutes.adminRawMaterialAssignments);
+    if (!token || !allowed() || !isSynchronouslyTrue(this.isCurrent) || activeSessionToken(this.session) !== token || !allowed()) {
       throw new Error('Sessiya o‘zgardi. Qayta urining.');
     }
   }

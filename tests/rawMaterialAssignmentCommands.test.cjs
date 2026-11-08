@@ -18,7 +18,7 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
 function setup(responses) {
   const session = { token: 'old', baseUrl: 'https://example.test', profile: { role: 'material_taminotchi', ref: 'one' },
     capabilities: ['raw_material.assign'], assigned_apparatus: [a, b] };
-  let active = true, current = true, refreshes = 0;
+  let active = true, current = true, currentHook = null, refreshes = 0;
   const auth = { activeSessionToken: s => active && s === session ? session.token : null,
     refreshSession: async () => { refreshes++; session.token = 'new'; return true; } };
   const scope = compile('sessionReadScope'), authorized = compile('authorizedFetch', { './auth': auth });
@@ -36,6 +36,7 @@ function setup(responses) {
   const { RawMaterialAssignmentCommands } = compile('shared/rawMaterialAssignmentCommands', {
     '../auth': auth, '../preparation/preparationInventoryAssignment': prep, '../rawMaterialUnlinkApi': unlink, '../sessionReadScope': scope,
     '../workerControlsApi': controls, './appRoutes': routes, './mobileApiException': errors,
+    './camera/synchronousGuard': compile('shared/camera/synchronousGuard'),
   });
   const original = global.fetch, calls = [];
   global.fetch = async (url, init) => { calls.push({ url: String(url), method: init.method, body: JSON.parse(init.body) });
@@ -44,9 +45,9 @@ function setup(responses) {
     const response = await next;
     return new Response(JSON.stringify(response.body), { status: response.status, headers: { 'content-type': 'application/json' } });
   };
-  const command = new RawMaterialAssignmentCommands(session, () => current);
+  const command = new RawMaterialAssignmentCommands(session, () => currentHook ? currentHook() : current);
   return { session, command, calls, refreshes: () => refreshes, setCurrent: value => { current = value; },
-    setActive: value => { active = value; }, restore: () => { global.fetch = original; } };
+    setCurrentHook: value => { currentHook = value; }, setActive: value => { active = value; }, restore: () => { global.fetch = original; } };
 }
 const opts = chooseApparatus => ({ chooseApparatus, cancelledMessage: 'Homashyoni ulash bekor qilindi' });
 
@@ -253,5 +254,44 @@ test('unlink 401 is not retried and requires reconciliation', async () => {
     assert.equal(h.calls.length, 1); assert.equal(h.command.needsReconciliation, true);
     await assert.rejects(h.command.unlink(linked(), manual, async () => true), /natijasi noaniq/);
     assert.equal(h.calls.length, 1);
+  } finally { h.restore(); }
+});
+
+test('assignment rejects async, truthy non-boolean and throwing lifetime guards before sending', async () => {
+  for (const guard of [() => Promise.resolve(true), () => Promise.reject(Error('async guard')), () => 1, () => 'yes',
+    () => { throw Error('guard threw'); }]) {
+    const h = setup([]); h.setCurrentHook(guard);
+    try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Sessiya o‘zgardi/);
+      assert.equal(h.calls.length, 0);
+    } finally { h.restore(); }
+  }
+  await new Promise(resolve => setImmediate(resolve));
+});
+
+test('assignment detects scope, token or account changes made inside a true lifetime callback', async () => {
+  const changes = [h => { h.session.profile.role = 'admin'; }, h => { h.session.profile.ref = 'other'; },
+    h => { h.session.capabilities = []; }, h => { h.session.assigned_item_groups = ['other']; },
+    h => { h.session.token = 'different-token'; }, h => { h.setActive(false); }];
+  for (const change of changes) {
+    const h = setup([]); h.setCurrentHook(() => { change(h); return true; });
+    try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Sessiya o‘zgardi/);
+      assert.equal(h.calls.length, 0);
+    } finally { h.restore(); }
+  }
+});
+
+test('reentrant callback during assignment beforeSend cannot issue the mutation', async () => {
+  const h = setup([]); let checks = 0;
+  h.setCurrentHook(() => { if (++checks === 3) h.session.profile.ref = 'other'; return true; });
+  try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Sessiya o‘zgardi/);
+    assert.equal(checks, 3); assert.equal(h.calls.length, 0);
+  } finally { h.restore(); }
+});
+
+test('reentrant callback after a successful write discards data and requires reconciliation', async () => {
+  const h = setup([success]); let checks = 0;
+  h.setCurrentHook(() => { if (++checks === 4) h.session.profile.ref = 'other'; return true; });
+  try { await assert.rejects(h.command.assignScanned('order', 'ROLL', opts(async () => a)), /Sessiya o‘zgardi/);
+    assert.equal(h.calls.length, 1); assert.equal(h.command.needsReconciliation, true);
   } finally { h.restore(); }
 });

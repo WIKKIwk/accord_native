@@ -3,6 +3,7 @@ import { authorizedFetch, currentQueueSnapshotReadEpoch } from '../../authorized
 import { sessionReadScope } from '../../sessionReadScope';
 import { productionMapResponseError } from '../../workerControlsApi';
 import { appRoutes, canOpenRoute } from '../appRoutes';
+import { isSynchronouslyTrue } from '../camera/synchronousGuard';
 import { dartTrim, isAscii, isAsciiCanonicalApparatusId } from '../dartApparatus';
 import { MobileApiException } from '../mobileApiException';
 import { supplyTaskWindowFromJson, type SupplyTaskKind, type SupplyTaskWindow } from './supplyTaskModels';
@@ -28,7 +29,9 @@ export function readSupplyTaskWindow(session: Session, input: SupplyTaskRequest,
   const normalizedSearch = search.toLowerCase();
   const scope = sessionReadScope(session), route = kind === 'material' ? appRoutes.materialTasks : appRoutes.qolipTasks;
   const guard = () => {
-    if (!activeSessionToken(session) || sessionReadScope(session) !== scope || !isCurrent() || !canOpenRoute(session, route)) {
+    const token = activeSessionToken(session);
+    const allowed = () => sessionReadScope(session) === scope && canOpenRoute(session, route);
+    if (!token || !allowed() || !isSynchronouslyTrue(isCurrent) || activeSessionToken(session) !== token || !allowed()) {
       throw new Error('Hisob o‘zgardi.');
     }
   };
