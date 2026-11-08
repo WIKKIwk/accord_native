@@ -119,3 +119,28 @@ test('real catalog callback wrapper accepts the checked Admin guard and rejects 
     if (invalidate) await assert.rejects(reader(), /session changed/); else assert.deepEqual(await reader(), []);
   }
 });
+
+function loadRoot(name, mocks) {
+  const filename = path.resolve(__dirname, '../src', name + '.ts'), mod = new Module(filename, module);
+  mod.filename = filename; mod.paths = module.paths;
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./') ? loadRoot(id.slice(2), mocks) : require(id);
+  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+  return mod.exports;
+}
+test('real paged Audit reader keeps complete counts for twenty findings and rechecks a body-time account change', async () => {
+  for (const invalidate of [false, true]) {
+    const f = fixture(), requests = [];
+    const raw = { version: 'audit-1', epoch: 'server', rev: 1, offset: 0, total: 45, next_cursor: 'next',
+      workflow_audit: { ok: false, checked_order_count: 1000, total_violations: 45,
+        violations: Array.from({ length: 20 }, (_, index) => ({ code: 'unknown_order', order_id: `zakaz-${index}`, subject: 'queue' })) } };
+    const pageApi = loadRoot('productionOrderPageApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
+      requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
+    } } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderPageApi': pageApi }).adminWorkMapReader(f.session, f.witness);
+    const result = reader({ view: 'audit', search: 'query' });
+    if (invalidate) await assert.rejects(result, /session changed/);
+    else { const page = await result; assert.equal(page.length, 20); assert.equal(page.workflow_audit.checked_order_count, 1000); assert.equal(page.workflow_audit.total_violations, 45); }
+    assert.equal(requests.length, 1);
+    assert.deepEqual(Object.fromEntries(new URL(requests[0], f.session.baseUrl).searchParams), { view: 'audit', limit: '20', search: 'query' });
+  }
+});

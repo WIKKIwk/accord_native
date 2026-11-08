@@ -12,7 +12,7 @@ function load(file, mocks = {}) {
   return mod.exports;
 }
 const dart = load('admin/dartJsonString');
-const { AdminWorkMapController: Controller, adminWorkMapRows: rows, adminWorkMapSearch: search } = load('admin/adminWorkMapController', { './dartJsonString': dart });
+const { AdminWorkMapController: Controller, adminWorkMapRows: rows, adminWorkMapSearch: search } = load('admin/adminWorkMapController', { './dartJsonString': dart, './adminWorkMapAuditModel': load('admin/adminWorkMapAuditModel', { './dartJsonString': dart }) });
 const summary = (overrides = {}) => ({ projection: 'orders_list_v1', version: 'v', epoch: 'e', scope: 's', revision: 4, offset: 0, length: 2,
   next_cursor: 'next', order_ids: ['zakaz-1'], pending_ids: ['p1'], order_rows: { 'zakaz-1': { id: 'zakaz-1', code: '', title: 'Product', customer_name: 'Customer', image_id: 'i', display_state: 'paused' } },
   pending_rows: { p1: { id: 'p1', code: 'P', title: 'Pending', customer_name: 'P customer', image_id: '', kg: 10 } }, pending_orders: [], closed_orders: [], workflow_audit: null, snapshot: null, ...overrides });

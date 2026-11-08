@@ -4,9 +4,9 @@ import type { AdminWorkMapControlsProps } from './adminWorkMapControlsTypes';
 
 export function AdminWorkMapModules(props: AdminWorkMapControlsProps) {
   return <Picker label="" selection={props.module} onSelectionChange={value => {
-    if (value === 'sequence' || value === 'orders') props.onModule(value);
+    if (value === 'sequence' || value === 'orders' || value === 'audit') props.onModule(value);
   }} modifiers={[pickerStyle('segmented')]}>
-    <Text modifiers={[tag('sequence')]}>Ketma-ketlik</Text><Text modifiers={[tag('orders')]}>Buyurtmalar</Text>
+    <Text modifiers={[tag('sequence')]}>Ketma-ketlik</Text><Text modifiers={[tag('orders')]}>Buyurtmalar</Text><Text modifiers={[tag('audit')]}>Tekshiruv</Text>
   </Picker>;
 }
 export function AdminWorkMapApparatusFilter(props: AdminWorkMapControlsProps) {

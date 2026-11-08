@@ -29,7 +29,7 @@ for (const platform of ['ios', 'android']) test(`${platform} native module/filte
     onModule: id => calls.push(['module', id]), onApparatus: id => calls.push(['apparatus', id]), onToggle: () => calls.push('toggle'),
     apparatusLabel: 'Apparat', unselectedLabel: 'Tanlanmagan', countText: '7 ta buyurtma' };
   const modules = nodes(exports.AdminWorkMapModules(props));
-  assert.deepEqual(modules.filter(node => node.type === 'NativeText').map(node => node.props.children), ['Ketma-ketlik', 'Buyurtmalar']);
+  assert.deepEqual(modules.filter(node => node.type === 'NativeText').map(node => node.props.children), ['Ketma-ketlik', 'Buyurtmalar', 'Tekshiruv']);
   if (platform === 'ios') modules[0].props.onSelectionChange('orders');
   else modules.find(node => node.type === segmented && !node.props.selected).props.onClick();
   const filter = nodes(exports.AdminWorkMapApparatusFilter(props));

@@ -11,7 +11,7 @@ function load(file, mocks = {}) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
-const controller = load('admin/adminWorkMapController', { './dartJsonString': load('admin/dartJsonString') });
+const controller = load('admin/adminWorkMapController', { './dartJsonString': load('admin/dartJsonString'), './adminWorkMapAuditModel': load('admin/adminWorkMapAuditModel', { './dartJsonString': load('admin/dartJsonString') }) });
 const Workspace = load('admin/adminWorkMapWorkspace', { './adminWorkMapController': controller }).AdminWorkMapWorkspace;
 const Store = load('shared/adminSequenceApparatusStore', { '../auth': {}, '../appPreferences': {} }).AdminSequenceApparatusStore;
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -82,4 +82,16 @@ test('session invalidation or dispose suppresses late catalog and page results',
     if (stop === 'invalidate') ready.invalidate(); else ready.workspace.dispose();
     ready.reads[0].response.resolve(page('sequence')); await tick(); assert.equal(ready.workspace.getSnapshot().list.rows.length, 0); ready.workspace.dispose();
   }
+});
+
+test('Audit opens independently of catalog, retains report state and never admits an unimplemented module', async () => {
+  const f = fixture(); f.workspace.start(); f.workspace.selectModule('audit');
+  assert.deepEqual(f.reads[0].request, { view: 'audit', search: '' });
+  const auditPage = { ...page('orders'), projection: '', order_ids: [], order_rows: {},
+    workflow_audit: { ok: false, checked_order_count: 12, checked_batch_count: 34, checked_session_count: 56, total_violations: 1,
+      violations: [{ code: 'invalid_queue_state', order_id: 'o', subject: 'queue', detail: '' }] } };
+  f.reads[0].response.resolve(auditPage); await tick(); f.catalog.resolve([a, b]); await tick();
+  assert.equal(f.workspace.getSnapshot().module, 'audit'); assert.equal(f.workspace.getSnapshot().list.audit.checked_order_count, 12); assert.equal(f.reads.length, 1);
+  f.workspace.selectModule('closed'); f.workspace.selectApparatus(b.id); assert.equal(f.workspace.getSnapshot().module, 'audit'); assert.equal(f.reads.length, 1);
+  f.workspace.selectModule('sequence'); assert.equal(f.workspace.getSnapshot().list.audit, null); assert.equal(f.reads[1].request.apparatus, a.id); f.workspace.dispose();
 });

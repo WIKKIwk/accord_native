@@ -29,11 +29,11 @@ export class AdminWorkMapWorkspace {
   private current(generation?: number) { return !this.disposed && this.deps.isCurrent() && (generation == null || generation === this.catalogGeneration); }
   start() { if (!this.started && !this.disposed) { this.started = true; this.window.start(); void this.loadCatalog(); } }
   private configure() {
-    this.window.configure(this.state.module === 'orders' ? { view: 'orders' }
+    this.window.configure(this.state.module !== 'sequence' ? { view: this.state.module }
       : this.state.selected ? { view: 'sequence', apparatus: this.state.selected.id } : null);
   }
   selectModule(module: AdminWorkMapModule) {
-    if (!this.current() || !['sequence', 'orders'].includes(module) || this.state.module === module) return;
+    if (!this.current() || !['sequence', 'orders', 'audit'].includes(module) || this.state.module === module) return;
     this.state = { ...this.state, module }; this.configure(); this.publish({});
   }
   selectApparatus(id: string) {

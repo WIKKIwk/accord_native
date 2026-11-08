@@ -29,7 +29,7 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route } }, '../shared/localization': { adminText: key => key, localizedGetter: key => key, productionText: key => key },
     '../components/BaseHost': { BaseHost: 'BaseHost' }, '../shared/orders/OrderListItem': { OrderListItem: 'OrderListItem' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
-    './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
+    './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
     './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' }, './AdminShellContext': { useAdminShell: () => shell },
     './useAdminWorkMapView': { useAdminWorkMapView: () => view }, './adminWorkMapText': { adminWorkMapText: () => ({ partial: 'partial', more: 'more' }) },
     './adminWorkMapPresentation': { adminWorkMapPresentation: value => ({ headline: value.title, supporting: value.customer, tone: 'paused' }) } };
@@ -52,6 +52,15 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   assert.equal(renderedRow.props.imageActive, false); renderedRow.props.onPress();
   const more = listChildren.at(-1); more.props.onPress(); await Promise.resolve();
   assert.deepEqual(calls, [['search', 'abc'], 'back', 'profile', 'reload', ['open', 'zakaz-1'], 'next']);
+  view.controls.module = 'audit'; view.state.rows = []; view.audit = { title: 'Audit' }; view.error = 'failed';
+  const auditTree = bound.type();
+  const auditBody = platform === 'ios' ? auditTree.props.children.find(value => value?.type === 'View') : auditTree;
+  const auditList = platform === 'ios' ? auditBody.props.children.find(value => value?.type === 'BaseHost' && value.props.children?.type === 'OrdersList').props.children
+    : auditBody.props.children.find(value => value?.type === 'OrdersList');
+  const auditChildren = auditList.props.children.flat(Infinity).filter(Boolean), auditContent = auditChildren.find(value => value.type === 'AdminWorkMapAudit');
+  assert.equal(auditContent.props.model, view.audit); assert.equal(auditContent.props.onRefresh, view.refresh);
+  assert.equal(auditChildren.some(value => value.type === 'OrderListItem' || value.type === 'ListItem' && value.props.supportingText === 'failed'), false);
+
 });
 
 test('opening a detail requires the current shell, enabled destination and a list authority ticket', () => {
@@ -64,7 +73,7 @@ test('opening a detail requires the current shell, enabled destination and a lis
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route, profile: '/profile' } },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     '../shared/localization': { productionText: key => key, adminText: key => key }, './AdminWorkMapDetail': { AdminWorkMapDetail: 'Detail' },
-    './AdminShellContext': { useAdminShell: () => shell }, './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: ctrl, workspace: { reload() {}, selectModule() {}, selectApparatus() {} },
+    './AdminShellContext': { useAdminShell: () => shell }, './adminWorkMapAuditPresentation': { adminWorkMapAuditPresentation: () => ({}) }, './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: ctrl, workspace: { reload() {}, selectModule() {}, selectApparatus() {} },
       workspaceState: { module: 'sequence', catalog: [], selected: null, catalogLoaded: false, catalogLoading: false } }) } };
   const view = load('admin/useAdminWorkMapView.tsx', mocks).useAdminWorkMapView();
   current = false; view.open(row); current = true; allowed = false; view.open(row); allowed = true; ticket = null; view.open(row); assert.equal(opened.length, 0);

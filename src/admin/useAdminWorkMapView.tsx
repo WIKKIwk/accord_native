@@ -6,7 +6,8 @@ import { appRoutes } from '../shared/appRoutes';
 import { adminText, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { AdminWorkMapDetail } from './AdminWorkMapDetail';
-import type { AdminWorkMapRow } from './adminWorkMapController';
+import { adminWorkMapAuditPresentation } from './adminWorkMapAuditPresentation';
+import type { AdminWorkMapModule, AdminWorkMapRow } from './adminWorkMapController';
 import { useAdminShell } from './AdminShellContext';
 import { useAdminWorkMap } from './useAdminWorkMap';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -29,7 +30,7 @@ export function useAdminWorkMapView() {
   };
   const controls = { module: workspaceState.module, catalog: workspaceState.catalog, selected: workspaceState.selected, expanded: filterExpanded,
     onToggle: () => setFilterExpanded(value => !value),
-    onModule: (value: 'sequence' | 'orders') => { if (shell.isCurrent()) { sheet.close(); workspace.selectModule(value); setFilterExpanded(false); } },
+    onModule: (value: AdminWorkMapModule) => { if (shell.isCurrent()) { sheet.close(); workspace.selectModule(value); setFilterExpanded(false); } },
     onApparatus: (id: string) => { if (shell.isCurrent()) { sheet.close(); workspace.selectApparatus(id); setFilterExpanded(false); } },
     apparatusLabel: productionText('worker.queue.filter.apparatus', locale), unselectedLabel: productionText('worker.queue.filter.unselected', locale),
     countText: workspaceState.module === 'sequence' && state.total > 0 ? productionText('worker.queue.orders_count', locale, { count: state.total }) : '' };
@@ -39,6 +40,6 @@ export function useAdminWorkMapView() {
     ? !workspaceState.catalogLoaded || loading ? '' : workspaceState.selected == null
       ? productionText('worker.queue.empty.select_apparatus', locale)
       : state.loaded && !state.rows.length ? productionText('worker.queue.empty.for_apparatus', locale, { apparatus: workspaceState.selected.name.trim() }) : ''
-    : state.loaded && !loading && !state.rows.length ? adminText(state.query ? 'production.search_empty' : 'production.open_empty', locale) : '';
-  return { shell, locale, state, controller, controls, error, loading, emptyText, refresh: () => workspace.reload(), query, goBack, onProfile, search, open };
+    : workspaceState.module === 'orders' && state.loaded && !loading && !state.rows.length ? adminText(state.query ? 'production.search_empty' : 'production.open_empty', locale) : '';
+  return { shell, locale, state, controller, controls, error, loading, emptyText, audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), query, goBack, onProfile, search, open };
 }
