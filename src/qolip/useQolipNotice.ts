@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 
+type Queue = { nextId: number; messages: { id: number; text: string }[] };
 /** Queue notices in the same order as V2's ScaffoldMessenger. */
 export function useQolipNotice() {
-  const [messages, setMessages] = useState<{ id: number; text: string }[]>([]);
-  const show = useCallback((text: string) => setMessages(current => [...current, { id: (current.at(-1)?.id ?? 0) + 1, text }]), []);
-  const activeId = messages[0]?.id;
+  const [queue, setQueue] = useState<Queue>({ nextId: 1, messages: [] });
+  const show = useCallback((text: string) => setQueue(current => ({ nextId: current.nextId + 1,
+    messages: [...current.messages, { id: current.nextId, text }] })), []);
+  const activeId = queue.messages[0]?.id;
   useEffect(() => {
     if (activeId === undefined) return;
-    const timer = setTimeout(() => setMessages(current => current.slice(1)), 4000);
+    const timer = setTimeout(() => setQueue(current => ({ ...current, messages: current.messages.slice(1) })), 4000);
     return () => clearTimeout(timer);
   }, [activeId]);
-  return { message: messages[0]?.text ?? '', show };
+  return { message: queue.messages[0]?.text ?? '', show };
 }
