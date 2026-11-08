@@ -53,8 +53,10 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
       <Host matchContents><IconButton enabled={!locked} onClick={() => { void controller.lookup(); }}
         modifiers={[semantics({ contentDescription: 'Rulonni topish' }), testID('homashyo-lookup')]}><RNHostView matchContents>
           <SymbolView name={{ android: 'arrow_forward' }} size={22} tintColor={colors.onSurfaceVariant} /></RNHostView></IconButton></Host></View>
-    <WorkerSheetButton label={t('Skanerlash')} disabled={locked} onPress={onScan} />
-    {state.printer && <><PreparationText>{t(`Printer: ${state.printer.transport}`)}</PreparationText>{state.printer.transport === 'wifi' &&
+    <WorkerSheetButton label={t('Skanerlash')} icon={{ android: 'qr_code_scanner' }} disabled={locked} onPress={onScan} />
+    {state.printer && <><View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <SymbolView name={{ android: 'print' }} size={20} tintColor={colors.onSurfaceVariant} /><View style={{ flex: 1 }}>
+        <PreparationText>{t(`Printer: ${state.printer.transport}`)}</PreparationText></View></View>{state.printer.transport === 'wifi' &&
       <DropdownFilter label="" selectedLabel={t(state.wifiPrinter === 'godex' ? 'GoDEX' : 'Zebra')} backgroundColor={colors.surface} enabled={!state.busy}
         options={[{ value: 'godex', label: t('GoDEX') }, { value: 'zebra', label: t('Zebra') }]} onChange={value => controller.setWifiPrinter(value)} />}</>}
     {source && plan && <><PreparationText title>{source.itemName}</PreparationText><PreparationText>{t(rawSplitSourceSummary(source))}</PreparationText>
@@ -82,7 +84,7 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
           <WorkerSheetButton label={t('Muammoni saqlash')} disabled={locked} onPress={() => { void controller.saveIssue(); }} />}</View>}
       {plan.errors.map((error, i) => error !== null && <Text key={state.outputs[i]?.id ?? i} style={{ color: colors.error }}>{t(`${i + 1}-rulon: ${error}`)}</Text>)}
       <PreparationText>{rawSplitBalance(source, state.outputs, state.waste)}</PreparationText>{widthLabel !== null && <PreparationText>{widthLabel}</PreparationText>}
-      <WorkerSheetButton label={t('Saqlash va chop etish')} variant="filled" disabled={locked} onPress={() => { void controller.save(); }} />
+      <WorkerSheetButton label={t('Saqlash va chop etish')} icon={{ android: 'print' }} variant="filled" disabled={locked} onPress={() => { void controller.save(); }} />
     </>}
   </ScrollView>;
 }
