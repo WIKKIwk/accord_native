@@ -15,7 +15,7 @@ function setup(name, options = {}) {
   const saved = new Map(), s = recordedSession(stem, name);
   const session = { ...s, profile: { role: 'homashyo_rezkachi', ref: 'split-1' }, capabilities: ['raw_material.split'] };
   let current = session;
-  const store = { getItemAsync: async key => saved.get(key) ?? null, setItemAsync: async (key, value) => { saved.set(key, value); },
+  const store = { getItemAsync: async key => saved.get(key) ?? null, setItemAsync: async (key, value) => { saved.set(key, typeof value === 'function' ? value(saved.get(key) ?? null) : value); },
     removeItemAsync: async key => saved.delete(key) };
   const replay = contractFetch(stem, name, options);
   const api = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: store, __esModule: true },

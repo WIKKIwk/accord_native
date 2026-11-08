@@ -17,7 +17,7 @@ const result = new model.RawSplitResult({ id: 'split-result', source: raw, sourc
 function setup(overrides = {}) {
   let scope = 'account-a', pending = null, pendingIssue = null, stockCalls = [], issueCalls = [], prints = [], notices = [], pick = { transport: 'bluetooth', printer: {} };
   const snapshot = new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] });
-  const ops = { rawSplitScope: () => scope, rawSplitPending: async () => pending, rawSplitIssuePending: async () => pendingIssue,
+  const ops = { rawSplitScope: () => scope, rawSplitSessionIsCurrent: () => true, rawSplitPending: async () => pending, rawSplitIssuePending: async () => pendingIssue,
     rawSplitSnapshot: async () => snapshot, rawSplitSource: async () => source, rawSplitSave: async (_session, payload) => { stockCalls.push(payload); return result; },
     rawSplitReportIssue: async (_session, payload) => { issueCalls.push(payload); return { id: 'issue-1' }; }, ...overrides };
   const options = { session: {}, operations: ops, requestId: async () => 'split-id', selectPrinter: async () => pick,
@@ -72,7 +72,7 @@ test('after committed stock, print failure reports reprint context and never res
 test('account change while lookup is pending does not apply another account’s source', async () => {
   let resolve; const h = setup({ rawSplitSource: () => new Promise(r => { resolve = r; }) });
   const pending = h.controller.lookup('parent'); h.setScope('account-b'); resolve(source); await pending;
-  assert.equal(h.controller.getSnapshot().source, null); assert.equal(h.controller.getSnapshot().error, 'Akkaunt o‘zgargan');
+  assert.equal(h.controller.getSnapshot().source, null); assert.equal(h.controller.getSnapshot().error, null);
 });
 test('lost response reloads durable command and retry reuses exactly that command', async () => {
   const h = setup(); let count = 0;
@@ -89,4 +89,11 @@ test('unsupported printer is reported before any stock write', async () => {
   const h = setup(); h.options.printerSupported = () => false; await fill(h.controller); await h.controller.save();
   assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []); assert.ok(h.notices.includes('unsupported-printer'));
   assert.equal(h.controller.getSnapshot().source.barcode, 'parent');
+});
+
+test('same-account new login cannot apply an old controller lookup result or emit state updates', async () => {
+  let resolve, current = true, updates = 0; const h = setup({ rawSplitSource: () => new Promise(r => { resolve = r; }),
+    rawSplitSessionIsCurrent: () => current }); h.controller.subscribe(() => updates++);
+  const pending = h.controller.lookup('parent'); current = false; const count = updates; resolve(source); await pending;
+  assert.equal(h.controller.getSnapshot().source, null); assert.equal(updates, count); assert.deepEqual(h.notices, []);
 });

@@ -1,6 +1,6 @@
 import type { Session } from '../auth';
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
-import { rawSplitScope, rawSplitSnapshot } from './rawSplitApi';
+import { rawSplitScope, rawSplitSessionIsCurrent, rawSplitSnapshot } from './rawSplitApi';
 import type { RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitModel';
 
 type Device = PreparationDeviceSelection;
@@ -9,26 +9,28 @@ export type RawSplitHistoryState = { snapshot: RawSplitSnapshot | null; printer:
 export type RawSplitHistoryOptions = { session: Session; selectPrinter: () => Promise<Device | null>;
   printOne: (result: RawSplitResult, output: RawSplitRoll, printer: Device, wifiPrinter: string, guard: () => void) => Promise<void>;
   onMessage: (message: string) => void; printerSupported: (printer: Device, wifiPrinter: string) => boolean;
-  onUnsupportedPrinter: () => void; snapshot?: typeof rawSplitSnapshot; scope?: () => string };
+  onUnsupportedPrinter: () => void; snapshot?: typeof rawSplitSnapshot; scope?: () => string; sessionCurrent?: () => boolean };
 const message = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
 
 /** State transitions from V2 _RawMaterialSplitHistoryScreenState. */
 export class RawSplitHistoryController {
   private active = true;
   private listeners = new Set<() => void>();
-  private readonly scope: string; private readonly scopeNow: () => string;
+  private readonly scope: string; private readonly scopeNow: () => string; private readonly sessionCurrent: () => boolean;
   private state: RawSplitHistoryState = { snapshot: null, printer: null, wifiPrinter: 'godex', error: null, busy: false };
   constructor(private readonly options: RawSplitHistoryOptions) {
     this.scopeNow = options.scope ?? rawSplitScope; this.scope = this.scopeNow();
+    this.sessionCurrent = options.sessionCurrent ?? (() => rawSplitSessionIsCurrent(options.session));
   }
-  private checkScope = (): void => {
-    if (!this.active || this.scopeNow() !== this.scope) throw new Error('Akkaunt o‘zgargan');
+  private isCurrent = (): boolean => {
+    try { return this.active && this.sessionCurrent() && this.scopeNow() === this.scope; } catch { return false; }
   };
+  private checkScope = (): void => { if (!this.isCurrent()) throw new Error('Akkaunt o‘zgargan'); };
   getSnapshot = (): RawSplitHistoryState => this.state;
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   dispose(): void { this.active = false; this.listeners.clear(); }
   private update(patch: Partial<RawSplitHistoryState>): void {
-    if (!this.active) return;
+    if (!this.isCurrent()) return;
     this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener());
   }
   async reload(): Promise<void> {
@@ -40,7 +42,7 @@ export class RawSplitHistoryController {
   }
   async selectPrinter(): Promise<void> {
     const printer = await this.options.selectPrinter();
-    if (this.active && printer !== null) { this.checkScope(); this.update({ printer }); }
+    if (this.isCurrent() && printer !== null) this.update({ printer });
   }
   setWifiPrinter(value: string): void { if (!this.state.busy) this.update({ wifiPrinter: value }); }
   async reprint(result: RawSplitResult, only?: RawSplitRoll): Promise<void> {
@@ -51,7 +53,7 @@ export class RawSplitHistoryController {
       const printer = this.state.printer;
       if (!this.options.printerSupported(printer, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
       for (const output of only ? [only] : result.outputs) {
-        if (!this.active) return;
+        if (!this.isCurrent()) return;
         this.checkScope();
         await this.options.printOne(result, output, printer, this.state.wifiPrinter, this.checkScope);
       }
