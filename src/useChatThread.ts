@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { ChatRequestError, loadChatMessages, markChatRead } from './chatApi';
@@ -8,8 +8,12 @@ import { sendChatMedia, type ChatMediaDraft } from './chatMedia';
 import { mergeChatMessages, reconcileChatRefresh, type ChatMessage } from './chatModel';
 import { chatDeviceId, pendingChatTexts, queueChatText, type PendingChatText } from './chatOutbox';
 import { flushChatOutbox } from './chatOutboxDelivery';
+import { existingChatUnreadRuntimeFor, subscribeChatUnreadRuntimeChanges } from './shared/chat/chatUnreadRuntime';
+
+const noUnreadRuntime = () => null;
 
 export function useChatThread(session: Session, conversationId: string) {
+  const unreadRuntime = useSyncExternalStore(subscribeChatUnreadRuntimeChanges, () => existingChatUnreadRuntimeFor(session), noUnreadRuntime);
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [pending, setPending] = useState<PendingChatText[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -39,6 +43,12 @@ export function useChatThread(session: Session, conversationId: string) {
   const retryBlocked = useRef(false);
   const restoreStorage = useRef<(() => void) | null>(null);
 
+  useEffect(() => {
+    if (!unreadRuntime) return;
+    unreadRuntime.setActiveConversation(conversationId);
+    return () => unreadRuntime.setActiveConversation('');
+  }, [conversationId, unreadRuntime]);
+
   const visible = useCallback(() => focused.current && activeSessionToken(session) !== null &&
     (AppState.currentState == null || AppState.currentState === 'active'), [session]);
   const merge = useCallback((incoming: ChatMessage[]) => {
@@ -66,7 +76,10 @@ export function useChatThread(session: Session, conversationId: string) {
       setMessages(reconciled.items);
       setError('');
       const sequence = page.items.at(-1)?.sequence ?? 0;
-      if (sequence) {
+      if (unreadRuntime) {
+        try { await unreadRuntime.rememberThreadMessages(conversationId, page.items); }
+        catch { /* A later refresh retries the receipt. */ }
+      } else if (sequence) {
         try {
           const deviceId = await chatDeviceId();
           if (visible() && !controller.signal.aborted && current === generation.current) {
@@ -80,7 +93,7 @@ export function useChatThread(session: Session, conversationId: string) {
     } finally {
       if (request.current === controller) request.current = null;
     }
-  }, [conversationId, session, visible]);
+  }, [conversationId, session, unreadRuntime, visible]);
 
   const loadOlder = useCallback(async () => {
     const before = messagesRef.current[0]?.sequence;
@@ -92,6 +105,11 @@ export function useChatThread(session: Session, conversationId: string) {
       const page = await loadChatMessages(session, conversationId, controller.signal, before);
       if (!visible() || controller.signal.aborted) return;
       merge(page.items);
+      if (unreadRuntime) {
+        try { await unreadRuntime.rememberThreadMessages(conversationId, page.items, false); }
+        catch { /* A later refresh can retry local storage. */ }
+      }
+      if (!visible() || controller.signal.aborted) return;
       setHasMore(page.hasMore);
       setError('');
     } catch (reason) {
@@ -100,7 +118,7 @@ export function useChatThread(session: Session, conversationId: string) {
       if (olderRequest.current === controller) olderRequest.current = null;
       if (focused.current) setLoadingMore(false);
     }
-  }, [conversationId, merge, session, visible]);
+  }, [conversationId, merge, session, unreadRuntime, visible]);
 
   const drain = useCallback(async (manual = false) => {
     if (!visible() || !storageReadyRef.current || (retryBlocked.current && !manual)) return;

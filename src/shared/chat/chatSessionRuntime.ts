@@ -130,12 +130,12 @@ export class ChatSessionRuntime {
   }
 
   /** Called by the existing thread after it loads real messages. */
-  async rememberThreadMessages(conversationId: string, items: readonly ChatMessage[]): Promise<void> {
+  async rememberThreadMessages(conversationId: string, items: readonly ChatMessage[], markAsRead = true): Promise<void> {
     await this.start();
     if (!this.current() || !this.engine) return;
     this.engine.rememberMessages(items);
     try { await this.deps.saveMessages(items); } catch { /* V2 still attempts the read receipt. */ }
-    if (this.current()) await this.markRead(conversationId);
+    if (markAsRead && this.current()) await this.markRead(conversationId);
   }
 
   private async markRead(conversationId: string): Promise<void> {
