@@ -4,7 +4,7 @@ import { qolipProductFromJson } from '../qolipCatalogApi';
 import { sessionReadScope } from '../sessionReadScope';
 import { MobileApiException } from '../shared/mobileApiException';
 import { qolipCatalogRuntimeFor } from '../shared/qolipCatalogRuntime';
-import { dartQuery, dartString, jsonObject, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { assertQolipReadCurrent, dartQuery, dartString, jsonObject, optionalText, qolipApiResponseError, trimDart, type QolipReadGuard } from './qolipApiCommon';
 
 type Product = ReturnType<typeof qolipProductFromJson>;
 /** @v2 QolipMoldDraft */
@@ -48,15 +48,23 @@ function draftJson(draft: QolipMoldDraft) {
     existing_only: draft.existingOnly === true };
 }
 
-async function send(session: Session, path: string, body?: Record<string, unknown>): Promise<Response> {
+async function send(session: Session, path: string, body?: Record<string, unknown>, guard?: QolipReadGuard): Promise<Response> {
+  assertQolipReadCurrent(guard);
   await Promise.resolve();
   if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
-  return authorizedFetch(session, path, body === undefined ? {} : {
+  const init = body === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
+  };
+  const beforeSend = () => {
+    assertQolipReadCurrent(guard);
+    if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
+  };
+  return guard === undefined ? authorizedFetch(session, path, init) : authorizedFetch(session, path, init, beforeSend);
 }
-async function dataFrom(response: Response): Promise<Record<string, unknown>> {
+async function dataFrom(response: Response, guard?: QolipReadGuard): Promise<Record<string, unknown>> {
+  assertQolipReadCurrent(guard);
   const data = jsonObject(await response.json());
+  assertQolipReadCurrent(guard);
   if (!data) throw new TypeError('Expected JSON object');
   return data;
 }
@@ -76,12 +84,21 @@ export async function qolipCreateSet(session: Session, input: { warehouse: strin
 }
 
 /** @v2 qolipManagedSets */
-export async function qolipManagedSets(session: Session): Promise<QolipManagedSet[]> {
-  const response = await send(session, '/v1/mobile/qolip/sets');
-  if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_set_load_failed', 'Komplektlar yuklanmadi');
-  const data = await dataFrom(response);
-  if (!Array.isArray(data.sets)) throw new TypeError('Invalid Qolip sets');
-  return data.sets.map(qolipManagedSetFromJson);
+export async function qolipManagedSets(session: Session, guard?: QolipReadGuard): Promise<QolipManagedSet[]> {
+  assertQolipReadCurrent(guard);
+  const response = await send(session, '/v1/mobile/qolip/sets', undefined, guard);
+  assertQolipReadCurrent(guard);
+  const status = response.status;
+  assertQolipReadCurrent(guard);
+  if (status !== 200) {
+    const error = await qolipApiResponseError(response, 'qolip_set_load_failed', 'Komplektlar yuklanmadi');
+    assertQolipReadCurrent(guard); throw error;
+  }
+  const data = await dataFrom(response, guard), sets = data.sets;
+  assertQolipReadCurrent(guard);
+  if (!Array.isArray(sets)) throw new TypeError('Invalid Qolip sets');
+  const result = sets.map(qolipManagedSetFromJson);
+  assertQolipReadCurrent(guard); return result;
 }
 
 /** @v2 qolipRenameSet */
