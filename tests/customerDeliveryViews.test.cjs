@@ -4,6 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const { loadCustomerStates } = require('./support/customerNativeStates.cjs');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 function nodes(node, pred) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(n => nodes(n, pred));
   return [...(pred(node) ? [node] : []), ...nodes(node.props?.children, pred)]; }
@@ -30,7 +31,8 @@ function fixture(platform, state, stateValues = [false, null], text = key => key
       secondaryContainer: 'status-bg', onSecondaryContainer: 'status-fg' }) },
     'react-native': { ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', Text: 'Text', View: 'View', PlatformColor: value => value },
     '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
-    './CustomerContext': { useCustomerText: () => ({ text }) }, './customerLogic': logic, './customerDeliveryView': view,
+    './CustomerContext': { useCustomerText: () => ({ text }) }, './CustomerStates': loadCustomerStates(platform, { text }),
+    './customerLogic': logic, './customerDeliveryView': view,
     './CustomerReturnDialog': { CustomerReturnDialog: 'CustomerReturnDialog' }, './CustomerSnackbar': { CustomerSnackbar: 'CustomerSnackbar' },
     './useCustomerScreens': { useCustomerDelivery: () => state } };
   return { ...load(`CustomerDelivery.${platform}.tsx`, mocks), updates, focus };
@@ -84,10 +86,14 @@ test('permission flags control response buttons and submission disables them wit
 test('loading and retry states use the existing V2 texts', () => {
   for (const platform of ['ios', 'android']) {
     const calls = [], loading = fixture(platform, state(calls, { loading: true })).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
-    assert.ok(nodes(loading, n => n.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length);
+    assert.equal(loading.type.name, 'CustomerLoadingState');
+    assert.ok(nodes(loading.type(loading.props), n => n.type === (platform === 'ios' ? 'ProgressView' : 'LoadingIndicator')).length);
     const failed = fixture(platform, state(calls, { error: Error('offline'), detail: null })).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
-    assert.ok(nodes(failed, n => n.type === 'Text' && n.props.children === 'serverDisconnectedRetry').length);
-    nodes(failed, n => n.type === 'Button' && n.props.label === 'retry')[0].props.onPress();
+    assert.equal(failed.type.name, 'CustomerRetryState');
+    const retryView = failed.type(failed.props);
+    assert.ok(nodes(retryView, n => n.type === 'Text' && n.props.children === 'serverDisconnectedRetry').length);
+    if (platform === 'ios') nodes(retryView, n => n.type === 'Button' && n.props.label === 'retry')[0].props.onPress();
+    else nodes(retryView, n => n.type === 'TextButton')[0].props.onClick();
     assert.equal(calls.at(-1), 'reload');
   }
 });

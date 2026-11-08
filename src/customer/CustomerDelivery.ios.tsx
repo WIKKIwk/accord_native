@@ -1,5 +1,5 @@
 import { Text } from '@expo/ui';
-import { Button, Host, List, ProgressView, Section, VStack } from '@expo/ui/swift-ui';
+import { Button, Host, List, Section, VStack } from '@expo/ui/swift-ui';
 import { background, disabled, fixedSize, font, foregroundStyle, frame, lineLimit, listStyle, padding, refreshable, shapes } from '@expo/ui/swift-ui/modifiers';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -10,6 +10,7 @@ import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerR
 import { customerDeliveryInfoRows, customerDiscussionEventId, type CustomerReturnKind } from './customerDeliveryView';
 import { CustomerReturnDialog } from './CustomerReturnDialog';
 import { CustomerSnackbar } from './CustomerSnackbar';
+import { CustomerLoadingState, CustomerRetryState } from './CustomerStates';
 import { useCustomerDelivery } from './useCustomerScreens';
 
 type Props = { deliveryNoteID: string; onChanged: () => void; onOpenDiscussion?: (receiptId: string) => void };
@@ -20,10 +21,8 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
   const [confirm, setConfirm] = useState(false), [dialog, setDialog] = useState<CustomerReturnKind | null>(null);
   const returningFromDiscussion = useRef(false), reload = state.reload;
   useFocusEffect(useCallback(() => { if (returningFromDiscussion.current) { returningFromDiscussion.current = false; void reload(); } }, [reload]));
-  if (state.loading) return <Host style={{ flex: 1 }}><ProgressView /></Host>;
-  if (state.error || !state.detail) return <Host style={{ flex: 1 }}><List><Section>
-    <Text>{text('serverDisconnectedRetry')}</Text><Button label={text('retry')} onPress={() => { void state.reload(); }} />
-  </Section></List></Host>;
+  if (state.loading) return <CustomerLoadingState />;
+  if (state.error || !state.detail) return <CustomerRetryState retry={state.reload} />;
   const detail = state.detail, record = detail.record;
   const hasDiscussion = ['accepted', 'partial', 'rejected'].includes(record.status);
   const onReturn = (input: CustomerReturnInput) => {

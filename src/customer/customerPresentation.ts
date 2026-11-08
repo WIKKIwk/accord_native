@@ -3,6 +3,11 @@ import type { CustomerSummary } from '../shared/dispatchRuntimeStores';
 import { trimCustomerInput } from './customerLogic';
 import type { CustomerStatusKind } from './customerStore';
 
+// V2 AppRetryState.contentWidthFor; parent padding still constrains narrow screens.
+export function customerRetryContentWidth(screenWidth: number): number {
+  return Math.min(360, Math.max(280, screenWidth * 0.88));
+}
+
 export function customerStatusTitleKey(kind: CustomerStatusKind): string {
   switch (kind) {
     case 'pending': return 'pendingLabel';

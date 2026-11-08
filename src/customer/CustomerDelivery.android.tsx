@@ -2,7 +2,7 @@ import { Button, Host } from '@expo/ui';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { WorkerAlert } from '../components/WorkerAlert';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useCustomerText } from './CustomerContext';
@@ -10,6 +10,7 @@ import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerR
 import { customerDeliveryInfoRows, customerDiscussionEventId, type CustomerDeliveryInfoRow, type CustomerReturnKind } from './customerDeliveryView';
 import { CustomerReturnDialog } from './CustomerReturnDialog';
 import { CustomerSnackbar } from './CustomerSnackbar';
+import { CustomerLoadingState, CustomerRetryState } from './CustomerStates';
 import { useCustomerDelivery } from './useCustomerScreens';
 
 type Props = { deliveryNoteID: string; onChanged: () => void; onOpenDiscussion?: (receiptId: string) => void };
@@ -24,10 +25,8 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
     returningFromDiscussion.current = true; onOpenDiscussion(customerDiscussionEventId(deliveryNoteID));
   }, [deliveryNoteID, onOpenDiscussion]);
   useFocusEffect(useCallback(() => { if (returningFromDiscussion.current) { returningFromDiscussion.current = false; void reload(); } }, [reload]));
-  if (state.loading) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
-  if (state.error || !state.detail) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-    <Text style={{ color: colors.onSurfaceVariant }}>{text('serverDisconnectedRetry')}</Text><Host matchContents>
-      <Button label={text('retry')} onPress={() => { void state.reload(); }} /></Host></View>;
+  if (state.loading) return <CustomerLoadingState />;
+  if (state.error || !state.detail) return <CustomerRetryState retry={state.reload} />;
   const detail = state.detail, record = detail.record;
   const hasDiscussion = ['accepted', 'partial', 'rejected'].includes(record.status);
   const onReturn = (input: CustomerReturnInput) => {

@@ -4,6 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const { loadCustomerStates } = require('./support/customerNativeStates.cjs');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 function nodes(node, predicate) {
   if (!node || typeof node !== 'object') return [];
@@ -27,7 +28,8 @@ function fixture(platform, state) {
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'highlight', onSurface: 'fg', onSurfaceVariant: 'muted' }) },
     'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './CustomerContext': { useCustomerText: () => ({ text: key => key }) },
-    './customerPresentation': presentation, './useCustomerScreens': { useCustomerHome: () => state, useCustomerStatus: () => state } };
+    './CustomerStates': loadCustomerStates(platform), './customerPresentation': presentation,
+    './useCustomerScreens': { useCustomerHome: () => state, useCustomerStatus: () => state } };
   return load(`CustomerHome.${platform}.tsx`, mocks);
 }
 const state = { loading: false, loaded: true, error: null, summary: { pendingCount: 2, confirmedCount: 1, rejectedCount: 0 }, records: [record], refresh: async () => {} };
@@ -52,10 +54,10 @@ test('both platforms show loading before the initial bootstrap and retry after a
   for (const platform of ['ios', 'android']) {
     const views = fixture(platform, { ...state, loaded: false, loading: false, error: null });
     const loading = views.CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
-    assert.equal(loading.type.name, 'LoadingOrRetry'); assert.equal(loading.props.loading, true);
+    assert.equal(loading.type.name, 'CustomerLoadingState');
     const failed = fixture(platform, { ...state, loaded: false, loading: false, error: Error('x') })
       .CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
-    assert.equal(failed.type.name, 'LoadingOrRetry'); assert.equal(failed.props.loading, false);
+    assert.equal(failed.type.name, 'CustomerRetryState'); assert.equal(failed.props.retry, state.refresh);
   }
 });
 test('status rows open the selected delivery and empty states use the V2 label', () => {
@@ -65,7 +67,7 @@ test('status rows open the selected delivery and empty states use the V2 label',
   android.props.renderItem({ item: record, index: 0 }).props.onPress(); assert.deepEqual(calls, ['dn', 'dn']);
   for (const platform of ['ios', 'android']) {
     const empty = fixture(platform, { ...state, records: [] }).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
-    assert.ok(nodes(empty, item => item.type === 'Text').some(item => item.props.children === 'noRecordsYet'));
+    assert.ok(nodes(empty.type(empty.props), item => item.type === 'Text').some(item => item.props.children === 'noRecordsYet'));
   }
 });
 
@@ -101,6 +103,35 @@ test('status detail keeps its name and note unrestricted instead of inheriting p
       const text = texts.find(item => item.props.children === value);
       assert.ok(text, `${platform} keeps the full status content`);
       assert.equal(text.props.numberOfLines, undefined);
+    }
+  }
+});
+
+// Source-derived: Center(AppLoadingIndicator) and AppRetryState's topCenter/padding defaults.
+test('initial native loading is centered and retry content starts at the padded top', () => {
+  for (const platform of ['ios', 'android']) {
+    const loading = fixture(platform, { ...state, loaded: false, loading: true }).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
+    const loadingView = loading.type(loading.props);
+    if (platform === 'ios') assert.equal(loadingView.props.alignment, 'center');
+    else assert.equal(loadingView.props.style.alignItems, 'center');
+    const failed = fixture(platform, { ...state, loaded: false, error: Error('offline') }).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
+    const retryView = failed.type(failed.props);
+    assert.equal(retryView.props.style.paddingHorizontal, 24);
+    assert.equal(retryView.props.style.paddingVertical, 40);
+    assert.equal(retryView.props.style.alignItems, 'center');
+    assert.notEqual(retryView.props.style.justifyContent, 'center');
+  }
+});
+
+test('loaded home and status content remains visible during refresh or a later failure', () => {
+  for (const platform of ['ios', 'android']) {
+    for (const loading of [false, true]) {
+      const views = fixture(platform, { ...state, loading, error: Error('offline') });
+      for (const screen of [views.CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} }),
+        views.CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} })]) {
+        assert.equal(screen.type, platform === 'ios' ? 'Host' : 'FlatList');
+        assert.equal(nodes(screen, item => typeof item.type === 'function').length, 0);
+      }
     }
   }
 });
