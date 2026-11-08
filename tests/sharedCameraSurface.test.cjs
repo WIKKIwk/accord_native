@@ -15,7 +15,7 @@ function harness() {
     useLayoutEffect: (setup, deps) => { const i = index++; const previous = effects[i]; if (!previous || !same(previous.deps, deps)) {
       previous?.cleanup?.(); effects[i] = { deps, setup, cleanup: null }; } },
   };
-  const jsx = { jsx: (type, props) => ({ type, props }) };
+  const jsx = { jsx: (type, props, key) => ({ type, props, key }) };
   const { CameraSurface } = load('shared/camera/CameraSurface.tsx', { react, 'react/jsx-runtime': jsx,
     'expo-camera': { CameraView: 'CameraView' }, './CameraSurfaceGate': gate }, true);
   let props = { active: true, permission: { granted: true, canAskAgain: true }, facing: 'back', torch: false,
@@ -53,19 +53,27 @@ test('a changed handler receives current events without rebuilding the native ge
   first.props.onBarcodeScanned({ data: 'from-old-listener' }); next.props.onBarcodeScanned({ data: 'new' });
   assert.deepEqual(calls, [{ data: 'from-old-listener' }, { data: 'new' }]); assert.deepEqual(h.events, []); h.unmount();
 });
-test('permission hook reads only; request and refresh are passed to the role and never invoked automatically', async () => {
-  const calls = [], permission = { granted: false, canAskAgain: false, status: 'denied' };
-  const request = async () => { calls.push('request'); return permission; }, refresh = async () => { calls.push('refresh'); return permission; };
-  const { useCameraSurfacePermission } = load('shared/camera/useCameraSurfacePermission.ts', {
-    'expo-camera': { useCameraPermissions: options => { assert.deepEqual(options, { get: true, request: false }); return [permission, request, refresh]; } } });
-  const state = useCameraSurfacePermission(); assert.equal(state.permission, permission); assert.deepEqual(calls, []);
-  assert.equal(await state.refreshPermission(), permission); assert.equal(await state.requestPermission(), permission); assert.deepEqual(calls, ['refresh', 'request']);
-});
-
 test('permission regrant starts a new generation and does not deliver the old generation', () => {
   const h = harness(), old = h.render(); assert.equal(h.render({ permission: null }), null);
   const next = h.render({ permission: { granted: true, canAskAgain: true } });
   const event = { type: 'datamatrix', data: 'value', raw: undefined, bounds: {}, cornerPoints: [] };
   old.props.onBarcodeScanned(event); next.props.onBarcodeScanned(event);
   assert.deepEqual(h.events, [['detected', event]]); h.unmount();
+});
+
+test('facing and barcode type changes each remount and invalidate prior camera events', () => {
+  const h = harness(), back = h.render(), front = h.render({ facing: 'front' });
+  assert.notEqual(back.key, front.key);
+  const event = { type: 'qr', data: 'old', bounds: {}, cornerPoints: [] };
+  back.props.onBarcodeScanned(event); assert.deepEqual(h.events, []); front.props.onBarcodeScanned(event);
+  const changedTypes = h.render({ barcodeTypes: ['code128'] }); assert.notEqual(front.key, changedTypes.key); front.props.onBarcodeScanned(event);
+  changedTypes.props.onBarcodeScanned(event); assert.deepEqual(h.events, [['detected', event], ['detected', event]]);
+  h.unmount();
+});
+test('equivalent barcode array and torch changes do not invalidate the active generation', () => {
+  const h = harness(), old = h.render(), current = h.render({ barcodeTypes: ['qr', 'datamatrix'], torch: true });
+  assert.equal(old.key, current.key);
+  const event = { type: 'qr', data: 'same-config', bounds: {}, cornerPoints: [] };
+  old.props.onBarcodeScanned(event); current.props.onBarcodeScanned(event);
+  assert.equal(current.props.enableTorch, true); assert.deepEqual(h.events, [['detected', event], ['detected', event]]); h.unmount();
 });

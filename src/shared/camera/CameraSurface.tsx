@@ -10,7 +10,7 @@ export type CameraSurfaceProps = {
   facing: CameraType;
   torch: boolean;
   barcodeTypes: BarcodeType[];
-  /** Change to force a new native camera generation when a role retries. */
+  /** Change to force a new native camera generation when a role retries or its detection policy changes. */
   sessionKey: string;
   style?: StyleProp<ViewStyle>;
   onDetection(event: BarcodeScanningResult): void;
@@ -22,7 +22,8 @@ export type CameraSurfaceProps = {
 export function CameraSurface({ active, permission, facing, torch, barcodeTypes, sessionKey, style,
   onDetection, onMountError, onReady }: CameraSurfaceProps) {
   const enabled = active && permission?.granted === true;
-  const token = useMemo(() => ({ enabled, sessionKey }), [enabled, sessionKey]);
+  const configKey = JSON.stringify([sessionKey, facing, barcodeTypes]);
+  const token = useMemo(() => ({ enabled, configKey }), [enabled, configKey]);
   const gate = useMemo(() => new CameraSurfaceGate(), []), callbacks = useRef({ onDetection, onMountError, onReady });
   useLayoutEffect(() => { callbacks.current = { onDetection, onMountError, onReady }; }, [onDetection, onMountError, onReady]);
   useLayoutEffect(() => {
@@ -30,7 +31,7 @@ export function CameraSurface({ active, permission, facing, torch, barcodeTypes,
     return () => gate.deactivate(token);
   }, [enabled, token, gate]);
   if (!enabled) return null;
-  return <CameraView key={sessionKey} style={style} facing={facing} enableTorch={torch} barcodeScannerSettings={{ barcodeTypes }}
+  return <CameraView key={configKey} style={style} facing={facing} enableTorch={torch} barcodeScannerSettings={{ barcodeTypes }}
     onBarcodeScanned={event => gate.deliver(token, event, callbacks.current.onDetection)}
     onMountError={event => gate.deliver(token, event, callbacks.current.onMountError)}
     onCameraReady={() => gate.deliver(token, undefined, () => callbacks.current.onReady?.())} />;
