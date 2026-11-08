@@ -20,7 +20,7 @@ export type SupplierSummaryRuntime = {
 /** @v2 SupplierStore */
 export class SupplierStore {
   private readonly listeners = new Set<() => void>();
-  private readonly unsubscribeRuntime: () => void;
+  private unsubscribeRuntime: (() => void) | null = null;
   private version = 0;
   private _loadingSummary = false;
   private _loadingHistory = false;
@@ -37,13 +37,12 @@ export class SupplierStore {
   private _summary: SupplierSummary = { pendingCount: 0, submittedCount: 0, returnedCount: 0 };
   private _historyItems: DispatchRecord[] = [];
 
-  constructor(private readonly session: Session, private readonly api: SupplierStoreApi, private readonly runtime: SupplierSummaryRuntime) {
-    this.unsubscribeRuntime = runtime.subscribe(() => this.notify());
-  }
+  constructor(private readonly session: Session, private readonly api: SupplierStoreApi, private readonly runtime: SupplierSummaryRuntime) {}
+  activate(): void { if (!this.unsubscribeRuntime) this.unsubscribeRuntime = this.runtime.subscribe(() => this.notify()); }
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   getSnapshot = (): number => this.version;
   private notify(): void { this.version++; for (const listener of this.listeners) listener(); }
-  dispose(): void { this.unsubscribeRuntime(); this.listeners.clear(); }
+  dispose(): void { this.unsubscribeRuntime?.(); this.unsubscribeRuntime = null; this.listeners.clear(); }
   get loadingSummary(): boolean { return this._loadingSummary; }
   get loadingHistory(): boolean { return this._loadingHistory; }
   get loadedSummary(): boolean { return this._loadedSummary; }

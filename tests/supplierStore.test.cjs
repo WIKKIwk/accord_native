@@ -28,7 +28,8 @@ function fixture(overrides = {}) {
     supplierStatusDetails: async (s, kind, code) => { calls.push(['detail', s, kind, code]); return []; },
     ...overrides,
   };
-  return { store: new SupplierStore(session, api, runtime), session, runtime, calls };
+  const store = new SupplierStore(session, api, runtime); store.activate();
+  return { store, session, runtime, calls };
 }
 
 test('history supplies summary until the server summary loads, including runtime mutations', async () => {
@@ -101,5 +102,13 @@ test('refreshAll starts summary and history in parallel, and clear resets cached
   assert.equal(f.store.loadedSummary, false); assert.equal(f.store.loadedHistory, false);
   assert.deepEqual(f.store.historyItems, []);
   assert.deepEqual(f.store.summary, { pendingCount: 0, submittedCount: 0, returnedCount: 0 });
+  f.store.dispose();
+});
+
+test('runtime listener can be reattached after a provider effect cleanup', () => {
+  const f = fixture(); f.store.dispose(); f.store.activate();
+  let changes = 0; f.store.subscribe(() => changes++);
+  f.runtime.recordCreatedPending();
+  assert.equal(changes, 1);
   f.store.dispose();
 });
