@@ -23,7 +23,7 @@ const session = { imageCacheScope: 'scope', profile: { role: 'boyoqchi', ref: 'p
 const context = { session, onLogout, profileNavigation: { current: null } };
 
 test('Android Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
-  const Profile = load('app/android-boyoqchi/profile', {
+  const Profile = load('held-routes/android-boyoqchi/profile.android', {
     react: { useRef: value => ({ current: value }), useLayoutEffect() {} },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
     'expo-router': { useIsFocused: () => true, useNavigation: () => ({ dispatch() {} }), router: { navigate() {} } },
@@ -45,7 +45,7 @@ test('Android Boyoqchi reuses shared Profile without an unrelated daily-work act
 });
 
 test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
-  const Profile = load('app/ios-boyoqchi/(tabs)/profile/index', {
+  const Profile = load('held-routes/ios-boyoqchi/(tabs)/profile/index.ios', {
     'expo-router': { router: { navigate() {} } }, 'react-native': { PlatformColor: value => value },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '../../../../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },

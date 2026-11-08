@@ -21,7 +21,7 @@ test('iOS Profile stack uses the localized title and the existing actionable dra
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host' }, '@expo/ui/swift-ui/modifiers': { labelStyle: () => ({}) },
     './roleDrawerContext': { useRoleDrawer: () => ({ open: () => { opens++; } }) },
   });
-  const Layout = load('app/ios-boyoqchi/(tabs)/profile/_layout.tsx', {
+  const Layout = load('held-routes/ios-boyoqchi/(tabs)/profile/_layout.ios.tsx', {
     'expo-router': { Stack: 'Stack' }, '../../../../shared/navigation/RoleDrawerButton': { RoleDrawerButton },
     '../../../../boyoqchi/useBoyoqchiText': { useBoyoqchiGetter: () => key => key === 'profileTitle' ? 'Profil' : key,
       useBoyoqchiText: () => value => value },

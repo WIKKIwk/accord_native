@@ -11,10 +11,10 @@ const routes = loaded.exports;
 const session = { token: 'token', baseUrl: 'https://example.test', profile: { ref: 'paint-1', role: 'boyoqchi' },
   capabilities: ['boyoqchi.access'], assigned_apparatus: [], assigned_apparatus_labels: [], imageCacheScope: 'scope' };
 
-test('Boyoqchi session routes to the correct native role tree on each platform', () => {
+test('Boyoqchi entry is held on each platform while route capabilities remain intact', () => {
   assert.equal(routes.homeRoute(session), routes.appRoutes.boyoqchiHome);
-  assert.equal(routes.homeTarget(session, 'ios'), '/ios-boyoqchi');
-  assert.equal(routes.homeTarget(session, 'android'), '/android-boyoqchi');
+  assert.equal(routes.homeTarget(session, 'ios'), null);
+  assert.equal(routes.homeTarget(session, 'android'), null);
   assert.equal(routes.canOpenRoute(session, routes.appRoutes.boyoqchiHome), true);
   assert.equal(routes.canOpenRoute(session, routes.appRoutes.boyoqchiAstatka), true);
   assert.equal(routes.canOpenRoute({ ...session, capabilities: [] }, routes.appRoutes.boyoqchiAstatka), false);
@@ -22,18 +22,18 @@ test('Boyoqchi session routes to the correct native role tree on each platform',
 
 test('role route trees reuse shared profile and chat pages on both platforms', () => {
   for (const platform of ['ios', 'android']) {
-    const root = path.resolve(__dirname, `../src/app/${platform}-boyoqchi`);
+    const root = path.resolve(__dirname, `../src/held-routes/${platform}-boyoqchi`);
     const chat = platform === 'ios' ? '(tabs)/chat' : 'chat';
-    for (const relative of ['_layout.tsx', `${chat}/_layout.tsx`, `${chat}/index.tsx`, `${chat}/new.tsx`, `${chat}/[conversationId].tsx`]) {
+    for (const relative of [`_layout.${platform}.tsx`, `${chat}/_layout.${platform}.tsx`, `${chat}/index.${platform}.tsx`, `${chat}/new.${platform}.tsx`, `${chat}/[conversationId].${platform}.tsx`]) {
       assert.equal(fs.existsSync(path.join(root, relative)), true, `${platform} ${relative}`);
     }
-    assert.match(fs.readFileSync(path.join(root, chat, '_layout.tsx'), 'utf8'), /ChatRouteProvider/);
+    assert.match(fs.readFileSync(path.join(root, chat, `_layout.${platform}.tsx`), 'utf8'), /ChatRouteProvider/);
   }
 });
 
 test('the shared role dock keeps Chat after Profile without an unverified unread badge', () => {
   const android = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiDock.android.tsx'), 'utf8');
-  const ios = fs.readFileSync(path.resolve(__dirname, '../src/app/ios-boyoqchi/(tabs)/_layout.tsx'), 'utf8');
+  const ios = fs.readFileSync(path.resolve(__dirname, '../src/held-routes/ios-boyoqchi/(tabs)/_layout.ios.tsx'), 'utf8');
   const context = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiContext.tsx'), 'utf8');
   assert.ok(android.indexOf("id: 'home'") < android.indexOf("id: 'astatka'"));
   assert.ok(android.indexOf("id: 'astatka'") < android.indexOf("id: 'profile'"));

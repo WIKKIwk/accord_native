@@ -50,7 +50,7 @@ function fixture(initialNames, scheduled = scheduler()) {
   };
   const context = { session: { imageCacheScope: 'account' }, onLogout() {}, profileNavigation: slot };
   const commonText = { useBoyoqchiGetter: () => key => key, useBoyoqchiText: () => key => key };
-  const Profile = load('app/android-boyoqchi/profile', {
+  const Profile = load('held-routes/android-boyoqchi/profile.android', {
     'react/jsx-runtime': jsx,
     react,
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
@@ -176,7 +176,7 @@ test('retained Profile A re-registers on focus after Profile B is popped', () =>
         hooks[index] = { dependencies, cleanup: effect() };
       },
     };
-    const Profile = load('app/android-boyoqchi/profile', {
+    const Profile = load('held-routes/android-boyoqchi/profile.android', {
       'react/jsx-runtime': jsx, react,
       '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
       'expo-router': { router: { navigate() {} }, useNavigation: id => { assert.equal(id, '/android-boyoqchi'); return { dispatch }; },
