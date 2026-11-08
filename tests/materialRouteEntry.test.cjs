@@ -14,7 +14,7 @@ function compile(file, mocks, extension = '.tsx') {
   return loaded.exports;
 }
 function setup(platform, authorized = true) {
-  const session = { profile: { role: 'material_taminotchi' } }, calls = [];
+  const session = { token: 'ordinary', profile: { role: 'material_taminotchi' } }, calls = [];
   let state = null, effect, canOpen = authorized, witnessValid = true, retired = false, raceOnSubscribe = false; const listeners = new Set(), witness = {};
   const react = { useCallback: value => value, useState: () => [state, value => { state = value; }],
     useSyncExternalStore: (_sub, get) => get() };
@@ -35,6 +35,7 @@ function setup(platform, authorized = true) {
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open: () => calls.push('drawer') }) },
     '../shared/supplyTasks/SupplyTasksController': { SupplyTasksController: Controller },
     '../shared/supplyTasks/supplyTaskApi': { readSupplyTaskWindow: (...args) => { calls.push(['read', ...args]); return Promise.resolve('window'); } },
+    './materialTestSession': { isMaterialTestSession: value => value.token === 'test-mode-token' },
     './MaterialContext': { useMaterialContext: () => ({ session, witness }) }, './MaterialHome': { MaterialHome: 'MaterialHome' },
     './MaterialTasks': { MaterialTasks: 'MaterialTasks' } };
   const home = compile('material/MaterialHomeRoute', mocks).MaterialHomeRoute;
@@ -74,6 +75,13 @@ for (const platform of ['ios', 'android']) {
   test(`${platform} task subscription rechecks before activation`, () => {
     const h = setup(platform); h.task(); h.race(); h.focus();
     assert.ok(h.calls.includes('invalidate')); assert.equal(h.calls.includes('activate'), false);
+  });
+  test(`${platform} test-token deep link starts no reader and a token change blocks an existing guard`, () => {
+    const h = setup(platform); h.task(); const blur = h.focus();
+    const options = h.calls.find(item => Array.isArray(item) && item[0] === 'new')[1];
+    h.session.token = 'test-mode-token'; assert.equal(options.isCurrent(), false); blur();
+    h.clearState(); assert.equal(h.task().props.children.type, 'Text'); h.focus();
+    assert.equal(h.calls.filter(item => Array.isArray(item) && item[0] === 'new').length, 1);
   });
   test(`${platform} deep link cannot create a task reader for a different role`, () => {
     const h = setup(platform); h.session.profile.role = 'admin'; assert.equal(h.task().props.children.type, 'Text'); h.focus();

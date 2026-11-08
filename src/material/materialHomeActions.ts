@@ -3,6 +3,7 @@ import { activeSessionEpoch, activeSessionToken, type Session } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
+import { isMaterialTestSession } from './materialTestSession';
 
 type ActionId = 'tasks' | 'receipt' | 'scan' | 'assignment' | 'movement';
 export type MaterialHomeHandlers = {
@@ -27,7 +28,7 @@ export function materialHomeActions(session: Session, handlers?: MaterialHomeHan
   if (!handlers || typeof handlers.isCurrent !== 'function') return empty;
   const { isCurrent, showMissingGroup, tasks, receipt, scan, assignment, movement } = handlers;
   const epoch = activeSessionEpoch(session), scope = sessionReadScope(session);
-  const allowed = () => session.profile.role === 'material_taminotchi' && sessionReadScope(session) === scope;
+  const allowed = () => !isMaterialTestSession(session) && session.profile.role === 'material_taminotchi' && sessionReadScope(session) === scope;
   const current = () => {
     try { return epoch !== null && activeSessionEpoch(session) === epoch && !!activeSessionToken(session) && allowed() && isSynchronouslyTrue(isCurrent) &&
       activeSessionEpoch(session) === epoch && !!activeSessionToken(session) && allowed(); } catch { return false; }

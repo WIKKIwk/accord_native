@@ -27,7 +27,7 @@ function setup(initialTransition = false) {
     logout: async () => { logouts++; } };
   const bootstrap = compile('materialSessionBootstrap', { '../auth': auth });
   const hook = compile('useMaterialSession', { react, '../auth': auth, '../appLock': { clearAppLock: async () => {} },
-    './materialSessionBootstrap': bootstrap }).useMaterialSession;
+    './materialSessionBootstrap': bootstrap, './materialTestSession': { isMaterialTestSession: value => value.token === 'test-mode-token' } }).useMaterialSession;
   const render = () => { slot = 0; return hook(); };
   return { session, render, effects, captures: () => captures, logouts: () => logouts,
     start: () => { transition = true; version++; listeners.forEach(listener => listener()); },
@@ -60,4 +60,10 @@ test('session reset clears a settled shell snapshot', async () => {
 test('reset while new shell waits does not trigger an old-session redirect loop', async () => {
   const h = setup(true); await mount(h); await h.reset(); assert.equal(h.render().session, undefined);
   h.finish(); await tick(); assert.equal(h.render().session, h.session);
+});
+
+
+test('reserved test token never invokes real logout', async () => {
+  const h = setup(); h.session.token = 'test-mode-token'; await mount(h); h.render().onLogout(); await tick();
+  assert.equal(h.logouts(), 0); assert.equal(h.render().session, h.session);
 });

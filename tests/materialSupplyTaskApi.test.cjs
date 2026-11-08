@@ -27,6 +27,7 @@ function setup(plan, change = '') {
     if (change === 'account') active = false;
     if (change === 'epoch') epoch++;
     if (change === 'witness') witness = false;
+    if (change === 'test-token') session.token = 'test-mode-token';
     return true;
   } };
   const scope = compile('sessionReadScope'), authorized = compile('authorizedFetch', { './auth': auth });
@@ -248,4 +249,17 @@ test('task reader checks the captured witness on real authorizedFetch 401 retry'
       assert.equal(controller.getSnapshot().window === null, !!change);
     } finally { controller.dispose(); h.restore(); }
   }
+});
+
+
+test('task reader will not retry a 401 with the reserved test token', async () => {
+  const h = setup([response({ error: 'expired' }, 401), response(wire)], 'test-token');
+  const { SupplyTasksController } = compile('shared/supplyTasks/SupplyTasksController', {
+    '../../auth': h.auth, '../../sessionReadScope': h.scope, '../appRoutes': compile('shared/appRoutes'),
+    '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'), '../dartApparatus': h.dart });
+  const controller = new SupplyTasksController({ session: h.session, kind: 'material',
+    isCurrent: () => h.session.token !== 'test-mode-token',
+    loadWindow: (query, current) => h.api.readSupplyTaskWindow(h.session, query, current) });
+  try { await controller.activate(); assert.equal(h.calls.length, 1); assert.equal(controller.getSnapshot().window, null); }
+  finally { controller.dispose(); h.restore(); }
 });

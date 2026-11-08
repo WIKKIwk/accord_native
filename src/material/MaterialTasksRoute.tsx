@@ -10,6 +10,7 @@ import { SupplyTasksController } from '../shared/supplyTasks/SupplyTasksControll
 import { readSupplyTaskWindow } from '../shared/supplyTasks/supplyTaskApi';
 import { useMaterialContext } from './MaterialContext';
 import { MaterialTasks } from './MaterialTasks';
+import { isMaterialTestSession } from './materialTestSession';
 
 const subscribe = (listener: () => void) => localeController.addListener(listener);
 const locale = () => localeController.locale;
@@ -19,11 +20,11 @@ export function MaterialTasksRoute() {
   const { session, witness } = useMaterialContext(), drawer = useRoleDrawer();
   const currentLocale = useSyncExternalStore(subscribe, locale, locale);
   const [owner, setOwner] = useState<{ session: typeof session; controller: SupplyTasksController } | null>(null);
-  const allowed = isSessionWitnessCurrent(witness) && session.profile.role === 'material_taminotchi' && canOpenRoute(session, appRoutes.materialTasks);
+  const allowed = !isMaterialTestSession(session) && isSessionWitnessCurrent(witness) && session.profile.role === 'material_taminotchi' && canOpenRoute(session, appRoutes.materialTasks);
   useFocusEffect(useCallback(() => {
     if (!allowed) return;
     let focused = true;
-    const controller = new SupplyTasksController({ session, kind: 'material', isCurrent: () => focused && isSessionWitnessCurrent(witness),
+    const controller = new SupplyTasksController({ session, kind: 'material', isCurrent: () => focused && !isMaterialTestSession(session) && isSessionWitnessCurrent(witness),
       loadWindow: (query, isCurrent) => readSupplyTaskWindow(session, query, isCurrent) });
     const unsubscribe = subscribeSessionWitness(() => { if (!isSessionWitnessCurrent(witness)) controller.invalidate(); });
     if (!isSessionWitnessCurrent(witness)) { controller.invalidate(); unsubscribe(); return; }

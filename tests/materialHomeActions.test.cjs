@@ -19,7 +19,7 @@ function setup() {
     activeSessionToken: s => active && s === session ? s.token : null,
     activeSessionEpoch: s => active && s === session ? epoch : null },
     '../sessionReadScope': compile('sessionReadScope'), '../shared/appRoutes': compile('shared/appRoutes'),
-    '../shared/camera/synchronousGuard': compile('shared/camera/synchronousGuard') });
+    '../shared/camera/synchronousGuard': compile('shared/camera/synchronousGuard'), './materialTestSession': compile('material/materialTestSession') });
   const handlers = { isCurrent: () => live, tasks: () => calls.push('tasks'), receipt: () => calls.push('receipt'),
     scan: () => calls.push('scan'), assignment: () => calls.push('assignment'), movement: () => calls.push('movement'),
     showMissingGroup: () => calls.push('group-warning') };
@@ -105,4 +105,11 @@ test('characterization: same-snapshot ABA remains a blocker to wiring', () => {
   const h = setup(), menu = h.api.materialHomeActions(h.session, h.handlers);
   h.session.capabilities = []; h.session.capabilities = ['raw_material.assign', 'gscale.print', 'inventory.movement.manage'];
   menu.select('receipt'); assert.deepEqual(h.calls, ['receipt']);
+});
+
+
+test('reserved test token never runs a home action even after a real-token view was created', () => {
+  const h = setup(), menu = h.api.materialHomeActions(h.session, h.handlers); h.session.token = 'test-mode-token';
+  for (const id of ['tasks', 'receipt', 'scan', 'assignment', 'movement']) menu.select(id);
+  assert.deepEqual(h.calls, []); assert.deepEqual(h.api.materialHomeActions(h.session, h.handlers).cards, []);
 });

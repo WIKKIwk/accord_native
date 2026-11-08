@@ -9,6 +9,8 @@ import { localeController } from '../shared/localization/runtime';
 import { MaterialProvider } from './MaterialContext';
 import { MaterialDrawer } from './MaterialDrawer';
 import { useMaterialSession } from './useMaterialSession';
+import { isMaterialTestSession } from './materialTestSession';
+import { MaterialTestNotice } from './MaterialTestNotice';
 
 const subscribe = (listener: () => void) => localeController.addListener(listener);
 const locale = () => localeController.locale;
@@ -16,6 +18,7 @@ export function MaterialLayout() {
   const { session, witness, onLogout } = useMaterialSession(), current = useSyncExternalStore(subscribe, locale, locale);
   if (Platform.OS !== 'ios' || session === null || (session && session.profile.role !== 'material_taminotchi')) return <Redirect href="/" />;
   if (!session || !witness) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
+  if (isMaterialTestSession(session)) return <MaterialTestNotice />;
   if (!canOpenRoute(session, appRoutes.materialHome)) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
     <Text>{localizedGetter('accessDenied', current)}</Text></View>;
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>

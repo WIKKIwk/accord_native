@@ -32,11 +32,17 @@ function setup(platform, initial) {
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener: () => () => {} } },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
     './MaterialContext': { MaterialProvider: 'MaterialProvider' }, './MaterialDrawer': { MaterialDrawer: 'MaterialDrawer' },
+    './materialTestSession': load('material/materialTestSession'), './MaterialTestNotice': { MaterialTestNotice: 'MaterialTestNotice' },
     './useMaterialSession': { useMaterialSession: () => ({ session: state.session, witness: {}, onLogout() {} }) } };
   const module = load(`material/MaterialLayout.${platform}`, mocks, '.tsx'); return { state, render: () => module.MaterialLayout() };
 }
 
 for (const platform of ['ios', 'android']) {
+  test(`${platform} reserved test token shows a stable warning instead of role screens or a redirect`, () => {
+    const h = setup(platform, { ...material(['raw_material.assign']), token: 'test-mode-token' }), tree = h.render();
+    assert.equal(nodes(tree, 'MaterialTestNotice').length, 1); assert.equal(nodes(tree, 'Redirect').length, 0);
+    assert.equal(nodes(tree, 'MaterialProvider').length, 0); assert.equal(nodes(tree, 'WorkerSecurityProvider').length, 0);
+  });
   test(`${platform} Material layout blocks unauthenticated, other-role and missing-capability deep links`, () => {
     const h = setup(platform, undefined); assert.equal(nodes(h.render(), 'ActivityIndicator').length, 1);
     h.state.session = null; assert.equal(nodes(h.render(), 'Redirect')[0].props.href, '/');
