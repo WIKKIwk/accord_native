@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { isSessionWitnessCurrent, logout, registerSessionResetHook,
+import { currentSession, isSessionWitnessCurrent, logout, registerSessionResetHook,
   sessionWitnessVersion, subscribeSessionWitness } from '../auth';
-import { clearAppLock } from '../appLock';
 import { startMaterialSessionBootstrap, type MaterialSession } from './materialSessionBootstrap';
 import { isMaterialTestSession } from './materialTestSession';
 
 export function useMaterialSession() {
   const [entry, setEntry] = useState<MaterialSession | null | undefined>();
-  const settled = useRef(false), retry = useRef<() => void>(() => {});
+  const settled = useRef(false), mounted = useRef(false), retry = useRef<() => void>(() => {});
   // React subscribes and rechecks the version after subscription, closing the render/subscribe gap.
   useSyncExternalStore(subscribeSessionWitness, sessionWitnessVersion, sessionWitnessVersion);
   useEffect(() => {
@@ -15,6 +14,7 @@ export function useMaterialSession() {
     retry.current = bootstrap.retry;
     return () => { retry.current = () => {}; bootstrap.stop(); };
   }, []);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => registerSessionResetHook(async () => {
     if (settled.current) setEntry(null); else retry.current();
   }), []);
@@ -22,7 +22,11 @@ export function useMaterialSession() {
   const current = entry && isSessionWitnessCurrent(entry.witness) ? entry : null;
   const onLogout = () => {
     if (!current || isMaterialTestSession(current.session) || !isSessionWitnessCurrent(current.witness)) return;
-    void Promise.all([logout(current.session).catch(() => {}), clearAppLock(current.session).catch(() => {})]).finally(() => setEntry(null));
+    const owner = current.session;
+    void logout(owner).catch(() => {}).finally(() => {
+      const active = currentSession();
+      if (mounted.current && (active === owner || active === null)) setEntry(value => value?.session === owner ? null : value);
+    });
   };
   return { session: entry === undefined ? undefined : current?.session ?? null, witness: current?.witness ?? null, onLogout };
 }
