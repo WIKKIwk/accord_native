@@ -22,7 +22,8 @@ for (const platform of ['ios', 'android']) test(`${platform} history sheet close
   const sheet = { open: value => { content = value; calls.push('open'); }, close: () => calls.push('close') };
   const present = (name, value) => { presentationCalls.push(name); if (!valid) throw new Error('Stale event presentation'); return value; };
   const mocks = { 'react/jsx-runtime': jsx, react: { useEffect: fn => { fn(); }, useSyncExternalStore: (_s, get) => get() },
-    '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', Text: 'ComposeText', useMaterialColors: () => ({}) },
+    '@expo/ui/jetpack-compose': { Column: 'Column', Row: 'Row', Host: 'Host', Text: 'ComposeText', useMaterialColors: () => ({}) },
+    '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}), width: value => value, weight: value => value },
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', Image: 'Image', List: 'List', ProgressView: 'ProgressView',
       Section: 'Section', Text: 'SwiftText', VStack: 'VStack' },
     '@expo/ui/swift-ui/modifiers': { font: value => value, foregroundStyle: value => value, frame: value => value, lineLimit: value => value },

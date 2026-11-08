@@ -1,4 +1,5 @@
-import { Column, Host, Text as ComposeText, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Column, Host, Row, Text as ComposeText, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useSyncExternalStore } from 'react';
@@ -13,7 +14,7 @@ import { OrdersList } from '../shared/orders/OrdersList';
 import type { AdminApparatus } from '../apparatusApi';
 import type { AdminRawMaterialEvent } from './materialHistoryApi';
 import { materialHistoryDetails, materialHistorySubtitle, materialHistoryTime, materialHistoryTitle } from './materialHistoryPresentation';
-import { materialHistorySymbol } from './materialHistorySymbols';
+import { materialHistoryMessageSymbols, materialHistorySymbol } from './materialHistorySymbols';
 import { useMaterialContext } from './MaterialContext';
 import { useMaterialHistory } from './useMaterialHistory';
 import { materialHistoryCurrent } from './materialHistoryAccess';
@@ -26,13 +27,23 @@ function MaterialHistoryDetails({ event, catalog, session, witness }: { event: A
   const colors = useMaterialColors();
   if (!materialHistoryCurrent(session, witness)) return null;
   const details = materialHistoryDetails(event, catalog);
-  return <View style={{ minHeight: 300, padding: 20 }}><Host matchContents={{ vertical: true }}>
-    <Column verticalArrangement={{ spacedBy: 8 }}><ComposeText color={colors.onSurface} style={{ typography: 'titleLarge' }}>
-      {materialHistoryTitle(event)}</ComposeText><ComposeText color={colors.onSurfaceVariant}>{materialHistorySubtitle(event, catalog)}</ComposeText>
-      {details.map((detail, index) => <Column key={`${detail.label}:${index}`}>
-        <ComposeText color={colors.onSurfaceVariant}>{detail.label}</ComposeText><ComposeText color={colors.onSurface}>{detail.value}</ComposeText>
-      </Column>)}
-    </Column></Host></View>;
+  return <View style={{ paddingHorizontal: 20, paddingVertical: 12, gap: 18 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+      <View style={{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.secondaryContainer }}>
+        <SymbolView name={materialHistorySymbol(event.event_type)} size={24} tintColor={colors.onSecondaryContainer} />
+      </View>
+      <Host style={{ flex: 1 }} matchContents={{ vertical: true }}><Column verticalArrangement={{ spacedBy: 4 }}>
+        <ComposeText color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '800' }}>{materialHistoryTitle(event)}</ComposeText>
+        <ComposeText color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{materialHistorySubtitle(event, catalog)}</ComposeText>
+      </Column></Host>
+    </View>
+    <Host style={{ width: '100%' }} matchContents={{ vertical: true }}><Column verticalArrangement={{ spacedBy: 7 }} modifiers={[fillMaxWidth()]}>
+      {details.map((detail, index) => <Row key={`${detail.label}:${index}`} verticalAlignment="top" modifiers={[fillMaxWidth()]}>
+        <ComposeText color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }} modifiers={[width(104)]}>{detail.label}</ComposeText>
+        <ComposeText color={colors.onSurface} style={{ typography: 'bodySmall', fontWeight: '600' }} modifiers={[weight(1)]}>{detail.value}</ComposeText>
+      </Row>)}
+    </Column></Host>
+  </View>;
 }
 
 // @v2 MaterialTaminotchiHistoryScreen
@@ -53,10 +64,12 @@ export function MaterialHistory() {
     } }} />
     <OrdersList onRefresh={history.refresh} active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={() => true}>
       {history.loading ? <ActivityIndicator /> : history.error ? <WorkerQueueCard backgroundColor={colors.surface} first last onPress={history.reload}>
-        <View style={{ padding: 12 }}><Text style={{ color: colors.onSurface }}>Tarix yuklanmadi</Text>
+        <SymbolView name={materialHistoryMessageSymbols.error} size={22} tintColor={colors.onSurfaceVariant} />
+        <View style={{ flex: 1, padding: 12 }}><Text style={{ color: colors.onSurface }}>Tarix yuklanmadi</Text>
           <Text style={{ color: colors.onSurfaceVariant }}>{history.error}</Text></View>
       </WorkerQueueCard> : !history.events.length ? <WorkerQueueCard backgroundColor={colors.surface} first last>
-        <Text style={{ color: colors.onSurface, padding: 12 }}>Harakatlar hali yo‘q</Text></WorkerQueueCard> :
+        <SymbolView name={materialHistoryMessageSymbols.empty} size={22} tintColor={colors.onSurfaceVariant} />
+        <Text style={{ flex: 1, color: colors.onSurface, padding: 12 }}>Harakatlar hali yo‘q</Text></WorkerQueueCard> :
         history.events.slice(0, 100).map((event, index, events) => <WorkerQueueCard key={`${event.event_id}:${index}`}
           backgroundColor={colors.surface} first={index === 0} last={index === events.length - 1}
           onPress={() => { if (materialHistoryCurrent(session, witness)) sheet.open(<MaterialHistoryDetails event={event} catalog={history.apparatus} session={session} witness={witness} />, { dismissible: true, compact: true, fitContent: true }); }}>

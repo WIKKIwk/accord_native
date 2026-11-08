@@ -2,6 +2,10 @@ import type { AndroidSymbol, SFSymbol } from 'expo-symbols';
 
 type HistorySymbol = Readonly<{ ios: SFSymbol; android: AndroidSymbol }>;
 const historySymbol: HistorySymbol = { ios: 'clock.arrow.circlepath', android: 'history' };
+export const materialHistoryMessageSymbols: Readonly<Record<'error' | 'empty', HistorySymbol>> = {
+  error: { ios: 'exclamationmark.circle', android: 'error_outline' },
+  empty: { ios: 'clock', android: 'history_toggle_off' },
+};
 const symbols: Readonly<Record<string, HistorySymbol>> = {
   receipt_posted: { ios: 'tray.and.arrow.down', android: 'add_business' },
   order_reserved: { ios: 'tray.and.arrow.up', android: 'outbox' },
