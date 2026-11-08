@@ -79,7 +79,12 @@ test('header button opens the actual shared Settings once and a blurred header c
   });
   const props = { session, snapshot: { profile: {} }, editing: false, busy: false, onRefresh: async () => {}, onOpenEditor() {},
     onCloseEditor() {}, onLogout() {}, registerSettingsOpener: open => f.slot.register(session, open) };
-  const render = () => { cursor = 0; return ProfileView(props); };
+  const render = () => {
+    cursor = 0; const tree = ProfileView(props);
+    const child = tree.props.children.find(node => typeof node?.type === 'function' && node.type.name === 'SettingsOpenerRegistration');
+    if (child) child.type(child.props);
+    return tree;
+  };
   render(); assert.equal(BoyoqchiProfileSettingsButton(), null);
   const blur = focusEffect(), button = BoyoqchiProfileSettingsButton().props.children;
   assert.equal(button.props.label, 'profileSettingsTitle'); assert.equal(button.props.systemImage, 'slider.horizontal.3');

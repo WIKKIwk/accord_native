@@ -11,7 +11,7 @@ function nodes(node, predicate) {
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
 function fixture(role, registerSettingsOpener) {
-  const hooks = []; let cursor = 0, focusEffect, focusCleanup, writes = [];
+  const hooks = []; let cursor = 0, focusEffect, focusCleanup, focused = false, hookCalls = 0, writes = [];
   const react = { useCallback: fn => fn, useState: initial => { const i = cursor++;
     if (!hooks[i]) hooks[i] = { value: initial };
     return [hooks[i].value, value => { hooks[i].value = value; writes.push([i, value]); }]; } };
@@ -19,7 +19,7 @@ function fixture(role, registerSettingsOpener) {
   const modifiers = new Proxy({ shapes: { rectangle: () => ({}), circle: () => ({}), capsule: () => ({}) } },
     { get: (target, name) => target[name] ?? (() => ({})) });
   const filename = path.resolve(__dirname, '../src/components/ProfileView.ios.tsx'), loaded = new Module(filename, module);
-  const mocks = { react, 'react/jsx-runtime': jsx, 'expo-router': { useFocusEffect: fn => { focusEffect = fn; } },
+  const mocks = { react, 'react/jsx-runtime': jsx, 'expo-router': { useFocusEffect: fn => { hookCalls++; focusEffect = fn; } },
     '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers, 'react-native': { PlatformColor: value => value },
     '../profileModel': { profileDisplay: () => ({ name: 'Name', role: 'Role', phone: '', legalName: '', apparatusLabels: [] }) },
     '../shared/themeRuntime': { themeController: { setThemeMode: async () => {} } }, './BaseHost': { BaseHost: 'BaseHost' },
@@ -32,12 +32,21 @@ function fixture(role, registerSettingsOpener) {
   }).outputText, filename);
   const props = { session: { profile: { role } }, snapshot: { profile: {} }, editing: false, busy: false, onRefresh: async () => {},
     onOpenEditor() {}, onCloseEditor() {}, onLogout() {}, registerSettingsOpener };
-  const render = () => { cursor = 0; return loaded.exports.ProfileView(props); };
-  return { render, focus: () => { focusCleanup = focusEffect(); }, blur: () => focusCleanup?.(), writes };
+  const render = () => {
+    cursor = 0; focusEffect = undefined; const tree = loaded.exports.ProfileView(props);
+    const child = nodes(tree, node => typeof node.type === 'function' && node.type.name === 'SettingsOpenerRegistration')[0];
+    if (child) child.type(child.props);
+    return tree;
+  };
+  return { render, hookCalls: () => hookCalls, focus: () => { focused = true; focusCleanup = focusEffect?.(); },
+    blur: () => { focused = false; focusCleanup?.(); focusCleanup = undefined; },
+    unmount: () => { focused = false; focusCleanup?.(); focusCleanup = undefined; },
+    replaceRegistration: register => { focusCleanup?.(); focusCleanup = undefined; props.registerSettingsOpener = register;
+      render(); if (focused) focusCleanup = focusEffect?.(); }, writes };
 }
 function settingsSheet(tree) { return nodes(tree, n => n.type === 'BottomSheet' && nodes(n, c => c.type === 'ProfileSettings').length)[0]; }
 for (const role of ['aparatchi', 'tayyorlov_masteri']) test(`${role} keeps existing Profile settings without opt-in`, () => {
-  const f = fixture(role), tree = f.render(); f.focus();
+  const f = fixture(role), tree = f.render(); f.focus(); assert.equal(f.hookCalls(), 0);
   const sheet = settingsSheet(tree); assert.equal(sheet.props.isPresented, false);
   sheet.props.anchor.props.onPress();
   assert.deepEqual(f.writes, [[0, true]]); assert.equal(settingsSheet(f.render()).props.isPresented, true);
@@ -54,4 +63,23 @@ test('opt-in registers while focused, opens the existing Settings once, and inva
   sheet.props.onIsPresentedChange(false); assert.deepEqual(f.writes, [[0, true], [0, false]]);
   f.blur(); assert.equal(removed, 1); registered(); assert.deepEqual(f.writes, [[0, true], [0, false]]);
   settingsSheet(f.render()).props.anchor.props.onPress(); assert.deepEqual(f.writes, [[0, true], [0, false], [0, true]]);
+});
+
+
+test('registration prop and session replacement while focused clean the previous callback', () => {
+  let oldOpen, newOpen, oldRemoved = 0, newRemoved = 0;
+  const f = fixture('boyoqchi', open => { oldOpen = open; return () => { oldRemoved++; }; });
+  f.render(); f.focus(); oldOpen(); assert.deepEqual(f.writes, [[0, true]]);
+  f.replaceRegistration(open => { newOpen = open; return () => { newRemoved++; }; });
+  assert.equal(oldRemoved, 1); oldOpen(); assert.deepEqual(f.writes, [[0, true]]);
+  newOpen(); assert.deepEqual(f.writes, [[0, true], [0, true]]);
+  f.blur(); assert.equal(newRemoved, 1); newOpen(); assert.deepEqual(f.writes, [[0, true], [0, true]]);
+  f.replaceRegistration(undefined); assert.equal(f.hookCalls(), 2);
+});
+
+
+test('unmount cleanup invalidates the registered callback', () => {
+  let open, removed = 0;
+  const f = fixture('boyoqchi', callback => { open = callback; return () => { removed++; }; });
+  f.render(); f.focus(); f.unmount(); assert.equal(removed, 1); open(); assert.deepEqual(f.writes, []);
 });
