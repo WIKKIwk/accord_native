@@ -146,7 +146,7 @@ export function ProfileView(props: ProfileViewProps) {
         <ApparatusRow labels={details.apparatusLabels} />
       </Section>
       <Section>
-        <NavigationRow icon="calendar" title="Kunlik ish" onPress={onDailyWork} />
+        {onDailyWork ? <NavigationRow icon="calendar" title="Kunlik ish" onPress={onDailyWork} /> : null}
         <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) setSettingsOpen(true); else closeSettings(); }}
           anchor={<NavigationRow icon="gearshape" title={text('profileSettingsTitle')} onPress={() => setSettingsOpen(true)} />}>
           <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text}
