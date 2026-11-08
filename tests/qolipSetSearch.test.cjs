@@ -4,6 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const { contractFetch, recordedSession } = require('./support/contractFetch.cjs');
 
 function load(relative, dependencies = {}) {
   const filename = path.resolve(__dirname, '../src', relative), loaded = new Module(filename, module);
@@ -87,4 +88,43 @@ test('failed lookup can be retried and same-account token refresh keeps the scop
   assert.equal(lookup.isCurrent, true);
   assert.deepEqual(await lookup.load(), sets);
   assert.equal(calls, 2);
+});
+
+// @v2-test test/qolip_set_lookup_test.dart
+test('f119 lookup replay rejects an old account and caches the new read', async () => {
+  const stem = 'f11910bb/qolip_set_lookup_test', name = 'lookup caches catalog reads and rejects responses from a previous session';
+  const metadata = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'contracts', `${stem}.json`), 'utf8'));
+  assert.equal(metadata.baseline, 'f11910bb2c8c7081ce26770e69811b03fd0739ed');
+  const replay = contractFetch(stem, name), recorded = recordedSession(stem, name);
+  const session = { ...recorded, profile: { ref: 'clerk', role: 'qolipchi' } };
+  const scope = { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile.ref]) };
+  const productParser = load('qolipCatalogApi.ts', { './auth': {}, './authorizedFetch': {}, './workerControlsApi': {} });
+  let release, started;
+  const entered = new Promise(resolve => { started = resolve; });
+  const gate = new Promise(resolve => { release = resolve; });
+  let calls = 0;
+  const setsApi = load('qolip/qolipSetsApi.ts', {
+    '../auth': { activeSessionToken: value => value.token || null }, '../sessionReadScope': scope,
+    '../qolipCatalogApi': productParser, '../shared/mobileApiException': { MobileApiException }, './qolipApiCommon': common,
+    '../shared/qolipCatalogRuntime': { qolipCatalogRuntimeFor: () => ({ applyResponse: () => {} }) },
+    '../authorizedFetch': { authorizedFetch: async (value, target, init = {}) => {
+      const headers = new Headers(init.headers);
+      headers.set('Authorization', `Bearer ${value.token}`);
+      const result = await replay(new URL(target, value.baseUrl), { ...init, headers });
+      if (++calls === 1) { started(); await gate; }
+      return result;
+    } },
+  });
+  const api = load('qolip/qolipSetSearch.ts', { '../sessionReadScope': scope,
+    '../shared/mobileApiException': { MobileApiException }, './qolipApiCommon': common,
+    './qolipSearchEngine': searchEngine, './qolipSetsApi': setsApi });
+  const lookup = new api.QolipSetLookup(session), old = lookup.load();
+  await entered;
+  session.profile.ref = 'other';
+  release();
+  await assert.rejects(old, error => error.code === 'session_scope_changed');
+  assert.equal((await lookup.load())[0].name, 'Botinka ko‘k');
+  assert.equal((await lookup.load())[0].name, 'Botinka ko‘k');
+  assert.equal(calls, 2);
+  replay.assertDone();
 });
