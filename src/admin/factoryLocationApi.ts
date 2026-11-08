@@ -15,24 +15,25 @@ async function decodeMutation(response: Response, code: string, message: string)
   return adminFactoryLocationFromJson(await response.json());
 }
 /** @v2 adminFactoryLocations */
-export async function adminFactoryLocations(session: Session): Promise<AdminFactoryLocation[]> {
-  const response = await authorizedFetch(session, path);
+export async function adminFactoryLocations(session: Session, beforeSend?: () => void): Promise<AdminFactoryLocation[]> {
+  const response = await authorizedFetch(session, path, undefined, beforeSend);
   if (response.status !== 200) throw await adminApiError(response, 'factory_locations_load_failed', 'State’lar yuklanmadi');
   const value: unknown = await response.json();
   if (!Array.isArray(value)) throw new TypeError('Invalid factory locations list');
   return value.filter(item => item !== null && typeof item === 'object' && !Array.isArray(item)).map(adminFactoryLocationFromJson);
 }
 /** @v2 adminCreateFactoryLocation */
-export async function adminCreateFactoryLocation(session: Session, name: string, apparatusIds: readonly string[] = []): Promise<AdminFactoryLocation> {
+export async function adminCreateFactoryLocation(session: Session, name: string, apparatusIds: readonly string[] = [],
+  beforeSend?: () => void): Promise<AdminFactoryLocation> {
   const normalizedName = dartTrim(name);
   if (!normalizedName) throw new MobileApiException({ code: 'state_name_required', message: 'State nomini kiriting' });
   const response = await authorizedFetch(session, path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: normalizedName, apparatus_ids: normalizeIds(apparatusIds) }) });
+    body: JSON.stringify({ name: normalizedName, apparatus_ids: normalizeIds(apparatusIds) }) }, beforeSend);
   return decodeMutation(response, 'factory_location_create_failed', 'State yaratilmadi');
 }
 /** @v2 adminUpdateFactoryLocation */
 export async function adminUpdateFactoryLocation(session: Session, id: string,
-  options: { name?: string | null; active?: boolean | null } = {}): Promise<AdminFactoryLocation> {
+  options: { name?: string | null; active?: boolean | null } = {}, beforeSend?: () => void): Promise<AdminFactoryLocation> {
   const normalizedId = dartTrim(id), name = options.name == null ? undefined : dartTrim(options.name), active = options.active;
   if (!normalizedId || (options.name == null && active == null)) {
     throw new MobileApiException({ code: 'factory_location_update_invalid', message: 'State o‘zgarishi topilmadi' });
@@ -41,16 +42,16 @@ export async function adminUpdateFactoryLocation(session: Session, id: string,
   const response = await authorizedFetch(session, `${path}/${encodeURIComponent(normalizedId)}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...(name != null ? { name } : {}), ...(active != null ? { active } : {}) }),
-  });
+  }, beforeSend);
   return decodeMutation(response, 'factory_location_update_failed', 'State yangilanmadi');
 }
 /** @v2 adminReplaceFactoryLocationApparatus */
 export async function adminReplaceFactoryLocationApparatus(session: Session, id: string,
-  apparatusIds: readonly string[]): Promise<AdminFactoryLocation> {
+  apparatusIds: readonly string[], beforeSend?: () => void): Promise<AdminFactoryLocation> {
   const normalizedId = dartTrim(id), ids = normalizeIds(apparatusIds);
   if (!normalizedId) throw new MobileApiException({ code: 'state_not_found', message: 'State topilmadi' });
   const response = await authorizedFetch(session, `${path}/${encodeURIComponent(normalizedId)}/apparatus`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apparatus_ids: ids }),
-  });
+  }, beforeSend);
   return decodeMutation(response, 'factory_location_apparatus_update_failed', 'State apparatlari yangilanmadi');
 }

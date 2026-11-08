@@ -12,7 +12,7 @@ export type AdminHomeDependencies = {
   afterFrame: () => Promise<void>;
 };
 
-/** @v2 _AdminHomeScreenState */
+/** Partial lifecycle derived from V2 _AdminHomeScreenState; integration remains open. */
 export class AdminHomeController {
   private active = false;
   private epoch = 0;

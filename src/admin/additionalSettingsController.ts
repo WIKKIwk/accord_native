@@ -25,7 +25,7 @@ function initial(operator: boolean): AdditionalSettingsSnapshot {
     confirmFreeMovement: false, confirmationSerial: 0, notice: null };
 }
 
-/** @v2 _AdminAdditionalSettingsScreenState */
+/** Partial state derived from V2 _AdminAdditionalSettingsScreenState; integration remains open. */
 export class AdditionalSettingsController {
   private state: AdditionalSettingsSnapshot;
   private listeners = new Set<() => void>();
