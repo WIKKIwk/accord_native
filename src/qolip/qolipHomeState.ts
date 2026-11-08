@@ -156,6 +156,13 @@ export class QolipHomeState {
     if (!this.active || !this.preserveHome) return;
     const scope = this.deps.scope(), invalid = !this.deps.valid();
     if (scope === this.homeScope && invalid === this.value.invalid) return;
+    this.clearSessionState(scope, invalid);
+    if (!invalid) void this.readBlocks().catch(() => {});
+  }
+  invalidateSession() {
+    if (this.active) this.clearSessionState(this.deps.scope(), true);
+  }
+  private clearSessionState(scope: string, invalid: boolean) {
     this.homeScope = scope; this.currentRead++; this.searchGeneration++; this.quietGeneration++; this.quietQueued = false;
     this.clearQuietCooldown(); this.homeDataReady = false; this.homeSnapshot = null;
     if (this.timer !== null) clearTimeout(this.timer);
@@ -163,7 +170,6 @@ export class QolipHomeState {
     this.searchQuery = ''; this.ordered = [];
     this.publish({ invalid, snapshot: null, selectedIndex: 0, query: '', blockCounts: {}, cellCounts: {},
       loading: !invalid, error: false });
-    if (!invalid) void this.readBlocks().catch(() => {});
   }
   private clearQuietCooldown() {
     if (this.quietCooldown !== null) clearTimeout(this.quietCooldown);

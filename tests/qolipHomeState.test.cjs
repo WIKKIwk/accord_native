@@ -163,3 +163,12 @@ test('account switch discards a late quiet response from the previous account', 
   await delay(10); oldQuiet.resolve(result([block('Stale')])); await delay(10);
   assert.deepEqual(h.state.displayBlocks.map(x => x.name), ['New']);
 });
+
+test('pre-switch invalidation clears old account data even before the active session object changes', async () => {
+  const quiet = deferred(); let reads = 0;
+  const h = harness({ blocks: () => ++reads === 1 ? Promise.resolve(result([block('Old')])) : quiet.promise });
+  await h.state.start(); h.state.locationsChanged(); h.state.invalidateSession();
+  assert.equal(h.state.getSnapshot().invalid, true); assert.deepEqual(h.state.displayBlocks, []);
+  quiet.resolve(result([block('Stale')])); await delay(10);
+  assert.equal(h.state.getSnapshot().invalid, true); assert.deepEqual(h.state.displayBlocks, []);
+});
