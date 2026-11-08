@@ -154,3 +154,50 @@ test('array endpoints and record fields reject wrong JSON shapes', async () => {
   assert.throws(() => fixture().notifications.dispatchRecordFromJson(null), TypeError);
   assert.equal(fixture().notifications.dispatchRecordFromJson({ status: 'unknown' }).status, 'pending');
 });
+
+// Recorded locally by tests/support/supplierUriOracle.dart using Dart VM 3.13.7;
+// these are Uri.replace results, not HTTP recordings or device tests.
+test('Supplier item and status-detail queries match Dart URI encoding and empty-value syntax', async () => {
+  const cases = require('./support/supplierUriOracle.json');
+  for (const sample of cases) {
+    const value = String.fromCharCode(...sample.utf16), f = fixture([]);
+    await f.supplierStatusDetails(f.session, 'returned', value);
+    assert.equal(f.calls[0].route, `/v1/mobile/supplier/status-details?${sample.details}`);
+    await f.supplierItems(f.session, value);
+    assert.equal(f.calls[1].route, `/v1/mobile/supplier/items${value === '' ? '' : `?${sample.items}`}`);
+  }
+});
+
+test('Supplier query encoding does not depend on the platform URLSearchParams implementation', async () => {
+  const previous = global.URLSearchParams;
+  global.URLSearchParams = class { constructor() { throw Error('Unexpected platform query encoder'); } };
+  try {
+    const f = fixture([]);
+    await f.supplierItems(f.session, "~*!'() +");
+    await f.supplierStatusDetails(f.session, 'returned', '');
+    assert.deepEqual(f.calls.map(call => call.route), [
+      '/v1/mobile/supplier/items?q=~%2A%21%27%28%29+%2B',
+      '/v1/mobile/supplier/status-details?kind=returned&item_code',
+    ]);
+  } finally { global.URLSearchParams = previous; }
+});
+
+test('Node and the installed React Native URL parser preserve Supplier query bytes before fetch', async () => {
+  const babel = require('@babel/core');
+  const filename = require.resolve('react-native/Libraries/Blob/URL.js');
+  const source = babel.transformSync(fs.readFileSync(filename, 'utf8'), { filename, babelrc: false, configFile: false,
+    plugins: ['@babel/plugin-transform-flow-strip-types', '@babel/plugin-transform-modules-commonjs'] }).code;
+  const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
+  mod.require = name => name === './NativeBlobModule' ? { __esModule: true, default: null }
+    : name === './URLSearchParams' ? { URLSearchParams: class {} } : require(name);
+  mod._compile(source, filename);
+  for (const sample of require('./support/supplierUriOracle.json')) {
+    const value = String.fromCharCode(...sample.utf16), f = fixture([]);
+    await f.supplierStatusDetails(f.session, 'returned', value); await f.supplierItems(f.session, value);
+    for (const { route } of f.calls) for (const Url of [URL, mod.exports.URL]) {
+      const parsed = new Url(route, 'https://example.test');
+      assert.equal(parsed.origin, 'https://example.test'); assert.equal(parsed.username, ''); assert.equal(parsed.password, '');
+      assert.equal(parsed.toString(), `https://example.test${route}`);
+    }
+  }
+});

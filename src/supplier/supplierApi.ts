@@ -40,6 +40,26 @@ function list(value: unknown): unknown[] {
   return value;
 }
 
+// Dart Uri.queryParameters uses UTF-8 form encoding with RFC 3986's unreserved
+// set, and replaces unpaired UTF-16 surrogates instead of throwing.
+function queryComponent(value: string): string {
+  let valid = '';
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) { valid += value[i] + value[++i]; continue; }
+      valid += '\ufffd';
+    } else if (code >= 0xdc00 && code <= 0xdfff) valid += '\ufffd';
+    else valid += value[i];
+  }
+  return encodeURIComponent(valid).replace(/[!'()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
+    .replace(/%20/g, '+');
+}
+function queryParameters(entries: readonly (readonly [string, string])[]): string {
+  return entries.map(([key, value]) => `${queryComponent(key)}${value ? `=${queryComponent(value)}` : ''}`).join('&');
+}
+
 /** Preserve Dart Exception's visible prefix for the source's explicit failures. */
 export class SupplierApiException extends Error {
   toString(): string { return `Exception: ${this.message}`; }
@@ -76,7 +96,7 @@ export async function supplierSummary(session: Session): Promise<SupplierSummary
 
 /** @v2 supplierStatusBreakdown */
 export async function supplierStatusBreakdown(session: Session, kind: SupplierStatusKind): Promise<SupplierStatusBreakdownEntry[]> {
-  const query = new URLSearchParams({ kind });
+  const query = queryParameters([['kind', kind]]);
   const response = await authorizedFetch(session, `/v1/mobile/supplier/status-breakdown?${query}`);
   if (response.status !== 200) throw new SupplierApiException('Supplier status breakdown failed');
   return list(await response.json()).map(supplierStatusBreakdownEntryFromJson);
@@ -84,7 +104,7 @@ export async function supplierStatusBreakdown(session: Session, kind: SupplierSt
 
 /** @v2 supplierStatusDetails */
 export async function supplierStatusDetails(session: Session, kind: SupplierStatusKind, itemCode: string): Promise<DispatchRecord[]> {
-  const query = new URLSearchParams({ kind, item_code: itemCode });
+  const query = queryParameters([['kind', kind], ['item_code', itemCode]]);
   const response = await authorizedFetch(session, `/v1/mobile/supplier/status-details?${query}`);
   if (response.status !== 200) throw new SupplierApiException('Supplier status details failed');
   return list(await response.json()).map(dispatchRecordFromJson);
@@ -97,7 +117,7 @@ const hasNonDartWhitespace = (value: string): boolean =>
 /** @v2 supplierItems */
 // The V2 test-mode branch is deferred until the shared test-mode pass (D3).
 export async function supplierItems(session: Session, query = ''): Promise<SupplierItem[]> {
-  const suffix = hasNonDartWhitespace(query) ? `?${new URLSearchParams({ q: query })}` : '';
+  const suffix = hasNonDartWhitespace(query) ? `?${queryParameters([['q', query]])}` : '';
   const response = await authorizedFetch(session, `/v1/mobile/supplier/items${suffix}`);
   if (response.status !== 200) throw new SupplierApiException('Supplier items failed');
   return list(await response.json()).map(supplierItemFromJson);

@@ -149,6 +149,13 @@ None proposed in this checkpoint.
 - Drift reports no V2 changes; check, Supplier role and both-platform text gates exited 0. Check retains the nine previously recorded endpoint warnings and text has zero missing/extra with the same 51 accepted rows. V2 remains clean at `f11910bb`. No backend request, native asset retry, simulator or device was used.
 - Notification routing, receipt detail, hidden/unread stores and account-switch behavior remain held and unchanged. Supplier remains partial and unconnected to login. Native dialog dismissal, refresh behavior and all other open items above remain unverified.
 
+## Supplier query encoding checkpoint (2026-11-08)
+
+- Matched the role-local query construction for `supplierItems`, `supplierStatusDetails` and `supplierStatusBreakdown` to V2 `mobile_api_supplier_notifications.dart:37-70,121-129`, which uses Dart `Uri.replace(queryParameters: ...)`. A standalone Dart VM 3.13.7 oracle, kept under `tests/support/supplierUriOracle.dart`, produced the checked-in expected query strings. It covers empty values, all ASCII code units, non-ASCII, a valid surrogate pair and unpaired surrogates. These are local runtime observations, not V2 HTTP recordings.
+- V2 emits `~` literally, percent-encodes `!'()*`, uses `+` for spaces, replaces unpaired UTF-16 surrogates with U+FFFD and omits `=` for an empty value. Node and the installed React Native `URLSearchParams` differ from Dart and from each other. The Supplier-only encoder now follows the observed Dart rules without changing shared GScale or transport code. Two regression tests failed before the change and pass afterward; a third checks that Node and the installed React Native URL implementation preserve the constructed string before fetch. Native HTTP serialization and actual server behavior remain unrecorded.
+- Focused Supplier/shared checks: 130 tests, 129 passed, 0 failed and one existing security TODO. Full suite: 1,294 tests, 1,287 passed, the same six Preparation Android Expo UI `createModifier` resolution failures and one TODO. iOS typecheck and lint passed. Android typecheck retains the same nine existing protected Worker errors, with no Supplier error.
+- Drift reports no changed V2 source; check, Supplier role and both-platform text gates exited 0, retaining nine endpoint warnings and the same 51 accepted text rows. No backend, simulator, device or native asset retry was used. Numeric/parser gaps and all security and routing holds above remain open; Supplier stays unconnected to login.
+
 ## Needs from the integrator
 
 - Supplier's Android unread badge can reuse `RoleNavigationItem.showBadge`, integrated from local main `2b6bacf`.
