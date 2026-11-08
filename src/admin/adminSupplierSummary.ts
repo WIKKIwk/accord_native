@@ -16,8 +16,8 @@ export function adminSupplierSummaryFromJson(value: unknown): AdminSupplierSumma
     blocked_suppliers: integer(row.blocked_suppliers) };
 }
 /** @v2 adminSupplierSummary */
-export async function adminSupplierSummary(session: Session): Promise<AdminSupplierSummary> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/suppliers/summary');
+export async function adminSupplierSummary(session: Session, beforeSend?: () => void): Promise<AdminSupplierSummary> {
+  const response = await authorizedFetch(session, '/v1/mobile/admin/suppliers/summary', undefined, beforeSend);
   if (response.status !== 200) throw new Error('Admin supplier summary failed');
   return adminSupplierSummaryFromJson(await response.json());
 }
