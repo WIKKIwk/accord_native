@@ -7,8 +7,10 @@ import { trimDart } from './qolipApiCommon';
  * `ownerScopeKey` is a stable SHA-256 digest of the server, authenticated account,
  * role and full authorization scope, not a token or credential. `generation`
  * is an opaque unique, nonsecret witness; `currentGeneration` is a synchronous
- * side-effect-free read that changes before every auth transition. No production
- * lease provider is supplied in this role branch.
+ * side-effect-free read that changes before every auth transition. Callback
+ * identities are snapshotted, and an observed mismatch permanently invalidates
+ * the captured lease. A provider must still detect changes between observations.
+ * No production lease provider is supplied in this role branch.
  */
 export type QolipPlacementSessionLease = {
   readonly ownerScopeKey: string;
@@ -58,14 +60,33 @@ function synchronous(value: unknown): unknown {
   }
   return value;
 }
-function stable(lease: QolipPlacementSessionLease, owner: string, generation: string): boolean {
+type LeaseContext = { lease: QolipPlacementSessionLease; owner: string; generation: string; invalidated: boolean;
+  currentGeneration: () => string; isCurrent: () => boolean };
+function sameCallable(value: unknown, expected: (...args: never[]) => unknown): boolean {
+  if (value === expected) return true;
+  synchronous(value);
+  return false;
+}
+function sameLease(context: LeaseContext): boolean {
+  const { lease, owner, generation, currentGeneration, isCurrent } = context;
+  // Observe every property even when another one has already changed, so
+  // multiple accidentally supplied rejected thenables are all drained.
+  const observedOwner = synchronous(lease.ownerScopeKey), observedGeneration = synchronous(lease.generation);
+  const sameGenerationReader = sameCallable(lease.currentGeneration, currentGeneration);
+  const sameCurrentReader = sameCallable(lease.isCurrent, isCurrent);
+  return observedOwner === owner && observedGeneration === generation && sameGenerationReader && sameCurrentReader;
+}
+function stable(context: LeaseContext): boolean {
+  if (context.invalidated) return false;
+  let valid = false;
   try {
-    if (synchronous(lease.ownerScopeKey) !== owner || synchronous(lease.generation) !== generation ||
-        synchronous(lease.currentGeneration()) !== generation) return false;
-    if (synchronous(lease.isCurrent()) !== true) return false;
-    return synchronous(lease.currentGeneration()) === generation && synchronous(lease.ownerScopeKey) === owner &&
-      synchronous(lease.generation) === generation;
-  } catch { return false; }
+    const { lease, generation, currentGeneration, isCurrent } = context;
+    valid = sameLease(context) && synchronous(currentGeneration.call(lease)) === generation && sameLease(context) &&
+      synchronous(isCurrent.call(lease)) === true && sameLease(context) &&
+      synchronous(currentGeneration.call(lease)) === generation && sameLease(context);
+  } catch { valid = false; }
+  if (!valid) context.invalidated = true;
+  return valid;
 }
 function serverOrigin(value: string): string {
   const url = new URL(value);
@@ -142,12 +163,15 @@ function copyStored(value: StoredPending): StoredPending {
 function publicPending(value: StoredPending): QolipPlacementPending {
   return { target: { ...value.target }, closed: value.closed, items: value.items.map(item => ({ code: item.code, status: item.status })) };
 }
-function contextOf(lease: QolipPlacementSessionLease): { owner: string; generation: string } {
+function contextOf(lease: QolipPlacementSessionLease): LeaseContext {
   if (!lease) throw new TypeError('Verified Qolip session lease is required');
   const owner = synchronous(lease.ownerScopeKey), generation = synchronous(lease.generation);
+  const currentGeneration = lease.currentGeneration, isCurrent = lease.isCurrent;
+  if (typeof currentGeneration !== 'function') synchronous(currentGeneration);
+  if (typeof isCurrent !== 'function') synchronous(isCurrent);
   if (!validOwner(owner) || typeof generation !== 'string' || !generation ||
-      typeof lease.currentGeneration !== 'function' || typeof lease.isCurrent !== 'function') throw new TypeError('Verified Qolip session lease is required');
-  return { owner, generation };
+      typeof currentGeneration !== 'function' || typeof isCurrent !== 'function') throw new TypeError('Verified Qolip session lease is required');
+  return { lease, owner, generation, currentGeneration, isCurrent, invalidated: false };
 }
 // The eventual transport must send this exact immutable request and call its
 // single-use beforeSend immediately before the wire operation. It is not wired.
@@ -172,7 +196,7 @@ export class QolipPlacementGate {
   }
   async reserve(input: { origin: string; actions: readonly { code: string; body: string }[]; target: QolipPlacementTarget;
     lease: QolipPlacementSessionLease }): Promise<QolipPlacementReservationResult> {
-    const origin = serverOrigin(input.origin), lease = input.lease, { owner, generation } = contextOf(lease);
+    const origin = serverOrigin(input.origin), context = contextOf(input.lease), { owner } = context;
     if (!Array.isArray(input.actions) || !input.actions.length || input.actions.some(action => !isObject(action) ||
         typeof action.code !== 'string' || typeof action.body !== 'string') || !validTarget(input.target)) {
       throw new TypeError('Invalid Qolip placement intent');
@@ -184,7 +208,7 @@ export class QolipPlacementGate {
     if (new Set(actions.map(action => action.code.toLowerCase())).size !== actions.length) return { kind: 'duplicate_code' };
     if (actions.some(action => !validBody(action.code, target, action.body))) throw new TypeError('Invalid Qolip placement request body');
     const result = await this.journal.transact<{ kind: 'session_changed' } | { kind: 'reconcile_required' } | { kind: 'reserved'; id: number }>(current => {
-      if (!stable(lease, owner, generation)) return { value: { kind: 'session_changed' as const } };
+      if (!stable(context)) return { value: { kind: 'session_changed' as const } };
       const journal = parseJournal(current);
       if (journal.origins.length) return { value: { kind: 'reconcile_required' as const } };
       if (journal.nextId >= Number.MAX_SAFE_INTEGER) throw new Error('Qolip placement journal is full');
@@ -193,46 +217,46 @@ export class QolipPlacementGate {
       journal.origins.push({ origin, pending });
       return { value: { kind: 'reserved' as const, id: pending.id }, next: JSON.stringify(journal) };
     });
-    if (result.kind !== 'reserved') return stable(lease, owner, generation) ? result : { kind: 'session_changed' };
-    const reservation = new Reservation(this.journal, origin, result.id, lease, owner, generation);
-    if (!stable(lease, owner, generation)) { await reservation.close(); return { kind: 'session_changed' }; }
+    if (result.kind !== 'reserved') return stable(context) ? result : { kind: 'session_changed' };
+    const reservation = new Reservation(this.journal, origin, result.id, context);
+    if (!stable(context)) { await reservation.close(); return { kind: 'session_changed' }; }
     return { kind: 'reserved', reservation };
   }
   async inspect(input: { origin: string; lease: QolipPlacementSessionLease }): Promise<QolipPlacementInspection> {
-    const origin = serverOrigin(input.origin), lease = input.lease, { owner, generation } = contextOf(lease);
+    const origin = serverOrigin(input.origin), context = contextOf(input.lease), { owner } = context;
     const result = await this.journal.transact<QolipPlacementInspection>(current => {
-      if (!stable(lease, owner, generation)) return { value: { kind: 'session_changed' as const } };
+      if (!stable(context)) return { value: { kind: 'session_changed' as const } };
       const entry = parseJournal(current).origins[0], pending = entry?.pending;
       if (!pending) return { value: { kind: 'clear' as const } };
       if (entry.origin !== origin || pending.ownerScopeKey !== owner) return { value: { kind: 'reconcile_required' as const } };
       return { value: { kind: 'owned' as const, pending: publicPending(pending) } };
     });
-    return stable(lease, owner, generation) ? result : { kind: 'session_changed' };
+    return stable(context) ? result : { kind: 'session_changed' };
   }
   async reconcile(input: { origin: string; lease: QolipPlacementSessionLease; authority: QolipPlacementAuthority }): Promise<QolipPlacementReconcileResult> {
-    const origin = serverOrigin(input.origin), lease = input.lease, { owner, generation } = contextOf(lease), { authority } = input;
+    const origin = serverOrigin(input.origin), context = contextOf(input.lease), { owner, lease } = context, { authority } = input;
     if (!authority || typeof authority.readAfterVerifiedSettlement !== 'function') throw new TypeError('Verified Qolip reconciliation authority is required');
     const readEvidence = authority.readAfterVerifiedSettlement.bind(authority);
     const snapshot = await this.journal.transact<{ kind: 'session_changed' | 'clear' | 'reconcile_required' | 'in_flight' } |
       { kind: 'snapshot'; pending: StoredPending }>(current => {
-      if (!stable(lease, owner, generation)) return { value: { kind: 'session_changed' as const } };
+      if (!stable(context)) return { value: { kind: 'session_changed' as const } };
       const entry = parseJournal(current).origins[0], pending = entry?.pending;
       if (!pending) return { value: { kind: 'clear' as const } };
       if (entry.origin !== origin || pending.ownerScopeKey !== owner) return { value: { kind: 'reconcile_required' as const } };
       if (!pending.closed) return { value: { kind: 'in_flight' as const } };
       return { value: { kind: 'snapshot' as const, pending: copyStored(pending) } };
     });
-    if (!stable(lease, owner, generation)) return { kind: 'session_changed' };
+    if (!stable(context)) return { kind: 'session_changed' };
     if (snapshot.kind !== 'snapshot') return snapshot;
     const evidence = await readEvidence(publicPending(snapshot.pending), lease);
-    if (!stable(lease, owner, generation)) return { kind: 'session_changed' };
+    if (!stable(context)) return { kind: 'session_changed' };
     const kind = evidence?.kind;
-    if (!stable(lease, owner, generation)) return { kind: 'session_changed' };
+    if (!stable(context)) return { kind: 'session_changed' };
     if (!evidence || (kind !== 'unknown' && kind !== 'applied' && kind !== 'not_applied')) {
       throw new TypeError('Invalid Qolip reconciliation evidence');
     }
     const reconciled = await this.journal.transact<QolipPlacementReconcileResult>(current => {
-      if (!stable(lease, owner, generation)) return { value: { kind: 'session_changed' as const } };
+      if (!stable(context)) return { value: { kind: 'session_changed' as const } };
       const journal = parseJournal(current), index = journal.origins.findIndex(entry => entry.origin === origin);
       const pending = journal.origins[index]?.pending;
       if (!pending || pending.ownerScopeKey !== owner || pending.id !== snapshot.pending.id || pending.revision !== snapshot.pending.revision || !pending.closed) {
@@ -245,8 +269,14 @@ export class QolipPlacementGate {
       journal.origins.splice(index, 1);
       return { value: { kind: 'reconciled' as const }, next: JSON.stringify(journal) };
     });
-    return stable(lease, owner, generation) ? reconciled : { kind: 'session_changed' };
+    return stable(context) ? reconciled : { kind: 'session_changed' };
   }
+}
+
+function observedFailure<T>(message: string): Promise<T> {
+  const result = Promise.reject<T>(new Error(message));
+  void result.catch(() => {});
+  return result;
 }
 
 class Reservation implements QolipPlacementReservation {
@@ -254,30 +284,58 @@ class Reservation implements QolipPlacementReservation {
   private preparing = false;
   private finishing = false;
   private invoked = false;
+  private checkingLease = false;
+  private reentered = false;
+  // A rejected outcome transaction may have committed before its acknowledgement
+  // was lost. Do not continue the batch even if a later read shows `confirmed`.
+  private outcomeFaulted = false;
   private allowedIndex: number | null = null;
   private closing: Promise<void> | null = null;
   constructor(private readonly journal: QolipPlacementAtomicJournal, private readonly origin: string, private readonly id: number,
-    private readonly lease: QolipPlacementSessionLease, private readonly owner: string, private readonly generation: string) {}
-  async markSending(index: number): Promise<{ request: QolipPlacementWireRequest; beforeSend: () => void } | null> {
-    if (this.preparing || this.allowedIndex !== null || this.closed || this.closing) throw new Error('Qolip placement is already sending');
+    private readonly context: LeaseContext) {}
+  private rejectReentrant(): boolean {
+    if (!this.checkingLease) return false;
+    this.reentered = true;
+    return true;
+  }
+  private checkLease(): boolean {
+    if (this.rejectReentrant()) return false;
+    this.checkingLease = true; this.reentered = false;
+    try {
+      const valid = stable(this.context);
+      if (this.reentered) this.context.invalidated = true;
+      return valid && !this.reentered;
+    } finally { this.checkingLease = false; }
+  }
+  markSending(index: number): Promise<{ request: QolipPlacementWireRequest; beforeSend: () => void } | null> {
+    if (this.rejectReentrant() || this.preparing || this.allowedIndex !== null || this.closed || this.closing) {
+      return observedFailure('Qolip placement is already sending');
+    }
+    if (this.outcomeFaulted) return observedFailure('Qolip placement journal outcome is uncertain');
     this.preparing = true;
+    const result = this.prepareSending(index);
+    void result.catch(() => {});
+    return result;
+  }
+  private async prepareSending(index: number): Promise<{ request: QolipPlacementWireRequest; beforeSend: () => void } | null> {
     try {
       const marked = await this.journal.transact<{ body: string } | null>(current => {
-        if (this.closed || !stable(this.lease, this.owner, this.generation)) return { value: null };
+        if (this.closed || !this.checkLease()) return { value: null };
         const journal = parseJournal(current), pending = journal.origins.find(entry => entry.origin === this.origin)?.pending;
-        if (!pending || pending.ownerScopeKey !== this.owner || pending.id !== this.id || pending.closed ||
+        if (!pending || pending.ownerScopeKey !== this.context.owner || pending.id !== this.id || pending.closed ||
             !Number.isSafeInteger(index) || !pending.items[index] || pending.items[index].status !== 'waiting') {
           throw new Error('Invalid Qolip placement reservation');
         }
         if (pending.items.some(item => item.status === 'uncertain')) throw new Error('Previous Qolip placement outcome is uncertain');
+        if (pending.items.slice(0, index).some(item => item.status !== 'confirmed')) throw new Error('Qolip placement order is invalid');
         pending.items[index].status = 'uncertain'; bump(pending);
         return { value: { body: pending.items[index].body }, next: JSON.stringify(journal) };
       });
-      if (!marked || !stable(this.lease, this.owner, this.generation)) return null;
+      if (!marked || !this.checkLease()) return null;
       this.allowedIndex = index; this.invoked = false;
       const request: QolipPlacementWireRequest = Object.freeze({ origin: this.origin, method: 'POST', path: '/v1/mobile/qolip/locations', body: marked.body });
       return { request, beforeSend: () => {
-        if (this.closed || this.closing || this.allowedIndex !== index || !stable(this.lease, this.owner, this.generation)) {
+        if (this.rejectReentrant() || this.preparing || this.finishing || this.closed || this.closing || this.allowedIndex !== index || !this.checkLease()) {
           throw new Error('Qolip placement session changed or request not journaled');
         }
         if (this.invoked) throw new Error('Qolip placement was already sent');
@@ -285,35 +343,48 @@ class Reservation implements QolipPlacementReservation {
       } };
     } finally { this.preparing = false; }
   }
-  async markOutcome(index: number, succeeded: boolean): Promise<void> {
-    if (this.closed || this.closing || this.finishing || this.allowedIndex !== index) throw new Error('Invalid Qolip placement outcome');
+  markOutcome(index: number, succeeded: boolean): Promise<void> {
+    if (this.rejectReentrant() || this.preparing || this.closed || this.closing || this.finishing || this.allowedIndex !== index) {
+      return observedFailure('Invalid Qolip placement outcome');
+    }
     this.finishing = true;
+    const result = this.finishOutcome(index, succeeded);
+    void result.catch(() => {});
+    return result;
+  }
+  private async finishOutcome(index: number, succeeded: boolean): Promise<void> {
     try {
       const confirmed = synchronous(succeeded) === true;
       if (confirmed && !this.invoked) throw new Error('Qolip placement was not sent');
       await this.journal.transact(current => {
         const journal = parseJournal(current), pending = journal.origins.find(entry => entry.origin === this.origin)?.pending;
-        if (!pending || pending.ownerScopeKey !== this.owner || pending.id !== this.id || pending.closed ||
+        if (!pending || pending.ownerScopeKey !== this.context.owner || pending.id !== this.id || pending.closed ||
             !Number.isSafeInteger(index) || !pending.items[index] || pending.items[index].status !== 'uncertain') {
           throw new Error('Invalid Qolip placement outcome');
         }
-        if (confirmed && stable(this.lease, this.owner, this.generation)) pending.items[index].status = 'confirmed';
+        if (confirmed && this.checkLease()) pending.items[index].status = 'confirmed';
         bump(pending);
         return { value: undefined, next: JSON.stringify(journal) };
       });
+    } catch (error) {
+      this.outcomeFaulted = true;
+      throw error;
     } finally { this.allowedIndex = null; this.finishing = false; this.invoked = false; }
   }
   close(): Promise<void> {
-    if (this.preparing || this.allowedIndex !== null) return Promise.reject(new Error('Qolip placement is still sending'));
-    return this.closing ??= this.journal.transact(current => {
+    if (this.rejectReentrant() || this.preparing || this.finishing || this.allowedIndex !== null) return observedFailure('Qolip placement is still sending');
+    if (this.closing) return this.closing;
+    this.closing = this.journal.transact(current => {
       const journal = parseJournal(current), index = journal.origins.findIndex(entry => entry.origin === this.origin);
       const pending = journal.origins[index]?.pending;
-      if (!pending || pending.ownerScopeKey !== this.owner || pending.id !== this.id || pending.closed) {
+      if (!pending || pending.ownerScopeKey !== this.context.owner || pending.id !== this.id || pending.closed) {
         throw new Error('Invalid Qolip placement reservation close');
       }
       if (pending.items.every(item => item.status === 'waiting')) journal.origins.splice(index, 1);
       else { pending.closed = true; bump(pending); }
       return { value: undefined, next: JSON.stringify(journal) };
     }).then(() => { this.closed = true; });
+    void this.closing.catch(() => {});
+    return this.closing;
   }
 }

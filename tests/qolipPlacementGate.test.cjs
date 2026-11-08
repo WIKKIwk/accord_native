@@ -285,3 +285,223 @@ test('a corrupted journal with out-of-order or repeated sends fails closed', asy
     await assert.rejects(blocked.inspect({ origin: ORIGIN, lease: l.token }), /journal is corrupt/);
   }
 });
+
+test('out-of-order permits leave a four-item journal byte-for-byte unchanged', async () => {
+  const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease();
+  const { reservation } = await gate.reserve(input(l.token, ['Q1', 'Q2', 'Q3', 'Q4']));
+  for (const index of [1, 2, 3]) {
+    const before = db.raw; await assert.rejects(reservation.markSending(index), /order is invalid/); assert.equal(db.raw, before);
+  }
+  for (let index = 0; index < 4; index++) {
+    const permit = await reservation.markSending(index); permit.beforeSend(); await reservation.markOutcome(index, true);
+    for (let skipped = index + 2; skipped < 4; skipped++) {
+      const before = db.raw; await assert.rejects(reservation.markSending(skipped), /order is invalid/); assert.equal(db.raw, before);
+    }
+  }
+  assert.deepEqual((await gate.inspect({ origin: ORIGIN, lease: l.token })).pending.items.map(item => item.status),
+    ['confirmed', 'confirmed', 'confirmed', 'confirmed']);
+  await reservation.close();
+});
+
+test('concurrent and out-of-order sends cannot mutate a delayed transaction', async () => {
+  const db = memoryBackend(), wrapped = db.wrapper(), entered = deferred(), release = deferred(); let delay = false;
+  const gate = new QolipPlacementGate({ async transact(update) {
+    if (delay) { delay = false; entered.resolve(); await release.promise; }
+    return wrapped.transact(update);
+  } }), l = lease();
+  const { reservation } = await gate.reserve(input(l.token, ['Q1', 'Q2', 'Q3']));
+  const before = db.raw; delay = true; const first = reservation.markSending(0); await entered.promise;
+  await assert.rejects(reservation.markSending(1), /already sending/);
+  await assert.rejects(reservation.markSending(2), /already sending/); assert.equal(db.raw, before);
+  release.resolve(); const permit = await first; permit.beforeSend(); await reservation.markOutcome(0, true);
+  const after = db.raw; await assert.rejects(reservation.markSending(2), /order is invalid/); assert.equal(db.raw, after);
+  const second = await reservation.markSending(1); second.beforeSend(); await reservation.markOutcome(1, true);
+  const third = await reservation.markSending(2); third.beforeSend(); await reservation.markOutcome(2, true); await reservation.close();
+});
+
+test('rejected or ambiguously committed stores never create a later send permit', async () => {
+  {
+    const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease();
+    const { reservation } = await gate.reserve(input(l.token, ['Q1', 'Q2'])); const before = db.raw; db.fail();
+    await assert.rejects(reservation.markSending(0), /journal unavailable/); assert.equal(db.raw, before);
+    await assert.rejects(reservation.markSending(1), /order is invalid/); assert.equal(db.raw, before);
+    const permit = await reservation.markSending(0); permit.beforeSend(); await reservation.markOutcome(0, true); await reservation.close();
+  }
+  {
+    const db = memoryBackend(), wrapped = db.wrapper(); let loseAcknowledgement = false;
+    const gate = new QolipPlacementGate({ async transact(update) {
+      const value = await wrapped.transact(update);
+      if (loseAcknowledgement) { loseAcknowledgement = false; throw new Error('acknowledgement lost'); }
+      return value;
+    } }), l = lease();
+    const { reservation } = await gate.reserve(input(l.token, ['Q1', 'Q2'])); loseAcknowledgement = true;
+    await assert.rejects(reservation.markSending(0), /acknowledgement lost/); const uncertain = db.raw;
+    assert.deepEqual(JSON.parse(uncertain).origins[0].pending.items.map(item => item.status), ['uncertain', 'waiting']);
+    await assert.rejects(reservation.markSending(1), /outcome is uncertain/); assert.equal(db.raw, uncertain);
+    await reservation.close(); assert.equal((await gate.inspect({ origin: ORIGIN, lease: l.token })).pending.items[0].status, 'uncertain');
+  }
+});
+
+for (const callback of ['isCurrent', 'currentGeneration']) {
+  for (const operation of ['markOutcome', 'markSending', 'close', 'beforeSend']) {
+    test(`reentrant ${operation} from ${callback} taints the permit and keeps the journal in flight`, async () => {
+      const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease();
+      let armed = false, nested, innerError, reservation, permit;
+      const original = l.token[callback];
+      l.token[callback] = function () {
+        if (armed) {
+          armed = false;
+          try {
+            if (operation === 'markOutcome') nested = reservation.markOutcome(0, false);
+            else if (operation === 'markSending') nested = reservation.markSending(1);
+            else if (operation === 'close') nested = reservation.close();
+            else permit.beforeSend();
+          } catch (error) { innerError = error; }
+        }
+        return original.call(this);
+      };
+      ({ reservation } = await gate.reserve(input(l.token, ['Q1', 'Q2'])));
+      permit = await reservation.markSending(0); const before = db.raw; armed = true;
+      assert.throws(permit.beforeSend, /session changed or request not journaled/);
+      if (operation === 'beforeSend') assert.match(innerError.message, /session changed or request not journaled/);
+      else await assert.rejects(nested, /Qolip placement/);
+      assert.equal(db.raw, before);
+      assert.throws(permit.beforeSend, /session changed or request not journaled/, 'the observed failure is sticky');
+      let calls = 0;
+      assert.deepEqual(await gate.reconcile({ origin: ORIGIN, lease: l.token, authority: { readAfterVerifiedSettlement: async () => {
+        calls++; return { kind: 'not_applied' };
+      } } }), { kind: 'in_flight' });
+      assert.equal(calls, 0); assert.equal(db.raw, before);
+      await reservation.markOutcome(0, false); await reservation.close();
+      assert.deepEqual((await gate.inspect({ origin: ORIGIN, lease: l.token })).pending.items.map(item => item.status), ['uncertain', 'waiting']);
+    });
+  }
+}
+
+test('ignored reentrant rejected operations are observed without releasing the hold', async () => {
+  const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease(), unhandled = [], listener = reason => unhandled.push(reason);
+  let armed = false, reservation;
+  const original = l.token.isCurrent;
+  l.token.isCurrent = function () {
+    if (armed) { armed = false; reservation.markOutcome(0, false); reservation.close(); reservation.markSending(1); }
+    return original.call(this);
+  };
+  process.on('unhandledRejection', listener);
+  try {
+    ({ reservation } = await gate.reserve(input(l.token, ['Q1', 'Q2']))); const permit = await reservation.markSending(0), before = db.raw;
+    armed = true; assert.throws(permit.beforeSend, /session changed/); await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(unhandled, []); assert.equal(db.raw, before);
+    await reservation.markOutcome(0, false); await reservation.close();
+  } finally { process.off('unhandledRejection', listener); }
+});
+
+test('reentrant close during prepare or outcome checks cannot clear or confirm an uncertain item', async () => {
+  for (const during of ['prepare', 'outcome']) {
+    const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease(); let armed = false, nested, reservation;
+    const original = l.token.isCurrent;
+    l.token.isCurrent = function () { if (armed) { armed = false; nested = reservation.close(); } return original.call(this); };
+    ({ reservation } = await gate.reserve(input(l.token)));
+    if (during === 'prepare') {
+      const before = db.raw; armed = true; assert.equal(await reservation.markSending(0), null);
+      await assert.rejects(nested, /still sending/); assert.equal(db.raw, before);
+      assert.equal(await reservation.markSending(0), null); await reservation.close();
+    } else {
+      const permit = await reservation.markSending(0); permit.beforeSend(); armed = true;
+      await reservation.markOutcome(0, true); await assert.rejects(nested, /still sending/); await reservation.close();
+      assert.equal((await gate.inspect({ origin: ORIGIN, lease: l.token })).pending.items[0].status, 'uncertain');
+    }
+  }
+});
+
+for (const property of ['isCurrent', 'currentGeneration', 'generation', 'ownerScopeKey']) {
+  test(`replacing lease ${property} after reservation permanently invalidates the captured lease`, async () => {
+    const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease();
+    const { reservation } = await gate.reserve(input(l.token)); const original = l.token[property], before = db.raw;
+    l.token[property] = property === 'isCurrent' ? () => true : property === 'currentGeneration' ? () => l.token.generation : 'changed';
+    assert.equal(await reservation.markSending(0), null); assert.equal(db.raw, before);
+    l.token[property] = original; assert.equal(await reservation.markSending(0), null); assert.equal(db.raw, before);
+    await reservation.close();
+  });
+}
+
+for (const property of ['isCurrent', 'currentGeneration']) {
+  test(`replacing lease ${property} after a permit cannot revive it by restoring the function`, async () => {
+    const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease();
+    const { reservation } = await gate.reserve(input(l.token)); const permit = await reservation.markSending(0), before = db.raw;
+    const original = l.token[property]; l.token[property] = property === 'isCurrent' ? () => true : () => l.token.generation;
+    assert.throws(permit.beforeSend, /session changed/); l.token[property] = original;
+    assert.throws(permit.beforeSend, /session changed/); assert.equal(db.raw, before);
+    await reservation.markOutcome(0, false); await reservation.close();
+  });
+}
+
+test('replacement during a delayed transaction and a live generation change cannot revive a reservation', async () => {
+  for (const change of ['replacement', 'generation']) {
+    const db = memoryBackend(), wrapped = db.wrapper(), entered = deferred(), release = deferred(); let delay = false;
+    const gate = new QolipPlacementGate({ async transact(update) {
+      if (delay) { delay = false; entered.resolve(); await release.promise; }
+      return wrapped.transact(update);
+    } }), l = lease();
+    const { reservation } = await gate.reserve(input(l.token)); const before = db.raw, original = l.token.currentGeneration;
+    delay = true; const pending = reservation.markSending(0); await entered.promise;
+    if (change === 'replacement') l.token.currentGeneration = () => l.token.generation;
+    else l.change('generation-2');
+    release.resolve(); assert.equal(await pending, null); assert.equal(db.raw, before);
+    l.token.currentGeneration = original; l.change('generation-1');
+    assert.equal(await reservation.markSending(0), null); assert.equal(db.raw, before); await reservation.close();
+  }
+});
+
+test('a callback that replaces its sibling during a check fails closed', async () => {
+  const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease(); let armed = false;
+  const original = l.token.currentGeneration, originalIsCurrent = l.token.isCurrent;
+  l.token.currentGeneration = function () { if (armed) { armed = false; l.token.isCurrent = () => true; } return original.call(this); };
+  const { reservation } = await gate.reserve(input(l.token)); const before = db.raw; armed = true;
+  assert.equal(await reservation.markSending(0), null); l.token.isCurrent = originalIsCurrent;
+  assert.equal(await reservation.markSending(0), null); assert.equal(db.raw, before); await reservation.close();
+});
+
+test('concurrent outcome, close and permit calls cannot overlap a delayed outcome commit', async () => {
+  const db = memoryBackend(), wrapped = db.wrapper(), entered = deferred(), release = deferred(); let delay = false;
+  const gate = new QolipPlacementGate({ async transact(update) {
+    if (delay) { delay = false; entered.resolve(); await release.promise; }
+    return wrapped.transact(update);
+  } }), l = lease();
+  const { reservation } = await gate.reserve(input(l.token, ['Q1', 'Q2'])); const permit = await reservation.markSending(0); permit.beforeSend();
+  const before = db.raw; delay = true; const finishing = reservation.markOutcome(0, true); await entered.promise;
+  await assert.rejects(reservation.markOutcome(0, false), /Invalid Qolip placement outcome/);
+  await assert.rejects(reservation.close(), /still sending/); await assert.rejects(reservation.markSending(1), /already sending/);
+  assert.throws(permit.beforeSend, /not journaled/); assert.equal(db.raw, before);
+  release.resolve(); await finishing; assert.equal((await gate.inspect({ origin: ORIGIN, lease: l.token })).pending.items[0].status, 'confirmed');
+  await reservation.close();
+});
+
+test('lost outcome-store acknowledgement permanently stops the reservation before the next item', async () => {
+  const db = memoryBackend(), wrapped = db.wrapper(); let loseAcknowledgement = false;
+  const gate = new QolipPlacementGate({ async transact(update) {
+    const value = await wrapped.transact(update);
+    if (loseAcknowledgement) { loseAcknowledgement = false; throw new Error('outcome acknowledgement lost'); }
+    return value;
+  } }), l = lease();
+  const { reservation } = await gate.reserve(input(l.token, ['Q1', 'Q2']));
+  const first = await reservation.markSending(0); first.beforeSend(); loseAcknowledgement = true;
+  await assert.rejects(reservation.markOutcome(0, true), /outcome acknowledgement lost/); const before = db.raw;
+  await assert.rejects(reservation.markSending(1), /journal outcome is uncertain/); assert.equal(db.raw, before);
+  await reservation.close(); assert.deepEqual((await gate.inspect({ origin: ORIGIN, lease: l.token })).pending.items.map(item => item.status),
+    ['confirmed', 'waiting']);
+});
+
+test('multiple rejected lease property replacements are observed and cannot revive a permit', async () => {
+  const db = memoryBackend(), gate = new QolipPlacementGate(db.wrapper()), l = lease(), unhandled = [], listener = reason => unhandled.push(reason);
+  process.on('unhandledRejection', listener);
+  try {
+    const { reservation } = await gate.reserve(input(l.token)), permit = await reservation.markSending(0), before = db.raw;
+    const original = { ...l.token };
+    l.token.currentGeneration = Promise.reject(new Error('bad generation property'));
+    l.token.isCurrent = Promise.reject(new Error('bad current property'));
+    assert.throws(permit.beforeSend, /session changed/); Object.assign(l.token, original);
+    assert.throws(permit.beforeSend, /session changed/); await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(unhandled, []); assert.equal(db.raw, before);
+    await reservation.markOutcome(0, false); await reservation.close();
+  } finally { process.off('unhandledRejection', listener); }
+});
