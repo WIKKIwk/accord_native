@@ -10,7 +10,9 @@ const canonical = (value: string) => value.trim().toLowerCase();
 
 /**
  * The existing USB bridge classifies Zebra by its USB vendor or descriptor; Bluetooth discovery filters XP-P323B.
- * Wi-Fi is intentionally denied until a live, device-bound printer identity can be proven at every write boundary.
+ * This is a previously observed selection, not an atomic connection to a physical device.
+ * Material GScale must stay unexposed until native device identity is bound and independently reviewed.
+ * Wi-Fi is denied until a live, device-bound printer identity can be proven at every write boundary.
  */
 export function materialPrinterSelectionKey(selection: PrintDeviceSelection | null): string | null {
   if (!selection) return null;
@@ -37,7 +39,8 @@ export class MaterialGScalePolicy {
   assertOperation(operation: MaterialGScaleOperation, state: GScaleOperatorState, expected: MaterialGScaleExpectation = {}): void {
     if (!this.isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.');
     const selected = state.device.selection, key = materialPrinterSelectionKey(selected);
-    if (!key || state.device.transport !== selected?.transport || (expected.selection != null && expected.selection !== key)) throw denied();
+    if (state.device.needsAttention || !key || state.device.transport !== selected?.transport ||
+        (expected.selection != null && expected.selection !== key)) throw denied();
     if (expected.requestPrinter != null && canonical(expected.requestPrinter) !== 'zebra') throw denied();
     if (expected.requestDriverUrl != null && expected.requestDriverUrl.trim() !== 'usb://local') throw denied();
     const { batch, resolved } = state.batch;

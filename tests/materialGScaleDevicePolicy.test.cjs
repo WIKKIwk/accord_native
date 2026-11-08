@@ -29,3 +29,23 @@ test('restricted restore and manual selection reject unsupported choices without
   await assert.rejects(store.select(wifi), /Printer ulanmagan/); await assert.rejects(store.select(godex), /Printer ulanmagan/);
   assert.deepEqual(writes, []); await store.select(usb); assert.equal(writes.length, 1); assert.equal(store.getSnapshot().selection, usb); store.dispose();
 });
+
+
+test('a rejected new choice leaves old selection visible but blocks every restricted write until a valid reselection', async () => {
+  const writes = [], deps = { preferences: { async saveLastPrintDevice() {}, async loadLastPrintDevice() { return null; } },
+    resolver: {}, async resolveSessionBluetooth() { return null; }, rememberSessionBluetooth() {}, async scan() { return { servers: [], candidateCount: 0 }; } };
+  const store = new GScaleDeviceStore(deps, value => safe.allowSelection(value));
+  await store.select(usb); assert.equal(store.getSnapshot().needsAttention, false);
+  await assert.rejects(store.select(godex), /Printer ulanmagan/);
+  assert.equal(store.getSnapshot().selection, usb); assert.equal(store.getSnapshot().needsAttention, true);
+  const active = { id: 'b', revision: 1, active: true, printer: 'zebra', driver_url: 'usb://local' };
+  for (const operation of ['start', 'stop', 'print', 'archive', 'reprint']) {
+    const batch = operation === 'stop' || operation === 'print' ? active : null;
+    const state = { device: store.getSnapshot(), draft: { printer: 'zebra' }, batch: { resolved: true, batch } };
+    try { safe.assertOperation(operation, state); writes.push(operation); } catch {}
+  }
+  assert.deepEqual(writes, []);
+  await store.select(usb); assert.equal(store.getSnapshot().needsAttention, false);
+  assert.doesNotThrow(() => safe.assertOperation('start', { device: store.getSnapshot(), draft: { printer: 'zebra' }, batch: { resolved: true, batch: null } }));
+  store.dispose();
+});
