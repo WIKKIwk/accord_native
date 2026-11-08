@@ -1,10 +1,11 @@
-import { ListItem, Text } from '@expo/ui';
+import { Text } from '@expo/ui';
 import { Button, Host, HStack, List, Section, VStack } from '@expo/ui/swift-ui';
-import { buttonStyle, contentShape, fixedSize, font, foregroundStyle, frame, lineLimit, listRowBackground, listStyle, padding, refreshable, shapes } from '@expo/ui/swift-ui/modifiers';
+import { buttonStyle, contentShape, fixedSize, font, foregroundStyle, frame, lineLimit, listStyle, padding, refreshable, shapes } from '@expo/ui/swift-ui/modifiers';
 import { PlatformColor } from 'react-native';
 import { useCustomerText } from './CustomerContext';
 import { CustomerEmptyStatusState, CustomerLoadingState, CustomerRetryState } from './CustomerStates';
-import { customerHomeRecord, customerStatusRecord, customerStatusRows } from './customerPresentation';
+import { CustomerStatusPanel } from './CustomerStatusPanel';
+import { customerHomeRecord, customerLayoutDirection, customerStatusRecord } from './customerPresentation';
 import type { CustomerStatusKind } from './customerStore';
 import { useCustomerHome, useCustomerStatus } from './useCustomerScreens';
 
@@ -13,11 +14,10 @@ type StatusProps = { kind: CustomerStatusKind; onOpenDetail: (id: string) => voi
 
 // @v2 CustomerHomeScreen
 export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
-  const state = useCustomerHome(), { text } = useCustomerText();
+  const state = useCustomerHome(), { locale, text } = useCustomerText();
   if (!state.loaded) return state.loading || !state.error ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
-  return <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(state.refresh)]}>
-    <Section>{customerStatusRows(state.summary).map(row => <ListItem key={row.kind} onPress={() => onOpenStatus(row.kind)}
-      modifiers={row.kind === 'pending' ? [listRowBackground(PlatformColor('secondarySystemFill'))] : undefined} trailing={<Text>{String(row.count)}</Text>}><Text>{text(row.titleKey)}</Text></ListItem>)}</Section>
+  return <Host style={{ flex: 1 }} layoutDirection={customerLayoutDirection(locale)}><List modifiers={[listStyle('insetGrouped'), refreshable(state.refresh)]}>
+    <CustomerStatusPanel summary={state.summary} onOpenStatus={onOpenStatus} />
     <Section title={text('recentShipmentsTitle')}>
       {state.records.length === 0 ? <Text>{text('noShipments')}</Text> : state.records.map(record => {
         const row = customerHomeRecord(record);

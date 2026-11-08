@@ -3,6 +3,12 @@ import type { CustomerSummary } from '../shared/dispatchRuntimeStores';
 import { trimCustomerInput } from './customerLogic';
 import type { CustomerStatusKind } from './customerStore';
 
+export type CustomerStatusPanelProps = { summary: CustomerSummary; onOpenStatus: (kind: CustomerStatusKind) => void };
+
+export function customerLayoutDirection(locale: string): 'leftToRight' | 'rightToLeft' {
+  return locale.toLowerCase().split(/[-_]/, 1)[0] === 'ur' ? 'rightToLeft' : 'leftToRight';
+}
+
 // V2 AppRetryState.contentWidthFor; parent padding still constrains narrow screens.
 export function customerRetryContentWidth(screenWidth: number): number {
   return Math.min(360, Math.max(280, screenWidth * 0.88));

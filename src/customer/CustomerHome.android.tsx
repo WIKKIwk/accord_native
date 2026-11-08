@@ -4,7 +4,8 @@ import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import type { DispatchRecord } from '../shared/notificationApi';
 import { useCustomerText } from './CustomerContext';
 import { CustomerEmptyStatusState, CustomerLoadingState, CustomerRetryState } from './CustomerStates';
-import { customerHomeRecord, customerStatusRecord, customerStatusRows } from './customerPresentation';
+import { CustomerStatusPanel } from './CustomerStatusPanel';
+import { customerHomeRecord, customerStatusRecord } from './customerPresentation';
 import type { CustomerStatusKind } from './customerStore';
 import { useCustomerHome, useCustomerStatus } from './useCustomerScreens';
 
@@ -15,16 +16,11 @@ type StatusProps = { kind: CustomerStatusKind; onOpenDetail: (id: string) => voi
 export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
   const state = useCustomerHome(), colors = useMaterialColors(), { text } = useCustomerText();
   if (!state.loaded) return state.loading || !state.error ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
-  const rows = customerStatusRows(state.summary);
   return <FlatList data={state.records} keyExtractor={item => item.id}
     refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}
     contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
     ListHeaderComponent={<View style={{ gap: 2 }}>
-      {rows.map((row, index) => <WorkerQueueCard key={row.kind} backgroundColor={row.kind === 'pending' ? colors.surfaceContainer : colors.surfaceContainerLow}
-        first={index === 0} last={index === rows.length - 1} onPress={() => onOpenStatus(row.kind)}>
-        <Text style={{ flex: 1, color: colors.onSurface, fontSize: 16 }}>{text(row.titleKey)}</Text>
-        <Text style={{ color: colors.onSurface, fontSize: 16 }}>{row.count}</Text>
-      </WorkerQueueCard>)}
+      <CustomerStatusPanel summary={state.summary} onOpenStatus={onOpenStatus} />
       <Text style={{ color: colors.onSurface, fontSize: 20, marginHorizontal: 24, marginTop: 16, marginBottom: 12 }}>{text('recentShipmentsTitle')}</Text>
     </View>}
     ListEmptyComponent={<Text style={{ color: colors.onSurfaceVariant, marginHorizontal: 24 }}>{text('noShipments')}</Text>}

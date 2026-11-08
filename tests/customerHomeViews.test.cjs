@@ -20,7 +20,7 @@ function load(file, overrides = {}) {
 }
 const logic = load('customerLogic.ts'), presentation = load('customerPresentation.ts', { './customerLogic': logic });
 const record = { id: 'dn', item_name: 'Product', item_code: 'P1', sent_qty: 3, uom: 'kg', note: 'note', created_label: 'date', status: 'pending' };
-function fixture(platform, state) {
+function fixture(platform, state, locale = 'uz') {
   const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': { ListItem: 'ListItem', Text: 'Text', Host: 'Host', Button: 'Button' },
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
     '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f], listRowBackground: v => ['background', v],
@@ -29,27 +29,25 @@ function fixture(platform, state) {
       shapes: { rectangle: () => ['rectangle'] } },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'highlight', onSurface: 'fg', onSurfaceVariant: 'muted' }) },
     'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
-    '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './CustomerContext': { useCustomerText: () => ({ text: key => key }) },
-    './CustomerStates': loadCustomerStates(platform), './customerPresentation': presentation,
+    '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './CustomerContext': { useCustomerText: () => ({ locale, text: key => key }) },
+    './CustomerStates': loadCustomerStates(platform), './CustomerStatusPanel': { CustomerStatusPanel: 'CustomerStatusPanel' }, './customerPresentation': presentation,
     './useCustomerScreens': { useCustomerHome: () => state, useCustomerStatus: () => state } };
   return load(`CustomerHome.${platform}.tsx`, mocks);
 }
 const state = { loading: false, loaded: true, error: null, summary: { pendingCount: 2, confirmedCount: 1, rejectedCount: 0 }, records: [record], refresh: async () => {} };
-test('iOS home exposes all status destinations and the shipment detail with native list rows', () => {
+test('iOS home supplies the real summary and status callback to its native panel and opens shipments', () => {
   const calls = [], screen = fixture('ios', state).CustomerHomeScreen({ onOpenStatus: kind => calls.push(kind), onOpenDetail: id => calls.push(id) });
-  const rows = nodes(screen, item => item.type === 'ListItem'); assert.equal(rows.length, 3);
-  assert.deepEqual(rows[0].props.modifiers, [['background', 'secondarySystemFill']]); assert.equal(rows[1].props.modifiers, undefined);
-  rows[0].props.onPress(); rows[1].props.onPress(); rows[2].props.onPress();
+  const panel = nodes(screen, item => item.type === 'CustomerStatusPanel')[0]; assert.equal(panel.props.summary, state.summary);
+  for (const kind of ['pending', 'confirmed', 'rejected']) panel.props.onOpenStatus(kind);
   const shipment = nodes(screen, item => item.type === 'Button')[0]; shipment.props.onPress();
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);
   assert.ok(nodes(shipment, item => item.type === 'Text' && item.props.children === 'P1').length);
 });
-test('Android home reuses queue cards, routes every status and opens shipment', () => {
+test('Android home supplies the real summary/status callback and reuses queue cards for shipments', () => {
   const calls = [], screen = fixture('android', state).CustomerHomeScreen({ onOpenStatus: kind => calls.push(kind), onOpenDetail: id => calls.push(id) });
   assert.equal(screen.type, 'FlatList');
-  const cards = nodes(screen.props.ListHeaderComponent, item => item.type === 'WorkerQueueCard'); assert.equal(cards.length, 3);
-  assert.equal(cards[0].props.backgroundColor, 'highlight'); assert.equal(cards[1].props.backgroundColor, 'bg');
-  cards.forEach(card => card.props.onPress());
+  const panel = nodes(screen.props.ListHeaderComponent, item => item.type === 'CustomerStatusPanel')[0]; assert.equal(panel.props.summary, state.summary);
+  for (const kind of ['pending', 'confirmed', 'rejected']) panel.props.onOpenStatus(kind);
   const shipment = screen.props.renderItem({ item: record, index: 0 }); shipment.props.onPress();
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);
 });
@@ -230,5 +228,12 @@ test('shipment previews retain exact fields and one real target with native intr
       assert.ok(row.props.children.props.modifiers.some(m => m[0] === 'contentShape' && m[1][0] === 'rectangle'));
       assert.ok(quantity.props.modifiers.some(m => m[0] === 'foregroundStyle' && m[1].color === 'secondaryLabel'));
     } else assert.equal(quantity.props.style.color, 'muted');
+  }
+});
+
+test('iOS Home follows the selected Urdu locale direction, including ur-PK', () => {
+  for (const [locale, direction] of [['uz', 'leftToRight'], ['en', 'leftToRight'], ['ru', 'leftToRight'], ['ur-PK', 'rightToLeft']]) {
+    const screen = fixture('ios', state, locale).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
+    assert.equal(screen.props.layoutDirection, direction);
   }
 });
