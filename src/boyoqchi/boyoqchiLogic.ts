@@ -36,10 +36,24 @@ export function boyoqchiAmount(raw: string): string {
   if (value.includes('.')) value = value.replace(/0+$/, '').replace(/\.$/, '');
   return value ? `${value} kg` : '—';
 }
+// Dart VM double.toInt() saturates at signed 64-bit limits and renders the exact integer.
+function dartIntegerText(value: number): string {
+  const limit = 2 ** 63;
+  if (value >= limit) return '9223372036854775807';
+  if (value <= -limit) return '-9223372036854775808';
+  const magnitude = Math.abs(value);
+  if (magnitude <= Number.MAX_SAFE_INTEGER) return String(value);
+  // Split the exact binary integer into 32-bit words, then into base 10^6.
+  // All intermediate products remain below 2^53, so no decimal digits are lost.
+  const high = Math.floor(magnitude / 2 ** 32), low = magnitude - high * 2 ** 32;
+  const tail = high * 967296 + low;
+  const head = high * 4294 + Math.floor(tail / 1000000);
+  return `${value < 0 ? '-' : ''}${head}${String(tail % 1000000).padStart(6, '0')}`;
+}
 export function boyoqchiNumber(raw: string): string {
   const value = returnedPaintDouble(raw);
   if (value === null) return raw;
-  if (Number.isInteger(value)) return String(value);
+  if (Number.isInteger(value)) return dartIntegerText(value);
   return value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
 }
 export function boyoqchiCategoryLabel(raw: string): string {
