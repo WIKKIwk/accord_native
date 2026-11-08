@@ -10,7 +10,7 @@ function createdLabelIsAfter(candidate: string, current: string): boolean {
   return candidate > current;
 }
 
-/** Pending branch of @v2 WerkaStore.breakdownItems. */
+/** @v2 _pendingBreakdownItems */
 export function werkaPendingBreakdown(items: readonly DispatchRecord[]): WerkaStatusBreakdownEntry[] {
   const grouped = new Map<string, WerkaStatusBreakdownEntry & { latestCreatedLabel: string }>();
   for (const item of items) {
@@ -30,7 +30,7 @@ export function werkaPendingBreakdown(items: readonly DispatchRecord[]): WerkaSt
       receiptCount: entry.receiptCount, totalSentQty: entry.totalSentQty, totalAcceptedQty: 0, totalReturnedQty: 0 }));
 }
 
-/** Pending branch of @v2 WerkaStore.detailItems. */
+/** @v2 _pendingDetailItems */
 export function werkaPendingDetailItems(items: readonly DispatchRecord[], supplierRef: string): DispatchRecord[] {
   const expected = supplierRef.trim();
   return items.filter(item => item.supplier_ref.trim() === expected);
