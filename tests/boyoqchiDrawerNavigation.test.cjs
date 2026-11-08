@@ -65,7 +65,6 @@ function harness(platform) {
     'expo-router': { router },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar() {} },
-    './BoyoqchiContext': { useBoyoqchiContext: () => ({ unread: 0 }) },
     './useBoyoqchiText': { useBoyoqchiText: () => value => value, useBoyoqchiGetter: () => value => value },
   }, 'tsx');
   function select(id) {

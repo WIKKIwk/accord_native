@@ -4,7 +4,7 @@ import { useBoyoqchiContext } from '../../../boyoqchi/BoyoqchiContext';
 import { useBoyoqchiGetter, useBoyoqchiText } from '../../../boyoqchi/useBoyoqchiText';
 export default function BoyoqchiTabs() {
   const getter = useBoyoqchiGetter(), t = useBoyoqchiText(), pathname = usePathname();
-  const { unread, chatClosing } = useBoyoqchiContext();
+  const { chatClosing } = useBoyoqchiContext();
   return <NativeTabs hidden={pathname.startsWith('/ios-boyoqchi/chat/') && !chatClosing} disableHiddenAnimation>
     <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
       <NativeTabs.Trigger.Label>{getter('homeNavTitle')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
@@ -14,7 +14,6 @@ export default function BoyoqchiTabs() {
       <NativeTabs.Trigger.Label>{getter('profileTitle')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="chat"><NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
       <NativeTabs.Trigger.Label>{t('Chat')}</NativeTabs.Trigger.Label>
-      <NativeTabs.Trigger.Badge hidden={unread <= 0} />
     </NativeTabs.Trigger>
   </NativeTabs>;
 }
