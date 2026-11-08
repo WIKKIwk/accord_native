@@ -4,7 +4,7 @@ import type { QolipReworkEntry } from './qolipReworkApi';
 type Prepared = { kind: 'confirm'; ids: string[]; scope: string };
 type ReturnResult = { kind: 'returned'; count: number } | { kind: 'session_changed' } | { kind: 'failed'; error: unknown } | null;
 type State = { entries: QolipReworkEntry[]; returned: boolean; selected: ReadonlySet<string>; query: string;
-  loading: boolean; error: unknown | null; saving: boolean };
+  loading: boolean; error: boolean; saving: boolean };
 type Dependencies = {
   load: () => Promise<QolipReworkEntry[]>;
   returnFromRework: (requestId: string, ids: string[]) => Promise<QolipReworkEntry[]>;
@@ -15,7 +15,7 @@ type Dependencies = {
 
 /** Reworks read, selection and return state. Platform views and the request-ID source remain open. */
 export class QolipReworksState {
-  private value: State = { entries: [], returned: false, selected: new Set(), query: '', loading: true, error: null, saving: false };
+  private value: State = { entries: [], returned: false, selected: new Set(), query: '', loading: true, error: false, saving: false };
   private active = true;
   private generation = 0;
   private readFuture = 0;
@@ -35,7 +35,7 @@ export class QolipReworksState {
   async load(): Promise<void> {
     if (!this.active) return;
     const scope = this.deps.scope(), generation = ++this.generation, future = ++this.readFuture;
-    this.update({ loading: true, error: null });
+    this.update({ loading: true, error: false });
     try {
       const entries = await this.deps.load();
       if (!this.active || generation !== this.generation || scope !== this.deps.scope()) return;
@@ -43,7 +43,7 @@ export class QolipReworksState {
       const openIds = new Set(entries.filter(entry => entry.is_open).map(entry => entry.id));
       this.update({ entries, selected: new Set([...this.value.selected].filter(id => openIds.has(id))) });
     } catch (error) {
-      if (this.active && future === this.readFuture) this.update({ error });
+      if (this.active && future === this.readFuture) this.update({ error: true });
       throw error;
     } finally { if (this.active && future === this.readFuture) this.update({ loading: false }); }
   }

@@ -7,7 +7,7 @@ import type { QolipMileageSheetProps } from './qolipMileageSheetProps';
 import { useQolipMileage } from './useQolipMileage';
 import { useQolipText } from './useQolipText';
 
-// The mileage sheet is not wired until a caller can open it from the reworks screen.
+// Opened by the reworks view; that view is not yet routed.
 export function QolipMileageSheet({ session, code }: QolipMileageSheetProps) {
   const { locale } = useQolipText(), state = useQolipMileage(session, code), { height } = useWindowDimensions();
   const t = (key: string, values: Record<string, unknown> = {}) => extensionText('qolipReworkText', key, locale, values);
