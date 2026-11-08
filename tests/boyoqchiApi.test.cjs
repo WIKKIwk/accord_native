@@ -14,8 +14,8 @@ function load(relative, mocks = {}) {
 }
 const controls = load('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': {} });
 const model = load('boyoqchi/returnedPaintModel', { '../workerControlsApi': controls });
-function api(fetch) {
-  return load('boyoqchi/returnedPaintApi', { '../authorizedFetch': { authorizedFetch: fetch },
+function api(fetch, imageFetch = fetch) {
+  return load('boyoqchi/returnedPaintApi', { '../authorizedFetch': { authorizedFetch: fetch, authorizedImageFetch: imageFetch },
     '../workerControlsApi': controls, './returnedPaintModel': model });
 }
 const session = { baseUrl: 'https://example.test' };
@@ -101,4 +101,64 @@ test('requests use the existing same-origin authenticated transport', async () =
     ]);
     assert.equal(seen[1].init.headers.get('content-type'), 'application/json');
   } finally { global.fetch = originalFetch; }
+});
+
+test('ordinary image upload validates apparatus and sends bytes, canonical parameters and sanitized filename', async () => {
+  let sent;
+  const client = api(async (_s, url, init) => { sent = { url, init }; return new Response(JSON.stringify({ image: {
+    image_id: 'image-1', image_name: 'x.jpg', image_mime: 'image/jpeg', image_size_bytes: 3, image_url: '/image/1' } })); });
+  await assert.rejects(client.uploadReturnedPaintImage(session, { orderId: 'o1', apparatus: 'Display name',
+    filename: 'x.jpg', mime: 'image/jpeg', bytes: Uint8Array.of(1, 2, 3) }), e => e.code === 'apparatus_id_invalid');
+  const result = await client.uploadReturnedPaintImage(session, { orderId: ' order 1 ', apparatus: ' apparatus:default:bosma_7 ',
+    filename: ' gul🌸.jpg ', mime: 'image/jpeg', bytes: Uint8Array.of(1, 2, 3) });
+  assert.equal(sent.url, '/v1/mobile/returned-paint/images?order_id=order+1&apparatus=apparatus%3Adefault%3Abosma_7');
+  assert.equal(sent.init.method, 'POST');
+  assert.deepEqual(sent.init.headers, { 'Content-Type': 'image/jpeg', 'x-file-name': 'gul.jpg' });
+  assert.deepEqual([...sent.init.body], [1, 2, 3]);
+  assert.equal(result.image_url, '/image/1');
+  await client.uploadReturnedPaintImage(session, { orderId: 'o1', apparatus: 'apparatus:default:bosma_7',
+    filename: '🌸', mime: 'image/png', bytes: new Uint8Array() });
+  assert.equal(sent.init.headers['x-file-name'], 'qaytarilgan-boyoq.jpg');
+});
+
+test('training image upload and delete use their own path and preserve the original filename', async () => {
+  const calls = [];
+  const client = api(async (_s, url, init) => { calls.push({ url, init });
+    return new Response(JSON.stringify({ image: { image_id: 'img', image_name: 'rang.png', image_size_bytes: 2 } })); });
+  await client.uploadReturnedPaintImage(session, { orderId: ' training-1 ', apparatus: 'apparatus:default:bosma_7',
+    filename: 'rang🌸.png', mime: 'image/png', bytes: Uint8Array.of(5, 6) });
+  assert.equal(calls[0].url, '/v1/mobile/admin/training/images');
+  assert.equal(calls[0].init.headers['x-file-name'], 'rang🌸.png');
+  await client.deleteReturnedPaintImage(session, ' image id ', 'training-1');
+  assert.equal(calls[1].url, '/v1/mobile/admin/training/images?id=image+id');
+  assert.equal(calls[1].init.method, 'DELETE');
+  await client.deleteReturnedPaintImage(session, '   ', 'training-1');
+  assert.equal(calls.length, 2);
+});
+
+test('ordinary image deletion and failed upload preserve source status and errors', async () => {
+  let fail = false, call;
+  const client = api(async (_s, url, init) => { call = { url, init }; return fail
+    ? new Response(JSON.stringify({ error: '  denied  ' }), { status: 403 }) : new Response('{}'); });
+  await client.deleteReturnedPaintImage(session, ' id /1 ');
+  assert.equal(call.url, '/v1/mobile/returned-paint/images?id=id+%2F1');
+  assert.equal(call.init.method, 'DELETE');
+  fail = true;
+  await assert.rejects(client.uploadReturnedPaintImage(session, { orderId: 'o', apparatus: 'apparatus:default:bosma_7',
+    filename: 'x.jpg', mime: 'image/jpeg', bytes: Uint8Array.of(2) }), e =>
+    e.code === 'returned_paint_image_upload_failed' && e.message === 'denied' && e.statusCode === 403);
+  await assert.rejects(client.deleteReturnedPaintImage(session, 'id'), e => e.code === 'returned_paint_image_delete_failed' && e.message === 'denied');
+});
+
+test('download uses the authenticated image transport and rejects missing, empty or unsuccessful images', async () => {
+  let url, response = new Response(Uint8Array.of(1, 2));
+  const client = api(async () => { throw Error('wrong transport'); }, async (_s, path) => { url = path; return response; });
+  const image = { image_id: 'i', image_name: '', image_mime: '', image_size_bytes: 2, image_url: '/image/1' };
+  assert.deepEqual([...await client.downloadReturnedPaintImage(session, image)], [1, 2]);
+  assert.equal(url, 'https://example.test/image/1');
+  await assert.rejects(client.downloadReturnedPaintImage(session, { ...image, image_url: '' }), e => e.code === 'returned_paint_image_url_missing');
+  response = new Response(new Uint8Array());
+  await assert.rejects(client.downloadReturnedPaintImage(session, image), e => e.code === 'returned_paint_image_download_failed');
+  response = new Response('{"error":"bad_image"}', { status: 404 });
+  await assert.rejects(client.downloadReturnedPaintImage(session, image), e => e.message === 'bad_image' && e.statusCode === 404);
 });

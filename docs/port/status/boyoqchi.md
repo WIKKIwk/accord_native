@@ -1,7 +1,7 @@
 # boyoqchi
 
 Status: part 1 of 1 in progress
-Stopped at: Models, pure rules, request-list and completion live paths, image URL resolution, and role-scoped draft persistence. Continue the remaining API, views, routes, audit and gates.
+Stopped at: Models, pure rules, draft persistence, request-list, completion and image API live paths. Continue the views, routes, unresolved API behavior, audit and gates.
 
 ## Baseline comparison evidence
 
@@ -24,7 +24,7 @@ Source Git objects `7c87a54e` and `f11910bb` were compared without modifying V2.
 |---|---|---|
 | Numeric JSON | `ReturnedPaintItemInput.fromJson`, `ReturnedPaintCalculation.fromJson` | JS JSON parsing cannot recover whether a numeric token was `1` or `1.0` or represent every large integer. The current backend serializes these decimal fields as strings; compare legacy numeric payloads before parity is claimed. Integer-like map keys may also have a different iteration order. |
 | Returned-paint draft persistence | `ReturnedPaintDraftStore` | Full image metadata, legacy migration, serialized writes and actor/request scope have focused tests using the new role-owned file adapter. Verify actual Expo filesystem behavior on iOS and Android phones. Worker draft behavior is unchanged. |
-| Boyoqchi APIs, UI and routes | `.port/role-boyoqchi.md` | Six of the nine listed API methods remain, along with both platform surfaces, sheet/dialog behavior and role navigation. Request-list and completion live paths and image URL resolution are implemented but still require the full role audit. |
+| Boyoqchi APIs, UI and routes | `.port/role-boyoqchi.md` | Image upload, delete and download live paths are implemented with focused source-derived tests but remain unchecked pending the training error and cross-origin items below. The unrestricted `returnedPaintImageHeaders` helper is not exposed. Both platform surfaces, sheet/dialog behavior, role navigation and full audit remain. |
 | Training image errors | `uploadTrainingReturnedPaintImage`, `deleteTrainingReturnedPaintImage`, `_adminProductionMapException` | The existing shared production-map error helper is incomplete relative to V2. Resolve its full mapping before marking the training-image paths and callers complete; do not change the protected worker file in this role. |
 | Image origin | `returnedPaintImageUrl`, `downloadReturnedPaintImage` | V2 attaches bearer headers even to absolute external URLs; the existing native transport restricts authenticated requests to the server origin. Do not weaken credential protection; confirm required cross-origin behavior. |
 | Text gate | `port_ledger.mjs` `scopeFiles` | Unqualified `_refresh` and `_orderLabel` tags incorrectly bring GScale and Preparation folders into the Boyoqchi text scan. Scope or justify each discrepancy without modifying protected roles. |
@@ -44,7 +44,7 @@ Source Git objects `7c87a54e` and `f11910bb` were compared without modifying V2.
 ## Checkpoint verification
 
 - `v2_oracle.sh test/returned_paint_models_test.dart test/returned_paint_draft_store_test.dart test/boyoqchi_astatka_screen_test.dart` against isolated `f11910bb`: 10 passed. The oracle uses a temporary export, not a device.
-- `node --test tests/boyoqchi*.test.cjs`: 19 passed, 0 failed. Cases are source-derived; no V2 HTTP fixture exists for these requests. Request tests include the existing same-origin authenticated transport; the filesystem adapter test uses a mock, not a device.
+- `node --test tests/boyoqchi*.test.cjs`: 23 passed, 0 failed. Cases are source-derived; no V2 HTTP fixture exists for these requests. Request tests include the existing same-origin authenticated transport; the filesystem adapter test uses a mock, not a device.
 - `npx tsc --noEmit -p tsconfig.ios.json`: passed after Expo regenerated ignored `.expo/types/router.d.ts` using an offline local Metro session. No simulator or device was started.
 - `npx expo lint`: passed.
 - `node .agents/skills/accord-port/scripts/port_ledger.mjs check`: passed with 8 repository-wide endpoint warnings outside this checkpoint.
