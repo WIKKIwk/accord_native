@@ -11,8 +11,9 @@ export function secureChatAvailable(): boolean {
 /** Reject arbitrary URLs before a ticket can cross the native bridge. */
 export function secureChatDestination(session: Session, rawUrl: string): { origin: string; ticket: string } {
   if (!activeSessionToken(session)) throw new Error('Sessiya tugagan.');
-  const base = new URL(session.baseUrl);
-  const target = new URL(rawUrl);
+  let base: URL, target: URL;
+  try { base = new URL(session.baseUrl); target = new URL(rawUrl); }
+  catch { throw new Error('Server manzili noto‘g‘ri.'); }
   const expected = `wss://${base.host}`;
   let parameters = 0;
   target.searchParams.forEach(() => { parameters++; });
@@ -42,7 +43,11 @@ export function secureChatSocket(session: Session, rawUrl: string): ChatLiveSock
     get readyState() { return readyState; },
     onopen: null, onmessage: null, onerror: null, onclose: null,
     send(value) {
-      if (closed || !id || readyState !== 1 || !current() || typeof value !== 'string' || !native.send(id, value)) {
+      let sent = false;
+      if (!closed && id && readyState === 1 && current() && typeof value === 'string') {
+        try { sent = native.send(id, value); } catch { /* Closing below also handles a destroyed native module. */ }
+      }
+      if (!sent) {
         socket.close();
         throw new Error('Chat aloqasi ochilmadi.');
       }
@@ -53,7 +58,8 @@ export function secureChatSocket(session: Session, rawUrl: string): ChatLiveSock
       readyState = 3;
       subscription?.remove();
       unregister();
-      try { if (id) native.stop(id); } finally { void Promise.resolve().then(() => socket.onclose?.({} as CloseEvent)); }
+      try { if (id) native.stop(id); } catch { /* A destroyed native module is already stopped. */ }
+      void Promise.resolve().then(() => socket.onclose?.({} as CloseEvent));
     },
   };
   const onEvent = (event: NativeChatSocketEvent) => {
@@ -70,12 +76,12 @@ export function secureChatSocket(session: Session, rawUrl: string): ChatLiveSock
     subscription = native.addListener('onChatSocket', onEvent);
     unregister = registerSessionResetHook(async () => { socket.close(); });
     id = native.open(origin, ticket);
-  } catch (error) {
+  } catch {
     closed = true;
     subscription?.remove();
     unregister();
     try { if (id) native.stop(id); } catch { /* Opening failed before a native socket existed. */ }
-    throw error;
+    throw new Error('Chat aloqasi ochilmadi.');
   }
   return socket;
 }

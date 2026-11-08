@@ -14,13 +14,13 @@ function load(file, mocks) {
 }
 
 function fixture(available = true) {
-  let active, sequence = 0;
+  let active, sequence = 0, failSend = false, failStop = false;
   const hooks = new Set(), callbacks = [], calls = [];
   const native = {
     addListener: (_name, callback) => { callbacks.push(callback); return { remove() {} }; },
     open: (origin, ticket) => { const id = String(++sequence); calls.push(['open', id, origin, ticket]); return id; },
-    stop: id => calls.push(['stop', id]),
-    send: (id, value) => { calls.push(['send', id, value]); return true; },
+    stop: id => { calls.push(['stop', id]); if (failStop) throw new Error('native destroyed'); },
+    send: (id, value) => { calls.push(['send', id, value]); if (failSend) throw new Error('native destroyed'); return true; },
   };
   const api = load('shared/chat/chatSecureSocket.ts', {
     '../../../modules/accord-chat-secure/src/AccordChatSecureModule': { chatSecureNativeModule: () => available ? native : null },
@@ -30,6 +30,7 @@ function fixture(available = true) {
   const session = { baseUrl: 'https://erp.example', token: 'synthetic-session', profile: { role: 'customer', ref: 'a' } };
   active = session;
   return { ...api, session, calls, callbacks, activate: value => { active = value; },
+    failNative: () => { failSend = true; failStop = true; },
     reset: async () => { for (const hook of [...hooks]) await hook(); },
     event: event => { for (const callback of callbacks) callback(event); } };
 }
@@ -45,6 +46,20 @@ test('secure destination is exactly the active session origin and fixed Chat pat
   }
   f.activate(null);
   assert.throws(() => f.secureChatDestination(f.session, 'wss://erp.example/v1/mobile/chat/live?ticket=synthetic'));
+});
+
+test('destroyed native send and stop close cleanly without breaking account reset', async () => {
+  const f = fixture();
+  const socket = f.secureChatSocket(f.session, 'wss://erp.example/v1/mobile/chat/live?ticket=synthetic');
+  let closed = 0;
+  socket.onclose = () => closed++;
+  f.event({ session: '1', type: 'open', value: '' });
+  f.failNative();
+  assert.throws(() => socket.send('synthetic-ping'), /Chat aloqasi ochilmadi/);
+  await f.reset();
+  await Promise.resolve();
+  assert.equal(closed, 1);
+  assert.equal(socket.readyState, 3);
 });
 
 test('missing development module fails closed without opening a socket', () => {

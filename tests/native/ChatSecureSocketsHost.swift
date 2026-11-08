@@ -44,6 +44,9 @@ private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
     let firstID = try ChatSocketIds.next(), secondID = try ChatSocketIds.next()
     let localOrigin = "https://127.0.0.1:\(port)"
     try firstModule.open(id: firstID, origin: localOrigin, ticket: "synthetic-ticket")
+    require(firstModule.send(id: firstID, value: "synthetic-ping"), "queued send")
+    firstModule.stop(id: firstID)
+    require(!firstModule.send(id: firstID, value: "after-stop"), "send after stop")
     firstModule.shutdown()
     eventLock.lock(); let afterShutdown = eventsA; eventLock.unlock()
     // A separate module instance still owns a separate URLSession.

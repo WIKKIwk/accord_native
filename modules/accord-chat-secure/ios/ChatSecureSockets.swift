@@ -78,12 +78,12 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
 
   func send(id: String, value: String) -> Bool {
     lock.lock()
-    let task = entries[id]
-    lock.unlock()
-    guard let task else { return false }
+    guard let task = entries[id] else { lock.unlock(); return false }
+    // Enqueue while holding the same lock as stop: nothing can be sent after stop returns.
     task.send(.string(value)) { [weak self] error in
       if error != nil { self?.finish(task: task, error: true) }
     }
+    lock.unlock()
     return true
   }
 
