@@ -25,7 +25,7 @@ export function CustomerNotificationsScreen({ onOpenDetail, onClearActionChanged
   return <>
     {showLoading ? <CustomerLoadingState /> : <FlatList data={state.records} keyExtractor={item => item.id} contentContainerStyle={{ flexGrow: 1, paddingTop: 8, paddingBottom: 24 }}
       refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}
-      ListHeaderComponent={state.records.length ? <Text style={{ color: colors.onSurface, fontSize: 20, marginHorizontal: 24, marginVertical: 12 }}>{text('shipmentsFlowTitle')}</Text> : undefined}
+      ListHeaderComponent={state.records.length ? <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700', marginHorizontal: 24, marginVertical: 12 }}>{text('shipmentsFlowTitle')}</Text> : undefined}
       ListEmptyComponent={<View style={{ flexGrow: 1 }}>{showRetry ? <CustomerRetryState retry={state.refresh} /> : <CustomerEmptyFeedState />}</View>}
       renderItem={({ item, index }: { item: DispatchRecord; index: number }) => {
         const row = customerNotificationRecord(item), highlighted = state.highlightedIds.has(item.id);

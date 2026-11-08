@@ -51,6 +51,15 @@ test('both notification views mark the tapped item seen before opening it', asyn
     else assert.ok(row.props.modifiers.some(m => m[0] === 'background' && m[1] === 'secondarySystemFill'));
   }
 });
+
+test('Android populated feed heading uses V2 titleLarge emphasis', () => {
+  const state = { loaded: true, loading: false, error: null, records: [record], highlightedIds: new Set(),
+    refresh: async () => {}, markSeen: async () => {}, clearAll: async () => {} };
+  const screen = fixture('android', state).CustomerNotificationsScreen({ onOpenDetail() {} });
+  const heading = nodes(screen, n => n.type === 'FlatList')[0].props.ListHeaderComponent;
+  assert.equal(heading.props.children, 'shipmentsFlowTitle');
+  assert.equal(heading.props.style.fontSize, 20); assert.equal(heading.props.style.fontWeight, '700');
+});
 test('clear action presents V2 confirmation and only its confirm callback clears', async () => {
   for (const platform of ['ios', 'android']) {
     let clearAction, clears = 0;

@@ -51,6 +51,12 @@ test('Android home supplies the real summary/status callback and reuses queue ca
   const shipment = screen.props.renderItem({ item: record, index: 0 }); shipment.props.onPress();
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);
 });
+
+test('Android recent shipments heading uses V2 titleLarge emphasis', () => {
+  const screen = fixture('android', state).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
+  const title = nodes(screen.props.ListHeaderComponent, item => item.type === 'Text' && item.props.children === 'recentShipmentsTitle')[0];
+  assert.equal(title.props.style.fontSize, 20); assert.equal(title.props.style.fontWeight, '700');
+});
 test('both platforms show loading before the initial bootstrap and retry after an initial failure', () => {
   for (const platform of ['ios', 'android']) {
     const views = fixture(platform, { ...state, loaded: false, loading: false, error: null });

@@ -21,7 +21,7 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
     contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
     ListHeaderComponent={<View style={{ gap: 2 }}>
       <CustomerStatusPanel summary={state.summary} onOpenStatus={onOpenStatus} />
-      <Text style={{ color: colors.onSurface, fontSize: 20, marginHorizontal: 24, marginTop: 16, marginBottom: 12 }}>{text('recentShipmentsTitle')}</Text>
+      <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700', marginHorizontal: 24, marginTop: 16, marginBottom: 12 }}>{text('recentShipmentsTitle')}</Text>
     </View>}
     ListEmptyComponent={<Text style={{ color: colors.onSurfaceVariant, marginHorizontal: 24 }}>{text('noShipments')}</Text>}
     renderItem={({ item, index }: { item: DispatchRecord; index: number }) => {
