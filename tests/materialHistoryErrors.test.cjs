@@ -18,8 +18,9 @@ function compile(file, mocks = {}) {
 const exceptions = compile('shared/mobileApiException');
 const controls = compile('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': {} });
 const dart = compile('shared/dartApparatus', { '../workerControlsApi': controls });
+const values = compile('material/materialHistoryValueText');
 const mapper = compile('material/materialHistoryErrors', { '../shared/mobileApiException': exceptions,
-  '../shared/dartApparatus': dart, './materialHistoryErrorMessages': compile('material/materialHistoryErrorMessages') });
+  '../shared/dartApparatus': dart, './materialHistoryErrorMessages': compile('material/materialHistoryErrorMessages'), './materialHistoryValueText': values });
 const error = (payload, status = 400, requestId) => mapper.materialHistoryResponseError({ status,
   headers: new Headers(requestId === undefined ? {} : { 'x-request-id': requestId }) }, payload);
 
@@ -133,7 +134,7 @@ test('remaining dynamic progress and store branches keep f119 wording', () => {
 
 test('History presentation recognizes the shared exception and appends the source HTTP status once', () => {
   const presentation = compile('material/materialHistoryPresentation', { '../shared/mobileApiException': exceptions,
-    '../shared/dartApparatus': dart, '../workerControlsApi': controls });
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls, './materialHistoryValueText': values });
   assert.equal(presentation.materialHistoryErrorMessage(error({ error: 'forbidden' }, 403)),
     'Bu amal sizning rolingiz uchun ruxsat etilmagan (403)');
   assert.equal(presentation.materialHistoryErrorMessage(error({}, 500)),
@@ -145,7 +146,7 @@ test('History API uses the role-local adapter for non-404 responses and preserve
   let response;
   const api = compile('material/materialHistoryApi', { '../authorizedFetch': { authorizedFetch: async () => response },
     '../shared/mobileApiException': exceptions, '../shared/dartApparatus': dart, '../workerControlsApi': controls,
-    './materialHistoryErrors': mapper });
+    './materialHistoryErrors': mapper, './materialHistoryValueText': values });
   for (const [status, payload, message] of [[403, { error: 'forbidden' }, 'Bu amal sizning rolingiz uchun ruxsat etilmagan'],
     [503, {}, 'Homashyo tarixi yuklanmadi. Serverda vaqtinchalik muammo yuz berdi. Keyinroq qayta urinib ko‘ring.']]) {
     response = new Response(JSON.stringify(payload), { status, headers: { 'x-request-id': 'trace' } });

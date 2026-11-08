@@ -4,11 +4,11 @@ import { MobileApiException } from '../shared/mobileApiException';
 import { dartTrim, isAsciiCanonicalApparatusId } from '../shared/dartApparatus';
 import { WorkerControlException } from '../workerControlsApi';
 import { materialHistoryResponseError } from './materialHistoryErrors';
+import { materialHistoryOptionalText as text } from './materialHistoryValueText';
 
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): ObjectValue | null => value !== null && typeof value === 'object' && !Array.isArray(value)
   ? value as ObjectValue : null;
-const text = (value: unknown): string => value == null ? '' : String(value);
 const number = (value: unknown, integer = false): number => {
   if (value == null) return 0;
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError('Invalid raw material event number');
@@ -39,7 +39,7 @@ export function rawMaterialEvent(raw: unknown): AdminRawMaterialEvent {
     actor_display_name: text(row.actor_display_name), owner_role: text(row.owner_role), owner_ref: text(row.owner_ref),
     owner_display_name: text(row.owner_display_name), source_type: text(row.source_type), source_id: text(row.source_id),
     occurred_at_unix: number(row.occurred_at_unix, true), recorded_at_unix: number(row.recorded_at_unix, true),
-    payload_json: object(row.payload_json) ?? {},
+    payload_json: { ...object(row.payload_json) },
   };
 }
 

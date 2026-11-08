@@ -15,12 +15,13 @@ const errors = load('shared/mobileApiException');
 function setup(fetch) {
   const controls = load('workerControlsApi', { './authorizedFetch': { authorizedFetch: fetch }, './sessionReadScope': { sessionReadScope: () => '' } });
   const dart = load('shared/dartApparatus', { '../workerControlsApi': controls });
+  const values = load('material/materialHistoryValueText');
   const mapper = load('material/materialHistoryErrors', { '../shared/dartApparatus': dart, '../shared/mobileApiException': errors,
-    './materialHistoryErrorMessages': load('material/materialHistoryErrorMessages') });
+    './materialHistoryErrorMessages': load('material/materialHistoryErrorMessages'), './materialHistoryValueText': values });
   const api = load('material/materialHistoryApi', { '../authorizedFetch': { authorizedFetch: fetch }, '../shared/mobileApiException': errors,
-    '../shared/dartApparatus': dart, '../workerControlsApi': controls, './materialHistoryErrors': mapper });
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls, './materialHistoryErrors': mapper, './materialHistoryValueText': values });
   const presentation = load('material/materialHistoryPresentation', { '../shared/mobileApiException': errors,
-    '../shared/dartApparatus': dart, '../workerControlsApi': controls });
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls, './materialHistoryValueText': values });
   return { ...api, ...presentation };
 }
 const station = 'apparatus:default:bosma_7';
@@ -106,4 +107,50 @@ test('history filters, safe labels and detail rows use Dart whitespace at both e
 test('unverified non-ASCII history apparatus IDs fail closed rather than using JS-only canonical rules', () => {
   const api = setup(() => {});
   assert.throws(() => api.rawMaterialEvent({ apparatus: 'apparatus:default:\u037f' }), error => error.code === 'apparatus_id_invalid');
+});
+
+// Source-derived cases: AdminRawMaterialEvent.fromJson uses ?.toString() for each text field.
+// These are not Flutter oracle results; decoded number spelling and numeric map-key order remain open.
+test('event text fields retain Dart list/map delimiters and nested null/boolean values', () => {
+  const api = setup(() => {}), fields = ['event_id', 'event_type', 'warehouse', 'barcode', 'item_code', 'item_name', 'uom',
+    'stock_status_before', 'stock_status_after', 'order_id', 'actor_role', 'actor_ref', 'actor_display_name',
+    'owner_role', 'owner_ref', 'owner_display_name', 'source_type', 'source_id'];
+  for (const field of fields) {
+    assert.equal(api.rawMaterialEvent({ [field]: ['Ali', true, null, { short: 'code', active: false }] })[field],
+      '[Ali, true, null, {short: code, active: false}]');
+    assert.equal(api.rawMaterialEvent({ [field]: { first: ['A', 'B'], second: null } })[field], '{first: [A, B], second: null}');
+    assert.equal(api.rawMaterialEvent({ [field]: null })[field], ''); assert.equal(api.rawMaterialEvent({})[field], '');
+    assert.equal(api.rawMaterialEvent({ [field]: false })[field], 'false'); assert.equal(api.rawMaterialEvent({ [field]: 2.5 })[field], '2.5');
+    assert.equal(api.rawMaterialEvent({ [field]: '\u0085 untrimmed \u0085' })[field], '\u0085 untrimmed \u0085');
+  }
+  assert.equal(api.rawMaterialEvent({ item_name: JSON.parse('{"toString":"literal","__proto__":"data"}') }).item_name,
+    '{toString: literal, __proto__: data}');
+});
+
+test('source-style container text preserves person-ref concealment and list titles', () => {
+  const api = setup(() => {}), event = api.rawMaterialEvent({ event_type: 'receipt_posted', item_name: ['Rulon', 'Qog‘oz'],
+    actor_display_name: { name: 'Ali' }, actor_ref: 'worker:1', owner_display_name: { name: 'Vali' }, owner_ref: { ref: 'worker:2' } });
+  assert.equal(api.materialHistoryTitle(event), '[Rulon, Qog‘oz] kirim');
+  const details = api.materialHistoryDetails(event, []);
+  assert.ok(!details.some(row => row.label === 'Bajargan' || row.label === 'Egasi'));
+  assert.ok(!details.some(row => row.value.includes('[object Object]')));
+  const short = api.materialHistoryDetails(api.rawMaterialEvent({ actor_ref: ['Ali', 'Vali'], owner_ref: [null, 7, true] }), []);
+  assert.ok(short.some(row => row.label === 'Bajargan' && row.value === '[Ali, Vali]'));
+  assert.ok(short.some(row => row.label === 'Egasi' && row.value === '[null, 7, true]'));
+});
+
+test('delivery name uses the same source-style nullable container string conversion', () => {
+  const api = setup(() => {});
+  const details = api.materialHistoryDetails(api.rawMaterialEvent({ event_type: 'delivery_received',
+    payload_json: { delivered_by: { name: ['Ali', { department: 'Supply' }, false, null] } } }), []);
+  assert.ok(details.some(row => row.label === 'Olib kelgan' && row.value === '[Ali, {department: Supply}, false, null]'));
+  const absent = api.materialHistoryDetails(api.rawMaterialEvent({ event_type: 'delivery_received', payload_json: { delivered_by: { name: null } } }), []);
+  assert.ok(!absent.some(row => row.label === 'Olib kelgan'));
+});
+
+test('event payload decoder makes the same shallow map copy as f119 _jsonObject', () => {
+  const api = setup(() => {}), raw = { delivered_by: { name: 'Ali' } }, event = api.rawMaterialEvent({ payload_json: raw });
+  assert.notEqual(event.payload_json, raw); assert.equal(event.payload_json.delivered_by, raw.delivered_by);
+  raw.other = 'later'; assert.equal(Object.hasOwn(event.payload_json, 'other'), false);
+  for (const value of [null, [], 'not a map', 7, false]) assert.deepEqual(api.rawMaterialEvent({ payload_json: value }).payload_json, {});
 });

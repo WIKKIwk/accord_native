@@ -1,20 +1,13 @@
 import { dartTrim } from '../shared/dartApparatus';
 import { MobileApiException } from '../shared/mobileApiException';
 import { materialHistoryErrorMessages } from './materialHistoryErrorMessages';
+import { materialHistoryJsonText as jsonText, materialHistoryOptionalText } from './materialHistoryValueText';
 
 type JsonObject = Record<string, unknown>;
 const object = (value: unknown): JsonObject | null => value !== null && typeof value === 'object' && !Array.isArray(value)
   ? value as JsonObject : null;
 
-// Dart's JSON containers use comma-space delimiters and unquoted string values in toString().
-// JSON numeric lexemes and integer-like map-key order have already been lost by response.json().
-function jsonText(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(jsonText).join(', ')}]`;
-  const row = object(value);
-  if (row) return `{${Object.entries(row).map(([key, item]) => `${key}: ${jsonText(item)}`).join(', ')}}`;
-  return String(value);
-}
-const text = (value: unknown): string => value == null ? '' : dartTrim(jsonText(value));
+const text = (value: unknown): string => dartTrim(materialHistoryOptionalText(value));
 function integer(value: unknown): number | null {
   if (value == null) return null;
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError();

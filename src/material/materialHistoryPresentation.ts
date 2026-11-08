@@ -3,6 +3,7 @@ import { MobileApiException } from '../shared/mobileApiException';
 import { dartTrim } from '../shared/dartApparatus';
 import { WorkerControlException } from '../workerControlsApi';
 import type { AdminRawMaterialEvent } from './materialHistoryApi';
+import { materialHistoryOptionalText } from './materialHistoryValueText';
 
 const label = (value: string, values: Record<string, string>) => values[dartTrim(value).toLowerCase()] ?? dartTrim(value).toLowerCase();
 const eventLabels: Record<string, string> = {
@@ -72,7 +73,7 @@ export function materialHistoryDetails(event: AdminRawMaterialEvent, catalog: Pi
   add('Zakaz', event.order_id); add('Apparat', materialFriendlyApparatus(event.apparatus, catalog));
   if (event.event_type === 'delivery_received') {
     const person = event.payload_json.delivered_by;
-    if (person && typeof person === 'object' && !Array.isArray(person)) add('Olib kelgan', String((person as Record<string, unknown>).name ?? ''));
+    if (person && typeof person === 'object' && !Array.isArray(person)) add('Olib kelgan', materialHistoryOptionalText((person as Record<string, unknown>).name));
   }
   const actor = dartTrim(event.actor_display_name), owner = dartTrim(event.owner_display_name);
   add(event.event_type === 'delivery_received' ? 'Qabul qilgan' : 'Bajargan', actor && !actor.includes(':') ? actor : reference(event.actor_ref));
