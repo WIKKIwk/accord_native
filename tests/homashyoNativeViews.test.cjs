@@ -105,3 +105,48 @@ for (const platform of ['ios', 'android']) {
     assert.equal(find(tree, n => n.props?.label === 'Eni (mm)')[0].props.enabled, false);
   });
 }
+function details(platform, printerLabel = null) {
+  const calls = [], react = { useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => { fn(); } };
+  const swift = new Proxy({}, { get: (_, name) => name });
+  const compose = new Proxy({ useMaterialColors: () => ({ onSurface: 'text', onSurfaceVariant: 'muted', surface: 'surface' }) }, { get: (o, name) => o[name] ?? name });
+  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }),
+    '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View' },
+    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText' },
+    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitModel': model, './rawSplitHistoryPresentation': presentation };
+  const views = load(`RawSplitDetails.${platform}.tsx`, mocks, true);
+  const props = { result, printerLabel, showWifiSelector: printerLabel === 'wifi', wifiPrinter: 'zebra', onSelectPrinter: () => calls.push('picker'),
+    onWifiChanged: value => calls.push(['wifi', value]), onReprint: async value => { calls.push(['one', value.barcode]); },
+    onReprintAll: async () => { calls.push('all'); }, onError: error => { calls.push(['error', error]); } };
+  return { calls, props, resultTree: () => views.RawSplitDetails(props), issueTree: () => views.RawSplitIssueDetails({ issue, hasResult: true }) };
+}
+for (const platform of ['ios', 'android']) {
+  test(`${platform} detail sheets show measured data and call reprint handlers`, async () => {
+    const h = details(platform), tree = h.resultTree();
+    assert.match(text(tree), /100 → 98 kg/); assert.match(text(tree), /Manba QR: parent/);
+    assert.match(text(tree), /Brutto: 99 kg/); assert.match(text(tree), /Babina: 1 kg/); assert.match(text(tree), /child/);
+    const buttonType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
+    find(tree, n => n.type === buttonType && n.props.label === 'Printer tanlash')[0].props.onPress();
+    if (platform === 'ios') find(tree, n => n.type === 'Button' && n.props.label === 'Shu rulonni qayta chop etish')[0].props.onPress();
+    else find(tree, n => n.type === 'IconButton')[0].props.onClick();
+    await new Promise(resolve => setImmediate(resolve));
+    find(tree, n => n.type === buttonType && n.props.label === 'Barchasini qayta chop etish')[0].props.onPress();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(h.calls, ['picker', ['one', 'child'], 'all']);
+    const issueTree = h.issueTree(); assert.match(text(issueTree), /Muammo bo‘yicha rulonlar saqlangan/);
+    assert.match(text(issueTree), /Og‘irlik: 99 kg/); assert.match(text(issueTree), /Netto: 98 kg/);
+  });
+  test(`${platform} detail sheet changes Wi-Fi printer using native selector`, () => {
+    const h = details(platform, 'wifi'), tree = h.resultTree();
+    if (platform === 'ios') find(tree, n => n.type === 'Button' && n.props.label === 'GoDEX')[0].props.onPress();
+    else find(tree, n => n.type === 'DropdownFilter')[0].props.onChange('godex');
+    assert.deepEqual(h.calls, [['wifi', 'godex']]);
+  });
+}
+for (const platform of ['ios', 'android']) test(`${platform} reprint errors return to the parent instead of becoming unhandled`, async () => {
+  const h = details(platform), error = new Error('printer unavailable'); h.props.onReprint = async () => { throw error; };
+  const tree = h.resultTree();
+  if (platform === 'ios') find(tree, n => n.type === 'Button' && n.props.label === 'Shu rulonni qayta chop etish')[0].props.onPress();
+  else find(tree, n => n.type === 'IconButton')[0].props.onClick();
+  await new Promise(resolve => setImmediate(resolve)); assert.deepEqual(h.calls, [['error', error]]);
+});
