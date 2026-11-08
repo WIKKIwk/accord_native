@@ -112,3 +112,12 @@ test('refresh waits for all requests and keeps the first error by completion tim
   rejected.resolve([]); await running;
   assert.equal(f.store.error, firstFailure); assert.equal(f.store.loading, false);
 });
+
+test('version is stable between changes and dispose detaches the shared runtime listener', async () => {
+  const f = fixture(); const initial = f.store.version; let calls = 0;
+  f.store.subscribe(() => calls++); await f.store.bootstrap();
+  assert.ok(f.store.version > initial); const completed = f.store.version;
+  assert.equal(f.store.version, completed); f.store.dispose();
+  f.runtime.recordIncoming(record('later', 'pending'));
+  assert.equal(f.store.version, completed); assert.equal(calls, 5);
+});

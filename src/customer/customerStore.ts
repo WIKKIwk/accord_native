@@ -18,13 +18,17 @@ export class CustomerStore {
   private _rejectedItems: DispatchRecord[] = [];
   private _historyItems: DispatchRecord[] = [];
   private readonly listeners = new Set<() => void>();
+  private readonly unsubscribeRuntime: () => void;
+  private _version = 0;
 
   constructor(private readonly api: CustomerStoreApi, private readonly runtime: CustomerDeliveryRuntimeStore) {
-    runtime.subscribe(() => this.notify());
+    this.unsubscribeRuntime = runtime.subscribe(() => this.notify());
   }
 
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
-  private notify(): void { for (const listener of this.listeners) listener(); }
+  private notify(): void { this._version++; for (const listener of this.listeners) listener(); }
+  get version(): number { return this._version; }
+  dispose(): void { this.unsubscribeRuntime(); this.listeners.clear(); }
   get loading(): boolean { return this._loading; }
   get loaded(): boolean { return this._loaded; }
   get error(): unknown { return this._error; }

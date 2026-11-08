@@ -23,7 +23,7 @@ function bool(value: unknown): boolean {
   if (typeof value !== 'boolean') throw new TypeError('Invalid customer boolean');
   return value;
 }
-function customerRecordFromJson(value: unknown): DispatchRecord {
+export function customerRecordFromJson(value: unknown): DispatchRecord {
   const source = object(value);
   // The shared parser is reused unchanged. Dart's native trim additionally
   // removes U+0085 around a status before parseDispatchStatus compares it.
