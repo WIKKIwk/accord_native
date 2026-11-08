@@ -23,8 +23,8 @@ const cryptoApi = { CryptoDigestAlgorithm: { SHA256: 'sha256' }, digestStringAsy
 // Each test controls completion so an omitted await cannot pass by timing luck.
 function createBackend() {
   const files = new Map(), moves = [], waiting = [];
-  const deletions = [];
-  let failCopy = false, beforeRead = null;
+  const deletions = [], copies = [], waitingCopies = [];
+  let failCopy = false, pauseCopy = false, beforeRead = null;
   class Directory {
     constructor(parent, name) { this.uri = `${parent.uri}/${name}`; }
     create() {}
@@ -44,6 +44,13 @@ function createBackend() {
       assert.deepEqual(options, { overwrite: true });
       // SDK 58 may remove an existing destination before attempting the copy.
       files.delete(destination.uri);
+      if (pauseCopy) {
+        pauseCopy = false;
+        await new Promise((resolve, reject) => {
+          const copy = { succeed: resolve, fail: () => reject(new Error('copy failed')) };
+          if (waitingCopies.length) waitingCopies.shift()(copy); else copies.push(copy);
+        });
+      }
       if (failCopy) { failCopy = false; throw new Error('copy failed'); }
       if (!files.has(this.uri)) throw new Error('copy source missing');
       files.set(destination.uri, files.get(this.uri));
@@ -75,6 +82,8 @@ function createBackend() {
   });
   return { files, deletions, storage: () => new ReturnedPaintDraftFileStorage(),
     failNextCopy: () => { failCopy = true; }, beforeNextRead: callback => { beforeRead = callback; },
+    pauseNextCopy: () => { pauseCopy = true; }, pendingMoves: () => moves.length,
+    nextCopy: () => copies.length ? Promise.resolve(copies.shift()) : new Promise(resolve => waitingCopies.push(resolve)),
     nextMove: () => moves.length ? Promise.resolve(moves.shift()) : new Promise(resolve => waiting.push(resolve)) };
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -274,4 +283,26 @@ test('after a failed queued write, clear can be retried and removes the recovere
   await store.clear('clear-after-failure');
   assert.equal(backend.files.has(`${move.targetUri}.bak`), false);
   assert.equal((await new draft.ReturnedPaintDraftStore(backend.storage()).load('clear-after-failure')).valuesFor('rasxot:Oq', 1)[0], '');
+});
+
+test('replacement waits for the asynchronous backup copy while the previous primary remains readable', async () => {
+  const backend = createBackend(), store = new draft.ReturnedPaintDraftStore(backend.storage());
+  const current = await store.load('copy-order');
+  current.setValue('rasxot:Oq', 0, 'saved', 1);
+  const first = await backend.nextMove();
+  first.succeed();
+  await store.flush('copy-order');
+
+  backend.pauseNextCopy();
+  current.setValue('rasxot:Oq', 0, 'new', 1);
+  const pending = store.flush('copy-order'), copy = await backend.nextCopy();
+  await tick();
+  assert.equal(backend.pendingMoves(), 0, 'replacement must wait for the backup copy');
+  assert.equal((await new draft.ReturnedPaintDraftStore(backend.storage()).load('copy-order')).valuesFor('rasxot:Oq', 1)[0], 'saved');
+  copy.succeed();
+  const second = await backend.nextMove();
+  assert.equal(JSON.parse(backend.files.get(`${second.targetUri}.bak`)).values['rasxot:Oq'][0], 'saved');
+  second.succeed();
+  await pending;
+  assert.equal((await new draft.ReturnedPaintDraftStore(backend.storage()).load('copy-order')).valuesFor('rasxot:Oq', 1)[0], 'new');
 });
