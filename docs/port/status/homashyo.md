@@ -1,0 +1,28 @@
+# homashyo
+
+Status: part 1 in progress
+Stopped at: Implement API, screens, navigation, text and surface audits.
+
+Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot. The original V2 checkout is read-only.
+
+## Open items
+| Where | V2 reference | What is needed |
+|---|---|---|
+| iOS and Android | `RawMaterialSplitScreen`, `RawMaterialSplitHistoryScreen`, `RawSplitDetailsSheet`, `RawSplitIssueDetailsSheet` | Native screens, sheets, scanner, printer selection, routing and full surface comparison remain to be implemented. |
+| Printing | `rawMaterialSplitPrintRequest`, `PrintService.printRps` | Connect the existing printer bridge and verify with a physical printer and phones. GoDEX stays excluded by D13. |
+| Tests | `test/raw_material_split_test.dart` | Selected-baseline oracle: 16 passed, 3 widget tests failed (`saved issue permits measured stock and printing`, `field-sized plus adds only fitting rolls`, `measured split sends net stock and prints gross core`); investigate rather than use failed cases as the spec. An isolated f119 fixture has been recorded; replay the passing cases. |
+| Models | `RawSplitIssue.createdAt` | Compare Dart `DateTime.parse` edge cases against the JavaScript date parser; malformed or offset-less timestamps need oracle coverage. |
+| Test mode | `rawSplitSave`, `rawSplitReportIssue` | Implement the shared test-mode policy in the deferred test-mode pass. |
+
+## Verification so far
+- `node --test tests/homashyoModel.test.cjs`: 6 passed.
+- `npx tsc --noEmit -p tsconfig.ios.json`: passed after regenerating the worktree’s stale ignored Expo Router types.
+- Selected-baseline Flutter oracle: 16 passed, 3 failed; no simulator or device.
+
+## Deviations candidates
+
+## Test mode pending
+`rawSplitSave` and `rawSplitReportIssue` reject test mode in V2; this is deferred to the centralized test-mode pass.
+
+## Needs from the integrator
+Do not expose a Homashyo Chat route until the shared WebSocket redirect/cookie security hold is cleared; do not change the protected worker/preparation Chat paths.
