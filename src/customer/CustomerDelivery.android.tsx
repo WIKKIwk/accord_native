@@ -1,5 +1,5 @@
-import { Button, Host } from '@expo/ui';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Button, FilledTonalButton, Host, OutlinedButton, Text as NativeText, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
@@ -7,7 +7,8 @@ import { WorkerAlert } from '../components/WorkerAlert';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useCustomerText } from './CustomerContext';
 import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerReportClaim, trimCustomerInput, type CustomerReturnInput } from './customerLogic';
-import { customerDeliveryInfoRows, customerDiscussionEventId, type CustomerDeliveryInfoRow, type CustomerReturnKind } from './customerDeliveryView';
+import { customerDeliveryInfoRows, customerDeliveryResponseActions, customerDiscussionEventId, type CustomerDeliveryInfoRow,
+  type CustomerDeliveryResponseAction, type CustomerReturnKind } from './customerDeliveryView';
 import { CustomerReturnDialog } from './CustomerReturnDialog';
 import { CustomerSnackbar } from './CustomerSnackbar';
 import { CustomerLoadingState, CustomerRetryState } from './CustomerStates';
@@ -28,6 +29,7 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
   if (state.loading) return <CustomerLoadingState />;
   if (state.error || !state.detail) return <CustomerRetryState retry={state.reload} />;
   const detail = state.detail, record = detail.record;
+  const actions = customerDeliveryResponseActions(detail, state.submitting);
   const hasDiscussion = ['accepted', 'partial', 'rejected'].includes(record.status);
   const onReturn = (input: CustomerReturnInput) => {
     const current = dialog; setDialog(null);
@@ -42,8 +44,15 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
       <Text style={{ color: row.highlighted ? colors.onSecondaryContainer : colors.onSurface, fontSize: row.highlighted ? 16 : 20,
         fontWeight: row.highlighted ? '700' : '600' }}>{row.value}</Text>
     </View></View>;
-  const action = (label: string, onPress: () => void, blocked = false) => <Host key={label} matchContents={{ vertical: true }} style={{ width: '100%' }}>
-    <Button label={text(label)} disabled={blocked} onPress={onPress} style={{ width: '100%' }} /></Host>;
+  const action = (key: string, label: string, appearance: CustomerDeliveryResponseAction['appearance'], onPress: () => void,
+    blocked = false, spacingBefore = 0) => {
+    const NativeButton = appearance === 'tonal' ? FilledTonalButton : appearance === 'outlined' ? OutlinedButton : Button;
+    return <Host key={key} matchContents={{ vertical: true }} style={{ width: '100%', marginTop: spacingBefore }}>
+      <NativeButton enabled={!blocked} onClick={blocked ? undefined : onPress} modifiers={[fillMaxWidth(), testID(`customer-response-${key}`)]}>
+        <NativeText>{text(label)}</NativeText>
+      </NativeButton>
+    </Host>;
+  };
   return <>
     <ScrollView contentContainerStyle={{ paddingVertical: 8, paddingBottom: 24, gap: 12 }}
       refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.reload(); }} />}>
@@ -54,14 +63,14 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
           <Text style={{ color: colors.onSurface }}>{record.note}</Text></View> : null}
         {hasDiscussion && onOpenDiscussion ? <View style={{ paddingHorizontal: 16, gap: 8 }}><Text style={{ color: colors.onSurface }}>{text('commentsTitle')}</Text>
           <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
-            <Button label={text('openDiscussionAction')} onPress={openDiscussion} style={{ width: '100%' }} />
+            <OutlinedButton enabled onClick={openDiscussion} modifiers={[fillMaxWidth(), testID('customer-discussion')]}>
+              <NativeText>{text('openDiscussionAction')}</NativeText>
+            </OutlinedButton>
           </Host></View> : null}
-        {detail.canApprove || detail.canPartiallyAccept || detail.canReject || detail.canReportClaim ? <View style={{ paddingHorizontal: 16, gap: 12 }}>
+        {actions.length ? <View style={{ paddingHorizontal: 16, gap: 12 }}>
           <Text style={{ color: colors.onSurface }}>{text('responseTitle')}</Text>
-          {detail.canApprove ? action(state.submitting ? 'sending' : 'approveAction', () => setConfirm(true), state.submitting) : null}
-          {detail.canPartiallyAccept ? action('partialAcceptAction', () => setDialog('partial'), state.submitting) : null}
-          {detail.canReject ? action('rejectAction', () => setDialog('reject'), state.submitting) : null}
-          {detail.canReportClaim ? action('reportIssueAction', () => setDialog('claim'), state.submitting) : null}
+          <View>{actions.map(item => action(item.kind, item.labelKey, item.appearance,
+            () => { if (item.kind === 'approve') setConfirm(true); else setDialog(item.kind); }, state.submitting, item.spacingBefore))}</View>
         </View> : null}
       </View></WorkerQueueCard>
     </ScrollView>

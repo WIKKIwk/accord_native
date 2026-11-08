@@ -1,13 +1,13 @@
 import { Text } from '@expo/ui';
 import { Button, Host, List, Section, VStack } from '@expo/ui/swift-ui';
-import { background, disabled, fixedSize, font, foregroundStyle, frame, lineLimit, listStyle, padding, refreshable, shapes } from '@expo/ui/swift-ui/modifiers';
+import { background, buttonStyle, disabled, fixedSize, font, foregroundStyle, frame, lineLimit, listStyle, padding, refreshable, shapes } from '@expo/ui/swift-ui/modifiers';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { PlatformColor } from 'react-native';
 import { WorkerAlert } from '../components/WorkerAlert';
 import { useCustomerText } from './CustomerContext';
 import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerReportClaim, trimCustomerInput, type CustomerReturnInput } from './customerLogic';
-import { customerDeliveryInfoRows, customerDiscussionEventId, type CustomerReturnKind } from './customerDeliveryView';
+import { customerDeliveryInfoRows, customerDeliveryResponseActions, customerDiscussionEventId, type CustomerReturnKind } from './customerDeliveryView';
 import { CustomerReturnDialog } from './CustomerReturnDialog';
 import { CustomerSnackbar } from './CustomerSnackbar';
 import { CustomerLoadingState, CustomerRetryState } from './CustomerStates';
@@ -24,6 +24,7 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
   if (state.loading) return <CustomerLoadingState />;
   if (state.error || !state.detail) return <CustomerRetryState retry={state.reload} />;
   const detail = state.detail, record = detail.record;
+  const actions = customerDeliveryResponseActions(detail, state.submitting);
   const hasDiscussion = ['accepted', 'partial', 'rejected'].includes(record.status);
   const onReturn = (input: CustomerReturnInput) => {
     const current = dialog; setDialog(null);
@@ -44,14 +45,16 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
         </VStack>)}
       </Section>
       {trimCustomerInput(record.note) ? <Section title={text('noteTitle')}><Text>{record.note}</Text></Section> : null}
-      {hasDiscussion && onOpenDiscussion ? <Section title={text('commentsTitle')}><Button label={text('openDiscussionAction')} onPress={() => {
+      {hasDiscussion && onOpenDiscussion ? <Section title={text('commentsTitle')}><Button modifiers={[buttonStyle('bordered')]} onPress={() => {
         returningFromDiscussion.current = true; onOpenDiscussion(customerDiscussionEventId(deliveryNoteID));
-      }} /></Section> : null}
-      {detail.canApprove || detail.canPartiallyAccept || detail.canReject || detail.canReportClaim ? <Section title={text('responseTitle')}>
-        {detail.canApprove ? <Button label={text(state.submitting ? 'sending' : 'approveAction')} modifiers={[disabled(state.submitting)]} onPress={() => setConfirm(true)} /> : null}
-        {detail.canPartiallyAccept ? <Button label={text('partialAcceptAction')} modifiers={[disabled(state.submitting)]} onPress={() => setDialog('partial')} /> : null}
-        {detail.canReject ? <Button label={text('rejectAction')} modifiers={[disabled(state.submitting)]} onPress={() => setDialog('reject')} /> : null}
-        {detail.canReportClaim ? <Button label={text('reportIssueAction')} modifiers={[disabled(state.submitting)]} onPress={() => setDialog('claim')} /> : null}
+      }}><Text modifiers={[frame({ maxWidth: Infinity }), lineLimit(), fixedSize({ horizontal: false, vertical: true })]}>{text('openDiscussionAction')}</Text></Button></Section> : null}
+      {actions.length ? <Section title={text('responseTitle')}><VStack spacing={0} modifiers={[frame({ maxWidth: Infinity })]}>
+        {actions.map(action => <Button key={action.kind} testID={`customer-response-${action.kind}`}
+          modifiers={[buttonStyle(action.appearance === 'filled' ? 'borderedProminent' : 'bordered'), disabled(state.submitting), padding({ top: action.spacingBefore })]}
+          onPress={() => { if (action.kind === 'approve') setConfirm(true); else setDialog(action.kind); }}>
+          <Text modifiers={[frame({ maxWidth: Infinity }), lineLimit(), fixedSize({ horizontal: false, vertical: true })]}>{text(action.labelKey)}</Text>
+        </Button>)}
+      </VStack>
       </Section> : null}
     </List></Host>
     <WorkerAlert alert={confirm ? { title: text('confirmTitle'), message: text('confirmQuestion'), cancelLabel: text('no'),
