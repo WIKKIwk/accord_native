@@ -1,13 +1,17 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { activeSessionToken, type Session } from '../../auth';
 import { loadChatConversations } from '../../chatApi';
 import { subscribeChatLive } from '../../chatLive';
 import type { ChatConversation } from '../../chatModel';
 import { useChatMetadata } from '../../components/ChatMetadata';
+import { existingChatUnreadRuntimeFor, subscribeChatUnreadRuntimeChanges } from './chatUnreadRuntime';
+
+const noUnreadRuntime = () => null;
 
 export function useChatConversations(session: Session) {
+  const unreadRuntime = useSyncExternalStore(subscribeChatUnreadRuntimeChanges, () => existingChatUnreadRuntimeFor(session), noUnreadRuntime);
   const { remember } = useChatMetadata();
   const [items, setItems] = useState<ChatConversation[] | null>(null);
   const [error, setError] = useState('');
@@ -41,7 +45,8 @@ export function useChatConversations(session: Session) {
   useFocusEffect(useCallback(() => {
     focused.current = true;
     void refresh();
-    const stopLive = subscribeChatLive(session, () => { void refresh(); });
+    const onInvalidate = () => { void refresh(); };
+    const stopLive = unreadRuntime ? unreadRuntime.subscribeInvalidation(onInvalidate) : subscribeChatLive(session, onInvalidate);
     const timer = setInterval(() => { void refresh(); }, 30000);
     const appState = AppState.addEventListener('change', state => {
       if (state === 'active') void refresh();
@@ -56,7 +61,7 @@ export function useChatConversations(session: Session) {
       appState.remove();
       stopLive();
     };
-  }, [refresh, session]));
+  }, [refresh, session, unreadRuntime]));
 
   return { items, error, query, setQuery, avatarToken, refresh };
 }

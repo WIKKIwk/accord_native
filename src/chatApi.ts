@@ -1,6 +1,6 @@
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
-import { isMyChatMessage, parseChatConversations, parseChatDirectory, parseChatMessage, parseChatMessages, parseOpenedChatConversation, type ChatPeer } from './chatModel';
+import { isMyChatMessage, parseChatConversations, parseChatDirectory, parseChatMessage, parseChatMessages, parseChatMessagesForRecovery, parseChatSyncPage, parseOpenedChatConversation, type ChatPeer } from './chatModel';
 
 export class ChatRequestError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
@@ -53,6 +53,26 @@ export async function loadChatMessages(session: Session, conversationId: string,
   return page;
 }
 
+/** @v2 chatMessages */
+export async function loadChatMessagesAfter(session: Session, conversationId: string, afterSequence: number, signal?: AbortSignal) {
+  const query = new URLSearchParams({ limit: '100', after_sequence: String(afterSequence) });
+  const response = await authorizedFetch(session, `${conversationPath(conversationId)}/messages?${query}`, { signal });
+  if (!response.ok) throw new ChatRequestError('Chat so‘rovi bajarilmadi', response.status);
+  const page = parseChatMessagesForRecovery(await response.json(), conversationId);
+  if (signal?.aborted || !activeSessionToken(session)) throw new Error('Sessiya tugagan.');
+  return page;
+}
+
+/** @v2 chatSync */
+export async function loadChatSync(session: Session, cursor: number, signal?: AbortSignal) {
+  const query = new URLSearchParams({ cursor: String(cursor), limit: '200' });
+  const response = await authorizedFetch(session, `/v1/mobile/chat/sync?${query}`, { signal });
+  if (!response.ok) throw new ChatRequestError('Chat so‘rovi bajarilmadi', response.status);
+  const page = parseChatSyncPage(await response.json());
+  if (signal?.aborted || !activeSessionToken(session)) throw new Error('Sessiya tugagan.');
+  return page;
+}
+
 export async function sendChatText(session: Session, conversationId: string, clientMessageId: string, body: string, signal?: AbortSignal) {
   const message = body.trim();
   if (!message || Array.from(message).length > 4000 || !clientMessageId.trim()) throw new Error('Xabar matni noto‘g‘ri.');
@@ -79,4 +99,14 @@ export async function markChatRead(session: Session, conversationId: string, seq
     body: JSON.stringify({ sequence, device_id: deviceId }), signal,
   });
   if (!response.ok) throw new ChatRequestError('O‘qilgan holat saqlanmadi.', response.status);
+}
+
+/** @v2 chatMarkDelivered */
+export async function markChatDelivered(session: Session, conversationId: string, sequence: number, deviceId: string, signal?: AbortSignal) {
+  if (!Number.isSafeInteger(sequence) || sequence <= 0 || !deviceId.trim()) return;
+  const response = await authorizedFetch(session, `${conversationPath(conversationId)}/delivered`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sequence, device_id: deviceId }), signal,
+  });
+  if (!response.ok) throw new ChatRequestError('Chat so‘rovi bajarilmadi', response.status);
 }
