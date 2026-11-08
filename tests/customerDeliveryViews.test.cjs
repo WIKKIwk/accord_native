@@ -33,9 +33,10 @@ function fixture(platform, state, stateValues = [false, null], text = key => key
       foregroundStyle: value => ['foregroundStyle', value], frame: value => ['frame', value], lineLimit: value => ['lineLimit', value],
       padding: value => ['padding', value], buttonStyle: value => ['buttonStyle', value], shapes: { roundedRectangle: value => ['roundedRectangle', value] } },
     '@expo/ui/jetpack-compose': { Button: 'Button', FilledTonalButton: 'FilledTonalButton', Host: 'Host', OutlinedButton: 'OutlinedButton', Text: 'Text',
-      useMaterialColors: () => ({ onSurface: 'fg', onSurfaceVariant: 'muted', surfaceContainerLow: 'bg',
+      Shape: { RoundedCorner: props => ({ type: 'NativeShape', props }) },
+      useMaterialColors: () => ({ primary: 'primary', onPrimary: 'on-primary', onSurface: 'fg', onSurfaceVariant: 'muted', surfaceContainerLow: 'bg',
       secondaryContainer: 'status-bg', onSecondaryContainer: 'status-fg' }) },
-    '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ['fillMaxWidth'], testID: value => ['testID', value] },
+    '@expo/ui/jetpack-compose/modifiers': { defaultMinSize: value => ['defaultMinSize', value], fillMaxWidth: () => ['fillMaxWidth'], testID: value => ['testID', value] },
     'react-native': { ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', Text: 'Text', View: 'View', PlatformColor: value => value },
     '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     './CustomerContext': { useCustomerText: () => ({ text }) }, './CustomerStates': loadCustomerStates(platform, { text }),
@@ -188,6 +189,21 @@ test('iOS delivery distinguishes the primary approve action from secondary nativ
 test('Android delivery retains the V2 filled, tonal and outlined button hierarchy', () => {
   const screen = fixture('android', state([])).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {}, onOpenDiscussion() {} });
   assert.deepEqual(deliveryButtons(screen).map(button => button.type), ['OutlinedButton', 'Button', 'FilledTonalButton', 'OutlinedButton', 'FilledTonalButton']);
+});
+
+test('Android response buttons apply the V2 app theme before tonal defaults', () => {
+  for (const flags of permissionCases()) for (const submitting of [false, true]) {
+    const snapshot = state([], { submitting, detail: { record, ...flags } });
+    const screen = fixture('android', snapshot).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
+    for (const button of deliveryButtons(screen)) {
+      assert.deepEqual(button.props.shape.props.cornerRadii, { topStart: 20, topEnd: 20, bottomStart: 20, bottomEnd: 20 });
+      assert.ok(button.props.modifiers.some(m => m[0] === 'defaultMinSize' && m[1].minHeight === 56));
+      assert.deepEqual(button.props.colors, button.type === 'OutlinedButton' ? { contentColor: 'fg' }
+        : { containerColor: 'primary', contentColor: 'on-primary' });
+      assert.deepEqual(nodes(button, n => n.type === 'Text')[0].props.style, { typography: 'labelLarge', fontSize: 16, fontWeight: '500' });
+      assert.equal(button.props.enabled, !submitting);
+    }
+  }
 });
 
 function permissionCases() {

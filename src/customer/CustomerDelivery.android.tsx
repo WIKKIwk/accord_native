@@ -1,5 +1,5 @@
-import { Button, FilledTonalButton, Host, OutlinedButton, Text as NativeText, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
+import { Button, FilledTonalButton, Host, OutlinedButton, Shape, Text as NativeText, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { defaultMinSize, fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
@@ -48,8 +48,11 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
     blocked = false, spacingBefore = 0) => {
     const NativeButton = appearance === 'tonal' ? FilledTonalButton : appearance === 'outlined' ? OutlinedButton : Button;
     return <Host key={key} matchContents={{ vertical: true }} style={{ width: '100%', marginTop: spacingBefore }}>
-      <NativeButton enabled={!blocked} onClick={blocked ? undefined : onPress} modifiers={[fillMaxWidth(), testID(`customer-response-${key}`)]}>
-        <NativeText>{text(label)}</NativeText>
+      <NativeButton enabled={!blocked} onClick={blocked ? undefined : onPress}
+        colors={appearance === 'outlined' ? { contentColor: colors.onSurface } : { containerColor: colors.primary, contentColor: colors.onPrimary }}
+        shape={Shape.RoundedCorner({ cornerRadii: { topStart: 20, topEnd: 20, bottomStart: 20, bottomEnd: 20 } })}
+        modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID(`customer-response-${key}`)]}>
+        <NativeText style={{ typography: 'labelLarge', fontSize: 16, fontWeight: '500' }}>{text(label)}</NativeText>
       </NativeButton>
     </Host>;
   };
