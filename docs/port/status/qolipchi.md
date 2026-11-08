@@ -72,6 +72,8 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 
 - Latest broad gate after merging local main `b13dfbe`: Node 1,388/1,394 passed, with the same six pre-existing preparation Android import failures. The Android typecheck most recently reported the same nine worker errors. The ledger resolved all 649 tagged symbols and 72 tagged tests; eight warnings concern other domains, not Qolip endpoints. The f119 source snapshot remained clean with zero drift. These checks do not establish role or device parity.
 
+- Cell placement logic checkpoint: specified the cell-placement mode and added placed-code loading, saved-code eligibility, picker search/paging/cache, single selection and sequential confirmed multi-save with full, partial and first-error results. It reuses the existing product, location and search APIs; account reset stops any remaining writes. The independent f119 oracle passed the direct available-cell filter test. Eleven focused source-derived tests and all 223 Qolip tests passed; iOS typecheck and Expo lint passed. The ledger resolves 654 source tags and 72 test tags with no drift. The two native sheets, picker UI, grid caller, scanner and block refresh are not yet wired; no device, backend write or full role parity is claimed.
+
 ## Deviations candidates
 
 - Grid statistics count nonempty location labels outside the fixed visible grid, which can yield occupied cells that are not displayed; f119 behavior is retained.
