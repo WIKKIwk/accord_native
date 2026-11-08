@@ -7,7 +7,8 @@ function compile(file,mocks={}) {const filename=path.join(root,file),m=new Modul
   m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,filename);return m.exports;}
 const receive=compile('werkaReceiveLogic.ts');
 const model=compile('werkaWipPresentation.ts',{'./werkaReceiveLogic':receive});
-const jsx={Fragment:'Fragment',jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
+const footerModel=compile('werkaReceiveFooterModel.ts');
+const jsx={Fragment:'Fragment',jsx:(type,props)=>typeof type==='function'?type(props):({type,props}),jsxs:(type,props)=>typeof type==='function'?type(props):({type,props})};
 function nodes(node,type){if(!node||typeof node!=='object')return[];if(Array.isArray(node))return node.flatMap(x=>nodes(x,type));
   return [...(node.type===type?[node]:[]),...nodes(node.props?.children,type)];}
 const preview={canReceive:true,snapshotToken:'s',receiveBlockedReason:'',paddonCode:'P1',warehouses:['W1','W2'],apparatusNames:{},
@@ -24,6 +25,8 @@ function setup(platform,patch={}){
     '../preparation/PreparationUI.ios':{PreparationList:'PreparationList'},
     '../preparation/PreparationUI.android':{PreparationRow:'PreparationRow',PreparationText:'PreparationText'},
     '../shared/filters/DropdownFilter.android':{DropdownFilter:'DropdownFilter'}};
+  mocks['./werkaReceiveFooterModel']=footerModel;
+  mocks[`./WerkaReceiveFooter.${platform}`]=compile(`WerkaReceiveFooter.${platform}.tsx`,mocks);
   const {WerkaWipContent}=compile(`WerkaWipContent.${platform}.tsx`,mocks);
   const props={preview,state,confirming:false,error:'',locale:'uz',onWarehouse:value=>calls.push(['warehouse',value]),
     onRequestReceive:()=>calls.push(['confirm']),onReload:()=>calls.push(['reload']),onNextQr:()=>calls.push(['next']),...patch};
