@@ -52,9 +52,10 @@ function DeleteDialog({ block, text, close, confirm }: { block: QolipBlock; text
 }
 const passthrough = () => true;
 
-// QolipBlocksScreen remains unwired until the role navigation and focus behavior are complete.
+// QolipBlocksScreen remains unwired until role navigation is complete.
 export function QolipBlocksScreen({ session, onMenu, onProfile, dock }: QolipBlocksScreenProps) {
   const { text, locale } = useQolipText(), state = useQolipBlocks(session), sheet = useNativeSheet();
+  const [searchFocused, setSearchFocused] = useState(false);
   const [editing, setEditing] = useState<QolipBlock | null>(null), [deleting, setDeleting] = useState<QolipBlock | null>(null);
   const afterSheet = useRef<(() => void) | null>(null), colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
@@ -74,7 +75,8 @@ export function QolipBlocksScreen({ session, onMenu, onProfile, dock }: QolipBlo
   };
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
     <OrdersHeader search={state.query} searchPlaceholder={text('blocks.search')} onSearchChange={state.controller.setQuery.bind(state.controller)}
-      onMenu={onMenu} onProfile={onProfile} />
+      onMenu={onMenu} onProfile={onProfile} showProfile={!searchFocused}
+      onSearchFocus={() => setSearchFocused(true)} onSearchBlur={() => setSearchFocused(false)} />
     {state.loading ? <View style={styles.center}><ActivityIndicator /></View>
       : state.error ? <View style={styles.center}><Host matchContents={{ vertical: true }}><Column>
         <Text>{text('blocks.load_failed')}</Text><TextButton onClick={() => { void state.controller.reload().catch(() => {}); }}

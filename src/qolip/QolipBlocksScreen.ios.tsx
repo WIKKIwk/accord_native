@@ -46,9 +46,10 @@ function EditDialog({ block, text, close, save }: { block: QolipBlock; text: Tex
   </Modal>;
 }
 
-// QolipBlocksScreen remains unwired until the role navigation and focus behavior are complete.
+// QolipBlocksScreen remains unwired until role navigation is complete.
 export function QolipBlocksScreen({ session, onMenu, onProfile, dock }: QolipBlocksScreenProps) {
   const { text, locale } = useQolipText(), state = useQolipBlocks(session), sheet = useNativeSheet();
+  const [searchFocused, setSearchFocused] = useState(false);
   const [editing, setEditing] = useState<QolipBlock | null>(null), afterSheet = useRef<(() => void) | null>(null);
   const insets = useSafeAreaInsets(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   useEffect(() => {
@@ -73,7 +74,8 @@ export function QolipBlocksScreen({ session, onMenu, onProfile, dock }: QolipBlo
   };
   return <View style={{ flex: 1, paddingTop: insets.top }}>
     <OrdersHeader search={state.query} searchPlaceholder={text('blocks.search')} onSearchChange={state.controller.setQuery.bind(state.controller)}
-      onMenu={onMenu} onProfile={onProfile} />
+      onMenu={onMenu} onProfile={onProfile} showProfile={!searchFocused}
+      onSearchFocus={() => setSearchFocused(true)} onSearchBlur={() => setSearchFocused(false)} />
     {state.loading ? <View style={styles.center}><Host matchContents><ProgressView /></Host></View>
       : state.error ? <View style={styles.center}><Host matchContents><VStack spacing={12}>
         <Text>{text('blocks.load_failed')}</Text><Button label={text('action.retry')} onPress={() => { void state.controller.reload().catch(() => {}); }} />

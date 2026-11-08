@@ -55,6 +55,9 @@ for (const platform of ['ios', 'android']) {
   test(`${platform} block screen renders V2 loading, retry and empty states using shared header and list`, () => {
     let h = screen(platform, { loading: true }); h.render();
     assert.equal(h.captures.OrdersHeader[0].searchPlaceholder, 'Blok qidirish');
+    assert.equal(h.captures.OrdersHeader[0].showProfile, true);
+    assert.equal(typeof h.captures.OrdersHeader[0].onSearchFocus, 'function');
+    assert.equal(typeof h.captures.OrdersHeader[0].onSearchBlur, 'function');
     assert.ok(h.captures[platform === 'ios' ? 'ProgressView' : 'ActivityIndicator']);
     h = screen(platform, { error: true }); let html = h.render(); assert.match(html, /Bloklar yuklanmadi/); assert.match(html, /Qayta urinish/);
     h = screen(platform); html = h.render(); assert.match(html, /Blok topilmadi/); assert.ok(h.captures.OrdersList); assert.match(html, /DOCK/);
