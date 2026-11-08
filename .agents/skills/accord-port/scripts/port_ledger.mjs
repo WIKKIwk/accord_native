@@ -697,11 +697,11 @@ function ambiguousScopeTags(graph, v4, scopeNames) {
     if (!tag.file.startsWith('src/')) continue;
     const name = tag.symbol.split('.').pop();
     if (!scopeNames.has(name)) continue;
-    const candidates = new Map();
-    for (const node of [...(graph.byName.get(name) ?? []), ...(graph.extensionMembers.get(name) ?? [])]) {
-      candidates.set(`${node.file}:${node.line}`, node);
-    }
-    if (candidates.size > 1) result.push({ tag, candidates: [...candidates.values()] });
+    // Each entry is a declaration candidate. Distinct declarations can share
+    // a file and line; extensionMembers can also repeat one containing node
+    // for distinct members (for example, a getter and setter).
+    const candidates = [...(graph.byName.get(name) ?? []), ...(graph.extensionMembers.get(name) ?? [])];
+    if (candidates.length > 1) result.push({ tag, candidates });
   }
   return result;
 }
@@ -752,18 +752,25 @@ function textReport(scope, which = 'both') {
     const { own, shown } = scopeFiles(scopeNames, platform, v4);
     const corpus = comparable(shown.map(file => read(path.join(V4, file))).join('\n'));
     // scopeFiles promotes whole folders before filtering the other platform.
-    // An opposite-platform tag is relevant only if its folder promotion can
-    // actually pull at least one file into this platform's scope.
+    // Remove all invisible ambiguous tags together so that two such tags in
+    // one folder cannot each conceal the other's contribution. A tag from
+    // the other platform matters only if its group actually adds files here.
+    const invisibleAmbiguous = new Set(ambiguous.filter(({ tag }) => !own.includes(tag.file)).map(({ tag }) => tag));
+    const withoutInvisible = scopeFiles(scopeNames, platform,
+      { ...v4, tags: v4.tags.filter(tag => !invisibleAmbiguous.has(tag)) });
+    const additionalOwn = new Set(own.filter(file => !withoutInvisible.own.includes(file)));
     const platformAmbiguous = ambiguous.filter(({ tag }) => {
       if (own.includes(tag.file)) return true;
       const folder = path.posix.dirname(tag.file);
-      return !/^src(\/(shared|components|printing|app)(\/|$)|$)/.test(folder)
-        && own.some(file => file.startsWith(`${folder}/`));
+      return [...additionalOwn].some(file => file.startsWith(`${folder}/`));
     });
-    const uncertainDirs = new Set(platformAmbiguous.map(({ tag }) => path.posix.dirname(tag.file))
-      .filter(folder => !/^src(\/(shared|components|printing|app)(\/|$)|$)/.test(folder)));
-    const uncertainFiles = new Set(shown.filter(file => platformAmbiguous.some(({ tag }) => tag.file === file)
-      || [...uncertainDirs].some(folder => file.startsWith(`${folder}/`))));
+    // Only attribute a shown file to ambiguity if it disappears when all
+    // ambiguous tags are removed; shared and independently selected files
+    // must not be reported as matched only through ambiguous scope.
+    const allAmbiguous = new Set(ambiguous.map(({ tag }) => tag));
+    const withoutAmbiguous = scopeFiles(scopeNames, platform,
+      { ...v4, tags: v4.tags.filter(tag => !allAmbiguous.has(tag)) });
+    const uncertainFiles = new Set(shown.filter(file => !withoutAmbiguous.shown.includes(file)));
     const otherCorpus = comparable(shown.filter(file => !uncertainFiles.has(file)).map(file => read(path.join(V4, file))).join('\n'));
     const uncertainCorpus = comparable([...uncertainFiles].map(file => read(path.join(V4, file))).join('\n'));
     const v4Strings = new Map();
@@ -818,7 +825,7 @@ route, or localization key. These diagnostics do not establish that the remainin
 
 ### Ambiguous selected @v2 tags (${selectedAmbiguous.length})
 
-${selectedAmbiguous.length ? selectedAmbiguous.map(({ tag, candidates }) => `- ${tag.file}:${tag.line} @v2 ${tag.symbol}: ${candidates.map(node => `${node.file}:${node.line}`).join(', ')}`).join('\n') : 'None detected.'}
+${selectedAmbiguous.length ? selectedAmbiguous.map(({ tag, candidates }) => `- ${tag.file}:${tag.line} @v2 ${tag.symbol}: ${candidates.map((node, index) => `${node.file}:${node.line} (${node.kind} ${node.name}; candidate ${index + 1})`).join(', ')}`).join('\n') : 'None detected.'}
 
 ${platforms.map(platform => `### ${platform}: V2 text matched only through ambiguous native scope (${result[platform].ambiguousMatches.length})
 

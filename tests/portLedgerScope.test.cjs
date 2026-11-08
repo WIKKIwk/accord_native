@@ -324,3 +324,103 @@ export function SharedNotice() { return <Text>Shared notice</Text>; }
   assert.match(result.stdout, /ios: 0 texts matched only through ambiguous native scope, 0 native texts matched only globally in V2/);
   assert.match(result.stdout, /android: 0 texts matched only through ambiguous native scope, 0 native texts matched only globally in V2/);
 });
+
+test('distinct declarations on the same Dart source line remain ambiguous', () => {
+  const v4 = path.join(fixture, 'v4');
+  const v2 = path.join(fixture, 'v2');
+  write(v2, 'lib/src/features/customer/presentation/customer.dart', `
+class CustomerScreen extends StatelessWidget {
+  Widget build(BuildContext context) => Text(label());
+}
+String label() => 'Exact customer text'; extension Other on Object { int label() => 3; }
+`);
+  write(v4, 'src/customer/Customer.ios.tsx', `
+/** @v\x32 label */
+export const hasView = true;
+`);
+  write(v4, 'src/components/Unrelated.ios.tsx', `
+export function Unrelated() { return <Text>Exact customer text</Text>; }
+`);
+  write(v4, 'docs/port/text/customer.tsv', '');
+  const result = rerun('ios');
+  assert.match(result.stdout, /ios: 0 V2 texts not found in V4, 0 V4 texts not found in V2/);
+  assert.equal(result.status, 1, 'Ambiguous declarations must block even if ordinary counts are zero');
+  assert.match(result.report, /Ambiguous selected @v\x32 tags \(1\)/);
+  assert.match(result.report, /customer\.dart:5 \(member label; candidate 1\)/);
+  assert.match(result.report, /customer\.dart:5 \(extension Other; candidate 2\)/);
+});
+
+test('an opposite-platform ambiguous tag does not taint a folder already selected by an in-platform tag', () => {
+  const v4 = path.join(fixture, 'v4');
+  const v2 = path.join(fixture, 'v2');
+  write(v2, 'lib/src/features/customer/presentation/customer.dart', `
+class CustomerScreen extends StatelessWidget {
+  Widget build(BuildContext context) => Text(_label());
+}
+String _label() => 'Exact customer text';
+`);
+  write(v2, 'lib/src/features/preparation/presentation/preparation.dart', `
+class PreparationScreen extends StatelessWidget {}
+String _label() => 'Preparation label';
+`);
+  write(v4, 'src/customer/Customer.ios.tsx', 'export const ignored = true;\n');
+  write(v4, 'src/customer/Customer.android.tsx', `
+// @v\x32 CustomerScreen
+export function Customer() { return <Text>Exact customer text</Text>; }
+`);
+  write(v4, 'src/customer/Other.ios.tsx', `
+/** @v\x32 _label */
+export const ignored = true;
+`);
+  const withOther = rerun('android');
+  assert.match(withOther.stdout, /android: 0 V2 texts not found in V4, 0 V4 texts not found in V2/);
+  assert.equal(withOther.status, 0, withOther.stdout);
+  assert.match(withOther.report, /Ambiguous selected @v\x32 tags \(0\)/);
+  assert.match(withOther.stdout, /android: 0 texts matched only through ambiguous native scope/);
+  fs.rmSync(path.join(v4, 'src/customer/Other.ios.tsx'));
+  const withoutOther = rerun('android');
+  assert.equal(withoutOther.status, 0, withoutOther.stdout);
+  assert.match(withoutOther.report, /Ambiguous selected @v\x32 tags \(0\)/);
+});
+
+test('opposite-platform ambiguous tags jointly promoting an otherwise unselected folder still block', () => {
+  const v4 = path.join(fixture, 'v4');
+  write(v4, 'src/customer/Customer.android.tsx', 'export const ignored = true;\n');
+  for (const name of ['One', 'Two']) {
+    write(v4, `src/foreign/${name}.ios.tsx`, `
+/** @v\x32 _label */
+export const ignored = true;
+`);
+  }
+  write(v4, 'src/foreign/Actual.android.tsx', `
+export function Actual() { return <Text>Exact customer text</Text>; }
+`);
+  const result = rerun('android');
+  assert.match(result.stdout, /android: 0 V2 texts not found in V4, 0 V4 texts not found in V2/);
+  assert.equal(result.status, 1);
+  assert.match(result.report, /Ambiguous selected @v\x32 tags \(2\)/);
+  assert.match(result.report, /src\/foreign\/One\.ios\.tsx:2 @v\x32 _label/);
+  assert.match(result.report, /src\/foreign\/Two\.ios\.tsx:2 @v\x32 _label/);
+});
+
+test('distinct extension members on one graph node remain separate candidates', () => {
+  const v4 = path.join(fixture, 'v4');
+  const v2 = path.join(fixture, 'v2');
+  fs.rmSync(path.join(v4, 'src/foreign'), { recursive: true, force: true });
+  write(v2, 'lib/src/features/customer/presentation/customer.dart', `
+class CustomerScreen extends StatelessWidget {
+  Widget build(BuildContext context) => Text(label());
+}
+String label() => 'Exact customer text'; extension Other on Object { int get label => 3; set label(int value) {} }
+`);
+  write(v4, 'src/customer/Customer.ios.tsx', `
+/** @v\x32 label */
+export const hasView = true;
+`);
+  const result = rerun('ios');
+  assert.match(result.stdout, /ios: 0 V2 texts not found in V4, 0 V4 texts not found in V2/);
+  assert.equal(result.status, 1);
+  assert.match(result.report, /customer\.dart:5 \(member label; candidate 1\)/);
+  assert.match(result.report, /customer\.dart:5 \(extension Other; candidate 2\)/);
+  assert.match(result.report, /customer\.dart:5 \(extension Other; candidate 3\)/);
+});
