@@ -18,6 +18,11 @@ export type WerkaArchivePeriodContentProps = {
   onSelect: (query: WerkaArchiveQuery) => void;
   onRefresh: () => Promise<void>;
 };
+export type WerkaArchivePeriodGridProps = Pick<WerkaArchivePeriodContentProps,
+  'kind' | 'page' | 'active' | 'locale' | 'formatMonthYear' | 'onPageStep' | 'onSelect'> & {
+  /** Sent-hub panels use narrower month cells and do not show the standalone empty-year message. */
+  variant?: 'standalone' | 'sent';
+};
 
 /** Initial month/year pages in the two standalone V2 archive calendars. */
 export function werkaArchivePeriodInitial(period: WerkaArchivePeriodPage['period'], now: Date): WerkaArchivePeriodPage {
@@ -64,4 +69,14 @@ export function werkaArchivePeriodPresentation(kind: WerkaArchiveKind, page: Wer
     pageLabel: pageLabel(page), previous, next, previousLabel: pageLabel(previous), nextLabel: pageLabel(next),
     cells, rows: Array.from({ length: 4 }, (_, index) => cells.slice(index * 3, index * 3 + 3)),
     emptyLabel: active.size === 0 ? t('archiveCalendarEmptyYear') : null };
+}
+
+/** Same real grid contract in standalone calendars and the sent hub, with their source layout differences. */
+export function werkaArchivePeriodGridPresentation(props: WerkaArchivePeriodGridProps) {
+  const model = werkaArchivePeriodPresentation(props.kind, props.page, props.active, props.locale, props.formatMonthYear);
+  const sent = props.variant === 'sent', prefix = sent ? `sent_archive_${props.page.period}` : 'archive';
+  const cells = model.cells.map(cell => ({ ...cell, id: sent ? `sent_${cell.id}` : cell.id }));
+  return { ...model, cells, rows: Array.from({ length: 4 }, (_, index) => cells.slice(index * 3, index * 3 + 3)),
+    previousId: `${prefix}_previous_page`, nextId: `${prefix}_next_page`,
+    monthWidth: sent ? 86 : 100, monthSpacing: sent ? 8 : 10, emptyLabel: sent ? null : model.emptyLabel };
 }

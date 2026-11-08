@@ -127,8 +127,8 @@ test('ranges preserve years below 100 and a formatter cannot mutate the selectio
   assert.deepEqual(ymd(years.cells[5].query.from), [0, 1, 1]);
 });
 
-const jsx = { Fragment: 'Fragment', jsx: (type, props, key) => ({ type, props, key }),
-  jsxs: (type, props, key) => ({ type, props, key }) };
+const element = (type, props, key) => typeof type === 'function' ? type(props) : ({ type, props, key });
+const jsx = { Fragment: 'Fragment', jsx: element, jsxs: element };
 function nodes(node, type) {
   if (!node || typeof node !== 'object') return [];
   if (Array.isArray(node)) return node.flatMap(value => nodes(value, type));
@@ -152,6 +152,7 @@ function setup(platform, patch = {}) {
     '../preparation/PreparationUI.ios': { PreparationList: 'PreparationList' },
     '../preparation/PreparationUI.android': { PreparationRow: 'PreparationRow', PreparationText: 'PreparationText' },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' } };
+  mocks[`./WerkaArchivePeriodGrid.${platform}`] = compile(`werka/WerkaArchivePeriodGrid.${platform}.tsx`, mocks);
   const { WerkaArchivePeriodContent } = compile(`werka/WerkaArchivePeriodContent.${platform}.tsx`, mocks);
   return { tree: WerkaArchivePeriodContent(props), calls };
 }
