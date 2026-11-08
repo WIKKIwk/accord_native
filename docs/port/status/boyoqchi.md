@@ -139,3 +139,6 @@ This isolated checkpoint starts at main `af3453c`, preserving its current shared
 ## Field outline checkpoint
 - Unlisted ordinary, Pantone and Pantone Mix labels use the existing app theme's `outlineVariant`, matching V2's field-color fallback (`returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:5-18`). Explicit paint colors remain unchanged; a muted fallback is used only if the theme omits the value. The label remains above the field rather than floating in the outline, and actual phone appearance remains unverified.
 - Twenty-five field, grid, save, pending-edit and swipe tests plus iOS TypeScript and Expo lint passed with mocks; no device was used.
+
+## Request metadata direction
+- Home metadata follows start alignment and Astatka values follow end alignment in both LTR and Urdu RTL, as in `boyoqchi_home_screen_widgets_part_01.dart:265-285` and `boyoqchi_astatka_screen.dart:359-379`. The existing app theme supplies the direction. Six request/logic tests, iOS TypeScript and Expo lint passed; native layout on a phone remains unverified.
