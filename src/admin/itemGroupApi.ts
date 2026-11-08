@@ -3,6 +3,7 @@ import { authorizedFetch } from '../authorizedFetch';
 import { adminItemsPage } from '../gscale/gscaleAdminApi';
 import type { SupplierItem } from '../shared/catalogApi';
 import { MobileApiException } from '../shared/mobileApiException';
+import { dartJsonString } from './dartJsonString';
 import { adminItemGroupBulkMoveResultFromJson, adminItemGroupFromJson,
   type AdminItemGroup, type AdminItemGroupBulkMoveResult, type AdminItemGroupTreeEntry } from './itemGroupModel';
 
@@ -10,14 +11,6 @@ async function responseList(response: Response): Promise<unknown[]> {
   const data: unknown = await response.json();
   if (!Array.isArray(data)) throw new TypeError('Invalid list');
   return data;
-}
-// Dart's decoded JSON values use Dart collection notation when toString() is called.
-function dartString(value: unknown): string {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return `[${value.map(dartString).join(', ')}]`;
-  if (typeof value === 'object') return `{${Object.entries(value as Record<string, unknown>)
-    .map(([key, child]) => `${key}: ${dartString(child)}`).join(', ')}}`;
-  return String(value);
 }
 async function mutationError(response: Response, fallbackCode: string, fallbackMessage: string): Promise<MobileApiException> {
   let code = fallbackCode;
@@ -52,7 +45,7 @@ async function mutationError(response: Response, fallbackCode: string, fallbackM
 export async function adminItemGroups(session: Session): Promise<string[]> {
   const response = await authorizedFetch(session, '/v1/mobile/admin/item-groups');
   if (response.status !== 200) throw new Error('Admin item groups failed');
-  return (await responseList(response)).map(dartString);
+  return (await responseList(response)).map(dartJsonString);
 }
 /** @v2 adminItemGroupTree */
 export async function adminItemGroupTree(session: Session): Promise<AdminItemGroupTreeEntry[]> {

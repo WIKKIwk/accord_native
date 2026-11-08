@@ -23,7 +23,7 @@ function fixture() {
       requests.push({ session, options }); return pages.shift();
     } },
     '../shared/mobileApiException': load('shared/mobileApiException'),
-    './itemGroupModel': model,
+    './itemGroupModel': model, './dartJsonString': load('admin/dartJsonString'),
   });
   return { ...api, requests, pages, setResponse: (value, code = 200) => { payload = value; status = code; } };
 }
