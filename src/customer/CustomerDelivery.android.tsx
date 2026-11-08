@@ -7,7 +7,7 @@ import { WorkerAlert } from '../components/WorkerAlert';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useCustomerText } from './CustomerContext';
 import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerReportClaim, trimCustomerInput, type CustomerReturnInput } from './customerLogic';
-import { customerDeliveryStatusKey, customerDiscussionEventId, type CustomerReturnKind } from './customerDeliveryView';
+import { customerDeliveryInfoRows, customerDiscussionEventId, type CustomerDeliveryInfoRow, type CustomerReturnKind } from './customerDeliveryView';
 import { CustomerReturnDialog } from './CustomerReturnDialog';
 import { CustomerSnackbar } from './CustomerSnackbar';
 import { useCustomerDelivery } from './useCustomerScreens';
@@ -36,8 +36,13 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
     else if (current === 'partial') void state.send(customerAcceptPartial(deliveryNoteID, record.sent_qty, input));
     else if (current === 'claim') void state.send(customerReportClaim(deliveryNoteID, input));
   };
-  const line = (label: string, value: string) => <View key={label} style={{ paddingHorizontal: 16, paddingVertical: 7 }}>
-    <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{text(label)}</Text><Text style={{ color: colors.onSurface, fontSize: 16 }}>{value}</Text></View>;
+  const line = (row: CustomerDeliveryInfoRow) => <View key={row.labelKey} style={{ paddingHorizontal: 16, paddingVertical: 7, gap: 6 }}>
+    <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, fontWeight: '600' }}>{row.label}</Text>
+    <View style={row.highlighted ? { alignSelf: 'flex-start', backgroundColor: colors.secondaryContainer, borderRadius: 14,
+      paddingHorizontal: 12, paddingVertical: 8 } : undefined}>
+      <Text style={{ color: row.highlighted ? colors.onSecondaryContainer : colors.onSurface, fontSize: row.highlighted ? 16 : 20,
+        fontWeight: row.highlighted ? '700' : '600' }}>{row.value}</Text>
+    </View></View>;
   const action = (label: string, onPress: () => void, blocked = false) => <Host key={label} matchContents={{ vertical: true }} style={{ width: '100%' }}>
     <Button label={text(label)} disabled={blocked} onPress={onPress} style={{ width: '100%' }} /></Host>;
   return <>
@@ -45,10 +50,7 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
       refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.reload(); }} />}>
       <WorkerQueueCard backgroundColor={colors.surfaceContainerLow} first last><View style={{ flex: 1, gap: 6, paddingVertical: 12 }}>
         <Text style={{ color: colors.onSurface, fontSize: 20, paddingHorizontal: 16 }}>{text('shipmentInfoTitle')}</Text>
-        {line('customerLabel', record.supplier_name)}{line('itemLabel', `${record.item_code} • ${record.item_name}`)}
-        {line('pendingStatus', `${record.sent_qty.toFixed(2)} ${record.uom}`)}
-        {record.accepted_qty > 0 ? line('acceptedFromQtyPrefix', `${record.accepted_qty.toFixed(2)} ${record.uom}`) : null}
-        {line('statusLabel', text(customerDeliveryStatusKey(record.status)))}
+        {customerDeliveryInfoRows(record, text).map(line)}
         {trimCustomerInput(record.note) ? <View style={{ paddingHorizontal: 16, gap: 6 }}><Text style={{ color: colors.onSurface }}>{text('noteTitle')}</Text>
           <Text style={{ color: colors.onSurface }}>{record.note}</Text></View> : null}
         {hasDiscussion && onOpenDiscussion ? <View style={{ paddingHorizontal: 16, gap: 8 }}><Text style={{ color: colors.onSurface }}>{text('commentsTitle')}</Text>

@@ -1,12 +1,13 @@
-import { ListItem, Text } from '@expo/ui';
-import { Button, Host, List, ProgressView, Section } from '@expo/ui/swift-ui';
-import { disabled, listStyle, refreshable } from '@expo/ui/swift-ui/modifiers';
+import { Text } from '@expo/ui';
+import { Button, Host, List, ProgressView, Section, VStack } from '@expo/ui/swift-ui';
+import { background, disabled, fixedSize, font, foregroundStyle, frame, lineLimit, listStyle, padding, refreshable, shapes } from '@expo/ui/swift-ui/modifiers';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
+import { PlatformColor } from 'react-native';
 import { WorkerAlert } from '../components/WorkerAlert';
 import { useCustomerText } from './CustomerContext';
 import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerReportClaim, trimCustomerInput, type CustomerReturnInput } from './customerLogic';
-import { customerDeliveryStatusKey, customerDiscussionEventId, type CustomerReturnKind } from './customerDeliveryView';
+import { customerDeliveryInfoRows, customerDiscussionEventId, type CustomerReturnKind } from './customerDeliveryView';
 import { CustomerReturnDialog } from './CustomerReturnDialog';
 import { CustomerSnackbar } from './CustomerSnackbar';
 import { useCustomerDelivery } from './useCustomerScreens';
@@ -34,12 +35,14 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
   return <>
     <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(state.reload)]}>
       <Section title={text('shipmentInfoTitle')}>
-        <ListItem trailing={<Text>{record.supplier_name}</Text>}><Text>{text('customerLabel')}</Text></ListItem>
-        <ListItem trailing={<Text>{`${record.item_code} • ${record.item_name}`}</Text>}><Text>{text('itemLabel')}</Text></ListItem>
-        <ListItem trailing={<Text>{`${record.sent_qty.toFixed(2)} ${record.uom}`}</Text>}><Text>{text('pendingStatus')}</Text></ListItem>
-        {record.accepted_qty > 0 ? <ListItem trailing={<Text>{`${record.accepted_qty.toFixed(2)} ${record.uom}`}</Text>}>
-          <Text>{text('acceptedFromQtyPrefix')}</Text></ListItem> : null}
-        <ListItem trailing={<Text>{text(customerDeliveryStatusKey(record.status))}</Text>}><Text>{text('statusLabel')}</Text></ListItem>
+        {customerDeliveryInfoRows(record, text).map(row => <VStack key={row.labelKey} alignment="leading" spacing={6}
+          modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+          <Text modifiers={[font({ textStyle: 'caption', weight: 'semibold' }), foregroundStyle(PlatformColor('secondaryLabel')),
+            lineLimit(), fixedSize({ horizontal: false, vertical: true })]}>{row.label}</Text>
+          <Text modifiers={[font({ textStyle: row.highlighted ? 'headline' : 'title3', weight: 'semibold' }), lineLimit(),
+            fixedSize({ horizontal: false, vertical: true }), ...(row.highlighted ? [padding({ horizontal: 12, vertical: 8 }),
+              background(PlatformColor('secondarySystemFill'), shapes.roundedRectangle({ cornerRadius: 14 }))] : [])]}>{row.value}</Text>
+        </VStack>)}
       </Section>
       {trimCustomerInput(record.note) ? <Section title={text('noteTitle')}><Text>{record.note}</Text></Section> : null}
       {hasDiscussion && onOpenDiscussion ? <Section title={text('commentsTitle')}><Button label={text('openDiscussionAction')} onPress={() => {
