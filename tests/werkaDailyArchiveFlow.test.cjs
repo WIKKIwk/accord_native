@@ -119,6 +119,12 @@ test('an observer that invalidates the session during selection cannot return na
   assert.equal(h.flow.selectDate(date(2024, 1, 4)), null); assert.equal(h.flow.getSnapshot(), null);
 });
 
+test('selection does not return navigation arguments after its observer replaces the load adapter', async () => {
+  let replace = false; const h = harness({ onState: () => { if (replace) h.deps.load = async () => response(); } });
+  await h.flow.start(); h.flow.revealAfterFrame(); replace = true;
+  assert.equal(h.flow.selectDate(date(2024, 1, 4)), null);
+});
+
 test('blocked, asynchronous or throwing guards and broken evaluators fail closed without unhandled rejection', async () => {
   const unhandled = [], listener = error => unhandled.push(error); process.on('unhandledRejection', listener);
   try {

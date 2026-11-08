@@ -114,9 +114,9 @@ export class WerkaDailyArchiveFlow {
   /** Call only for an enabled picker day. The owner must recheck the guard before navigating. */
   selectDate(value: Date): WerkaArchiveQuery | null {
     if (!this.started || !this.current() || !this.state.calendar.calendarOpen || !Number.isFinite(value.getTime())) return null;
-    const result = werkaDailyArchiveSelect(this.kind, this.state.calendar, value), action = ++this.actionGeneration;
+    const load = this.deps.load, result = werkaDailyArchiveSelect(this.kind, this.state.calendar, value), action = ++this.actionGeneration;
     const published = this.publish({ calendar: result.state });
-    return published && action === this.actionGeneration && this.current() ? result.query : null;
+    return published && action === this.actionGeneration && this.current() && this.deps.load === load ? result.query : null;
   }
   dispose(): void { this.disposed = true; this.requestGeneration++; this.actionGeneration++; }
 }

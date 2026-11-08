@@ -94,11 +94,12 @@ export class WerkaArchivePeriodFlow {
   /** Call only for a real visible cell. Active and inactive cells both return arguments without navigating. */
   select(value: number): WerkaArchiveQuery | null {
     if (!this.started || !this.current() || !Number.isInteger(value)) return null;
-    const page = this.state.page;
+    const page = this.state.page, load = this.deps.load, onState = this.deps.onState;
     if (page.period === 'monthly' && (value < 1 || value > 12)) return null;
     if (page.period === 'yearly' && (value < page.firstYear || value > page.firstYear + 11)) return null;
     const range = page.period === 'monthly' ? werkaArchiveMonthRange(page.year, value) : werkaArchiveYearRange(value);
-    return this.current() && this.state.page === page ? { kind: this.kind, period: page.period, ...range } : null;
+    return this.current() && this.state.page === page && this.deps.load === load && this.deps.onState === onState
+      ? { kind: this.kind, period: page.period, ...range } : null;
   }
   dispose(): void { this.disposed = true; this.requestGeneration++; }
 }

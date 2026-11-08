@@ -159,6 +159,15 @@ test('invalid clock, page steps and cell values do not fabricate a range', async
   assert.equal(h.queries.length, 1);
 });
 
+test('selection does not return a range when its guard replaces an adapter or observer', async () => {
+  for (const key of ['load', 'onState']) {
+    let armed = false, calls = 0;
+    const h = harness('monthly', { isCurrent: () => { if (armed && ++calls === 2) h.deps[key] = () => {};
+      return true; } });
+    await h.flow.start(); armed = true; assert.equal(h.flow.select(2), null, key);
+  }
+});
+
 test('reentrant page changes or refreshes prevent superseded sends and loading completion', async () => {
   let flow, armed = false, moved = false; const queries = [], pending = defer();
   const h = harness('monthly', { load: query => { queries.push(query); return queries.length === 1
