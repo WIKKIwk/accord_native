@@ -11,6 +11,7 @@ import { checkedAdminGuard } from './adminProductionRequest';
 import type { AdminWorkMapDetailTicket, AdminWorkMapPage } from './adminWorkMapController';
 import { adminWorkMapMetadataFromSaved } from './adminWorkMapMetadataModel';
 import { adminProductionMapOrderSummary } from './adminOrderSummaryApi';
+import { adminWorkMapOrderWeight } from './adminWorkMapOrderWeight';
 
 /** Capture one witness and one read scope for this screen; never recapture a stale operation. */
 function adminWorkMapGuard(session: Session, isWitnessCurrent: () => boolean) {
@@ -61,7 +62,9 @@ export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () 
         const saved = snapshot.maps[0], map = saved.map, customers = snapshot.order_customers ?? {};
         const metadata = adminWorkMapMetadataFromSaved(saved);
         guard();
-        return { kind: 'order' as const, map, metadata, qolipInRework: saved.qolip_in_rework === true,
+        // Compact Orders detail computes this fallback from its hydrated templates; Sequence and legacy full pages use different metric flows.
+        const orderWeight = ticket.ordersSummary ? adminWorkMapOrderWeight(map, Object.values(snapshot.calculation_templates ?? {})) : null;
+        return { kind: 'order' as const, map, metadata, orderWeight, qolipInRework: saved.qolip_in_rework === true,
           customer: Object.hasOwn(customers, ticket.id) ? customers[ticket.id] : map.customer_name };
       }
     }

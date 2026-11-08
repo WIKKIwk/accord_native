@@ -11,7 +11,8 @@ export type AdminWorkMapPage = { projection: string; version: string; epoch: str
   offset: number; length: number; next_cursor: string | null; order_ids: string[]; pending_ids: string[];
   order_rows: Record<string, any>; pending_rows: Record<string, any>; pending_orders: any[]; closed_orders: AdminWorkMapClosedOrder[];
   workflow_audit: AdminWorkMapAuditReport | null; snapshot: { maps: any[]; revision?: number | null; order_customers?: Record<string, string> } | null };
-export type AdminWorkMapDetailTicket = { generation: number; id: string; kind: 'pending' | 'order'; epoch: string; revision: number | null; apparatus?: string };
+export type AdminWorkMapDetailTicket = { generation: number; id: string; kind: 'pending' | 'order'; epoch: string; revision: number | null;
+  apparatus?: string; ordersSummary?: true };
 export type AdminWorkMapState = { query: string; rows: readonly AdminWorkMapRow[]; loading: boolean; loaded: boolean; error: string | null; hasMore: boolean; total: number; audit: AdminWorkMapAuditReport | null; closed: readonly AdminWorkMapClosedOrder[] };
 type Dependencies = { isCurrent: () => boolean; request?: AdminWorkMapRequest | null;
   read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }) => Promise<AdminWorkMapPage | null> };
@@ -102,7 +103,9 @@ export class AdminWorkMapController {
   detailTicket(row: AdminWorkMapRow): AdminWorkMapDetailTicket | null {
     if (this.request?.view === 'move' || !this.deps.isCurrent() || !this.state.rows.some(item => item.id === row.id && item.kind === row.kind)) return null;
     const first = this.pages[0];
+    const source = this.pages.find(page => row.kind === 'order' && page.order_ids.includes(row.id));
     return first ? { generation: this.generation, id: row.id, kind: row.kind, epoch: first.epoch, revision: first.revision,
+      ...(this.request?.view === 'orders' && source?.projection === 'orders_list_v1' ? { ordersSummary: true as const } : {}),
       ...(this.request?.view === 'sequence' ? { apparatus: this.request.apparatus } : {}) } : null;
   }
   detailIsCurrent(ticket: AdminWorkMapDetailTicket): boolean {

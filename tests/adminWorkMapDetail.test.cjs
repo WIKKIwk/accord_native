@@ -75,7 +75,7 @@ test('actual detail hook/reader composition accepts a valid ticket and rejects t
     '../sessionReadScope': { sessionReadScope: session => JSON.stringify(session.profile) },
     '../shared/appRoutes': load('shared/appRoutes.ts'), '../shared/profileSessionGuard': guard,
     '../shared/mobileApiException': load('shared/mobileApiException.ts'), './adminProductionRequest': adminGuard,
-    './adminWorkMapMetadataModel': metadata,
+    './adminWorkMapMetadataModel': metadata, './adminWorkMapOrderWeight': load('admin/adminWorkMapOrderWeight.ts', { './dartJsonString': load('admin/dartJsonString.ts') }),
   });
   const f = fixture(readers); f.args.session = { token: 'token', profile: { role: 'admin', ref: 'me' }, capabilities: ['admin.access'] };
   assert.equal(f.render().valid, true); assert.equal(sent.length, 1);
@@ -164,6 +164,10 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   assert.deepEqual(tree.filter(node => node.type === 'Text').slice(0, 3).map(node => node.props.children), ['worker.order.code', '-', 'Canonical • Hydrated']);
   assert.deepEqual(tree.find(node => node.type === 'Metadata').props.rows.map(row => row.value), ['detail.date_missing', 'detail.creator_missing']);
   assert.equal(tree.find(node => node.type === 'Summary').props.model.canExpand, true);
+  assert.equal(tree.find(node => node.type === 'Summary').props.model.map.order_kg, 12);
+  detail.value.orderWeight = 42.5;
+  assert.equal(nodes(View(props)).find(node => node.type === 'Summary').props.model.map.order_kg, 42.5);
+  assert.equal(detail.value.map.order_kg, 12, 'the hydrated snapshot itself is not mutated');
   assert.equal(tree.some(node => node.props.testID === 'admin-qolip-rework-notice'), false);
   detail.value.qolipInRework = true;
   for (const role of ['admin', 'brigader']) {

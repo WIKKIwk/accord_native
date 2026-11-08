@@ -15,6 +15,7 @@ const routes = load('shared/appRoutes'), profileGuard = load('shared/profileSess
 const adminGuard = load('admin/adminProductionRequest', { '../authorizedFetch': {}, '../shared/mobileApiException': {}, '../workerControlsApi': {} });
 const metadata = load('admin/adminWorkMapMetadataModel', { './dartJsonString': load('admin/dartJsonString'),
   './adminWorkMapClosedModel': load('admin/adminWorkMapClosedModel', { './dartJsonString': load('admin/dartJsonString') }) });
+const weight = load('admin/adminWorkMapOrderWeight', { './dartJsonString': load('admin/dartJsonString') });
 function fixture() {
   const session = { baseUrl: 'https://server.example', token: 'token', profile: { role: 'admin', ref: 'me' }, capabilities: ['admin.access'] };
   let current = true, duringRead = () => {}, snapshot = { epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }] };
@@ -27,7 +28,7 @@ function fixture() {
     '../pendingOrderApi': { pendingOrderDetail: async (s, id, guard) => { calls.push(['pending', s, id]); guard(); duringRead(); guard(); return { id, template: { product: 'P' }, manager_name: 'Manager' }; } },
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile, value.capabilities]) },
     '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, '../shared/mobileApiException': exception, './adminProductionRequest': adminGuard,
-    './adminWorkMapMetadataModel': metadata,
+    './adminWorkMapMetadataModel': metadata, './adminWorkMapOrderWeight': weight,
     './adminOrderSummaryApi': { adminProductionMapOrderSummary: async (s, id, guard) => { calls.push(['summary', s, id]); guard(); duringRead(); guard(); return { source_map_id: id }; } },
   };
   const api = load('admin/adminWorkMapReader', apis);
@@ -126,8 +127,17 @@ test('Sequence catalog cannot return after its witness changes during a read', a
 });
 test('Sequence detail keeps the apparatus from its original visible list ticket', async () => {
   const f = fixture(), apparatus = 'apparatus:default:asset-005';
-  await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4, apparatus });
+  f.setSnapshot({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o', order_kg: 0 } }],
+    calculation_templates: { o: { source_map_id: 'o', kg: 77 } } });
+  const result = await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4, apparatus });
+  assert.equal(result.orderWeight, null);
   assert.deepEqual(f.calls[0][2], { apparatus, order_id: 'o' });
+});
+test('legacy full Orders detail does not use the compact summary template-metric flow', async () => {
+  const f = fixture(); f.setSnapshot({ epoch: 'e', revision: 5, scope: 's', maps: [{ map: { id: 'o', order_kg: 0 } }],
+    calculation_templates: { o: { source_map_id: 'o', kg: 77 } } });
+  const result = await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4 });
+  assert.equal(result.orderWeight, null);
 });
 
 test('real catalog callback wrapper accepts the checked Admin guard and rejects a body-time witness transition', async () => {
@@ -164,20 +174,25 @@ test('actual pending detail decodes manager and template under the original witn
     assert.equal(query.pathname, '/v1/mobile/admin/pending-orders'); assert.deepEqual(Object.fromEntries(query.searchParams), { id: 'p' });
   }
 });
-test('actual detail decoder supplies creation metadata and rework flag only while the opening scope is still current', async () => {
+test('actual detail decoder supplies metadata, rework flag and template weight only while the opening scope is current', async () => {
   for (const invalidate of [false, true]) {
     const f = fixture(), requests = [], raw = { epoch: 'e', scope: 's', rev: 5, sequences: {}, visible_order_ids: {},
       queue_states: {}, queue_policies: [], order_controls: {}, stage_states: {}, queue_action_controls: {}, frozen_orders_by_apparatus: {},
-      maps: [{ map: { id: 'o', title: 'Film', nodes: [], edges: [] }, program: {}, qolip_in_rework: true, created_at_unix: 1700000000,
-        created_by: { role: 'brigader', display_name: 'Ana', ref: 'ignored' } }] };
+      maps: [{ map: { id: 'o', title: 'Film', order_kg: 0, width_mm: 100, nodes: [], edges: [] }, program: {}, qolip_in_rework: true, created_at_unix: 1700000000,
+        created_by: { role: 'brigader', display_name: 'Ana', ref: 'ignored' } }],
+      calculation_templates: { o: { source_map_id: 'o', kg: 42.5, width_mm: 100 } } };
     const detailApi = loadRoot('productionOrderDetailApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
       requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
     } } });
     const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderDetailApi': detailApi }).adminWorkMapDetailReader(f.session, f.witness);
-    const pending = reader({ kind: 'order', id: 'o', epoch: 'e', revision: 4 });
+    const pending = reader({ kind: 'order', id: 'o', epoch: 'e', revision: 4, ordersSummary: true });
     if (invalidate) await assert.rejects(pending, /session changed/);
     else { const detail = await pending; assert.deepEqual(detail.metadata, { createdAtUnix: 1700000000, creator: { role: 'brigader', displayName: 'Ana' } });
-      assert.equal(detail.qolipInRework, true); }
+      assert.equal(detail.qolipInRework, true); assert.equal(detail.orderWeight, 42.5);
+      const localization = load('shared/localization/index', { './catalog.json': require('../src/shared/localization/catalog.json') });
+      const present = load('admin/adminWorkMapSummaryPresentation', { '../shared/localization': localization, './dartJsonString': load('admin/dartJsonString') }).adminWorkMapSummaryPresentation;
+      const summary = present({ ...detail.map, order_kg: detail.orderWeight ?? detail.map.order_kg }, { expanded: true, canExpand: true, loading: true, failed: false }, 'en');
+      assert.equal(summary.blocks.find(block => block.id === 'weight').value, '42.5 kg'); }
     assert.equal(requests.length, 1);
   }
 });

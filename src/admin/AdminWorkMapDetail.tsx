@@ -55,7 +55,8 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
       {!header && !pending && !!customer && <ListItem supportingText={customer}>{localizedGetter('customerLabel', locale)}</ListItem>}
       {metadata.length > 0 && <AdminWorkMapMetadata rows={metadata} />}
       {combo && <AdminWorkMapCombo key={value?.kind === 'order' ? value.map.id : undefined} model={combo} />}
-      {pending ? <AdminWorkMapPending rows={pending.rows} /> : showSummary ? <AdminWorkMapSummary model={adminWorkMapSummaryPresentation(value?.kind === 'order' ? value.map : null, summary, locale)} onToggle={summary.toggle} onRetry={summary.retry} /> : <>
+      {pending ? <AdminWorkMapPending rows={pending.rows} /> : showSummary ? <AdminWorkMapSummary model={adminWorkMapSummaryPresentation(value?.kind === 'order'
+        ? { ...value.map, order_kg: value.orderWeight ?? value.map.order_kg } : null, summary, locale)} onToggle={summary.toggle} onRetry={summary.retry} /> : <>
         {typeof weight === 'number' && Number.isFinite(weight) && <ListItem supportingText={`${weight} kg`}>{productionText('worker.summary.weight', locale)}</ListItem>}
         {typeof length === 'number' && Number.isFinite(length) && <ListItem supportingText={`${length} m`}>{productionText('worker.summary.length', locale)}</ListItem>}
         {typeof width === 'number' && Number.isFinite(width) && <ListItem supportingText={`${width} mm`}>{productionText('worker.summary.material_width', locale)}</ListItem>}

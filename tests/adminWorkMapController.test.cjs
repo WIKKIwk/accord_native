@@ -70,9 +70,16 @@ test('detail tickets bind a visible row to the current page generation', async (
   let current = true; const c = new Controller({ isCurrent: () => current, read: async () => summary() });
   c.start(); await tick(); const row = c.getSnapshot().rows[0], ticket = c.detailTicket(row);
   assert.equal(ticket.id, row.id); assert.equal(c.detailIsCurrent(ticket), true);
+  assert.equal(ticket.ordersSummary, undefined); assert.equal(c.detailTicket(c.getSnapshot().rows[1]).ordersSummary, true);
   assert.equal(c.detailTicket({ ...row, id: 'unknown' }), null);
   c.setQuery('new'); assert.equal(c.detailIsCurrent(ticket), false); assert.equal(c.detailTicket(row), null);
   current = false; c.invalidate(); assert.equal(c.detailIsCurrent(ticket), false); c.dispose();
+});
+test('legacy full Orders detail ticket does not claim compact-summary metrics', async () => {
+  const page = summary({ projection: '', length: 1, next_cursor: null, order_ids: ['o'], pending_ids: [], order_rows: {}, pending_rows: {}, pending_orders: [],
+    snapshot: { maps: [{ map: { id: 'o', title: 'Film', nodes: [] } }] } });
+  const c = new Controller({ isCurrent: () => true, read: async () => page }); c.start(); await tick();
+  assert.equal(c.detailTicket(c.getSnapshot().rows[0]).ordersSummary, undefined); c.dispose();
 });
 test('card formatting retains V2 pending label and a Dart-like decimal for ordinary integer kg', () => {
   const localization = { productionText: () => 'Order' };

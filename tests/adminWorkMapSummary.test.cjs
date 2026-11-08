@@ -63,6 +63,7 @@ test('actual saved-summary hook/reader accepts the composed witness and retires 
     '../sessionReadScope': { sessionReadScope: session => JSON.stringify(session.profile) },
     '../shared/appRoutes': load('shared/appRoutes.ts'), '../shared/profileSessionGuard': guard,
     '../shared/mobileApiException': load('shared/mobileApiException.ts'), './adminProductionRequest': adminGuard, './adminWorkMapMetadataModel': {},
+    './adminWorkMapOrderWeight': load('admin/adminWorkMapOrderWeight.ts', { './dartJsonString': dart }),
   });
   const f = fixture(readers); f.args.session = { token: 'token', profile: { role: 'admin', ref: 'me' }, capabilities: ['admin.access'] };
   f.render().toggle(); f.render(); assert.equal(sent.length, 1); assert.equal(sent[0].id, 'o');
