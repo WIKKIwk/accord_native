@@ -36,3 +36,13 @@ test('actual main transition during role pending-key write stops dispatch and re
   const replacement = { ...h.session, profile: { ...h.session.profile }, imageCacheScope: 'B' }; await h.auth.saveSession(replacement);
   gate.resolve(); await assert.rejects(pending, /Akkaunt o‘zgargan/); assert.equal(h.calls(), 0); assert.deepEqual(JSON.parse([...h.state.values()][0]), payload);
 });
+
+test('role Profile guard uses the actual captured witness and blocks a demo token', async () => {
+  const h = setup(); await h.auth.saveSession(h.session); const witness = h.auth.captureSessionWitness(h.session);
+  const ticket = h.api.createRawSplitSessionTicket(h.session, h.auth.activeSessionEpoch, () => h.auth.isSessionWitnessCurrent(witness));
+  const { useRawSplitProfileGuard } = load('homashyo/useRawSplitProfileGuard', { react: { useCallback: fn => fn },
+    './rawSplitApi': h.api, './RawSplitContext': { useRawSplitContext: () => ({ session: h.session, ticket }) } });
+  const guard = useRawSplitProfileGuard(); assert.equal(guard(), true); h.session.token = 'test-mode-token'; assert.equal(guard(), false);
+  h.session.token = 'not-a-credential'; const other = { ...h.session, profile: { ...h.session.profile }, imageCacheScope: 'B' };
+  await h.auth.saveSession(other); await h.auth.saveSession(h.session); assert.equal(guard(), false);
+});
