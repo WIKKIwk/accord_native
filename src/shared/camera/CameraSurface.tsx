@@ -3,6 +3,7 @@ import { CameraView, type BarcodeScanningResult, type BarcodeType, type CameraMo
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { CameraSurfaceGate } from './CameraSurfaceGate';
+import { isSynchronouslyTrue } from './synchronousGuard';
 
 export type CameraSurfaceProps = {
   active: boolean;
@@ -34,7 +35,7 @@ export function CameraSurface({ active, permission, checking, facing, torch, bar
     return () => gate.deactivate(token);
   }, [enabled, token, gate]);
   if (!enabled) return null;
-  const current = () => { try { return callbacks.current.isCurrent(); } catch { return false; } };
+  const current = () => isSynchronouslyTrue(callbacks.current.isCurrent);
   return <CameraView key={configKey} style={style} facing={facing} enableTorch={torch} barcodeScannerSettings={{ barcodeTypes }}
     onBarcodeScanned={event => gate.deliver(token, event, value => { if (current()) callbacks.current.onDetection(value); })}
     onMountError={event => gate.deliver(token, event, value => { if (current()) callbacks.current.onMountError(value); })}

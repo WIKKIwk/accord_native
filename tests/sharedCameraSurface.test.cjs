@@ -17,7 +17,8 @@ function harness() {
   };
   const jsx = { jsx: (type, props, key) => ({ type, props, key }) };
   const { CameraSurface } = load('shared/camera/CameraSurface.tsx', { react, 'react/jsx-runtime': jsx,
-    'expo-camera': { CameraView: 'CameraView' }, './CameraSurfaceGate': gate }, true);
+    'expo-camera': { CameraView: 'CameraView' }, './CameraSurfaceGate': gate,
+    './synchronousGuard': load('shared/camera/synchronousGuard.ts') }, true);
   let props = { active: true, permission: { granted: true, canAskAgain: true }, checking: false, facing: 'back', torch: false,
     barcodeTypes: ['qr', 'datamatrix'], sessionKey: '1', isCurrent: () => true, onDetection: value => events.push(['detected', value]),
     onMountError: value => events.push(['error', value]), onReady: () => events.push(['ready']) };
@@ -103,4 +104,12 @@ test('starting permission refresh blocks a queued barcode before React can re-re
   tree.props.onBarcodeScanned({ type: 'qr', data: 'old' }); assert.deepEqual(h.events, []); assert.equal(controller.canUseCamera(), false);
   nextResolve(permission); await pending; tree.props.onBarcodeScanned({ type: 'qr', data: 'new' });
   assert.equal(h.events.length, 1); h.unmount(); controller.unmount();
+});
+
+test('an accidentally async or rejected current guard never authorizes an event or leaks rejection', async () => {
+  for (const guard of [() => Promise.resolve(true), () => Promise.reject(new Error('guard failed')), () => 1, () => 'true']) {
+    const h = harness(), tree = h.render({ isCurrent: guard }); tree.props.onBarcodeScanned({ type: 'qr', data: 'old' });
+    tree.props.onCameraReady(); tree.props.onMountError({ message: 'old' }); await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(h.events, []); h.unmount();
+  }
 });
