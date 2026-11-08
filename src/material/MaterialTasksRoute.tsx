@@ -11,6 +11,7 @@ import { readSupplyTaskWindow } from '../shared/supplyTasks/supplyTaskApi';
 import { useMaterialContext } from './MaterialContext';
 import { MaterialTasks } from './MaterialTasks';
 import { isMaterialTestSession } from './materialTestSession';
+import { useMaterialTaskDetail } from './useMaterialTaskDetail';
 
 const subscribe = (listener: () => void) => localeController.addListener(listener);
 const locale = () => localeController.locale;
@@ -19,6 +20,7 @@ const locale = () => localeController.locale;
 export function MaterialTasksRoute() {
   const { session, witness } = useMaterialContext(), drawer = useRoleDrawer();
   const currentLocale = useSyncExternalStore(subscribe, locale, locale);
+  const openDetail = useMaterialTaskDetail(session, witness);
   const [owner, setOwner] = useState<{ session: typeof session; controller: SupplyTasksController } | null>(null);
   const allowed = !isMaterialTestSession(session) && isSessionWitnessCurrent(witness) && session.profile.role === 'material_taminotchi' && canOpenRoute(session, appRoutes.materialTasks);
   useFocusEffect(useCallback(() => {
@@ -35,6 +37,6 @@ export function MaterialTasksRoute() {
   if (!allowed) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
     <Text>{localizedGetter('accessDenied', currentLocale)}</Text></View>;
   if (!owner || owner.session !== session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
-  return <MaterialTasks controller={owner.controller} session={session} locale={currentLocale}
+  return <MaterialTasks controller={owner.controller} session={session} locale={currentLocale} handlers={{ openDetail }}
     onMenu={drawer.open} onProfile={() => router.navigate(`/${Platform.OS === 'ios' ? 'ios' : 'android'}-material/profile` as Href)} />;
 }

@@ -37,7 +37,7 @@ function setup(platform, authorized = true) {
     '../shared/supplyTasks/supplyTaskApi': { readSupplyTaskWindow: (...args) => { calls.push(['read', ...args]); return Promise.resolve('window'); } },
     './materialTestSession': { isMaterialTestSession: value => value.token === 'test-mode-token' },
     './MaterialContext': { useMaterialContext: () => ({ session, witness }) }, './MaterialHome': { MaterialHome: 'MaterialHome' },
-    './MaterialTasks': { MaterialTasks: 'MaterialTasks' } };
+    './MaterialTasks': { MaterialTasks: 'MaterialTasks' }, './useMaterialTaskDetail': { useMaterialTaskDetail: () => () => calls.push('detail') } };
   const home = compile('material/MaterialHomeRoute', mocks).MaterialHomeRoute;
   const task = compile('material/MaterialTasksRoute', mocks).MaterialTasksRoute;
   return { session, calls, home, task, focus: () => effect(), setAllowed: value => { canOpen = value; }, clearState: () => { state = null; }, transition: () => { witnessValid = false; listeners.forEach(listener => listener()); },
@@ -53,7 +53,7 @@ for (const platform of ['ios', 'android']) {
   });
   test(`${platform} tasks entry activates real reader only for an authorized focus`, async () => {
     const h = setup(platform); assert.equal(h.task().type, 'View'); const blur = h.focus();
-    const tree = h.task(); assert.equal(tree.type, 'MaterialTasks');
+    const tree = h.task(); assert.equal(tree.type, 'MaterialTasks'); assert.equal(typeof tree.props.handlers.openDetail, 'function');
     const options = h.calls.find(item => Array.isArray(item) && item[0] === 'new')[1];
     const guard = () => true, query = { kind: 'material', limit: 10, apparatus: '', search: '' };
     assert.equal(options.kind, 'material'); assert.equal(options.isCurrent(), true);
