@@ -14,7 +14,8 @@ function compile(relative, mocks = {}) {
   return loaded.exports;
 }
 const controls = compile('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': {} });
-const { productionMapAuthorizedOrderApparatus: authorized } = compile('shared/productionMapAuthorizedApparatus', { '../workerControlsApi': controls });
+const dartApparatus = compile('shared/dartApparatus', { '../workerControlsApi': controls });
+const { productionMapAuthorizedOrderApparatus: authorized } = compile('shared/productionMapAuthorizedApparatus', { './dartApparatus': dartApparatus });
 const golden = require('./contracts/f11910bb/material_assignment_apparatus.json');
 const unicode = require('./contracts/f11910bb/material_unicode_trim.json');
 
