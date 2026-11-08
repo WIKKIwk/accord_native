@@ -21,10 +21,10 @@ function history(platform, translate = value => value) {
   let effects = [], loads = 0, selectedResult, selectedIssue;
   const state = { snapshot: null, printer: null, wifiPrinter: 'godex', error: null, busy: false };
   const controller = { getSnapshot: () => state, subscribe: () => () => {}, reload: async () => { loads++; } };
-  const react = { useEffect: fn => effects.push(fn), useSyncExternalStore: (_subscribe, get) => get() };
+  const react = { useLayoutEffect: fn => effects.push(fn), useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': new Proxy({}, { get: (_, name) => name }),
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surface: 'surface', primary: 'primary', onSurface: 'text', onSurfaceVariant: 'muted' }) },
-    '@expo/ui/swift-ui/modifiers': { lineLimit: value => ({ type: 'lineLimit', value }) }, 'expo-symbols': { SymbolView: 'SymbolView' },
+    '@expo/ui/swift-ui/modifiers': { lineLimit: value => ({ type: 'lineLimit', value }), disabled: value => ({ type: 'disabled', value }) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'NativeText', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
@@ -37,7 +37,7 @@ function history(platform, translate = value => value) {
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform} history shows loading, then actual snapshot rows and opens correct details`, () => {
-    const h = history(platform); let tree = h.render(); assert.equal(h.loads(), 1);
+    const h = history(platform); h.state.busy = true; let tree = h.render(); assert.equal(h.loads(), 1);
     assert.ok(find(tree, n => n.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length);
     assert.ok(!text(tree).includes('Hali bo‘lish tarixi yo‘q.'));
     h.state.snapshot = { warehouses: ['Raw W'], history: [result], issues: [issue] }; tree = h.render();
@@ -66,6 +66,62 @@ for (const platform of ['ios', 'android']) {
     const tree = h.render(); assert.match(text(tree), /Tarix yuklanmadi/); assert.match(text(tree), /offline/);
     assert.ok(platform === 'ios' ? find(tree, n => n.type === 'Section' && n.props.title === 'Muammolar').length : text(tree).includes('Muammolar'));
     assert.doesNotMatch(text(tree), /100 → 98 kg/);
+  });
+}
+// raw_material_split_history_screen.dart:194-253 and RawSplitHistoryMessage:634-688.
+for (const platform of ['ios', 'android']) {
+  const loadingType = platform === 'ios' ? 'ProgressView' : 'ActivityIndicator';
+  const messageIcons = tree => platform === 'ios' ? find(tree, n => n.type === 'Image').map(n => n.props.systemName)
+    : find(tree, n => n.type === 'SymbolView').map(n => n.props.name.android);
+  test(`${platform} history distinguishes an idle empty state from the first pending snapshot`, () => {
+    const h = history(platform); let tree = h.render();
+    assert.match(text(tree), /Hali bo‘lish tarixi yo‘q\./); assert.equal(find(tree, n => n.type === loadingType).length, 0);
+    assert.deepEqual(messageIcons(tree), [platform === 'ios' ? 'clock.arrow.circlepath' : 'history_toggle_off']);
+    h.state.busy = true; tree = h.render();
+    assert.equal(find(tree, n => n.type === loadingType).length, 1); assert.doesNotMatch(text(tree), /Hali bo‘lish tarixi/);
+    h.state.snapshot = { warehouses: [], history: [result], issues: [] }; tree = h.render();
+    assert.match(text(tree), /100 → 98 kg/); assert.equal(find(tree, n => n.type === loadingType).length, 0);
+  });
+  test(`${platform} history retains the source error title even for an empty error and trims only its subtitle`, () => {
+    const h = history(platform); h.state.busy = true;
+    for (const error of ['', '   ', '  offline\n  ']) {
+      h.state.error = error; const tree = h.render();
+      assert.match(text(tree), /Tarix yuklanmadi/); assert.equal(find(tree, n => n.type === loadingType).length, 0);
+      assert.doesNotMatch(text(tree), /Hali bo‘lish tarixi/);
+      assert.deepEqual(messageIcons(tree), [platform === 'ios' ? 'exclamationmark.circle' : 'error_outline']);
+      const labels = find(tree, n => n.type === (platform === 'ios' ? 'Text' : 'NativeText')).map(text);
+      assert.deepEqual(labels, error.trim() ? ['Tarix yuklanmadi', 'offline'] : ['Tarix yuklanmadi']);
+    }
+  });
+  test(`${platform} history disables the error retry surface while busy and enables it again when idle`, () => {
+    const h = history(platform); h.state.error = 'offline'; h.state.busy = true; let tree = h.render();
+    const button = find(tree, n => n.type === (platform === 'ios' ? 'Button' : 'WorkerQueueCard'))[0];
+    const before = h.loads();
+    if (platform === 'ios') { assert.deepEqual(button.props.modifiers, [{ type: 'disabled', value: true }]); button.props.onPress(); }
+    else assert.equal(button.props.onPress, undefined);
+    assert.equal(h.loads(), before); h.state.busy = false; tree = h.render();
+    const idle = find(tree, n => n.type === (platform === 'ios' ? 'Button' : 'WorkerQueueCard'))[0];
+    if (platform === 'ios') assert.deepEqual(idle.props.modifiers, [{ type: 'disabled', value: false }]);
+    idle.props.onPress(); assert.equal(h.loads(), before + 2); // One mock mount effect and one explicit retry.
+  });
+  test(`${platform} history shows the printer message only with content and preserves transport-specific text`, () => {
+    const h = history(platform); h.state.printer = { transport: 'wifi' }; h.state.wifiPrinter = 'zebra';
+    h.state.snapshot = { warehouses: [], history: [], issues: [] };
+    assert.doesNotMatch(text(h.render()), /Printer:/);
+    h.state.snapshot = { warehouses: [], history: [], issues: [issue] }; let tree = h.render();
+    assert.match(text(tree), /Printer: wifiWi-Fi printer: zebra/);
+    assert.equal(messageIcons(tree)[0], platform === 'ios' ? 'printer' : 'print');
+    h.state.printer = { transport: 'bluetooth' }; tree = h.render();
+    assert.match(text(tree), /Printer: bluetooth/); assert.doesNotMatch(text(tree), /Wi-Fi printer:/);
+    h.state.error = 'offline'; tree = h.render(); assert.doesNotMatch(text(tree), /Printer:/);
+    // An existing issue remains visible below the error, as it does in V2.
+    assert.match(text(tree), /Film/);
+  });
+  test(`${platform} history message labels retain the V2 ordinary Text localization boundary`, () => {
+    const h = history(platform, value => `translated(${value})`); h.state.error = '  offline  ';
+    assert.equal(text(h.render()), 'Tarix yuklanmadioffline');
+    h.state.error = null; h.state.snapshot = { warehouses: [], history: [], issues: [] };
+    assert.equal(text(h.render()), 'Hali bo‘lish tarixi yo‘q.');
   });
 }
 const width = load('rawSplitWidthPlan.ts', { './rawSplitModel': model });

@@ -2,6 +2,7 @@ import { router, Stack, type Href } from 'expo-router';
 import { useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { usePreparationText } from '../preparation/PreparationUI';
+import { RawSplitBusy } from './RawSplitBusy';
 import { RawSplitHome } from './RawSplitHome';
 import { RawSplitScanner } from './RawSplitScanner';
 import { useRawSplitHomeScreen } from './useRawSplitHomeScreen';
@@ -15,6 +16,7 @@ export function RawSplitHomeScreen() {
       onPress={() => router.push('/ios-homashyo/history' as Href)} />
       <Stack.Toolbar.Button icon="printer" accessibilityLabel={t('Printer tanlash')} disabled={state.busy}
         onPress={selectPrinter} /></Stack.Toolbar>
+    {state.busy && <RawSplitBusy />}
     <RawSplitHome controller={flow.controller} onScan={flow.scan} issueRevision={flow.issueRevision} />
     <RawSplitScanner visible={flow.visible} active={flow.cameraActive} isCurrent={flow.isScannerCurrent} onClose={flow.close} onComplete={flow.complete} />
   </View>;

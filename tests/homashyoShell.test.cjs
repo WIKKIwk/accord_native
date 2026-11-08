@@ -48,7 +48,7 @@ test('iOS history Back pops when possible and otherwise replaces the role home',
       back: () => calls.push('back'), replace: route => calls.push(['replace', route]) } },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { Pressable: 'Pressable', View: 'View' },
     '../preparation/PreparationUI': { usePreparationText: () => value => value },
-    './RawSplitHistory': { RawSplitHistory: 'History' }, './useRawSplitHistoryActions': { useRawSplitHistoryActions: () => ({ controller }) },
+    './RawSplitBusy': { RawSplitBusy: 'RawSplitBusy' }, './RawSplitHistory': { RawSplitHistory: 'History' }, './useRawSplitHistoryActions': { useRawSplitHistoryActions: () => ({ controller }) },
     './useRawSplitHeaderPrinter': { useRawSplitHeaderPrinter: () => () => {} } };
   const tree = load('RawSplitHistoryScreen.ios.tsx', mocks, true).RawSplitHistoryScreen();
   const options = tree.props.children[0].props.options; assert.equal(options.headerBackVisible, false);
