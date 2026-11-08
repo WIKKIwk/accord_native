@@ -45,3 +45,7 @@ The scoped `order_scan_bootstrap_api_test` f119 fixture is owned by this branch;
 - iOS typecheck and Expo lint passed. Android typecheck reports only the nine existing Worker errors; no Material errors.
 - Expo SDK 58 versioned documentation and installed UI types were checked. No simulator or phone used.
 - Material route trees are present but no `homeTargets` entry was added. No Chat, unread, notification detail or GScale route was exposed.
+
+## GScale guard checkpoint (not wired)
+- `gscaleMaterialPolicy.ts` is opt-in and currently standalone: it rejects GoDEX, unknown devices and all Wi-Fi, admits only locally identified Zebra USB / XP-P323B Bluetooth, requires current session and valid batch metadata for writes, and provides an in-memory overlay so legacy shared preferences cannot be overwritten. This conservative filter has focused tests, but is not an end-to-end guard yet.
+- Automatic late-error batch stop can POST on opening the screen. Before exposing Material GScale, inject the policy at its actual API boundary and at start, print/prepare/confirm, archive and reprint boundaries; test asynchronous account/selection changes and default behavior for other roles. Wi-Fi printer identity and actual hardware still require an independently verified design.
