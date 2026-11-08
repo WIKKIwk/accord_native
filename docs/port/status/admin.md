@@ -45,6 +45,12 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - An independently authored mock HTTP probe, derived from f119 source rather than a pre-existing V2 test, passed 3/3 in the isolated f119 oracle. Its passing 200 and 500 requests were recorded under `tests/contracts/f11910bb/admin_activity_probe_test.json` after that independent run, and both replays pass. The fixture contains placeholder test data and token only; no backend was contacted. Shared parser, AdminStore and activity tests passed 12/12 together; iOS typecheck and lint pass.
 - This reuse preserves existing native notification behavior but is not fully equivalent to V2: status strings with U+0085 or U+0130, validation order for multiple malformed fields and JSON large-number precision remain shared-parser open items. The f119 probe confirmed V2 accepts NEL-trimmed `ACCEPTED` and Dart-lowercased `PARTİAL`; native currently maps both to pending.
 
+## Checkpoint: additional settings controller
+
+- `additionalSettingsController.ts` implements the common Admin/Brigader/Rezka state machine, per-card loading/retry and server-readback on failure, free-movement confirmation, and captured session identity/scope/route checks both after confirmation and immediately before each mutation. Session reset invalidates pending work. The shared screen contract documents Rezka's Paddon-only operator view and the full Admin/Brigader view. No platform view or route is connected yet.
+- The original f119 Brigader additional-settings widget test passed independently in the oracle; the source-derived route regression covers Admin, Brigader, Rezka Master, Worker and Preparation access boundaries. Nine focused V4 controller/route tests, iOS typecheck and lint pass. No backend or device was used.
+- A deliberate safety improvement rereads a card when an older write completes after a same-session refresh, so the newer view is reconciled rather than accepting stale state. The complete native UI, shell/dock integration, runtime reset-hook wiring and real-device confirmation remain open.
+
 ## Checkpoint: production settings
 
 - `productionSettingsApi.ts` ports the paddon management read/update and free-movement wrappers, plus lamination label settings read/update. It reuses the existing Worker lamination model parser and the existing production-map error reader. Required server acknowledgements and submitted switch values are checked before success is returned. The additional-settings screen and its V2 confirmation before enabling free movement remain unported.

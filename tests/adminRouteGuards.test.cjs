@@ -22,3 +22,15 @@ test('source-derived f119 Admin route paths and capability alternatives match th
     }
   }
 });
+// @v2-test test/admin_additional_settings_test.dart: Brigader case independently passed at f119.
+test('additional settings preserves Admin, Brigader and Rezka Master route branches', () => {
+  const actor = (role, capabilities) => ({ token: 'test', profile: { role, ref: 'test' }, capabilities });
+  const route = appRoutes.adminAdditionalSettings;
+  assert.equal(canOpenRoute(actor('admin', ['admin.access']), route), true);
+  assert.equal(canOpenRoute(actor('brigader', ['brigader.access']), route), true);
+  assert.equal(canOpenRoute(actor('brigader', []), route), false);
+  assert.equal(canOpenRoute(actor('rezka_master', ['rezka.master.access']), route), true);
+  assert.equal(canOpenRoute(actor('rezka_master', []), route), false);
+  assert.equal(canOpenRoute(actor('aparatchi', ['admin.access']), route), false);
+  assert.equal(canOpenRoute(actor('tayyorlov_masteri', ['admin.access']), route), false);
+});
