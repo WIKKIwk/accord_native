@@ -1,7 +1,7 @@
 import { Host, IconButton, OutlinedTextField, RNHostView, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { PreparationText, usePreparationText } from '../preparation/PreparationUI.android';
@@ -22,12 +22,24 @@ function Input({ label, value, enabled, onChange, decimal = false, onDone, searc
   </OutlinedTextField></Host>;
 }
 
-export function RawSplitHome({ controller, onScan }: RawSplitHomeViewProps) {
+export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplitHomeViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), colors = useMaterialColors(), t = usePreparationText();
   useEffect(() => { void controller.reload(); }, [controller]);
   const locked = controller.locked, plan = controller.widthPlan, check = controller.wasteCheck, source = state.source;
   const widthLabel = plan ? rawSplitWasteWidthLabel(plan) : null;
-  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120, gap: 12 }}>
+  const issueVisible = !!(source && plan && state.showIssue && check && check.kind !== null);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null), handledIssue = useRef(0);
+  const [issueLayout, setIssueLayout] = useState<{ source: NonNullable<typeof source>; y: number } | null>(null);
+  const issueY = issueLayout?.source === source ? issueLayout.y : null;
+  useEffect(() => {
+    if (!issueVisible || issueY === null || issueRevision <= handledIssue.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (!scroll.current) return;
+      handledIssue.current = issueRevision; scroll.current.scrollTo({ y: issueY, animated: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [issueRevision, issueVisible, issueY]);
+  return <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120, gap: 12 }}>
     {state.error !== null && <Text style={{ color: colors.error }}>{state.error}</Text>}
     {state.pending !== null && <><PreparationText>{t('Oldingi saqlash natijasini tekshiring.')}</PreparationText>
       <WorkerSheetButton label={t('Tekshirish va chop etish')} variant="filled" disabled={state.busy} onPress={() => { void controller.save(true); }} /></>}
@@ -62,12 +74,12 @@ export function RawSplitHome({ controller, onScan }: RawSplitHomeViewProps) {
           <View style={{ flex: 1 }}>{i === state.outputs.length - 1 && plan.canAdd && <WorkerSheetButton label={t('+ rulon')} variant="filled" disabled={locked} onPress={() => controller.addRoll()} />}</View></View>
       </View>)}
       <Input label="Atxot (kg) *" value={state.waste} enabled={!locked} decimal onChange={value => controller.setWaste(value)} />
-      {state.showIssue && check?.kind !== null && check !== null && <><Text style={{ color: colors.error }}>{check.message}</Text>
+      {state.showIssue && check?.kind !== null && check !== null && <View onLayout={event => setIssueLayout({ source, y: event.nativeEvent.layout.y })} style={{ gap: 12 }}><Text style={{ color: colors.error }}>{check.message}</Text>
         <Input label={t('Farq sababi')} value={state.issueNote} enabled={!locked && !state.issueSaved} multiline onChange={value => controller.setIssueNote(value)} />
         {state.issueError !== null && <Text style={{ color: colors.error }}>{state.issueError}</Text>}
         {state.issueSaved ? <PreparationText>{t(check.waste === null ? 'Muammo saqlandi. Chop etish uchun atxot kg ni son bilan kiriting.' :
           'Muammo saqlandi. Endi chop etishingiz mumkin.')}</PreparationText> :
-          <WorkerSheetButton label={t('Muammoni saqlash')} disabled={locked} onPress={() => { void controller.saveIssue(); }} />}</>}
+          <WorkerSheetButton label={t('Muammoni saqlash')} disabled={locked} onPress={() => { void controller.saveIssue(); }} />}</View>}
       {plan.errors.map((error, i) => error !== null && <Text key={state.outputs[i]?.id ?? i} style={{ color: colors.error }}>{t(`${i + 1}-rulon: ${error}`)}</Text>)}
       <PreparationText>{rawSplitBalance(source, state.outputs, state.waste)}</PreparationText>{widthLabel !== null && <PreparationText>{widthLabel}</PreparationText>}
       <WorkerSheetButton label={t('Saqlash va chop etish')} variant="filled" disabled={locked} onPress={() => { void controller.save(); }} />

@@ -2,6 +2,7 @@ import type { Session } from '../auth';
 import type { AdminApparatus } from '../apparatusApi';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { useWorkerColors } from '../components/useWorkerColors';
+import { useBaseTheme } from '../components/useBaseTheme';
 import { StyleSheet, Text, View } from 'react-native';
 import { BoyoqchiImage } from './BoyoqchiImage';
 import { boyoqchiAmount, boyoqchiApparatusLabel, boyoqchiCategoryLabel, boyoqchiDate, boyoqchiGroups,
@@ -10,9 +11,9 @@ import type { ReturnedPaintRequest } from './returnedPaintModel';
 import { useBoyoqchiText } from './useBoyoqchiText';
 
 function Row({ label, value, prominent = false, compact = false }: { label: string; value: string; prominent?: boolean; compact?: boolean }) {
-  const colors = useWorkerColors(), t = useBoyoqchiText();
+  const colors = useWorkerColors(), t = useBoyoqchiText(), rtl = useBaseTheme().direction === 'rightToLeft';
   return <View style={[styles.row, compact && styles.compactRow]}><Text style={[compact ? styles.compactRowLabel : styles.rowLabel, { color: colors.text }]}>{t(label)}</Text>
-    <Text style={[styles.rowValue, { color: colors.text, textAlign: compact ? 'left' : 'right',
+    <Text style={[styles.rowValue, { color: colors.text, textAlign: compact ? (rtl ? 'right' : 'left') : (rtl ? 'left' : 'right'),
       fontWeight: prominent ? compact ? '700' : '800' : '500' }]}>{value}</Text></View>;
 }
 export function BoyoqchiRequestContent({ session, request, home, apparatus, onEdit }: {
