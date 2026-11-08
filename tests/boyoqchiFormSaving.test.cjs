@@ -69,3 +69,12 @@ test('rejected save removes spinner, restores dismissal and shows the existing e
   assert.deepEqual(f.busyChanges, [true, false]);
   assert.ok(nodes(failed, node => node.type === 'Text' && node.props.children === 'Qaytarilgan bo‘yoq saqlanmadi').length);
 });
+
+test('uncertain completion visibly asks the user to refresh and reconcile without automatic resubmission', async () => {
+  const f = fixture(), idle = f.render(); saveButton(idle).props.onPress(); f.render();
+  const failure = new Error('Saqlash natijasi aniq emas. Ro‘yxatni yangilab, hisobotni tekshiring.');
+  failure.name = 'ReturnedPaintReconciliationError'; f.reject(failure); await tick();
+  const failed = f.render();
+  assert.ok(nodes(failed, node => node.type === 'Text' && node.props.children === failure.message).length);
+  assert.equal(f.saves(), 1); assert.equal(f.closes(), 0); assert.equal(f.back(), false);
+});

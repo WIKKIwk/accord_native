@@ -35,14 +35,18 @@ export async function boyoqchiReturnedPaintRequests(session: Session, limit = 20
 }
 
 /** @v2 completeReturnedPaint */
-export async function completeReturnedPaint(session: Session, input: ReturnedPaintCompleteSubmission): Promise<ReturnedPaintRequest> {
+export async function completeReturnedPaint(session: Session, input: ReturnedPaintCompleteSubmission, options?: {
+  beforeSend?: () => void; verifyResponse?: (body: Record<string, unknown>) => void;
+}): Promise<ReturnedPaintRequest> {
   const response = await authorizedFetch(session, '/v1/mobile/returned-paint/requests/complete', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(returnedPaintCompleteToJson(input)),
-  });
+  }, options?.beforeSend);
   if (response.status !== 200) {
     throw await returnedPaintException(response, 'returned_paint_complete_failed', 'Qaytarilgan bo‘yoq hisoboti saqlanmadi');
   }
-  return returnedPaintRequestFromJson(await mapBody(response));
+  const body = await mapBody(response);
+  options?.verifyResponse?.(body);
+  return returnedPaintRequestFromJson(body);
 }
 
 /** @v2 returnedPaintImageUrl */

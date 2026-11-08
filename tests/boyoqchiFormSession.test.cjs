@@ -18,6 +18,7 @@ function fixture() {
     react: { useRef: value => ({ current: value }), useEffect: effect => { effect(); } },
     '../nativeSheet': { useNativeSheet: () => sheet }, './BoyoqchiForm': { BoyoqchiForm: 'BoyoqchiForm' },
     './returnedPaintApi': { completeReturnedPaint: () => pendingSave.promise },
+    './returnedPaintCompletion': { ReturnedPaintReconciliationError: class extends Error {}, verifyReturnedPaintCompletion() {} },
     './returnedPaintDraftRuntime': { returnedPaintDraftStoreFor: () => store },
   };
   loaded.filename = filename; loaded.paths = module.paths;
