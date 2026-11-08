@@ -18,8 +18,8 @@ function harness() {
   const jsx = { jsx: (type, props, key) => ({ type, props, key }) };
   const { CameraSurface } = load('shared/camera/CameraSurface.tsx', { react, 'react/jsx-runtime': jsx,
     'expo-camera': { CameraView: 'CameraView' }, './CameraSurfaceGate': gate }, true);
-  let props = { active: true, permission: { granted: true, canAskAgain: true }, facing: 'back', torch: false,
-    barcodeTypes: ['qr', 'datamatrix'], sessionKey: '1', onDetection: value => events.push(['detected', value]),
+  let props = { active: true, permission: { granted: true, canAskAgain: true }, checking: false, facing: 'back', torch: false,
+    barcodeTypes: ['qr', 'datamatrix'], sessionKey: '1', isCurrent: () => true, onDetection: value => events.push(['detected', value]),
     onMountError: value => events.push(['error', value]), onReady: () => events.push(['ready']) };
   const render = patch => { props = { ...props, ...patch }; index = 0; const tree = CameraSurface(props);
     for (const effect of effects) if (effect && !effect.cleanup) effect.cleanup = effect.setup() ?? (() => {});
@@ -76,4 +76,31 @@ test('equivalent barcode array and torch changes do not invalidate the active ge
   const event = { type: 'qr', data: 'same-config', bounds: {}, cornerPoints: [] };
   old.props.onBarcodeScanned(event); current.props.onBarcodeScanned(event);
   assert.equal(current.props.enableTorch, true); assert.deepEqual(h.events, [['detected', event], ['detected', event]]); h.unmount();
+});
+
+test('role synchronous current guard drops pre-commit callbacks without waiting for a render', () => {
+  let current = true; const h = harness(), tree = h.render({ isCurrent: () => current });
+  current = false; tree.props.onBarcodeScanned({ type: 'qr', data: 'old' }); tree.props.onCameraReady(); tree.props.onMountError({ message: 'old' });
+  assert.deepEqual(h.events, []); h.unmount();
+});
+
+test('permission checking unmounts the surface even if a caller still has an older grant', () => {
+  const h = harness(), old = h.render(); assert.equal(h.render({ checking: true }), null);
+  old.props.onBarcodeScanned({ type: 'qr', data: 'late' }); assert.deepEqual(h.events, []); h.unmount();
+});
+
+test('an owner guard exception fails closed for native events', () => {
+  const h = harness(), tree = h.render({ isCurrent: () => { throw new Error('logged out'); } });
+  assert.doesNotThrow(() => tree.props.onBarcodeScanned({ type: 'qr', data: 'old' }));
+  assert.deepEqual(h.events, []); h.unmount();
+});
+test('starting permission refresh blocks a queued barcode before React can re-render', async () => {
+  const { CameraPermissionController } = load('shared/camera/CameraPermissionController.ts'); let nextResolve, reads = 0;
+  const refresh = new Promise(resolve => { nextResolve = resolve; }), permission = { granted: true, canAskAgain: true, status: 'granted' };
+  const controller = new CameraPermissionController(() => reads++ === 0 ? Promise.resolve(permission) : refresh, async () => permission);
+  controller.mount(); await new Promise(resolve => setImmediate(resolve)); assert.equal(controller.canUseCamera(), true);
+  const h = harness(), tree = h.render({ isCurrent: controller.canUseCamera }); const pending = controller.refreshPermission();
+  tree.props.onBarcodeScanned({ type: 'qr', data: 'old' }); assert.deepEqual(h.events, []); assert.equal(controller.canUseCamera(), false);
+  nextResolve(permission); await pending; tree.props.onBarcodeScanned({ type: 'qr', data: 'new' });
+  assert.equal(h.events.length, 1); h.unmount(); controller.unmount();
 });

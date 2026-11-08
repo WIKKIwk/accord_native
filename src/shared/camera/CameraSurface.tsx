@@ -7,11 +7,14 @@ import { CameraSurfaceGate } from './CameraSurfaceGate';
 export type CameraSurfaceProps = {
   active: boolean;
   permission: PermissionResponse | null;
+  checking: boolean;
   facing: CameraType;
   torch: boolean;
   barcodeTypes: BarcodeType[];
   /** Change to force a new native camera generation when a role retries or its detection policy changes. */
   sessionKey: string;
+  /** Must synchronously check role focus/app/session state and permission controller canUseCamera(). */
+  isCurrent(): boolean;
   style?: StyleProp<ViewStyle>;
   onDetection(event: BarcodeScanningResult): void;
   onMountError(event: CameraMountError): void;
@@ -19,20 +22,21 @@ export type CameraSurfaceProps = {
 };
 
 /** Permission requests, UI, parser, deduplication and navigation belong to the caller. */
-export function CameraSurface({ active, permission, facing, torch, barcodeTypes, sessionKey, style,
-  onDetection, onMountError, onReady }: CameraSurfaceProps) {
-  const enabled = active && permission?.granted === true;
+export function CameraSurface({ active, permission, checking, facing, torch, barcodeTypes, sessionKey, style,
+  isCurrent, onDetection, onMountError, onReady }: CameraSurfaceProps) {
+  const enabled = active && checking === false && permission?.granted === true;
   const configKey = JSON.stringify([sessionKey, facing, barcodeTypes]);
   const token = useMemo(() => ({ enabled, configKey }), [enabled, configKey]);
-  const gate = useMemo(() => new CameraSurfaceGate(), []), callbacks = useRef({ onDetection, onMountError, onReady });
-  useLayoutEffect(() => { callbacks.current = { onDetection, onMountError, onReady }; }, [onDetection, onMountError, onReady]);
+  const gate = useMemo(() => new CameraSurfaceGate(), []), callbacks = useRef({ isCurrent, onDetection, onMountError, onReady });
+  useLayoutEffect(() => { callbacks.current = { isCurrent, onDetection, onMountError, onReady }; }, [isCurrent, onDetection, onMountError, onReady]);
   useLayoutEffect(() => {
     if (enabled) gate.activate(token);
     return () => gate.deactivate(token);
   }, [enabled, token, gate]);
   if (!enabled) return null;
+  const current = () => { try { return callbacks.current.isCurrent(); } catch { return false; } };
   return <CameraView key={configKey} style={style} facing={facing} enableTorch={torch} barcodeScannerSettings={{ barcodeTypes }}
-    onBarcodeScanned={event => gate.deliver(token, event, callbacks.current.onDetection)}
-    onMountError={event => gate.deliver(token, event, callbacks.current.onMountError)}
-    onCameraReady={() => gate.deliver(token, undefined, () => callbacks.current.onReady?.())} />;
+    onBarcodeScanned={event => gate.deliver(token, event, value => { if (current()) callbacks.current.onDetection(value); })}
+    onMountError={event => gate.deliver(token, event, value => { if (current()) callbacks.current.onMountError(value); })}
+    onCameraReady={() => gate.deliver(token, undefined, () => { if (current()) callbacks.current.onReady?.(); })} />;
 }
