@@ -76,6 +76,8 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 
 - Cell picker state checkpoint: factored the existing V2 relevance score into one Qolip module reused by set and cell pickers, then added 220 ms search debounce, 80-item pages, stale-response handling and insertion-ordered multi-selection. Corrected the contract: only raw pages preserve source order; a nonempty query reorders the accumulated rows by relevance. The f119 mock-only picker oracle passed its long-press and selection case, and `search_normalizer_test.dart` passed both relevance cases. All 228 Qolip tests, iOS typecheck and lint passed; Android has the same nine existing worker errors. No fixture or backend call was used. The native picker and placement sheet still need views and wiring.
 
+- Cell picker native-view checkpoint: added separate SwiftUI and Compose views over the shared picker controller, reusing the existing Android card and native sheet workflow. Static component tests cover loading, retry, empty, single and multi-selection. All 232 Qolip tests, iOS typecheck and lint passed; Android still has only nine earlier worker errors. The views are not connected to the placement sheet; phone testing is still required, including iOS long-press/tap interaction, accessibility, paging and sheet height.
+
 ## Deviations candidates
 
 - Grid statistics count nonempty location labels outside the fixed visible grid, which can yield occupied cells that are not displayed; f119 behavior is retained.

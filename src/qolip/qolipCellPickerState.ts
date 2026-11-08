@@ -1,10 +1,9 @@
 import { trimDart } from './qolipApiCommon';
-import { qolipPlacementSortLoadedProducts, type QolipCellProductPicker, type QolipPlacementProduct } from './qolipCellPlacement';
+import { qolipPlacementProductKey, qolipPlacementSortLoadedProducts, type QolipCellProductPicker, type QolipPlacementProduct } from './qolipCellPlacement';
 
 type State = { items: readonly QolipPlacementProduct[]; selected: ReadonlySet<string>;
   loading: boolean; loadingMore: boolean; hasMore: boolean; error: boolean };
 const pageSize = 80;
-const keyFor = (item: QolipPlacementProduct) => trimDart(item.qolip_code).toLowerCase();
 
 /** M3 picker behavior for cell placement; the native views are separate. */
 export class QolipCellPickerState {
@@ -56,7 +55,7 @@ export class QolipCellPickerState {
   }
   toggle(item: QolipPlacementProduct) {
     if (!this.active) return;
-    const key = keyFor(item);
+    const key = qolipPlacementProductKey(item);
     if (this.selectedItems.has(key)) this.selectedItems.delete(key); else this.selectedItems.set(key, item);
     this.publish({ selected: new Set(this.selectedItems.keys()) });
   }

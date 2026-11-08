@@ -7,6 +7,7 @@ import { searchRelevanceScore } from './qolipSearchRelevance';
 
 export type QolipPlacementProduct = ReturnType<typeof qolipProductFromJson>;
 const normalizedCode = (code: string) => trimDart(code).toLowerCase();
+export const qolipPlacementProductKey = (product: QolipPlacementProduct) => normalizedCode(product.qolip_code);
 
 /** @v2 qolipProductsAvailableForCellPlacement */
 export function qolipProductsAvailableForCellPlacement(products: readonly QolipPlacementProduct[],
