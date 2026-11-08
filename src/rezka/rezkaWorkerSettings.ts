@@ -6,7 +6,7 @@ export type RezkaTeam = { workers: RezkaWorker[]; apparatus: AdminApparatus[]; a
 export type RezkaNotice = { key: string; values?: Record<string, string>; tone: 'success' | 'error' };
 export type RezkaPicker = { worker: RezkaWorker; previous: RezkaAssignment | null; selected: string[]; saving: boolean; blocked: RezkaNotice | null };
 export type RezkaWorkersState = { phase: 'loading' | 'ready' | 'error'; team: RezkaTeam | null; expandedId: string | null;
-  picker: RezkaPicker | null; notice: RezkaNotice | null };
+  picker: RezkaPicker | null; notice: RezkaNotice | null; savingIds: string[] };
 export type RezkaWorkerDependencies = {
   isCurrent(): boolean;
   loadTeam(): Promise<{ workers: RezkaWorker[]; assignments: RezkaAssignment[] }>;
@@ -39,14 +39,18 @@ function errorParts(error: unknown): { code: string; details: string[]; message:
 
 /** Master-only branch of @v2 AdminWorkerSettingsScreen and _WorkerApparatusAssignmentSheet. */
 export class RezkaWorkerSettingsController {
-  private state: RezkaWorkersState = { phase: 'loading', team: null, expandedId: null, picker: null, notice: null };
+  private state: RezkaWorkersState = { phase: 'loading', team: null, expandedId: null, picker: null, notice: null, savingIds: [] };
   private listeners = new Set<() => void>();
   private revision = 0;
   private disposed = false;
   constructor(private readonly deps: RezkaWorkerDependencies) {}
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
-  private active() { return !this.disposed && this.deps.isCurrent(); }
+  private active() {
+    if (this.disposed) return false;
+    if (!this.deps.isCurrent()) { this.invalidate(); return false; }
+    return true;
+  }
   private update(change: Partial<RezkaWorkersState>) {
     if (!this.active()) return;
     this.state = { ...this.state, ...change };
@@ -56,7 +60,7 @@ export class RezkaWorkerSettingsController {
   invalidate() {
     if (this.disposed) return;
     this.disposed = true; this.revision++;
-    this.state = { phase: 'loading', team: null, expandedId: null, picker: null, notice: null };
+    this.state = { phase: 'loading', team: null, expandedId: null, picker: null, notice: null, savingIds: [] };
     this.listeners.forEach(listener => listener());
   }
   dispose() { this.disposed = true; this.revision++; this.listeners.clear(); }
@@ -81,7 +85,7 @@ export class RezkaWorkerSettingsController {
     const team = this.state.team;
     if (!this.active() || this.state.phase !== 'ready' || !team || !team.apparatus.length) return;
     const worker = team.workers.find(item => item.id === workerId);
-    if (!worker || !worker.id.trim()) return;
+    if (!worker || !worker.id.trim() || this.state.savingIds.includes(worker.id.trim())) return;
     const assignments = new Map(team.assignments.map(item => [item.principal_ref, item]));
     const previous = assignments.get(worker.id.trim()) ?? null;
     const selected = team.apparatus.filter(item => previous?.assigned_apparatus.includes(item.id)).map(item => item.id);
@@ -98,6 +102,8 @@ export class RezkaWorkerSettingsController {
     if (this.state.picker?.saving) return;
     this.update({ picker: null });
   }
+  /** V2 still permits the platform's swipe, barrier or Back dismissal while saving. */
+  dismissPicker() { this.update({ picker: null }); }
   async save(): Promise<void> {
     const picker = this.state.picker, team = this.state.team;
     if (!this.active() || !picker || picker.saving || !team || !picker.selected.length) return;
@@ -110,11 +116,12 @@ export class RezkaWorkerSettingsController {
         : { key: 'scope.already_saved', tone: 'success' } });
       return;
     }
-    this.update({ picker: { ...picker, saving: true, blocked: null } });
+    this.update({ picker: { ...picker, saving: true, blocked: null }, savingIds: [...this.state.savingIds, workerId] });
     try {
       await this.deps.save(workerId, values.ids, values.previous);
       if (!this.active()) return;
-      this.update({ picker: null, notice: { key: 'scope.saved', tone: 'success' } });
+      this.update({ ...(this.state.picker?.worker.id === picker.worker.id ? { picker: null } : {}),
+        notice: { key: 'scope.saved', tone: 'success' } });
       await this.load();
     } catch (error) {
       if (!this.active()) return;
@@ -124,16 +131,19 @@ export class RezkaWorkerSettingsController {
         const blocked: RezkaNotice = labels.length
           ? { key: 'rezka_master.rezka_worker_has_open_run_details', values: { worker: picker.worker.name, apparatus: labels.join(', ') }, tone: 'error' }
           : { key: 'rezka_master.rezka_worker_has_open_run', tone: 'error' };
-        this.update({ picker: { ...picker, saving: false, blocked } });
+        if (this.state.picker?.worker.id === picker.worker.id) this.update({ picker: { ...picker, saving: false, blocked } });
       } else if (parts.code === 'rezka_assignment_changed' || parts.code === 'worker_not_found') {
-        this.update({ picker: null, notice: { key: 'rezka_master.rezka_assignment_changed', tone: 'error' } });
+        this.update({ ...(this.state.picker?.worker.id === picker.worker.id ? { picker: null } : {}),
+          notice: { key: 'rezka_master.rezka_assignment_changed', tone: 'error' } });
         await this.load();
       } else {
         const notice: RezkaNotice = parts.code === 'rezka_apparatus_required'
           ? { key: 'rezka_master.rezka_apparatus_required', tone: 'error' }
           : { key: 'scope.save_failed', values: { error: parts.message }, tone: 'error' };
-        this.update({ picker: { ...picker, saving: false }, notice });
+        this.update({ ...(this.state.picker?.worker.id === picker.worker.id ? { picker: { ...picker, saving: false } } : {}), notice });
       }
+    } finally {
+      if (this.active()) this.update({ savingIds: this.state.savingIds.filter(id => id !== workerId) });
     }
   }
 }

@@ -59,3 +59,14 @@ test('reset redacts previous account while an in-flight write remains uncertain'
   active = false; c.invalidate(); resolveSave(); await pending;
   assert.equal(calls, 1); assert.equal(c.getSnapshot().team, null); assert.equal(c.getSnapshot().picker, null); assert.equal(c.getSnapshot().notice, null);
 });
+test('platform dismissal during save does not reopen a blocked sheet or allow duplicate writes', async () => {
+  let rejectSave, calls = 0;
+  const c = new RezkaWorkerSettingsController({ isCurrent: () => true, loadTeam: async () => ({ workers, assignments: [assignment] }),
+    loadApparatus: async () => apparatus, save: () => { calls++; return new Promise((_, reject) => { rejectSave = reject; }); } });
+  await c.load(); c.openPicker('worker-ali'); c.toggle(b, true); const pending = c.save();
+  c.closePicker(); assert.ok(c.getSnapshot().picker, 'the in-sheet close control is disabled while saving');
+  c.dismissPicker(); assert.equal(c.getSnapshot().picker, null);
+  c.openPicker('worker-ali'); assert.equal(c.getSnapshot().picker, null, 'the same worker remains busy');
+  rejectSave({ code: 'rezka_worker_has_open_run', details: [a] }); await pending;
+  assert.equal(calls, 1); assert.equal(c.getSnapshot().picker, null); assert.deepEqual(c.getSnapshot().savingIds, []);
+});
