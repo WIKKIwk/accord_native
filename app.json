@@ -62,7 +62,7 @@
         "expo-media-library",
         {
           "photosPermission": "Chatda so‘nggi rasmlarni ko‘rsatish va profil uchun rasm tanlashga ruxsat bering.",
-          "savePhotosPermission": false,
+          "savePhotosPermission": "Saved archive pages are added to Photos so you can review and share them later.",
           "granularPermissions": ["photo"]
         }
       ],
