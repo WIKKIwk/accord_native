@@ -65,12 +65,25 @@ export async function adminPaddonQrReport(session: Session, code: string) {
 }
 
 /** @v2 adminPaddons */
-export async function adminPaddons(session: Session, input: { limit?: number; selectable_only?: boolean; apparatus?: string } = {}) {
+export async function adminPaddons(session: Session, input: { limit?: number; selectable_only?: boolean; apparatus?: string;
+  beforeSend?: () => void } = {}) {
   const limit = Math.min(200, Math.max(1, Math.trunc(input.limit ?? 100)));
   const query = new URLSearchParams({ limit: String(limit) });
   if (input.apparatus?.trim()) query.set('apparatus', input.apparatus.trim());
   if (input.selectable_only) query.set('selectable_only', 'true');
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons?${query}`);
+  const path = `/v1/mobile/admin/production-maps/paddons?${query}`;
+  // Preserve the legacy call shape while allowing scoped callers to check the
+  // original witness immediately before the first send and any 401 retry.
+  const beforeSend = input.beforeSend;
+  const checkedGuard = beforeSend ? () => {
+    const result: unknown = beforeSend();
+    if (result === undefined) return;
+    // An accidentally async guard cannot authorize a send. Consume a rejected
+    // promise too, so its rejection is not left unhandled after failing closed.
+    if (result !== null && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
+    throw new TypeError('Paddon read guard must be synchronous');
+  } : undefined;
+  const response = checkedGuard ? await authorizedFetch(session, path, {}, checkedGuard) : await authorizedFetch(session, path);
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
