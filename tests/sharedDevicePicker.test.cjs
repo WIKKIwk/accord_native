@@ -36,10 +36,10 @@ test('extracted hook retains GScale selection objects, ordering and USB detectio
 test('Bluetooth discovery subscription is stopped on unmount', async () => {
   const h = hookHarness('bluetooth'); await h.cleanup(); assert.equal(h.stopped(), 1);
 });
-function sheet(platform, connection = null) {
+function sheet(platform, connection = null, error = '') {
   const calls = [], server = { endpoint: { baseUrl: 'http://scale' }, handshake: { serverName: 'Scale' } }, printer = { address: 'aa', displayName: 'XP' };
   const picker = { device: { connection, checkingAddress: false, addressError: '', scanning: false, scanResult: { servers: [server] } },
-    address: 'http://gscale.local:39117', setAddress: value => calls.push(['address', value]), printers: [printer], scanning: false, error: '',
+    address: 'http://gscale.local:39117', setAddress: value => calls.push(['address', value]), printers: [printer], scanning: false, error,
     choose: value => calls.push(['choose', value]), checkAddress: async () => calls.push('check'), selectServer: async value => calls.push(['server', value]),
     scan: () => calls.push('scan'), selectBluetooth: async value => calls.push(['bluetooth', value]), rescanBluetooth: () => calls.push('rescan'),
     selectUsb: async () => calls.push('usb') };
@@ -104,4 +104,73 @@ test('late Bluetooth watcher setup is stopped even when the sheet unmounts first
   const operator = { subscribe: () => () => {}, getSnapshot: () => ({ device: { connection: 'bluetooth' } }), selectConnection: () => {} };
   useDevicePicker(operator, () => {}); const cleanup = effects.map(effect => effect()); cleanup.forEach(fn => fn?.());
   ready(() => stopped++); await new Promise(resolve => setImmediate(resolve)); assert.equal(stopped, 1);
+});
+
+function guardedHook(overrides = {}) {
+  const calls = [], state = { device: { connection: null, scanning: false, scanResult: null, checkingAddress: false, addressError: '' } };
+  let generation = 0, active = true, closed = 0;
+  const operator = { subscribe: () => () => {}, getSnapshot: () => state,
+    selectConnection: connection => { generation++; state.device.connection = connection; }, scanDevices: async () => {},
+    checkDeviceAddress: async () => null, selectDevice: async () => true,
+    selectionToken: () => generation, isSelectionCurrent: token => active && token === generation, ...overrides };
+  const react = { useSyncExternalStore: (_subscribe, get) => get(), useEffect: fn => fn(),
+    useState: initial => [initial, value => calls.push(typeof value === 'function' ? 'updater' : value)] };
+  const { useDevicePicker } = compile('shared/printing/useDevicePicker.ts', { react, 'react-native': { Platform: { OS: 'ios' } },
+    '../../gscale/gscaleBluetoothDevices': { watchGScaleBluetoothDevices: async () => () => {} },
+    '../../printing/nativePrinter': { NativeBluetoothPrinter: {} },
+    '../../printing/printService': { PrintService: { detectOfflinePrinter: overrides.detectOfflinePrinter ?? (async () => ({ kind: 'godex' })) } } });
+  const picker = useDevicePicker(operator, () => closed++);
+  return { picker, calls, closed: () => closed, invalidate: () => { active = false; }, back: () => operator.selectConnection(null) };
+}
+test('rejected Wi-Fi, Bluetooth and USB selection shows the error and keeps the picker open', async () => {
+  for (const method of ['wifi', 'bluetooth', 'usb']) {
+    const h = guardedHook({ selectDevice: async () => { throw new Error('Printer ulanmagan'); } });
+    if (method === 'wifi') await h.picker.selectServer({ endpoint: {}, handshake: {} });
+    else if (method === 'bluetooth') await h.picker.selectBluetooth({ address: 'AA' });
+    else await h.picker.selectUsb();
+    assert.ok(h.calls.includes('Printer ulanmagan'), method); assert.equal(h.closed(), 0, method);
+  }
+});
+test('late Wi-Fi/Bluetooth rejection is ignored after dismiss, back or account switch', async () => {
+  for (const method of ['wifi', 'bluetooth']) for (const reason of ['dismiss', 'back', 'session']) {
+    let reject; const pending = new Promise((_, r) => { reject = r; });
+    const h = guardedHook({ selectDevice: () => pending });
+    const operation = method === 'wifi' ? h.picker.selectServer({ endpoint: {}, handshake: {} }) : h.picker.selectBluetooth({ address: 'AA' });
+    if (reason === 'back') h.back(); else h.invalidate();
+    const before = h.calls.length; reject(new Error('late failure')); await operation;
+    assert.equal(h.calls.length, before, `${method}/${reason}`); assert.equal(h.closed(), 0, `${method}/${reason}`);
+  }
+});
+test('late manual address and scan failures do not select, close, or update a dismissed picker', async () => {
+  for (const method of ['address', 'scan']) for (const outcome of ['success', 'failure']) {
+    let settle, selectCount = 0;
+    const pending = new Promise((resolve, reject) => { settle = outcome === 'success' ? resolve : reject; });
+    const h = guardedHook({ checkDeviceAddress: () => pending, scanDevices: () => pending,
+      selectDevice: async () => { selectCount++; return true; } });
+    const operation = method === 'address' ? h.picker.checkAddress() : (h.picker.scan(), null);
+    h.invalidate(); const before = h.calls.length; settle(outcome === 'success' ? { endpoint: {}, handshake: {} } : new Error('late'));
+    if (operation) await operation; await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.calls.length, before, `${method}/${outcome}`); assert.equal(selectCount, 0); assert.equal(h.closed(), 0);
+  }
+});
+test('a boolean rejection also leaves the sheet open', async () => {
+  const h = guardedHook({ selectDevice: async () => false }); await h.picker.selectServer({ endpoint: {}, handshake: {} });
+  assert.equal(h.closed(), 0);
+});
+
+for (const platform of ['ios', 'android']) test(`${platform} sheet shows the rejected selection reason`, () => {
+  const h = sheet(platform, 'usb', 'Printer ulanmagan');
+  assert.ok(find(h.tree, n => (n.type === 'Text' || n.type === 'Label') && n.props.children === 'Printer ulanmagan').length);
+});
+test('late Bluetooth discovery events after unmount do not update UI state', async () => {
+  let callback, stopped = 0; const changes = [], effects = [];
+  const react = { useSyncExternalStore: (_subscribe, get) => get(), useEffect: fn => effects.push(fn),
+    useState: initial => [initial, value => changes.push(value)] };
+  const { useDevicePicker } = compile('shared/printing/useDevicePicker.ts', { react, 'react-native': { Platform: { OS: 'ios' } },
+    '../../gscale/gscaleBluetoothDevices': { watchGScaleBluetoothDevices: async (_os, _native, cb) => { callback = cb; return () => stopped++; } },
+    '../../printing/nativePrinter': { NativeBluetoothPrinter: {} }, '../../printing/printService': { PrintService: {} } });
+  const operator = { subscribe: () => () => {}, getSnapshot: () => ({ device: { connection: 'bluetooth' } }), selectConnection: () => {} };
+  useDevicePicker(operator, () => {}); const cleanup = effects.map(effect => effect()); await new Promise(resolve => setImmediate(resolve));
+  cleanup.forEach(fn => fn?.()); const before = changes.length; callback({ printer: { address: 'late' }, complete: true });
+  assert.equal(stopped, 1); assert.equal(changes.length, before);
 });

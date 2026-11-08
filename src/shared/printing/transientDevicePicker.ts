@@ -5,13 +5,14 @@ import type { PrintDeviceSelection } from '../../gscale/gscalePreferences';
 import type { DevicePickerAdapter } from './devicePickerTypes';
 
 type Connection = GScaleDeviceState['connection'];
-type Dependencies = { isCurrent(): boolean; scan(): Promise<DiscoveryResult>; probe(endpoint: ServerEndpoint): Promise<DiscoveredServer | null> };
+type Dependencies = { isCurrent(): boolean; scan(): Promise<DiscoveryResult>; probe(endpoint: ServerEndpoint): Promise<DiscoveredServer | null>;
+  validateSelection?: (selection: PrintDeviceSelection) => void | Promise<void> };
 
 /** A one-shot picker. Unlike the GScale operator, it never restores or saves a device or session Bluetooth printer. */
 export function createTransientDevicePicker(deps: Dependencies) {
   let device: GScaleDeviceState = { selection: null, transport: 'wifi', needsAttention: false, connection: null,
     scanning: false, scanResult: null, checkingAddress: false, addressError: '' };
-  let snapshot = { device }, finished = false, generation = 0;
+  let snapshot = { device }, finished = false, generation = 0, acceptedGeneration: number | null = null;
   const listeners = new Set<() => void>();
   let resolveResult: (selection: PrintDeviceSelection | null) => void = () => {};
   const result = new Promise<PrintDeviceSelection | null>(resolve => { resolveResult = resolve; });
@@ -20,14 +21,16 @@ export function createTransientDevicePicker(deps: Dependencies) {
     device = { ...device, ...patch }; snapshot = { device };
     for (const listener of listeners) listener();
   };
+  const scopeCurrent = () => { try { return deps.isCurrent(); } catch { return false; } };
   const finish = (selection: PrintDeviceSelection | null) => {
-    if (finished) return;
-    finished = true; generation++; listeners.clear();
-    resolveResult(deps.isCurrent() ? selection : null);
+    if (finished) { if (selection === null) acceptedGeneration = null; return; }
+    const accepted = scopeCurrent() ? selection : null;
+    acceptedGeneration = accepted === null ? null : generation;
+    finished = true; generation++; listeners.clear(); resolveResult(accepted);
   };
   const current = () => {
     if (finished) return false;
-    if (!deps.isCurrent()) { finish(null); return false; }
+    if (!scopeCurrent()) { finish(null); return false; }
     return true;
   };
   const adapter: DevicePickerAdapter = {
@@ -65,8 +68,15 @@ export function createTransientDevicePicker(deps: Dependencies) {
       return server;
     },
     selectionToken: () => generation,
-    isSelectionCurrent: token => current() && token === generation,
-    selectDevice: async selection => { if (!current()) return false; finish(selection); return true; },
+    isSelectionCurrent: token => finished ? acceptedGeneration === token && scopeCurrent() : current() && token === generation,
+    selectDevice: async selection => {
+      if (!current()) return false;
+      const version = generation;
+      try { await deps.validateSelection?.(selection); }
+      catch (error) { if (!current() || version !== generation) return false; throw error; }
+      if (!current() || version !== generation) return false;
+      finish(selection); return true;
+    },
   };
   return { adapter, result, cancel: () => finish(null), dispose: () => finish(null) };
 }

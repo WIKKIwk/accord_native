@@ -71,3 +71,28 @@ test('GScale default store continues to remember and persist Bluetooth and Wi-Fi
   const bt = { transport: 'bluetooth', bluetoothPrinter: bluetooth }, wifi = { transport: 'wifi', server };
   await store.select(bt); await store.select(wifi); assert.deepEqual(saved, [bt, wifi]); assert.deepEqual(remembered, [bluetooth]); store.dispose();
 });
+
+test('a rejected selection remains open and can subsequently accept a supported device', async () => {
+  let attempts = 0; const h = setup({ validateSelection: async value => { attempts++; if (value.offlinePrinter?.kind !== 'zebra') throw new Error('Unsupported printer'); } });
+  await assert.rejects(h.adapter.selectDevice({ transport: 'offline', offlinePrinter: { kind: 'godex' } }), /Unsupported printer/);
+  assert.equal(attempts, 1); const accepted = { transport: 'offline', offlinePrinter: { kind: 'zebra' } };
+  assert.equal(await h.adapter.selectDevice(accepted), true); assert.equal(await h.result, accepted);
+});
+test('pending async validation cannot select after cancel, back, unmount or session change', async () => {
+  for (const action of ['cancel', 'back', 'dispose', 'session']) {
+    const validation = deferred(), h = setup({ validateSelection: () => validation.promise });
+    const pending = h.adapter.selectDevice({ transport: 'bluetooth', bluetoothPrinter: { address: 'AA' } });
+    if (action === 'back') h.adapter.selectConnection(null); else if (action === 'session') h.invalidate(); else h[action]();
+    validation.resolve(); assert.equal(await pending, false, action);
+    if (action === 'back') h.cancel(); assert.equal(await h.result, null, action);
+  }
+});
+test('session lookup exceptions resolve a transient request as cancelled', async () => {
+  const h = setup({ isCurrent: () => { throw new Error('logged out'); } });
+  assert.equal(await h.adapter.selectDevice({ transport: 'wifi', server }), false); assert.equal(await h.result, null);
+});
+test('cancel after successful result invalidates its close token without changing the settled result', async () => {
+  const h = setup(), token = h.adapter.selectionToken(); const selection = { transport: 'wifi', server };
+  assert.equal(await h.adapter.selectDevice(selection), true); assert.equal(h.adapter.isSelectionCurrent(token), true);
+  h.cancel(); assert.equal(h.adapter.isSelectionCurrent(token), false); assert.equal(await h.result, selection);
+});
