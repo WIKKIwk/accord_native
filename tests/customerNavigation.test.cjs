@@ -133,12 +133,12 @@ test('Android Customer dock reuses native bar, suppresses notification dot on it
       'react/jsx-runtime': jsx, 'expo-router': { useNavigation: parent => { assert.equal(parent, '/android-customer'); return { dispatch: action => calls.push(action) }; } },
       'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 12 }) },
       '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
-      './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => true, useCustomerContext: () => ({ chatUnread: 2 }) },
+      './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => true },
       './customerNavigation': nav,
     }).CustomerDock({ active });
     assert.equal(dock.type, 'RoleBottomBar'); assert.equal(dock.props.active, active ?? ''); assert.equal(dock.props.bottomInset, 12);
     assert.deepEqual(dock.props.items.map(item => item.id), ['home', 'notifications', 'chat']);
-    assert.equal(dock.props.items[1].showBadge, active !== 'notifications'); assert.equal(dock.props.items[2].showBadge, true);
+    assert.equal(dock.props.items[1].showBadge, active !== 'notifications'); assert.equal(dock.props.items[2].showBadge, undefined);
     if (active) dock.props.onSelect(active);
     dock.props.onSelect('notifications');
     assert.deepEqual(calls, active === 'notifications' ? [] : [{ type: 'NAVIGATE', payload: { name: 'notifications', pop: true } }]);
@@ -163,37 +163,26 @@ test('Customer drawer delegates current-item and logout behavior to the existing
   assert.deepEqual(calls, [['replace', '/android-customer/notifications'], ['replace', '/android-customer/profile'], 'logout']);
 });
 
-test('iOS Customer native tabs show the shared Chat unread dot and suppress the notification dot while active', () => {
-  for (const count of [0, 2]) for (const pathname of ['/ios-customer', '/ios-customer/notifications']) {
+test('iOS Customer keeps the notification dot but does not start a Chat badge under the transport hold', () => {
+  for (const pathname of ['/ios-customer', '/ios-customer/notifications']) {
     const Trigger = Object.assign(function Trigger() {}, { Icon: 'Icon', Label: 'Label', Badge: 'Badge' });
     const NativeTabs = Object.assign(function NativeTabs() {}, { Trigger });
     const shell = load('src/customer/CustomerShell.ios.tsx', {
       'react/jsx-runtime': jsx, 'expo-router': { usePathname: () => pathname }, 'expo-router/native-tabs': { NativeTabs },
       react: { createContext: () => ({ Provider: 'Provider' }), useContext: () => () => {}, useState: value => [value, () => {}] },
       './CustomerDrawer': { CustomerDrawer: 'CustomerDrawer' },
-      './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerContext: () => ({ chatUnread: count }), useCustomerUnread: () => true },
+      './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => true },
       './customerNavigation': nav,
     }).CustomerShell();
     const triggers = nodes(shell, node => node.type === Trigger);
     assert.deepEqual(triggers.map(item => item.props.name), ['(home)', 'notifications', 'chat']);
     assert.equal(nodes(triggers[1], node => node.type === 'Badge').length, pathname.endsWith('/notifications') ? 0 : 1);
-    assert.equal(nodes(triggers[2], node => node.type === 'Badge').length, count > 0 ? 1 : 0);
+    assert.equal(nodes(triggers[2], node => node.type === 'Badge').length, 0);
   }
 });
 
-test('Android Customer dock hides the shared Chat dot at zero unread', () => {
-  const dock = load('src/customer/CustomerDock.android.tsx', {
-    'react/jsx-runtime': jsx, 'expo-router': { useNavigation: () => ({ dispatch() {} }) },
-    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
-    '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
-    './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => false, useCustomerContext: () => ({ chatUnread: 0 }) },
-    './customerNavigation': nav,
-  }).CustomerDock({ active: 'home' });
-  assert.equal(dock.props.items[2].showBadge, false);
-});
-
-test('persistent Customer session provider starts the shared unread hook once with its own session', () => {
-  const calls = [], session = { imageCacheScope: 'customer-account', profile: { role: 'customer' } };
+test('Customer provider does not opt into the held Chat unread runtime', () => {
+  const session = { imageCacheScope: 'customer-account', profile: { role: 'customer' } };
   class Notifications { constructor() {} }
   const modules = {
     'react/jsx-runtime': jsx,
@@ -204,17 +193,15 @@ test('persistent Customer session provider starts the shared unread hook once wi
     '../auth': { loadSession() {}, logout() {}, registerSessionResetHook() {} }, '../appLock': { clearAppLock() {} },
     '../appPreferences': { appPreferences: {} }, '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
     '../shared/appRoutes': { appRoutes: { customerHome: '/customer-home' }, canOpenRoute: () => true },
-    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: value => { calls.push(value); return 4; } },
+    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => assert.fail('held Chat runtime must not start') },
     '../shared/localization': { localizedGetter() {}, localizedMethod() {} }, '../shared/localization/runtime': { localeController: {} },
     '../shared/notificationStoresRuntime': { notificationHiddenStore: {}, notificationUnreadStore: {}, refreshHub: {} },
     './customerNotifications': { CustomerNotificationsController: Notifications }, './customerRuntime': { createCustomerStore: () => ({}) },
   };
   const gate = load('src/customer/CustomerContext.tsx', modules).CustomerGate({ platform: 'ios', children: 'role-shell' });
-  assert.equal(gate.type, 'WorkerSecurityProvider');
   const provider = gate.props.children.type(gate.props.children.props);
-  assert.equal(provider.type, 'CustomerContextProvider');
-  assert.equal(provider.props.value.session, session); assert.equal(provider.props.value.chatUnread, 4);
-  assert.deepEqual(calls, [session]);
+  assert.equal(provider.type, 'CustomerContextProvider'); assert.equal(provider.props.value.session, session);
+  assert.equal(Object.hasOwn(provider.props.value, 'chatUnread'), false);
 });
 
 test('notification listener survives a pushed detail and stops only when its screen unmounts', () => {

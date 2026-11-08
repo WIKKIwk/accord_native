@@ -6,7 +6,6 @@ import { clearAppLock } from '../appLock';
 import { appPreferences } from '../appPreferences';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
-import { useChatUnreadCount } from '../shared/chat/useChatUnreadCount';
 import { localizedGetter, localizedMethod } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { notificationHiddenStore, notificationUnreadStore, refreshHub } from '../shared/notificationStoresRuntime';
@@ -14,7 +13,7 @@ import { CustomerNotificationsController } from './customerNotifications';
 import { createCustomerStore } from './customerRuntime';
 import type { CustomerStore } from './customerStore';
 
-type CustomerContextValue = { session: Session; store: CustomerStore; notifications: CustomerNotificationsController; onLogout: () => void; chatUnread: number };
+type CustomerContextValue = { session: Session; store: CustomerStore; notifications: CustomerNotificationsController; onLogout: () => void };
 const CustomerContext = createContext<CustomerContextValue | null>(null);
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -27,13 +26,12 @@ export function useCustomerText() {
 
 function CustomerProvider({ session, onLogout, children }: { session: Session; onLogout: () => void; children: ReactNode }) {
   const store = useMemo(() => createCustomerStore(session), [session]);
-  const chatUnread = useChatUnreadCount(session);
   const notifications = useMemo(() => new CustomerNotificationsController({ session, store, storage: appPreferences,
     hidden: notificationHiddenStore, unread: notificationUnreadStore, refreshHub,
     schedule: callback => { requestAnimationFrame(callback); } }), [session, store]);
   useEffect(() => registerSessionResetHook(() => notifications.resetSession()), [notifications]);
   useEffect(() => { store.activate(); return () => { notifications.stop(); store.dispose(); }; }, [notifications, store]);
-  return <CustomerContext.Provider value={{ session, store, notifications, onLogout, chatUnread }}>{children}</CustomerContext.Provider>;
+  return <CustomerContext.Provider value={{ session, store, notifications, onLogout }}>{children}</CustomerContext.Provider>;
 }
 
 export function CustomerGate({ platform, children }: { platform: 'ios' | 'android'; children: ReactNode }) {

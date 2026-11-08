@@ -25,7 +25,7 @@ function fixture(initialNames) {
     assert.equal(parent, '/android-customer'); return { dispatch };
   } }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
   '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
-  './CustomerContext': { useCustomerContext: () => ({ chatUnread: 0 }), useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => false },
+  './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => false },
   './customerNavigation': { customerNotificationBadge: () => false } };
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);

@@ -1,7 +1,7 @@
 # customer
 
 Status: part 1 of 1 in progress
-Stopped at: integrate Supplier notification detail, complete the text and surface audits on both platforms, and resolve or document the remaining device and lifecycle checks.
+Stopped at: resolve the shared Chat transport security hold, integrate Supplier notification detail after account-switch review, complete the text and surface audits, and resolve or document remaining device and lifecycle checks.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -20,7 +20,7 @@ Stopped at: integrate Supplier notification detail, complete the text and surfac
 | iOS notification blur edge | `customer_notifications_screen_widgets_part_01.dart:81–94`, `app_root_navigation.dart:43–49` | A stale iOS tab tap is cancelled after any blur, including blur/refocus. This matches V2 when navigation disposed the feed; if V2 pushed an absent Home above a still-mounted feed, V2 could instead open detail late. NativeTabs does not reproduce the same flat route history; the edge and phone behavior remain open. |
 | iOS native tab history | `customer_home_screen_widgets_part_01.dart:66–72`, `customer_notifications_screen_widgets_part_01.dart:125–131` | The drawer requests replacement, but the installed iOS TabRouter changes tab selection rather than maintaining V2’s single flat Navigator history. Cross-tab Back behavior needs device validation or a native-navigation design decision. |
 | iOS native tabs on secondary screens | `customer_dock.dart`, `customer_status_detail_screen.dart`, `customer_delivery_detail_screen.dart`, `profile_screen.dart` | V2 shows no selected dock destination on status, detail and profile. Expo native tabs keep the containing tab selected; resolve with supported native controls or explicitly defer after real-phone review. Android passes no selection for these screens. |
-| Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | The reviewed shared session-scoped Chat unread hook is now mounted once in the Customer provider and supplies both platform dock dots. The shared Chat status documents inherited V2 reliability quirks; live backend, account-switch and real-phone behavior, as well as initialized push delivery, remain unverified. |
+| Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | The Customer opt-in is withheld: the existing Android React Native WebSocket may forward an origin cookie on a cross-origin redirect. Do not start the shared unread runtime from Customer until a no-redirect/no-cookie transport is verified. The Chat unread dot is absent rather than faked. Initialized push delivery and real-device/backend behavior remain unverified. |
 
 ## Baseline evidence
 
@@ -35,6 +35,8 @@ Stopped at: integrate Supplier notification detail, complete the text and surfac
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Security hold: removed the Customer `useChatUnreadCount` opt-in and omitted its Chat unread dot until a no-redirect/no-cookie transport is verified. The notification unread dot remains real, and no placeholder Chat count was added. Existing worker/preparation Chat paths were not changed.
 
 - iOS late notification navigation: deferred mark-seen reproduced two failures before the fix. A focus-generation guard now prevents an old tap from opening detail after tab blur, refocus or unmount, while a current tap still opens it. 26 focused feed/navigation tests, iOS typecheck and uncached lint passed; Android remains unchanged with its nine baseline errors.
 
@@ -52,7 +54,7 @@ Stopped at: integrate Supplier notification detail, complete the text and surfac
 
 - Full pinned-source search found `handleCustomerTabSwipe` and `navigateToCustomerTab` only inside their unreferenced helper file; neither Customer screen invokes them. No swipe gesture was invented.
 
-- Customer Chat badge: after merging main `f0d1fcc`, the existing shared `useChatUnreadCount(session)` runs once in the persistent Customer provider and drives iOS native-tab and Android native-dock dots. 26 focused Customer notification/navigation and shared Chat runtime tests passed, including read-clearing and account reset. iOS typecheck and uncached Expo lint passed; Android retains the nine baseline worker errors. Real-device/backend behavior remains open. The Customer notification view files were renamed without behavioral changes to remove a case-insensitive resolver collision with the controller.
+- Customer Chat badge history: the shared hook was tested after merging main `f0d1fcc`, then the Customer opt-in was removed under the Android WebSocket redirect/cookie security hold. The Chat badge is not supplied until a safe transport is verified. The Customer notification view files were renamed without behavioral changes to remove a case-insensitive resolver collision with the controller.
 
 - Customer shell/routes: `tests/customerNavigation.test.cjs` covers both home targets, destination mapping, notification badge suppression, role guards, status/detail transitions, refresh-after-return and shared profile reuse. The existing drawer, profile and chat components are reused; the shared notification detail remains explicitly pending; this checkpoint preceded the subsequent Chat badge hookup. iOS typecheck and lint passed; Android has the same nine baseline worker type errors. Offline iOS and Android JavaScript exports passed, without a simulator or device. Native tab selection, drawer navigation, hardware back and the badge require real-phone checks.
 
@@ -98,7 +100,7 @@ Source and native code were compared without a device; “partial” means an op
 | Delivery detail and response snackbar, `customer_delivery_detail_screen.dart:32–233`, methods part 01:12–69 | `CustomerDelivery.*`, `useCustomerScreens.ts`, `CustomerSnackbar.*` | partial | partial | Loading, retry, fields, response order and snackbar are implemented. Discussion is intentionally absent until the reviewed shared destination can be safely integrated; iOS selection and phone checks remain open. |
 | Approve confirmation and return/partial/claim dialogs, methods part 01:75–240 | `CustomerReturnDialog.*`, `customerLogic.ts`, `CustomerDelivery.*` | partial | partial | Reason/quantity rules, order, cancel/confirm and requests are source-tested; keyboard, dismissal and accessibility need real-device checks. |
 | Shared notification detail, `notification_detail_screen.dart:30–171,302–372`, methods part 01 | Supplier `NotificationDetailScreen.*` (not integrated) | pending | pending | Shared screen is blocked pending account-switch review. Customer must omit its dock footer and replace the shared route for `MAT-DN-` redirects. |
-| Shared profile and Chat, `profile_screen.dart:162–198`, `role_dock.dart` | `CustomerRoutes.*`, `CustomerShell.*`, `CustomerDock.android.tsx` | partial | partial | Existing profile/Chat and reviewed unread hook are reused; iOS selection and live/device/account-switch checks remain open. |
+| Shared profile and Chat, `profile_screen.dart:162–198`, `role_dock.dart` | `CustomerRoutes.*`, `CustomerShell.*`, `CustomerDock.android.tsx` | partial | partial | Existing profile and Chat screens are reused. The unread hook is withheld under a transport security hold; iOS selection and live/device/account-switch checks remain open. |
 
 ## Deviation candidates
 
