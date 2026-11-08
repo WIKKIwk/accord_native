@@ -1,6 +1,5 @@
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
-import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import type { DispatchRecord } from '../shared/notificationApi';
 import { useCustomerText } from './CustomerContext';
 import { CustomerEmptyStatusState, CustomerLoadingState, CustomerRetryState } from './CustomerStates';
@@ -55,20 +54,28 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
 
 // @v2 CustomerStatusDetailScreen
 export function CustomerStatusDetailScreen({ kind, onOpenDetail }: StatusProps) {
-  const state = useCustomerStatus(kind), colors = useMaterialColors();
+  const state = useCustomerStatus(kind), colors = useMaterialColors(), { locale } = useCustomerText();
   if (!state.loaded) return state.loading || state.error == null ? <CustomerLoadingState /> : <CustomerRetryState retry={state.refresh} />;
   if (!state.records.length) return <CustomerEmptyStatusState />;
-  return <FlatList data={state.records} keyExtractor={item => item.id} contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
+  const direction = customerLayoutDirection(locale) === 'rightToLeft' ? 'rtl' : 'ltr';
+  return <FlatList data={state.records} keyExtractor={item => item.id} contentContainerStyle={{ paddingBottom: 24 }}
     refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}
     renderItem={({ item, index }: { item: DispatchRecord; index: number }) => {
-      const row = customerStatusRecord(item);
-      return <WorkerQueueCard backgroundColor={colors.surfaceContainerLow} first={index === 0} last={index === state.records.length - 1}
-        onPress={() => onOpenDetail(item.id)}><View style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-            <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700', flex: 1 }}>{row.name}</Text>
-            <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.created}</Text>
-          </View><Text style={{ color: colors.onSurface, fontSize: 28, fontWeight: '700', letterSpacing: -0.6, marginTop: 10 }}>{row.quantity}</Text>
-          {row.note ? <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, marginTop: 8 }}>{row.note}</Text> : null}
-        </View></WorkerQueueCard>;
+      const row = customerStatusRecord(item), first = index === 0, last = index === state.records.length - 1;
+      return <View testID="customer-status-card" style={{ marginStart: 14, marginEnd: 16, backgroundColor: colors.surfaceContainerLow, direction,
+        borderTopLeftRadius: first ? 28 : 0, borderTopRightRadius: first ? 28 : 0,
+        borderBottomLeftRadius: last ? 28 : 0, borderBottomRightRadius: last ? 28 : 0, overflow: 'hidden' }}>
+        <Pressable accessibilityRole="button" android_ripple={{ color: '#33212121' }} onPress={() => onOpenDetail(item.id)}
+          style={{ paddingHorizontal: 18, paddingVertical: 16, borderRadius: first || last ? 28 : 0, overflow: 'hidden' }}>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+              <Text style={{ color: colors.onSurface, fontSize: 20, fontWeight: '700', flex: 1 }}>{row.name}</Text>
+              <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.created}</Text>
+            </View><Text style={{ color: colors.onSurface, fontSize: 28, fontWeight: '700', letterSpacing: -0.6, marginTop: 10 }}>{row.quantity}</Text>
+            {row.note ? <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, marginTop: 8 }}>{row.note}</Text> : null}
+          </View>
+        </Pressable>
+        {!last ? <View testID="customer-status-divider" style={{ height: 1, backgroundColor: colors.outlineVariant }} /> : null}
+      </View>;
     }} />;
 }

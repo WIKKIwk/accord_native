@@ -121,11 +121,43 @@ test('status rows open the selected delivery and empty states use the V2 label',
   const calls = [], ios = fixture('ios', state).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail: id => calls.push(id) });
   nodes(ios, item => item.type === 'Button')[0].props.onPress();
   const android = fixture('android', state).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail: id => calls.push(id) });
-  android.props.renderItem({ item: record, index: 0 }).props.onPress(); assert.deepEqual(calls, ['dn', 'dn']);
+  const row = android.props.renderItem({ item: record, index: 0 });
+  nodes(row, item => item.type === 'Pressable')[0].props.onPress(); assert.deepEqual(calls, ['dn', 'dn']);
   for (const platform of ['ios', 'android']) {
     const empty = fixture(platform, { ...state, records: [] }).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
     assert.ok(nodes(empty.type(empty.props), item => item.type === 'Text').some(item => item.props.children === 'noRecordsYet'));
   }
+});
+
+test('Android status rows form a rounded panel with full-width dividers and real actions', async () => {
+  const records = [0, 1, 2].map(index => ({ ...record, id: `dn-${index}` })), calls = [];
+  let refreshes = 0;
+  const status = { ...state, records, refresh: async () => { refreshes++; } };
+  const screen = fixture('android', status, 'ur-PK').CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail: id => calls.push(id) });
+  assert.equal(screen.type, 'FlatList'); assert.equal(screen.props.contentContainerStyle.paddingTop, undefined);
+  screen.props.refreshControl.props.onRefresh(); await Promise.resolve(); assert.equal(refreshes, 1);
+  records.forEach((item, index) => {
+    const row = screen.props.renderItem({ item, index });
+    const card = nodes(row, n => n.props.testID === 'customer-status-card')[0];
+    const target = nodes(row, n => n.type === 'Pressable')[0];
+    assert.equal(card.props.style.backgroundColor, 'bg'); assert.equal(card.props.style.direction, 'rtl');
+    assert.equal(card.props.style.marginStart, 14); assert.equal(card.props.style.marginEnd, 16);
+    assert.equal(card.props.style.borderTopLeftRadius, index === 0 ? 28 : 0);
+    assert.equal(card.props.style.borderTopRightRadius, index === 0 ? 28 : 0);
+    assert.equal(card.props.style.borderBottomLeftRadius, index === 2 ? 28 : 0);
+    assert.equal(card.props.style.borderBottomRightRadius, index === 2 ? 28 : 0);
+    assert.equal(target.props.accessibilityRole, 'button'); assert.equal(target.props.style.paddingHorizontal, 18);
+    assert.equal(target.props.style.paddingVertical, 16); assert.equal(target.props.style.borderRadius, index === 1 ? 0 : 28);
+    assert.deepEqual(target.props.android_ripple, { color: '#33212121' });
+    target.props.onPress();
+    const dividers = nodes(row, n => n.props.testID === 'customer-status-divider'); assert.equal(dividers.length, index === 2 ? 0 : 1);
+    if (dividers.length) assert.deepEqual(dividers[0].props.style, { height: 1, backgroundColor: 'outline' });
+    assert.equal(nodes(target.props.children, n => n.type === 'Pressable' || n.type === 'Button').length, 0);
+  });
+  assert.deepEqual(calls, records.map(item => item.id));
+  const single = fixture('android', state).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} }).props.renderItem({ item: record, index: 0 });
+  const card = nodes(single, n => n.props.testID === 'customer-status-card')[0].props.style;
+  assert.equal(card.borderTopLeftRadius, 28); assert.equal(card.borderBottomLeftRadius, 28);
 });
 
 // Source-derived: customer_home_screen_widgets_part_02.dart _CustomerPreviewRow.
@@ -204,7 +236,7 @@ test('status timestamps share only the header, leaving quantity and notes below 
     assert.deepEqual(nodes(header, item => item.type === 'Text').map(item => item.props.children), [record.item_name, record.created_label]);
     if (platform === 'ios') { assert.equal(header.props.alignment, 'top'); assert.equal(header.props.spacing, 12); }
     else { assert.equal(header.props.style.alignItems, 'flex-start'); assert.equal(header.props.style.gap, 12); }
-    const body = row.props.children;
+    const body = platform === 'ios' ? row.props.children : nodes(row, item => item.type === 'Pressable')[0].props.children;
     assert.ok(body.props.children.some(item => item?.type === 'Text' && item.props.children === '3 kg'));
     assert.ok(body.props.children.some(item => item?.type === 'Text' && item.props.children === 'note'));
   }
