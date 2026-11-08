@@ -13,16 +13,24 @@ import type { ReturnedPaintDraft } from './returnedPaintDraft';
 import { returnedPaintDouble, type ReturnedPaintItem } from './returnedPaintModel';
 import { useBoyoqchiText } from './useBoyoqchiText';
 
+const fieldColors: Record<string, string> = {
+  Mix: '#8A6A4A', '1w Oq': '#C9B9AA', '7w Oq': '#C9B9AA', Qora: '#202124', Sariq: '#E0B52D',
+  Qizil: '#E53935', 'Ko‘k': '#1E88E5', Spirt: '#6AAED6', 'Mix+': '#8A6A4A', 'Pantone+': '#8E6BBE',
+};
+
 type Props = { session: Session; draft: ReturnedPaintDraft; close: () => void; onBusyChange: (busy: boolean) => void;
   save: (items: ReturnedPaintItem[]) => Promise<void> };
-function Field({ label, placeholder, initial = '', decimal = false, autoFocus = false, onChange }: {
-  label: string; placeholder?: string; initial?: string; decimal?: boolean; autoFocus?: boolean; onChange: (value: string) => void;
+function Field({ label, placeholder, initial = '', decimal = false, autoFocus = false, paintField = false, onChange }: {
+  label: string; placeholder?: string; initial?: string; decimal?: boolean; autoFocus?: boolean; paintField?: boolean; onChange: (value: string) => void;
 }) {
   const colors = useWorkerColors(), native = useNativeState(initial), last = useRef(initial), t = useBoyoqchiText();
+  const [focused, setFocused] = useState(false);
   return <View style={styles.field}><Text style={{ color: colors.muted }}>{t(label)}</Text>
     <Host matchContents={{ vertical: true }} style={styles.host}><TextInput value={native} placeholder={placeholder === undefined ? undefined : t(placeholder)}
       accessibilityLabel={t(label)} autoFocus={autoFocus} keyboardType={decimal ? 'decimal-pad' : 'default'} autoCapitalize={decimal ? 'none' : 'words'}
-      onChangeText={value => {
+      style={paintField ? { width: '100%', height: 56, borderRadius: 12, borderWidth: focused ? 1.8 : 1.2,
+        borderColor: fieldColors[label] ?? colors.muted, paddingHorizontal: 12 } : undefined}
+      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onChangeText={value => {
         if (decimal && !boyoqchiInputAllowed(value)) { native.set(last.current); return; }
         last.current = value; onChange(value);
       }} /></Host>
@@ -101,9 +109,9 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
       {!!error && <View style={[styles.error, { backgroundColor: colors.field }]}><Text style={{ color: colors.text }}>{t(error)}</Text></View>}
       {!paint ? <WorkerPaintPalette usage={usage} onUsage={(value: 'rasxot' | 'astatka') => { draft.setUsage(value === 'astatka' ? 1 : 0); changed(); }}
         onSelect={(value: string) => { setPaint(value); setError(''); }} /> : <View style={styles.fields}>
-        {fields.map((label, index) => <Field key={`${optionKey}:${index}:${label}`} label={label} decimal initial={values[index]}
+        {fields.map((label, index) => <Field key={`${optionKey}:${index}:${label}`} label={label} decimal paintField initial={values[index]}
           onChange={value => update(optionKey, index, value, fields.length)} />)}
-        {mixFields.map((label, index) => <Field key={`${mixKey}:${index}:${label}`} label={label} decimal initial={mixValues[index]}
+        {mixFields.map((label, index) => <Field key={`${mixKey}:${index}:${label}`} label={label} decimal paintField initial={mixValues[index]}
           onChange={value => update(mixKey, index, value, mixFields.length)} />)}
         {paint === 'Pantone' && <WorkerSheetButton label="Pantone+" onPress={() => setDialog({ paint: 'Pantone', key: optionKey, base: [] })} />}
         {paint === 'Pantone' && <WorkerSheetButton label="Mix+" onPress={() => setDialog({ paint: 'Mix', key: mixKey, base: [] })} />}

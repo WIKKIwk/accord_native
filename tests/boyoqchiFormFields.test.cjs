@@ -10,9 +10,10 @@ function nodes(node, predicate) {
   if (Array.isArray(node)) return node.flatMap(child => nodes(child, predicate));
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
+let fieldFocus = false;
 const filename = path.resolve(__dirname, '../src/boyoqchi/BoyoqchiFormContent.tsx'), loaded = new Module(filename, module);
 const mocks = {
-  'react/jsx-runtime': jsx, react: { useEffect() {}, useRef: value => ({ current: value }), useState: value => [value, () => {}] },
+  'react/jsx-runtime': jsx, react: { useEffect() {}, useRef: value => ({ current: value }), useState: value => [value === false ? fieldFocus : value, next => { if (typeof next === 'boolean') fieldFocus = next; }] },
   '@expo/ui': { Host: 'Host', TextInput: 'TextInput', useNativeState: value => ({ value, set() {} }) },
   'react-native': { BackHandler: {}, Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View',
     StyleSheet: { create: value => value, absoluteFill: {} } },
@@ -45,4 +46,25 @@ test('named-field dialog retains its exact explicit name and value hints', () =>
   ]);
   assert.deepEqual(fields.map(field => nodes(Field(field.props), node => node.type === 'TextInput')[0].props.placeholder),
     ['Masalan: Pantone Blue', 'Masalan: 12.5']);
+});
+
+
+test('paint fields use pinned V2 border colors and focus thickness without changing dialog fields', () => {
+  const expected = { Mix: '#8A6A4A', '1w Oq': '#C9B9AA', '7w Oq': '#C9B9AA', Qora: '#202124',
+    Sariq: '#E0B52D', Qizil: '#E53935', 'Ko‘k': '#1E88E5', Spirt: '#6AAED6',
+    'Mix+': '#8A6A4A', 'Pantone+': '#8E6BBE', 'Pantone Blue': 'gray' };
+  for (const [label, color] of Object.entries(expected)) {
+    fieldFocus = false;
+    const get = () => nodes(Field({ label, paintField: true, decimal: true, onChange() {} }), node => node.type === 'TextInput')[0];
+    let input = get();
+    assert.equal(input.props.style.borderColor, color);
+    assert.equal(input.props.style.borderWidth, 1.2);
+    assert.equal(input.props.style.borderRadius, 12);
+    input.props.onFocus(); input = get(); assert.equal(input.props.style.borderWidth, 1.8);
+    input.props.onBlur(); input = get(); assert.equal(input.props.style.borderWidth, 1.2);
+  }
+  const dialog = NamedFieldDialog({ paint: 'Pantone', close() {}, add() {} });
+  for (const field of nodes(dialog, node => node.type === Field)) {
+    assert.equal(nodes(Field(field.props), node => node.type === 'TextInput')[0].props.style, undefined);
+  }
 });
