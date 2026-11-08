@@ -14,17 +14,24 @@ export function pendingOrderFromJson(value: unknown) {
   return { id: row.id, template: calculateOrderTemplateFromJson(row.template), manager_name: row.manager_name ?? '', completed: row.completion != null };
 }
 /** @v2 pendingOrderDetail */
-export async function pendingOrderDetail(session: Session, orderId: string) {
+export async function pendingOrderDetail(session: Session, orderId: string, beforeSend?: () => void) {
   const id = orderId.trim(); if (!id) throw invalid();
   const query = new URLSearchParams({ id });
-  const response = await authorizedFetch(session, `/v1/mobile/admin/pending-orders?${query}`);
+  const path = `/v1/mobile/admin/pending-orders?${query}`;
+  const response = beforeSend ? await authorizedFetch(session, path, undefined, beforeSend) : await authorizedFetch(session, path);
+  beforeSend?.();
   if (response.status !== 200) {
-    let data: unknown; try { data = await response.json(); } catch { data = null; }
+    let data: unknown; try { data = await response.json(); } catch { beforeSend?.(); data = null; }
+    beforeSend?.();
     throw productionMapResponseError(response.status, data, 'pending_order_detail');
   }
-  const row = object(await response.json());
+  const json = await response.json();
+  beforeSend?.();
+  const row = object(json);
   if (!row || row.id !== id || !object(row.template)) throw invalid();
-  return pendingOrderFromJson(row);
+  const result = pendingOrderFromJson(row);
+  beforeSend?.();
+  return result;
 }
 /** @v2 pendingOrders */
 export async function pendingOrders(session: Session) {
