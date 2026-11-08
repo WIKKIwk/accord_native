@@ -49,6 +49,12 @@ export function qolipPlacementProductSearchDocument(product: QolipPlacementProdu
   return document;
 }
 
+/** Text used in the attach form, which differs slightly from the picker row. */
+export function qolipPlacementFormProductLabel(product: QolipPlacementProduct): string {
+  const name = trimDart(product.name) || trimDart(product.code);
+  return [name, product.has_qolip_spec ? `${trimDart(product.qolip_code)} • ${product.size}` : ''].filter(Boolean).join(' • ');
+}
+
 /** Text used by the V2 product picker for each loaded item. */
 export function qolipPlacementPickerTitle(product: QolipPlacementProduct): string {
   return trimDart(product.name) || product.code;

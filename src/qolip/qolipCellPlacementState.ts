@@ -2,9 +2,9 @@ import type { QolipBlock } from './qolipBlocksApi';
 import type { QolipLocationEntry } from './qolipLocationsApi';
 import { QolipCellProductPicker, qolipPlacedCodes, type QolipPlacementProduct } from './qolipCellPlacement';
 
-type Target = { block: QolipBlock; rowLetter: string; columnNumber: number };
-type Prepared = { target: Target; products: readonly QolipPlacementProduct[]; scope: string };
-type PlacementResult = { kind: 'saved'; target: Target; products: readonly QolipPlacementProduct[] }
+export type QolipCellTarget = { block: QolipBlock; rowLetter: string; columnNumber: number };
+export type QolipCellPlacementPrepared = { target: QolipCellTarget; products: readonly QolipPlacementProduct[]; scope: string };
+export type QolipCellPlacementResult = { kind: 'saved'; target: QolipCellTarget; products: readonly QolipPlacementProduct[] }
   | { kind: 'partial'; saved: number; failed: number }
   | { kind: 'failed'; error: unknown }
   | { kind: 'session_changed'; saved: number }
@@ -12,7 +12,7 @@ type PlacementResult = { kind: 'saved'; target: Target; products: readonly Qolip
 type Dependencies = {
   locations: (block: string) => Promise<readonly QolipLocationEntry[]>;
   products: () => Promise<QolipPlacementProduct[]>;
-  save: (target: Target, product: QolipPlacementProduct) => Promise<unknown>;
+  save: (target: QolipCellTarget, product: QolipPlacementProduct) => Promise<unknown>;
   scope: () => string;
   valid: () => boolean;
 };
@@ -71,26 +71,26 @@ export class QolipCellPlacementState {
     return this.isCurrent() && !saving && !!block && rowLetter !== null && columnNumber !== null &&
       selected.length > 0 && selected.every(product => product.has_qolip_spec);
   }
-  private target(): Target | null {
+  private target(): QolipCellTarget | null {
     const { block, rowLetter, columnNumber } = this.value;
     return block && rowLetter !== null && columnNumber !== null ? { block, rowLetter, columnNumber } : null;
   }
   /** Caller displays this confirmation and calls confirmMulti only after acceptance. */
-  prepareMulti(products: readonly QolipPlacementProduct[]): Prepared | null {
+  prepareMulti(products: readonly QolipPlacementProduct[]): QolipCellPlacementPrepared | null {
     const target = this.target();
     return this.isCurrent() && !this.inFlight && target
       ? { target, products: [...products], scope: this.openedScope } : null;
   }
-  async confirmMulti(prepared: Prepared): Promise<PlacementResult> {
+  async confirmMulti(prepared: QolipCellPlacementPrepared): Promise<QolipCellPlacementResult> {
     if (!this.isCurrent() || prepared.scope !== this.deps.scope()) return { kind: 'session_changed', saved: 0 };
     return this.save(prepared.products);
   }
-  async saveSelected(): Promise<PlacementResult> {
+  async saveSelected(): Promise<QolipCellPlacementResult> {
     if (!this.canSave) return null;
     return this.save(this.value.selected);
   }
   /** @v2 _saveCellProducts */
-  private async save(products: readonly QolipPlacementProduct[]): Promise<PlacementResult> {
+  private async save(products: readonly QolipPlacementProduct[]): Promise<QolipCellPlacementResult> {
     const target = this.target(), valid = products.filter(product => product.has_qolip_spec);
     if (!this.active || this.inFlight || !target || !valid.length) return null;
     if (!this.isCurrent()) return { kind: 'session_changed', saved: 0 };

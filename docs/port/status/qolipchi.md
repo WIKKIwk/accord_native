@@ -78,6 +78,8 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 
 - Cell picker native-view checkpoint: added separate SwiftUI and Compose views over the shared picker controller, reusing the existing Android card and native sheet workflow. Static component tests cover loading, retry, empty, single and multi-selection. All 232 Qolip tests, iOS typecheck and lint passed; Android still has only nine earlier worker errors. The views are not connected to the placement sheet; phone testing is still required, including iOS long-press/tap interaction, accessibility, paging and sheet height.
 
+- Cell attach native-view checkpoint: added iOS and Android cell-only attach sheets and connected the existing picker with a confirmation before multi-save, shared real location API, partial/all-error notices and a success result for the home caller. All 238 Qolip tests, iOS typecheck and lint passed; Android reports only its nine pre-existing worker errors. The QR scanner and home-grid entry/refresh remain open, so the sheets are not routed. Phone testing remains outstanding. An account reset stops unsent batch items; an already-sent request can have an uncertain server outcome and must be refreshed before retry.
+
 ## Deviations candidates
 
 - Grid statistics count nonempty location labels outside the fixed visible grid, which can yield occupied cells that are not displayed; f119 behavior is retained.

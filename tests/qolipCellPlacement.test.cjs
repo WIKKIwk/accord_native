@@ -157,4 +157,6 @@ test('picker keeps source order for an empty query and sorts all loaded rows by 
   assert.deepEqual(logic.qolipPlacementSortLoadedProducts(values, 'kross').map(x => x.qolip_code), ['Q2', 'Q5', 'Q4', 'Q1', 'KROSS']);
   assert.equal(logic.qolipPlacementPickerTitle(product('Q1', { name: '  ' })), 'ITEM-Q1');
   assert.equal(logic.qolipPlacementPickerSubtitle(product(' Q1 ', { code: ' C1 ', size: 43 })), 'Q1 • 43 • C1');
+  assert.equal(logic.qolipPlacementFormProductLabel(product(' Q1 ', { name: '  ', code: ' C1 ', size: 43 })), 'C1 • Q1 • 43');
+  assert.equal(logic.qolipPlacementFormProductLabel(product('Q1', { name: ' Name ', has_qolip_spec: false })), 'Name');
 });
