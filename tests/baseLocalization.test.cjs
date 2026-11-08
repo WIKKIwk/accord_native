@@ -12,7 +12,7 @@ mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOpt
 const { localizedGetter, localizedMethod, productionText, adminText, extensionText, uiText, LocaleController } = mod.exports;
 
 test('baseline catalog provides static strings in four V2 locales', () => {
-  assert.match(catalog.baseline, /^7c87a54e/);
+  assert.equal(catalog.baseline, fs.readFileSync(path.resolve(__dirname, '../docs/port/V2_BASELINE'), 'utf8').trim());
   assert.equal(localizedGetter('loginFailed', 'uz'), 'Kirish muvaffaqiyatsiz');
   assert.equal(localizedGetter('loginFailed', 'en'), 'Login failed');
   assert.equal(localizedGetter('loginFailed', 'ru'), 'Не удалось войти');
