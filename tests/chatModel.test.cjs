@@ -28,7 +28,7 @@ test('list preserves V2 fields and excludes conversations without messages', () 
   assert.equal(page.items.length, 1);
   assert.deepEqual(page.items[0], {
     id: '1', title: 'Ali', peer: { role: 'aparatchi', ref: 'w1', displayName: 'Ali', avatarUrl: '' },
-    preview: 'Salom', lastMessageSequence: 1, unreadCount: 2, timestamp: 1700000100,
+    preview: 'Salom', lastMessageSequence: 1, unreadCount: 2, updatedAt: 1700000000, timestamp: 1700000100,
   });
   assert.throws(() => parseChatConversations({ items: 'invalid' }), /o‘qib bo‘lmadi/);
 });
