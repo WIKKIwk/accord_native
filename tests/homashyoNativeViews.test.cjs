@@ -154,7 +154,7 @@ for (const platform of ['ios', 'android']) test(`${platform} reprint errors retu
   await new Promise(resolve => setImmediate(resolve)); assert.deepEqual(h.calls, [['error', error]]);
 });
 function scanner(platform, granted, active = true) {
-  const calls = [], scan = { permission: { granted }, failed: false, manual: 'manual-code', setManual: value => calls.push(['manual', value]),
+  const calls = [], scan = { permission: { granted }, checking: false, canUseCamera: () => granted, failed: false, manual: 'manual-code', setManual: value => calls.push(['manual', value]),
     complete: value => calls.push(['complete', value]), cameraFailed: () => calls.push('camera-failed'), title: 'Homashyo QR',
     manualLabel: 'Barcode', unavailable: 'Kamera ochilmadi. Quyidagi maydonga QR yoki barcode kiriting.', guide: 'QR kodni shu to‘r ichiga olib keling' };
   const state = value => ({ current: value, get() { return this.current; }, set(next) { this.current = next; } });
@@ -170,7 +170,7 @@ function scanner(platform, granted, active = true) {
   // Compose slots are components, represented by names in this static render harness.
   mocks['@expo/ui/jetpack-compose'].OutlinedTextField = Object.assign('OutlinedTextField', { Label: 'OutlinedTextField.Label' });
   const component = load(`RawSplitScanner.${platform}.tsx`, mocks, true).RawSplitScanner;
-  const root = component({ visible: true, active, onClose: () => calls.push('close'), onComplete: () => {} });
+  const root = component({ visible: true, active, isCurrent: () => active, onClose: () => calls.push('close'), onComplete: () => {} });
   return { calls, scan, tree: root.type(root.props) };
 }
 for (const platform of ['ios', 'android']) {
