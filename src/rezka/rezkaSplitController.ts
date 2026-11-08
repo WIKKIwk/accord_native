@@ -14,7 +14,7 @@ export type RezkaSplitNotice =
   | { kind: 'serverMismatch'; total: number; sourceQty: number }
   | { kind: 'success'; count: number };
 export type RezkaSplitState = { barcode: string; reason: string; driverUrl: string; printer: string; printMode: string; transport: RezkaTransport;
-  source: RezkaSource | null; outputs: RezkaDraft[]; loadingSource: boolean; submitting: boolean; uncertain: boolean;
+  source: RezkaSource | null; outputs: RezkaDraft[]; loadingSource: boolean; submitting: boolean; uncertain: boolean; blockedPrinter: boolean;
   remainder: { source: RezkaSource; total: number; difference: number } | null; notice: RezkaSplitNotice | null };
 export type RezkaSplitDependencies = {
   isCurrent(): boolean;
@@ -26,7 +26,7 @@ export type RezkaSplitDependencies = {
   confirm(request: RezkaSplitInput): Promise<RezkaSplitResponse>;
 };
 const initial = (): RezkaSplitState => ({ barcode: '', reason: '', driverUrl: 'http://gscale.local:39117', printer: 'godex', printMode: 'label',
-  transport: 'offline', source: null, outputs: [], loadingSource: false, submitting: false, uncertain: false, remainder: null, notice: null });
+  transport: 'offline', source: null, outputs: [], loadingSource: false, submitting: false, uncertain: false, blockedPrinter: false, remainder: null, notice: null });
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 function knownServerResponse(error: unknown): boolean {
   return !!error && typeof error === 'object' && typeof (error as { statusCode?: unknown }).statusCode === 'number';
@@ -41,7 +41,9 @@ export class RezkaSplitController {
   private listeners = new Set<() => void>();
   private disposed = false;
   private mutationStarted = false;
+  private nextDraftKey = 0;
   constructor(private readonly deps: RezkaSplitDependencies) {}
+  private keyed(draft: RezkaDraft): RezkaDraft { return { ...draft, key: ++this.nextDraftKey }; }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private active() {
@@ -63,7 +65,7 @@ export class RezkaSplitController {
   dispose() { this.disposed = true; this.listeners.clear(); }
   setBarcode(barcode: string) { this.update({ barcode }); }
   setReason(reason: string) { this.update({ reason }); }
-  setPrinter(values: Partial<Pick<RezkaSplitState, 'transport' | 'driverUrl' | 'printer' | 'printMode'>>) { this.update(values); }
+  setPrinter(values: Partial<Pick<RezkaSplitState, 'transport' | 'driverUrl' | 'printer' | 'printMode'>>) { this.update({ ...values, blockedPrinter: false }); }
   editOutput(index: number, values: Partial<RezkaDraft>) {
     if (!this.active() || !this.state.outputs[index]) return;
     this.update({ outputs: this.state.outputs.map((output, i) => i === index ? { ...output, ...values } : output) });
@@ -74,7 +76,7 @@ export class RezkaSplitController {
     this.editOutput(index, { item_code: item.code, item_name: item.name, uom: item.uom.trim() ? item.uom : 'kg',
       warehouse: item.warehouse.trim() ? item.warehouse : output.warehouse });
   }
-  addOutput() { if (this.state.source) this.update({ outputs: [...this.state.outputs, draftFromSource(this.state.source)] }); }
+  addOutput() { if (this.state.source) this.update({ outputs: [...this.state.outputs, this.keyed(draftFromSource(this.state.source))] }); }
   removeOutput(index: number) {
     if (this.state.outputs.length > 2 && index >= 0 && index < this.state.outputs.length)
       this.update({ outputs: this.state.outputs.filter((_item, i) => i !== index) });
@@ -93,7 +95,7 @@ export class RezkaSplitController {
     try {
       const response = await this.deps.loadSource(barcode);
       if (!this.active()) return;
-      this.update({ source: response.source, outputs: [draftFromSource(response.source), draftFromSource(response.source)] });
+      this.update({ source: response.source, outputs: [this.keyed(draftFromSource(response.source)), this.keyed(draftFromSource(response.source))] });
     } catch (error) {
       if (this.active()) this.update({ notice: { kind: 'sourceError', message: errorMessage(error) } });
     } finally { if (this.active()) this.update({ loadingSource: false }); }
@@ -103,11 +105,11 @@ export class RezkaSplitController {
     if (!this.active() || !remainder) return;
     if (choice === 'cancel') { this.update({ remainder: null }); return; }
     const scrap = choice === 'scrap';
-    this.update({ remainder: null, outputs: [...this.state.outputs, remainderDraft(remainder.source, remainder.difference, scrap)],
+    this.update({ remainder: null, outputs: [...this.state.outputs, this.keyed(remainderDraft(remainder.source, remainder.difference, scrap))],
       notice: { kind: 'remainderAdded', quantity: remainder.difference, uom: remainder.source.uom, scrap } });
   }
   async submit() {
-    if (!this.active() || this.state.submitting || this.state.uncertain || !this.state.source) return;
+    if (!this.active() || this.state.submitting || this.state.uncertain || this.state.blockedPrinter || !this.state.source) return;
     const source = this.state.source, snapshot = this.state;
     if (snapshot.transport === 'wifi' && (!snapshot.driverUrl.trim() || !snapshot.printer.trim() || !snapshot.printMode.trim())) {
       this.update({ notice: { kind: 'printerConfig' } }); return;
@@ -131,7 +133,7 @@ export class RezkaSplitController {
         this.update({ notice: { kind: snapshot.transport === 'bluetooth' ? 'bluetoothMissing' : snapshot.transport === 'offline' ? 'usbMissing' : 'printerUnavailable' } });
         return;
       }
-      if (/godex/i.test(`${target.printer} ${target.model ?? ''}`)) { this.update({ notice: { kind: 'godexExcluded' } }); return; }
+      if (/godex/i.test(`${target.printer} ${target.model ?? ''}`)) { this.update({ blockedPrinter: true, notice: { kind: 'godexExcluded' } }); return; }
       const request: RezkaSplitInput = { source_barcode: source.barcode, source_stock_entry: source.stock_entry_name,
         source_line_index: source.line_index, reason: snapshot.reason, driver_url: target.driver_url, printer: target.printer,
         print_mode: target.print_mode, outputs };
@@ -166,7 +168,7 @@ export class RezkaSplitController {
       const totalValue = Number(match[1]) || 0, sourceQty = Number(match[2]) || 0, difference = sourceQty - totalValue;
       const current = this.state.source;
       if (current && difference > 0.0001) {
-        this.update({ outputs: [...this.state.outputs, remainderDraft(current, difference, false)],
+        this.update({ outputs: [...this.state.outputs, this.keyed(remainderDraft(current, difference, false))],
           notice: { kind: 'serverRemainder', total: totalValue, sourceQty, difference, uom: current.uom } });
       } else this.update({ notice: { kind: 'serverMismatch', total: totalValue, sourceQty } });
     } finally {

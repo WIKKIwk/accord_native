@@ -77,6 +77,7 @@ test('scope change before printer resolves clears data without claiming a reques
 });
 test('excluded GoDEX never causes a backend write or a made-up success', async () => {
   const t = setup({ resolvePrinter: async () => ({ ...target, printer: 'GoDEX' }) }); await fill(t.controller); await t.controller.submit();
+  assert.equal(t.controller.getSnapshot().blockedPrinter, true);
   assert.equal(t.controller.getSnapshot().notice.kind, 'godexExcluded'); assert.equal(rezkaSplitNoticeText(t.controller.getSnapshot().notice), null);
   assert.equal(t.calls.some(x => x[0] === 'prepare' || x[0] === 'split'), false);
 });
@@ -100,4 +101,12 @@ test('explicit account reset during an in-flight print retains uncertain outcome
   t.controller.invalidate(); release(); await pending;
   assert.equal(t.controller.getSnapshot().uncertain, true); assert.equal(t.controller.getSnapshot().source, null);
   assert.equal(t.calls.some(x => x[0] === 'confirm'), false);
+});
+test('draft keys remain stable when another output is removed', async () => {
+  const t = setup(); await fill(t.controller); t.controller.addOutput();
+  const [first, second, third] = t.controller.getSnapshot().outputs.map(output => output.key);
+  assert.equal(new Set([first, second, third]).size, 3);
+  t.controller.editOutput(1, { qty: '3' }); t.controller.removeOutput(0);
+  assert.deepEqual(t.controller.getSnapshot().outputs.map(output => output.key), [second, third]);
+  assert.equal(t.controller.getSnapshot().outputs[0].qty, '3');
 });

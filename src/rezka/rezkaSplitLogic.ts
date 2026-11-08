@@ -1,6 +1,6 @@
 import type { RezkaSource, RezkaOutputRequest } from './rezkaSplitApi';
 
-export type RezkaDraft = { item_code: string; item_name: string; qty: string; uom: string; warehouse: string; reason: string; print_qr: boolean };
+export type RezkaDraft = { key?: number; item_code: string; item_name: string; qty: string; uom: string; warehouse: string; reason: string; print_qr: boolean };
 /** @v2 _RezkaOutputDraft.fromSource */
 export function draftFromSource(source: RezkaSource): RezkaDraft {
   return { item_code: '', item_name: '', qty: '', uom: source.uom.trim() ? source.uom : 'kg', warehouse: source.warehouse, reason: '', print_qr: true };
