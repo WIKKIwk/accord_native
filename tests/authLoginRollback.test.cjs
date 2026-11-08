@@ -425,3 +425,59 @@ test('login and refresh reset session-scoped state when effective access role ch
     assert.equal(resets, 2);
   } finally { global.fetch = original; }
 });
+test('active session epoch is read-only and detects a failed login attempt even if the previous object returns', async () => {
+  const original = global.fetch, values = new Map(); let failMetadata = false;
+  const secure = { getItemAsync: async key => values.get(key) ?? null, deleteItemAsync: async key => { values.delete(key); },
+    setItemAsync: async (key, value) => { if (key === 'accord_v4_session' && failMetadata) { failMetadata = false; throw Error('storage failure'); } values.set(key, value); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'new-token', profile: { role: 'aparatchi', ref: 'new' } }) });
+  try {
+    const api = auth(secure, 'ios'), previous = oldSession(), unrelated = oldSession();
+    assert.equal(api.activeSessionEpoch(previous), null);
+    await api.saveSession(previous);
+    const before = api.activeSessionEpoch(previous);
+    assert.equal(typeof before, 'number'); assert.equal(api.activeSessionEpoch(unrelated), null);
+    assert.equal(api.activeSessionToken(previous), 'old-token');
+    failMetadata = true;
+    await assert.rejects(api.login('https://example.test', '123', '456'), /storage failure/);
+    assert.equal(api.currentSession(), previous); assert.equal(api.activeSessionToken(previous), 'old-token');
+    assert.equal(api.activeSessionEpoch(previous), before + 1);
+    assert.equal(values.get('accord_v4_token'), 'old-token');
+  } finally { global.fetch = original; }
+});
+
+test('active session epoch stays stable on token refresh and changes on clear', async () => {
+  const original = global.fetch; let calls = 0;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++calls}`,
+    profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth({}), session = await api.login('https://example.test', 'one', 'code');
+    const before = api.activeSessionEpoch(session);
+    assert.equal(await api.refreshSession(session, session.token), true);
+    assert.equal(api.activeSessionEpoch(session), before);
+    await api.clearSession(); assert.equal(api.activeSessionEpoch(session), null);
+    await api.saveSession(session); assert.equal(api.activeSessionEpoch(session), before + 1);
+  } finally { global.fetch = original; }
+});
+
+test('active session epoch does not claim to detect same-epoch saveSession ABA', async () => {
+  const api = auth({}), first = oldSession(), other = { ...oldSession(), profile: { role: 'aparatchi', ref: 'other' } };
+  await api.saveSession(first); const before = api.activeSessionEpoch(first);
+  await api.saveSession(other); assert.equal(api.activeSessionEpoch(first), null);
+  await api.saveSession(first); assert.equal(api.activeSessionEpoch(first), before);
+});
+
+test('an epoch captured after login starts cannot detect that attempt rolling back', async () => {
+  const original = global.fetch; let release, signal;
+  const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async () => { signal(); return new Promise(resolve => { release = resolve; }); };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous);
+    const before = api.activeSessionEpoch(previous);
+    const attempt = api.login('https://example.test', '123', 'bad');
+    await entered;
+    const during = api.activeSessionEpoch(previous);
+    assert.equal(during, before + 1); release({ ok: false, status: 401 });
+    await assert.rejects(attempt);
+    assert.equal(api.currentSession(), previous); assert.equal(api.activeSessionEpoch(previous), during);
+  } finally { global.fetch = original; }
+});
