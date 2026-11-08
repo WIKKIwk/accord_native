@@ -4,7 +4,7 @@ import { qolipProductFromJson } from '../qolipCatalogApi';
 import { sessionReadScope } from '../sessionReadScope';
 import { MobileApiException } from '../shared/mobileApiException';
 import { qolipCatalogRuntimeFor } from '../shared/qolipCatalogRuntime';
-import { dartString, jsonObject, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { dartQuery, dartString, jsonObject, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
 
 type Product = ReturnType<typeof qolipProductFromJson>;
 /** @v2 QolipMoldDraft */
@@ -114,7 +114,7 @@ export async function qolipEditSet(session: Session, input: {
 
 /** @v2 qolipResolveSet */
 export async function qolipResolveSet(session: Session, identifier: string): Promise<QolipSharedSet | null> {
-  const query = new URLSearchParams({ identifier: trimDart(identifier) });
+  const query = dartQuery({ identifier: trimDart(identifier) });
   const response = await send(session, `/v1/mobile/qolip/shared-sets?${query}`);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_set_load_failed', 'Qolip komplekti yuklanmadi');
   const data = await dataFrom(response);

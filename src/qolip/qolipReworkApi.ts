@@ -2,7 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { sessionReadScope } from '../sessionReadScope';
 import { MobileApiException } from '../shared/mobileApiException';
-import { jsonObject as object, optionalText, qolipApiResponseError, trimDart as trim, type JsonObject } from './qolipApiCommon';
+import { dartQuery, jsonObject as object, optionalText, qolipApiResponseError, trimDart as trim, type JsonObject } from './qolipApiCommon';
 function requiredString(value: unknown): string {
   if (typeof value !== 'string') throw new TypeError('Expected string');
   return value;
@@ -106,7 +106,7 @@ function decodeReworks(data: JsonObject): QolipReworkEntry[] {
 /** @v2 qolipReworks */
 export async function qolipReworks(session: Session, status: 'open' | 'returned' | 'all' = 'open'): Promise<QolipReworkEntry[]> {
   if (!['open', 'returned', 'all'].includes(status)) throw new TypeError('Invalid mold rework status');
-  const query = new URLSearchParams({ status });
+  const query = dartQuery({ status });
   return decodeReworks(await request(session, `/v1/mobile/qolip/reworks?${query}`,
     'qolip_rework_failed', 'Peredelkadagi qoliplar yuklanmadi'));
 }
@@ -137,7 +137,7 @@ export async function qolipReturnFromRework(session: Session, input: { requestId
 
 /** @v2 qolipMileage */
 export async function qolipMileage(session: Session, qolipCode: string): Promise<QolipMileage> {
-  const code = trim(qolipCode), query = new URLSearchParams({ qolip_code: code });
+  const code = trim(qolipCode), query = dartQuery({ qolip_code: code });
   const data = await request(session, `/v1/mobile/qolip/mileage?${query}`, 'qolip_mileage_failed', 'Probeg yuklanmadi');
   const result = qolipMileageFromJson(data.mileage);
   if (result.qolip_code.toLowerCase() !== code.toLowerCase()) throw new TypeError('Mold mileage identity changed');

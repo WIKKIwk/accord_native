@@ -2,7 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import type { qolipProductFromJson } from '../qolipCatalogApi';
 import { MobileApiException } from '../shared/mobileApiException';
-import { jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { dartQuery, jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
 import type { QolipBlock } from './qolipBlocksApi';
 
 /** @v2 QolipLocationEntry */
@@ -30,7 +30,7 @@ async function send(session: Session, path: string, body?: Record<string, unknow
 
 /** @v2 qolipLocations */
 export async function qolipLocations(session: Session, block: string): Promise<QolipLocationEntry[]> {
-  const query = new URLSearchParams({ block: trimDart(block) });
+  const query = dartQuery({ block: trimDart(block) });
   const response = await send(session, `/v1/mobile/qolip/locations?${query}`);
   if (response.status !== 200) throw new Error('Qolip locations failed');
   const data = jsonObject(await response.json());

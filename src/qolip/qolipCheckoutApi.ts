@@ -2,7 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { sessionReadScope } from '../sessionReadScope';
 import { qolipCatalogRuntimeFor } from '../shared/qolipCatalogRuntime';
-import { jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { dartQuery, jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
 
 /** @v2 QolipWorkerOption */
 export type QolipWorkerOption = { id: string; name: string; level: string };
@@ -53,10 +53,10 @@ function invalidateCatalogIfCurrent(session: Session, scope: string): void {
 
 /** @v2 qolipWorkers */
 export async function qolipWorkers(session: Session, query = ''): Promise<QolipWorkerOption[]> {
-  const params = new URLSearchParams();
-  if (trimDart(query)) params.set('q', trimDart(query));
-  params.set('limit', '100');
-  const response = await send(session, `/v1/mobile/qolip/workers?${params}`);
+  const params: Record<string, string> = {};
+  if (trimDart(query)) params.q = trimDart(query);
+  params.limit = '100';
+  const response = await send(session, `/v1/mobile/qolip/workers?${dartQuery(params)}`);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_workers_failed', 'Qolipchilar yuklanmadi.');
   const data = await responseData(response);
   if (data.workers == null) return [];
@@ -67,11 +67,11 @@ export async function qolipWorkers(session: Session, query = ''): Promise<QolipW
 /** @v2 qolipCheckouts */
 export async function qolipCheckouts(session: Session, input: { block?: string; status?: string; limit?: number } = {}): Promise<QolipCheckoutEntry[]> {
   const block = trimDart(input.block ?? ''), status = trimDart(input.status ?? 'open');
-  const params = new URLSearchParams();
-  if (block) params.set('block', block);
-  if (status) params.set('status', status);
-  params.set('limit', String(input.limit ?? 100));
-  const response = await send(session, `/v1/mobile/qolip/checkouts?${params}`);
+  const params: Record<string, string> = {};
+  if (block) params.block = block;
+  if (status) params.status = status;
+  params.limit = String(input.limit ?? 100);
+  const response = await send(session, `/v1/mobile/qolip/checkouts?${dartQuery(params)}`);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_checkouts_failed', 'Qarz daftari yuklanmadi.');
   const data = await responseData(response);
   if (data.checkouts == null) return [];

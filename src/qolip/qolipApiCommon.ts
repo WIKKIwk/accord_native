@@ -4,6 +4,16 @@ export type JsonObject = Record<string, unknown>;
 export const jsonObject = (value: unknown): JsonObject | null => value !== null && typeof value === 'object' && !Array.isArray(value)
   ? value as JsonObject : null;
 export const trimDart = (value: string) => value.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');
+// Dart Uri.replace(queryParameters: ...) omits '=' for an empty value.
+export function dartQuery(values: Record<string, string>): string {
+  const encode = (value: string) => encodeURIComponent(value)
+    .replace(/[!'()*]/g, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)
+    .replace(/%20/g, '+');
+  return Object.entries(values).map(([key, value]) => {
+    const encoded = encode(key);
+    return value === '' ? encoded : `${encoded}=${encode(value)}`;
+  }).join('&');
+}
 
 // The JSON fields are normally strings; Dart also calls toString on optional fields.
 export function dartString(value: unknown): string {

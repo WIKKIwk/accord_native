@@ -3,7 +3,7 @@ import { authorizedFetch } from '../authorizedFetch';
 import { qolipProductFromJson } from '../qolipCatalogApi';
 import { qolipProducts } from '../qolipProductsApi';
 import { MobileApiException } from '../shared/mobileApiException';
-import { jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { dartQuery, jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
 import { qolipLocationFromJson, type QolipLocationEntry } from './qolipLocationsApi';
 
 /** @v2 QolipCellQr */
@@ -58,7 +58,7 @@ async function get(session: Session, path: string): Promise<Response> {
 export async function qolipCellQrLookup(session: Session, qrPayload: string): Promise<QolipCellQr> {
   const qr = trimDart(qrPayload);
   if (!qr) throw new MobileApiException({ code: 'qolip_cell_qr_required', message: 'Yachayka QR bo‘sh.' });
-  const query = new URLSearchParams({ qr });
+  const query = dartQuery({ qr });
   const response = await get(session, `/v1/mobile/qolip/cell-qr?${query}`);
   if (response.status !== 200) throw await cellQrError(response);
   const data = jsonObject(await response.json());
@@ -69,7 +69,7 @@ export async function qolipCellQrLookup(session: Session, qrPayload: string): Pr
 export async function qolipScanQr(session: Session, qrPayload: string): Promise<QolipScanResult> {
   const qr = trimDart(qrPayload);
   if (!qr) throw new MobileApiException({ code: 'qolip_qr_required', message: 'QR bo‘sh.' });
-  const query = new URLSearchParams({ qr });
+  const query = dartQuery({ qr });
   const response = await get(session, `/v1/mobile/qolip/scan?${query}`);
   if (response.status !== 200) throw await qolipApiResponseError(response,
     'qolip_scan_failed', 'QR bo‘yicha qolip yoki yacheyka topilmadi.');
