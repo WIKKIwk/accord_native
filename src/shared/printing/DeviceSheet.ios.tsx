@@ -3,10 +3,10 @@ import { disabled } from '@expo/ui/swift-ui/modifiers';
 import type { DevicePickerAdapter, DevicePickerTextHook } from './devicePickerTypes';
 import { useDevicePicker } from './useDevicePicker';
 
-type DeviceSheetProps = { operator: DevicePickerAdapter; close(): void; useText: DevicePickerTextHook };
+type DeviceSheetProps = { operator: DevicePickerAdapter; close(): void; useText: DevicePickerTextHook; safe?: boolean };
 
-export function DeviceSheet({ operator, close, useText }: DeviceSheetProps) {
-  const picker = useDevicePicker(operator, close), address = useNativeState(picker.address), t = useText();
+export function DeviceSheet({ operator, close, useText, safe }: DeviceSheetProps) {
+  const picker = useDevicePicker(operator, close, safe), address = useNativeState(picker.address), t = useText();
   return <Host style={{ minHeight: 430 }}><VStack><Text>{t('Qurilma tanlash')}</Text><List>
     {picker.device.connection == null ? <Section>
       <Button label={t('Wi-Fi qurilma')} onPress={() => picker.choose('wifi')} />

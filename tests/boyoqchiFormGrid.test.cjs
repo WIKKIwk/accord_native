@@ -31,7 +31,7 @@ function fixture() {
       Text: 'Text', View: 'View', StyleSheet: { create: value => value, absoluteFill: {} } },
     '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../components/useWorkerColors': { useWorkerColors: () => ({}) }, '../workerOrderLogic': { paintOptions },
-    './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' }, './BoyoqchiImage': {},
+    './BoyoqchiUsageSwipe': { BoyoqchiUsageSwipe: 'BoyoqchiUsageSwipe' }, './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' }, './BoyoqchiImage': {},
     './boyoqchiLogic': { boyoqchiInputAllowed: () => true }, './returnedPaintModel': {}, './useBoyoqchiText': { useBoyoqchiText: () => value => value },
   }, '\nmodule.exports.__Field = Field; module.exports.__NamedFieldDialog = NamedFieldDialog;');
   const draft = new ReturnedPaintDraft(() => {});

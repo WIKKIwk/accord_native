@@ -17,7 +17,7 @@ const mocks = {
   '@expo/ui': { Host: 'Host', TextInput: 'TextInput', useNativeState: value => ({ value, set() {} }) },
   'react-native': { BackHandler: {}, Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View',
     StyleSheet: { create: value => value, absoluteFill: {} } },
-  '../components/WorkerIconButton': {}, './BoyoqchiPaintPalette': {}, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
+  '../components/WorkerIconButton': {}, './BoyoqchiUsageSwipe': { BoyoqchiUsageSwipe: 'BoyoqchiUsageSwipe' }, './BoyoqchiPaintPalette': {}, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
   '../components/useWorkerColors': { useWorkerColors: () => ({ muted: 'gray', surface: 'white' }) }, '../workerOrderLogic': { paintOptions: [] },
   './BoyoqchiImage': {}, './boyoqchiLogic': { boyoqchiInputAllowed: () => true }, './returnedPaintModel': { returnedPaintDouble: () => 0 },
   './useBoyoqchiText': { useBoyoqchiText: () => value => value },
