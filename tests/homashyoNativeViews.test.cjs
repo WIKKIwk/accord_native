@@ -2,10 +2,11 @@
 const assert = require('node:assert/strict'); const fs = require('node:fs'); const Module = require('node:module');
 const path = require('node:path'); const test = require('node:test'); const ts = require('typescript');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+function children(node) { return typeof node?.type === 'function' && node.type.name === 'RawSplitDetailLine' ? node.type(node.props) : node?.props?.children; }
 function find(node, predicate) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(n => find(n, predicate));
-  return [...(predicate(node) ? [node] : []), ...find(node.props?.children, predicate)]; }
+  return [...(predicate(node) ? [node] : []), ...find(children(node), predicate)]; }
 function text(node) { if (typeof node === 'string' || typeof node === 'number') return String(node); if (Array.isArray(node)) return node.map(text).join('');
-  return node && typeof node === 'object' ? text(node.props?.children) : ''; }
+  return node && typeof node === 'object' ? text(children(node)) : ''; }
 function load(name, mocks = {}, jsxEnabled = false) { const filename = path.resolve(__dirname, `../src/homashyo/${name}`), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths; mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS,
@@ -181,7 +182,7 @@ function details(platform, printerLabel = null, translate = value => value, issu
   const swift = new Proxy({}, { get: (_, name) => name });
   const compose = new Proxy({ useMaterialColors: () => ({ onSurface: 'text', onSurfaceVariant: 'muted', surface: 'surface' }) }, { get: (o, name) => o[name] ?? name });
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ modifier: name, args }) }),
-    '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
+    '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ modifier: name, args }) }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => translate },
     '../preparation/PreparationUI': { usePreparationText: () => translate },
@@ -190,12 +191,12 @@ function details(platform, printerLabel = null, translate = value => value, issu
   const props = { result, printerLabel, showWifiSelector: printerLabel === 'wifi', wifiPrinter: 'zebra', onSelectPrinter: () => calls.push('picker'),
     onWifiChanged: value => calls.push(['wifi', value]), onReprint: async value => { calls.push(['one', value.barcode]); },
     onReprintAll: async () => { calls.push('all'); }, onError: error => { calls.push(['error', error]); } };
-  return { calls, props, resultTree: () => views.RawSplitDetails(props), issueTree: () => views.RawSplitIssueDetails({ issue: issueValue, hasResult: true }) };
+  return { calls, props, resultTree: () => views.RawSplitDetails(props), issueTree: (hasResult = true) => views.RawSplitIssueDetails({ issue: issueValue, hasResult }) };
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform} detail sheets show measured data and call reprint handlers`, async () => {
     const h = details(platform), tree = h.resultTree();
-    assert.match(text(tree), /100 → 98 kg/); assert.match(text(tree), /Manba QR: parent/);
+    assert.match(text(tree), /100 → 98 kg/); assert.match(text(tree), /Manba QRparent/);
     assert.match(text(tree), /Brutto: 99 kg/); assert.match(text(tree), /Babina: 1 kg/); assert.match(text(tree), /child/);
     const buttonType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
     find(tree, n => n.type === buttonType && n.props.label === 'Printer tanlash')[0].props.onPress();
@@ -213,6 +214,69 @@ for (const platform of ['ios', 'android']) {
     if (platform === 'ios') find(tree, n => n.type === 'Button' && n.props.label === 'GoDEX')[0].props.onPress();
     else find(tree, n => n.type === 'DropdownFilter')[0].props.onChange('godex');
     assert.deepEqual(h.calls, [['wifi', 'godex']]);
+  });
+}
+const detailRows = tree => find(tree, n => typeof n.type === 'function' && n.type.name === 'RawSplitDetailLine');
+for (const platform of ['ios', 'android']) {
+  test(`${platform} result details keep separate source labels and unmodified values in source order`, () => {
+    const h = details(platform); h.props.result = new model.RawSplitResult({ id: 'result', source: { ...source, warehouse: ' Raw W ' },
+      source_kg: '100', output_kg: '98', waste_kg: '2', created_at: 'raw timestamp', issue_id: 'issue', issue_note: '  note\nline  ', outputs: [{ ...output, warehouse: ' Raw W ' }] });
+    const rows = detailRows(h.resultTree());
+    assert.deepEqual(rows.map(n => [n.props.label, n.props.value]), [['Manba QR', 'parent'], ['Ombor', ' Raw W '], ['Vaqti', 'raw timestamp'],
+      ['Farq', 'Muammo izoh bilan qayd etilgan'], ['Sabab', '  note\nline  ']]);
+    for (const node of rows) assert.ok(!node.props.label.endsWith(':'), node.props.label);
+  });
+  test(`${platform} detail metadata uses native wrapping columns rather than a flattened sentence`, () => {
+    const row = detailRows(details(platform).resultTree())[0], rendered = row.type(row.props);
+    const labels = find(rendered, n => n.type === 'Text'); assert.equal(labels.length, 2);
+    assert.deepEqual(labels.map(text), ['Manba QR', 'parent']);
+    if (platform === 'ios') {
+      assert.equal(rendered.type, 'HStack'); assert.equal(rendered.props.alignment, 'top');
+      assert.ok(labels[0].props.modifiers.some(m => m.modifier === 'frame' && m.args[0].width === 104 && m.args[0].alignment === 'leading'));
+      assert.ok(labels[1].props.modifiers.some(m => m.modifier === 'font' && m.args[0].weight === 'semibold'));
+      assert.ok(labels.every(n => !n.props.modifiers.some(m => m.modifier === 'lineLimit')));
+    } else {
+      assert.equal(rendered.type, 'Host'); assert.deepEqual(rendered.props.matchContents, { vertical: true });
+      assert.equal(rendered.props.children.type, 'Row'); assert.equal(rendered.props.children.props.verticalAlignment, 'top');
+      assert.deepEqual(labels[0].props.modifiers, [{ modifier: 'width', args: [104] }]);
+      assert.deepEqual(labels[1].props.modifiers, [{ modifier: 'weight', args: [1] }]);
+      assert.equal(labels[0].props.color, 'muted'); assert.equal(labels[1].props.color, 'text');
+      assert.equal(labels[1].props.style.fontWeight, '600'); assert.ok(labels.every(n => n.props.maxLines === undefined));
+    }
+  });
+  test(`${platform} both sheets restore the source header icon and selected-printer status icon`, () => {
+    const h = details(platform, 'wifi'), resultTree = h.resultTree(), issueTree = h.issueTree();
+    const icons = tree => platform === 'ios' ? find(tree, n => n.type === 'Image').map(n => [n.props.systemName, n.props.size])
+      : find(tree, n => n.type === 'SymbolView').map(n => [n.props.name.android, n.props.size]);
+    assert.ok(icons(resultTree).some(([name, size]) => name === (platform === 'ios' ? 'scissors' : 'content_cut') && size === 24));
+    assert.ok(icons(resultTree).some(([name, size]) => name === (platform === 'ios' ? 'printer' : 'print') && size === 20));
+    assert.deepEqual(icons(issueTree), [[platform === 'ios' ? 'exclamationmark.triangle' : 'warning_amber', 24]]);
+  });
+  test(`${platform} metadata stays ordinary Text while V2 Urdu-aware summaries and issue footers are localized`, () => {
+    const t = value => `localized(${value})`, h = details(platform, null, t), tree = h.resultTree();
+    const rows = detailRows(tree); assert.deepEqual(rows.map(n => n.props.label), ['Manba QR', 'Ombor', 'Farq', 'Sabab']);
+    assert.deepEqual(rows.map(n => text(n.type(n.props))), ['Manba QRparent', 'OmborRaw W', 'FarqMuammo izoh bilan qayd etilgan', 'Sababnote']);
+    assert.match(text(tree), /localized\(98 kg · 1000 mm · 20 mkm · 1000 m\)/);
+    const issueTree = h.issueTree(false);
+    assert.deepEqual(detailRows(issueTree).map(n => n.props.label), ['QR', 'Asl', '1-rulon']);
+    assert.match(text(issueTree), /localized\(Sabab: note\)/);
+    assert.match(text(issueTree), /localized\(Muammo sababi qayd etilgan\.\)/);
+    assert.match(text(h.issueTree(true)), /localized\(Muammo bo‘yicha rulonlar saqlangan\.\)/);
+    assert.ok(!detailRows(issueTree).some(n => n.props.value.includes('localized(')));
+  });
+  test(`${platform} missing optional result measurements and metadata add no placeholder rows`, () => {
+    const h = details(platform); h.props.result = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2',
+      outputs: [{ ...output, gross_kg: null, bobina_kg: null, length_m: null }] });
+    const tree = h.resultTree(); assert.deepEqual(detailRows(tree).map(n => n.props.label), ['Manba QR', 'Ombor']);
+    assert.doesNotMatch(text(tree), /Brutto:|Babina:|Metri:|Vaqti|Farq|Sabab/);
+    assert.match(text(tree), /98 kg · 1000 mm · 20 mkm/);
+  });
+  test(`${platform} result outputs keep snapshot order and each barcode remains selectable`, () => {
+    const h = details(platform); h.props.result = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2',
+      outputs: ['second', 'first'].map(barcode => ({ ...output, stock_id: barcode, barcode, kg: '49', gross_kg: '50', width_mm: '500' })) });
+    const tree = h.resultTree(), codes = platform === 'ios' ? find(tree, n => n.type === 'Text' && n.props.modifiers?.some(m => m.modifier === 'textSelection' && m.args[0]))
+      : find(tree, n => n.type === 'NativeText' && n.props.selectable === true);
+    assert.deepEqual(codes.map(text), ['second', 'first']);
   });
 }
 for (const platform of ['ios', 'android']) test(`${platform} reprint errors return to the parent instead of becoming unhandled`, async () => {
