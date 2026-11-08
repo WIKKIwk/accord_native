@@ -35,9 +35,9 @@ export function SupplierShell({ platform, children }: { platform: 'ios' | 'andro
 /** Reuses the native role drawer. The caller owns route selection and root-stack rules. */
 export function SupplierDrawer({ active, onSelect, children }: { active?: string; onSelect: (id: string) => void;
   children: (open: () => void) => ReactNode }) {
-  const state = useRoleDrawerState(), { l, t } = useSupplierText(), { onLogout } = useSupplierSession();
+  const state = useRoleDrawerState(), { l, dismissTooltip } = useSupplierText(), { onLogout } = useSupplierSession();
   return <RoleDrawer {...state} title="Bo‘limlar" items={supplierDrawerItems(l).filter(item => item.id !== 'notifications')} active={active}
-    closeAccessibilityLabel={t('Menyuni yopish')} footerAction={{ id: 'logout', label: l('logoutTitle'), destructive: true }}
+    closeAccessibilityLabel={dismissTooltip} footerAction={{ id: 'logout', label: l('logoutTitle'), destructive: true }}
     onSelect={id => { if (id === 'logout') confirmRoleDrawerLogout(onLogout); else onSelect(id); }}>
     {children(state.onOpen)}
   </RoleDrawer>;

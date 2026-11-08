@@ -16,3 +16,11 @@ test('menu accessibility tooltip follows Flutter Material localizations in every
   assert.equal(supplierMenuTooltip('ur-PK'), 'نیویگیشن مینیو کھولیں');
   assert.equal(supplierMenuTooltip('zz'), 'Open navigation menu');
 });
+
+test('drawer dismissal accessibility tooltip follows Flutter Material localizations', () => {
+  const { supplierDismissTooltip } = mod.exports;
+  assert.equal(supplierDismissTooltip('uz'), 'Yopish');
+  assert.equal(supplierDismissTooltip('en'), 'Dismiss');
+  assert.equal(supplierDismissTooltip('ru'), 'Закрыть');
+  assert.equal(supplierDismissTooltip('ur-PK'), 'برخاست کریں');
+});
