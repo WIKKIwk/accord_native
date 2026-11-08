@@ -34,7 +34,7 @@ export function SupplierHomeScreen(props: SupplierHomeProps) {
   useSupplierRootRefresh(store, 'home');
   const pending = supplierPendingItems(store.historyItems), summary = store.summary;
   const loading = !store.loadedHistory && !store.historyError;
-  return <View style={{ flex: 1 }}><Header title={l('supplierRoleName')} onAction={props.onOpenDrawer} menu />
+  return <View style={{ flex: 1 }}><Header title={l('supplierRoleName')} onAction={props.onRootBack ?? props.onOpenDrawer} menu={!props.onRootBack} />
     <PreparationList refresh={!loading ? () => store.refreshAll() : undefined}>
       {loading ? <ProgressView /> : !store.loadedHistory && store.historyError != null
         ? <Retry onRetry={() => { void store.refreshAll(); }} /> : <>
@@ -56,7 +56,7 @@ export function SupplierRecentScreen(props: SupplierRecentProps) {
   const store = useSupplierStore(props.store), { l } = useSupplierText();
   useSupplierRootRefresh(store, 'history');
   const failed = !store.loadedHistory && store.historyError != null;
-  return <View style={{ flex: 1 }}><Header title={l('recentTitle')} subtitle={l('recentSubtitle')} onAction={props.onOpenDrawer} menu />
+  return <View style={{ flex: 1 }}><Header title={l('recentTitle')} subtitle={l('recentSubtitle')} onAction={props.onRootBack ?? props.onOpenDrawer} menu={!props.onRootBack} />
     <PreparationList refresh={failed || store.historyItems.length > 0 ? () => store.refreshHistory() : undefined}>
       {!store.loadedHistory && !store.historyError ? <ProgressView /> : !store.loadedHistory && store.historyError != null
         ? <Retry onRetry={() => { void store.refreshHistory(); }} /> : store.historyItems.length === 0

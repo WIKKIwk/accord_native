@@ -33,7 +33,7 @@ export function SupplierHomeScreen(props: SupplierHomeProps) {
   useSupplierRootRefresh(store, 'home');
   const pending = supplierPendingItems(store.historyItems), summary = store.summary;
   const loading = !store.loadedHistory && !store.historyError, failed = !store.loadedHistory && store.historyError != null;
-  return <Page title={l('supplierRoleName')} onAction={props.onOpenDrawer} menu footer={props.footer}
+  return <Page title={l('supplierRoleName')} onAction={props.onRootBack ?? props.onOpenDrawer} menu={!props.onRootBack} footer={props.footer}
     refresh={!loading ? () => store.refreshAll() : undefined} refreshing={store.loadingHistory || store.loadingSummary}>
     {loading ? <Loading /> : failed ? <Retry onRetry={() => { void store.refreshAll(); }} /> : <>
       {(['pending', 'submitted', 'returned'] as const).map(kind => <PreparationRow key={kind}
@@ -51,7 +51,7 @@ export function SupplierRecentScreen(props: SupplierRecentProps) {
   const store = useSupplierStore(props.store), { l } = useSupplierText();
   useSupplierRootRefresh(store, 'history');
   const loading = !store.loadedHistory && !store.historyError, failed = !store.loadedHistory && store.historyError != null;
-  return <Page title={l('recentTitle')} subtitle={l('recentSubtitle')} onAction={props.onOpenDrawer} menu footer={props.footer}
+  return <Page title={l('recentTitle')} subtitle={l('recentSubtitle')} onAction={props.onRootBack ?? props.onOpenDrawer} menu={!props.onRootBack} footer={props.footer}
     refresh={failed || store.historyItems.length > 0 ? () => store.refreshHistory() : undefined} refreshing={store.loadingHistory}>
     {loading ? <Loading /> : failed ? <Retry onRetry={() => { void store.refreshHistory(); }} /> : !store.historyItems.length
       ? <PreparationText>{l('noSupplierShipmentsYet')}</PreparationText> : store.historyItems.map((record, index) => {

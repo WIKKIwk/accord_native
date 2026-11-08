@@ -34,6 +34,8 @@ test('dock badges, primary visibility and selection match V2', () => {
   const chat = supplierDockItems(l, state({ chatActive: true, chatUnreadCount: 1 }));
   assert.deepEqual(chat.filter(x => x.active).map(x => x.id), ['chat']);
   assert.equal(chat.find(x => x.id === 'chat').showBadge, true);
+  const unavailable = supplierDockItems(l, state({ chatUnreadCount: undefined }));
+  assert.equal(unavailable.find(x => x.id === 'chat').showBadge, undefined, 'unavailable Chat state is not a fabricated count');
   const create = supplierDockItems(l, state({ activeTab: null, centerActive: true }));
   assert.deepEqual(create.filter(x => x.active).map(x => x.id), ['create']);
 });

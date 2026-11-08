@@ -28,7 +28,8 @@ export function SupplierNotificationsScreen(props: SupplierNotificationsProps) {
     cancelLabel: l('no'), confirmLabel: l('yes'), onConfirm: () => { void controller.clearAll(); } });
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
     <View style={{ flexDirection: 'row', alignItems: 'center' }}><View style={{ flex: 1 }}>
-      <RoleHeader title={l('notificationsTitle')} navigation={{ icon: 'menu', label: menuTooltip, onPress: props.onOpenDrawer }} />
+      <RoleHeader title={l('notificationsTitle')} navigation={{ icon: props.onRootBack ? 'back' : 'menu',
+        label: props.onRootBack ? 'Orqaga' : menuTooltip, onPress: props.onRootBack ?? props.onOpenDrawer }} />
     </View><Host matchContents><IconButton onClick={clear} modifiers={[testID('supplier-clear-notifications'), semantics({ contentDescription: l('clearTitle') })]}>
       <RNHostView matchContents><SymbolView name={{ android: 'clear_all' }} size={24} tintColor={colors.onSurface} /></RNHostView>
     </IconButton></Host></View>

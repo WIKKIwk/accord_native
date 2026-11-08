@@ -7,8 +7,8 @@ export type SupplierDockState = {
   centerActive: boolean;
   chatActive: boolean;
   primaryVisible: boolean;
-  notificationUnread: boolean;
-  chatUnreadCount: number;
+  notificationUnread?: boolean;
+  chatUnreadCount?: number;
 };
 export type SupplierDockItem = {
   id: SupplierDockDestination;
@@ -38,13 +38,13 @@ export function supplierDockItems(l: Label, state: SupplierDockState): SupplierD
       active: !state.chatActive && state.activeTab === 'home' && !state.centerActive },
     { id: 'notifications', label: l('notificationsShortTitle'), icon: { ios: 'bell', android: 'notifications' },
       active: !state.chatActive && state.activeTab === 'notifications',
-      showBadge: state.notificationUnread && state.activeTab !== 'notifications' },
+      showBadge: state.notificationUnread == null ? undefined : state.notificationUnread && state.activeTab !== 'notifications' },
     ...(state.primaryVisible ? [{ id: 'create' as const, label: l('createNavTitle'), icon: { ios: 'plus', android: 'add' },
       active: !state.chatActive && state.centerActive, primary: true }] : []),
     { id: 'recent', label: l('historyNavTitle'), icon: { ios: 'clock.arrow.circlepath', android: 'history' },
       active: !state.chatActive && state.activeTab === 'recent' },
     { id: 'chat', label: 'Chat', icon: { ios: 'bubble.left', android: 'chat_bubble' },
-      active: state.chatActive, showBadge: state.chatUnreadCount > 0 },
+      active: state.chatActive, showBadge: state.chatUnreadCount == null ? undefined : state.chatUnreadCount > 0 },
   ];
 }
 
