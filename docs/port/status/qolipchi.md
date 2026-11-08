@@ -80,6 +80,8 @@ Stopped at: continue the incomplete UI contract for remaining Qolip surfaces, th
 
 - Cell attach native-view checkpoint: added iOS and Android cell-only attach sheets and connected the existing picker with a confirmation before multi-save, shared real location API, partial/all-error notices and a success result for the home caller. All 238 Qolip tests, iOS typecheck and lint passed; Android reports only its nine pre-existing worker errors. The QR scanner and home-grid entry/refresh remain open, so the sheets are not routed. Phone testing remains outstanding. An account reset stops unsent batch items; an already-sent request can have an uncertain server outcome and must be refreshed before retry.
 
+- Session-switch safety test: a response arriving after reset cannot report success or mutate a newly opened session, and the old controller cannot reactivate or send another write. This does not determine whether the server accepted an already-sent request. Before exposing a retry in a new session, require an authoritative refresh after the uncertain request settles; the cross-session retry gate is not yet wired.
+
 ## Deviations candidates
 
 - Grid statistics count nonempty location labels outside the fixed visible grid, which can yield occupied cells that are not displayed; f119 behavior is retained.

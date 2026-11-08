@@ -160,3 +160,17 @@ test('picker keeps source order for an empty query and sorts all loaded rows by 
   assert.equal(logic.qolipPlacementFormProductLabel(product(' Q1 ', { name: '  ', code: ' C1 ', size: 43 })), 'C1 • Q1 • 43');
   assert.equal(logic.qolipPlacementFormProductLabel(product('Q1', { name: ' Name ', has_qolip_spec: false })), 'Name');
 });
+
+test('a late old-session write result neither reports success nor mutates the new session', async () => {
+  const response = deferred(), oldCalls = [], newCalls = [];
+  const old = harness({ save: async (_target, value) => { oldCalls.push(value.qolip_code); await response.promise; } });
+  old.state.selectProduct(product('Q1')); const pending = old.state.saveSelected();
+  old.state.invalidateSession();
+  const newer = harness({ save: async (_target, value) => { newCalls.push(value.qolip_code); } });
+  let newEvents = 0; newer.state.subscribe(() => { newEvents++; });
+  response.resolve(); const result = await pending;
+  assert.equal(result, null); assert.deepEqual(oldCalls, ['Q1']); assert.deepEqual(newCalls, []);
+  assert.equal(newEvents, 0); assert.deepEqual(newer.state.getSnapshot().selected, []); assert.equal(newer.state.getSnapshot().saving, false);
+  old.state.activate(); assert.equal(old.state.openPicker(), null); assert.equal(await old.state.saveSelected(), null);
+  assert.deepEqual(oldCalls, ['Q1']); newer.state.dispose();
+});
