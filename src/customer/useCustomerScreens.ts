@@ -63,7 +63,11 @@ export function useCustomerDelivery(deliveryNoteID: string, onChanged: () => voi
     } catch (failure) { if (mounted.current && request === generation.current) setError(failure); }
     finally { if (mounted.current && request === generation.current) setLoading(false); }
   }, [deliveryNoteID, session]);
-  useEffect(() => { mounted.current = true; void reload(); return () => { mounted.current = false; generation.current++; }; }, [reload]);
+  useEffect(() => {
+    mounted.current = true; let active = true; const currentGeneration = generation;
+    void Promise.resolve().then(() => { if (active) return reload(); });
+    return () => { active = false; mounted.current = false; currentGeneration.current++; };
+  }, [reload]);
   const send = async (reply: CustomerDeliveryResponse) => {
     if (!detail || submittingRef.current) return;
     submittingRef.current = true; setSubmitting(true);
