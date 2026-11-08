@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { usePreparationNotice } from '../preparation/usePreparationNotice';
 import { createDispatch, supplierItems } from './supplierApi';
-import { SupplierConfirmController, SupplierPickerController } from './supplierCreateController';
+import { SupplierConfirmController, SupplierPickerController, type SupplierConfirmCallbacks } from './supplierCreateController';
 import type { SupplierConfirmProps, SupplierPickerProps } from './supplierCreateTypes';
-
-const notReady = async () => { throw new Error('Supplier confirmation callback is not ready'); };
 
 export function useSupplierPicker(props: SupplierPickerProps) {
   const controller = useMemo(() => new SupplierPickerController(props.session, supplierItems), [props.session]);
@@ -20,13 +18,17 @@ export function useSupplierPicker(props: SupplierPickerProps) {
 
 export function useSupplierConfirm(props: SupplierConfirmProps) {
   const notice = usePreparationNotice();
+  const [callbacks] = useState(() => {
+    let current: SupplierConfirmCallbacks = { onSuccess: props.onSuccess, onFailure: notice.show };
+    return { set: (next: SupplierConfirmCallbacks) => { current = next; },
+      onSuccess: (record: Parameters<SupplierConfirmCallbacks['onSuccess']>[0]) => current.onSuccess(record),
+      onFailure: (message: string) => current.onFailure(message) };
+  });
   const controller = useMemo(() => new SupplierConfirmController(props.session, props.item, props.qty, {
     create: createDispatch, recordCreatedPending: () => props.store.recordCreatedPending(),
-  }, { onSuccess: notReady, onFailure: () => { throw new Error('Supplier confirmation callback is not ready'); } }),
-  [props.session, props.item, props.qty, props.store]);
+  }, callbacks), [props.session, props.item, props.qty, props.store, callbacks]);
   const submitting = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  useEffect(() => { controller.setCallbacks({ onSuccess: props.onSuccess, onFailure: notice.show }); },
-    [controller, props.onSuccess, notice.show]);
+  useEffect(() => { callbacks.set({ onSuccess: props.onSuccess, onFailure: notice.show }); }, [callbacks, props.onSuccess, notice.show]);
   useEffect(() => { controller.start(); return () => controller.stop(); }, [controller]);
   return { controller, submitting, notice: notice.message };
 }

@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { notificationHiddenStore, notificationUnreadStore, refreshHub } from '../shared/notificationStoresRuntime';
 import { SupplierNotificationsController } from './supplierNotificationsController';
 import type { SupplierNotificationsProps } from './supplierNotificationsTypes';
 
-const notReady = () => { throw new Error('Supplier notification navigation is not ready'); };
 export function useSupplierNotifications(props: SupplierNotificationsProps) {
+  const [callback] = useState(() => {
+    let current = props.onReceipt;
+    return { set: (next: (id: string) => void) => { current = next; }, open: (id: string) => current(id) };
+  });
   const controller = useMemo(() => new SupplierNotificationsController(props.session, props.store,
-    notificationHiddenStore, notificationUnreadStore, notReady), [props.session, props.store]);
+    notificationHiddenStore, notificationUnreadStore, callback.open), [props.session, props.store, callback]);
   useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useSyncExternalStore(props.store.subscribe, props.store.getSnapshot, props.store.getSnapshot);
-  useEffect(() => { controller.setOnOpenReceipt(props.onReceipt); }, [controller, props.onReceipt]);
+  useEffect(() => { callback.set(props.onReceipt); }, [callback, props.onReceipt]);
   useEffect(() => {
     void props.store.bootstrapHistory();
     controller.start();
