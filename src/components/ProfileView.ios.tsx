@@ -106,7 +106,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
 
 // @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout } = props;
   const details = profileDisplay(snapshot);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
@@ -154,10 +154,10 @@ export function ProfileView(props: ProfileViewProps) {
             onAppearanceChange={value => value === 'system' ? Promise.resolve() : themeController.setThemeMode(value)} />
         </BottomSheet>
       </Section>
-      <Section>
+      {showDirectLogout !== false ? <Section>
         <Button role="destructive" label={text('logoutTitle')} systemImage="rectangle.portrait.and.arrow.right"
           onPress={onLogout} modifiers={[buttonStyle('plain')]} />
-      </Section>
+      </Section> : null}
     </List>
   </Host>
   <ProfileAvatarPreview visible={avatarOpen} onClose={() => setAvatarOpen(false)} session={session} profile={snapshot.profile}
