@@ -1,7 +1,6 @@
-import type { Session } from '../auth';
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
 import { PrintService } from '../printing/printService';
-import { rawSplitPrint } from './rawSplitApi';
+import { rawSplitPrint, rawSplitSessionIsCurrent, type RawSplitSessionTicket } from './rawSplitApi';
 import type { RawSplitResult, RawSplitRoll } from './rawSplitModel';
 import { rawMaterialSplitPrintRequest } from './rawSplitPrinting';
 
@@ -14,12 +13,12 @@ export function rawSplitPrinterSupported(device: PreparationDeviceSelection, wif
 }
 
 /** Print one existing child roll through the existing native bridge or V2 Wi-Fi API. */
-export async function printRawSplitRoll(session: Session, result: RawSplitResult, output: RawSplitRoll,
+export async function printRawSplitRoll(ticket: RawSplitSessionTicket, result: RawSplitResult, output: RawSplitRoll,
   device: PreparationDeviceSelection, wifiPrinter: string, guard: () => void): Promise<void> {
-  guard();
+  guard(); if (!rawSplitSessionIsCurrent(ticket)) throw new Error('Akkaunt o‘zgargan');
   if (!rawSplitPrinterSupported(device, wifiPrinter)) throw new RawSplitUnsupportedPrinter();
   if (device.transport === 'wifi') {
-    await rawSplitPrint(session, { splitId: result.id, barcode: output.barcode, driverUrl: device.driverBaseUrl!,
+    await rawSplitPrint(ticket, { splitId: result.id, barcode: output.barcode, driverUrl: device.driverBaseUrl!,
       printer: wifiPrinter, printMode: 'label' });
     return;
   }
@@ -27,11 +26,12 @@ export async function printRawSplitRoll(session: Session, result: RawSplitResult
   const response = await PrintService.printRps(request, device.transport === 'offline'
     ? { transport: 'offline', printerProfile: device.printer }
     : { transport: 'bluetooth', bluetoothPrinter: device.printer });
+  if (!rawSplitSessionIsCurrent(ticket)) throw new Error('Akkaunt o‘zgargan'); guard();
   if (!response.ok || response.status !== 'done') throw new Error('Printer natijani tasdiqlamadi');
 }
 
 /** V2 prints each output once, in returned order, with scope checked before each. */
-export async function printRawSplitResult(session: Session, result: RawSplitResult, device: PreparationDeviceSelection,
+export async function printRawSplitResult(ticket: RawSplitSessionTicket, result: RawSplitResult, device: PreparationDeviceSelection,
   wifiPrinter: string, guard: () => void): Promise<void> {
-  for (const output of result.outputs) await printRawSplitRoll(session, result, output, device, wifiPrinter, guard);
+  for (const output of result.outputs) await printRawSplitRoll(ticket, result, output, device, wifiPrinter, guard);
 }

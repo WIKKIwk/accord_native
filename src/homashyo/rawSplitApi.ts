@@ -19,29 +19,41 @@ function currentScope(): string {
 }
 /** @v2 rawSplitScope */
 export function rawSplitScope(): string { return currentScope(); }
-/** Storage stays account-scoped across logins; asynchronous work must also belong to the exact active login object. */
-export function rawSplitSessionIsCurrent(session: Session): boolean { return currentSession() === session; }
-function guard(scope: string, session: Session): void {
-  if (!rawSplitSessionIsCurrent(session)) throw new Error('Akkaunt o‘zgargan');
+/** The integrator must inject the active auth epoch reader; there is no identity-only fallback. */
+export type RawSplitSessionTicket = { readonly session: Session; check(): void };
+export type RawSplitEpochReader = (session: Session) => number | null;
+const issuedTickets = new WeakSet<RawSplitSessionTicket>();
+export function createRawSplitSessionTicket(session: Session, readEpoch: RawSplitEpochReader): RawSplitSessionTicket {
+  const epoch = readEpoch(session), scope = rawSplitScope();
+  if (typeof epoch !== 'number' || !Number.isSafeInteger(epoch) || epoch < 0 || currentSession() !== session) throw new Error('Akkaunt o‘zgargan');
+  const ticket: RawSplitSessionTicket = { session, check: () => {
+    if (currentSession() !== session || readEpoch(session) !== epoch) throw new Error('Akkaunt o‘zgargan');
+    try { if (rawSplitScope() === scope) return; } catch { /* Account was removed or lost permission. */ }
+    throw new Error('Akkaunt o‘zgargan');
+  } };
+  issuedTickets.add(ticket); return Object.freeze(ticket);
+}
+export function rawSplitSessionIsCurrent(ticket: RawSplitSessionTicket): boolean {
+  try { if (!issuedTickets.has(ticket)) return false; ticket.check(); return currentSession() === ticket.session; } catch { return false; }
+}
+function guard(scope: string, ticket: RawSplitSessionTicket): void {
+  if (!issuedTickets.has(ticket)) throw new Error('Sessiya tekshiruvi kerak');
+  ticket.check();
+  if (currentSession() !== ticket.session) throw new Error('Akkaunt o‘zgargan');
   try { if (rawSplitScope() === scope) return; } catch { /* Account was removed or lost permission. */ }
   throw new Error('Akkaunt o‘zgargan');
-}
-function captureSession(session?: Session): Session {
-  const active = session ?? currentSession();
-  if (!active) throw new Error('Homashyo rezkachisi huquqi kerak');
-  return active;
 }
 function parsePending(raw: string | null): Json | null { return raw === null ? null : object(JSON.parse(raw)); }
 
 /** @v2 rawSplitPending */
-export async function rawSplitPending(expected?: Session): Promise<Json | null> {
-  const session = captureSession(expected), scope = rawSplitScope(); guard(scope, session);
-  const raw = await Storage.getItemAsync(scope); guard(scope, session); return parsePending(raw);
+export async function rawSplitPending(ticket: RawSplitSessionTicket): Promise<Json | null> {
+  const scope = rawSplitScope(); guard(scope, ticket);
+  const raw = await Storage.getItemAsync(scope); guard(scope, ticket); return parsePending(raw);
 }
 /** @v2 rawSplitIssuePending */
-export async function rawSplitIssuePending(expected?: Session): Promise<Json | null> {
-  const session = captureSession(expected), scope = rawSplitScope(); guard(scope, session);
-  const raw = await Storage.getItemAsync(`${scope}:issue`); guard(scope, session); return parsePending(raw);
+export async function rawSplitIssuePending(ticket: RawSplitSessionTicket): Promise<Json | null> {
+  const scope = rawSplitScope(); guard(scope, ticket);
+  const raw = await Storage.getItemAsync(`${scope}:issue`); guard(scope, ticket); return parsePending(raw);
 }
 async function responseObject(response: Response): Promise<Json> {
   let row: Json | null;
@@ -54,36 +66,36 @@ async function responseObject(response: Response): Promise<Json> {
   }
   return row;
 }
-async function guardedResponseObject(response: Response, scope: string, session: Session): Promise<Json> {
-  try { const row = await responseObject(response); guard(scope, session); return row; }
-  catch (error) { guard(scope, session); throw error; }
+async function guardedResponseObject(response: Response, scope: string, ticket: RawSplitSessionTicket): Promise<Json> {
+  try { const row = await responseObject(response); guard(scope, ticket); return row; }
+  catch (error) { guard(scope, ticket); throw error; }
 }
-async function read(session: Session, path: string, query?: URLSearchParams): Promise<Json> {
-  const scope = rawSplitScope(); guard(scope, session);
+async function read(ticket: RawSplitSessionTicket, path: string, query?: URLSearchParams): Promise<Json> {
+  const { session } = ticket, scope = rawSplitScope(); guard(scope, ticket);
   const response = await authorizedFetch(session, `/v1/mobile/raw-material-split/${path}${query ? `?${query}` : ''}`,
-    {}, () => guard(scope, session));
-  guard(scope, session); return guardedResponseObject(response, scope, session);
+    {}, () => guard(scope, ticket));
+  guard(scope, ticket); return guardedResponseObject(response, scope, ticket);
 }
 /** @v2 rawSplitSnapshot */
-export async function rawSplitSnapshot(session: Session): Promise<RawSplitSnapshot> {
-  return new RawSplitSnapshot(await read(session, 'snapshot'));
+export async function rawSplitSnapshot(ticket: RawSplitSessionTicket): Promise<RawSplitSnapshot> {
+  return new RawSplitSnapshot(await read(ticket, 'snapshot'));
 }
 /** @v2 rawSplitSource */
-export async function rawSplitSource(session: Session, barcode: string): Promise<RawSplitRoll> {
-  const result = new RawSplitRoll(await read(session, 'source', new URLSearchParams({ barcode: barcode.trim() })));
+export async function rawSplitSource(ticket: RawSplitSessionTicket, barcode: string): Promise<RawSplitRoll> {
+  const result = new RawSplitRoll(await read(ticket, 'source', new URLSearchParams({ barcode: barcode.trim() })));
   if (result.revision === null || !result.revision) throw new Error('Rulon versiyasi olinmadi');
   return result;
 }
 const definitiveErrors = new Set(['raw_split_invalid', 'raw_split_conflict', 'raw_split_scope']);
-async function removePending(key: string, serialized: string, scope: string, session: Session): Promise<boolean> {
-  guard(scope, session);
+async function removePending(key: string, serialized: string, scope: string, ticket: RawSplitSessionTicket): Promise<boolean> {
+  guard(scope, ticket);
   let removed: boolean;
   try { removed = await Storage.removeItemAsync(key); }
   catch (error) {
     // Removal may have completed before throwing. Never overwrite a newer pending command.
     await Storage.setItemAsync(key, previous => previous ?? serialized); throw error;
   }
-  try { guard(scope, session); }
+  try { guard(scope, ticket); }
   catch (error) {
     // A new login of the same account must see the uncertain request. Do not overwrite a newer key.
     await Storage.setItemAsync(key, previous => previous ?? serialized); throw error;
@@ -91,68 +103,70 @@ async function removePending(key: string, serialized: string, scope: string, ses
   if (!removed) await Storage.setItemAsync(key, previous => previous ?? serialized);
   return removed;
 }
-async function clearDefinitiveRejection(response: Response, key: string, serialized: string, scope: string, session: Session): Promise<void> {
+async function clearDefinitiveRejection(response: Response, key: string, serialized: string, scope: string, ticket: RawSplitSessionTicket): Promise<void> {
   if (response.status < 400 || response.status >= 500) return;
   let code: unknown;
   try { code = object(await response.clone().json()).code; } catch { return; }
-  guard(scope, session);
-  if (typeof code === 'string' && definitiveErrors.has(code)) await removePending(key, serialized, scope, session);
+  guard(scope, ticket);
+  if (typeof code === 'string' && definitiveErrors.has(code)) await removePending(key, serialized, scope, ticket);
 }
 let saving = false, issueSaving = false;
 /** @v2 rawSplitSave */
-export async function rawSplitSave(session: Session, payload: Json): Promise<RawSplitResult> {
+export async function rawSplitSave(ticket: RawSplitSessionTicket, payload: Json): Promise<RawSplitResult> {
+  const { session } = ticket;
   if (saving) throw new Error('Saqlash davom etmoqda');
   saving = true;
   try {
-    const scope = rawSplitScope(); guard(scope, session);
-    const raw = await Storage.getItemAsync(scope); guard(scope, session); const pending = parsePending(raw) ?? { ...payload };
+    const scope = rawSplitScope(); guard(scope, ticket);
+    const raw = await Storage.getItemAsync(scope); guard(scope, ticket); const pending = parsePending(raw) ?? { ...payload };
     if (JSON.stringify(pending) !== JSON.stringify(payload)) throw new Error('Avval oldingi operatsiya natijasini tekshiring');
     const serialized = JSON.stringify(pending);
-    await Storage.setItemAsync(scope, serialized); guard(scope, session);
-    const persisted = await Storage.getItemAsync(scope); guard(scope, session);
+    await Storage.setItemAsync(scope, serialized); guard(scope, ticket);
+    const persisted = await Storage.getItemAsync(scope); guard(scope, ticket);
     if (persisted !== serialized) throw new Error('So‘rov kaliti saqlanmadi');
     const response = await authorizedFetch(session, '/v1/mobile/raw-material-split/split',
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: serialized }, () => guard(scope, session));
-    guard(scope, session); await clearDefinitiveRejection(response, scope, serialized, scope, session); guard(scope, session);
-    const row = await guardedResponseObject(response, scope, session); const result = new RawSplitResult(row);
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: serialized }, () => guard(scope, ticket));
+    guard(scope, ticket); await clearDefinitiveRejection(response, scope, serialized, scope, ticket); guard(scope, ticket);
+    const row = await guardedResponseObject(response, scope, ticket); const result = new RawSplitResult(row);
     if (result.issueId !== (pending.issue_id ?? null)) throw new Error('Muammo qaydi bilan saqlash tasdiqlanmadi');
-    if (!await removePending(scope, serialized, scope, session)) throw new Error('Operatsiya natijasini qayta tekshiring');
-    guard(scope, session); return result;
+    if (!await removePending(scope, serialized, scope, ticket)) throw new Error('Operatsiya natijasini qayta tekshiring');
+    guard(scope, ticket); return result;
   } finally { saving = false; }
 }
 /** @v2 rawSplitReportIssue */
-export async function rawSplitReportIssue(session: Session, payload: Json): Promise<RawSplitIssue> {
+export async function rawSplitReportIssue(ticket: RawSplitSessionTicket, payload: Json): Promise<RawSplitIssue> {
+  const { session } = ticket;
   if (issueSaving) throw new Error('Muammo saqlanmoqda');
   issueSaving = true;
   try {
-    const scope = rawSplitScope(), key = `${scope}:issue`; guard(scope, session);
-    const raw = await Storage.getItemAsync(key); guard(scope, session); const pending = parsePending(raw) ?? payload;
+    const scope = rawSplitScope(), key = `${scope}:issue`; guard(scope, ticket);
+    const raw = await Storage.getItemAsync(key); guard(scope, ticket); const pending = parsePending(raw) ?? payload;
     if (JSON.stringify(pending) !== JSON.stringify(payload)) throw new Error('Avval oldingi muammo natijasini tekshiring');
     const serialized = JSON.stringify(pending);
-    await Storage.setItemAsync(key, serialized); guard(scope, session);
-    const persisted = await Storage.getItemAsync(key); guard(scope, session);
+    await Storage.setItemAsync(key, serialized); guard(scope, ticket);
+    const persisted = await Storage.getItemAsync(key); guard(scope, ticket);
     if (persisted !== serialized) throw new Error('Muammo so‘rovi saqlanmadi');
     const response = await authorizedFetch(session, '/v1/mobile/raw-material-split/issues',
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: serialized }, () => guard(scope, session));
-    guard(scope, session); await clearDefinitiveRejection(response, key, serialized, scope, session); guard(scope, session);
-    const row = await guardedResponseObject(response, scope, session); const result = new RawSplitIssue(row);
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: serialized }, () => guard(scope, ticket));
+    guard(scope, ticket); await clearDefinitiveRejection(response, key, serialized, scope, ticket); guard(scope, ticket);
+    const row = await guardedResponseObject(response, scope, ticket); const result = new RawSplitIssue(row);
     const command = object(pending.command), outputs = command.outputs;
     if (!Array.isArray(outputs) || typeof pending.note !== 'string' || result.requestId !== command.request_id ||
       result.source.barcode !== command.source_barcode || result.note !== pending.note.trim() || result.enteredWaste !== command.waste_kg ||
       result.outputs.length !== outputs.length || result.outputs.some((output, i) => Object.entries(output).some(([key, value]) =>
         object(outputs[i])[key] !== value))) throw new Error('Boshqa muammoning javobi olindi');
-    if (!await removePending(key, serialized, scope, session)) throw new Error('Muammo natijasini qayta tekshiring');
-    guard(scope, session); return result;
+    if (!await removePending(key, serialized, scope, ticket)) throw new Error('Muammo natijasini qayta tekshiring');
+    guard(scope, ticket); return result;
   } finally { issueSaving = false; }
 }
 /** @v2 rawSplitPrint */
-export async function rawSplitPrint(session: Session, input: { splitId: string; barcode: string; driverUrl: string;
+export async function rawSplitPrint(ticket: RawSplitSessionTicket, input: { splitId: string; barcode: string; driverUrl: string;
   printer: string; printMode: string }): Promise<void> {
-  const scope = rawSplitScope(); guard(scope, session);
+  const { session } = ticket, scope = rawSplitScope(); guard(scope, ticket);
   const response = await authorizedFetch(session, '/v1/mobile/raw-material-split/print', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ split_id: input.splitId,
       barcode: input.barcode, driver_url: input.driverUrl, printer: input.printer, print_mode: input.printMode }),
-  }, () => guard(scope, session));
-  guard(scope, session); const row = await guardedResponseObject(response, scope, session);
+  }, () => guard(scope, ticket));
+  guard(scope, ticket); const row = await guardedResponseObject(response, scope, ticket);
   if (row.ok !== true || row.status !== 'done' || row.barcode !== input.barcode) throw new Error('Chop etish tasdiqlanmadi');
 }

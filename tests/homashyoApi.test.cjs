@@ -14,15 +14,21 @@ function load(name, mocks = {}) {
 function setup(name, options = {}) {
   const saved = new Map(), s = recordedSession(stem, name);
   const session = { ...s, profile: { role: 'homashyo_rezkachi', ref: 'split-1' }, capabilities: ['raw_material.split'] };
-  let current = session;
+  let current = session, epoch = 0;
   const store = { getItemAsync: async key => saved.get(key) ?? null, setItemAsync: async (key, value) => { saved.set(key, typeof value === 'function' ? value(saved.get(key) ?? null) : value); },
     removeItemAsync: async key => saved.delete(key) };
   const replay = contractFetch(stem, name, options);
-  const api = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: store, __esModule: true },
+  const raw = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: store, __esModule: true },
     '../auth': { currentSession: () => current }, '../authorizedFetch': { authorizedFetch: (s, p, init = {}, guard) => {
       guard?.(); return replay(new URL(p, s.baseUrl), { ...init, headers: { ...(init.headers ?? {}), Authorization: `Bearer ${s.token}` } });
     } }, '../shared/mobileApiException': load('shared/mobileApiException'), './rawSplitModel': load('homashyo/rawSplitModel') });
-  return { api, store, saved, session, replay, setCurrent: value => { current = value; } };
+  const ticket = candidate => raw.createRawSplitSessionTicket(candidate, value => current === value ? epoch : null);
+  const api = { ...raw, rawSplitPending: () => raw.rawSplitPending(ticket(current)),
+    rawSplitIssuePending: () => raw.rawSplitIssuePending(ticket(current)),
+    rawSplitSnapshot: s => raw.rawSplitSnapshot(ticket(s)), rawSplitSource: (s, value) => raw.rawSplitSource(ticket(s), value),
+    rawSplitSave: (s, value) => raw.rawSplitSave(ticket(s), value), rawSplitReportIssue: (s, value) => raw.rawSplitReportIssue(ticket(s), value),
+    rawSplitPrint: (s, value) => raw.rawSplitPrint(ticket(s), value) };
+  return { api, store, saved, session, replay, setCurrent: value => { current = value; epoch++; } };
 }
 function bodyFor(name, pathPart) {
   const record = fixture.records.find(r => r.test === name && r.url.includes(pathPart) && r.requestBody?.text);

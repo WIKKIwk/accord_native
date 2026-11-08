@@ -20,7 +20,7 @@ function setup(overrides = {}) {
   const ops = { rawSplitScope: () => scope, rawSplitSessionIsCurrent: () => true, rawSplitPending: async () => pending, rawSplitIssuePending: async () => pendingIssue,
     rawSplitSnapshot: async () => snapshot, rawSplitSource: async () => source, rawSplitSave: async (_session, payload) => { stockCalls.push(payload); return result; },
     rawSplitReportIssue: async (_session, payload) => { issueCalls.push(payload); return { id: 'issue-1' }; }, ...overrides };
-  const options = { session: {}, operations: ops, requestId: async () => 'split-id', selectPrinter: async () => pick,
+  const options = { ticket: { session: {}, check() {} }, operations: ops, requestId: async () => 'split-id', selectPrinter: async () => pick,
     print: async (...args) => { prints.push(args); }, onMessage: value => notices.push(value), onIssueVisible: () => notices.push('issue-visible'),
     printerSupported: () => true, onUnsupportedPrinter: () => notices.push('unsupported-printer') };
   const controller = new RawSplitController(options);

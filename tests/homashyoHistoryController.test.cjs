@@ -4,15 +4,15 @@ const path = require('node:path'); const test = require('node:test'); const ts =
 function load(name, mocks = {}) { const filename = path.resolve(__dirname, `../src/homashyo/${name}.ts`), m = new Module(filename, module);
   m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
-const model = load('rawSplitModel'), { RawSplitHistoryController } = load('rawSplitHistoryController', { './rawSplitApi': {} });
+const model = load('rawSplitModel'), { RawSplitHistoryController } = load('rawSplitHistoryController', { './rawSplitApi': { rawSplitSessionIsCurrent: ticket => { try { ticket.check(); return true; } catch { return false; } } } });
 const source = { revision: '1', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM', item_name: 'Film', kg: '100', width_mm: '1000', micron: '20' };
 const result = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2', outputs: [
   { ...source, stock_id: 'c1', barcode: 'c1', kg: '39', gross_kg: '40', bobina_kg: '1', width_mm: '400' },
   { ...source, stock_id: 'c2', barcode: 'c2', kg: '59', gross_kg: '60', bobina_kg: '1', width_mm: '600' }] });
 function setup() {
   let selection = { transport: 'bluetooth', printer: {} }, calls = [], notices = [];
-  const options = { session: {}, snapshot: async () => new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] }),
-    scope: () => 'account-1', sessionCurrent: () => true, selectPrinter: async () => selection, printOne: async (_result, output) => { calls.push(output.barcode); }, onMessage: message => notices.push(message),
+  const options = { ticket: { session: {}, check() {} }, snapshot: async () => new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] }),
+    scope: () => 'account-1', selectPrinter: async () => selection, printOne: async (_result, output) => { calls.push(output.barcode); }, onMessage: message => notices.push(message),
     printerSupported: () => true, onUnsupportedPrinter: () => notices.push('unsupported-printer') };
   return { c: new RawSplitHistoryController(options), options, calls, notices, setSelection: value => { selection = value; } };
 }
@@ -59,7 +59,7 @@ test('account change between physical labels prevents later labels and success n
 });
 
 test('same-account new login while history loads suppresses old controller state and callbacks', async () => {
-  let resolve, current = true, updates = 0; const h = setup(); h.options.sessionCurrent = () => current;
+  let resolve, current = true, updates = 0; const h = setup(); h.options.ticket = { session: {}, check() { if (!current) throw new Error('old session'); } };
   h.options.snapshot = () => new Promise(r => { resolve = r; }); const controller = new RawSplitHistoryController(h.options);
   controller.subscribe(() => updates++); const pending = controller.reload(); current = false; const count = updates;
   resolve(new model.RawSplitSnapshot({ warehouses: ['old'], history: [], issues: [] })); await pending;

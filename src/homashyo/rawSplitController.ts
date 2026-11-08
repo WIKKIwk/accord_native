@@ -1,4 +1,3 @@
-import type { Session } from '../auth';
 import { preparationInventoryBarcode } from '../preparation/preparationInventory';
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
 import * as api from './rawSplitApi';
@@ -18,7 +17,7 @@ export type RawSplitControllerState = {
   showIssue: boolean; issueSaved: boolean; savedIssueId: string | null; busy: boolean;
 };
 export type RawSplitControllerOptions = {
-  session: Session; selectPrinter: () => Promise<Device | null>;
+  ticket: api.RawSplitSessionTicket; selectPrinter: () => Promise<Device | null>;
   print: (result: RawSplitResult, printer: Device, wifiPrinter: string, guard: () => void) => Promise<void>;
   onMessage: (message: string) => void; onIssueVisible: () => void;
   printerSupported: (printer: Device, wifiPrinter: string) => boolean; onUnsupportedPrinter: () => void;
@@ -40,7 +39,7 @@ export class RawSplitController {
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   dispose(): void { this.active = false; this.listeners.clear(); }
   private isCurrent = (): boolean => {
-    try { return this.active && this.ops.rawSplitSessionIsCurrent(this.options.session) && this.ops.rawSplitScope() === this.scope; }
+    try { return this.active && this.ops.rawSplitSessionIsCurrent(this.options.ticket) && this.ops.rawSplitScope() === this.scope; }
     catch { return false; }
   };
   private update(patch: Partial<RawSplitControllerState>): void {
@@ -61,12 +60,12 @@ export class RawSplitController {
     catch { return null; }
   }
   async reload(): Promise<void> {
-    if (this.state.busy || !this.active) return;
+    if (this.state.busy || !this.isCurrent()) return;
     this.update({ busy: true });
     try {
-      const pending = await this.ops.rawSplitPending(this.options.session); this.checkScope(); this.update({ pending });
-      const pendingIssue = await this.ops.rawSplitIssuePending(this.options.session); this.checkScope(); this.update({ pendingIssue });
-      const snapshot = await this.ops.rawSplitSnapshot(this.options.session); this.checkScope(); this.update({ snapshot });
+      const pending = await this.ops.rawSplitPending(this.options.ticket); this.checkScope(); this.update({ pending });
+      const pendingIssue = await this.ops.rawSplitIssuePending(this.options.ticket); this.checkScope(); this.update({ pendingIssue });
+      const snapshot = await this.ops.rawSplitSnapshot(this.options.ticket); this.checkScope(); this.update({ snapshot });
     } catch (reason) { this.update({ error: message(reason) }); }
     finally { this.update({ busy: false }); }
   }
@@ -92,17 +91,18 @@ export class RawSplitController {
     this.update({ outputs: this.state.outputs.filter((_, i) => i !== index), issueSaved: false });
   }
   async lookup(raw = this.state.barcode): Promise<void> {
-    if (this.locked || !this.active) return;
+    if (this.locked || !this.isCurrent()) return;
     const barcode = preparationInventoryBarcode(raw); if (!barcode) return;
     this.update({ barcode: raw, busy: true, error: null, source: null, saved: null });
     try {
-      const source = await this.ops.rawSplitSource(this.options.session, barcode); this.checkScope();
+      const source = await this.ops.rawSplitSource(this.options.ticket, barcode); this.checkScope();
       this.update({ source, outputs: [emptyOutput()], waste: '', issueNote: '', showIssue: false, issueSaved: false,
         savedIssueId: null, issueError: null });
     } catch (reason) { this.update({ error: message(reason) }); }
     finally { this.update({ busy: false }); }
   }
   async selectPrinter(): Promise<boolean> {
+    if (!this.isCurrent()) return false;
     const selected = await this.options.selectPrinter();
     if (!this.isCurrent() || selected === null) return false;
     this.update({ printer: selected }); return true;
@@ -115,7 +115,7 @@ export class RawSplitController {
       issueSaved: this.state.issueSaved, savedIssueId: this.state.savedIssueId, requestId });
   }
   async save(retry = false): Promise<void> {
-    if (!this.active || this.state.busy || (!retry && this.locked)) return;
+    if (!this.isCurrent() || this.state.busy || (!retry && this.locked)) return;
     this.update({ busy: true, error: null });
     try {
       const payload = retry ? this.state.pending : await this.payload(false);
@@ -123,7 +123,7 @@ export class RawSplitController {
       if (!this.state.printer && !await this.selectPrinter()) return;
       if (!this.options.printerSupported(this.state.printer!, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
       this.checkScope();
-      const result = await this.ops.rawSplitSave(this.options.session, payload); this.checkScope();
+      const result = await this.ops.rawSplitSave(this.options.ticket, payload); this.checkScope();
       this.update({ saved: result, source: null, pending: null, barcode: '' });
       await this.options.print(result, this.state.printer!, this.state.wifiPrinter, this.checkScope);
       if (this.isCurrent()) this.options.onMessage('Chop etildi');
@@ -135,13 +135,13 @@ export class RawSplitController {
     }
   }
   async saveIssue(retry = false): Promise<void> {
-    if (!this.active || this.state.busy || (!retry && (this.locked || this.state.issueSaved))) return;
+    if (!this.isCurrent() || this.state.busy || (!retry && (this.locked || this.state.issueSaved))) return;
     this.update({ busy: true, issueError: null, error: null });
     try {
       if (!retry && !this.state.issueNote.trim()) throw new Error('Farq sababini yozing');
       const payload = retry ? this.state.pendingIssue : { command: await this.payload(true), note: this.state.issueNote.trim() };
       if (!payload) return;
-      const issue = await this.ops.rawSplitReportIssue(this.options.session, payload); this.checkScope();
+      const issue = await this.ops.rawSplitReportIssue(this.options.ticket, payload); this.checkScope();
       this.update({ pendingIssue: null, issueSaved: true, savedIssueId: issue.id });
       if (!this.state.source && this.isCurrent()) this.options.onMessage('Muammo saqlandi');
     } catch (reason) { this.update({ issueError: message(reason) }); }

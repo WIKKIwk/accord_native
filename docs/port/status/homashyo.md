@@ -10,7 +10,7 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot
 |---|---|---|
 | iOS and Android | `RawMaterialSplitScreen`, `RawMaterialSplitHistoryScreen`, `RawSplitDetailsSheet`, `RawSplitIssueDetailsSheet` | Candidate home/history/details/scanner contents exist, but scanner parity, shared picker integration, printer runtime wiring, routing, scroll-to-issue, localized text and full surface comparison remain open. None is exposed by a role route. |
 | Printing | `rawMaterialSplitPrintRequest`, `PrintService.printRps` | Label mapping and a supported Bluetooth/Zebra/Wi-Fi Zebra runtime reuse the existing bridge/API with mocked tests; connect them to role views and verify with physical printers and phones. D13 blocks GoDEX before a stock write. Explain this unsupported choice in the eventual UI; it must not silently proceed. |
-| Session epoch | `rawSplitScope`, `auth.ts` | API and controllers now guard the exact current session object as well as the account key. Private auth `sessionEpoch` is not exposed; a failed login rollback could reactivate the identical previous object without our observing the intermediate session. An integrator-provided epoch accessor or equivalent is required before claiming complete session isolation. |
+| Session epoch | `rawSplitScope`, `auth.ts` | Role APIs/controllers require a ticket constructed with an injected auth epoch reader; no identity-only fallback exists. Integrator must connect main’s `activeSessionEpoch` and own cleanup. Snapshotting after a login attempt already starts, or `saveSession(A)→B→A` in one epoch, remains undetectable; the accessor emits no change event. |
 | Durable storage recovery | `rawSplitSave`, `rawSplitReportIssue` | A failed or interrupted key removal is restored if absent without overwriting a newer key. If the restoration write itself fails, pending-key durability cannot be guaranteed; surface the storage failure and do not auto-resend. |
 | Picker dismissal | native sheet navigation | No Expo Router 58 `beforeRemove` event exists; a production dismiss-start signal for back/swipe is not proven. `onDismiss` follows entry removal, and owner unmount suppresses it. The transient adapter is unexposed and must not be routed until safe dismissal/session cleanup is verified. A prevented pop can leave the existing sheet entry stuck even though the candidate request times out as null. |
 | Request ID | `newRawSplitRequestId` | Secure randomness matches V2; JavaScript clock uses milliseconds × 1000 rather than a true microsecond clock. Verify or provide native microsecond precision. |
@@ -19,7 +19,7 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot
 | Test mode | `rawSplitSave`, `rawSplitReportIssue` | Implement the shared test-mode policy in the deferred test-mode pass. |
 
 ## Verification so far
-- `node --test tests/homashyo*.test.cjs`: 89 passed, including mocked iOS/Android home/history/detail/scanner render trees, callbacks and source-derived labels, including selected-baseline wire replays.
+- `node --test tests/homashyo*.test.cjs`: 93 passed, including mocked iOS/Android home/history/detail/scanner render trees, callbacks and source-derived labels, including selected-baseline wire replays.
 - `tests/contracts/f11910bb/raw_material_split_test.json` is a new f119 recording; prior historical fixtures remain untouched. The file includes requests from the three failed V2 widget tests, which must not be treated as specifications.
 - `npx tsc --noEmit -p tsconfig.ios.json`: passed after regenerating the worktree’s stale ignored Expo Router types.
 - Selected-baseline Flutter oracle: 16 passed, 3 failed; no simulator or device. The V2 mobile_scanner scan-window geometry unit oracle also passed 28/28; it does not prove Expo's camera-coordinate equivalence.
@@ -41,7 +41,7 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot
 `rawSplitSave` and `rawSplitReportIssue` reject test mode in V2; this is deferred to the centralized test-mode pass.
 
 ## Needs from the integrator
-- Keep Homashyo routes unexposed until the real scanner, safe native picker dismissal, exact login epoch, supported printer selection and printing are wired and audited. Wire `rawSplitPrinterSupported` and the required unsupported-printer callback before any stock save. Existing shared Profile can be reused without the optional daily-work callback.
+- Keep Homashyo routes unexposed until the real scanner, safe native picker dismissal, injected active-login epoch and its documented limits, supported printer selection and printing are wired and audited. Wire `rawSplitPrinterSupported` and the required unsupported-printer callback before any stock save. Existing shared Profile can be reused without the optional daily-work callback.
 Do not expose a Homashyo Chat route until the shared WebSocket redirect/cookie security hold is cleared; do not change the protected worker/preparation Chat paths.
 
 ## Surface audit
