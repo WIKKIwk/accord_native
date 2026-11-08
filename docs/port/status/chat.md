@@ -18,6 +18,16 @@ Stopped at: opt-in native session adapter, React hook and existing thread bridge
 | Chat role surfaces | `ChatDetailScreen`, `ChatParticipantProfileScreen` and Chat widgets | Audit and complete the full role on both platforms, including voice, participant profile, request cards and all text, sheets and actions. |
 | Device checks | Chat role | No simulator, emulator or physical device has been used. |
 
+## Deviations candidates
+
+These are inherited from the selected V2 source and are preserved for the 1:1 port. They are candidates for a separate fix, not completed changes.
+
+| Risk | V2 source | Concrete behavior |
+|---|---|---|
+| Read after navigation blur | `chat_detail_screen.dart:81-96,105-109`; `chat_store_ChatStore_methods_01.dart:501-533` | A mounted detail owns the active conversation until disposal, not until it loses route focus. A retained blurred detail can therefore suppress unread or mark later messages read; disposal of an older detail can clear a newer active conversation. |
+| Read after backgrounding | `chat_runtime.dart:42-49`; `chat_store_ChatStore_methods_01.dart:135-142`; `chat_store_sync.dart:77-85,125-131,406-443` | Pausing stops the socket and timer but does not cancel a sync or receipt flush already underway. A delayed sync can mark an active conversation read and send the receipt after the app backgrounds. |
+| Gap recovery after a failed write | `chat_store_sync.dart:160-173,184-208` | Gap messages enter memory before their SQLite write. If that write fails, a retry can use the advanced in-memory sequence, skip fetching intermediate messages, and later save the event cursor despite those messages being absent from local storage. |
+
 ## Source and drift notes
 
 - This checkpoint follows V2 commit `f11910bb2c8c7081ce26770e69811b03fd0739ed`, now pinned in merged main `dad5041`; an isolated clean source snapshot was verified at that SHA. No historical replay fixture was used.
@@ -40,6 +50,7 @@ Stopped at: opt-in native session adapter, React hook and existing thread bridge
 - With the native adapter and runtime registry, 65 related tests passed, including same-session reuse, account switch, logout abort and background/resume. The hook's real React Native rendering and backend/device behavior have not been tested. iOS TypeScript and lint passed; Android retained the same nine worker errors.
 - With the existing thread bridge, 150 Chat and preparation-Chat tests passed. The new regression test exercises both the opted-in path and the unchanged direct-read path for aparatchi and tayyorlov sessions. iOS TypeScript and lint passed; Android retained the same nine worker errors.
 - After consolidating opted-in live subscriptions, 153 Chat and preparation-Chat tests passed. Focus/blur, invalidation fan-out, background/resume and stale-session callbacks have focused tests; no device or backend was used. iOS TypeScript and lint passed; Android retained the same nine worker errors.
+- After independent review, the attempted stricter lifecycle edits were undone; 32 focused sync, receipt, runtime, thread/list and preparation-Chat tests passed. The three V2-inherited risks above remain unchanged and open.
 - Pinned ledger reports 25 public API methods and 8 screens/sheets. The text gate fails with 157 unmatched V2 texts per platform and 41 iOS / 52 Android unmatched V4 texts; these scanner findings need a surface-by-surface audit. Ledger `check` passed with 8 endpoint warnings; it does not prove parity.
 - The worktree's incomplete copied dependencies were restored with `npm ci --ignore-scripts --no-audit --no-fund`. An offline Expo server was started briefly to refresh route types and stopped without using a device.
 - Full role gates, text/surface audit and device checks remain open.
