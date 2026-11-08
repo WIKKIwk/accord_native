@@ -4,6 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const { loadCustomerStates } = require('./support/customerNativeStates.cjs');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 function nodes(node, predicate) {
   if (!node || typeof node !== 'object') return [];
@@ -27,10 +28,10 @@ function fixture(platform, state, confirm = false) {
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
     '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f], listRowBackground: c => ['background', c] },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', onSurface: 'fg', onSurfaceVariant: 'muted', secondaryContainer: 'highlight', onSecondaryContainer: 'selected' }) },
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { useFocusEffect: fn => { const clean = fn(); if (clean) cleanups.push(clean); } }, 'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', RefreshControl: 'RefreshControl',
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { useFocusEffect: fn => { const clean = fn(); if (clean) cleanups.push(clean); } }, 'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl',
       Text: 'Text', View: 'View', PlatformColor: value => value },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' },
-    './CustomerContext': { useCustomerText: () => ({ text: key => key }) }, './customerPresentation': presentation,
+    './CustomerContext': { useCustomerText: () => ({ text: key => key }) }, './CustomerStates': loadCustomerStates(platform), './customerPresentation': presentation,
     './useCustomerScreens': { useCustomerNotifications: () => state } };
   return { ...load(`CustomerNotificationsView.${platform}.tsx`, mocks), updates, cleanups, refs };
 }
@@ -59,15 +60,72 @@ test('clear action presents V2 confirmation and only its confirm callback clears
     alert.onConfirm(); await Promise.resolve(); assert.equal(clears, 1);
   }
 });
-test('empty, loading and retry feed states preserve the V2 labels', () => {
+// Source-derived: customer_notifications_screen_widgets_part_01.dart loading, retry and empty branches.
+test('initial feed loading takes priority, uses the common centered native state, and leaves the clear dialog mounted', () => {
+  for (const platform of ['ios', 'android']) for (const error of [null, Error('offline')]) {
+    const state = { loaded: false, loading: true, error, records: [], highlightedIds: new Set(), refresh: async () => {}, markSeen: async () => {}, clearAll: async () => {} };
+    const screen = fixture(platform, state, true).CustomerNotificationsScreen({ onOpenDetail() {} });
+    const loading = nodes(screen, n => n.type?.name === 'CustomerLoadingState')[0]; assert.ok(loading);
+    assert.equal(nodes(screen, n => n.type === 'FlatList' || n.type === 'ScrollView' || n.type === 'List').length, 0);
+    assert.ok(nodes(loading.type(loading.props), n => n.type === (platform === 'ios' ? 'ProgressView' : 'LoadingIndicator')).length);
+    assert.equal(nodes(screen, n => n.type === 'WorkerAlert')[0].props.alert.title, 'clearTitle');
+  }
+});
+
+test('failed and empty feeds use source state priority, retain refresh and the real retry callback', async () => {
   for (const platform of ['ios', 'android']) for (const [loaded, loading, error, expected] of [
-    [true, false, null, 'noRecordsYet'], [false, false, Error('offline'), 'serverDisconnectedRetry'], [false, true, null, null],
+    [false, false, Error('offline'), 'CustomerRetryState'], [true, false, null, 'CustomerEmptyFeedState'],
+    [false, false, null, 'CustomerEmptyFeedState'], [true, true, Error('old'), 'CustomerEmptyFeedState'],
   ]) {
-    const state = { loaded, loading, error, records: [], highlightedIds: new Set(), refresh: async () => {}, markSeen: async () => {}, clearAll: async () => {} };
+    let refreshes = 0;
+    const state = { loaded, loading, error, records: [], highlightedIds: new Set(), refresh: async () => { refreshes++; }, markSeen: async () => {}, clearAll: async () => {} };
     const screen = fixture(platform, state).CustomerNotificationsScreen({ onOpenDetail() {} });
-    const content = platform === 'android' ? nodes(screen, item => item.type === 'FlatList')[0].props.ListEmptyComponent : screen;
-    if (expected) assert.ok(nodes(content, item => item.type === 'Text').some(item => item.props.children === expected));
-    else assert.ok(nodes(content, item => item.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length);
+    const list = nodes(screen, n => n.type === (platform === 'ios' ? 'ScrollView' : 'FlatList'))[0]; assert.ok(list);
+    if (platform === 'ios') assert.equal(list.props.alwaysBounceVertical, true);
+    const empty = platform === 'ios' ? undefined : list.props.ListEmptyComponent;
+    if (empty) { assert.equal(empty.type, 'View'); assert.equal(empty.props.style.flexGrow, 1); }
+    const view = platform === 'ios' ? list.props.children : empty.props.children;
+    assert.equal(view.type.name, expected); list.props.refreshControl.props.onRefresh(); await Promise.resolve(); assert.equal(refreshes, 1);
+    const rendered = view.type(view.props);
+    if (expected === 'CustomerRetryState') {
+      assert.equal(view.props.retry, state.refresh);
+      assert.ok(nodes(rendered, n => n.type === 'Text' && n.props.children === 'serverDisconnectedRetry').length);
+      const button = nodes(rendered, n => n.type === (platform === 'ios' ? 'Button' : 'TextButton'))[0];
+      (button.props.onPress ?? button.props.onClick)(); await Promise.resolve(); assert.equal(refreshes, 2);
+    } else {
+      assert.ok(nodes(rendered, n => n.type === 'Text' && n.props.children === 'noRecordsYet').length);
+      assert.equal(nodes(rendered, n => n.type === 'Button' || n.type === 'TextButton').length, 0);
+    }
+  }
+});
+
+test('cached feed rows remain visible during an initial refresh or error', () => {
+  for (const platform of ['ios', 'android']) for (const [loading, error] of [[true, null], [true, Error('offline')], [false, Error('offline')]]) {
+    const state = { loaded: false, loading, error, records: [record], highlightedIds: new Set(), refresh: async () => {}, markSeen: async () => {}, clearAll: async () => {} };
+    const screen = fixture(platform, state).CustomerNotificationsScreen({ onOpenDetail() {} });
+    assert.equal(nodes(screen, n => n.type?.name === 'CustomerLoadingState' || n.type?.name === 'CustomerRetryState').length, 0);
+    const row = platform === 'ios' ? nodes(screen, n => n.type === 'ListItem')[0]
+      : nodes(screen, n => n.type === 'FlatList')[0].props.renderItem({ item: record, index: 0 });
+    assert.ok(row);
+  }
+});
+
+test('the empty feed is a read-only 16-padded native panel and follows Urdu direction', () => {
+  for (const platform of ['ios', 'android']) for (const [locale, direction] of [['uz', 'leftToRight'], ['ur-PK', 'rightToLeft']]) {
+    const state = loadCustomerStates(platform, { locale }).CustomerEmptyFeedState();
+    const host = nodes(state, n => n.type === 'Host')[0]; assert.equal(host.props.layoutDirection, direction);
+    const label = nodes(state, n => n.type === 'Text' && n.props.children === 'noRecordsYet')[0]; assert.ok(label);
+    assert.equal(nodes(state, n => n.type === 'Button' || n.type === 'TextButton').length, 0);
+    if (platform === 'ios') {
+      const card = nodes(state, n => n.type === 'VStack')[0];
+      assert.ok(card.props.modifiers.some(m => m[0] === 'padding' && m[1].all === 16));
+      assert.ok(card.props.modifiers.some(m => m[0] === 'background' && m[2][1].cornerRadius === 28));
+    } else {
+      const card = nodes(state, n => n.type === 'Surface')[0];
+      assert.deepEqual(card.props.shape.props.cornerRadii, { topStart: 28, topEnd: 28, bottomStart: 28, bottomEnd: 28 });
+      assert.ok(label.props.modifiers.some(m => m[0] === 'paddingAll' && m[1] === 16));
+      assert.equal(card.props.onClick, undefined);
+    }
   }
 });
 

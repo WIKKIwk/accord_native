@@ -24,6 +24,7 @@ function fixture() {
     '@expo/ui/swift-ui/modifiers': { listStyle: value => value, refreshable: value => value, listRowBackground: value => value },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { PlatformColor: value => value },
     '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' }, './CustomerContext': { useCustomerText: () => ({ text: key => key }) },
+    './CustomerStates': { CustomerEmptyFeedState: 'CustomerEmptyFeedState', CustomerLoadingState: 'CustomerLoadingState', CustomerRetryState: 'CustomerRetryState' },
     './customerPresentation': { customerNotificationRecord: () => ({ icon: 'schedule', name: 'item', code: 'code', body: 'body', created: 'date' }) },
     './useCustomerScreens': { useCustomerNotifications: () => state },
   };

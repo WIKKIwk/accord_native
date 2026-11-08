@@ -17,7 +17,7 @@ function nodes(node, predicate) {
   if (Array.isArray(node)) return node.flatMap(child => nodes(child, predicate));
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
-function loadCustomerStates(platform, { width = 390, text = key => key } = {}) {
+function loadCustomerStates(platform, { width = 390, locale = 'uz', text = key => key } = {}) {
   const modifier = name => (...values) => [name, ...values];
   return load(`CustomerStates.${platform}.tsx`, {
     'react/jsx-runtime': jsx,
@@ -27,10 +27,11 @@ function loadCustomerStates(platform, { width = 390, text = key => key } = {}) {
       ['shapes', { roundedRectangle: modifier('roundedRectangle') }],
     ])),
     '@expo/ui/jetpack-compose': { Card: 'Card', Column: 'Column', Host: 'Host', LoadingIndicator: 'LoadingIndicator', Text: 'Text', TextButton: 'TextButton',
+      Surface: 'Surface', Shape: { RoundedCorner: props => ({ type: 'NativeShape', props: { ...props, type: 'roundedCorner' } }) },
       useMaterialColors: () => ({ primary: 'primary', onSurface: 'fg', onSurfaceVariant: 'muted', surfaceContainerLow: 'bg' }) },
     '@expo/ui/jetpack-compose/modifiers': Object.fromEntries(['fillMaxWidth', 'paddingAll', 'semantics', 'size', 'testID'].map(name => [name, modifier(name)])),
     'react-native': { PlatformColor: value => value, useWindowDimensions: () => ({ width, height: 844 }), View: 'View' },
-    './CustomerContext': { useCustomerText: () => ({ text }) }, './customerPresentation': presentation,
+    './CustomerContext': { useCustomerText: () => ({ locale, text }) }, './customerPresentation': presentation,
   });
 }
 

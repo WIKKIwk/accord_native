@@ -1,12 +1,13 @@
 import { ListItem, Text } from '@expo/ui';
-import { Button, Host, List, ProgressView, Section, VStack } from '@expo/ui/swift-ui';
+import { Host, List, Section, VStack } from '@expo/ui/swift-ui';
 import { listRowBackground, listStyle, refreshable } from '@expo/ui/swift-ui/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PlatformColor } from 'react-native';
+import { PlatformColor, RefreshControl, ScrollView } from 'react-native';
 import { WorkerAlert } from '../components/WorkerAlert';
 import { useCustomerText } from './CustomerContext';
+import { CustomerEmptyFeedState, CustomerLoadingState, CustomerRetryState } from './CustomerStates';
 import { customerNotificationRecord } from './customerPresentation';
 import { useCustomerNotifications } from './useCustomerScreens';
 
@@ -28,14 +29,16 @@ export function CustomerNotificationsScreen({ onOpenDetail, onClearActionChanged
     await state.markSeen(id);
     if (mounted.current && generation === focusGeneration.current) onOpenDetail(id);
   };
-  const showLoading = !state.loaded && state.records.length === 0 && (state.loading || !state.error);
-  const showRetry = !state.loaded && state.records.length === 0 && !state.loading && !!state.error;
+  const showLoading = !state.loaded && state.records.length === 0 && state.loading;
+  const showRetry = !state.loaded && state.records.length === 0 && !!state.error;
   return <>
-    <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(state.refresh)]}>
-      {showLoading ? <ProgressView /> : showRetry ? <Section><Text>{text('serverDisconnectedRetry')}</Text>
-        <Button label={text('retry')} onPress={() => { void state.refresh(); }} /></Section>
-        : state.records.length === 0 ? <Section><Text>{text('noRecordsYet')}</Text></Section>
-          : <Section title={text('shipmentsFlowTitle')}>{state.records.map(record => {
+    {showLoading ? <CustomerLoadingState /> : state.records.length === 0
+      ? <ScrollView alwaysBounceVertical contentContainerStyle={{ flexGrow: 1, paddingTop: 8, paddingBottom: 24 }}
+        refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.refresh(); }} />}>
+        {showRetry ? <CustomerRetryState retry={state.refresh} /> : <CustomerEmptyFeedState />}
+      </ScrollView>
+      : <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(state.refresh)]}>
+        <Section title={text('shipmentsFlowTitle')}>{state.records.map(record => {
             const row = customerNotificationRecord(record), highlighted = state.highlightedIds.has(record.id);
             const symbol = row.icon === 'done' ? 'checkmark' : row.icon === 'close' ? 'xmark' : 'clock';
             return <ListItem key={record.id} onPress={() => { void open(record.id); }}
@@ -43,8 +46,8 @@ export function CustomerNotificationsScreen({ onOpenDetail, onClearActionChanged
               leading={<SymbolView name={{ ios: symbol }} size={20} />} trailing={<Text>{row.created}</Text>}
               supportingText={<VStack alignment="leading"><Text numberOfLines={1}>{row.code}</Text><Text numberOfLines={2}>{row.body}</Text></VStack>}>
               <Text>{row.name}</Text></ListItem>;
-          })}</Section>}
-    </List></Host>
+          })}</Section>
+      </List></Host>}
     <WorkerAlert alert={confirm ? { title: text('clearTitle'), message: text('clearAllNotificationsPrompt'),
       cancelLabel: text('no'), confirmLabel: text('yes'), onConfirm: () => { void state.clearAll(); } } : null} onDismiss={() => setConfirm(false)} />
   </>;

@@ -2,7 +2,7 @@ import { Button, Host, ProgressView, Text, VStack } from '@expo/ui/swift-ui';
 import { accessibilityLabel, background, buttonStyle, fixedSize, font, foregroundStyle, frame, lineLimit, multilineTextAlignment, padding, shapes } from '@expo/ui/swift-ui/modifiers';
 import { PlatformColor, useWindowDimensions, View } from 'react-native';
 import { useCustomerText } from './CustomerContext';
-import { customerRetryContentWidth } from './customerPresentation';
+import { customerLayoutDirection, customerRetryContentWidth } from './customerPresentation';
 
 export function CustomerLoadingState() {
   return <Host style={{ flex: 1 }} alignment="center"><ProgressView
@@ -28,4 +28,16 @@ export function CustomerEmptyStatusState() {
     background(PlatformColor('secondarySystemGroupedBackground'), shapes.roundedRectangle({ cornerRadius: 12 }))]}>
     <Text modifiers={[font({ textStyle: 'headline' }), lineLimit(), fixedSize({ horizontal: false, vertical: true })]}>{text('noRecordsYet')}</Text>
   </VStack></Host>;
+}
+
+/** V2 _NotificationPanel empty feed. */
+export function CustomerEmptyFeedState() {
+  const { locale, text } = useCustomerText();
+  return <View style={{ marginHorizontal: 8 }}><Host matchContents={{ vertical: true }} style={{ width: '100%' }} layoutDirection={customerLayoutDirection(locale)}>
+    <VStack alignment="leading" modifiers={[padding({ all: 16 }), frame({ maxWidth: Infinity, alignment: 'leading' }),
+      background(PlatformColor('secondarySystemGroupedBackground'), shapes.roundedRectangle({ cornerRadius: 28 }))]}>
+      <Text modifiers={[font({ textStyle: 'body' }), foregroundStyle(PlatformColor('label')), lineLimit(),
+        fixedSize({ horizontal: false, vertical: true })]}>{text('noRecordsYet')}</Text>
+    </VStack>
+  </Host></View>;
 }
