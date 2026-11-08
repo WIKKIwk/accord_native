@@ -32,6 +32,16 @@ test('return dialog requires a reason or three Unicode code points and valid qua
   assert.deepEqual(logic.customerReturnInput(dialog({ rawQty: '', requireQtyEntry: false })).returnedQty, 10);
 });
 
+test('Dart native trim removes U+0085 around quantity, reasons and comments', () => {
+  assert.equal(logic.parseCustomerReturnQty('\u0085 1,25 \u0085'), 1.25);
+  assert.equal(logic.customerReturnInput(dialog({ selectedReason: '\u0085', comment: '\u0085ab\u0085' })), null);
+  assert.deepEqual(logic.customerReturnInput(dialog({ selectedReason: '\u0085Defective\u0085', comment: '\u0085ok\u0085' })),
+    { returnedQty: 4, reason: 'Defective', comment: 'ok' });
+  assert.deepEqual(logic.customerDeliveryResponseBody({ deliveryNoteID: 'id', comment: '\u0085   \u0085' }),
+    { delivery_note_id: 'id', reason: '' });
+  assert.equal(logic.customerDeliveryResponseBody({ deliveryNoteID: 'id', comment: '\u0085abc\u0085' }).comment, 'abc');
+});
+
 test('the four delivery responses preserve V2 modes, flags and amounts', () => {
   const input = { returnedQty: 2.5, reason: 'Wrong item', comment: ' details ' };
   assert.deepEqual(logic.customerDeliveryResponseBody(logic.customerApproveAll(' id ')),

@@ -1,3 +1,6 @@
+// Dart's native String.trim includes U+0085 in addition to JavaScript whitespace.
+const trimCustomerInput = (value: string): string => value.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');
+
 /** @v2 CustomerDeliveryResponseMode */
 export type CustomerDeliveryResponseMode = 'acceptAll' | 'acceptPartial' | 'rejectAll' | 'claimAfterAccept';
 
@@ -38,14 +41,14 @@ export function customerDeliveryResponseBody(response: CustomerDeliveryResponse)
     if (!Number.isFinite(response.returnedQty)) throw new TypeError('Invalid returned quantity');
     body.returned_qty = response.returnedQty;
   }
-  const comment = response.comment?.trim() ?? '';
+  const comment = trimCustomerInput(response.comment ?? '');
   if (comment) body.comment = comment;
   return body;
 }
 
 /** @v2 _CustomerDeliveryDetailScreenState._parseQty */
 export function parseCustomerReturnQty(raw: string): number | null {
-  const normalized = raw.trim().replaceAll(',', '.');
+  const normalized = trimCustomerInput(raw).replaceAll(',', '.');
   if (!/^[+-]?(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|Infinity|NaN)$/.test(normalized)) return null;
   if (/^[+-]?NaN$/.test(normalized)) return NaN;
   return Number(normalized);
@@ -63,8 +66,8 @@ export type CustomerReturnDialogValues = {
 
 /** @v2 _CustomerDeliveryDetailScreenState._showReturnDialog */
 export function customerReturnInput(values: CustomerReturnDialogValues): CustomerReturnInput | null {
-  const reason = (values.selectedReason ?? '').trim();
-  const comment = values.comment.trim();
+  const reason = trimCustomerInput(values.selectedReason ?? '');
+  const comment = trimCustomerInput(values.comment);
   const qty = parseCustomerReturnQty(values.rawQty);
   const validQty = !values.requireQtyEntry || (qty !== null && qty > 0 &&
     (values.allowFullReturn ? qty <= values.sentQty : qty < values.sentQty));
