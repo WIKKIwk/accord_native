@@ -1,4 +1,3 @@
-import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { customerDeliveryDetail, customerRespondDelivery, type CustomerDeliveryDetail } from './customerApi';
 import type { CustomerDeliveryResponse } from './customerLogic';
@@ -41,7 +40,8 @@ export function useCustomerNotifications() {
   const storeSubscribe = useCallback((listener: () => void) => store.subscribe(listener), [store]);
   const storeVersion = useCallback(() => store.version, [store]);
   useSyncExternalStore(storeSubscribe, storeVersion, storeVersion);
-  useFocusEffect(useCallback(() => { notifications.start(); return () => notifications.stop(); }, [notifications]));
+  // V2 keeps its refresh listener while a delivery detail is pushed on top.
+  useEffect(() => { notifications.start(); return () => notifications.stop(); }, [notifications]);
   return { loading: store.loading, loaded: store.loaded, error: store.error, records: notifications.items,
     highlightedIds: notifications.highlightedIds, refresh: () => notifications.reload(),
     markSeen: (id: string) => notifications.markDetailSeen(id), clearAll: () => notifications.clearAll() };

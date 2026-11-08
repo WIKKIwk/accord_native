@@ -1,7 +1,7 @@
 # customer
 
 Status: part 1 of 1 in progress
-Stopped at: integrate Supplier notification detail, implement the V2 home/notifications swipe, then complete the text and surface audits on both platforms.
+Stopped at: integrate Supplier notification detail, complete the text and surface audits on both platforms, and resolve or document the remaining device and lifecycle checks.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -14,7 +14,8 @@ Stopped at: integrate Supplier notification detail, implement the V2 home/notifi
 | In-flight refresh at account reset | `customer_store.dart` `clear`, `refresh` | V2 clears its singleton without explicitly cancelling an already pending refresh. Confirm whether an old response can update shared runtime state after an account switch before declaring that lifecycle fully audited. |
 | Timestamp ties | `customer_store.dart` `_mergeHistoryItems`, `customer_delivery_runtime_store.dart` `_sorted` | V2 Dart sorting does not guarantee tie order; JavaScript sorting is stable. Exact visible ordering of records with identical timestamps remains unverified. |
 | Return dialogs | `customer_delivery_detail_screen__CustomerDeliveryDetailScreenState_methods_01.dart` `_showReturnDialog` | Native centered return/partial/claim dialogs are implemented on both platforms; verify keyboard, outside/back dismissal, focus, resizing and accessibility on real phones. |
-| Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home, status, notifications, delivery, shared profile and shared Chat are routed on both platforms using the existing drawer, bottom controls and shared screens. Shared NotificationDetailScreen integration, text and surface audits remain open; the discussion action is intentionally unavailable until that real destination is connected. Both platforms still need the V2 home/notifications horizontal swipe. |
+| Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home, status, notifications, delivery, shared profile and shared Chat are routed on both platforms using the existing drawer, bottom controls and shared screens. Shared NotificationDetailScreen integration, text and surface audits remain open; the discussion action is intentionally unavailable until that real destination is connected. The V2 swipe helper has no callers in lib, so no untriggered gesture was added. |
+| Retained iOS tabs | `customer_home_screen_widgets_part_01.dart:27–30`, `customer_notifications_screen_widgets_part_01.dart:27–54` | V2 disposes the prior root screen when replacing tabs. NativeTabs may retain inactive screen trees and their refresh listeners; check duplicate refreshes and navigation on a real iPhone. The notification listener deliberately stays alive under pushed delivery details, matching V2. |
 | iOS native tabs on secondary screens | `customer_dock.dart`, `customer_status_detail_screen.dart`, `customer_delivery_detail_screen.dart`, `profile_screen.dart` | V2 shows no selected dock destination on status, detail and profile. Expo native tabs keep the containing tab selected; resolve with supported native controls or explicitly defer after real-phone review. Android passes no selection for these screens. |
 | Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | The reviewed shared session-scoped Chat unread hook is now mounted once in the Customer provider and supplies both platform dock dots. The shared Chat status documents inherited V2 reliability quirks; live backend, account-switch and real-phone behavior, as well as initialized push delivery, remain unverified. |
 
@@ -31,6 +32,10 @@ Stopped at: integrate Supplier notification detail, implement the V2 home/notifi
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Notification feed lifecycle: kept its store and RefreshHub listeners through pushed detail screens, as V2 does, rather than stopping on blur. The listener stops on unmount or account reset. 21 focused lifecycle, feed and navigation tests passed; iOS typecheck and uncached lint passed. Real-phone tab retention remains open.
+
+- Full pinned-source search found `handleCustomerTabSwipe` and `navigateToCustomerTab` only inside their unreferenced helper file; neither Customer screen invokes them. No swipe gesture was invented.
 
 - Customer Chat badge: after merging main `f0d1fcc`, the existing shared `useChatUnreadCount(session)` runs once in the persistent Customer provider and drives iOS native-tab and Android native-dock dots. 26 focused Customer notification/navigation and shared Chat runtime tests passed, including read-clearing and account reset. iOS typecheck and uncached Expo lint passed; Android retains the nine baseline worker errors. Real-device/backend behavior remains open. The Customer notification view files were renamed without behavioral changes to remove a case-insensitive resolver collision with the controller.
 
@@ -68,7 +73,7 @@ Stopped at: integrate Supplier notification detail, implement the V2 home/notifi
 
 ## Deviation candidates
 
-- The iOS native tab bar keeps a visible tab selected on Customer status, detail and profile, unlike V2; the Android bar supports no active item. Horizontal home/notifications swipe is not wired yet. These remain open rather than claimed as parity.
+- The iOS native tab bar keeps a visible tab selected on Customer status, detail and profile, unlike V2; the Android bar supports no active item. The V2 tab-swipe helper has no callers in the pinned lib tree, so adding a swipe would invent behavior. These remain open rather than claimed as parity.
 
 ## Test mode pending
 

@@ -216,3 +216,22 @@ test('persistent Customer session provider starts the shared unread hook once wi
   assert.equal(provider.props.value.session, session); assert.equal(provider.props.value.chatUnread, 4);
   assert.deepEqual(calls, [session]);
 });
+
+test('notification listener survives a pushed detail and stops only when its screen unmounts', () => {
+  const events = [], effects = [];
+  const notifications = { subscribe: () => () => {}, version: 0, items: [], highlightedIds: new Set(),
+    start: () => events.push('start'), stop: () => events.push('stop') };
+  const store = { subscribe: () => () => {}, version: 0, loading: false, loaded: true, error: null };
+  const hooks = load('src/customer/useCustomerScreens.ts', {
+    react: { useCallback: fn => fn, useEffect: fn => effects.push(fn), useRef: v => ({ current: v }), useState: v => [v, () => {}],
+      useSyncExternalStore() {} },
+    './customerApi': {}, './customerLogic': {}, './CustomerContext': { useCustomerContext: () => ({ notifications, store }) },
+    '../shared/notificationStoresRuntime': { refreshHub: {} },
+  });
+  hooks.useCustomerNotifications();
+  assert.equal(effects.length, 1); const unmount = effects[0]();
+  assert.deepEqual(events, ['start']);
+  // Opening a child route does not unmount the feed, so no cleanup fires.
+  assert.deepEqual(events, ['start']);
+  unmount(); assert.deepEqual(events, ['start', 'stop']);
+});

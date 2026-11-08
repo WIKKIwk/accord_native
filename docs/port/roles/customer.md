@@ -1,6 +1,6 @@
 # Customer UI contract
 
-Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is a behavior contract, not evidence of a completed port. Customer uses the existing profile, chat, shared role drawer, shared notification stores and the Supplier-owned `NotificationDetailScreen`. `CustomerStore`, Customer API methods and response rules are in `src/customer/`; their session, notification and view bindings still need implementation.
+Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is a behavior contract, not evidence of a completed port. Customer uses the existing profile, chat, shared role drawer, shared notification stores and the Supplier-owned `NotificationDetailScreen`. `CustomerStore`, Customer API methods, response rules, session, notification and both platform view bindings are in `src/customer/`; shared notification detail remains an integration dependency.
 
 ## Shell, navigation and common states
 
