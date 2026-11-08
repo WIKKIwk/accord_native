@@ -30,6 +30,8 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 
 ## Verification
 
+- `tests/customerPresentation.test.cjs`: 2 source-derived tests passed for status order, quantities, note visibility and notification fallback text. iOS typecheck passed.
+
 - Customer context and session binding: `tests/customerRuntime.test.cjs`, the store lifecycle and notification controller tests passed. iOS typecheck passed. The new provider is not yet mounted in routes.
 
 - Customer notifications/controller checkpoint: 15 focused tests passed for cache, hidden/unread ordering, clear/seen behavior, refresh coalescing, reset write ordering and store lifecycle. The role routes do not yet mount the controller.
