@@ -43,10 +43,11 @@ test('filtered visible rows keep hidden selected entries and indexes follow the 
   assert.deepEqual(h.owner.bulkChoice(), h.all); h.owner.suspend();
 });
 
-test('reload retains only IDs present in loaded entries and rejects foreign visible rows', () => {
+test('reload retains only IDs present in loaded entries while displayed rows may belong to a newer future', () => {
   const h = harness(); h.owner.activate(); h.owner.longPress(h.a); h.owner.longPress(h.b);
   h.owner.update([h.b], [h.b], unlocked()); assert.deepEqual([...h.owner.getSnapshot().selectedIds], ['b']);
-  h.owner.update([h.b], [{ ...h.b }], unlocked()); assert.equal(h.owner.getSnapshot().rows[0].entry, h.b); h.owner.suspend();
+  const newerVisible = { ...h.b }; h.owner.update([h.b], [newerVisible], unlocked());
+  assert.equal(h.owner.getSnapshot().rows[0].entry, newerVisible); assert.equal(h.owner.getSnapshot().selectedEntries[0], h.b); h.owner.suspend();
 });
 
 test('real returning and bulk locks disable the source interactions without dispatching an action', () => {

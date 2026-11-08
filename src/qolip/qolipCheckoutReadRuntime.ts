@@ -2,11 +2,12 @@ import { activeSessionToken, type Session } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { assertQolipReadCurrent } from './qolipApiCommon';
 import { qolipCheckouts } from './qolipCheckoutApi';
+import type { QolipCheckoutEntry } from './qolipCheckoutApi';
 import { QolipCheckoutReadState } from './qolipCheckoutReadState';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 
 /** No witness is captured here; the settled shell must supply its one original shared-witness boundary. */
-export function createQolipCheckoutRead(session: Session, boundary: QolipHomeReadBoundary) {
+export function qolipCheckoutBoundary(session: Session, boundary: QolipHomeReadBoundary): QolipHomeReadBoundary {
   const scope = sessionReadScope(session), original = () => boundary.current();
   let expired = false;
   const current = () => {
@@ -20,6 +21,11 @@ export function createQolipCheckoutRead(session: Session, boundary: QolipHomeRea
       return true;
     } catch { expired = true; return false; }
   };
-  return new QolipCheckoutReadState({ current, subscribe: listener => boundary.subscribe(listener) },
-    guard => qolipCheckouts(session, { status: 'open', limit: 200 }, guard));
+  return { current, subscribe: listener => boundary.subscribe(listener) };
+}
+
+export function createQolipCheckoutRead(session: Session, boundary: QolipHomeReadBoundary,
+  onLoaded?: (entries: readonly QolipCheckoutEntry[]) => boolean) {
+  return new QolipCheckoutReadState(qolipCheckoutBoundary(session, boundary),
+    guard => qolipCheckouts(session, { status: 'open', limit: 200 }, guard), onLoaded);
 }

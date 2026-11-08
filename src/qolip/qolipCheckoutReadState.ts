@@ -27,12 +27,13 @@ export class QolipCheckoutReadState {
   private expired = false;
   private run: Run | null = null;
   constructor(private readonly boundary: QolipHomeReadBoundary,
-    private readonly read: (guard: QolipReadGuard) => Promise<readonly QolipCheckoutEntry[]>) {}
+    private readonly read: (guard: QolipReadGuard) => Promise<readonly QolipCheckoutEntry[]>,
+    private readonly onLoaded?: (entries: readonly QolipCheckoutEntry[]) => boolean) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private originalCurrent = () => this.boundary.current();
   private current(): boolean {
     if (this.expired) return false;
-    try { assertQolipReadCurrent(this.originalCurrent); return true; } catch { this.expired = true; return false; }
+    try { assertQolipReadCurrent(this.originalCurrent); return !this.expired; } catch { this.expired = true; return false; }
   }
   getSnapshot = (): QolipCheckoutReadSnapshot => (!this.run || this.run.active) && this.current() ? this.value : invalid;
   private notify() { for (const listener of [...this.listeners]) {
@@ -87,6 +88,11 @@ export class QolipCheckoutReadState {
     try {
       assertQolipReadCurrent(guard);
       const entries = await this.read(guard);
+      if (!guard()) return;
+      if (this.onLoaded) {
+        try { assertQolipReadCurrent(() => this.onLoaded!(entries)); }
+        catch { this.invalidate(); return; }
+      }
       if (!guard() || serial !== run.serial) return;
       const visible = qolipFilterCheckouts(entries, trimDart(this.value.search));
       if (!guard() || serial !== run.serial) return;

@@ -11,7 +11,7 @@ export class QolipLocationChoiceLifetime {
   private readBoundary = () => this.boundary.current();
   getSnapshot = (): boolean => {
     if (this.expired) return false;
-    try { assertQolipReadCurrent(this.readBoundary); return true; }
+    try { assertQolipReadCurrent(this.readBoundary); return !this.expired; }
     catch { this.expired = true; return false; }
   };
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
