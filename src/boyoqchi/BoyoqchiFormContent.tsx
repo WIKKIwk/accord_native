@@ -1,6 +1,6 @@
-import { Host, TextInput, useNativeState } from '@expo/ui';
+import { Button, Host, RNHostView, TextInput, useNativeState } from '@expo/ui';
 import { useEffect, useRef, useState } from 'react';
-import { BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Session } from '../auth';
 import { WorkerIconButton } from '../components/WorkerIconButton';
 import { WorkerPaintPalette } from '../components/WorkerPaintPalette';
@@ -111,7 +111,9 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
         {option?.fields.includes('1w Oq') && <WorkerSheetButton label="Pantone+" onPress={() => setDialog({ paint: paint ?? '', key: optionKey, base: option.fields })} />}
       </View>}
       <View style={[styles.divider, { backgroundColor: colors.field }]} />
-      <WorkerSheetButton label={t('Saqlash')} disabled={busy} variant="filled" onPress={() => { void submit(); }} />
+      {busy ? <Host matchContents={{ vertical: true }} style={styles.host}><Button disabled variant="filled" style={{ height: 50 }}>
+        <RNHostView matchContents><ActivityIndicator size="small" /></RNHostView>
+      </Button></Host> : <WorkerSheetButton label={t('Saqlash')} height={50} variant="filled" onPress={() => { void submit(); }} />}
     </ScrollView>
     {dialog && <NamedFieldDialog paint={dialog.paint} close={() => setDialog(null)} add={addNamed} />}
   </View>;
