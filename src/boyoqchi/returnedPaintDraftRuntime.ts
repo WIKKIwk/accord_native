@@ -23,11 +23,13 @@ export class ReturnedPaintDraftFileStorage implements ReturnedPaintDraftStorage 
   }
   async write(scope: string, value: string): Promise<void> {
     const file = await this.file(scope), temporary = new File(this.directory(), `${file.name}.tmp`);
+    // SDK 58 mutates temporary.uri after move; keep a separate reference to the old path.
+    const originalTemporary = new File(temporary.uri);
     try {
       temporary.create({ overwrite: true });
       await temporary.write(value);
-      temporary.move(file, { overwrite: true });
-    } finally { if (temporary.exists) temporary.delete(); }
+      await temporary.move(file, { overwrite: true });
+    } finally { if (originalTemporary.exists) originalTemporary.delete(); }
   }
   async remove(scope: string): Promise<void> {
     const file = await this.file(scope);
