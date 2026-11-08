@@ -17,6 +17,20 @@ test('Qolip location revision increments once per notification and supports unsu
   assert.deepEqual(values, [1, 2]); assert.equal(revision.locations, 3);
 });
 
+test('revision notification continues after a listener fails and defers newly added listeners', () => {
+  const revision = new QolipDataRevision(), calls = [], oldError = console.error;
+  try {
+    console.error = () => {};
+    revision.subscribe(() => { calls.push('bad'); throw new Error('listener'); });
+    let remove;
+    revision.subscribe(() => { calls.push('add'); remove ??= revision.subscribe(() => calls.push('new')); });
+    revision.subscribe(() => calls.push('last'));
+    revision.notifyLocationsChanged(); assert.deepEqual(calls, ['bad', 'add', 'last']);
+    revision.notifyLocationsChanged(); assert.deepEqual(calls, ['bad', 'add', 'last', 'bad', 'add', 'last', 'new']);
+    remove();
+  } finally { console.error = oldError; }
+});
+
 test('home runtime uses existing app preferences, current scope and an after-frame scheduler', async () => {
   const saved = new Map(), calls = [], session = { profile: { role: 'qolipchi', ref: 'A' } }; let active = session, deps, preserve;
   class FakeState { constructor(input, isPreserved) { deps = input; preserve = isPreserved; } }
