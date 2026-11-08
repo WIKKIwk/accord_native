@@ -40,3 +40,13 @@ test('account switch or disposal clears data and ignores in-flight results', asy
   assert.deepEqual(state.getSnapshot().events, []); assert.deepEqual(state.getSnapshot().apparatus, []);
   assert.equal(state.getSnapshot().loading, false);
 });
+
+test('characterization: scope-only changes without a reset event leave old data in state, so the route is held', async () => {
+  let current = true;
+  const state = new MaterialHistoryState({ history: async () => [{ event_id: 'old-scope' }], apparatus: async () => [], isCurrent: () => current });
+  state.activate(); await state.load(); assert.equal(state.getSnapshot().events[0].event_id, 'old-scope');
+  current = false;
+  // No scope-change notification reaches this controller: a stale snapshot remains until invalidation.
+  assert.equal(state.getSnapshot().events[0].event_id, 'old-scope');
+  state.invalidate(); assert.deepEqual(state.getSnapshot().events, []);
+});
