@@ -20,11 +20,12 @@ function load(relative, mocks) {
   return loaded.exports;
 }
 const session = { imageCacheScope: 'scope', profile: { role: 'boyoqchi', ref: 'paint-1' } }, onLogout = () => {};
-const context = { session, onLogout, profileNavigation: { current: null } };
+const witness = { session }, context = { session, witness, onLogout, profileNavigation: { current: null } };
 
 test('Android Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
   const Profile = load('app/android-boyoqchi/profile', {
     react: { useRef: value => ({ current: value }), useLayoutEffect() {} },
+    '../../auth': { isSessionWitnessCurrent: () => true },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
     'expo-router': { useIsFocused: () => true, useNavigation: () => ({ dispatch() {} }), router: { navigate() {} } },
     'react-native': { View: 'View' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
@@ -45,7 +46,7 @@ test('Android Boyoqchi reuses shared Profile without an unrelated daily-work act
 });
 
 test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
-  const settings = { register: (value, opener) => { assert.equal(value, session); assert.equal(typeof opener, 'function'); return () => {}; } };
+  const settings = { register: (value, opener) => { assert.equal(value, witness); assert.equal(typeof opener, 'function'); return () => {}; } };
   const Profile = load('app/ios-boyoqchi/(tabs)/profile/index', {
     react: { useCallback: fn => fn },
     '../../../../boyoqchi/BoyoqchiProfileSettings.ios': { useBoyoqchiProfileSettings: () => settings },

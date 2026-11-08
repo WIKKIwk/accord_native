@@ -25,7 +25,7 @@ function fixture(initialNames) {
   let state = { stale: false, type: 'stack', key: 'boyoqchi-stack', index: initialNames.length - 1, routeNames: names,
     routes: initialNames.map((name, index) => ({ key: `${name}-${index}`, name })) };
   const frames = [], cleanups = [], events = [];
-  let dismisses = 0;
+  let dismisses = 0, witnessCurrent = true;
   const queue = createBoyoqchiDockScheduler(fn => frames.push(fn), () => { dismisses++; });
   const dispatch = action => {
     events.push(action);
@@ -36,6 +36,7 @@ function fixture(initialNames) {
   const { BoyoqchiDock } = load('boyoqchi/BoyoqchiDock.android', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
     react: { useRef: value => ({ current: value }), useEffect: effect => { const cleanup = effect(); if (cleanup) cleanups.push(cleanup); } },
+    '../auth': { isSessionWitnessCurrent: () => witnessCurrent }, './BoyoqchiContext': { useBoyoqchiContext: () => ({ witness: {} }) },
     'expo-router': { useNavigation: parent => { assert.equal(parent, '/android-boyoqchi'); return { dispatch }; } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
@@ -43,7 +44,7 @@ function fixture(initialNames) {
     './boyoqchiDockScheduler': { queueBoyoqchiDockNavigation: queue },
   }, 'tsx');
   return { dock: active => BoyoqchiDock({ active }).props, names: () => state.routes.slice(0, state.index + 1).map(route => route.name),
-    events, frames, dismisses: () => dismisses, frame: () => { while (frames.length) frames.shift()(); },
+    invalidate: () => { witnessCurrent = false; }, events, frames, dismisses: () => dismisses, frame: () => { while (frames.length) frames.shift()(); },
     unmount: () => { while (cleanups.length) cleanups.pop()(); }, back: () => dispatch({ type: 'POP', payload: { count: 1 } }) };
 }
 
@@ -94,4 +95,10 @@ test('scheduler rechecks the active destination at the frame and keeps the first
   queue({ destination: 'profile', active: () => 'home', isMounted: () => true, dispatch: value => events.push(['second', value]) });
   firstMounted = false; frames.shift()();
   assert.deepEqual(events, []);
+});
+
+
+test('a witness transition drops a dock action already queued for the next frame', () => {
+  const f = fixture(['index']); f.dock('home').onSelect('astatka'); f.invalidate(); f.frame();
+  assert.deepEqual(f.names(), ['index']); assert.deepEqual(f.events, []);
 });

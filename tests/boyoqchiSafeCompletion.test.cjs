@@ -27,9 +27,10 @@ const deferred = () => { let resolve; const promise = new Promise(yes => { resol
 
 function fixture(fetch, refreshSession = async () => false) {
   const session = { baseUrl: 'https://one.invalid', token: 'old-token' }, opened = [], cleared = [], refreshed = [], flushed = [];
-  const draft = { values: {}, dynamic_field_labels: {}, image: null }, files = { current: 'original' };
-  let active = session, epoch = 1, scope = 'original', failClear = false, failRefresh = false, clearWait = null, clearStarted = null;
-  const auth = { activeSessionToken: value => value === active ? value.token : null, refreshSession };
+  const draft = { values: {}, dynamic_field_labels: {}, image: null }, files = { current: 'original' }, witness = { session };
+  let active = session, epoch = 1, generation = 1, scope = 'original', failClear = false, failRefresh = false, clearWait = null, clearStarted = null, unmount = () => {};
+  const auth = { activeSessionToken: value => value === active ? value.token : null, refreshSession,
+    isSessionWitnessCurrent: value => value === witness && active === session && epoch === 1 && generation === 1 && scope === 'original' };
   const transport = compile('authorizedFetch.ts', { './auth': auth });
   const api = compile('boyoqchi/returnedPaintApi.ts', { '../authorizedFetch': transport, '../workerControlsApi': controls, './returnedPaintModel': model, './returnedPaintDemoGuard': demo });
   const store = { isCurrent: () => active === session && epoch === 1 && scope === 'original', load: async () => draft,
@@ -39,15 +40,15 @@ function fixture(fetch, refreshSession = async () => false) {
   const sheet = { isOpen: () => false, open: value => opened.push(value), close() {}, update() {} };
   const { useReturnedPaintForm } = compile('boyoqchi/useReturnedPaintForm.tsx', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
-    react: { useRef: value => ({ current: value }), useEffect: fn => { fn(); } },
-    '../nativeSheet': { useNativeSheet: () => sheet }, './BoyoqchiForm': { BoyoqchiForm: 'BoyoqchiForm' },
+    react: { useRef: value => ({ current: value }), useEffect: fn => { unmount = fn(); } },
+    '../auth': auth, '../nativeSheet': { useNativeSheet: () => sheet }, './BoyoqchiForm': { BoyoqchiForm: 'BoyoqchiForm' },
     './returnedPaintApi': api, './returnedPaintCompletion': verifier, './returnedPaintDraftRuntime': { returnedPaintDraftStoreFor: () => store },
   });
   const originalFetch = global.fetch; global.fetch = fetch;
-  const open = useReturnedPaintForm(session, { refresh: async () => { refreshed.push(true); if (failRefresh) throw new Error('offline'); } });
+  const open = useReturnedPaintForm(session, { refresh: async () => { refreshed.push(true); if (failRefresh) throw new Error('offline'); } }, witness);
   return { session, opened, cleared, refreshed, flushed, draft, files, open: () => open({ id: 'request', image: null }),
     deferClear: () => { clearWait = deferred(); clearStarted = deferred(); return { wait: clearWait, started: clearStarted }; },
-    changeScope: () => { scope = 'changed'; }, rollbackEpoch: () => { epoch++; active = {}; active = session; },
+    changeScope: () => { scope = 'changed'; }, transition: () => { generation++; }, unmount: () => unmount(), rollbackEpoch: () => { epoch++; active = {}; active = session; },
     failClear: () => { failClear = true; }, failRefresh: () => { failRefresh = true; }, restore: () => { global.fetch = originalFetch; } };
 }
 async function prepare(f) { await f.open(); assert.equal(f.opened.length, 1); return f.opened[0].props.save; }
@@ -154,5 +155,30 @@ test('a 401 refresh that yields a fake demo token cannot send a second completio
   try { const save = await prepare(f);
     await assert.rejects(save(input), error => error.name === 'BoyoqchiDemoUnavailableError');
     assert.equal(calls, 1); assert.deepEqual(f.cleared, []); assert.deepEqual(f.refreshed, []);
+  } finally { f.restore(); }
+});
+
+
+test('witness transition alone blocks a retained form even when session object, epoch and scope are unchanged', async () => {
+  let calls = 0; const f = fixture(async () => { calls++; return new Response('{}'); });
+  try { const save = await prepare(f); f.transition(); await assert.rejects(save(input), /Sessiya tugagan/);
+    assert.equal(calls, 0); assert.deepEqual(f.cleared, []); assert.deepEqual(f.refreshed, []); } finally { f.restore(); }
+});
+
+test('witness transition during 401 refresh prevents the retry even when the old object returns', async () => {
+  let calls = 0; const waiting = deferred(), started = deferred();
+  const f = fixture(async () => { calls++; return new Response('{}', { status: 401 }); }, async session => {
+    started.resolve(); await waiting.promise; session.token = 'renewed'; return true;
+  });
+  try { const save = await prepare(f), saving = save(input); await started.promise; f.transition(); waiting.resolve();
+    await assert.rejects(saving, /Sessiya tugagan/); assert.equal(calls, 1);
+    assert.deepEqual(f.cleared, []); assert.deepEqual(f.refreshed, []); } finally { f.restore(); }
+});
+
+test('unmount after a POST starts cannot clear or refresh when its response later arrives', async () => {
+  const pending = deferred(), f = fixture(async () => pending.promise);
+  try { const save = await prepare(f), saving = save(input); await tick(); f.unmount();
+    pending.resolve(new Response(JSON.stringify(response()), { status: 200 }));
+    await assert.rejects(saving, /Sessiya tugagan/); assert.deepEqual(f.cleared, []); assert.deepEqual(f.refreshed, []);
   } finally { f.restore(); }
 });

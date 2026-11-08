@@ -17,9 +17,9 @@ import { useReturnedPaintForm } from './useReturnedPaintForm';
 // @v2 BoyoqchiHomeScreen
 // @v2 BoyoqchiAstatkaScreen
 export function BoyoqchiScreen({ home }: { home: boolean }) {
-  const { session } = useBoyoqchiContext(), { state, controller } = useBoyoqchiRequests(session, home);
+  const { session, witness } = useBoyoqchiContext(), { state, controller } = useBoyoqchiRequests(session, home, witness);
   const colors = useWorkerColors(), t = useBoyoqchiText(), offset = useSharedValue(0), height = useSharedValue(0);
-  const open = useReturnedPaintForm(session, controller);
+  const open = useReturnedPaintForm(session, controller, witness);
   return <View style={{ flex: 1, backgroundColor: colors.background }}><Stack.Screen options={{ title: t(home ? 'Bo‘yoqchi' : 'Astatka') }} />
     {session.token === 'test-mode-token' ? <BoyoqchiMessage title={BOYOQCHI_DEMO_UNAVAILABLE} error />
       : state.phase === 'loading' ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>

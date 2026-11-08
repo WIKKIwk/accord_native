@@ -15,17 +15,24 @@ function load(relative, mocks = {}) {
   return loaded.exports;
 }
 function setup() {
-  let active = null, epoch = 1;
-  const auth = { activeSessionEpoch: session => active === session ? epoch : null,
-    activeSessionToken: session => active === session ? session.token : null };
+  let active = null, epoch = 1, generation = 1;
+  const issued = new WeakSet();
   const { sessionReadScope } = load('sessionReadScope.ts');
-  const { createBoyoqchiProfileSettingsSlot } = load('boyoqchi/boyoqchiProfileSettingsSlot.ts', {
-    '../auth': auth, '../sessionReadScope': { sessionReadScope },
-  });
-  const slot = createBoyoqchiProfileSettingsSlot();
+  const witness = session => {
+    const value = { session, epoch, generation, scope: sessionReadScope(session) }; issued.add(value); return value;
+  };
+  const auth = { isSessionWitnessCurrent: value => {
+    const current = !!value && issued.has(value) && active === value.session && value.epoch === epoch &&
+      value.generation === generation && value.scope === sessionReadScope(value.session);
+    if (!current && value) issued.delete(value);
+    return current;
+  } };
+  const { createBoyoqchiProfileSettingsSlot } = load('boyoqchi/boyoqchiProfileSettingsSlot.ts', { '../auth': auth });
+  const actual = createBoyoqchiProfileSettingsSlot(), slot = { ...actual, register: (session, open) => actual.register(witness(session), open) };
   const session = () => ({ token: 'token', baseUrl: 'https://one.invalid', profile: { role: 'boyoqchi', ref: 'ref' },
     capabilities: ['boyoqchi.access'], assigned_apparatus: [] });
-  return { slot, session, setActive: value => { active = value; }, advanceEpoch: () => { epoch++; } };
+  return { slot, session, setActive: value => { if (active !== value) generation++; active = value; },
+    advanceEpoch: () => { epoch++; }, transition: () => { generation++; } };
 }
 
 test('registration is focus-scoped and old handles cannot open a superseding screen or session', () => {
@@ -44,14 +51,15 @@ test('registration is focus-scoped and old handles cannot open a superseding scr
   assert.equal(changes, 4); unsubscribe();
 });
 
-test('failed-login rollback, token and same-object read-scope changes invalidate stale openers', () => {
+test('failed-login rollback and same-object scope changes invalidate old openers but token refresh does not', () => {
   const f = setup(), a = f.session(), b = f.session(); let calls = 0; f.setActive(a);
   const stop = f.slot.register(a, () => calls++), old = f.slot.getSnapshot();
   f.advanceEpoch(); f.setActive(b); f.setActive(a); old.open(); assert.equal(calls, 0);
   stop(); f.slot.register(a, () => calls++); const current = f.slot.getSnapshot(); current.open(); assert.equal(calls, 1);
-  a.capabilities.push('other.access'); current.open(); assert.equal(calls, 1);
-  a.capabilities.pop(); a.assigned_apparatus.push('machine'); current.open(); assert.equal(calls, 1);
-  a.assigned_apparatus.pop(); a.token = 'new-token'; current.open(); assert.equal(calls, 1);
+  a.token = 'new-token'; current.open(); assert.equal(calls, 2, 'same-session token refresh remains valid');
+  a.capabilities.push('other.access'); current.open(); assert.equal(calls, 2);
+  a.capabilities.pop(); a.assigned_apparatus.push('machine'); current.open(); assert.equal(calls, 2);
+  a.assigned_apparatus.pop(); current.open(); assert.equal(calls, 2, 'an observed invalid opener cannot revive');
 });
 
 test('header button opens the actual shared Settings once and a blurred header cannot open it again', () => {
@@ -90,4 +98,11 @@ test('header button opens the actual shared Settings once and a blurred header c
   assert.equal(button.props.label, 'profileSettingsTitle'); assert.equal(button.props.systemImage, 'slider.horizontal.3');
   button.props.onPress(); assert.equal(writes, 1); render(); assert.equal(hooks[0].value, true);
   blur(); assert.equal(BoyoqchiProfileSettingsButton(), null); button.props.onPress(); assert.equal(writes, 1);
+});
+
+
+test('a transition invalidates a retained Profile opener before focus cleanup runs', () => {
+  const f = setup(), a = f.session(); f.setActive(a); let calls = 0;
+  f.slot.register(a, () => calls++); const opener = f.slot.getSnapshot(); f.transition(); opener.open();
+  assert.equal(calls, 0);
 });

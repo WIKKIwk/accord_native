@@ -114,11 +114,12 @@ test('role sheet changes its native dismissible option while a save is pending',
     update: (_content, options) => updates.push(options), close() {} };
   const { useReturnedPaintForm } = compile('boyoqchi/useReturnedPaintForm.tsx', {
     react: { useRef: value => ({ current: value }), useEffect: effect => { effect(); } },
-    '../nativeSheet': { useNativeSheet: () => sheet }, './BoyoqchiForm': { BoyoqchiForm: 'BoyoqchiForm' },
+    '../auth': { isSessionWitnessCurrent: () => true }, '../nativeSheet': { useNativeSheet: () => sheet }, './BoyoqchiForm': { BoyoqchiForm: 'BoyoqchiForm' },
     './returnedPaintApi': {}, './returnedPaintCompletion': {},
     './returnedPaintDraftRuntime': { returnedPaintDraftStoreFor: () => ({ load: async () => ({}), isCurrent: () => true }) },
   });
-  await useReturnedPaintForm({}, {})({ id: 'r', image: null });
+  const session = {};
+  await useReturnedPaintForm(session, {}, { session })({ id: 'r', image: null });
   assert.equal(opened[0].options.dismissible, true);
   opened[0].content.props.onBusyChange(true); opened[0].content.props.onBusyChange(false);
   assert.deepEqual(updates, [{ dismissible: false }, { dismissible: true }]);
@@ -140,11 +141,11 @@ test('native sheet dismissal while saving cannot reopen or replace a newer draft
     update: (content, options) => { if (isOpen) updates.push({ content, options }); }, close: () => { isOpen = false; } };
   const { useReturnedPaintForm } = compile('boyoqchi/useReturnedPaintForm.tsx', {
     react: { useRef: value => ({ current: value }), useEffect: effect => { effect(); } },
-    '../nativeSheet': { useNativeSheet: () => sheet }, './BoyoqchiForm': { BoyoqchiForm: 'BoyoqchiForm' },
+    '../auth': { isSessionWitnessCurrent: () => true }, '../nativeSheet': { useNativeSheet: () => sheet }, './BoyoqchiForm': { BoyoqchiForm: 'BoyoqchiForm' },
     './returnedPaintApi': {}, './returnedPaintCompletion': {},
     './returnedPaintDraftRuntime': { returnedPaintDraftStoreFor: () => ({ load: async () => ({}), isCurrent: () => true }) },
   });
-  const open = useReturnedPaintForm({}, {}), request = { id: 'r', image: null };
+  const session = {}, open = useReturnedPaintForm(session, {}, { session }), request = { id: 'r', image: null };
   await open(request); const first = opened[0].content;
   first.props.onBusyChange(true); isOpen = false; // Native Android Back can dismiss despite the JS guard.
   await open(request); assert.equal(opened.length, 1);

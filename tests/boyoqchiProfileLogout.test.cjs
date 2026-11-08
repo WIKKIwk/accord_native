@@ -112,6 +112,7 @@ test('Boyoqchi drawer asks once and only confirmation ends the session', () => {
     '../localization': { localizedGetter: key => key }, '../localization/runtime': { localeController: { locale: 'uz' } },
   });
   const Drawer = load('boyoqchi/BoyoqchiDrawer.tsx', {
+    '../auth': { isSessionWitnessCurrent: () => true },
     'expo-router': { router: {}, usePathname: () => '/android-boyoqchi' }, 'react-native': { Platform: { OS: 'android' } },
     '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({ onClose() {}, onOpen() {} }) },

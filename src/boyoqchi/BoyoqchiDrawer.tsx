@@ -1,3 +1,4 @@
+import { isSessionWitnessCurrent } from '../auth';
 import { router, usePathname, type Href } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Platform } from 'react-native';
@@ -8,7 +9,7 @@ import { useBoyoqchiContext } from './BoyoqchiContext';
 import { useBoyoqchiGetter, useBoyoqchiText } from './useBoyoqchiText';
 import { queueBoyoqchiDockNavigation } from './boyoqchiDockScheduler';
 export function BoyoqchiDrawer({ children }: { children: ReactNode }) {
-  const state = useRoleDrawerState(), { onLogout, profileNavigation } = useBoyoqchiContext(), pathname = usePathname();
+  const state = useRoleDrawerState(), { witness, onLogout, profileNavigation } = useBoyoqchiContext(), pathname = usePathname();
   const t = useBoyoqchiText(), getter = useBoyoqchiGetter();
   const base = Platform.OS === 'ios' ? '/ios-boyoqchi' : '/android-boyoqchi';
   const active = pathname.includes('/chat') ? 'chat' : pathname.endsWith('/profile') ? 'profile' : pathname.endsWith('/astatka') ? 'astatka' : 'home';
@@ -18,6 +19,7 @@ export function BoyoqchiDrawer({ children }: { children: ReactNode }) {
     { id: 'profile', label: getter('profileTitle'), symbol: { ios: 'person' as const, android: 'person' as const } },
   ];
   const select = (id: string) => {
+    if (!isSessionWitnessCurrent(witness)) return;
     if (id === 'logout') { confirmRoleDrawerLogout(onLogout); return; }
     if (id !== 'home' && id !== 'astatka' && id !== 'profile') return;
     if (Platform.OS === 'android' && active === 'profile') {

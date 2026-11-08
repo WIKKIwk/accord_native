@@ -20,9 +20,9 @@ import { useReturnedPaintForm } from './useReturnedPaintForm';
 // @v2 BoyoqchiHomeScreen
 // @v2 BoyoqchiAstatkaScreen
 export function BoyoqchiScreen({ home }: { home: boolean }) {
-  const { session } = useBoyoqchiContext(), { state, controller } = useBoyoqchiRequests(session, home);
+  const { session, witness } = useBoyoqchiContext(), { state, controller } = useBoyoqchiRequests(session, home, witness);
   const drawer = useRoleDrawer(), colors = useMaterialColors(), insets = useSafeAreaInsets(), t = useBoyoqchiText();
-  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), open = useReturnedPaintForm(session, controller);
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), open = useReturnedPaintForm(session, controller, witness);
   const title = home ? 'Bo‘yoqchi' : 'Astatka';
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
     <RoleHeader title={t(title)} navigation={{ icon: 'menu', label: t('Bo‘yoqchi bo‘limlari'), onPress: drawer.open }} />

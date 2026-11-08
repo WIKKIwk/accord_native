@@ -25,12 +25,13 @@ async function mapBody(response: Response): Promise<Json> {
 }
 
 /** @v2 boyoqchiReturnedPaintRequests */
-export async function boyoqchiReturnedPaintRequests(session: Session, limit = 20, offset = 0): Promise<ReturnedPaintRequestPage> {
+export async function boyoqchiReturnedPaintRequests(session: Session, limit = 20, offset = 0,
+  options?: { beforeSend?: () => void; signal?: AbortSignal }): Promise<ReturnedPaintRequestPage> {
   ensureBoyoqchiRealSession(session);
   const query = new URLSearchParams({ limit: String(limit) });
   if (offset > 0) query.set('offset', String(offset));
-  const response = await authorizedFetch(session, `/v1/mobile/returned-paint/requests?${query}`, undefined,
-    () => ensureBoyoqchiRealSession(session));
+  const response = await authorizedFetch(session, `/v1/mobile/returned-paint/requests?${query}`, options?.signal ? { signal: options.signal } : undefined,
+    () => { ensureBoyoqchiRealSession(session); options?.beforeSend?.(); });
   if (response.status !== 200) {
     throw await returnedPaintException(response, 'returned_paint_load_failed', 'Qaytarilgan bo‘yoq ma’lumotlari yuklanmadi');
   }

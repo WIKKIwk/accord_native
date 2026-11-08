@@ -26,7 +26,13 @@ const cryptoApi = { CryptoDigestAlgorithm: { SHA256: 'sha256' }, digestStringAsy
 function createBackend() {
   const files = new Map(), moves = [], waiting = [];
   const deletions = [], copies = [], waitingCopies = [], reads = [], waitingReads = [];
-  let failCopy = false, pauseCopy = false, pauseRead = false, beforeRead = null, active = null, epoch = 1;
+  let failCopy = false, pauseCopy = false, pauseRead = false, beforeRead = null, active = null, epoch = 1, generation = 1;
+  const witnesses = new WeakMap();
+  const witnessFor = session => {
+    const scope = sessionScope.sessionReadScope(session), old = witnesses.get(session);
+    if (old && old.epoch === epoch && old.generation === generation && old.scope === scope) return old;
+    const next = { session, epoch, generation, scope }; witnesses.set(session, next); return next;
+  };
   class Directory {
     constructor(parent, name) { this.uri = `${parent.uri}/${name}`; }
     create() {}
@@ -89,12 +95,15 @@ function createBackend() {
   const runtime = load('boyoqchi/returnedPaintDraftRuntime', {
     'expo-crypto': cryptoApi, 'expo-file-system': backend, './returnedPaintDraft': draft, './boyoqchiDraftScope': scopes,
     '../auth': { activeSessionToken: session => active === session ? session.token : null,
-      activeSessionEpoch: session => active === session ? epoch : null },
+      activeSessionEpoch: session => active === session ? epoch : null,
+      isSessionWitnessCurrent: witness => !!witness && active === witness.session && epoch === witness.epoch &&
+        generation === witness.generation && sessionScope.sessionReadScope(witness.session) === witness.scope },
     '../sessionReadScope': sessionScope,
   });
   return { files, deletions, storage: () => new runtime.ReturnedPaintDraftFileStorage(() => true),
-    activate: session => { active = session; }, advanceEpoch: () => { epoch++; },
-    sessionStore: session => runtime.returnedPaintDraftStoreFor(session),
+    activate: session => { if (active !== session) generation++; active = session; }, advanceEpoch: () => { epoch++; },
+    invalidate: () => { generation++; },
+    sessionStore: session => runtime.returnedPaintDraftStoreFor(session, witnessFor(session)),
     failNextCopy: () => { failCopy = true; }, beforeNextRead: callback => { beforeRead = callback; },
     pauseNextCopy: () => { pauseCopy = true; }, pendingMoves: () => moves.length,
     pauseNextRead: () => { pauseRead = true; },
@@ -588,4 +597,22 @@ test('same-object capability and assignment changes invalidate old stores withou
   const next = backend.sessionStore(session);
   assert.notEqual(next, changed);
   assert.equal((await next.load('request')).valuesFor('rasxot:Oq', 1)[0], 'saved');
+});
+
+
+test('a witness transition stops a delayed backup before the next native move and stale callbacks cannot clear', async () => {
+  const backend = createBackend(), session = account('https://alpha.invalid'); backend.activate(session);
+  const stale = backend.sessionStore(session), original = await stale.load('request');
+  original.setValue('rasxot:Oq', 0, 'last-saved', 1);
+  const first = await backend.nextMove(); first.succeed(); await stale.flush('request');
+  backend.pauseNextCopy(); original.setValue('rasxot:Oq', 0, 'pending', 1);
+  const pending = stale.flush('request'), copy = await backend.nextCopy();
+  backend.invalidate(); copy.succeed();
+  await assert.rejects(pending, /Sessiya tugagan/); assert.equal(backend.pendingMoves(), 0);
+  await assert.rejects(stale.clear('request'), /Sessiya tugagan/);
+  original.setValue('rasxot:Oq', 0, 'late-edit', 1); await tick();
+  assert.throws(() => stale.flush('request'), /Sessiya tugagan/);
+  const fresh = backend.sessionStore(session);
+  assert.notEqual(fresh, stale);
+  assert.equal((await fresh.load('request')).valuesFor('rasxot:Oq', 1)[0], 'last-saved');
 });

@@ -163,3 +163,21 @@ test('download uses the authenticated image transport and rejects missing, empty
   response = new Response('{"error":"bad_image"}', { status: 404 });
   await assert.rejects(client.downloadReturnedPaintImage(session, image), e => e.message === 'bad_image' && e.statusCode === 404);
 });
+
+
+test('list checks the captured role scope again before an authorized 401 retry', async () => {
+  const originalFetch = global.fetch; let calls = 0, current = true, release, started;
+  const waiting = new Promise(resolve => { release = resolve; }), begun = new Promise(resolve => { started = resolve; });
+  const account = { baseUrl: 'https://example.test', token: 'old' };
+  const auth = { activeSessionToken: s => s.token, refreshSession: async s => {
+    started(); await waiting; s.token = 'new'; return true;
+  } };
+  const transport = load('authorizedFetch', { './auth': auth }), client = api(transport.authorizedFetch);
+  global.fetch = async () => { calls++; return new Response('{}', { status: 401 }); };
+  try {
+    const pending = client.boyoqchiReturnedPaintRequests(account, 100, 0, { beforeSend: () => {
+      if (!current) throw new Error('stale witness');
+    } });
+    await begun; current = false; release(); await assert.rejects(pending, /stale witness/); assert.equal(calls, 1);
+  } finally { global.fetch = originalFetch; }
+});

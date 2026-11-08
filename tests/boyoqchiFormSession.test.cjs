@@ -9,6 +9,7 @@ function fixture() {
   const filename = path.resolve(__dirname, '../src/boyoqchi/useReturnedPaintForm.tsx'), loaded = new Module(filename, module);
   const pendingLoad = deferred(), pendingSave = deferred(), opened = [], cleared = [], refreshed = [];
   let current = true;
+  const session = { baseUrl: 'https://alpha.invalid', profile: { role: 'boyoqchi', ref: 'actor' } }, witness = { session };
   const store = { isCurrent: () => current, load: () => pendingLoad.promise, clear: async id => {
     if (!current) throw new Error('Sessiya tugagan'); cleared.push(id);
   } };
@@ -16,6 +17,7 @@ function fixture() {
   const mocks = {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
     react: { useRef: value => ({ current: value }), useEffect: effect => { effect(); } },
+    '../auth': { isSessionWitnessCurrent: value => current && value === witness },
     '../nativeSheet': { useNativeSheet: () => sheet }, './BoyoqchiForm': { BoyoqchiForm: 'BoyoqchiForm' },
     './returnedPaintApi': { completeReturnedPaint: () => pendingSave.promise },
     './returnedPaintCompletion': { ReturnedPaintReconciliationError: class extends Error {}, returnedPaintDraftContentSnapshot: () => 'unchanged', verifyReturnedPaintCompletion() {} },
@@ -26,8 +28,8 @@ function fixture() {
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
-  const open = loaded.exports.useReturnedPaintForm({ baseUrl: 'https://alpha.invalid', profile: { role: 'boyoqchi', ref: 'actor' } },
-    { refresh: async () => { refreshed.push(true); } });
+  const open = loaded.exports.useReturnedPaintForm(session,
+    { refresh: async () => { refreshed.push(true); } }, witness);
   return { open, pendingLoad, pendingSave, opened, cleared, refreshed, switchSession: () => { current = false; } };
 }
 

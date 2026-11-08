@@ -36,9 +36,10 @@ function layout(platform, selected, devicePlatform = platform) {
   const mocks = { 'react/jsx-runtime': jsx, react: { useEffect() {}, useState: () => [selected, () => {}] },
     'expo-router': { Redirect: 'Redirect', Stack: 'Stack', router: {} },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: devicePlatform }, View: 'View' },
-    '../auth': {}, '../appLock': {}, '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
+    '../auth': { isSessionWitnessCurrent: () => true }, '../appLock': {}, '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
     '../shared/switchPinRuntime': {}, './BoyoqchiShell': { BoyoqchiContextShell: 'BoyoqchiContextShell' },
-    './boyoqchiEntryGuard': { canEnterBoyoqchi } };
+    './boyoqchiEntryGuard': { canEnterBoyoqchi },
+    './useBoyoqchiSession': { useBoyoqchiSession: () => ({ witness: selected == null ? selected : { session: selected }, mounted: { current: true } }) } };
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {

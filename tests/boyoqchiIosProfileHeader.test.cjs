@@ -42,6 +42,7 @@ test('iOS Profile drawer closes the current item and routes other destinations',
   const routes = [], state = { closed: 0 };
   const { selectRoleDrawerItem } = load('shared/navigation/roleDrawerModel.ts');
   const Drawer = load('boyoqchi/BoyoqchiDrawer.tsx', {
+    '../auth': { isSessionWitnessCurrent: () => true },
     'expo-router': { router: { navigate: href => routes.push(href) }, usePathname: () => '/ios-boyoqchi/profile' },
     'react-native': { Platform: { OS: 'ios' } }, '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({ onOpen() {}, onClose: () => { state.closed++; } }) },

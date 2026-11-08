@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
-import { activeSessionEpoch, activeSessionToken, type Session } from '../auth';
+import { activeSessionEpoch, activeSessionToken, isSessionWitnessCurrent, type Session, type SessionWitness } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { boyoqchiDraftAccount, boyoqchiDraftAccountKey, boyoqchiDraftKey } from './boyoqchiDraftScope';
 import type { ReturnedPaintImage } from './returnedPaintModel';
@@ -85,13 +85,14 @@ export class BoyoqchiSessionDraftStore {
   private readonly account: ReturnType<typeof boyoqchiDraftAccount>;
   private readonly accountKey: string;
   private readonly store: ReturnedPaintDraftStore;
-  constructor(private readonly session: Session, private readonly epoch: number, private readonly readScope: string) {
+  constructor(private readonly session: Session, private readonly epoch: number, private readonly readScope: string,
+    private readonly witness: SessionWitness) {
     this.account = boyoqchiDraftAccount(session);
     this.accountKey = boyoqchiDraftAccountKey(this.account);
     this.store = new ReturnedPaintDraftStore(new ReturnedPaintDraftFileStorage(() => this.isCurrent()));
   }
   isCurrent(): boolean {
-    try { return !!activeSessionToken(this.session) && activeSessionEpoch(this.session) === this.epoch &&
+    try { return this.witness.session === this.session && isSessionWitnessCurrent(this.witness) && !!activeSessionToken(this.session) && activeSessionEpoch(this.session) === this.epoch &&
       sessionReadScope(this.session) === this.readScope && boyoqchiDraftAccountKey(boyoqchiDraftAccount(this.session)) === this.accountKey; }
     catch { return false; }
   }
@@ -107,16 +108,18 @@ export class BoyoqchiSessionDraftStore {
   async clear(requestId: string): Promise<void> { const key = this.key(requestId); await this.store.clear(key); this.key(requestId); }
   flush(requestId: string): Promise<void> { return this.store.flush(this.key(requestId)); }
 }
-const sessionStores = new WeakMap<Session, { accountKey: string; epoch: number; readScope: string; store: BoyoqchiSessionDraftStore }>();
-export function returnedPaintDraftStoreFor(session: Session): BoyoqchiSessionDraftStore {
-  const accountKey = boyoqchiDraftAccountKey(boyoqchiDraftAccount(session));
+// Each shell witness owns a distinct cache. An old store can never borrow a new login's witness.
+const sessionStores = new WeakMap<SessionWitness, BoyoqchiSessionDraftStore>();
+export function returnedPaintDraftStoreFor(session: Session, witness: SessionWitness): BoyoqchiSessionDraftStore {
   const epoch = activeSessionEpoch(session), readScope = sessionReadScope(session);
-  if (epoch === null || !activeSessionToken(session)) throw new Error('Sessiya tugagan. Qayta kiring.');
-  let entry = sessionStores.get(session);
-  if (!entry || entry.accountKey !== accountKey || entry.epoch !== epoch || entry.readScope !== readScope) {
-    entry = { accountKey, epoch, readScope, store: new BoyoqchiSessionDraftStore(session, epoch, readScope) };
-    sessionStores.set(session, entry);
+  if (witness.session !== session || !isSessionWitnessCurrent(witness) || epoch === null || !activeSessionToken(session)) {
+    throw new Error('Sessiya tugagan. Qayta kiring.');
   }
-  if (!entry.store.isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.');
-  return entry.store;
+  let store = sessionStores.get(witness);
+  if (!store) {
+    store = new BoyoqchiSessionDraftStore(session, epoch, readScope, witness);
+    sessionStores.set(witness, store);
+  }
+  if (!store.isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.');
+  return store;
 }

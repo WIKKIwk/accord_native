@@ -57,6 +57,7 @@ function harness(platform) {
     payload: { name: request.destination === 'home' ? 'index' : request.destination, pop: true } });
   const { BoyoqchiDrawer } = load('boyoqchi/BoyoqchiDrawer', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
+    '../auth': { isSessionWitnessCurrent: () => true },
     'expo-router': { router, usePathname: currentPath },
     'react-native': { Platform: { OS: platform } },
     '../shared/navigation/RoleDrawer': { RoleDrawer() {} },
@@ -69,6 +70,7 @@ function harness(platform) {
   const { BoyoqchiDock } = load('boyoqchi/BoyoqchiDock.android', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
     react: { useRef: value => ({ current: value }), useEffect: effect => { effect(); } },
+    '../auth': { isSessionWitnessCurrent: () => true }, './BoyoqchiContext': { useBoyoqchiContext: () => ({ witness: {} }) },
     'expo-router': { useNavigation: parent => {
       assert.equal(parent, '/android-boyoqchi');
       return { dispatch: event => { events.push(['dock-dispatch', event.payload.name]); action(event); } };

@@ -1,5 +1,4 @@
-import { activeSessionEpoch, activeSessionToken, type Session } from '../auth';
-import { sessionReadScope } from '../sessionReadScope';
+import { isSessionWitnessCurrent, type SessionWitness } from '../auth';
 
 export type BoyoqchiProfileSettingsHandle = { open: () => void };
 
@@ -10,14 +9,11 @@ export function createBoyoqchiProfileSettingsSlot() {
   const notify = () => { for (const listener of listeners) listener(); };
   const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
   const getSnapshot = () => current;
-  const register = (session: Session, open: () => void) => {
-    const epoch = activeSessionEpoch(session), token = activeSessionToken(session);
-    if (epoch === null || !token) return () => {};
-    const scope = sessionReadScope(session);
+  const register = (witness: SessionWitness, open: () => void) => {
+    if (!isSessionWitnessCurrent(witness)) return () => {};
     let focused = true;
     const handle: BoyoqchiProfileSettingsHandle = { open: () => {
-      if (focused && current === handle && activeSessionEpoch(session) === epoch && activeSessionToken(session) === token &&
-          sessionReadScope(session) === scope) open();
+      if (focused && current === handle && isSessionWitnessCurrent(witness)) open();
     } };
     current = handle; notify();
     return () => {

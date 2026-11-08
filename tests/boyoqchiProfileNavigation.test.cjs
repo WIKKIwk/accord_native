@@ -53,6 +53,7 @@ function fixture(initialNames, scheduled = scheduler()) {
   const Profile = load('app/android-boyoqchi/profile', {
     'react/jsx-runtime': jsx,
     react,
+    '../../auth': { isSessionWitnessCurrent: () => true },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
     'expo-router': { router: { navigate() {} }, useIsFocused: () => focused,
       useNavigation: id => { assert.equal(id, '/android-boyoqchi'); return { dispatch }; } },
@@ -66,7 +67,7 @@ function fixture(initialNames, scheduled = scheduler()) {
     '../../boyoqchi/useBoyoqchiText': commonText,
   }, 'tsx').default;
   const Drawer = load('boyoqchi/BoyoqchiDrawer', {
-    'react/jsx-runtime': jsx, 'react-native': { Platform: { OS: 'android' } },
+    'react/jsx-runtime': jsx, '../auth': { isSessionWitnessCurrent: () => true }, 'react-native': { Platform: { OS: 'android' } },
     'expo-router': { usePathname: () => '/android-boyoqchi/profile', router: {
       replace() { throw new Error('Profile must not replace'); }, navigate() { throw new Error('Profile must not use plain navigate'); },
     } },
@@ -178,6 +179,7 @@ test('retained Profile A re-registers on focus after Profile B is popped', () =>
     };
     const Profile = load('app/android-boyoqchi/profile', {
       'react/jsx-runtime': jsx, react,
+      '../../auth': { isSessionWitnessCurrent: () => true },
       '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
       'expo-router': { router: { navigate() {} }, useNavigation: id => { assert.equal(id, '/android-boyoqchi'); return { dispatch }; },
         useIsFocused: () => focused },
@@ -193,7 +195,7 @@ test('retained Profile A re-registers on focus after Profile B is popped', () =>
   };
   const base = '/android-boyoqchi';
   const Drawer = load('boyoqchi/BoyoqchiDrawer', {
-    'react/jsx-runtime': jsx, 'react-native': { Platform: { OS: 'android' } },
+    'react/jsx-runtime': jsx, '../auth': { isSessionWitnessCurrent: () => true }, 'react-native': { Platform: { OS: 'android' } },
     'expo-router': { usePathname: () => state.routes[state.index].name === 'index' ? base : `${base}/${state.routes[state.index].name}`,
       router: { replace: target => dispatch({ type: 'REPLACE', payload: { name: target === base ? 'index' : target.slice(base.length + 1) } }),
         navigate: () => { throw new Error('unexpected plain navigation'); } } },

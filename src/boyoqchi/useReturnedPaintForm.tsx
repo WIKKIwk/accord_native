@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Session } from '../auth';
+import { isSessionWitnessCurrent, type Session, type SessionWitness } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import type { BoyoqchiRequestsController } from './boyoqchiController';
 import { BoyoqchiForm } from './BoyoqchiForm';
@@ -8,20 +8,23 @@ import { ReturnedPaintReconciliationError, returnedPaintDraftContentSnapshot, ve
 import { returnedPaintDraftStoreFor } from './returnedPaintDraftRuntime';
 import type { ReturnedPaintRequest } from './returnedPaintModel';
 
-export function useReturnedPaintForm(session: Session, controller: BoyoqchiRequestsController) {
+export function useReturnedPaintForm(session: Session, controller: BoyoqchiRequestsController, witness: SessionWitness) {
   const sheet = useNativeSheet(), opening = useRef(false), busy = useRef(false), mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   return async (request: ReturnedPaintRequest) => {
-    if (opening.current || busy.current || sheet.isOpen()) return;
+    if (!mounted.current || witness.session !== session || !isSessionWitnessCurrent(witness) ||
+        opening.current || busy.current || sheet.isOpen()) return;
     opening.current = true;
     try {
-      const store = returnedPaintDraftStoreFor(session);
+      const store = returnedPaintDraftStoreFor(session, witness);
       const draft = await store.load(request.id, request.image);
-      if (!mounted.current || !store.isCurrent()) return;
-      const content = <BoyoqchiForm session={session} draft={draft} close={() => sheet.close()}
-        onBusyChange={value => { busy.current = value; sheet.update(content, { dismissible: !value }); }}
+      if (!mounted.current || !isSessionWitnessCurrent(witness) || !store.isCurrent()) return;
+      const isCurrentScope = () => mounted.current && isSessionWitnessCurrent(witness) && store.isCurrent();
+      const content = <BoyoqchiForm session={session} draft={draft} close={() => { if (isCurrentScope()) sheet.close(); }}
+        onBusyChange={value => { if (isCurrentScope()) { busy.current = value; sheet.update(content, { dismissible: !value }); } }}
         save={async items => {
-          const ensureCurrent = () => { if (!store.isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.'); };
+          const isCurrent = isCurrentScope;
+          const ensureCurrent = () => { if (!isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.'); };
           const input = { request_id: request.id, items };
           ensureCurrent();
           const submittedDraft = returnedPaintDraftContentSnapshot(draft);
@@ -29,7 +32,7 @@ export function useReturnedPaintForm(session: Session, controller: BoyoqchiReque
             await completeReturnedPaint(session, input, { beforeSend: ensureCurrent,
               verifyResponse: body => verifyReturnedPaintCompletion(body, input) });
           } catch (failure) {
-            if (!store.isCurrent()) throw failure;
+            if (!isCurrent()) throw failure;
             if (failure instanceof Error && failure.name === 'BoyoqchiDemoUnavailableError') throw failure;
             if (failure instanceof Error && failure.name === 'MobileApiException' &&
                 'statusCode' in failure && typeof failure.statusCode === 'number' &&
@@ -39,11 +42,12 @@ export function useReturnedPaintForm(session: Session, controller: BoyoqchiReque
           ensureCurrent();
           if (submittedDraft !== returnedPaintDraftContentSnapshot(draft)) throw new ReturnedPaintReconciliationError();
           try { await store.clear(request.id); } catch { throw new ReturnedPaintReconciliationError(); }
+          ensureCurrent();
           if (submittedDraft !== returnedPaintDraftContentSnapshot(draft)) {
             try { await store.flush(request.id); } catch { /* Keep the in-memory draft; reconciliation is required. */ }
             throw new ReturnedPaintReconciliationError();
           }
-          if (store.isCurrent()) {
+          if (isCurrent()) {
             try { await controller.refresh(); } catch { /* The server write was already confirmed; refresh can be retried separately. */ }
           }
         }} />;
