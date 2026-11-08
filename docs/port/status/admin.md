@@ -34,6 +34,12 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - `adminServerMonitorLiveUri` now accepts only the authenticated session's normalized HTTPS origin before constructing WSS, matching the existing `authorizedFetch` origin/HTTPS guard. That initial check alone does not enforce redirects. A future native transport must reject cross-origin and insecure redirects before sending credentials and must not forward origin cookies; leave live monitor disconnected until then. This stricter security behavior is an intentional open difference from any V2 flow that would follow such redirects.
 - The removed stream's JSON ping, silence timer and pause/resume logic were only mock-tested and were not a safe production transport. They need reimplementation on a verified no-redirect transport, alongside V2's 25-second native control ping and real-device validation.
 
+## Checkpoint: admin summary and store
+
+- `adminSupplierSummary.ts` implements the live summary read/model; `adminStore.ts` ports independent summary/activity loading, bootstrap, refresh, error and listener behavior, with injected readers to reuse the future shared activity API. Five source-derived V4 tests and iOS typecheck passed. No live request was sent.
+- The selected f119 mock V2 widget test `admin home defers summary load until after first frame` failed: immediately after `pumpWidget` it expected no summary request, but the source's post-frame callback had already issued `GET /v1/mobile/admin/suppliers/summary`. Do not use that failed test as a behavioral specification. It uses a custom HttpClient, not an instrumented MockClient; no f119 HTTP recording is claimed.
+- As a deliberate account-safety difference, `AdminStore.clear()` increments an epoch so old pending responses cannot refill a newly cleared account's state. V2's `clear()` resets flags but does not invalidate in-flight reads. The app must invoke clear on account change and logout; neither runtime integration nor the Admin home/activity screens are connected yet.
+
 ## Open items
 
 | Where | V2 reference | What is needed |
@@ -42,6 +48,7 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 | V2 drift | `docs/port/status/baseline-sync.md` | Compare role-relevant `7c87a54e..f11910bb` changes, including dependencies already tagged in V4. A zero drift report against the new pin does not establish that historical drift was re-ported. |
 | Recorded contracts | `.port/role-admin-tests.md` | Run each relevant V2 test independently first; record successful f119 cases into distinct nested fixtures, never overwrite the historical top-level files, and port the replays. Coordinate shared stems. Do not run a live-backend mutation. |
 | Item groups and paging | `mobile_api_admin_item_groups.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_01.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_04.dart` | No direct V2 HTTP recording was found for the seven checkpoint methods. Source-derived tests cover their requests; add a real f119 recording if a suitable V2 mock test is found. |
+| Admin home and activity | `AdminStore`, `AdminHomeScreen`, `AdminActivityScreen` | Summary read/store logic is unconnected; implement home, activity, capability guards, deferred mount timing, hidden activity and refresh, reuse shared shell components, and call `clear` during session reset. The f119 first-frame widget test fails as described above. The shared activity record parser is available in supplier branch `a947a1a` and must be integrated before reuse. |
 | Admin settings | `adminSettings`, `updateAdminSettings`, `AdminSettings` | Live source-derived API and model tests exist but no recorded f119 HTTP replay was found. Settings screen, capability guards, saved/loading/error states and demo branch are still unported. |
 | Server monitor | `mobile_api_admin_settings_monitor_declarations_part_02.dart`, `warehouse_live_client_io.dart`, `admin_server_monitor_screen_*` | Live transport was withheld: RN Android WebSocket can follow redirects, and its final origin/security cannot be checked before connection from JS. Implement a native transport that rejects cross-origin and insecure redirects before transmitting the session token, then port JSON/control pings, watchdog, pause/resume and retry lifecycle. Backup import and download streams, UI and test mode also remain unported; native streaming and real-phone behavior need verification. The independent oracle passed, but the recorder produced zero records for its custom client. |
 | Factory locations | `test/admin_factory_locations_test.dart`, `admin_factory_locations_screen.dart` | The live API/model has source-derived tests but no recorded f119 HTTP replay. V2 test-mode mutation behavior and the screen, editor dialog, apparatus picker and route remain unported. |
@@ -54,7 +61,7 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 
 ## Deviations candidates
 
-None identified in this checkpoint.
+V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionally invalidates them to avoid showing a prior account’s stale data after a session reset; integrate the clear call on session change and logout.
 
 ## Test mode pending
 
@@ -64,9 +71,11 @@ None identified in this checkpoint.
 | `adminFactoryLocations`, `adminCreateFactoryLocation`, `adminUpdateFactoryLocation`, `adminReplaceFactoryLocationApparatus` | Their namesakes read or mutate the in-memory factory-location catalog in test mode, including duplicate-name and apparatus membership checks. |
 | `adminServerMonitor`, `adminStartBackup`, `adminServerMonitorLiveEvents` | V2 reads and updates in-memory demo backup data, and completes the live event stream without opening a socket, in test mode. |
 | `adminSettings` | V2 returns demo admin settings in test mode. |
+| `adminSupplierSummary` | V2 returns demo supplier summary in test mode. |
 
 ## Needs from the integrator
 
+- Do not enable `useChatUnreadCount` for Admin until a no-redirect, no-cookie live transport is verified; preserve existing worker and preparation Chat behavior.
 - Integrate other role branches and shared navigation only after reviewing conflicts and role guards. The Admin home and routes are not wired by this checkpoint.
 - Preserve the protected worker and preparation code. Admin's separate branches of shared production queue surfaces still require a reviewed integration plan.
 
