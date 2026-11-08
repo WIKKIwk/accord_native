@@ -1,0 +1,27 @@
+# platform	text	reason
+both	Rasm qo‘shish	V2 Astatka constructs the sheet with default allowImageEditing=false: boyoqchi_astatka_screen.dart:88-103, returned_paint_sheet_helpers_part_01.dart:167.
+both	Rasmni almashtirish	V2 Astatka uses allowImageEditing=false: boyoqchi_astatka_screen.dart:88-103, returned_paint_sheet_helpers_part_01.dart:167.
+both	Almashtirish	V2 shows this only with allowImageEditing=true: returned_paint_sheet.dart:302-319; Astatka uses its false default: boyoqchi_astatka_screen.dart:88-103.
+both	Gallery	Image-source selection is unreachable with allowImageEditing=false: returned_paint_sheet.dart:287-294, boyoqchi_astatka_screen.dart:88-103.
+both	Tanlangan rasm bo‘sh	This is an image-editing error unreachable in Boyoqchi: returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:275-325; boyoqchi_astatka_screen.dart:88-103.
+both	Rasm hajmi 6 MB dan oshmasligi kerak	This is an image-editing error unreachable in Boyoqchi: returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:275-325; boyoqchi_astatka_screen.dart:88-103.
+both	Rasm yuklanmadi	This is an image-editing error unreachable in Boyoqchi: returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:275-325; boyoqchi_astatka_screen.dart:88-103.
+both	Rasm olib tashlanmadi	This is an image-editing error unreachable in Boyoqchi: returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:331-345; boyoqchi_astatka_screen.dart:88-103.
+both	7w Oq	Reused field labels are defined in src/workerOrderLogic.ts:6 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
+both	MAT lak	Reused field label is defined in src/workerOrderLogic.ts:11 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
+both	Etil	Reused field label is defined in src/workerOrderLogic.ts:12 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
+both	Metoxil	Reused field label is defined in src/workerOrderLogic.ts:12 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
+both	Rasvavitel	Reused field label is defined in src/workerOrderLogic.ts:12 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
+both	Izopropel	Reused field label is defined in src/workerOrderLogic.ts:12 and rendered from paintOptions in src/boyoqchi/BoyoqchiFormContent.tsx:104-105.
+ios	Qora	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Sariq	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Qizil	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Ko‘k	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Tilla	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+ios	Kumush	Reused palette value is in src/workerOrderLogic.ts:10 and rendered by src/components/WorkerPaintPalette.tsx:16.
+both	[A-Za-z0-9._ -]	V2 uses this as an internal filename-filter regular expression, not visible text: mobile_api_boyoqchi.dart:288-296.
+both	Boyoqchi session unavailable	This is a programming error thrown only outside the required provider, not screen text: src/boyoqchi/BoyoqchiContext.tsx:10-12.
+both	Menyuni yopish	Nonvisual accessibility label for the dismissible drawer overlay: src/boyoqchi/BoyoqchiDrawer.tsx:26; V2 drawer dismissal is in role_navigation_drawer.dart:49-62.
+both	#ffffffb3	Color literal used by the image-preview icon, not text: src/boyoqchi/BoyoqchiImage.tsx.
+both	#fff	Color literal used in preview styling, not text: src/boyoqchi/BoyoqchiImage.tsx.
+both	Qaytarilgan bo‘yoq qiymatlari kiritilmagan. Rasmdagi qiymatlarni Bo‘yoqchi to‘ldirishi kerak.	This exactly joins the adjacent V2 string literals in boyoqchi_astatka_screen.dart:273-274; rendered in src/boyoqchi/BoyoqchiRequestContent.tsx:46.
