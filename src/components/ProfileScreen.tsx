@@ -15,7 +15,7 @@ import { localeController } from '../shared/localization/runtime';
 import { ProfileView } from './ProfileView';
 import type { AvatarSource } from './profileViewTypes';
 
-type Props = { session: Session; onLogout: () => void; onDailyWork: () => void };
+type Props = { session: Session; onLogout: () => void; onDailyWork?: () => void };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 
