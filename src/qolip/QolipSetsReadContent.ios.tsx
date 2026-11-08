@@ -1,14 +1,15 @@
-import { Button, Host, HStack, Image, ProgressView, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
-import { accessibilityIdentifier, accessibilityLabel, background, contentShape, disabled, font, frame, labelStyle, lineLimit,
+import { Button, Circle, Host, HStack, Image, ProgressView, Text, TextField, VStack, ZStack, useNativeState } from '@expo/ui/swift-ui';
+import { accessibilityIdentifier, accessibilityLabel, background, contentShape, disabled, font, foregroundStyle, frame, labelStyle, lineLimit,
   onTapGesture, padding, shapes } from '@expo/ui/swift-ui/modifiers';
 import { PlatformColor, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { extensionText, localizedGetter } from '../shared/localization';
+import { extensionText, localizedGetter, localizedMethod } from '../shared/localization';
 import { trimDart } from './qolipApiCommon';
+import { qolipVisibleColor } from './qolipColorPresentation';
 import type { QolipSetsReadContentProps } from './qolipSetsReadContentProps';
 import { useQolipText } from './useQolipText';
 
-// Unmounted partial content. Color swatches, clipboard and all mutations/retry/refresh are absent.
+// Unmounted partial content. Clipboard and all mutations/retry/refresh are absent.
 export function QolipSetsReadContent({ snapshot }: QolipSetsReadContentProps) {
   const input = useNativeState(snapshot.search), { locale, text } = useQolipText(), insets = useSafeAreaInsets();
   if (snapshot.invalid || !snapshot.actions) return null;
@@ -41,8 +42,14 @@ export function QolipSetsReadContent({ snapshot }: QolipSetsReadContentProps) {
                 {entry.set.product_labels.length > 0 && <Text>{entry.set.product_labels.join(', ')}</Text>}
                 {entry.set.members.map((member, memberIndex) => {
                   const subtitle = member.is_in_use ? text('products.issued') : member.size > 0 ? text('products.size_value', { size: member.size }) : '';
+                  const color = qolipVisibleColor(member.color), colorLabel = color
+                    ? text('products.color_label', { color: localizedMethod('qolipColorName', locale, { raw: member.color }) }) : '';
                   return <HStack key={`${member.qolip_code}:${memberIndex}`} spacing={8}>
-                    <Image systemName={member.is_in_use ? 'lock' : 'qrcode'} /><VStack alignment="leading" spacing={2}>
+                    <Image systemName={member.is_in_use ? 'lock' : 'qrcode'} />
+                    {color && <ZStack modifiers={[accessibilityLabel(colorLabel)]}>
+                      <Circle modifiers={[frame({ width: 16, height: 16 }), foregroundStyle(PlatformColor('separator'))]} />
+                      <Circle modifiers={[frame({ width: 14, height: 14 }), foregroundStyle(color)]} />
+                    </ZStack>}<VStack alignment="leading" spacing={2}>
                       <Text modifiers={[font({ weight: 'bold' }), lineLimit(1)]}>{member.qolip_code}</Text>
                       {!!trimDart(subtitle) && <Text>{subtitle}</Text>}
                     </VStack>

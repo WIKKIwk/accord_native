@@ -14,21 +14,22 @@ function harness(platform) {
   const row = { entry, expanded: false }, actions = { setSearch: value => calls.push(['search', value]), tap: (...args) => calls.push(['tap', ...args]) };
   const snapshot = { invalid: false, loading: false, error: false, search: '', saving: false, rows: [row], actions };
   const component = name => props => { records.push({ name, props }); return React.createElement('div', null, props.label ?? props.children); };
-  const ui = Object.fromEntries(['Button', 'Column', 'Host', 'HStack', 'IconButton', 'Image', 'OutlinedTextField', 'ProgressView',
-    'RNHostView', 'Row', 'Text', 'TextField', 'VStack'].map(name => [name, component(name)]));
+  const ui = Object.fromEntries(['Box', 'Button', 'Circle', 'Column', 'Host', 'HStack', 'IconButton', 'Image', 'OutlinedTextField', 'ProgressView',
+    'RNHostView', 'Row', 'Text', 'TextField', 'VStack', 'ZStack'].map(name => [name, component(name)]));
   for (const slot of ['Placeholder', 'LeadingIcon', 'TrailingIcon']) ui.OutlinedTextField[slot] = component(`OutlinedTextField.${slot}`);
   let value = ''; ui.useNativeState = initial => { initials.push(initial); value = initial; return { get: () => value, set: next => { value = next; } }; };
-  ui.useMaterialColors = () => ({ onSurfaceVariant: 'secondary', surface: 'surface' });
+  ui.useMaterialColors = () => ({ onSurfaceVariant: 'secondary', surface: 'surface', outlineVariant: 'outline' });
   const modifier = name => (...args) => ({ name, args });
   const mods = Object.fromEntries(['accessibilityIdentifier', 'accessibilityLabel', 'background', 'contentShape', 'disabled', 'font', 'frame',
-    'labelStyle', 'lineLimit', 'onTapGesture', 'padding', 'clickable', 'clip', 'fillMaxWidth', 'paddingAll', 'semantics', 'testID', 'weight'].map(name => [name, modifier(name)]));
-  mods.shapes = { rectangle: () => 'rect', roundedRectangle: () => 'rounded' }; mods.Shapes = { RoundedCorner: () => 'rounded' };
+    'foregroundStyle', 'labelStyle', 'lineLimit', 'onTapGesture', 'padding', 'clickable', 'clip', 'fillMaxSize', 'fillMaxWidth', 'paddingAll', 'semantics', 'size', 'testID', 'weight'].map(name => [name, modifier(name)]));
+  mods.shapes = { rectangle: () => 'rect', roundedRectangle: () => 'rounded' }; mods.Shapes = { RoundedCorner: () => 'rounded', Circle: 'circle' };
   const filename = path.resolve(__dirname, `../src/qolip/QolipSetsReadContent.${platform}.tsx`), loaded = new Module(filename, module);
   const mocks = { '@expo/ui/swift-ui': ui, '@expo/ui/jetpack-compose': ui, '@expo/ui/swift-ui/modifiers': mods, '@expo/ui/jetpack-compose/modifiers': mods,
     'expo-symbols': { SymbolView: component('SymbolView') }, 'react-native': { ActivityIndicator: component('ActivityIndicator'), ScrollView: component('ScrollView'),
       View: component('View'), PlatformColor: name => name }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 20 }) },
-    '../shared/localization': { localizedGetter: key => key, extensionText: (_method, key, _locale, values) => `${key}${Object.keys(values).length ? `:${Object.values(values).join(',')}` : ''}` },
+    '../shared/localization': { localizedGetter: key => key, localizedMethod: (_key, _locale, values) => `color:${values.raw}`, extensionText: (_method, key, _locale, values) => `${key}${Object.keys(values).length ? `:${Object.values(values).join(',')}` : ''}` },
     './qolipApiCommon': { trimDart: value => value.trim() },
+    './qolipColorPresentation': { qolipVisibleColor: value => value.trim() ? '#E53935' : null },
     './useQolipText': { useQolipText: () => ({ locale: 'uz', text: (key, values) => `${key}${values ? `:${Object.values(values).join(',')}` : ''}` }) } };
   loaded.require = id => id in mocks ? mocks[id] : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
@@ -57,6 +58,17 @@ for (const platform of ['ios', 'android']) {
     assert.match(markup, /products\.issued/); assert.doesNotMatch(markup, /action\.delete|copy_code|retry|create/);
     h.entry.name = ''; h.entry.display_name = 'S-1'; const fallback = h.render();
     assert.doesNotMatch(fallback, /S-1 · products\.mold_count/);
+  });
+
+  test(`${platform} expanded member color uses a localized accessible swatch and absent colors show none`, () => {
+    const h = harness(platform); h.row.expanded = true; h.entry.set.members[0].color = '#E53935'; h.render();
+    const swatch = h.records.find(record => record.name === (platform === 'ios' ? 'ZStack' : 'Box') &&
+      record.props.modifiers?.some(mod => mod.name === (platform === 'ios' ? 'accessibilityLabel' : 'semantics') &&
+        JSON.stringify(mod.args).includes('products.color_label:color:#E53935')));
+    assert.ok(swatch); const fill = h.records.filter(record => record.name === (platform === 'ios' ? 'Circle' : 'Box'))
+      .flatMap(record => record.props.modifiers ?? []).find(mod => mod.name === (platform === 'ios' ? 'foregroundStyle' : 'background') && mod.args[0] === '#E53935');
+    assert.ok(fill); h.entry.set.members[0].color = ' '; h.render();
+    assert.equal(h.records.some(record => record.name === (platform === 'ios' ? 'ZStack' : 'Box')), false);
   });
 
   test(`${platform} saving prevents row activation; loading, error, empty and invalid states remain read-only`, () => {

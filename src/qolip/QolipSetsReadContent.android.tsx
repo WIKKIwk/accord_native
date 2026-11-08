@@ -1,14 +1,15 @@
-import { Column, Host, IconButton, OutlinedTextField, RNHostView, Row, Text, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
-import { background, clickable, clip, fillMaxWidth, paddingAll, semantics, Shapes, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { Box, Column, Host, IconButton, OutlinedTextField, RNHostView, Row, Text, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
+import { background, clickable, clip, fillMaxSize, fillMaxWidth, paddingAll, semantics, Shapes, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { extensionText, localizedGetter } from '../shared/localization';
+import { extensionText, localizedGetter, localizedMethod } from '../shared/localization';
 import { trimDart } from './qolipApiCommon';
+import { qolipVisibleColor } from './qolipColorPresentation';
 import type { QolipSetsReadContentProps } from './qolipSetsReadContentProps';
 import { useQolipText } from './useQolipText';
 
-// Unmounted partial content. Color swatches, clipboard and all mutations/retry/refresh are absent.
+// Unmounted partial content. Clipboard and all mutations/retry/refresh are absent.
 export function QolipSetsReadContent({ snapshot }: QolipSetsReadContentProps) {
   const input = useNativeState(snapshot.search), { locale, text } = useQolipText(), colors = useMaterialColors(), insets = useSafeAreaInsets();
   if (snapshot.invalid || !snapshot.actions) return null;
@@ -43,9 +44,13 @@ export function QolipSetsReadContent({ snapshot }: QolipSetsReadContentProps) {
                   {entry.set.product_labels.length > 0 && <Text>{entry.set.product_labels.join(', ')}</Text>}
                   {entry.set.members.map((member, memberIndex) => {
                     const subtitle = member.is_in_use ? text('products.issued') : member.size > 0 ? text('products.size_value', { size: member.size }) : '';
+                    const color = qolipVisibleColor(member.color), colorLabel = color
+                    ? text('products.color_label', { color: localizedMethod('qolipColorName', locale, { raw: member.color }) }) : '';
                     return <Row key={`${member.qolip_code}:${memberIndex}`} horizontalArrangement={{ spacedBy: 8 }}>
                       <RNHostView matchContents><SymbolView name={{ android: member.is_in_use ? 'lock_outline' : 'qr_code_2' }} size={17} tintColor={colors.onSurfaceVariant} /></RNHostView>
-                      <Column><Text maxLines={1} overflow="ellipsis" style={{ fontWeight: '700' }}>{member.qolip_code}</Text>
+                      {color && <Box modifiers={[size(16, 16), clip(Shapes.Circle), background(colors.outlineVariant), paddingAll(1), semantics({ contentDescription: colorLabel })]}>
+                        <Box modifiers={[fillMaxSize(), clip(Shapes.Circle), background(color)]} />
+                      </Box>}<Column><Text maxLines={1} overflow="ellipsis" style={{ fontWeight: '700' }}>{member.qolip_code}</Text>
                         {!!trimDart(subtitle) && <Text>{subtitle}</Text>}</Column>
                     </Row>;
                   })}
