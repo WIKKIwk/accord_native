@@ -16,6 +16,7 @@ function load(relative, mocks = {}) {
 const controls = load('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': {} });
 const model = load('boyoqchi/returnedPaintModel', { '../workerControlsApi': controls });
 const draft = load('boyoqchi/returnedPaintDraft', { './returnedPaintModel': model });
+const scopes = load('boyoqchi/boyoqchiDraftScope');
 const cryptoApi = { CryptoDigestAlgorithm: { SHA256: 'sha256' }, digestStringAsync: async (_, value) =>
   crypto.createHash('sha256').update(value).digest('hex') };
 
@@ -23,8 +24,8 @@ const cryptoApi = { CryptoDigestAlgorithm: { SHA256: 'sha256' }, digestStringAsy
 // Each test controls completion so an omitted await cannot pass by timing luck.
 function createBackend() {
   const files = new Map(), moves = [], waiting = [];
-  const deletions = [], copies = [], waitingCopies = [];
-  let failCopy = false, pauseCopy = false, beforeRead = null;
+  const deletions = [], copies = [], waitingCopies = [], reads = [], waitingReads = [];
+  let failCopy = false, pauseCopy = false, pauseRead = false, beforeRead = null, active = null;
   class Directory {
     constructor(parent, name) { this.uri = `${parent.uri}/${name}`; }
     create() {}
@@ -38,6 +39,13 @@ function createBackend() {
     async text() {
       if (beforeRead) { const callback = beforeRead; beforeRead = null; callback(this.uri); }
       if (!files.has(this.uri)) throw new Error('file missing');
+      if (pauseRead) {
+        pauseRead = false;
+        await new Promise(resolve => {
+          const read = { resume: resolve };
+          if (waitingReads.length) waitingReads.shift()(read); else reads.push(read);
+        });
+      }
       return files.get(this.uri);
     }
     async copy(destination, options) {
@@ -77,12 +85,16 @@ function createBackend() {
     delete() { deletions.push(this.uri); files.delete(this.uri); }
   }
   const backend = { Directory, File, Paths: { document: { uri: 'file:///documents' } } };
-  const { ReturnedPaintDraftFileStorage } = load('boyoqchi/returnedPaintDraftRuntime', {
-    'expo-crypto': cryptoApi, 'expo-file-system': backend, './returnedPaintDraft': draft,
+  const runtime = load('boyoqchi/returnedPaintDraftRuntime', {
+    'expo-crypto': cryptoApi, 'expo-file-system': backend, './returnedPaintDraft': draft, './boyoqchiDraftScope': scopes,
+    '../auth': { activeSessionToken: session => active === session ? session.token : null },
   });
-  return { files, deletions, storage: () => new ReturnedPaintDraftFileStorage(),
+  return { files, deletions, storage: () => new runtime.ReturnedPaintDraftFileStorage(() => true),
+    activate: session => { active = session; }, sessionStore: session => runtime.returnedPaintDraftStoreFor(session),
     failNextCopy: () => { failCopy = true; }, beforeNextRead: callback => { beforeRead = callback; },
     pauseNextCopy: () => { pauseCopy = true; }, pendingMoves: () => moves.length,
+    pauseNextRead: () => { pauseRead = true; },
+    nextRead: () => reads.length ? Promise.resolve(reads.shift()) : new Promise(resolve => waitingReads.push(resolve)),
     nextCopy: () => copies.length ? Promise.resolve(copies.shift()) : new Promise(resolve => waitingCopies.push(resolve)),
     nextMove: () => moves.length ? Promise.resolve(moves.shift()) : new Promise(resolve => waiting.push(resolve)) };
 }
@@ -402,4 +414,137 @@ test('separate adapters order write, remove and later write for the same scope',
   await later;
   assert.equal(await b.read('ordered-scope'), '{"value":2}');
   assert.equal(backend.files.has(`${secondMove.targetUri}.bak`), false, 'removed draft must not remain as a backup');
+});
+
+const account = (baseUrl, ref = 'same-ref', role = 'boyoqchi') => ({ baseUrl, token: 'test-token', profile: { ref, role } });
+
+test('private draft keys normalize HTTPS server and separate account, role and request without exposing them in filenames', () => {
+  const key = (server, ref = 'same-ref', role = 'boyoqchi', request = 'request-1') =>
+    scopes.boyoqchiDraftKey(scopes.boyoqchiDraftAccount(account(server, ref, role)), request);
+  assert.equal(key('https://ALPHA.invalid:443/'), key('https://alpha.invalid'));
+  assert.notEqual(key('https://alpha.invalid'), key('https://beta.invalid'));
+  assert.notEqual(key('https://alpha.invalid'), key('https://alpha.invalid', 'different-ref'));
+  assert.notEqual(key('https://alpha.invalid'), key('https://alpha.invalid', 'same-ref', 'other-role'));
+  assert.notEqual(key('https://alpha.invalid'), key('https://alpha.invalid', 'same-ref', 'boyoqchi', 'request-2'));
+  assert.notEqual(key('https://alpha.invalid', 'a:b', 'boyoqchi', 'c'), key('https://alpha.invalid', 'a', 'boyoqchi', 'b:c'));
+  for (const bad of ['http://alpha.invalid', 'https://user:pass@alpha.invalid', 'https://alpha.invalid/path', 'https://alpha.invalid?x=1']) {
+    assert.throws(() => key(bad), /Invalid draft account scope/);
+  }
+  assert.throws(() => key('https://alpha.invalid', ''), /Invalid draft account scope/);
+  assert.throws(() => key('https://alpha.invalid', 'same-ref', ''), /Invalid draft account scope/);
+  assert.throws(() => key('https://alpha.invalid', 'same-ref', 'boyoqchi', '   '), /Invalid draft request scope/);
+});
+
+test('two placeholder servers with the same actor and request cannot read, change or clear each other', async () => {
+  const backend = createBackend(), a = account('https://alpha.invalid'), b = account('https://beta.invalid');
+  backend.activate(a);
+  const storeA = backend.sessionStore(a), draftA = await storeA.load('same-request');
+  draftA.setValue('rasxot:Oq', 0, 'server-a', 1);
+  const imageA = { image_id: 'image-a', image_name: 'a.png', image_mime: 'image/png', image_size_bytes: 1, image_url: '/a' };
+  draftA.setImage(imageA);
+  const first = await backend.nextMove(); first.succeed();
+  const imageMove = await backend.nextMove(); imageMove.succeed(); await storeA.flush('same-request');
+  backend.activate(b);
+  const storeB = backend.sessionStore(b), draftB = await storeB.load('same-request');
+  assert.equal(draftB.valuesFor('rasxot:Oq', 1)[0], '');
+  assert.equal(draftB.image, null);
+  draftB.setValue('rasxot:Oq', 0, 'server-b', 1);
+  const second = await backend.nextMove();
+  assert.notEqual(first.targetUri, second.targetUri);
+  second.succeed(); await storeB.flush('same-request');
+  await storeB.clear('same-request');
+  assert.equal(backend.files.has(first.targetUri), true);
+  assert.equal(backend.files.has(second.targetUri), false);
+  await assert.rejects(storeA.load('same-request'), /Sessiya tugagan/);
+  await assert.rejects(storeA.clear('same-request'), /Sessiya tugagan/);
+  const reauthenticatedA = account('https://ALPHA.invalid:443/');
+  backend.activate(reauthenticatedA);
+  const restoredA = await backend.sessionStore(reauthenticatedA).load('same-request');
+  assert.equal(restoredA.valuesFor('rasxot:Oq', 1)[0], 'server-a');
+  assert.deepEqual(restoredA.image, imageA);
+  assert.ok([...backend.files.keys()].every(name => /\/[0-9a-f]{64}\.json(?:\.bak|\.tmp)?$/.test(name)));
+  assert.ok([...backend.files.keys()].every(name => !/alpha|beta|same-ref|same-request/.test(name)));
+});
+
+test('late old-server move and stale callbacks cannot affect the new server draft', async () => {
+  const backend = createBackend(), a = account('https://alpha.invalid'), b = account('https://beta.invalid');
+  backend.activate(a);
+  const storeA = backend.sessionStore(a), draftA = await storeA.load('same-request');
+  draftA.setValue('rasxot:Oq', 0, 'old-pending', 1);
+  const pendingA = storeA.flush('same-request'), oldMove = await backend.nextMove();
+  backend.activate(b);
+  const storeB = backend.sessionStore(b), draftB = await storeB.load('same-request');
+  draftB.setValue('rasxot:Oq', 0, 'new-current', 1);
+  const newMove = await backend.nextMove();
+  newMove.succeed(); await storeB.flush('same-request');
+  oldMove.succeed();
+  await assert.rejects(pendingA, /Sessiya tugagan/);
+  draftA.setValue('rasxot:Oq', 0, 'stale-edit', 1);
+  await assert.rejects(storeA.clear('same-request'), /Sessiya tugagan/);
+  assert.equal((await storeB.load('same-request')).valuesFor('rasxot:Oq', 1)[0], 'new-current');
+  const bRestart = account('https://beta.invalid'); backend.activate(bRestart);
+  assert.equal((await backend.sessionStore(bRestart).load('same-request')).valuesFor('rasxot:Oq', 1)[0], 'new-current');
+});
+
+test('legacy actor/request-only files are neither read, copied nor removed by the new account scope', async () => {
+  const backend = createBackend(), a = account('https://alpha.invalid');
+  const legacy = 'boyoqchi:same-ref:same-request', hash = crypto.createHash('sha256').update(legacy).digest('hex');
+  const legacyUri = `file:///documents/boyoqchi-returned-paint-v1/${hash}.json`, content = '{"values":{"rasxot:Oq":["legacy"]}}';
+  backend.files.set(legacyUri, content); backend.files.set(`${legacyUri}.bak`, content);
+  backend.activate(a);
+  const store = backend.sessionStore(a), current = await store.load('same-request');
+  assert.equal(current.valuesFor('rasxot:Oq', 1)[0], '');
+  current.setValue('rasxot:Oq', 0, 'new', 1);
+  const move = await backend.nextMove(); move.succeed(); await store.flush('same-request');
+  await store.clear('same-request');
+  assert.equal(backend.files.get(legacyUri), content);
+  assert.equal(backend.files.get(`${legacyUri}.bak`), content);
+});
+
+test('a session identity change invalidates cached stores and isolates the next account', async () => {
+  const backend = createBackend(), session = account('https://alpha.invalid');
+  backend.activate(session);
+  const before = backend.sessionStore(session), saved = await before.load('request');
+  saved.setValue('rasxot:Oq', 0, 'first-account', 1);
+  const move = await backend.nextMove(); move.succeed(); await before.flush('request');
+  session.profile.ref = 'other-ref';
+  assert.equal(before.isCurrent(), false);
+  await assert.rejects(before.load('request'), /Sessiya tugagan/);
+  const after = backend.sessionStore(session);
+  assert.notEqual(after, before);
+  assert.equal((await after.load('request')).valuesFor('rasxot:Oq', 1)[0], '');
+});
+
+test('reauthentication of the same account serializes a late old write before the new edit', async () => {
+  const backend = createBackend(), oldSession = account('https://alpha.invalid');
+  backend.activate(oldSession);
+  const oldStore = backend.sessionStore(oldSession), oldDraft = await oldStore.load('request');
+  oldDraft.setValue('rasxot:Oq', 0, 'old', 1);
+  const oldPending = oldStore.flush('request'), oldMove = await backend.nextMove();
+  const nextSession = account('https://alpha.invalid'); backend.activate(nextSession);
+  const nextStore = backend.sessionStore(nextSession), nextDraft = await nextStore.load('request');
+  nextDraft.setValue('rasxot:Oq', 0, 'new', 1);
+  const nextPending = nextStore.flush('request');
+  await tick();
+  assert.equal(backend.pendingMoves(), 0, 'same account must wait for the prior native move');
+  oldMove.succeed();
+  await assert.rejects(oldPending, /Sessiya tugagan/);
+  const nextMove = await backend.nextMove(); nextMove.succeed(); await nextPending;
+  const restart = account('https://alpha.invalid'); backend.activate(restart);
+  assert.equal((await backend.sessionStore(restart).load('request')).valuesFor('rasxot:Oq', 1)[0], 'new');
+});
+
+test('a delayed read from the prior login rejects after the active server changes', async () => {
+  const backend = createBackend(), firstLogin = account('https://alpha.invalid');
+  backend.activate(firstLogin);
+  const original = backend.sessionStore(firstLogin), draftA = await original.load('request');
+  draftA.setImage({ image_id: 'only-a', image_name: 'a.png', image_mime: 'image/png', image_size_bytes: 1, image_url: '/a' });
+  const save = await backend.nextMove(); save.succeed(); await original.flush('request');
+  const secondLogin = account('https://alpha.invalid'); backend.activate(secondLogin);
+  backend.pauseNextRead();
+  const pending = backend.sessionStore(secondLogin).load('request'), read = await backend.nextRead();
+  const otherServer = account('https://beta.invalid'); backend.activate(otherServer);
+  read.resume();
+  await assert.rejects(pending, /Sessiya tugagan/);
+  assert.equal((await backend.sessionStore(otherServer).load('request')).image, null);
 });
