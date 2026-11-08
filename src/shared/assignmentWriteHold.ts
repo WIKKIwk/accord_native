@@ -62,14 +62,33 @@ export class AssignmentWriteHold {
 
   async acquire(): Promise<AssignmentWriteLease> {
     if (this.options.enabled !== true) throw denied('disabled');
-    const store = this.options.store;
-    if (!store) throw denied('storage_uncertain');
-    const expected = stringResult(this.options.evaluator, this.options.scopeSnapshot);
-    if (!expected || !current(this.options, expected)) throw denied('not_current');
-    const owner = stringResult(this.options.evaluator, this.options.createOwner);
+    // Capture function references before any await. Replacing a caller's
+    // options or evaluator properties later must not alter an existing lease.
+    // The captured functions themselves must still read their live state.
+    let options: HoldOptions;
+    try {
+      const source = this.options, evaluator = source.evaluator;
+      options = Object.freeze({ enabled: true, store: source.store, createOwner: source.createOwner,
+        isCurrent: source.isCurrent, scopeSnapshot: source.scopeSnapshot,
+        evaluator: Object.freeze({ isTrue: evaluator.isTrue, string: evaluator.string }) });
+    } catch { throw denied('not_current'); }
+    const sourceStore = options.store;
+    if (!sourceStore) throw denied('storage_uncertain');
+    let store: AtomicAssignmentHoldStore;
+    try {
+      const acquire = sourceStore.acquireIfAbsent, read = sourceStore.read, release = sourceStore.releaseIfOwner;
+      if (typeof acquire !== 'function' || typeof read !== 'function' || typeof release !== 'function') throw Error();
+      // Hold method references as well as the store object, while retaining its
+      // receiver for legitimate state changes inside the real implementation.
+      store = Object.freeze({ acquireIfAbsent: (marker: AssignmentWriteMarker) => acquire.call(sourceStore, marker),
+        read: () => read.call(sourceStore), releaseIfOwner: (owner: string) => release.call(sourceStore, owner) });
+    } catch { throw denied('storage_uncertain'); }
+    const expected = stringResult(options.evaluator, options.scopeSnapshot);
+    if (!expected || !current(options, expected)) throw denied('not_current');
+    const owner = stringResult(options.evaluator, options.createOwner);
     // The shape can be checked, but randomness/uniqueness is a requirement on the caller.
     if (!owner || !/^[a-f0-9]{32,128}$/i.test(owner)) throw denied('invalid_owner');
-    if (!current(this.options, expected)) throw denied('not_current');
+    if (!current(options, expected)) throw denied('not_current');
     const marker: AssignmentWriteMarker = Object.freeze({ version: 1, owner });
     let acquired: boolean;
     try { acquired = await store.acquireIfAbsent(marker); }
@@ -80,9 +99,9 @@ export class AssignmentWriteHold {
     try { observed = await store.read(); }
     catch { throw denied('storage_uncertain'); }
     if (!observed || observed.version !== 1 || observed.owner !== owner) throw denied('ownership_uncertain');
-    const lease = new AssignmentWriteLease(store, marker, this.options, expected);
+    const lease = new AssignmentWriteLease(store, marker, options, expected);
     try {
-      if (!current(this.options, expected)) throw denied('not_current');
+      if (!current(options, expected)) throw denied('not_current');
     } catch (error) {
       // No send has been attempted. Conditional release cannot remove another owner.
       await lease.releaseIfUnsent();

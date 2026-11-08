@@ -112,22 +112,25 @@ test('non-boolean or missing storage acknowledgments do not count as durable own
 });
 
 test('release failure or wrong owner keeps the lease blocked and cannot send', async () => {
-  const store = new AtomicStore(), lease = await gate(store).acquire();
+  const store = new AtomicStore();
   store.releaseIfOwner = async () => { throw Error('delete failed'); };
+  const lease = await gate(store).acquire();
   await assert.rejects(lease.releaseIfUnsent(), code('storage_uncertain'));
   assert.equal(store.marker.owner, a); assert.throws(() => lease.beforeSend(), code('already_attempted'));
 });
 
 test('uncertain delete after an unsent reservation never permits that lease to send', async () => {
-  const store = new AtomicStore(), lease = await gate(store).acquire();
+  const store = new AtomicStore();
   store.releaseIfOwner = async () => { store.marker = null; throw Error('delete acknowledgment lost'); };
+  const lease = await gate(store).acquire();
   await assert.rejects(lease.releaseIfUnsent(), code('storage_uncertain'));
   assert.throws(() => lease.beforeSend(), code('already_attempted'));
 });
 
 test('release and beforeSend race fails closed while conditional release is pending', async () => {
-  const store = new AtomicStore(), lease = await gate(store).acquire(), delayed = deferred();
+  const store = new AtomicStore(), delayed = deferred();
   store.releaseIfOwner = async owner => { await delayed.promise; if (store.marker?.owner !== owner) return false; store.marker = null; return true; };
+  const lease = await gate(store).acquire();
   const releasing = lease.releaseIfUnsent(); assert.throws(() => lease.beforeSend(), code('already_attempted'));
   delayed.resolve(); await releasing; assert.equal(store.marker, null);
 });
@@ -290,4 +293,61 @@ test('false, throwing or rejected async send guards leave the marker blocked', a
     assert.equal(store.marker.owner, a); assert.deepEqual(store.calls, ['acquire', 'read']);
   }
   await new Promise(resolve => setImmediate(resolve));
+});
+
+function mutableInputs() {
+  let liveCurrent = true, liveScope = 'scope';
+  const storedEvaluator = { ...evaluator }, store = new AtomicStore(), decoyStore = new AtomicStore();
+  const options = { enabled: true, store, createOwner: () => a,
+    isCurrent: () => liveCurrent, scopeSnapshot: () => liveScope, evaluator: storedEvaluator };
+  const invalidateAndReplace = kind => {
+    if (kind === 'isCurrent') { liveCurrent = false; options.isCurrent = () => true; }
+    if (kind === 'scopeSnapshot') { liveScope = 'other'; options.scopeSnapshot = () => 'scope'; }
+    if (kind === 'evaluator.isTrue') { liveCurrent = false; storedEvaluator.isTrue = () => true; }
+    if (kind === 'evaluator.string') { liveScope = 'other'; storedEvaluator.string = () => 'scope'; }
+    if (kind === 'evaluator') { liveCurrent = false; options.evaluator = { isTrue: () => true, string: () => 'scope' }; }
+    // Replacing the store property cannot redirect this in-flight acquisition or lease.
+    options.store = decoyStore;
+  };
+  return { options, store, decoyStore, invalidateAndReplace };
+}
+
+for (const kind of ['isCurrent', 'scopeSnapshot', 'evaluator.isTrue', 'evaluator.string', 'evaluator']) {
+  test(`pending acquisition retains original ${kind} callback while observing live state`, async () => {
+    const state = mutableInputs(), delayed = deferred(), original = state.store.acquireIfAbsent.bind(state.store);
+    state.store.acquireIfAbsent = async marker => { const result = await original(marker); await delayed.promise; return result; };
+    const pending = new AssignmentWriteHold(state.options).acquire(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(state.store.marker.owner, a); state.invalidateAndReplace(kind); delayed.resolve();
+    await assert.rejects(pending, code('not_current'));
+    assert.equal(state.store.marker, null); assert.deepEqual(state.store.calls, ['acquire', 'read', 'release']);
+    assert.deepEqual(state.decoyStore.calls, []);
+  });
+
+  test(`acquired lease retains original ${kind} callback while observing live state`, async () => {
+    const state = mutableInputs(), lease = await new AssignmentWriteHold(state.options).acquire();
+    state.invalidateAndReplace(kind); assert.throws(() => lease.beforeSend(), code('not_current'));
+    await assert.rejects(lease.releaseIfUnsent(), code('already_attempted'));
+    assert.equal(state.store.marker.owner, a); assert.deepEqual(state.store.calls, ['acquire', 'read']);
+    assert.deepEqual(state.decoyStore.calls, []);
+  });
+}
+
+test('store method replacements during a pending acquisition cannot spoof read or release', async () => {
+  const store = new AtomicStore(), delayed = deferred(), originalAcquire = store.acquireIfAbsent.bind(store);
+  let replacementsCalled = 0;
+  store.acquireIfAbsent = async marker => { const result = await originalAcquire(marker); await delayed.promise; return result; };
+  const pending = gate(store).acquire(); await new Promise(resolve => setImmediate(resolve));
+  store.read = async () => { replacementsCalled++; return { version: 1, owner: b }; };
+  store.releaseIfOwner = async () => { replacementsCalled++; return true; };
+  delayed.resolve(); const lease = await pending; await lease.releaseIfUnsent();
+  assert.equal(replacementsCalled, 0); assert.equal(store.marker, null); assert.deepEqual(store.calls, ['acquire', 'read', 'release']);
+});
+
+test('store method replacement after lease cannot fake release, while live store state is still observed', async () => {
+  const store = new AtomicStore(), lease = await gate(store).acquire(); let replacementCalled = false;
+  store.releaseIfOwner = async () => { replacementCalled = true; return true; };
+  store.marker = { version: 1, owner: b };
+  await assert.rejects(lease.releaseIfUnsent(), code('ownership_uncertain'));
+  assert.equal(replacementCalled, false); assert.equal(store.marker.owner, b);
+  assert.deepEqual(store.calls, ['acquire', 'read', 'release']);
 });
