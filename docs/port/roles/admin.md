@@ -1,6 +1,6 @@
 # Admin UI contract (partial)
 
-Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is an incremental contract for Admin home, activity, and parts of the drawer and dock only. Other screens, sheets, dialogs and create overlay still need complete contracts and V2/V4 audits; this file does not establish role completion or authorize a placeholder screen.
+Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is an incremental contract for Admin home, activity, factory locations, and parts of the drawer and dock only. Other screens, sheets, dialogs and create overlay still need complete contracts and V2/V4 audits; this file does not establish role completion or authorize a placeholder screen.
 
 ## AdminHomeScreen
 
@@ -18,6 +18,16 @@ V2: `lib/src/features/admin/presentation/admin_home_screen.dart:20`. `AdminShell
 V2: `features/admin/presentation/widgets/admin_navigation_drawer.dart`, `admin_drawer_navigation.dart`, and `core/widgets/navigation/role_navigation_drawer.dart`. `src/admin/adminDrawerModel.ts` contains the ordered candidate destinations, localized labels, icons, push flags and `canOpenRoute` filtering. For a sales manager the Products destination targets item creation; otherwise it targets bulk item move. The selected route defaults to the session home when not supplied.
 
 Reuse the existing native `RoleDrawer`; no Admin drawer view is connected yet. The selected destination closes the drawer without navigating. Other selections close the drawer, wait 220 ms, then: direct-push destinations push; otherwise pop to an existing target, replace the current non-home route when home is below it, or push a new route. V2 logout closes the drawer, waits 120 ms, then opens its logout prompt. The existing shared drawer calls its selection callback immediately, so an Admin coordinator must preserve these delays and route-stack rules. Implement the logout prompt and each destination through existing components rather than substituting a new route. The menu header uses `adminDrawerSections`; the logout label uses `logoutTitle`.
+
+## Factory locations
+
+V2: `admin_factory_locations_screen.dart` and its `widgets_part_01`, `widgets_part_02` and `models_part_03`. On mount or pull-to-refresh, load locations and the existing apparatus catalog concurrently with limit 10,000; loading shows the common indicator and errors use `factory.states_load_failed` in the common retry state. Sort the apparatus catalog with IDs beginning `apparatus:default:` first by `sortOrder`, then custom equipment by lowercase name. The Admin shell uses `adminFactoryStatesNavTitle`, selects factory locations in the drawer and Home in the dock. The app-bar add icon and list button use `factory.state_create`; both and each row action are disabled while saving.
+
+Each location row opens the editor on tap. It shows name, selectable ID, `factory.apparatus_state` when it has members or `factory.ordinary_state` otherwise, an additional `factory.inactive` badge when inactive, and member display labels resolved through the canonical apparatus catalog. The row menu offers `factory.edit_equipment`, `factory.rename`, and `factory.deactivate` or `action.activate` according to current status. Empty list uses `factory.no_states`.
+
+The create/editor dialog uses `factory.state_create` or `factory.state_edit`, a `factory.state_name` field, `factory.attach_title`, selected equipment chips, and `action.save` / `action.cancel`. Editing makes the name read-only and shows `factory.state_id_note`; renaming happens in its own dialog with `factory.state_name_edit`. A missing name displays `factory.enter_state_name` and does not close. The equipment picker is a safe-area bottom sheet at 78% height, with `factory.state_search`, `factory.default_equipment` and `factory.custom_equipment` sections, `factory.no_equipment` on no matches, and a button labelled `factory.continue_without_selection` or `factory.selected_count`. Cancel preserves the previous selection; confirmation preserves the set's insertion order. Chips display selected IDs present in the catalog, but unseen selected IDs remain in the selection.
+
+Create calls the existing create API with trimmed name and selected IDs. Editing only replaces equipment when the selected ID set differs, ignoring ordering; after create/edit upsert and sort locations by lowercase name. Rename skips empty or unchanged names, updates the name and resorts. Activation calls update and keeps row order. API exceptions display their message; other save, rename and activation failures use `factory.state_save_failed`, `factory.state_update_failed` and `factory.state_status_failed`. `factoryLocationEditorModel.ts` records the pure rules. Platform views, dialogs/sheet, safe async session lifecycle and routing are not yet wired.
 
 ## Admin activity
 

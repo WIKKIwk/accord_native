@@ -12,6 +12,11 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - iOS TypeScript passes after regenerating the ignored `.expo/types/router.d.ts` using Expo's installed route generator. The worktree script copied stale route types lacking the existing `/sheet/[id]` route, which initially caused an unrelated `src/nativeSheet.tsx` type error. No tracked routing or TypeScript configuration was changed.
 - Text gate before implementation: iOS 1,172 V2 strings absent / 62 native extras; Android 1,170 absent / 73 extras. These are scanner results, not audited differences: matching the broad admin ledger also sweeps shared and other-role surfaces, while dynamically assembled and localized strings can be missed. No exceptions were accepted. Every relevant V2 screen and dialog still needs side-by-side review rather than using counts as proof.
 
+## Checkpoint: factory location editor rules
+
+- `factoryLocationEditorModel.ts` captures default/custom apparatus ordering, picker filtering, selection display, name validation, membership-set comparison, create/edit plans and save/rename/status ordering. The full factory-location surface contract is documented; no dialog, sheet, screen or route is connected. Ten V4 model/API tests, iOS typecheck and lint passed; the full f119 factory locations test had passed 6/6 independently, including picker behavior, earlier in this branch.
+- The picker and name ordering use existing JavaScript `toLowerCase`; Dart differs for U+0130, final sigma and other Unicode scalars, so rare Unicode search/sort behavior is an open parity issue. Dart and JavaScript may also order equal sort keys differently. The async save/load lifecycle and account/session guarding require review during UI integration.
+
 ## Checkpoint: factory locations
 
 - `src/admin/factoryLocationApi.ts` ports the live paths of `adminFactoryLocations`, `adminCreateFactoryLocation`, `adminUpdateFactoryLocation` and `adminReplaceFactoryLocationApparatus`, including local validation, normalization and V2 error messages. `factoryLocationModel.ts` handles compact backend apparatus snapshots and reuses the existing full canonical apparatus reader.
@@ -161,6 +166,7 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 |---|---|---|---|---|
 | `AdminDock`, `admin_dock.dart` and default create overlay | `src/admin/adminDockModel.ts` (logic only) | pending | pending | Destination and default action decisions compared with source; platform dock, custom actions, overlay, back, motion and routes remain open. |
 | `AdminNavigationDrawer`, `admin_navigation_drawer.dart` | `src/admin/adminDrawerModel.ts` (logic only) | pending | pending | Destination order and navigation plan compared with source and three selected V2 tests; native integration, timing, logout, routes and shell remain open. |
+| `AdminFactoryLocationsScreen` and editor/picker, `admin_factory_locations_screen.dart` | `src/admin/factoryLocationEditorModel.ts` (logic only) | pending | pending | Selection, validation and ordering compared; views, dialogs, session-safe lifecycle and Unicode casing remain open. |
 | `AdminActivityScreen`, `admin_activity_screen.dart:18` | `src/admin/adminActivityModel.ts` (logic only) | pending | pending | V2 list-state, status icon and quantity text rules compared; no native screen, hidden-store integration, dialog, navigation or refresh lifecycle. |
 | `AdminHomeScreen`, `admin_home_screen.dart:20` | `src/admin/adminHomeModel.ts` (logic only) | pending | pending | Action/shortcut rules compared with source and two V2 localization tests; neither platform view, shell/dock, routes nor navigation/refresh lifecycle is implemented. |
 
