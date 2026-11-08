@@ -33,7 +33,7 @@ export function SupplierHomeScreen(props: SupplierHomeProps) {
   const store = useSupplierStore(props.store), { l } = useSupplierText();
   useSupplierRootRefresh(store, 'home');
   const pending = supplierPendingItems(store.historyItems), summary = store.summary;
-  const loading = !store.loadedHistory && !store.historyError;
+  const loading = !store.loadedHistory && store.historyError == null;
   return <View style={{ flex: 1 }}><Header title={l('supplierRoleName')} onAction={props.onRootBack ?? props.onOpenDrawer} menu={!props.onRootBack} />
     <PreparationList refresh={!loading ? () => store.refreshAll() : undefined}>
       {loading ? <ProgressView /> : !store.loadedHistory && store.historyError != null
@@ -58,7 +58,7 @@ export function SupplierRecentScreen(props: SupplierRecentProps) {
   const failed = !store.loadedHistory && store.historyError != null;
   return <View style={{ flex: 1 }}><Header title={l('recentTitle')} subtitle={l('recentSubtitle')} onAction={props.onRootBack ?? props.onOpenDrawer} menu={!props.onRootBack} />
     <PreparationList refresh={failed || store.historyItems.length > 0 ? () => store.refreshHistory() : undefined}>
-      {!store.loadedHistory && !store.historyError ? <ProgressView /> : !store.loadedHistory && store.historyError != null
+      {!store.loadedHistory && store.historyError == null ? <ProgressView /> : !store.loadedHistory && store.historyError != null
         ? <Retry onRetry={() => { void store.refreshHistory(); }} /> : store.historyItems.length === 0
           ? <Section><Text>{l('noSupplierShipmentsYet')}</Text></Section>
           : <Section>{store.historyItems.map((record, index) => <OptionalAction key={`${record.id}:${index}`}
@@ -79,7 +79,7 @@ export function SupplierStatusBreakdownScreen(props: SupplierBreakdownProps) {
     : ['acceptedByWerka', 'approvedUnannounced'];
   const items = store.breakdownItems(props.kind), error = grouped ? store.historyError : store.breakdownError(props.kind);
   const waiting = !ready || (grouped ? store.loadingHistory && !store.loadedHistory : store.loadingBreakdown(props.kind) && items.length === 0);
-  const failed = grouped ? !!error && !store.loadedHistory : !!error && items.length === 0;
+  const failed = grouped ? error != null && !store.loadedHistory : error != null && items.length === 0;
   const reload = () => grouped ? store.refreshHistory() : store.refreshBreakdown(props.kind);
   return <View style={{ flex: 1 }}><Header title={l(supplierStatusTitleKey(props.kind))} onAction={props.onBack} />
     <PreparationList refresh={!waiting && !failed && (grouped || items.length > 0) ? reload : undefined}>
@@ -101,7 +101,7 @@ export function SupplierSubmittedCategoryDetailScreen(props: SupplierCategoryPro
   const store = useSupplierStore(props.store), { l, t } = useSupplierText();
   useSupplierCategory(store);
   const items = supplierCategoryItems(store.historyItems, props.category);
-  const loading = !store.loadedHistory && !store.historyError, failed = !store.loadedHistory && store.historyError != null;
+  const loading = !store.loadedHistory && store.historyError == null, failed = !store.loadedHistory && store.historyError != null;
   return <View style={{ flex: 1 }}><Header title={l(supplierCategoryTitleKey(props.category))} onAction={props.onBack} />
     <PreparationList refresh={!loading && !failed && items.length ? () => store.refreshHistory() : undefined}>
       {loading ? <ProgressView /> : failed

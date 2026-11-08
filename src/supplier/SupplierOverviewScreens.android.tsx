@@ -32,7 +32,7 @@ export function SupplierHomeScreen(props: SupplierHomeProps) {
   const store = useSupplierStore(props.store), { l } = useSupplierText();
   useSupplierRootRefresh(store, 'home');
   const pending = supplierPendingItems(store.historyItems), summary = store.summary;
-  const loading = !store.loadedHistory && !store.historyError, failed = !store.loadedHistory && store.historyError != null;
+  const loading = !store.loadedHistory && store.historyError == null, failed = !store.loadedHistory && store.historyError != null;
   return <Page title={l('supplierRoleName')} onAction={props.onRootBack ?? props.onOpenDrawer} menu={!props.onRootBack} footer={props.footer}
     refresh={!loading ? () => store.refreshAll() : undefined} refreshing={store.loadingHistory || store.loadingSummary}>
     {loading ? <Loading /> : failed ? <Retry onRetry={() => { void store.refreshAll(); }} /> : <>
@@ -50,7 +50,7 @@ export function SupplierHomeScreen(props: SupplierHomeProps) {
 export function SupplierRecentScreen(props: SupplierRecentProps) {
   const store = useSupplierStore(props.store), { l } = useSupplierText();
   useSupplierRootRefresh(store, 'history');
-  const loading = !store.loadedHistory && !store.historyError, failed = !store.loadedHistory && store.historyError != null;
+  const loading = !store.loadedHistory && store.historyError == null, failed = !store.loadedHistory && store.historyError != null;
   return <Page title={l('recentTitle')} subtitle={l('recentSubtitle')} onAction={props.onRootBack ?? props.onOpenDrawer} menu={!props.onRootBack} footer={props.footer}
     refresh={failed || store.historyItems.length > 0 ? () => store.refreshHistory() : undefined} refreshing={store.loadingHistory}>
     {loading ? <Loading /> : failed ? <Retry onRetry={() => { void store.refreshHistory(); }} /> : !store.historyItems.length
@@ -70,7 +70,7 @@ export function SupplierStatusBreakdownScreen(props: SupplierBreakdownProps) {
   const categories: SupplierCategory[] = props.kind === 'pending' ? ['pendingDispatches', 'pendingUnannounced'] : ['acceptedByWerka', 'approvedUnannounced'];
   const items = store.breakdownItems(props.kind), error = grouped ? store.historyError : store.breakdownError(props.kind);
   const waiting = !ready || (grouped ? store.loadingHistory && !store.loadedHistory : store.loadingBreakdown(props.kind) && !items.length);
-  const failed = grouped ? !!error && !store.loadedHistory : !!error && !items.length;
+  const failed = grouped ? error != null && !store.loadedHistory : error != null && !items.length;
   const reload = () => grouped ? store.refreshHistory() : store.refreshBreakdown(props.kind);
   return <Page title={l(supplierStatusTitleKey(props.kind))} onAction={props.onBack} footer={props.footer}
     refresh={!waiting && !failed && (grouped || items.length > 0) ? reload : undefined}
@@ -90,7 +90,7 @@ export function SupplierSubmittedCategoryDetailScreen(props: SupplierCategoryPro
   const store = useSupplierStore(props.store), { l, t } = useSupplierText();
   useSupplierCategory(store);
   const items = supplierCategoryItems(store.historyItems, props.category);
-  const loading = !store.loadedHistory && !store.historyError, failed = !store.loadedHistory && store.historyError != null;
+  const loading = !store.loadedHistory && store.historyError == null, failed = !store.loadedHistory && store.historyError != null;
   return <Page title={l(supplierCategoryTitleKey(props.category))} onAction={props.onBack} footer={props.footer}
     refresh={!loading && !failed && items.length ? () => store.refreshHistory() : undefined} refreshing={store.loadingHistory}>
     {loading ? <Loading /> : failed ? <PreparationText>{t(String(store.historyError))}</PreparationText>
