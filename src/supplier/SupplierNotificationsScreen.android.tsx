@@ -22,7 +22,7 @@ const icons: Record<ReturnType<typeof supplierNotificationStatusIcon>, AndroidSy
 export function SupplierNotificationsScreen(props: SupplierNotificationsProps) {
   const { controller, items, highlighted, store } = useSupplierNotifications(props), { l, menuTooltip } = useSupplierText();
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), [alert, setAlert] = useState<WorkerAlertData | null>(null);
-  const loading = !store.loadedHistory && !store.historyError && !items.length;
+  const loading = !store.loadedHistory && store.historyError == null && !items.length;
   const failed = !store.loadedHistory && store.historyError != null && !items.length;
   const clear = () => setAlert({ title: l('clearTitle'), message: l('clearAllNotificationsPrompt'),
     cancelLabel: l('no'), confirmLabel: l('yes'), onConfirm: () => { void controller.clearAll(); } });
