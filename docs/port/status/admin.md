@@ -28,6 +28,11 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - The full f119 `test/test_mode_demo_data_test.dart` passed 9/9 in the isolated oracle, including a demo settings read. V4's test mode remains pending, so that result does not establish V4 test-mode parity. Two source-derived V4 API/model tests and iOS typecheck passed; no f119 HTTP recording for these methods was found.
 - Interim full gates after the preceding checkpoint: lint passed; Android typecheck reports 9 existing errors in protected worker components and no errors in these admin files; Node suite passed 1,182 / 1,188, with the six inherited preparation tests failing while resolving the Expo UI ESM import.
 
+## Checkpoint: server monitor live events
+
+- `serverMonitorLive.ts` opens the V2 live URI, sends the initial and two-second JSON pings, parses report/pong messages, applies the seven-second silence watchdog and closes on cancellation or failure. Four deterministic mock-socket tests and iOS typecheck passed; no socket was opened against a backend or device.
+- Limitations remain: this callback subscription has no Dart `StreamSubscription.pause` / `resume` interface and the standard RN WebSocket does not expose V2's native 25-second control-frame ping. It has not been exercised on a phone. Do not mark the live stream fully equivalent until those are resolved and the screen's retry/lifecycle behavior is ported.
+
 ## Open items
 
 | Where | V2 reference | What is needed |
@@ -37,7 +42,7 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 | Recorded contracts | `.port/role-admin-tests.md` | Run each relevant V2 test independently first; record successful f119 cases into distinct nested fixtures, never overwrite the historical top-level files, and port the replays. Coordinate shared stems. Do not run a live-backend mutation. |
 | Item groups and paging | `mobile_api_admin_item_groups.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_01.dart`, `mobile_api_admin_items_MobileApiAdminItems_methods_04.dart` | No direct V2 HTTP recording was found for the seven checkpoint methods. Source-derived tests cover their requests; add a real f119 recording if a suitable V2 mock test is found. |
 | Admin settings | `adminSettings`, `updateAdminSettings`, `AdminSettings` | Live source-derived API and model tests exist but no recorded f119 HTTP replay was found. Settings screen, capability guards, saved/loading/error states and demo branch are still unported. |
-| Server monitor | `mobile_api_admin_settings_monitor_declarations_part_02.dart`, `warehouse_live_client_io.dart`, `admin_server_monitor_screen_*` | Live event subscription (2-second ping, 7-second silence watchdog and 10-second connection timeout), backup import and download streams, UI and its test mode are not ported. RN native WebSocket transport-level 25-second ping and streaming import/download need a verified native mechanism. The independent oracle passed, but the recorder produced zero records for its custom client. |
+| Server monitor | `mobile_api_admin_settings_monitor_declarations_part_02.dart`, `warehouse_live_client_io.dart`, `admin_server_monitor_screen_*` | Live JSON ping, watchdog and connection timeout have mock tests, but pause/resume subscription semantics and native transport-level 25-second ping remain open. Backup import and download streams, UI/retry lifecycle and test mode are not ported; native streaming and real-phone behavior need verification. The independent oracle passed, but the recorder produced zero records for its custom client. |
 | Factory locations | `test/admin_factory_locations_test.dart`, `admin_factory_locations_screen.dart` | The live API/model has source-derived tests but no recorded f119 HTTP replay. V2 test-mode mutation behavior and the screen, editor dialog, apparatus picker and route remain unported. |
 | JSON value fidelity | `adminItemGroups`, `AdminItemGroupBulkMoveResult.fromJson` | Dart distinguishes integer-valued double JSON tokens and exact large integers; standard `JSON.parse` does not. Group-name conversion and count parsing therefore differ on those unusual non-string/non-integer payloads. A lossless parser needs evaluation; do not silently mark full parser parity. |
 | Existing `adminItemsPage` | `SupplierItem.fromJson` in `app_models_declarations_part_01.dart` | The imported reader parses ordinary catalog payloads. Its JS stringification of nested `order_apparatus_options` / `customer_names` values differs from Dart collection `toString()`; compare nonstandard values and resolve without rewriting the shared reader independently. |
@@ -55,7 +60,7 @@ None identified in this checkpoint.
 |---|---|
 | `adminItemGroups`, `adminItemGroupTree`, `adminItemUoms`, `adminItems` | Their namesakes read or derive test-mode demo data; this shared mode is deferred and has not been added to the live-path functions. |
 | `adminFactoryLocations`, `adminCreateFactoryLocation`, `adminUpdateFactoryLocation`, `adminReplaceFactoryLocationApparatus` | Their namesakes read or mutate the in-memory factory-location catalog in test mode, including duplicate-name and apparatus membership checks. |
-| `adminServerMonitor`, `adminStartBackup` | Their namesakes read and update V2 in-memory demo backup data. |
+| `adminServerMonitor`, `adminStartBackup`, `adminServerMonitorLiveEvents` | V2 reads and updates in-memory demo backup data, and completes the live event stream without opening a socket, in test mode. |
 | `adminSettings` | V2 returns demo admin settings in test mode. |
 
 ## Needs from the integrator
