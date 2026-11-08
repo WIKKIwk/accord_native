@@ -11,7 +11,7 @@ const names = ['index', 'status', 'detail', 'notifications', 'chat', 'profile'];
 const options = { routeParamList: {}, routeGetIdList: {} };
 const jsx = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 function fixture(initialNames) {
-  const router = StackRouter({ initialRouteName: 'index' });
+  const router = StackRouter({ initialRouteName: 'index' }), frames = []; let dismisses = 0;
   let state = { stale: false, type: 'stack', key: 'customer-stack', index: initialNames.length - 1, routeNames: names,
     routes: initialNames.map((name, index) => ({ key: `${name}-${index}`, name })) };
   const dispatch = action => {
@@ -19,9 +19,15 @@ function fixture(initialNames) {
     assert.ok(result && result.state, `Unhandled: ${JSON.stringify(action)}`);
     state = result.state;
   };
+  const schedulerFile = path.resolve(__dirname, '../src/customer/customerDockScheduler.ts'), schedulerModule = new Module(schedulerFile, module);
+  schedulerModule.filename = schedulerFile; schedulerModule.paths = module.paths;
+  schedulerModule.require = id => id === 'react-native' ? { Keyboard: { dismiss() {} } } : require(id);
+  schedulerModule._compile(ts.transpileModule(fs.readFileSync(schedulerFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, schedulerFile);
+  const queueCustomerDockNavigation = schedulerModule.exports.createCustomerDockScheduler(fn => frames.push(fn), () => { dismisses++; });
   const filename = path.resolve(__dirname, '../src/customer/CustomerDock.android.tsx');
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-  const mocks = { 'react/jsx-runtime': jsx, 'expo-router': { useNavigation: parent => {
+  const mocks = { 'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }), useEffect: fn => { fn(); } },
+    './customerDockScheduler': { queueCustomerDockNavigation }, 'expo-router': { useNavigation: parent => {
     assert.equal(parent, '/android-customer'); return { dispatch };
   } }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
   '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
@@ -30,29 +36,42 @@ function fixture(initialNames) {
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   return { dock: mod.exports.CustomerDock, names: () => state.routes.slice(0, state.index + 1).map(route => route.name),
-    back: () => dispatch({ type: 'POP', payload: { count: 1 } }) };
+    back: () => dispatch({ type: 'POP', payload: { count: 1 } }), flush: () => { while (frames.length) frames.shift()(); },
+    dismisses: () => dismisses };
 }
 
 test('dock pushes an absent destination so back returns to the delivery detail', () => {
   const f = fixture(['index', 'status', 'detail']);
-  f.dock({ active: null }).props.onSelect('notifications');
+  f.dock({ active: null }).props.onSelect('notifications'); f.flush();
   assert.deepEqual(f.names(), ['index', 'status', 'detail', 'notifications']);
   f.back(); assert.deepEqual(f.names(), ['index', 'status', 'detail']);
 });
 
 test('dock pops to an existing destination without duplicating it', () => {
   const f = fixture(['index', 'notifications', 'status', 'detail']);
-  f.dock({ active: null }).props.onSelect('notifications');
+  f.dock({ active: null }).props.onSelect('notifications'); f.flush();
   assert.deepEqual(f.names(), ['index', 'notifications']);
-  f.dock({ active: 'notifications' }).props.onSelect('home');
+  f.dock({ active: 'notifications' }).props.onSelect('home'); f.flush();
   assert.deepEqual(f.names(), ['index']);
 });
 
 test('dock pushes an absent chat and ignores the currently active destination', () => {
   const f = fixture(['index', 'notifications']);
-  f.dock({ active: 'notifications' }).props.onSelect('notifications');
+  f.dock({ active: 'notifications' }).props.onSelect('notifications'); f.flush();
   assert.deepEqual(f.names(), ['index', 'notifications']);
-  f.dock({ active: 'notifications' }).props.onSelect('chat');
+  f.dock({ active: 'notifications' }).props.onSelect('chat'); f.flush();
   assert.deepEqual(f.names(), ['index', 'notifications', 'chat']);
   f.back(); assert.deepEqual(f.names(), ['index', 'notifications']);
+});
+
+
+test('rapid same-frame dock choices coalesce to the last requested destination', () => {
+  const f = fixture(['index']);
+  const dock = f.dock({ active: 'home' });
+  dock.props.onSelect('notifications');
+  dock.props.onSelect('chat');
+  assert.deepEqual(f.names(), ['index']);
+  f.flush();
+  assert.deepEqual(f.names(), ['index', 'chat']);
+  assert.equal(f.dismisses(), 2);
 });

@@ -130,7 +130,9 @@ test('Android Customer dock reuses native bar, suppresses notification dot on it
   for (const active of ['home', 'notifications', 'chat', null]) {
     const calls = [];
     const dock = load('src/customer/CustomerDock.android.tsx', {
-      'react/jsx-runtime': jsx, 'expo-router': { useNavigation: parent => { assert.equal(parent, '/android-customer'); return { dispatch: action => calls.push(action) }; } },
+      'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }), useEffect: fn => { fn(); } },
+      './customerDockScheduler': { queueCustomerDockNavigation: request => request.dispatch({ type: 'NAVIGATE', payload: { name: request.destination === 'home' ? 'index' : request.destination, pop: true } }) },
+      'expo-router': { useNavigation: parent => { assert.equal(parent, '/android-customer'); return { dispatch: action => calls.push(action) }; } },
       'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 12 }) },
       '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
       './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => true },
