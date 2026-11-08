@@ -5,6 +5,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const {testWerkaGuardEvaluator} = require('./support/werkaGuardEvaluator.cjs');
 const base = path.resolve(__dirname, '../src');
 const fakeSession = ref => ({baseUrl:'https://example.invalid',token:`fake-${ref}`,profile:{role:'werka',ref},
   capabilities:['werka.access'],assigned_apparatus:[],assigned_item_groups:[],assigned_warehouses:[]});
@@ -61,7 +62,7 @@ test('scanner flow suppresses stale 401 refresh outcomes without stock fallback'
   const saved=globalThis.fetch, h=setup(s=>{s.capabilities=[];}), session=h.session;
   const captured=h.scope.sessionReadScope(session), events=[]; let sends=0;
   try {globalThis.fetch=async()=>{sends++;return new Response('{}',{status:401});};
-    const flow=new h.scanner.WerkaScannerFlow({isCurrent:()=>h.session===session&&h.scope.sessionReadScope(session)===captured&&session.capabilities.includes('werka.access'),
+    const flow=new h.scanner.WerkaScannerFlow({evaluateGuard:testWerkaGuardEvaluator,isCurrent:()=>h.session===session&&h.scope.sessionReadScope(session)===captured&&session.capabilities.includes('werka.access'),
       stopCamera:async()=>{},startCamera:async()=>{events.push('restart');return 'running';},preview:code=>h.api.werkaQrPreview(session,code),
       onState:()=>{},onNotice:message=>events.push(message),onResult:result=>events.push(result.kind)});
     await flow.handleCode('00002'); assert.equal(sends,1); assert.deepEqual(events,[]);

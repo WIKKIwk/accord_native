@@ -1,3 +1,4 @@
+import type { WerkaGuardEvaluator } from './werkaGuardTypes';
 import { parseWerkaArchiveBatchQr } from './werkaArchiveBatchQr';
 import { extractWerkaLookupBarcode, firstWerkaBarcodeValue, resolveWerkaScannedCode, werkaScanErrorMessage } from './werkaScanLogic';
 import type { werkaQrPreview } from './werkaPaddonApi';
@@ -7,6 +8,8 @@ export type WerkaScannerState = Readonly<{ processing: boolean; manualEntry: boo
 type Dependencies = {
   /** Must capture the originating auth generation, identity, scope and role permission. */
   isCurrent: () => boolean;
+  /** Required verified evaluator; this branch deliberately supplies no fallback. */
+  evaluateGuard: WerkaGuardEvaluator;
   /** Completion only reflects what the supplied camera adapter can actually guarantee. */
   stopCamera: () => Promise<void>;
   startCamera: () => Promise<'running' | 'suspended' | 'error'>;
@@ -25,8 +28,13 @@ export class WerkaScannerFlow {
   private state: WerkaScannerState = { processing: false, manualEntry: false, status: READY };
   private disposed = false;
   constructor(private readonly deps: Dependencies) {}
-  getSnapshot(): WerkaScannerState { return this.state; }
-  private current(): boolean { return !this.disposed && this.deps.isCurrent(); }
+  getSnapshot(): WerkaScannerState | null { return this.current() ? this.state : null; }
+  private current(): boolean {
+    if (this.disposed) return false;
+    const guard = this.deps.isCurrent, evaluate = this.deps.evaluateGuard;
+    try { return evaluate(guard) === true && !this.disposed && this.deps.isCurrent === guard && this.deps.evaluateGuard === evaluate; }
+    catch { return false; }
+  }
   private update(patch: Partial<WerkaScannerState>): void {
     if (!this.current()) return;
     this.state = { ...this.state, ...patch }; this.deps.onState(this.state);

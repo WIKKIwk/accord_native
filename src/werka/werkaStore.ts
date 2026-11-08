@@ -1,3 +1,4 @@
+import type { WerkaGuardEvaluator } from './werkaGuardTypes';
 import { currentSession, type Session } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { WerkaRuntimeStore, type WerkaSummary } from '../shared/dispatchRuntimeStores';
@@ -43,7 +44,9 @@ export class WerkaStore {
   private generation = 0;
   private disposed = false;
 
-  constructor(private readonly api: WerkaStoreApi, session: Session | null = null,
+  constructor(private readonly api: WerkaStoreApi, session: Session | null,
+    /** Required verified synchronous evaluator; this branch provides no fallback. */
+    private readonly evaluateGuard: WerkaGuardEvaluator,
     private readonly isActiveSession: (session: Session) => boolean = candidate => currentSession() === candidate) {
     this.stopRuntime = this.runtime.subscribe(() => this.update({}));
     this.setSession(session);
@@ -51,19 +54,24 @@ export class WerkaStore {
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   getSnapshot = (): Readonly<State> => this.visible() ? this.state : this.emptyState;
   captureGeneration(): number { return this.generation; }
+  private permitted(session: Session): boolean {
+    const evaluate = this.evaluateGuard, active = this.isActiveSession;
+    try { return evaluate(() => active(session)) === true && this.evaluateGuard === evaluate && this.isActiveSession === active; }
+    catch { return false; }
+  }
   private visible(): boolean {
-    return !this.disposed && this.session !== null && this.isActiveSession(this.session) && sessionReadScope(this.session) === this.scope;
+    const session = this.session, scope = this.scope, generation = this.generation;
+    if (this.disposed || session === null || scope === null || sessionReadScope(session) !== scope) return false;
+    return this.permitted(session) && !this.disposed && this.session === session && this.scope === scope &&
+      this.generation === generation && sessionReadScope(session) === scope;
   }
   private current(generation: number): boolean {
-    if (this.disposed || !this.session || generation !== this.generation) return false;
-    if (!this.isActiveSession(this.session)) {
-      this.setSession(null);
-      return false;
-    }
-    if (sessionReadScope(this.session) !== this.scope) {
-      this.setSession(this.session);
-      return false;
-    }
+    const session = this.session, scope = this.scope;
+    if (this.disposed || !session || scope === null || generation !== this.generation) return false;
+    const permitted = this.permitted(session);
+    if (this.disposed || this.session !== session || this.scope !== scope || generation !== this.generation) return false;
+    if (!permitted) { this.setSession(null); return false; }
+    if (sessionReadScope(session) !== scope) { this.setSession(session); return false; }
     return true;
   }
   private update(patch: Partial<State>): void {
@@ -76,8 +84,13 @@ export class WerkaStore {
   /** A replacement session or changed read scope invalidates old reads; an in-place token refresh does not. */
   setSession(session: Session | null): void {
     if (this.disposed) return;
-    const accepted = session && this.isActiveSession(session) ? session : null;
-    const scope = accepted ? sessionReadScope(accepted) : null;
+    const beforeSession = this.session, beforeScope = this.scope, beforeGeneration = this.generation;
+    const candidateScope = session ? sessionReadScope(session) : null;
+    const allowed = session !== null && this.permitted(session);
+    // A reentrant evaluator must not overwrite a newer session or scope.
+    if (this.disposed || this.session !== beforeSession || this.scope !== beforeScope || this.generation !== beforeGeneration) return;
+    const accepted = session && allowed && sessionReadScope(session) === candidateScope ? session : null;
+    const scope = accepted ? candidateScope : null;
     const changed = accepted !== this.session || scope !== this.scope;
     this.session = accepted;
     if (!changed) return;

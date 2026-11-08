@@ -4,6 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const {testWerkaGuardEvaluator} = require('./support/werkaGuardEvaluator.cjs');
 function load(file, cache = new Map()) {
   const resolved = path.resolve(file.endsWith('.ts') ? file : `${file}.ts`);
   if (cache.has(resolved)) return cache.get(resolved);
@@ -14,7 +15,7 @@ function load(file, cache = new Map()) {
   cache.set(resolved, module.exports); return module.exports;
 }
 const { WerkaStore } = load(path.resolve(__dirname, '../src/werka/werkaStore.ts'));
-const makeStore = (api, active) => new WerkaStore(api, active, () => true);
+const makeStore = (api, active) => new WerkaStore(api, active, testWerkaGuardEvaluator, () => true);
 const session = ref => ({ baseUrl: 'https://example.invalid', token: `fake-${ref}`, profile: { role: 'werka', ref },
   capabilities: ['werka.access'], assigned_apparatus: [], assigned_item_groups: [], assigned_warehouses: [] });
 const record = (id, supplier = 's') => ({ id, record_type: '', supplier_ref: supplier, supplier_name: supplier, item_code: '', item_name: '',
@@ -106,7 +107,7 @@ test('active session check hides old data before the UI lifecycle installs the n
   const a = session('A'), b = session('B'), late = deferred(); let active = a, aReads = 0, historyCalls = 0;
   const api = baseApi({ home: current => current === a && ++aReads === 2 ? late.promise : Promise.resolve(home(current.profile.ref)),
     history: async () => { historyCalls++; return []; } });
-  const store = new WerkaStore(api, a, candidate => candidate === active);
+  const store = new WerkaStore(api, a, testWerkaGuardEvaluator, candidate => candidate === active);
   await store.bootstrapHome(); assert.equal(store.getPendingItems()[0].id, 'A');
   const old = store.refreshHome(); active = b;
   assert.deepEqual(store.getSnapshot().pendingItems, []); assert.deepEqual(store.getPendingItems(), []);
@@ -114,4 +115,24 @@ test('active session check hides old data before the UI lifecycle installs the n
   late.resolve(home('late-A')); await old;
   assert.deepEqual(store.getSnapshot().pendingItems, []);
   store.setSession(b); await store.bootstrapHome(); assert.equal(store.getPendingItems()[0].id, 'B');
+});
+test('store hides records for asynchronous, rejected or non-boolean active guards', async () => {
+  const a=session('A'), guards=[()=>undefined,()=>false,()=>Promise.resolve(true),()=>Promise.reject(Error('inactive'))];
+  const unhandled=[],listener=e=>unhandled.push(e);process.on('unhandledRejection',listener);
+  try {for(const active of guards) {let calls=0;const store=new WerkaStore(baseApi({home:async()=>{calls++;return home('private');}}),a,testWerkaGuardEvaluator,active);
+    await store.refreshHome();assert.equal(calls,0);assert.deepEqual(store.getSnapshot().pendingItems,[]);store.dispose();}
+    await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(unhandled,[]);
+  } finally {process.off('unhandledRejection',listener);}
+});
+test('store rejects a scope change inside the active callback before accepting a session', async () => {
+  const a=session('A');let calls=0;const store=new WerkaStore(baseApi({home:async()=>{calls++;return home('private');}}),a,testWerkaGuardEvaluator,
+    candidate=>{candidate.assigned_warehouses=['changed'];return true;});
+  await store.refreshHome();assert.equal(calls,0);assert.deepEqual(store.getSnapshot().pendingItems,[]);
+});
+test('reentrant active callback cannot publish old data or overwrite the replacement session', async () => {
+  const a=session('A'),b=session('B');let change=false,changed=false,store;
+  const active=()=>{if(change&&!changed){changed=true;store.setSession(b);}return true;};
+  store=new WerkaStore(baseApi({home:async current=>home(current.profile.ref)}),a,testWerkaGuardEvaluator,active);
+  await store.bootstrapHome();assert.equal(store.getPendingItems()[0].id,'A');change=true;
+  assert.deepEqual(store.getSnapshot().pendingItems,[]);await store.bootstrapHome();assert.equal(store.getPendingItems()[0].id,'B');
 });

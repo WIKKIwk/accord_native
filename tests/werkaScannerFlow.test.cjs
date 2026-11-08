@@ -5,6 +5,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const {testWerkaGuardEvaluator} = require('./support/werkaGuardEvaluator.cjs');
 function load(file, cache = new Map()) {
   const resolved = path.resolve(file.endsWith('.ts') ? file : `${file}.ts`);
   if (cache.has(resolved)) return cache.get(resolved);
@@ -20,7 +21,7 @@ const {WorkerControlException} = load(`${base}/workerControlsApi.ts`,cache);
 const deferred = () => { let resolve, reject; const promise = new Promise((yes,no) => {resolve=yes;reject=no;}); return {promise,resolve,reject}; };
 function harness(overrides = {}) {
   const calls = [], snapshots = []; let active = true;
-  const deps = { isCurrent:()=>active, stopCamera:async()=>{calls.push(['stop']);}, startCamera:async()=>{calls.push(['start']);return 'running';},
+  const deps = { isCurrent:()=>active, evaluateGuard:testWerkaGuardEvaluator, stopCamera:async()=>{calls.push(['stop']);}, startCamera:async()=>{calls.push(['start']);return 'running';},
     preview:async code=>{calls.push(['preview',code]);return {code,paddon:{},wip:null};},
     onState:state=>snapshots.push({...state}), onNotice:message=>calls.push(['notice',message]), onResult:result=>calls.push(['result',result]), ...overrides };
   const flow = new WerkaScannerFlow(deps);
@@ -79,4 +80,25 @@ test('scope change during state callback blocks camera stop and notice', async (
   let valid=true, stops=0, notices=0;
   const h=harness({isCurrent:()=>valid,onState:()=>{valid=false;},stopCamera:async()=>{stops++;},onNotice:()=>{notices++;}});
   await h.flow.handleCode('00002'); assert.equal(stops,0); assert.equal(notices,0);
+});
+test('required evaluator rejects false, undefined, asynchronous and throwing scope guards', async () => {
+  const unhandled=[];const listener=error=>unhandled.push(error);process.on('unhandledRejection',listener);
+  try {for(const guard of [()=>false,()=>undefined,()=>Promise.resolve(true),()=>Promise.reject(new Error('no')),()=>{throw Error('no');}]) {
+    const h=harness({isCurrent:guard});await h.flow.handleCode('00002');assert.deepEqual(h.calls,[]);
+  } await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(unhandled,[]);
+  } finally {process.off('unhandledRejection',listener);}
+});
+test('scope-bound evaluator rejects a guard that changes account, scope or generation before returning true', async () => {
+  for(const field of ['account','scope','generation']) {
+    const live={account:'A',scope:'W1',generation:1},captured={...live};
+    const evaluate=guard=>{if(JSON.stringify(live)!==JSON.stringify(captured))return false;
+      const result=testWerkaGuardEvaluator(guard);return result===true&&JSON.stringify(live)===JSON.stringify(captured);};
+    const h=harness({evaluateGuard:evaluate,isCurrent:()=>{live[field]=field==='generation'?2:'changed';return true;}});
+    await h.flow.handleCode('00002');assert.deepEqual(h.calls,[],field);
+  }
+});
+test('guard replacement during evaluation cannot dispatch a scanner action', async () => {
+  let flow, stops=0;const deps={isCurrent:()=>true,evaluateGuard:guard=>{const result=guard();deps.isCurrent=()=>true;return result;},
+    stopCamera:async()=>{stops++;},startCamera:async()=> 'running',preview:async()=>({}),onState:()=>{},onNotice:()=>{},onResult:()=>{}};
+  flow=new WerkaScannerFlow(deps);await flow.handleCode('00002');assert.equal(stops,0);
 });
