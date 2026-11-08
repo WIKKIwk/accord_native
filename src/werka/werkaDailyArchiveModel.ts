@@ -3,8 +3,22 @@ import type { WerkaArchiveKind, WerkaArchiveQuery } from './werkaArchiveApi';
 import { werkaArchiveDayRange, werkaArchiveMonthRange, werkaArchiveYearRange } from './werkaArchiveCalendar';
 import { werkaArchiveMediumDate } from './werkaArchiveDateLabels';
 import { werkaArchivePeriodBody } from './werkaArchivePeriodPresentation';
+import type { ReactNode } from 'react';
 
 export type WerkaDailyArchiveState = { displayMonth: Date; selectedDate: Date | null; calendarOpen: boolean };
+/** Controlled body only. The owner must guard callbacks and supply the real picker subtree. */
+export type WerkaDailyArchiveContentProps = {
+  kind: WerkaArchiveKind;
+  state: WerkaDailyArchiveState;
+  activeDays: ReadonlySet<number>;
+  loading: boolean;
+  error: unknown | null;
+  locale: string;
+  /** Keep the same child type/key and pass enabled through to its guarded picker callbacks. */
+  renderCalendar: (enabled: boolean) => ReactNode;
+  onToggle: () => void;
+  onRefresh: () => Promise<void>;
+};
 
 /** Source initState only. The eventual owner must schedule and guard the first-frame callback. */
 export function werkaDailyArchiveInitial(now: Date): WerkaDailyArchiveState {
