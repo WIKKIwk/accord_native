@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react';
-import { activeSessionToken, type Session } from '../auth';
+import { isSessionWitnessCurrent, type Session, type SessionWitness } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
+import { appRoutes } from '../shared/appRoutes';
 import { adminActivityReader } from './adminActivityReader';
 import type { AdminActivityBinding } from './adminActivityBinding';
 import { adminHomeSummaryReader } from './adminHomeSummaryReader';
@@ -11,14 +12,14 @@ type AdminShell = { session: Session; store: AdminStore; onLogout: () => void; i
   destination: (route: string, platform: string) => string | null; isRouteAvailable: (route: string) => boolean;
   activityBinding: AdminActivityBinding | null };
 const Context = createContext<AdminShell | null>(null);
-// The shared transition witness/event must be integrated before Profile or GScale is enabled here.
-const enabledDestinations: ReadonlySet<string> = new Set();
+// Profile is opt-in guarded; Activity and GScale remain held for their own dependencies.
+const enabledDestinations: ReadonlySet<string> = new Set([appRoutes.profile]);
 const activityBinding: AdminActivityBinding | null = null;
-export function AdminShellProvider({ session, onLogout, children }: { session: Session; onLogout: () => void; children: ReactNode }) {
+export function AdminShellProvider({ session, witness, onLogout, children }: { session: Session; witness: SessionWitness; onLogout: () => void; children: ReactNode }) {
   const scope = useMemo(() => sessionReadScope(session), [session]);
-  const store = useMemo(() => new AdminStore(adminHomeSummaryReader(session), adminActivityReader(session)), [session]);
+  const isCurrent = useCallback(() => isSessionWitnessCurrent(witness) && sessionReadScope(session) === scope && adminShellMayEnter(session), [session, scope, witness]);
+  const store = useMemo(() => new AdminStore(adminHomeSummaryReader(session, isCurrent), adminActivityReader(session, isCurrent)), [session, isCurrent]);
   useEffect(() => () => store.clear(), [store]);
-  const isCurrent = useCallback(() => !!activeSessionToken(session) && sessionReadScope(session) === scope && adminShellMayEnter(session), [session, scope]);
   const destination = useCallback((route: string, platform: string) => isCurrent()
     ? adminDestinationPath(session, route, platform, enabledDestinations) : null, [session, isCurrent]);
   const isRouteAvailable = useCallback((route: string) => !!destination(route, 'ios') || !!destination(route, 'android'), [destination]);

@@ -11,6 +11,7 @@ export type AdminHomeScreenProps = {
   openRoute: (route: string) => Promise<void>;
   /** Only real, safely integrated destinations may be displayed or opened. */
   isRouteAvailable: (route: string) => boolean;
+  isSessionCurrent: () => boolean;
   navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null;
   footer?: ReactNode;
 };

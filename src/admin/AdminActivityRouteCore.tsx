@@ -1,6 +1,6 @@
 import { Redirect, router, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
-import { Alert, BackHandler, Platform } from 'react-native';
+import { Alert, BackHandler, Platform, View } from 'react-native';
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { localizedGetter } from '../shared/localization';
@@ -47,7 +47,7 @@ function BoundActivity({ shell, binding, footer }: { shell: Shell; binding: Admi
     ], { cancelable: true, onDismiss: () => { void controller.resolveClear(serial, false); } });
   };
   const navigation = { icon: 'back' as const, label: adminActivityBackLabel(locale), onPress: goBack };
-  if (state.invalidated) return <Redirect href="/" />;
+  if (state.invalidated) return <View style={{ flex: 1 }} />;
   if (state.hiddenState !== 'ready') return <AdminActivityPending status={state.hiddenState} onRetry={() => { void controller.reload(); }}
     navigation={navigation} footer={footer} />;
   return <AdminActivityScreen snapshot={state.activity} hiddenIds={state.hiddenIds} navigation={navigation} footer={footer}
@@ -56,6 +56,7 @@ function BoundActivity({ shell, binding, footer }: { shell: Shell; binding: Admi
 /** No fallback storage: direct entry is denied until the real safe binding is supplied. */
 export function AdminActivityRoute({ footer }: { footer?: ReactNode }) {
   const shell = useAdminShell();
-  if (!shell.isCurrent() || !shell.activityBinding || !shell.destination(appRoutes.adminActivity, Platform.OS)) return <Redirect href="/" />;
+  if (!shell.isCurrent()) return <View style={{ flex: 1 }} />;
+  if (!shell.activityBinding || !shell.destination(appRoutes.adminActivity, Platform.OS)) return <Redirect href="/" />;
   return <BoundActivity shell={shell} binding={shell.activityBinding} footer={footer} />;
 }

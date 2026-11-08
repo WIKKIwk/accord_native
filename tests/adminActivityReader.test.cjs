@@ -48,3 +48,14 @@ test('activity reader rejects a scope change while the response body is parsing'
     json: async () => { f.switchAccount(); return [{ id: 'old' }]; } });
   try { await assert.rejects(f.read(), /session changed/); } finally { global.fetch = original; }
 });
+
+test('an invalidated captured witness blocks the activity reader before send', async () => {
+  const session = { baseUrl: 'https://server.example', token: 'first', profile: { role: 'admin', ref: 'example' },
+    capabilities: ['admin.access', 'admin.activity.read'] }, auth = { activeSessionToken: () => 'first', refreshSession: async () => true };
+  const transport = load('authorizedFetch', { './auth': auth });
+  const api = load('admin/adminActivityApi', { '../authorizedFetch': transport, '../shared/notificationApi': parser, './adminProductionRequest': guards });
+  const read = load('admin/adminActivityReader', { '../auth': auth, '../sessionReadScope': scope, '../shared/appRoutes': routes,
+    './adminActivityApi': api }).adminActivityReader(session, () => false);
+  const original = global.fetch; let sends = 0; global.fetch = async () => { sends++; return response(); };
+  try { await assert.rejects(read(), /session changed/); assert.equal(sends, 0); } finally { global.fetch = original; }
+});

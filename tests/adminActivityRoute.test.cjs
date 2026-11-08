@@ -31,7 +31,7 @@ function setup({ hiddenState = 'ready', invalidated = false, bound = true, enabl
   const react = { useMemo: fn => fn(), useCallback: fn => fn, useEffect: fn => effects.push(fn), useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = { react, 'expo-router': { Redirect: 'Redirect', router: { canGoBack: () => false, back: () => calls.push('back'),
     replace: path => calls.push(['replace', path]) } }, 'react-native': { Platform: { OS: 'android' },
-    Alert: { alert: (...args) => { confirm = args; } }, BackHandler: { addEventListener: (_event, fn) => ({ remove() { calls.push('remove-back'); }, fn }) } },
+    View: 'View', Alert: { alert: (...args) => { confirm = args; } }, BackHandler: { addEventListener: (_event, fn) => ({ remove() { calls.push('remove-back'); }, fn }) } },
     '../sessionReadScope': { sessionReadScope: () => 'scope' }, '../shared/appRoutes': { appRoutes: { adminActivity: '/admin-activity' }, canOpenRoute: () => true },
     '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     '../shared/notificationStoresRuntime': { refreshHub: {} }, './AdminActivityPending': { AdminActivityPending: 'AdminActivityPending' },
@@ -43,7 +43,8 @@ function setup({ hiddenState = 'ready', invalidated = false, bound = true, enabl
     setActive: value => { active = value; }, setGeneration: value => { generation = value; }, notify: () => witnessListener() };
 }
 test('activity deep link remains blocked without a current session, safe hidden binding and explicit destination enablement', () => {
-  for (const options of [{ bound: false }, { enabled: false }, { current: false }]) assert.equal(setup(options).outer.type, 'Redirect');
+  for (const options of [{ bound: false }, { enabled: false }]) assert.equal(setup(options).outer.type, 'Redirect');
+  assert.equal(setup({ current: false }).outer.type, 'View');
   assert.equal(typeof setup().outer.type, 'function');
 });
 for (const hiddenState of ['loading', 'error']) test(`unknown hidden state ${hiddenState} shows neither activity list nor clear action`, () => {
@@ -66,7 +67,7 @@ test('witness notification invalidates immediately and disposal unsubscribes', (
   cleanup.forEach(fn => fn()); assert.ok(f.calls.includes('unsub-witness')); assert.ok(f.calls.includes('dispose'));
 });
 test('invalidated controller redirects instead of rendering stale data', () => {
-  const f = setup({ invalidated: true }); assert.equal(f.outer.type(f.outer.props).type, 'Redirect');
+  const f = setup({ invalidated: true }); assert.equal(f.outer.type(f.outer.props).type, 'View');
 });
 
 function nodes(node, predicate) {

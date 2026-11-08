@@ -8,7 +8,7 @@ import { RoleBottomBar, type RoleNavigationItem } from '../shared/navigation/Rol
 import { useAdminShell } from './AdminShellContext';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
-export function AdminBottomBar({ active }: { active: 'home' | 'activity' }) {
+export function AdminBottomBar({ active }: { active: 'home' | 'activity' | 'user' }) {
   const shell = useAdminShell(), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), insets = useSafeAreaInsets();
   const activityPath = shell.activityBinding ? shell.destination(appRoutes.adminActivity, 'android') : null;
   const items: RoleNavigationItem[] = [{ id: 'home', label: localizedGetter('adminHomeNavTitle', locale), icon: 'home' }];

@@ -47,3 +47,19 @@ test('summary accepts a token-only retry and rejects a response after scope chan
   const g = fixture(); global.fetch = async () => { g.session.profile.role = 'brigader'; return response(); };
   try { await assert.rejects(g.read(), /session changed/); } finally { global.fetch = original; }
 });
+
+test('an invalidated captured witness stops the summary before a send or post-body result', async () => {
+  const f = fixture(), original = global.fetch; let allowed = false, sends = 0;
+  const auth = { activeSessionToken: value => value === f.session ? value.token : null, refreshSession: async () => true };
+  const transport = load('authorizedFetch', { './auth': auth });
+  const api = load('admin/adminSupplierSummary', { '../authorizedFetch': transport });
+  const reader = load('admin/adminHomeSummaryReader', { '../auth': auth, '../sessionReadScope': scope,
+    './adminHomeModel': model, './adminSupplierSummary': api }).adminHomeSummaryReader(f.session, () => allowed);
+  global.fetch = async () => { sends++; return response(); };
+  try { await assert.rejects(reader(), /session changed/); assert.equal(sends, 0); }
+  finally { global.fetch = original; }
+  allowed = true;
+  global.fetch = async () => ({ status: 200, headers: new Headers(), clone: () => ({ arrayBuffer: async () => new ArrayBuffer(0) }),
+    json: async () => { allowed = false; return { total_suppliers: 4, active_suppliers: 3, blocked_suppliers: 1 }; } });
+  try { await assert.rejects(reader(), /session changed/); } finally { global.fetch = original; }
+});

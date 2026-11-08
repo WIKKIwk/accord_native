@@ -7,11 +7,11 @@ import { adminHomeCanLoadSummary } from './adminHomeModel';
 import type { AdminHomeScreenProps } from './adminHomeTypes';
 
 const afterFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-export function useAdminHome({ session, store, hub, isRouteAvailable }: AdminHomeScreenProps) {
+export function useAdminHome({ session, store, hub, isRouteAvailable, isSessionCurrent }: AdminHomeScreenProps) {
   const controller = useMemo(() => new AdminHomeController({ store, hub, afterFrame,
-    isCurrent: () => !!activeSessionToken(session), scope: () => sessionReadScope(session),
+    isCurrent: () => isSessionCurrent() && !!activeSessionToken(session), scope: () => sessionReadScope(session),
     canLoadSummary: () => adminHomeCanLoadSummary(session), canOpen: route => canOpenRoute(session, route) && isRouteAvailable(route),
-  }), [session, store, hub, isRouteAvailable]);
+  }), [session, store, hub, isRouteAvailable, isSessionCurrent]);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   useEffect(() => { controller.start(); return () => controller.dispose(); }, [controller]);
   return { state, controller };

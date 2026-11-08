@@ -43,7 +43,7 @@ function render(platform, account, state = baseState, navigation = 'menu', isRou
     '../shared/localization': localization, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './adminHomeModel': model, './adminHomeSymbols': symbols, './useAdminHome': { useAdminHome: () => ({ state, controller }) } };
   const Screen = load(`admin/AdminHomeScreen.${platform}.tsx`, mocks).AdminHomeScreen;
-  return { tree: Screen({ session: account, store: {}, hub: {}, openRoute: opener, isRouteAvailable, navigation: leading,
+  return { tree: Screen({ session: account, store: {}, hub: {}, openRoute: opener, isRouteAvailable, isSessionCurrent: () => true, navigation: leading,
     footer: { type: 'ExistingDock', props: {} } }), calls };
 }
 const admin = session('admin', ['admin.access', 'party.supplier.read', 'production.map.manage']);
@@ -124,7 +124,7 @@ test('home hook connects the supplied session-scoped store and shared refresh hu
     '../shared/appRoutes': { canOpenRoute: (_session, route) => route === '/allowed' }, './adminHomeController': { AdminHomeController: Controller },
     './adminHomeModel': { adminHomeCanLoadSummary: value => value.capabilities.includes('party.supplier.read') } });
   try {
-    const result = hook.useAdminHome({ session: scoped, store, hub, openRoute: async () => {}, isRouteAvailable: () => true });
+    const result = hook.useAdminHome({ session: scoped, store, hub, openRoute: async () => {}, isRouteAvailable: () => true, isSessionCurrent: () => true });
     assert.equal(started, 1); assert.equal(dependencies.store, store); assert.equal(dependencies.hub, hub);
     assert.equal(dependencies.isCurrent(), true); assert.equal(dependencies.scope(), 'scope'); assert.equal(dependencies.canLoadSummary(), true);
     assert.equal(dependencies.canOpen('/allowed'), true); assert.equal(dependencies.canOpen('/held'), false);

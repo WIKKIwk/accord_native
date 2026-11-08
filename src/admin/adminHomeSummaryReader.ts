@@ -4,10 +4,10 @@ import { adminHomeCanLoadSummary } from './adminHomeModel';
 import { adminSupplierSummary, type AdminSupplierSummary } from './adminSupplierSummary';
 
 /** A fresh reader is required for every session and access scope. */
-export function adminHomeSummaryReader(session: Session): () => Promise<AdminSupplierSummary> {
+export function adminHomeSummaryReader(session: Session, isWitnessCurrent?: () => boolean): () => Promise<AdminSupplierSummary> {
   const scope = sessionReadScope(session);
   const guard = () => {
-    if (!activeSessionToken(session) || sessionReadScope(session) !== scope || !adminHomeCanLoadSummary(session)) {
+    if (!activeSessionToken(session) || (isWitnessCurrent && !isWitnessCurrent()) || sessionReadScope(session) !== scope || !adminHomeCanLoadSummary(session)) {
       throw new Error('Admin summary session changed');
     }
   };
