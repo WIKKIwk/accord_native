@@ -19,7 +19,7 @@ function setup(platform) {
     removeOutput: index => calls.push(['remove', index]), addOutput: () => calls.push('add'), setReason: value => calls.push(['reason', value]),
     setPrinter: value => calls.push(['printer', value]), submit: async () => calls.push('submit'), chooseRemainder: value => calls.push(['remainder', value]) };
   const hook = { controller, state, device: { title: 'Bluetooth printer tanlanmagan', subtitle: 'Bluetooth printer tanlash uchun bosing' }, snapshot: { session: {}, scope: 'scope', epoch: 1 },
-    choosePrinter: async () => calls.push('choosePrinter'), scan: async () => calls.push('scan'), isCurrent: () => true };
+    choosePrinter: async () => calls.push('choosePrinter'), scan: async scanner => calls.push(['scan', scanner]), isCurrent: () => true };
   const shared = initial => ({ value: initial, get() { return this.value; }, set(value) { this.value = value; } });
   const Alert = Object.assign(function Alert() {}, { Trigger: 'Alert.Trigger', Message: 'Alert.Message', Actions: 'Alert.Actions' });
   const AlertDialog = Object.assign(function AlertDialog() {}, { Title: 'AlertDialog.Title', Text: 'AlertDialog.Text', ConfirmButton: 'AlertDialog.ConfirmButton' });
@@ -65,6 +65,14 @@ for (const platform of ['ios', 'android']) {
     assert.ok(!JSON.stringify(t.render()).includes('Bo‘lish va QR chiqarish'));
     t.state.uncertain = false; t.state.blockedPrinter = true;
     assert.ok(!JSON.stringify(t.render()).includes('Bo‘lish va QR chiqarish'));
+  });
+  test(`${platform}: scanner action passes the focused native scanner owner unchanged`, async () => {
+    const t = setup(platform), scanner = { open() {}, isCurrent() {} }, page = t.render(scanner, null);
+    const action = platform === 'ios' ? nodes(page, n => n.type === 'Button' && n.props.label === 'QR scan')[0]
+      : nodes(page, n => n.type === 'IconButton' && JSON.stringify(n).includes('QR scan'))[0];
+    assert.ok(action); (action.props.onPress ?? action.props.onClick)();
+    assert.deepEqual(t.calls.at(-1), ['scan', scanner]);
+    assert.ok(!JSON.stringify(page).includes('Bo‘lish va QR chiqarish'));
   });
   test(`${platform}: missing real bridge shows an explicit explanation and no print or picker action`, () => {
     const t = setup(platform), page = t.render(undefined, null), text = JSON.stringify(page);
