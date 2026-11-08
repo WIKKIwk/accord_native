@@ -1,7 +1,7 @@
 # material
 
 Status: in progress
-Stopped at: branch-only Material Home, Profile and task-list entrypoints exist on both platforms. The task detail, receipt and other role flows remain incomplete. The shared session-witness consumer is now attached, but main integration requires independent review of its lifetime behavior and the confirmed Profile/transport boundaries; historical checkpoint notes below describe their state at the time.
+Stopped at: Material Home, Profile and task-list entrypoints are integrated on main; this role branch now adds a partial read-only task detail sheet. Receipt and other role flows remain incomplete. The shared session-witness consumer is now attached, but main integration requires independent review of its lifetime behavior and the confirmed Profile/transport boundaries; historical checkpoint notes below describe their state at the time.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -243,3 +243,9 @@ The scoped `order_scan_bootstrap_api_test` f119 fixture is owned by this branch;
 - Mirrored the narrow-branch `0bfdb6e` and `39e7607` logout lifetime changes: late completion cannot clear a newer session or unmounted shell, and Material logout does not call the unguarded asynchronous `clearAppLock`. Existing PIN/biometric lock remains instead of the old logout clear; this deliberate safety deviation is open pending a safely scoped clear. Other roles and shared logout/lock are unchanged.
 - The 19 focused logout/bootstrap tests, iOS TypeScript and Expo lint completed with exit 0 on this role branch. Narrow-branch validation also covered Profile/auth, Android baseline and offline exports.
 - Mirrored narrow-branch `b30b519`: old logout completion does not update state while a new tracked login/account transition is pending, even when `currentSession()` is temporarily null. The 20 focused session/bootstrap tests completed with exit 0; narrow branch iOS typecheck and lint also completed with exit 0.
+
+
+## Material task detail sheet
+- Tapping a current task row now opens the existing `useNativeSheet` non-dismissible presentation and hydrates the exact full order through `readMaterialTaskDetail`. The sheet reuses `WorkerOrderOverview`, `WorkerIconButton` and `WorkerSheetButton`, shows loading/error/retry, and closes or withholds late results when its own session witness/lifetime expires. It deliberately owns a separate read-only modal lifetime because opening the root sheet blurs and disposes the task-list controller. Scope, role, capability, test-token, initial/401 retry and response-ID checks remain in force.
+- This is partial detail, not full V2 parity: image, stage/material sections and the Material receive/receipt path remain open. The receipt/print route still has confirmed physical USB identity and uncertain-write safety gaps; no fake receive action was added. Native modal focus/close/accessibility behavior still needs user device verification. The shared `adminProductionMap` optional before-send dependency is `0ca36e7` and is not yet on main; it must be reviewed/integrated separately. The historical role branch predates the main Profile guard; integrate only the narrow detail diff against current main rather than merging the entire role branch.
+- The 143 focused detail, task, route, auth and Preparation navigation tests completed with exit 0. iOS TypeScript and lint completed with exit 0; Android TypeScript exited 2 with the same nine known Worker diagnostics. Both offline Expo JavaScript exports completed with exit 0; no native build, real user, backend or device was used.
