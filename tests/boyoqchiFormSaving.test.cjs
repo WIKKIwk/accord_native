@@ -27,7 +27,7 @@ function fixture() {
     '@expo/ui': { Host: 'Host', Button: 'Button', RNHostView: 'RNHostView', TextInput: 'TextInput', useNativeState: value => ({ value, set() {} }) },
     'react-native': { ActivityIndicator: 'ActivityIndicator', BackHandler: { addEventListener: (_event, callback) => { back = callback; return { remove() {} }; } },
       Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View', StyleSheet: { create: value => value, absoluteFill: {} } },
-    '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerPaintPalette': { WorkerPaintPalette: 'WorkerPaintPalette' },
+    '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../components/useWorkerColors': { useWorkerColors: () => ({}) },
     '../workerOrderLogic': { paintOptions: [] }, './BoyoqchiImage': { BoyoqchiImage: 'BoyoqchiImage' },
     './boyoqchiLogic': { boyoqchiInputAllowed: () => true, boyoqchiSaveInput: () => ({ items: [{ name: 'paint' }], error: '' }) },

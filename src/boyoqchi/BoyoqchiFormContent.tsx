@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Session } from '../auth';
 import { WorkerIconButton } from '../components/WorkerIconButton';
-import { WorkerPaintPalette } from '../components/WorkerPaintPalette';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { paintOptions } from '../workerOrderLogic';
 import { BoyoqchiImage } from './BoyoqchiImage';
+import { BoyoqchiPaintPalette } from './BoyoqchiPaintPalette';
 import { boyoqchiInputAllowed, boyoqchiSaveInput } from './boyoqchiLogic';
 import type { ReturnedPaintDraft } from './returnedPaintDraft';
 import { returnedPaintDouble, type ReturnedPaintItem } from './returnedPaintModel';
@@ -107,7 +107,7 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
       </View><Text style={[styles.headingText, { color: colors.text }]}>{t('Qaytarilgan bo‘yoq')}</Text></View>
       {draft.image && <BoyoqchiImage session={session} image={draft.image} />}
       {!!error && <View style={[styles.error, { backgroundColor: colors.field }]}><Text style={{ color: colors.text }}>{t(error)}</Text></View>}
-      {!paint ? <WorkerPaintPalette usage={usage} onUsage={(value: 'rasxot' | 'astatka') => { draft.setUsage(value === 'astatka' ? 1 : 0); changed(); }}
+      {!paint ? <BoyoqchiPaintPalette usage={usage} onUsage={(value: 'rasxot' | 'astatka') => { draft.setUsage(value === 'astatka' ? 1 : 0); changed(); }}
         onSelect={(value: string) => { setPaint(value); setError(''); }} /> : <View style={styles.fields}>
         {fields.map((label, index) => <Field key={`${optionKey}:${index}:${label}`} label={label} decimal paintField initial={values[index]}
           onChange={value => update(optionKey, index, value, fields.length)} />)}
