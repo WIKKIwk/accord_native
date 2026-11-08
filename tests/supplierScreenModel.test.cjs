@@ -68,4 +68,10 @@ test('recent records prefill the product with no warehouse and notifications ret
   assert.equal(model.supplierNotificationSecondary(rows[0]), 'Name a');
   assert.equal(model.supplierNotificationMetric(rows[1]), '10 kg jo‘natildi • 7 kg qabul');
   assert.equal(model.supplierNotificationMetric(rows[0]), '10 kg jo‘natildi');
+  assert.equal(model.supplierNotificationStatusIcon(rows[0]), 'clock');
+  assert.equal(model.supplierNotificationStatusIcon(rows[1]), 'doneAll');
+  assert.equal(model.supplierNotificationStatusIcon(rows[2]), 'check');
+  assert.equal(model.supplierNotificationStatusIcon(record('d', 'pending', { note: 'Supplier tasdiqladi: yes' })), 'doneAll');
+  assert.equal(model.supplierNotificationStatusIcon(record('e', 'rejected')), 'close');
+  assert.equal(model.supplierNotificationStatusIcon(record('f', 'cancelled')), 'remove');
 });

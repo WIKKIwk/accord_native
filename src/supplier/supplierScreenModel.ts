@@ -81,3 +81,14 @@ export function supplierNotificationMetric(record: DispatchRecord): string {
   const sent = `${record.sent_qty.toFixed(0)} ${record.uom} jo‘natildi`;
   return record.accepted_qty > 0 ? `${sent} • ${record.accepted_qty.toFixed(0)} ${record.uom} qabul` : sent;
 }
+
+export function supplierNotificationStatusIcon(record: DispatchRecord): 'clock' | 'doneAll' | 'check' | 'close' | 'remove' {
+  if (record.note.includes('Supplier tasdiqladi:') || record.note.includes('Tasdiqlayman, shu holat')) return 'doneAll';
+  switch (record.status) {
+    case 'draft': case 'pending': return 'clock';
+    case 'accepted': return 'doneAll';
+    case 'partial': return 'check';
+    case 'rejected': return 'close';
+    case 'cancelled': return 'remove';
+  }
+}
