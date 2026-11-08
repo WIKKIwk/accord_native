@@ -10,8 +10,9 @@ export function useSupplierPicker(props: SupplierPickerProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => {
     controller.start();
-    const subscription = AppState.addEventListener('change', value => { if (value === 'active') void controller.reload(); });
-    return () => { subscription.remove(); controller.stop(); };
+    let active = true;
+    const subscription = AppState.addEventListener('change', value => { if (active && value === 'active') void controller.reload(); });
+    return () => { active = false; subscription.remove(); controller.stop(); };
   }, [controller]);
   return { controller, state, items: controller.visibleItems };
 }
