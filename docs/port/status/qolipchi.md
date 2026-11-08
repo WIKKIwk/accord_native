@@ -1,14 +1,17 @@
 # qolipchi
 
-Status: narrow logic checkpoints; role port incomplete
-Stopped at: wait for the integrator's baseline synchronization before resuming the Qolip role scope, logic, screens, wiring and audits.
+Status: part 1 of 2 in progress; role port incomplete
+Stopped at: continue the remaining Qolip API and UI contracts, then both platform screens, navigation and audits.
 
 ## Open items
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Source pin | `docs/port/V2_BASELINE`, V2 commit `f11910bb2c8c7081ce26770e69811b03fd0739ed` | The user chose the latest V2 source; the integrator is synchronizing the committed baseline before the remaining role work. |
-| Role-wide logic and surfaces | `lib/src/features/qolip/`, `lib/src/core/api/qolip/` | Except for the isolated code helpers and search engine below, the role logic, iOS and Android views, navigation, text gate and surface audit remain to be completed. |
+| Role-wide logic and surfaces | `lib/src/features/qolip/`, `lib/src/core/api/qolip/` | Except for the checkpoints below, the role logic, iOS and Android views, navigation, text gate and surface audit remain to be completed. The text gate currently reports 143 missing iOS and 141 missing Android V2 strings, plus unmatched existing V4 strings. |
 | Qolip search on devices | `qolip_search_engine.dart`, `search_normalizer.dart` | Confirm React Native timer slicing and cancellation on both phones. Rare Unicode lowercase mapping differences between the Dart VM and the phone's JavaScript engine have not been verified. |
+| Rework request ID | `qolip_rework_request_id.dart` | Supply the secure 128-bit random ID with V2's microsecond timestamp before connecting rework actions. The API currently accepts the caller's request ID and preserves it across retries. |
+| Rework JSON edge values | `QolipReworkEntry.fromJson`, `QolipMileage.fromJson` | JavaScript JSON parsing can lose integer precision above 2^53 or the `.0` spelling of a floating numeric value when V2 converts optional fields with `toString`; no recorded response exercises those edge values. |
+| Shared product cache invalidation | `mobile_api_qolip_reworks.dart` `_qolipProductsSnapshot`, `src/qolipProductsApi.ts`, `src/authorizedFetch.ts` | V2 clears the product snapshot after successful rework mutations. The existing native shared request layer invalidates its read epoch for every mutation, including failures; reconcile without changing worker or preparation behavior. |
+| Shared contract ownership | `admin_sequence_list_widget_test`, `order_image_memory_peek_test`, `order_image_widgets_test`, `tayyorlov_order_sheet_test` | These cross-role fixture stems are owned by the integrator or another role; do not overwrite them here. The Qolip PostgreSQL E2E case writes to a server and was not run. |
 | Full test gate | `tests/preparationHomeDependentPages.test.cjs`, `tests/preparationWarehouse.android.test.cjs` | Six existing preparation Android tests cannot resolve `@expo/ui`'s extensionless `createModifier` import under Node in this fresh install. They do not import this checkpoint's code. |
 | Android typecheck | `WorkerOutputProgress.android.tsx`, `WorkerPaintPalette.android.tsx` | Nine existing errors remain in worker components; none points to the Qolip code. |
 
@@ -20,6 +23,8 @@ Stopped at: wait for the integrator's baseline synchronization before resuming t
 - The ignored Expo route types were regenerated in this worktree using the installed Expo type-generation module to include the existing `/sheet/[id]` route before typechecking. No simulator, emulator, device, V2 oracle, or backend was used. This checkpoint is not a role parity claim.
 - Ported `QolipSearchDocument`, `QolipSearchQuery` and `filterQolipSearch` into `src/qolip/qolipSearchEngine.ts`. The engine's only project import is `search_normalizer.dart`; both source files, direct engine test and its legacy reference have identical Git blobs at the two V2 pins. `pubspec.yaml` and `pubspec.lock` are identical as well. The separate matcher and home-widget tests are identical files, but their full model/UI dependency closures were not established as identical.
 - Reused `src/shared/searchNormalizer.ts`, applying Dart's U+0085 edge trim only within Qolip. `tests/qolipSearch.test.cjs` covers the V2 examples and compares 3,500 generated cases against a separately translated legacy matcher; it is source-derived, not a V2 oracle recording. Keyboard alternatives, variable edit distances, digital identifiers, cancellation, duplicate results and yielding are covered.
+- Rework checkpoint: ported live `qolipReworks`, `qolipSendToRework`, `qolipReturnFromRework` and `qolipMileage`, including session guards, response validation and error codes. The independent f119 V2 oracle passed `qolip_reworks_api_test.dart` (15 tests); an isolated recorder captured 16 requests from its 11 live cases in `tests/contracts/f11910bb/qolip_reworks_api_test.json`. Replays and source-derived edge tests passed. `qolip_product_molds_api_test.dart` also passed separately in the f119 oracle (3 tests), but its historical native fixture has not yet been replaced or claimed as f119 evidence.
+- After the rework checkpoint, `node --test tests/qolip*.test.cjs` passed all 37 tests; iOS typecheck and Expo lint passed. Android typecheck and the entire Node suite were not rerun in this checkpoint.
 
 ## Deviations candidates
 
@@ -27,8 +32,8 @@ None recorded for this narrow checkpoint.
 
 ## Test mode pending
 
-The role-wide test mode is deferred by the port plan and was not addressed here.
+The role-wide test mode is deferred by the port plan. Rework functions reject the test-mode session rather than sending to the backend; the four test-mode lifecycle cases in `qolip_reworks_api_test.dart` remain to be ported in the shared test-mode pass.
 
 ## Needs from the integrator
 
-- Complete the agreed V2 baseline synchronization and resolve the shared test toolchain issues before the remaining role work.
+- Reconcile the shared product-cache invalidation behavior and the shared test toolchain issues without modifying protected roles.
