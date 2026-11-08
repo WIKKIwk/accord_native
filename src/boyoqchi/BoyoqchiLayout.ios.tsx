@@ -1,6 +1,6 @@
 import { Redirect, Stack, router } from 'expo-router';
 import { ActivityIndicator, Platform, View } from 'react-native';
-import { currentSession, isSessionWitnessCurrent, logout } from '../auth';
+import { currentSession, isSessionWitnessCurrent, logout, sessionWitnessTransitioning } from '../auth';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { canEnterBoyoqchi } from './boyoqchiEntryGuard';
 import { BoyoqchiContextShell } from './BoyoqchiShell';
@@ -15,7 +15,7 @@ export function BoyoqchiLayout() {
     if (!isSessionWitnessCurrent(witness)) return;
     void logout(session).catch(() => {}).finally(() => {
       const current = currentSession();
-      if (mounted.current && (!current || current === session)) router.replace('/');
+      if (mounted.current && !sessionWitnessTransitioning() && (!current || current === session)) router.replace('/');
     });
   };
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
