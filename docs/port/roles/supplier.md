@@ -1,6 +1,6 @@
 # Supplier UI contract
 
-Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This contract is in progress; the remaining Supplier screens are not yet inventoried here.
+Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. The entries below describe behavior and visible words, not Material layout.
 
 ## NotificationDetailScreen
 
@@ -14,6 +14,34 @@ Supplier can acknowledge a partial, rejected or cancelled record, or one with a 
 
 Comments appear for partial/rejected/cancelled or a nonblank note, except during unannounced response, for `supplier_ack`, or for Supplier after an acknowledgment. Display `Izohlar`, comments with author, body and created label, or `Hozircha izoh yo‘q.`; a 3–5 line field has `Izoh yozing`. Only a nonblank trimmed value reveals `Comment yuborish`. Send the trimmed comment, clear on success, disable while sending and use `Yuborilmoqda...`; `forbidden` maps to the ownership snackbar and other errors to `Comment yuborilmadi: $error`. Dialogs can be dismissed by back or outside tap in V2. No extra confirmation is shown for comments.
 
-## Remaining Supplier surfaces
+## Home and shell
 
-Home, item picker, quantity, confirmation, success, recent, notifications, status breakdown, submitted category and status detail still need their complete contract rows before implementation.
+`SupplierHomeScreen` at `supplier_home_screen.dart` initializes summary and history, refreshes both on Supplier push and app resume, and offers pull-to-refresh. Until history loads show progress; an initial history failure shows the shared retry state. Show the localized `pendingStatus`, `submittedStatus`, `returnedStatus` counts in that order. Each opens status breakdown with the corresponding kind. Pending/draft history rows appear under localized `inProgressItemsTitle`; each shows item name, item code, whole sent quantity with UOM and created label, and opens notification detail by receipt ID.
+
+`SupplierDock` supplies localized Home, notifications, create and history in that order; shared `RoleDock` appends Chat. Home/notifications/history/Chat switch root destination, while create pushes item picker; selecting an already active destination does nothing. Notification badge is shown for unseen IDs except on notifications; Chat badge follows Chat's actual unread count. On create-flow pages the center is selected. The primary create action is hidden when profile overlay obscures it. `SupplierNavigationDrawer` has Home, notifications, history, profile in that order and uses the existing role drawer and logout behavior. Profile and Chat use existing shared screens.
+
+## Product picker and quantity
+
+`SupplierItemPickerScreen` at `supplier_item_picker_screen.dart` is titled `Mahsulot tanlash`, loads all assigned items on entry/resume and refresh, and filters locally by the trimmed query against name and code using V2 `searchMatches`. The search hint is `Nom bo‘yicha qidiring` and its clear button appears for nonblank input. Loading shows progress; error offers the shared retry state. The empty unfiltered message is `Bu supplierga item biriktirilmagan.`; the empty filtered message is `Mahsulot topilmadi.`. A row displays item name, falling back to code, and opens quantity for that item.
+
+`SupplierQtyScreen` at `supplier_qty_screen.dart` is titled `Miqdor`; show item name, a decimal keyboard quantity field with UOM suffix, and `Davom etish`. An initial quantity greater than zero is prefilled with zero decimal places. Parse with Dart `double.tryParse` after trimming; invalid or `<= 0` silently stays on the page. Positive values and `NaN` follow V2's exact comparison semantics and open confirmation with item and quantity. Back returns to the preceding page.
+
+## Confirmation and success
+
+`SupplierConfirmScreen` at `supplier_confirm_screen.dart` is titled `Tasdiqlash`. Show item name, code, then rows `Mahsulot` (code), `Nomi` (name), `Miqdor` (quantity fixed to two decimals plus UOM), and `Ombor` only when the warehouse is nonblank. Buttons are `Ha, jo‘natishni saqlash` then `Orqaga qaytish`. Submit posts item code and quantity once, records a temporary pending summary delta and pushes success with the returned record. While waiting, show a spinner, disable the two buttons and leading back action, and absorb the dock. Failure shows the snackbar `Jo‘natish saqlanmadi: $error`; no fabricated success. V2's widget test confirms a repeated tap cannot submit twice.
+
+`SupplierSuccessScreen` at `supplier_success_screen.dart` is titled `Saqlandi`. Show the returned ID, then item code and sent quantity fixed to two decimals with UOM. `Home ga qaytish` goes to Supplier home and removes intermediate routes.
+
+## Recent and notifications
+
+`SupplierRecentScreen` at `supplier_recent_screen.dart` uses localized `recentTitle` and `recentSubtitle`, loads history on entry, refreshes on Supplier push/resume and pull. Initial loading/error use progress/shared retry. Empty is localized `noSupplierShipmentsYet`. Preserve history order; each row shows item name falling back to code, whole sent quantity and UOM, positive amount with optional currency, and created label. Tapping builds a SupplierItem with that code, name, UOM and empty warehouse, then opens quantity with the sent quantity prefilled.
+
+`SupplierNotificationsScreen` at `supplier_notifications_screen_widgets_part_01.dart` initializes history and hidden/unread stores, refreshes on Supplier push/resume and pull, marks hidden IDs seen and retains unread IDs present in current history. Hide locally hidden records; place highlighted unread records first while retaining their original relative order. Empty is localized `noNotifications`. Rows show item code, nonblank highlight or item name, whole sent quantity plus `jo‘natildi`, optional positive accepted quantity plus `qabul`, created label and V2 status icon. Opening marks that ID seen before navigating to notification detail. The clear-all action opens the localized `clearTitle`/`clearAllNotificationsPrompt` dialog with `no` then `yes`; confirmation hides every current history ID and marks them seen. Loading/error use progress/shared retry. No server deletion occurs.
+
+## Status breakdown and details
+
+`SupplierStatusBreakdownScreen` at `supplier_status_breakdown_screen.dart` titles itself with localized pending/submitted/returned status. It initializes breakdown for all kinds and history for pending/submitted. Pending and submitted render two category rows from history: localized pending-dispatches then pending-unannounced, or accepted-by-Werka then approved-unannounced. Pending/draft with `werka_unannounced_pending` is unannounced. An accepted item is approved-unannounced if its event is `werka_unannounced_approved` or its trimmed lowercased note starts `aytilmagan mahsulot tasdiqlandi` or `unannounced item approved`. Each category row opens `SupplierSubmittedCategoryDetailScreen`; pull-to-refresh reloads history. Returned loads the server breakdown; each row shows item name, localized returned quantity and receipt count, and opens status detail with kind, item code and item name. Initial errors show the source error, empty is localized `noStatusRecords`.
+
+`SupplierSubmittedCategoryDetailScreen` at `supplier_submitted_category_detail_screen.dart` uses the selected localized category title and history filter above, with progress/error and localized `noRecordsYet` when empty. Each row shows whole sent quantity and UOM, created label and optional note, and opens notification detail by receipt ID. Pull reloads history.
+
+`SupplierStatusDetailScreen` at `supplier_status_detail_screen.dart` is titled with the selected item name. Fetch status details by kind and item code, show progress/error, and use localized `noSupplierReceiptsYet` when empty. Each row shows whole sent quantity and UOM, created label, positive accepted quantity using localized `acceptedQtyLabel`, and optional note. Tapping opens notification detail; pull reloads the detail. All detail screens have back and the Supplier dock.
