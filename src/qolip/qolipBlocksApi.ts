@@ -59,11 +59,16 @@ export async function qolipBlocks(session: Session, guard?: QolipReadGuard): Pro
 }
 
 /** @v2 qolipCreateBlock */
-export async function qolipCreateBlock(session: Session, input: { warehouse: string; block: string }): Promise<QolipBlock> {
-  const response = await send(session, jsonBody('POST', { warehouse: trimDart(input.warehouse), block: trimDart(input.block) }));
+export async function qolipCreateBlock(session: Session, input: { warehouse: string; block: string }, guard?: QolipReadGuard): Promise<QolipBlock> {
+  assertQolipReadCurrent(guard);
+  const response = await send(session, jsonBody('POST', { warehouse: trimDart(input.warehouse), block: trimDart(input.block) }), guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw new Error('Qolip block create failed');
   const data = jsonObject(await response.json());
-  return qolipBlockFromJson(data?.block);
+  assertQolipReadCurrent(guard);
+  const result = qolipBlockFromJson(data?.block);
+  assertQolipReadCurrent(guard);
+  return result;
 }
 
 /** @v2 qolipUpdateBlock */
