@@ -17,12 +17,15 @@ const { canEnterBoyoqchi } = compile('boyoqchi/boyoqchiEntryGuard', {
   '../auth': { activeSessionToken: session => current === session ? session.token : null }, '../shared/appRoutes': routes,
 });
 const make = (role = 'boyoqchi', capabilities = ['boyoqchi.access']) => ({ token: 'token', profile: { role, ref: 'ref' }, capabilities });
-for (const platform of ['ios', 'android']) test(`${platform} deep link requires the exact active Boyoqchi session and capability`, () => {
+for (const platform of ['ios', 'android']) test(`${platform} deep link requires the exact active session and V2 route capability`, () => {
   const session = make(); current = session;
   assert.equal(canEnterBoyoqchi(session, platform, platform), true);
   assert.equal(canEnterBoyoqchi(session, platform === 'ios' ? 'android' : 'ios', platform), false);
   const missing = make('boyoqchi', []); current = missing; assert.equal(canEnterBoyoqchi(missing, platform, platform), false);
-  const worker = make('aparatchi'); current = worker; assert.equal(canEnterBoyoqchi(worker, platform, platform), false);
+  const worker = make('aparatchi'); current = worker; assert.equal(canEnterBoyoqchi(worker, platform, platform), true);
+  for (const role of ['rezka_master', 'brigader', 'sales_manager']) {
+    const restricted = make(role); current = restricted; assert.equal(canEnterBoyoqchi(restricted, platform, platform), false, role);
+  }
   current = make(); assert.equal(canEnterBoyoqchi(session, platform, platform), false);
   const noRef = make(); noRef.profile.ref = ''; current = noRef; assert.equal(canEnterBoyoqchi(noRef, platform, platform), false);
 });
@@ -50,6 +53,6 @@ for (const platform of ['ios', 'android']) test(`${platform} role layout applies
   assert.equal(layout(platform, session, platform === 'ios' ? 'android' : 'ios').type, 'Redirect');
   const entered = layout(platform, session); assert.equal(entered.type, 'WorkerSecurityProvider');
   assert.equal(entered.props.children.type, 'BoyoqchiContextShell');
-  const invalid = make('aparatchi'); current = invalid; assert.equal(layout(platform, invalid).type, 'Redirect');
+  const invalid = make('rezka_master'); current = invalid; assert.equal(layout(platform, invalid).type, 'Redirect');
   current = make(); assert.equal(layout(platform, session).type, 'Redirect');
 });

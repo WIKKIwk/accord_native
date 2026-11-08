@@ -11,11 +11,17 @@ const routes = loaded.exports;
 const session = { token: 'token', baseUrl: 'https://example.test', profile: { ref: 'paint-1', role: 'boyoqchi' },
   capabilities: ['boyoqchi.access'], assigned_apparatus: [], assigned_apparatus_labels: [], imageCacheScope: 'scope' };
 
-test('Boyoqchi entry selects native homes only for its authorized role', () => {
+test('Boyoqchi entry follows V2 home and route capability eligibility', () => {
   assert.equal(routes.homeRoute(session), routes.appRoutes.boyoqchiHome);
   assert.equal(routes.homeTarget(session, 'ios'), '/ios-boyoqchi');
   assert.equal(routes.homeTarget(session, 'android'), '/android-boyoqchi');
-  assert.equal(routes.homeTarget({ ...session, profile: { ...session.profile, role: 'other' } }, 'ios'), null);
+  assert.equal(routes.homeTarget({ ...session, profile: { ...session.profile, role: 'aparatchi' } }, 'ios'), '/ios-boyoqchi');
+  for (const role of ['rezka_master', 'brigader', 'sales_manager']) {
+    const restricted = { ...session, profile: { ...session.profile, role } };
+    assert.equal(routes.homeRoute(restricted), routes.appRoutes.boyoqchiHome);
+    assert.equal(routes.canOpenRoute(restricted, routes.appRoutes.boyoqchiHome), false);
+    assert.equal(routes.homeTarget(restricted, 'ios'), null);
+  }
   assert.equal(routes.canOpenRoute(session, routes.appRoutes.boyoqchiHome), true);
   assert.equal(routes.canOpenRoute(session, routes.appRoutes.boyoqchiAstatka), true);
   assert.equal(routes.canOpenRoute({ ...session, capabilities: [] }, routes.appRoutes.boyoqchiAstatka), false);

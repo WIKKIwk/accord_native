@@ -713,7 +713,7 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
   const route = homeRoute(session);
-  if (route === appRoutes.boyoqchiHome && session.profile.role !== 'boyoqchi') return null;
+  if (route === appRoutes.boyoqchiHome && !canOpenRoute(session, route)) return null;
   const entry = homeTargets[route];
   return platform === 'ios' ? entry?.ios ?? null : platform === 'android' ? entry?.android ?? null : null;
 }
