@@ -1,0 +1,23 @@
+# Material ta’minotchi: partial Home and Tasks checkpoint
+
+Status: partial, not a completed role. This narrow integration candidate is based on main `fdbfcfdcc6500e70ca8525e2e1d18c468649d728`; fuller experimental work remains isolated on `port/material`. The Flutter V2 reference is pinned at `f11910bb2c8c7081ce26770e69811b03fd0739ed` and has been read only.
+
+## Available in this checkpoint
+
+- Guarded Material Home and existing shared Profile are available on iOS and Android; the profile deliberately omits `onDailyWork`, as in V2. Home, drawer and dock reach the compact Material task list. Direct entry and actions require the Material role and the existing V2 route capabilities. The existing inventory-only home-route/capability mismatch remains unchanged.
+- The task list uses the actual authorized window reader, 250 ms search debounce, list size and apparatus filters, counts, loading/error states, native search/list/card controls and pull-to-refresh. Home, drawer, dock, Profile, FAB pattern and list/card/search components reuse existing native implementations. Only the task handler is connected; unimplemented destinations are not represented by fake actions.
+- The shell captures the existing shared session witness once, subscribes and rechecks it, and clears the task controller on tracked transitions. A new shell waits for an active account transition and validates the final session, avoiding a root-to-role redirect loop; a previously stale witness never revives. Same-session token refresh remains supported. Shared witness and its read-only transition getter come from main and are not duplicated here.
+- A reserved `test-mode-token` shows a stable warning without mounting Home, shared Profile, task or security providers, and without fake logout or redirect. Task reads and Home refresh entry also refuse this token. The warning currently has no account-switch/logout control. This is not V2's separately persisted test-mode flag or demo data.
+
+## Open work and constraints
+
+- Task full-order detail, receipt/print, thumbnails, saved apparatus, live task socket/reconnect, supply sequence, history, assignment, inventory, QR scan, GScale and Chat remain unconnected. Printer selection/physical identity and uncertain-write safeguards are not solved; don't connect those operations without their separate review. Notification detail and unread/hidden stores retain their account-switch holds. Do not expose new-role Chat while its shared WebSocket redirect/cookie issue remains open.
+- Same-snapshot in-place scope changes that never pass through a tracked auth boundary, redirect hops and JS-to-native dispatch are not made atomic by the witness. Existing shared Profile callbacks cannot take the Material witness; an already-started Profile operation may outlive a transition. A Home `profile()` refresh already in flight can retry after a 401 with the reserved test token because the shared API has no optional send guard yet; the shared seam is being handled separately. Conditional cross-origin login redirect risk in shared auth remains open; no real credentials were used.
+- The compact parser conservatively rejects non-ASCII apparatus IDs and search pending Dart/Hermes parity; JSON integer lexical forms such as `7.0` cannot yet be distinguished after `JSON.parse`. No full parity, real-time transport or real-device accessibility claim is made. User will verify the app on a simulator or phone.
+- V2's sqlite3 native-asset hash mismatch currently blocks new Flutter oracle runs. No bypass was attempted. The f119 task fixture is source-derived and contains previously executed Dart golden results, not an invented HTTP recording. No live backend, credentials, printer, scale or simulator were used in this checkpoint.
+
+## Validation on this narrow branch
+
+- 207 focused Material, task-model/API, witness/auth/account-switch and existing Preparation navigation tests passed; the separately added native Home reuse regression also passed. Full Node suite: 1,455 passed and six known Preparation Android tests failed with Expo UI extensionless ESM resolution, exit 1.
+- iOS TypeScript and Expo lint completed with exit 0. Android TypeScript exited 2 with the same nine known Worker diagnostics; no Material diagnostic. Offline iOS and Android Expo JavaScript exports completed with exit 0; these are not native builds.
+- Port drift: zero changed V2 files, exit 0. Ledger check: 561 V2 tags and 64 V2 test tags resolve, with eight pre-existing endpoint warnings, exit 0. Material text gate remains open, exit 1: iOS 130 V2-only / 48 native-only strings; Android 129 / 59. The role is not complete.
