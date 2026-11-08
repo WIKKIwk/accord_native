@@ -17,13 +17,13 @@ async function mandatoryUpdatesResponse(response: Response): Promise<boolean> {
   throw new MobileApiException({ code: 'app_update_settings_failed', message: 'Yangilash sozlamasi yuklanmadi', statusCode: response.status });
 }
 /** @v2 mandatoryAppUpdatesEnabled */
-export async function mandatoryAppUpdatesEnabled(session: Session): Promise<boolean> {
-  return mandatoryUpdatesResponse(await authorizedFetch(session, path));
+export async function mandatoryAppUpdatesEnabled(session: Session, beforeSend?: () => void): Promise<boolean> {
+  return mandatoryUpdatesResponse(await authorizedFetch(session, path, undefined, beforeSend));
 }
 /** @v2 setMandatoryAppUpdatesEnabled */
-export async function setMandatoryAppUpdatesEnabled(session: Session, enabled: boolean): Promise<boolean> {
+export async function setMandatoryAppUpdatesEnabled(session: Session, enabled: boolean, beforeSend?: () => void): Promise<boolean> {
   const response = await authorizedFetch(session, path, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mandatory_updates_enabled: enabled }) });
+    body: JSON.stringify({ mandatory_updates_enabled: enabled }) }, beforeSend);
   const saved = await mandatoryUpdatesResponse(response);
   if (saved !== enabled) throw new MobileApiException({ code: 'app_update_settings_failed', message: 'Yangilash sozlamasi saqlanmadi' });
   return saved;

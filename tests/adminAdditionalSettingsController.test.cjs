@@ -45,16 +45,15 @@ test('rezka operator reads only paddon settings, forbidden roles do not read', a
   assert.equal(forbidden.getSnapshot().screen, 'forbidden'); assert.deepEqual(g.calls, []);
 });
 test('enabling free movement requires confirmation and rechecks identity, scope and role after it', async () => {
+  for (const mutate of [f => f.setScope('B'), f => f.setAllowed(false), f => f.setCurrent(false)]) {
+    const f = fixture(), controller = new AdditionalSettingsController(f.deps); controller.start(); await tick();
+    controller.requestFreeMovement(true); assert.equal(controller.getSnapshot().confirmFreeMovement, true);
+    mutate(f); controller.resolveFreeMovement(true); await tick();
+    assert.equal(f.calls.filter(Array.isArray).length, 0); assert.equal(controller.getSnapshot().screen, 'forbidden');
+  }
   const f = fixture(), controller = new AdditionalSettingsController(f.deps); controller.start(); await tick();
-  controller.requestFreeMovement(true); assert.equal(controller.getSnapshot().confirmFreeMovement, true);
-  controller.resolveFreeMovement(false); await tick(); assert.equal(f.calls.filter(Array.isArray).length, 0);
-  controller.requestFreeMovement(true); f.setScope('B'); controller.resolveFreeMovement(true); await tick();
-  assert.equal(f.calls.filter(Array.isArray).length, 0);
-  f.setScope('A'); controller.requestFreeMovement(true); f.setAllowed(false); controller.resolveFreeMovement(true); await tick();
-  assert.equal(f.calls.filter(Array.isArray).length, 0);
-  f.setAllowed(true); controller.requestFreeMovement(true); f.setCurrent(false); controller.resolveFreeMovement(true); await tick();
-  assert.equal(f.calls.filter(Array.isArray).length, 0);
-  f.setCurrent(true); controller.requestFreeMovement(true); controller.resolveFreeMovement(true); await tick();
+  controller.requestFreeMovement(true); controller.resolveFreeMovement(false); await tick(); assert.equal(f.calls.filter(Array.isArray).length, 0);
+  controller.requestFreeMovement(true); controller.resolveFreeMovement(true); await tick();
   assert.deepEqual(f.calls.at(-1), ['writePaddon', { freeMovementEnabled: true }]);
   assert.equal(controller.getSnapshot().paddon.value.free_movement_enabled, true);
   controller.requestFreeMovement(false); await tick();
@@ -95,4 +94,29 @@ test('scope is checked again immediately before sending after state listeners ru
   controller.subscribe(() => { if (controller.getSnapshot().paddon.busy) f.setScope('B'); });
   controller.requestFreeMovement(true); controller.resolveFreeMovement(true); await tick();
   assert.equal(f.calls.filter(Array.isArray).length, 0);
+  assert.equal(controller.getSnapshot().screen, 'forbidden');
+});
+
+test('controller can restart after an effect cleanup without allowing stale reads', async () => {
+  const f = fixture(), old = deferred(); let first = true;
+  f.deps.readPaddon = () => { if (first) { first = false; return old.promise; } return Promise.resolve({ free_movement_enabled: false, worker_visibility_enabled: true }); };
+  const controller = new AdditionalSettingsController(f.deps); controller.start(); controller.dispose(); controller.start(); await tick();
+  old.resolve({ free_movement_enabled: true, worker_visibility_enabled: false }); await tick();
+  assert.equal(controller.getSnapshot().paddon.value.worker_visibility_enabled, true);
+  assert.equal(controller.getSnapshot().paddon.value.free_movement_enabled, false);
+});
+
+test('a changed scope invalidates the loaded screen before another action', async () => {
+  for (const action of [c => c.setWorkerVisibility(true), c => c.setAppUpdate(true), c => c.requestFreeMovement(true)]) {
+    const f = fixture(), controller = new AdditionalSettingsController(f.deps); controller.start(); await tick();
+    f.setScope('B'); action(controller); await tick();
+    assert.equal(f.calls.filter(Array.isArray).length, 0); assert.equal(controller.getSnapshot().screen, 'forbidden');
+    assert.equal(controller.getSnapshot().paddon.value, null); assert.equal(controller.getSnapshot().confirmFreeMovement, false);
+  }
+});
+test('a scope change during a write clears previous values and ignores the late response', async () => {
+  const f = fixture(), pending = deferred(); f.deps.writePaddon = () => pending.promise;
+  const controller = new AdditionalSettingsController(f.deps); controller.start(); await tick();
+  controller.setWorkerVisibility(true); f.setScope('B'); pending.resolve({ free_movement_enabled: true, worker_visibility_enabled: true }); await tick();
+  assert.equal(controller.getSnapshot().screen, 'forbidden'); assert.equal(controller.getSnapshot().paddon.value, null);
 });

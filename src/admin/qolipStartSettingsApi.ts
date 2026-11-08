@@ -27,13 +27,13 @@ async function settingsResponse(response: Response): Promise<AdminQolipStartSett
   return adminQolipStartSettingsFromJson(row.settings);
 }
 /** @v2 qolipStartSettings */
-export async function qolipStartSettings(session: Session): Promise<AdminQolipStartSettings> {
-  return settingsResponse(await authorizedFetch(session, path));
+export async function qolipStartSettings(session: Session, beforeSend?: () => void): Promise<AdminQolipStartSettings> {
+  return settingsResponse(await authorizedFetch(session, path, undefined, beforeSend));
 }
 /** @v2 setQolipAutomaticConfirmationEnabled */
-export async function setQolipAutomaticConfirmationEnabled(session: Session, enabled: boolean): Promise<AdminQolipStartSettings> {
+export async function setQolipAutomaticConfirmationEnabled(session: Session, enabled: boolean, beforeSend?: () => void): Promise<AdminQolipStartSettings> {
   const response = await authorizedFetch(session, path, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ automatic_confirmation_enabled: enabled }) });
+    body: JSON.stringify({ automatic_confirmation_enabled: enabled }) }, beforeSend);
   const settings = await settingsResponse(response);
   if (settings.automatic_confirmation_enabled !== enabled) throw invalid();
   return settings;

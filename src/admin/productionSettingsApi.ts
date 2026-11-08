@@ -29,17 +29,17 @@ async function paddonResponse(response: Response): Promise<PaddonManagementSetti
   return { free_movement_enabled: settings.free_movement_enabled, worker_visibility_enabled: settings.worker_visibility_enabled === true };
 }
 /** @v2 paddonManagementSettings */
-export async function paddonManagementSettings(session: Session): Promise<PaddonManagementSettings> {
-  return paddonResponse(await authorizedFetch(session, paddonPath));
+export async function paddonManagementSettings(session: Session, beforeSend?: () => void): Promise<PaddonManagementSettings> {
+  return paddonResponse(await authorizedFetch(session, paddonPath, undefined, beforeSend));
 }
 /** @v2 updatePaddonManagementSettings */
 export async function updatePaddonManagementSettings(session: Session,
-  options: { freeMovementEnabled?: boolean | null; workerVisibilityEnabled?: boolean | null } = {}): Promise<PaddonManagementSettings> {
+  options: { freeMovementEnabled?: boolean | null; workerVisibilityEnabled?: boolean | null } = {}, beforeSend?: () => void): Promise<PaddonManagementSettings> {
   const { freeMovementEnabled, workerVisibilityEnabled } = options;
   const body = { ...(freeMovementEnabled != null ? { free_movement_enabled: freeMovementEnabled } : {}),
     ...(workerVisibilityEnabled != null ? { worker_visibility_enabled: workerVisibilityEnabled } : {}) };
   const response = await authorizedFetch(session, paddonPath, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body) });
+    body: JSON.stringify(body) }, beforeSend);
   const settings = await paddonResponse(response);
   if ((freeMovementEnabled != null && settings.free_movement_enabled !== freeMovementEnabled) ||
     (workerVisibilityEnabled != null && settings.worker_visibility_enabled !== workerVisibilityEnabled)) {
@@ -66,18 +66,18 @@ async function laminationResponse(response: Response): Promise<AdminLaminationLa
   return laminationLabelSettingsFromJson(settings);
 }
 /** @v2 laminationLabelSettings */
-export async function laminationLabelSettings(session: Session): Promise<AdminLaminationLabelSettings> {
-  return laminationResponse(await authorizedFetch(session, laminationPath));
+export async function laminationLabelSettings(session: Session, beforeSend?: () => void): Promise<AdminLaminationLabelSettings> {
+  return laminationResponse(await authorizedFetch(session, laminationPath, undefined, beforeSend));
 }
 /** @v2 setLaminationLabelSettings */
 export async function setLaminationLabelSettings(session: Session,
-  options: { printWipRemainderLabels?: boolean | null; printFilmRemainderLabels?: boolean | null }): Promise<AdminLaminationLabelSettings> {
+  options: { printWipRemainderLabels?: boolean | null; printFilmRemainderLabels?: boolean | null }, beforeSend?: () => void): Promise<AdminLaminationLabelSettings> {
   const { printWipRemainderLabels, printFilmRemainderLabels } = options;
   if (printWipRemainderLabels == null && printFilmRemainderLabels == null) throw new TypeError('A label switch is required');
   const body = { ...(printWipRemainderLabels != null ? { print_wip_remainder_labels: printWipRemainderLabels } : {}),
     ...(printFilmRemainderLabels != null ? { print_film_remainder_labels: printFilmRemainderLabels } : {}) };
   const response = await authorizedFetch(session, laminationPath, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body) });
+    body: JSON.stringify(body) }, beforeSend);
   const settings = await laminationResponse(response);
   if ((printWipRemainderLabels != null && settings.print_wip_remainder_labels !== printWipRemainderLabels) ||
       (printFilmRemainderLabels != null && settings.print_film_remainder_labels !== printFilmRemainderLabels)) {
