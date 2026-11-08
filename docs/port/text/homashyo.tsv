@@ -1,0 +1,42 @@
+# platform	text	reason
+both	Mac print bridge failed	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
+both	Mac print bridge returned an invalid response	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
+both	Mac USB printer not found	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
+both	Mac print bridge returned an invalid printer profile	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
+both	qr payload is empty	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,BUZZER,0	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~MDELG,${graphicNames.text}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~EB,${graphicNames.text},${textGraphic.length}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~MDELG,${graphicNames.qr}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~EB,${graphicNames.qr},${qrGraphic.length}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~S,STATUS	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~S,ESG	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^AD	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,UNICODE,1	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,IMMEDIATE,1	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,ACTIVERESPONSE,1	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,CODEPAGE,16	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,72,1,1,0,0,COMPANY: ${content.companyName}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,${112 + i * 40},1,1,0,0,${lines[i]}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,264,1,1,0,0,NETTO: ${content.kgText} KG	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,304,1,1,0,0,BRUTTO: ${content.bruttoText} KG	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	BA,0,24,1,2,42,0,0,${content.epc}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,264,1,1,0,0,${netIncludesBobina ? 'NETTO' : 'KG'}: ${GodexRpsRenderer._normalizeKgValue(grossQty.toString())}${netIncludesBobina ? ' KG' : ''}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,304,1,1,0,0,METRAJ: $qtyText	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	7 TA RANGLI BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	7 TA RANGLI BOSMA APARAT	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	7TALIK BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	8 TA RANGLI BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	8 TA RANGLI BOSMA APARAT	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	8TALIK BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	9 TA RANGLI BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	9 TA RANGLI BOSMA APARAT	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	9TALIK BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	qr data too long	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	Brutto: ${rawSplitDisplay(output.grossKg)} kg · Babina: ${rawSplitDisplay(output.bobinaKg!)} kg	raw_material_split_result_view.dart:389-391 shows the same Brutto/Babina line; template syntax differs between Dart and TypeScript.
+both	#fff	RawSplitScanner platform styles use this as a color literal, not visible text.
+both	Bu USB printer qo‘llab-quvvatlanmaydi. Zebra yoki Bluetooth printerni tanlang.	PORT.md D13 excludes GoDEX; this explicit message explains why unsupported USB selection is blocked before stock mutation.
+both	${rawSplitDisplay(output.width_mm as string)} mm · Og‘irlik: ${rawSplitDisplay(output.gross_kg as string)} kg · 	raw_material_split_result_view.dart:557-561 shows the same issue width and Og‘irlik values; the scanner splits the template.
+both	Babina: ${rawSplitDisplay(output.bobina_kg as string)} kg · Netto: ${rawSplitDisplay(output.kg as string)} kg	raw_material_split_result_view.dart:557-561 shows the same issue Babina and Netto values; the scanner splits the template.
+both	Asl: ${rawSplitDisplay(issue.source.kg)} kg · Atxot: ${issue.enteredWaste || 'kiritilmagan'} kg	raw_material_split_result_view.dart:549-552 shows Asl as the label and the same weight/Atxot content as the value.
+both	Sessiya tekshiruvi kerak	Role-only API rejects calls without an issued epoch-checked session ticket; the fail-closed guard has no V2 equivalent.
