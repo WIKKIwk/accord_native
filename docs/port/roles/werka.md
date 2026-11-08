@@ -52,6 +52,8 @@ Source permits `NaN` and positive infinity past its numeric validation, where Da
 
 `WerkaUnannouncedContent` now supplies only an unwired native form body on both platforms. It reuses existing list, field and button components and calls its owner for picker, quantity and submit events without performing those actions. The owner must retain the latest quantity across conditional field remounts and change `quantityFieldKey` for a programmatic reset. iOS currently shows the unit below its reused field and its placeholder differs; Android's reused field places the label inside and lacks the source's `0` placeholder. Exact source visuals, pickers, validation/dialog, account-safe callback lifecycle and all routes remain open.
 
+`werkaUnannouncedAfterTrim` supplies a pure decision for already Dart-trimmed field text and preserves the source's non-finite behavior. The caller must apply the existing shared `dartTrim` from main rather than JS `trim`, then show the source snackbar or confirmation. A standalone f119 source-equivalent Dart fixture compares 303 examples, not exhaustive Flutter, Hermes or device behavior. The form and this decision are not yet connected.
+
 ### WerkaArchiveScreen and WerkaArchivePeriodScreen
 
 Source: `werka_archive_screen.dart:12-67`, `werka_archive_period_screen.dart:12-103`.
