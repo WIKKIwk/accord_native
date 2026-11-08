@@ -85,6 +85,11 @@ test('draft collection preserves both usage tabs, Pantone/Mix order and decimal 
     item('rasxot', { Mix: '3' }), { usage: 'astatka', category: 'solvents', name: 'Spirtlar', values: { Aralashmalar: '0.25' } }]);
   draft.values['rasxot:Oq'][0] = '-1';
   assert.equal(rules.returnedPaintItemsFromDraft(draft).some(x => x.name === 'Oq'), false);
+  draft.dynamic_field_labels['rasxot:Mix'] = ['__proto__'];
+  draft.values['rasxot:Mix'] = ['4'];
+  const named = rules.returnedPaintItemsFromDraft(draft)[0].values;
+  assert.equal(Object.hasOwn(named, '__proto__'), true);
+  assert.equal(named.__proto__, '4');
 });
 
 test('report close rule requires three fields in each usage or a purely image-only input', () => {

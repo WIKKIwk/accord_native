@@ -22,7 +22,10 @@ export function returnedPaintItemsFromDraft(draft: ReturnedPaintDraftData): Retu
         const raw = rawValues[index].trim();
         if (!raw) return;
         const normalized = raw.replace(/,/g, '.'), number = returnedPaintDouble(normalized);
-        if (number !== null && number >= 0) result[field] = normalized;
+        if (number !== null && number >= 0) {
+          // A named field may be "__proto__"; preserve it as data, not as a prototype setter.
+          Object.defineProperty(result, field, { value: normalized, enumerable: true, configurable: true, writable: true });
+        }
       });
       if (Object.keys(result).length) items.push({ usage, category, name, values: result });
     };
