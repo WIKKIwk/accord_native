@@ -13,7 +13,7 @@ function compile(file, mocks) {
 }
 function setup(initialTransition = false) {
   const session = { token: 'a', profile: { role: 'material_taminotchi', ref: 'x' } }, listeners = new Set(), effects = [];
-  let active = session, entry, transition = initialTransition, captures = 0, version = 0, reset, logouts = 0, slot = 0, writes = 0, logoutGate;
+  let active = session, entry, transition = initialTransition, captures = 0, version = 0, reset, logouts = 0, slot = 0, writes = 0, lockClears = 0, logoutGate;
   const refs = [], retired = new Set();
   const react = { useState: () => [entry, value => { writes++; entry = typeof value === 'function' ? value(entry) : value; }], useRef: initial => refs[slot] ??= { current: initial },
     useEffect: fn => { effects.push(fn); }, useSyncExternalStore: (subscribe, read) => { subscribe(() => {}); read(); } };
@@ -26,10 +26,10 @@ function setup(initialTransition = false) {
     subscribeSessionWitness: listener => { listeners.add(listener); return () => listeners.delete(listener); },
     logout: async () => { logouts++; if (logoutGate) await logoutGate.promise; } };
   const bootstrap = compile('materialSessionBootstrap', { '../auth': auth });
-  const hook = compile('useMaterialSession', { react, '../auth': auth, '../appLock': { clearAppLock: async () => {} },
+  const hook = compile('useMaterialSession', { react, '../auth': auth, '../appLock': { clearAppLock: async () => { lockClears++; } },
     './materialSessionBootstrap': bootstrap, './materialTestSession': { isMaterialTestSession: value => value.token === 'test-mode-token' } }).useMaterialSession;
   const render = () => { slot = 0; return hook(); };
-  return { session, render, effects, captures: () => captures, logouts: () => logouts, writes: () => writes,
+  return { session, render, effects, captures: () => captures, logouts: () => logouts, lockClears: () => lockClears, writes: () => writes,
     delayLogout: () => { let resolve; const promise = new Promise(done => { resolve = done; }); logoutGate = { promise, resolve }; return logoutGate; },
     start: () => { transition = true; version++; listeners.forEach(listener => listener()); },
     finish: (next = active) => { active = next; transition = false; version++; listeners.forEach(listener => listener()); }, reset: () => reset() };
@@ -85,4 +85,11 @@ test('late logout completion after unmount does not set shell state', async () =
 test('normal logout may clear only its own still-mounted shell', async () => {
   const h = setup(); await mount(h); const gate = h.delayLogout(); h.render().onLogout(); gate.resolve(); await tick();
   assert.equal(h.render().session, null);
+});
+
+
+test('Material logout never clears the account lock, including after same-account login', async () => {
+  const h = setup(); await mount(h); const gate = h.delayLogout(); h.render().onLogout();
+  const sameAccount = { token: 'new', profile: { ...h.session.profile } }; h.start(); h.finish(sameAccount);
+  gate.resolve(); await tick(); assert.equal(h.logouts(), 1); assert.equal(h.lockClears(), 0);
 });
