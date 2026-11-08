@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureDetector, GestureHandlerRootView, usePanGesture, usePinchGesture, useSimultaneousGestures } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
@@ -36,6 +36,8 @@ export function BoyoqchiImage({ session, image, allowDownload = false }: {
   const data = result?.key === sourceKey ? result.data : '';
   const broken = result?.key === sourceKey && result.broken;
   const [downloading, setDownloading] = useState(false), [notice, setNotice] = useState('');
+  const previewGeneration = useRef(0), downloadingRef = useRef(false);
+  useEffect(() => () => { previewGeneration.current++; }, []);
   const scale = useSharedValue(1), initialScale = useSharedValue(1), x = useSharedValue(0), y = useSharedValue(0);
   const initialX = useSharedValue(0), initialY = useSharedValue(0);
   const pinch = usePinchGesture({ onActivate: () => { 'worklet'; initialScale.set(scale.get()); },
@@ -63,22 +65,27 @@ export function BoyoqchiImage({ session, image, allowDownload = false }: {
     const timer = setTimeout(() => setNotice(''), 4000);
     return () => clearTimeout(timer);
   }, [notice]);
-  const close = () => { setVisible(false); scale.set(1); x.set(0); y.set(0); };
+  const close = () => {
+    previewGeneration.current++; downloadingRef.current = false;
+    setVisible(false); setDownloading(false); setNotice(''); scale.set(1); x.set(0); y.set(0);
+  };
   const download = async () => {
-    if (downloading) return;
+    if (downloadingRef.current) return;
+    const generation = previewGeneration.current;
+    downloadingRef.current = true;
     setDownloading(true); setNotice('');
     try {
       await saveReturnedPaintImageToPhotos(session, image);
-      setNotice(t('Rasm Photos ga saqlandi.'));
+      if (previewGeneration.current === generation) setNotice(t('Rasm Photos ga saqlandi.'));
     } catch (error) {
-      setNotice(error instanceof WorkerControlException ? error.message : t('Rasm yuklab olinmadi'));
+      if (previewGeneration.current === generation) setNotice(error instanceof WorkerControlException ? error.message : t('Rasm yuklab olinmadi'));
     } finally {
-      setDownloading(false);
+      if (previewGeneration.current === generation) { downloadingRef.current = false; setDownloading(false); }
     }
   };
   const icon = broken ? 'broken_image' : 'image';
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel={t('Rasmni to‘liq ko‘rish')} onPress={() => setVisible(true)}
+    <Pressable accessibilityRole="button" accessibilityLabel={t('Rasmni to‘liq ko‘rish')} onPress={() => { previewGeneration.current++; setVisible(true); }}
       style={[styles.thumbnail, { backgroundColor: colors.field }]}>
       {data ? <Image source={{ uri: data }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory" onError={() => setResult({ key: sourceKey, data: '', broken: true })} />
         : <SymbolView name={{ ios: broken ? 'photo.badge.exclamationmark' : 'photo', android: icon }} size={42} tintColor={colors.muted} />}

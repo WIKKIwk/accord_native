@@ -42,3 +42,10 @@ test('old refresh and catalog completions cannot overwrite a newer request or ca
   controller.cancelPending(); catalog.resolve([{ id: 'machine' }]); await loadCatalog;
   assert.deepEqual(controller.getSnapshot().apparatus, []);
 });
+
+test('refresh after completion can propagate failure while exposing the error state', async () => {
+  const failure = Error('offline');
+  const controller = new BoyoqchiRequestsController(async () => { throw failure; });
+  await assert.rejects(controller.refresh(true), error => error === failure);
+  assert.equal(controller.getSnapshot().phase, 'error');
+});

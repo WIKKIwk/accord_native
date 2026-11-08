@@ -120,12 +120,14 @@ export const appRoutes = {
   "qolipCheckouts": "/qolip-checkouts",
   "qolipLocationTransfer": "/qolip-location-transfer",
   "qolipProductTransfer": "/qolip-product-transfer",
+  /** @v2 AppRoutes.boyoqchiHome */
   "boyoqchiHome": "/boyoqchi-home",
   "preparation": "/preparation",
   "preparationFormulas": "/preparation-formulas",
   "preparationProduction": "/preparation-production",
   "rawMaterialSplit": "/raw-material-split",
   "rawMaterialSplitHistory": "/raw-material-split-history",
+  /** @v2 AppRoutes.boyoqchiAstatka */
   "boyoqchiAstatka": "/boyoqchi-astatka",
   "rezkaSplit": "/rezka-split"
 } as const;
