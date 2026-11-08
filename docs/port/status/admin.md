@@ -5,6 +5,11 @@ Stopped at: Continue part 1's remaining API families and their V2 tests, then wr
 
 The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. An isolated clean clone was used for ledger and oracle reads. The original source and the clone were both clean at that SHA before and after those operations. The ledger reports 8 parts, 275 public API entries (including already-tagged imports) and 112 surface entries; runtime reachability and existing tags still require review. The historical 61 top-level contract files are from `7c87a54e` and were not overwritten.
 
+## Dependency checkpoint: integrated Profile options mirror
+
+- To reuse the already integrated native Profile without adding V2-absent direct logout or duplicating its settings UI, the five shared Profile files and their three tests were copied byte-for-byte from integrated main `56f620d` (including shared checkpoints `6277762` and `c219ad6`). Their Git blob hashes match the integrated source. The options default to previous Worker/Preparation behavior; no protected-role file was changed. Parent integration must reconcile the identical files rather than apply the extraction again.
+- Nineteen focused shared Profile option tests and iOS typecheck pass locally. This dependency alone does not enable Profile or prove its session lifetime, permission, native layout or every existing inherited difference; those are separate role integration work.
+
 ## Dependency checkpoint: integrated session witness mirror
 
 - To prepare Admin consumers without merging or rebasing this role branch, the already independently reviewed and main-integrated witness `56f620d` was copied byte-for-byte into this worktree: `src/auth.ts`, `src/shared/accountSwitchController.ts`, `tests/authLoginRollback.test.cjs`, and `tests/baseAccountSwitch.test.cjs`. Each file's Git blob hash was verified against `56f620d`; no new shared-auth behavior was designed in this role checkpoint. Parent integration must reconcile these identical files with main, not apply the witness twice.

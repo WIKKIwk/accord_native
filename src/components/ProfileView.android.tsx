@@ -41,7 +41,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
 
 // @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout } = props;
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const dark = useColorScheme() === 'dark';
   const theme = useBaseTheme();
@@ -123,9 +123,9 @@ export function ProfileView(props: ProfileViewProps) {
         {onDailyWork && session.profile.role !== 'tayyorlov_masteri' ? <Button label="Kunlik ish" variant="text" onPress={onDailyWork} /> : null}
         <Button label={localizedGetter('profileSettingsTitle', locale)} variant="text" onPress={openSettings} testID="profile-settings" />
       </FieldGroup.Section>
-      <FieldGroup.Section>
+      {showDirectLogout !== false ? <FieldGroup.Section>
         <Button label={localizedGetter('logoutTitle', locale)} variant="outlined" onPress={onLogout} />
-      </FieldGroup.Section>
+      </FieldGroup.Section> : null}
     </FieldGroup></PullToRefreshBox>
   </Host>;
 }
