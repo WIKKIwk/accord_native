@@ -20,6 +20,6 @@ The prototype does not edit `authorizedFetch`, auth, Worker, Preparation or thei
 
 ## Verification
 
-- 26 focused tests use synthetic sessions and a fake `expo/fetch`; they cover same-origin hops, cross-origin rejection, 401, callback scope changes, late timeout/abort, response URL mismatch and async guard failure. No real network was used.
-- Existing auth and authorized-fetch regression tests passed. The full Node suite had 1,243 passes and the same six pre-existing Preparation Android ESM-import failures. iOS TypeScript, uncached Expo lint and the ledger check passed; Android retained the same nine pre-existing Worker TypeScript errors.
+- 27 focused tests use synthetic sessions and a fake `expo/fetch`; they cover same-origin hops, cross-origin rejection, 401, callback scope changes, late timeout/abort, response URL mismatch, async guard failure and the known mocked JS-to-native dispatch gap. No real network was used.
+- Existing auth and authorized-fetch regression tests passed. The full Node suite had 1,244 passes and the same six pre-existing Preparation Android ESM-import failures. iOS TypeScript, uncached Expo lint and the ledger check passed; Android retained the same nine pre-existing Worker TypeScript errors.
 - Offline iOS and Android JavaScript exports passed with bytecode disabled. They are not native builds or device tests.

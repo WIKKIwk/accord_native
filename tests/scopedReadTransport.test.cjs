@@ -153,3 +153,15 @@ test('encoded slash, backslash and double-encoded path segments fail before any 
     assert.equal(redirected.calls.length, 1);
   }
 });
+
+test('a mocked internal native-dispatch gap can send an old token to the trusted origin before the stale response is rejected', async () => {
+  const entered = deferred(), release = deferred(), dispatched = []; let h;
+  h = setup(async (url, options) => {
+    entered.resolve(); await release.promise;
+    dispatched.push({ origin: new URL(url).origin, authorization: options.headers.Authorization });
+    return new Response('ok');
+  });
+  const pending = h.transport.scopedRead(h.session, '/v1/mobile/start', h.opts);
+  await entered.promise; h.changeEpoch(); release.resolve();
+  await assert.rejects(pending); assert.deepEqual(dispatched, [{ origin: 'https://example.test', authorization: 'Bearer dummy-token' }]);
+});
