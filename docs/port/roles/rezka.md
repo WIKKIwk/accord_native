@@ -25,6 +25,16 @@ V2 `admin_production_map_orders_helpers.dart:3–45`: only a Rezka master assign
 
 V2 master uses the shared `AdminAdditionalSettingsScreen`, only the two Paddon switches, with the same operator shell and no primary FAB. Shared component is owned by the admin session. No duplicate implementation is permitted here.
 
+## Assigned Paddon preparation
+
+V2 `aparatchi_paddon_scope.dart`, `canonical_apparatus_groups.dart`, `aparatchi_navigation_drawer.dart` and `aparatchi_paddons_screen.dart` define this operator path; `rezkaMaster` is an apparatus operator. `rezkaPaddonScope.ts`, `rezkaPaddonApparatusController.ts` and `useRezkaPaddonApparatus.ts` prepare its read-only scope logic but are not connected to either shell and do not expose a destination.
+
+- The drawer skips its apparatus read only when the assigned list is empty; otherwise its reader uses the existing `adminApparatus(limit: 10000)` with the shell's original master witness and a pre-send/401 guard. Failure, an empty catalog or no matching assignment yields no Paddon drawer entries. A React effect replay shares one read; a changed session/scope, reset or unmount retires the old read and cannot display a late result.
+- V2 first keeps exactly `active` machines, groups by trimmed/lowercased operation and uses the `cut` group. It sorts by catalog order and then lowercase name, and matches against a set of individually trimmed assigned IDs using exact, case-sensitive membership. Ties compare equal in V2; its sort does not specify tie order. V4 does not mutate the catalog.
+- The Paddon screen auto-selects a sole assigned cutting machine on an unscoped entry; with zero or multiple options, it asks for a selection. A supplied route ID and name are trimmed, and an empty name is resolved by exact ID when available. V2's route-to-display resolution is not itself an authorization check, so the pure helper must not be used to authorize an arbitrary incoming ID.
+- For a selected machine V2 filters the returned Paddons again by exact apparatus ID, preserves server order, and totals displayed Paddon count and `itemCount` WIP. The unscoped multi-machine state does not load a Paddon list.
+- Still open: review a guarded shared `adminPaddons` read, including the original witness on initial send and 401 retry; native Paddon list/selector/detail screens, localization, retry/refresh, actual drawer destinations, scoped navigation, create/delete/transfer/printing and safe unknown-write reconciliation. No Paddon route, screen, read request or write was activated by this preparation. Source-derived Node assertions are not an executed V2 oracle or phone validation.
+
 ## Master work instructions
 
 V2 `features/aparatchi/presentation/aparatchi_work_instructions_screen.dart:14–378`. This shared operator surface is reachable by Rezka masters; its V4 implementation is scoped to this role and changes no Worker/Preparation files. `RezkaWorkInstructions.ios.tsx` and `.android.tsx` use `useRezkaWorkInstructions` and the shell's original witness. The drawer entry `worker.instructions` follows daily work and any assigned-Paddon entries, before Profile. iOS uses its native stack; Android keeps the existing role shell, drawer and bottom bar.
