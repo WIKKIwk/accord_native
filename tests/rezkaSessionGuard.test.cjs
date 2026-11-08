@@ -28,7 +28,7 @@ function setup(s, refresh = async () => true) {
   let active = s;
   const auth = { activeSessionToken: value => value === active ? value.token : null, refreshSession: refresh };
   const load = loader({ '../auth': auth, './auth': auth });
-  return { api: load('rezka/rezkaMasterApi'), split: load('rezka/rezkaSplitApi'), guard: load('rezka/rezkaSessionGuard'),
+  return { api: load('rezka/rezkaMasterApi'), split: load('rezka/rezkaSplitApi'), printSide: load('rezka/rezkaPrintSide'), guard: load('rezka/rezkaSessionGuard'),
     switchTo: value => { active = value; } };
 }
 test('master mutation requires active exact session, role, capability and captured scope before initial send', async () => {
@@ -75,5 +75,29 @@ test('split enforces capability and V2 master allowlist on every attempt', async
     const admin = session('admin', ['rezka.split.manage']), t = setup(admin, async () => { admin.capabilities = []; return true; });
     await assert.rejects(t.split.rezkaSplit(admin, request), e => e.name === 'RezkaScopeChanged' && e.mayHaveExecuted);
     assert.equal(count, 1);
+  } finally { global.fetch = previousFetch; }
+});
+
+
+test('print-side wrapper blocks revoked role or scope before send and 401 retry', async () => {
+  const previousFetch = global.fetch; let count = 0;
+  global.fetch = async () => { count++; return new Response('{}', { status: 401 }); };
+  try {
+    const s = session(), t = setup(s, async () => { s.capabilities = []; return true; });
+    const staleScope = t.guard.currentRezkaScope(s); s.assigned_apparatus = ['apparatus:default:other'];
+    await assert.rejects(t.printSide.rezkaMasterSavePrintSideGuarded(s, 'order', true, false, staleScope), e => !e.mayHaveExecuted);
+    assert.equal(count, 0);
+    await assert.rejects(t.printSide.rezkaMasterSavePrintSideGuarded(s, 'order', true, false), e => e.name === 'RezkaScopeChanged' && e.mayHaveExecuted);
+    assert.equal(count, 1);
+  } finally { global.fetch = previousFetch; }
+});
+
+test('print-side wrapper treats a changed account after transmission as uncertain', async () => {
+  const previousFetch = global.fetch; let count = 0, release;
+  global.fetch = async () => { count++; await new Promise(resolve => { release = resolve; }); return new Response('{}', { status: 200 }); };
+  try {
+    const s = session(), t = setup(s), pending = t.printSide.rezkaMasterSavePrintSideGuarded(s, 'order', true, false);
+    await Promise.resolve(); t.switchTo(session()); release();
+    await assert.rejects(pending, e => e.name === 'RezkaScopeChanged' && e.mayHaveExecuted); assert.equal(count, 1);
   } finally { global.fetch = previousFetch; }
 });
