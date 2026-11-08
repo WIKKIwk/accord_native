@@ -61,6 +61,12 @@ Source: `werka_archive_screen.dart:12-67`, `werka_archive_period_screen.dart:12-
 - Archive root title is `archiveTitle` (`Data` in Uzbek). The three rows are `archiveReceivedTitle`, `archiveSentTitle`, `archiveReturnedTitle`; received/returned open Period with their kind and sent opens Sent Hub. Archive dock is active.
 - Period title is the selected kind title; its three rows are `archiveDailyTitle`, `archiveMonthlyTitle`, `archiveYearlyTitle`, opening the respective calendar with the selected kind. Its dock has no selected tab. Router defaults a missing/wrong kind to `sent`; see `app_router_AppRouter_resplit_class_AppRouter_resplit2_static_methods_01.dart:114-155`.
 
+### Sent archive hub (pure projection only)
+
+Sources: `werka_archive_sent_hub_screen.dart` and `werka_archive_sent_hub_screen__WerkaArchiveSentHubScreenState_methods_01.dart`. Initially the daily panel is open and the selected date, displayed month and displayed year are today; the 12-year page begins at current year minus five. The daily, monthly and yearly cards show their source labels and `archiveSelectDateAction`. Tapping the open card closes it; tapping another closes the rest and opens that one. Daily selection opens a sent/daily archive for that day; month and year selections open their respective inclusive ranges. The monthly panel changes its displayed year by one; the yearly panel moves by twelve years. Daily calendar fetches active days but this source does not paint those markers.
+
+`werkaSentArchiveModel` only projects initial state, toggle behavior, request descriptions, empty-set loading/error choice, card metadata and selection arguments, reusing existing archive date ranges. It does not fetch or navigate. The three V2 loads concurrently mutate one shared loading flag, so the first completion can clear it while others remain pending; this inherited behavior is not silently fixed. Native calendars/cards, account-safe loading and lifecycle, actual date localization, route integration and device checks remain open.
+
 ## Scanner and receive flows (partial)
 
 Sources: `werka_stock_entry_qr_scan_screen_widgets_part_01.dart`, `werka_qr_preview_screen.dart`, `werka_paddon_receive_screen.dart`. The remaining UI, dialog and device details still require a full surface audit.
