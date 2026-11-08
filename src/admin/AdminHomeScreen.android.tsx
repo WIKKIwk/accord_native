@@ -23,7 +23,8 @@ export function AdminHomeScreen(props: AdminHomeScreenProps) {
     setRefreshing(true);
     try { await controller.reload(); } finally { if (mounted.current) setRefreshing(false); }
   };
-  const rows = view === 'actions' ? adminHomeActions(session, locale) : view === 'shortcuts' ? adminHomeShortcuts(session, locale) : [];
+  const rows = (view === 'actions' ? adminHomeActions(session, locale) : view === 'shortcuts' ? adminHomeShortcuts(session, locale) : [])
+    .filter(row => props.isRouteAvailable(row.routeName));
   const showIcons = view === 'actions' && adminHomeShowsActionIcons(session);
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}>
     <RoleHeader title={adminHomeTitle(session, locale)} navigation={navigation ?? undefined} />

@@ -19,7 +19,8 @@ const currentLocale = () => localeController.locale;
 export function AdminHomeScreen(props: AdminHomeScreenProps) {
   const { session, navigation, footer } = props, { state, controller } = useAdminHome(props);
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), view = adminHomeViewState(session, state);
-  const rows = view === 'actions' ? adminHomeActions(session, locale) : view === 'shortcuts' ? adminHomeShortcuts(session, locale) : [];
+  const rows = (view === 'actions' ? adminHomeActions(session, locale) : view === 'shortcuts' ? adminHomeShortcuts(session, locale) : [])
+    .filter(row => props.isRouteAvailable(row.routeName));
   const showIcons = view === 'actions' && adminHomeShowsActionIcons(session);
   return <>
     <Stack.Screen options={{ headerShown: true, title: adminHomeTitle(session, locale),

@@ -28,7 +28,7 @@ const react = { useEffect() {}, useRef: value => ({ current: value }), useState:
   useSyncExternalStore: (_subscribe, get) => get() };
 const baseState = { loadingSummary: false, loadedSummary: true, summaryError: null };
 const session = (role, capabilities) => ({ token: 'test', profile: { role, ref: 'test' }, capabilities });
-function render(platform, account, state = baseState, navigation = 'menu') {
+function render(platform, account, state = baseState, navigation = 'menu', isRouteAvailable = () => true) {
   const calls = [], opener = async () => {}, controller = { reload: async () => { calls.push('refresh'); },
     openAndReload: async (route, callback) => { assert.equal(callback, opener); calls.push(['open', route]); } };
   const native = { View: 'View', Text: 'NativeText', ScrollView: 'ScrollView', ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl',
@@ -43,7 +43,7 @@ function render(platform, account, state = baseState, navigation = 'menu') {
     '../shared/localization': localization, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './adminHomeModel': model, './adminHomeSymbols': symbols, './useAdminHome': { useAdminHome: () => ({ state, controller }) } };
   const Screen = load(`admin/AdminHomeScreen.${platform}.tsx`, mocks).AdminHomeScreen;
-  return { tree: Screen({ session: account, store: {}, hub: {}, openRoute: opener, navigation: leading,
+  return { tree: Screen({ session: account, store: {}, hub: {}, openRoute: opener, isRouteAvailable, navigation: leading,
     footer: { type: 'ExistingDock', props: {} } }), calls };
 }
 const admin = session('admin', ['admin.access', 'party.supplier.read', 'production.map.manage']);
@@ -58,6 +58,11 @@ for (const platform of ['ios', 'android']) {
     assert.deepEqual(rows.map(row => nodes(row, n => (n.type === 'Text' || n.type === 'NativeText') && typeof n.props.children === 'string')[0].props.children),
       ['Factory map', 'Quick orders', 'Open order', 'Work map']);
     rows[0].props.onPress(); assert.deepEqual(calls, [['open', routes.appRoutes.adminFactoryMap]]);
+  });
+  test(`${platform} omits unavailable destinations rather than opening placeholders`, () => {
+    const { tree } = render(platform, admin, baseState, 'menu', route => route === routes.appRoutes.adminCalculateOrders);
+    const rows = nodes(tree, node => node.type === rowType); assert.equal(rows.length, 1);
+    assert.equal(nodes(rows[0], n => (n.type === 'Text' || n.type === 'NativeText') && typeof n.props.children === 'string')[0].props.children, 'Quick orders');
   });
   test(`${platform} action rows preserve sales icon omission and permitted action order`, () => {
     const { tree, calls } = render(platform, sales), rows = nodes(tree, node => node.type === rowType);
@@ -119,7 +124,7 @@ test('home hook connects the supplied session-scoped store and shared refresh hu
     '../shared/appRoutes': { canOpenRoute: (_session, route) => route === '/allowed' }, './adminHomeController': { AdminHomeController: Controller },
     './adminHomeModel': { adminHomeCanLoadSummary: value => value.capabilities.includes('party.supplier.read') } });
   try {
-    const result = hook.useAdminHome({ session: scoped, store, hub, openRoute: async () => {} });
+    const result = hook.useAdminHome({ session: scoped, store, hub, openRoute: async () => {}, isRouteAvailable: () => true });
     assert.equal(started, 1); assert.equal(dependencies.store, store); assert.equal(dependencies.hub, hub);
     assert.equal(dependencies.isCurrent(), true); assert.equal(dependencies.scope(), 'scope'); assert.equal(dependencies.canLoadSummary(), true);
     assert.equal(dependencies.canOpen('/allowed'), true); assert.equal(dependencies.canOpen('/held'), false);
