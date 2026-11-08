@@ -49,13 +49,13 @@ function RemainderDialog({ sourceQty, total, remainder, uom, choose }: { sourceQ
 
 // V2 RezkaSplitScreen. Requires a real printer bridge; no route is enabled here.
 export function RezkaSplitScreen({ session, printer, scan, onBack }: RezkaSplitScreenProps) {
-  const { controller, state, device, scope, choosePrinter, scan: scanCode, isCurrent } = useRezkaSplit(session, printer);
+  const { controller, state, device, snapshot, choosePrinter, scan: scanCode, isCurrent } = useRezkaSplit(session, printer);
   const t = useRezkaText(), colors = useMaterialColors(), itemSheet = useNativeSheet(), [printerOpen, setPrinterOpen] = useState(false);
   const openItem = (index: number) => {
     if (!isCurrent()) return;
     const key = controller.getSnapshot().outputs[index]?.key;
     if (key == null) return;
-    itemSheet.open(<RezkaItemPicker session={session} scope={scope} select={item => {
+    itemSheet.open(<RezkaItemPicker snapshot={snapshot} select={item => {
       const currentIndex = controller.getSnapshot().outputs.findIndex(output => output.key === key);
       if (isCurrent() && currentIndex >= 0) controller.selectItem(currentIndex, item);
       itemSheet.close();

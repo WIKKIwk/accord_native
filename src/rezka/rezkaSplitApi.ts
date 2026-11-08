@@ -1,7 +1,7 @@
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
-import { currentRezkaScope, guardedRezkaRequest } from './rezkaSessionGuard';
+import { guardedRezkaRequest, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 
 type Json = Record<string, unknown>;
 const object = (value: unknown): Json | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Json : null;
@@ -68,30 +68,30 @@ async function decode(response: Response, fallbackCode: string, fallbackMessage:
   return body;
 }
 /** @v2 rezkaSource */
-export async function rezkaSource(session: Session, barcode: string, expectedScope = currentRezkaScope(session)): Promise<RezkaSourceResponse> {
+export async function rezkaSource(session: Session, barcode: string, snapshot: RezkaSessionSnapshot): Promise<RezkaSourceResponse> {
   const query = new URLSearchParams({ barcode: barcode.trim() });
-  const response = await guardedRezkaRequest(session, 'split', expectedScope, false, beforeSend =>
+  const response = await guardedRezkaRequest(session, 'split', snapshot, false, beforeSend =>
     authorizedFetch(session, `/v1/mobile/rezka/source?${query}`, {}, beforeSend));
   const row = await decode(response, 'rezka_source_failed', 'Rezka source failed');
   if (row.source != null && !object(row.source)) throw new TypeError('Invalid source');
   return { ok: row.ok === true, source: sourceFromJson(row.source) };
 }
-async function split(session: Session, path: string, request: RezkaSplitInput, expectedScope: string): Promise<RezkaSplitResponse> {
+async function split(session: Session, path: string, request: RezkaSplitInput, snapshot: RezkaSessionSnapshot): Promise<RezkaSplitResponse> {
   const body = splitRequestToJson(request);
   if (request.outputs.some(output => !Number.isFinite(output.qty))) throw new TypeError('Non-finite quantity');
-  const response = await guardedRezkaRequest(session, 'split', expectedScope, true, beforeSend =>
+  const response = await guardedRezkaRequest(session, 'split', snapshot, true, beforeSend =>
     authorizedFetch(session, path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, beforeSend));
   return splitResponseFromJson(await decode(response, 'rezka_split_failed', 'Rezka split failed'));
 }
 /** @v2 rezkaSplit */
-export function rezkaSplit(session: Session, request: RezkaSplitInput, expectedScope = currentRezkaScope(session)): Promise<RezkaSplitResponse> {
-  return split(session, '/v1/mobile/rezka/split', request, expectedScope);
+export function rezkaSplit(session: Session, request: RezkaSplitInput, snapshot: RezkaSessionSnapshot): Promise<RezkaSplitResponse> {
+  return split(session, '/v1/mobile/rezka/split', request, snapshot);
 }
 /** @v2 rezkaSplitClientPrintPrepare */
-export function rezkaSplitClientPrintPrepare(session: Session, request: RezkaSplitInput, expectedScope = currentRezkaScope(session)): Promise<RezkaSplitResponse> {
-  return split(session, '/v1/mobile/rezka/split/client-print/prepare', request, expectedScope);
+export function rezkaSplitClientPrintPrepare(session: Session, request: RezkaSplitInput, snapshot: RezkaSessionSnapshot): Promise<RezkaSplitResponse> {
+  return split(session, '/v1/mobile/rezka/split/client-print/prepare', request, snapshot);
 }
 /** @v2 rezkaSplitClientPrintConfirm */
-export function rezkaSplitClientPrintConfirm(session: Session, request: RezkaSplitInput, expectedScope = currentRezkaScope(session)): Promise<RezkaSplitResponse> {
-  return split(session, '/v1/mobile/rezka/split/client-print/confirm', request, expectedScope);
+export function rezkaSplitClientPrintConfirm(session: Session, request: RezkaSplitInput, snapshot: RezkaSessionSnapshot): Promise<RezkaSplitResponse> {
+  return split(session, '/v1/mobile/rezka/split/client-print/confirm', request, snapshot);
 }

@@ -1,7 +1,7 @@
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { isCanonicalApparatusId, WorkerControlException } from '../workerControlsApi';
-import { currentRezkaScope, guardedRezkaRequest } from './rezkaSessionGuard';
+import { guardedRezkaRequest, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 
 type JsonObject = Record<string, unknown>;
 const object = (value: unknown): JsonObject | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : null;
@@ -66,8 +66,8 @@ async function assertSuccess(response: Response, fallbackCode: string, fallbackM
 }
 
 /** @v2 rezkaMasterWorkers */
-export async function rezkaMasterWorkers(session: Session, expectedScope = currentRezkaScope(session)): Promise<{ workers: RezkaWorker[]; assignments: RezkaAssignment[] }> {
-  const response = await guardedRezkaRequest(session, 'master', expectedScope, false, beforeSend =>
+export async function rezkaMasterWorkers(session: Session, snapshot: RezkaSessionSnapshot): Promise<{ workers: RezkaWorker[]; assignments: RezkaAssignment[] }> {
+  const response = await guardedRezkaRequest(session, 'master', snapshot, false, beforeSend =>
     authorizedFetch(session, '/v1/mobile/rezka-master/workers', {}, beforeSend));
   await assertSuccess(response, 'rezka_workers_load_failed', 'Rezka ishchilari yuklanmadi');
   const row = object(await response.json());
@@ -75,8 +75,8 @@ export async function rezkaMasterWorkers(session: Session, expectedScope = curre
   return { workers: row.workers.map(rezkaWorkerFromJson), assignments: row.assignments.map(rezkaAssignmentFromJson) };
 }
 
-async function save(session: Session, path: string, body: JsonObject, expectedScope: string): Promise<void> {
-  const response = await guardedRezkaRequest(session, 'master', expectedScope, true, beforeSend =>
+async function save(session: Session, path: string, body: JsonObject, snapshot: RezkaSessionSnapshot): Promise<void> {
+  const response = await guardedRezkaRequest(session, 'master', snapshot, true, beforeSend =>
     authorizedFetch(session, `/v1/mobile/rezka-master/${path}`, { method: 'PUT',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, beforeSend));
   await assertSuccess(response, 'rezka_settings_save_failed', 'Rezka sozlamalari saqlanmadi');
@@ -84,13 +84,13 @@ async function save(session: Session, path: string, body: JsonObject, expectedSc
 
 /** @v2 rezkaMasterAssignWorker */
 export function rezkaMasterAssignWorker(session: Session, workerId: string, apparatusIds: string[], previousApparatusIds: string[],
-  expectedScope = currentRezkaScope(session)): Promise<void> {
-  return save(session, 'workers', { worker_id: workerId, apparatus_ids: apparatusIds, previous_apparatus_ids: previousApparatusIds }, expectedScope);
+  snapshot: RezkaSessionSnapshot): Promise<void> {
+  return save(session, 'workers', { worker_id: workerId, apparatus_ids: apparatusIds, previous_apparatus_ids: previousApparatusIds }, snapshot);
 }
 
 /** @v2 rezkaMasterSaveOrderSettings */
 export function rezkaMasterSaveOrderSettings(session: Session, orderId: string, duplicateLabels: boolean, includeBobina: boolean,
-  previousDuplicateLabels: boolean, previousIncludeBobina: boolean, expectedScope = currentRezkaScope(session)): Promise<void> {
+  previousDuplicateLabels: boolean, previousIncludeBobina: boolean, snapshot: RezkaSessionSnapshot): Promise<void> {
   return save(session, 'order-settings', { order_id: orderId, duplicate_rezka_labels: duplicateLabels, include_bobina_in_net: includeBobina,
-    previous_duplicate_rezka_labels: previousDuplicateLabels, previous_include_bobina_in_net: previousIncludeBobina }, expectedScope);
+    previous_duplicate_rezka_labels: previousDuplicateLabels, previous_include_bobina_in_net: previousIncludeBobina }, snapshot);
 }

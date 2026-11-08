@@ -6,8 +6,8 @@ import type { RezkaItemPickerProps } from './rezkaItemPickerTypes';
 import { useRezkaItemPicker, useRezkaText } from './useRezkaSplit';
 
 // V2 _RezkaItemPickerSheet, available only through the split screen's native sheet.
-export function RezkaItemPicker({ session, scope, select }: RezkaItemPickerProps) {
-  const { controller, state } = useRezkaItemPicker(session, scope), query = useNativeState(state.query), t = useRezkaText();
+export function RezkaItemPicker({ snapshot, select }: RezkaItemPickerProps) {
+  const { controller, state } = useRezkaItemPicker(snapshot), query = useNativeState(state.query), t = useRezkaText();
   const { height } = useWindowDimensions();
   useEffect(() => { if (query.get() !== state.query) query.set(state.query); }, [query, state.query]);
   return <Host style={{ height: height * 0.72 }}><VStack>

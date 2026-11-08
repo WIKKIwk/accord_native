@@ -1,3 +1,3 @@
-import type { Session } from '../auth';
+import type { RezkaSessionSnapshot } from './rezkaSessionGuard';
 import type { SupplierItem } from '../shared/catalogApi';
-export type RezkaItemPickerProps = { session: Session; scope: string; select(item: SupplierItem): void };
+export type RezkaItemPickerProps = { snapshot: RezkaSessionSnapshot; select(item: SupplierItem): void };

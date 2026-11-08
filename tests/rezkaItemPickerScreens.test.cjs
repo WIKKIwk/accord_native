@@ -24,7 +24,7 @@ for (const platform of ['ios', 'android']) {
     const filename = path.resolve(__dirname, `../src/rezka/RezkaItemPicker.${platform}.tsx`), mod = new Module(filename, module);
     mod.filename = filename; mod.paths = module.paths; mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
     mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
-    const page = mod.exports.RezkaItemPicker({ session: {}, scope: 'scope', select: value => calls.push(['select', value]) });
+    const page = mod.exports.RezkaItemPicker({ snapshot: { session: {}, scope: 'scope', epoch: 1 }, select: value => calls.push(['select', value]) });
     assert.ok(JSON.stringify(page).includes('ERPNext item qidirish')); assert.ok(JSON.stringify(page).includes('Film'));
     const field = nodes(page, n => n.type === (platform === 'ios' ? 'TextField' : elements.OutlinedTextField))[0];
     (field.props.onTextChange ?? field.props.onValueChange)('film'); assert.deepEqual(calls.at(-1), ['query', 'film']);

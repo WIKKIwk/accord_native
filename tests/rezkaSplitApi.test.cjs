@@ -29,10 +29,10 @@ test('selected V2 source: source query and all split paths, JSON and parsing', a
     return new Response(JSON.stringify(path.includes('/source?') ? { ok: true, source: { barcode: ' B1 ', line_index: '3.8', item_code: ' I-1 ', qty: '2.5', uom: ' kg ' } }
       : { ok: true, status: ' ready ', outputs: [{ epc: ' E1 ', qty: '2.5', print_qr: true }, { epc: ' E2 ', print_qr: false }] }), { status: 200 });
   } } });
-  const source = await api.rezkaSource({}, ' B 1 ');
+  const source = await api.rezkaSource({}, ' B 1 ', {});
   assert.equal(new URL(sent[0].path, 'https://example.test').searchParams.get('barcode'), 'B 1');
   assert.equal(source.source.barcode, 'B1'); assert.equal(source.source.line_index, 3); assert.equal(source.source.qty, 2.5);
-  const response = await api.rezkaSplit({}, input); await api.rezkaSplitClientPrintPrepare({}, input); await api.rezkaSplitClientPrintConfirm({}, input);
+  const response = await api.rezkaSplit({}, input, {}); await api.rezkaSplitClientPrintPrepare({}, input, {}); await api.rezkaSplitClientPrintConfirm({}, input, {});
   assert.equal(response.status, 'ready'); assert.equal(response.outputs[0].epc, 'E1'); assert.equal(response.outputs[1].print_qr, false);
   assert.deepEqual(sent.slice(1).map(x => x.path), ['/v1/mobile/rezka/split', '/v1/mobile/rezka/split/client-print/prepare', '/v1/mobile/rezka/split/client-print/confirm']);
   for (const row of sent.slice(1)) { assert.equal(row.method, 'POST'); assert.equal(row.headers['Content-Type'], 'application/json'); assert.deepEqual(JSON.parse(row.body), wire); }
@@ -45,11 +45,11 @@ test('selected V2 source: source query and all split paths, JSON and parsing', a
 test('V2 error fallbacks, strict status and malformed payload handling', async () => {
   let response = new Response(JSON.stringify({ error: ' bad_source ', detail: ' conflict ', message: 'later' }), { status: 409 });
   const api = load('rezka/rezkaSplitApi', { ...base, '../authorizedFetch': { authorizedFetch: async () => response } });
-  await assert.rejects(api.rezkaSource({}, 'x'), e => e.code === 'bad_source' && e.message === 'conflict' && e.statusCode === 409);
+  await assert.rejects(api.rezkaSource({}, 'x', {}), e => e.code === 'bad_source' && e.message === 'conflict' && e.statusCode === 409);
   response = new Response('invalid', { status: 500 });
-  await assert.rejects(api.rezkaSplit({}, input), e => e.code === 'rezka_split_failed' && e.message === 'Rezka split failed');
+  await assert.rejects(api.rezkaSplit({}, input, {}), e => e.code === 'rezka_split_failed' && e.message === 'Rezka split failed');
   response = new Response('invalid', { status: 200 });
-  assert.deepEqual(await api.rezkaSplit({}, input), { ok: false, status: '', stock_entry_name: '', source_barcode: '', outputs: [] });
+  assert.deepEqual(await api.rezkaSplit({}, input, {}), { ok: false, status: '', stock_entry_name: '', source_barcode: '', outputs: [] });
 });
 
 test('source model trims text, uses Dart-like number defaults and response filters non-objects', () => {
@@ -63,14 +63,14 @@ test('source model trims text, uses Dart-like number defaults and response filte
 test('replays four calls captured from the custom V2 oracle at f11910bb', async () => {
   const { contractFetch, recordedSession } = require('./support/contractFetch.cjs');
   const stem = 'f11910bb/rezka_split_oracle_test', name = 'Rezka source and split requests and models at selected V2 baseline';
-  const replay = contractFetch(stem, name), session = recordedSession(stem, name);
+  const replay = contractFetch(stem, name), session = recordedSession(stem, name), snapshot = { session, epoch: 1, scope: 'scope' };
   const api = load('rezka/rezkaSplitApi', { ...base, '../authorizedFetch': { authorizedFetch: (s, p, init = {}) =>
     replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) } });
-  const source = await api.rezkaSource(session, ' B 1 ');
+  const source = await api.rezkaSource(session, ' B 1 ', snapshot);
   assert.equal(source.source.qty, 2.5); assert.equal(source.source.line_index, 3);
-  const response = await api.rezkaSplit(session, input);
+  const response = await api.rezkaSplit(session, input, snapshot);
   assert.equal(response.outputs[0].epc, 'E1');
-  await api.rezkaSplitClientPrintPrepare(session, input);
-  await api.rezkaSplitClientPrintConfirm(session, input);
+  await api.rezkaSplitClientPrintPrepare(session, input, snapshot);
+  await api.rezkaSplitClientPrintConfirm(session, input, snapshot);
   replay.assertDone();
 });

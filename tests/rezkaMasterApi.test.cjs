@@ -26,17 +26,17 @@ test('selected V2 baseline: master loads workers, retries blocked move and adds 
   const session = recordedSession(stem, name);
   const api = load('rezka/rezkaMasterApi', { ...deps, '../authorizedFetch': { authorizedFetch: (s, p, init = {}) =>
     replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) } });
-  const one = 'apparatus:default:asset-010', two = 'apparatus:default:asset-011';
-  let data = await api.rezkaMasterWorkers(session);
+  const one = 'apparatus:default:asset-010', two = 'apparatus:default:asset-011', snapshot = { session, epoch: 1, scope: 'scope' };
+  let data = await api.rezkaMasterWorkers(session, snapshot);
   assert.deepEqual(data.workers.map(row => row.name), ['Bek', 'Ali']);
   assert.deepEqual(data.assignments[0].assigned_apparatus, [one]);
-  await assert.rejects(api.rezkaMasterAssignWorker(session, 'worker-ali', [two], [one]), e =>
+  await assert.rejects(api.rezkaMasterAssignWorker(session, 'worker-ali', [two], [one], snapshot), e =>
     e.code === 'rezka_worker_has_open_run' && e.statusCode === 409 && e.details[0] === one);
-  await api.rezkaMasterAssignWorker(session, 'worker-ali', [two], [one]);
-  data = await api.rezkaMasterWorkers(session);
+  await api.rezkaMasterAssignWorker(session, 'worker-ali', [two], [one], snapshot);
+  data = await api.rezkaMasterWorkers(session, snapshot);
   assert.deepEqual(data.assignments[0].assigned_apparatus, [two]);
-  await api.rezkaMasterAssignWorker(session, 'worker-ali', [one, two], [two]);
-  data = await api.rezkaMasterWorkers(session);
+  await api.rezkaMasterAssignWorker(session, 'worker-ali', [one, two], [two], snapshot);
+  data = await api.rezkaMasterWorkers(session, snapshot);
   assert.deepEqual(data.assignments[0].assigned_apparatus, [one, two]);
   replay.assertDone();
 });
@@ -46,7 +46,7 @@ test('order settings sends all current and previous values exactly as V2 source'
   const api = load('rezka/rezkaMasterApi', { ...deps, '../authorizedFetch': { authorizedFetch: async (_s, p, init) => {
     sent = { path: p, ...init }; return new Response(null, { status: 200 });
   } } });
-  await api.rezkaMasterSaveOrderSettings({}, ' order ', true, false, false, true);
+  await api.rezkaMasterSaveOrderSettings({}, ' order ', true, false, false, true, {});
   assert.equal(sent.path, '/v1/mobile/rezka-master/order-settings');
   assert.equal(sent.method, 'PUT'); assert.equal(sent.headers['Content-Type'], 'application/json');
   assert.deepEqual(JSON.parse(sent.body), { order_id: ' order ', duplicate_rezka_labels: true, include_bobina_in_net: false,
@@ -67,7 +67,7 @@ test('worker and assignment decoding honors V2 defaults, validation and deduplic
 test('V2 fallback and mapped server errors keep status, code and details', async () => {
   let response = new Response('not json', { status: 503 });
   const api = load('rezka/rezkaMasterApi', { ...deps, '../authorizedFetch': { authorizedFetch: async () => response } });
-  await assert.rejects(api.rezkaMasterWorkers({}), e => e.code === 'rezka_workers_load_failed' && e.message === 'Rezka ishchilari yuklanmadi (HTTP 503)' && e.statusCode === 503);
+  await assert.rejects(api.rezkaMasterWorkers({}, {}), e => e.code === 'rezka_workers_load_failed' && e.message === 'Rezka ishchilari yuklanmadi (HTTP 503)' && e.statusCode === 503);
   response = new Response(JSON.stringify({ error: 'rezka_worker_has_open_run', blocked_apparatus_ids: ['apparatus:default:1', 42] }), { status: 409 });
-  await assert.rejects(api.rezkaMasterAssignWorker({}, 'w', [], []), e => e.code === 'rezka_worker_has_open_run' && e.details.join() === 'apparatus:default:1');
+  await assert.rejects(api.rezkaMasterAssignWorker({}, 'w', [], [], {}), e => e.code === 'rezka_worker_has_open_run' && e.details.join() === 'apparatus:default:1');
 });

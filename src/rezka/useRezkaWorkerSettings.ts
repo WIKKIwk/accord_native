@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
+import { activeSessionEpoch, registerSessionResetHook, type Session } from '../auth';
 import { adminApparatus } from '../apparatusApi';
-import { canOpenRoute, appRoutes } from '../shared/appRoutes';
 import { adminText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { rezkaMasterAssignWorker, rezkaMasterWorkers } from './rezkaMasterApi';
-import { currentRezkaScope } from './rezkaSessionGuard';
+import { currentRezkaScope, isRezkaSessionCurrent } from './rezkaSessionGuard';
 import { RezkaWorkerSettingsController, type RezkaNotice } from './rezkaWorkerController';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -17,14 +16,14 @@ export function useRezkaAdminText() {
 }
 
 export function useRezkaWorkerSettings(session: Session) {
-  const scope = currentRezkaScope(session);
+  const scope = currentRezkaScope(session), epoch = activeSessionEpoch(session);
+  const snapshot = useMemo(() => Object.freeze({ session, scope, epoch }), [session, scope, epoch]);
   const controller = useMemo(() => new RezkaWorkerSettingsController({
-    isCurrent: () => !!activeSessionToken(session) && currentRezkaScope(session) === scope &&
-      session.profile.role === 'rezka_master' && canOpenRoute(session, appRoutes.adminWorkerSettings),
-    loadTeam: () => rezkaMasterWorkers(session, scope),
+    isCurrent: () => isRezkaSessionCurrent(snapshot, 'master'),
+    loadTeam: () => rezkaMasterWorkers(session, snapshot),
     loadApparatus: () => adminApparatus(session, { limit: 500 }),
-    save: (workerId, ids, previous) => rezkaMasterAssignWorker(session, workerId, ids, previous, scope),
-  }), [session, scope]);
+    save: (workerId, ids, previous) => rezkaMasterAssignWorker(session, workerId, ids, previous, snapshot),
+  }), [session, snapshot]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const t = useRezkaAdminText();
   const leases = useRef(new Map<RezkaWorkerSettingsController, number>());

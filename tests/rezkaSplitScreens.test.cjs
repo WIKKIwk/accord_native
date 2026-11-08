@@ -18,7 +18,7 @@ function setup(platform) {
     selectItem: (index, item) => calls.push(['item', index, item]), editOutput: (index, value) => calls.push(['edit', index, value]),
     removeOutput: index => calls.push(['remove', index]), addOutput: () => calls.push('add'), setReason: value => calls.push(['reason', value]),
     setPrinter: value => calls.push(['printer', value]), submit: async () => calls.push('submit'), chooseRemainder: value => calls.push(['remainder', value]) };
-  const hook = { controller, state, device: { title: 'Bluetooth printer tanlanmagan', subtitle: 'Bluetooth printer tanlash uchun bosing' }, scope: 'scope',
+  const hook = { controller, state, device: { title: 'Bluetooth printer tanlanmagan', subtitle: 'Bluetooth printer tanlash uchun bosing' }, snapshot: { session: {}, scope: 'scope', epoch: 1 },
     choosePrinter: async () => calls.push('choosePrinter'), scan: async () => calls.push('scan'), isCurrent: () => true };
   const shared = initial => ({ value: initial, get() { return this.value; }, set(value) { this.value = value; } });
   const Alert = Object.assign(function Alert() {}, { Trigger: 'Alert.Trigger', Message: 'Alert.Message', Actions: 'Alert.Actions' });
