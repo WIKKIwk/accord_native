@@ -1,9 +1,9 @@
-import { Host, Icon, NavigationBar, NavigationBarItem, RNHostView, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Badge, BadgedBox, Host, Icon, NavigationBar, NavigationBarItem, RNHostView, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView, type AndroidSymbol } from 'expo-symbols';
 import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
-export type RoleNavigationItem = { id: string; label: string; icon: AndroidSymbol; testID?: string };
+export type RoleNavigationItem = { id: string; label: string; icon: AndroidSymbol; testID?: string; showBadge?: boolean };
 type Props = { active: string; items: readonly RoleNavigationItem[]; onSelect: (id: string) => void; bottomInset?: number };
 const navigationIcons: Partial<Record<AndroidSymbol, { outlined: ImageSourcePropType; filled: ImageSourcePropType }>> = {
   home: { outlined: require('../../../assets/icons/navigation/outlined/home.xml'), filled: require('../../../assets/icons/navigation/filled/home_fill.xml') },
@@ -19,11 +19,12 @@ function NavItem({ item, active, onSelect }: { item: RoleNavigationItem; active:
     unselectedTextColor: palette.onSurfaceVariant,
   };
   const selected = item.id === active, icon = navigationIcons[item.icon];
+  const iconView = icon ? <Icon source={selected ? icon.filled : icon.outlined} size={24} tint={selected ? palette.onSecondaryContainer : palette.onSurfaceVariant} />
+    : <RNHostView matchContents><SymbolView name={{ android: item.icon }} size={24} tintColor={selected ? palette.onSecondaryContainer : palette.onSurfaceVariant} /></RNHostView>;
   return <NavigationBarItem selected={selected} onClick={() => onSelect(item.id)} colors={colors}
     modifiers={item.testID ? [testID(item.testID)] : undefined}>
     <NavigationBarItem.Icon>
-      {icon ? <Icon source={selected ? icon.filled : icon.outlined} size={24} tint={selected ? palette.onSecondaryContainer : palette.onSurfaceVariant} />
-        : <RNHostView matchContents><SymbolView name={{ android: item.icon }} size={24} tintColor={selected ? palette.onSecondaryContainer : palette.onSurfaceVariant} /></RNHostView>}
+      {item.showBadge ? <BadgedBox><BadgedBox.Badge><Badge /></BadgedBox.Badge>{iconView}</BadgedBox> : iconView}
     </NavigationBarItem.Icon>
     <NavigationBarItem.Label><Text>{item.label}</Text></NavigationBarItem.Label>
   </NavigationBarItem>;
