@@ -41,7 +41,7 @@ test('every printer operation requires a current account, verified device and sa
   assert.throws(() => policy.assertOperation('start', { ...state(), draft: { printer: 'godex' } }));
   assert.throws(() => policy.assertOperation('archive', state(usb, { ...batch, printer: 'godex' })));
   assert.throws(() => policy.assertOperation('reprint', { ...state(), batch: { resolved: false, batch: null } }));
-  current = false; for (const op of ['start', 'stop', 'print', 'archive', 'reprint'])
+  current = false; assert.equal(policy.allowSelection(usb), false); for (const op of ['start', 'stop', 'print', 'archive', 'reprint'])
     assert.throws(() => policy.assertOperation(op, state(usb, op === 'stop' || op === 'print' ? batch : null)), /Sessiya tugagan/);
 });
 

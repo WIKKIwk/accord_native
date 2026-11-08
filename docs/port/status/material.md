@@ -8,12 +8,17 @@ Stopped at: history surfaces and partial navigation are built in unlinked Materi
 |---|---|---|
 | Material history | `material_taminotchi_home_screen_widgets_part_01.dart`, `_MaterialHistoryDetailsSheet` | iOS and Android history and dismissible detail sheets are implemented with session invalidation. Review icon/layout, refresh/back behavior, scope changes, real-device accessibility and full V2 parity before declaring complete. |
 | Material home, tasks, sequence, assignment, inventory | `MaterialTaminotchiHomeScreen`, drawer and dock | Only a partial home shell, profile and history drawer entry exist in unlinked role routes; implement all cards, FAB, tasks, supply sequence, assignment and inventory using shared native components and role-neutral APIs. Do not expose the partial home in `homeTargets`. |
-| GScale | `gscale_mode_screen.dart`, `OperatorDashboardPage` | Do not route Material into existing GScale: GoDEX remains selectable/restorable/auto-detected and Wi-Fi printer identity may be unknown. Build and independently review role-scoped fail-closed policy at every write, auto-stop, print and reprint boundary, preserving other roles, then audit all flows and verify real hardware. Existing GScale open items remain. |
+| GScale | `gscale_mode_screen.dart`, `OperatorDashboardPage` | Material GScale route remains held. Opt-in `materialPrinterSafety` now guards selection, stop/start, local/remote print stages and archive/reprint boundaries, but must receive independent review and real-hardware verification. Wi-Fi remains blocked; an identified USB/Bluetooth device still needs physical verification. Audit all f119 flows and inherited GScale open items. |
 | Chat | shared chat transport | Keep new-role Chat and unread subscription unwired until integrator resolves redirect/cookie security hold. |
 | Notifications | shared notification routes and stores | Do not expose held shared notification detail or hidden/unread stores until account-switch holds are resolved. |
 | Printer / scale / phone | native channels in role ledger | Verify native builds, permissions, discovery, printing and full flows on physical iOS and Android devices; no simulator, hardware or device used. |
 | Test mode | `adminRawMaterialHistory` | Return the V2 demo/test-mode empty history when the later shared test-mode pass is implemented. |
 | Error mapping | `_adminProductionMapException` | Shared production map error mapper is incomplete; audit all history non-404 server codes and diagnostics against f119 before parity is claimed. |
+| Policy integration | `GScaleModeScreen`, `useGScaleScreen` | Policy is opt-in and no route invokes it. Shared picker must catch refused Wi-Fi/Bluetooth selections without closing or unhandled rejection; register operator lifetime/session reset before safe integration. Keep route held pending independent review. |
+| Device preferences | `SavedPrintDevice`, `OperatorControlDraft` | Material policy reads legacy choices but uses a session-only overlay to avoid changing other roles’ saved device/draft; durable role-isolated persistence and correct user-facing rejection remain open. |
+| Account switch during print | `_printActiveRsBatch`, `reprintArchiveReceipt` | Guards prevent later print/confirm steps after account change, but cannot undo a physical print or prepare request already sent. Define reconciliation and verify on real hardware. |
+| Capability mismatch | `AppSession.homeRoute`, `AppRouter.canOpenRoute` | V2 selects material home for `inventory.movement.manage` alone but rejects that route; retain the denial behavior and audit the initial routing edge before home is connected. |
+| Remaining tests | `.port/role-material-tests.md` | Re-record any actually used preparation/qolip shared fixture at f119 in coordinated nested stems, and inspect remaining contract/logic/widget cases for reachable tasks, inventory, assignment and GScale; historical top-level recordings are not f119 evidence. |
 
 ## Deviations candidates
 None identified yet.
@@ -46,6 +51,12 @@ The scoped `order_scan_bootstrap_api_test` f119 fixture is owned by this branch;
 - Expo SDK 58 versioned documentation and installed UI types were checked. No simulator or phone used.
 - Material route trees are present but no `homeTargets` entry was added. No Chat, unread, notification detail or GScale route was exposed.
 
-## GScale guard checkpoint (not wired)
-- `gscaleMaterialPolicy.ts` is opt-in and currently standalone: it rejects GoDEX, unknown devices and all Wi-Fi, admits only locally identified Zebra USB / XP-P323B Bluetooth, requires current session and valid batch metadata for writes, and provides an in-memory overlay so legacy shared preferences cannot be overwritten. This conservative filter has focused tests, but is not an end-to-end guard yet.
-- Automatic late-error batch stop can POST on opening the screen. Before exposing Material GScale, inject the policy at its actual API boundary and at start, print/prepare/confirm, archive and reprint boundaries; test asynchronous account/selection changes and default behavior for other roles. Wi-Fi printer identity and actual hardware still require an independently verified design.
+## GScale guard checkpoint (route not wired)
+- `gscaleMaterialPolicy.ts` is default-off. The explicit `materialPrinterSafety` runtime option rejects GoDEX, unknown devices and all Wi-Fi, admits only native-identified Zebra USB / XP-P323B Bluetooth, requires current session and valid batch metadata for writes, and uses an in-memory overlay so shared preferences cannot be overwritten. It is not activated by a route.
+- Automatic late-error batch stop, start, print/prepare/confirm, archive print and receipt prepare/print/confirm check the policy at their write boundaries. Focused tests cover session, selection and revision races and the default Preparation behavior. Independent review, printer identity validation, picker error handling and real devices remain required; this is not proof of a deployable route.
+
+## Verification after policy integration
+- 112 focused GScale and Material safety tests passed, including no-write on rejected, stale account, scope, device or batch metadata, and default GScale regression cases. Tests use mocks and no live backend.
+- iOS TypeScript and Expo lint passed; Android TypeScript reported only the nine inherited Worker errors. Both offline Expo JS exports passed on the current screen checkpoint; they are not native builds.
+- Ledger `check` exited 0 (564 tags, 64 test tags) with eight existing dynamic/other-domain endpoint warnings; role report generated, but text gate remains red: iOS 119 V2-only / 51 V4-only strings, Android 118 / 62, plus 33 surfaces to audit. No text exceptions were accepted.
+- Source V2 HEAD remains `f11910bb2c8c7081ce26770e69811b03fd0739ed` and original and snapshot Git status are clean. No simulator, real phone, scale, printer or live backend mutation used.

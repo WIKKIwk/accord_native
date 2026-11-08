@@ -56,19 +56,21 @@ export async function loadGScaleArchive(session: Session, context: GScaleArchive
 }
 
 /** @v2 _printArchiveSession */
-export async function printGScaleArchiveSession(context: GScaleArchiveContext, session: ArchiveSession): Promise<string> {
+export async function printGScaleArchiveSession(context: GScaleArchiveContext, session: ArchiveSession, beforeWrite?: () => void): Promise<string> {
   const printer = currentArchivePrinterChoice(context);
   if (!printer) throw new Error('Printer ulanmagan');
   const local = context.transport !== 'wifi';
   const plan = context.controlOnly || local ? buildMaterialBatchPrintPlan(session) : null;
   const name = session.item_name || session.item_code || 'Partiya';
   if (local) {
+    beforeWrite?.();
     await PrintService.printRps(materialBatchUsbRequest(plan!, printer), { transport: context.transport,
       printerProfile: context.selection?.transport === 'offline' ? context.selection.offlinePrinter : null,
       bluetoothPrinter: context.selection?.transport === 'bluetooth' ? context.selection.bluetoothPrinter : null });
     return `${name} ${context.transport === 'bluetooth' ? 'Bluetooth' : 'USB'} printerda chop etildi`;
   }
   const body = context.controlOnly ? materialBatchDriverRequest(plan!, printer) : { session_id: session.session_id, printer };
+  beforeWrite?.();
   const response = await request(context.server, context.controlOnly ? '/v1/mobile/driver/print' : '/v1/mobile/archive/print', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }, 5000);
@@ -79,12 +81,13 @@ export async function printGScaleArchiveSession(context: GScaleArchiveContext, s
   return `${name} uchun QR chop etish yuborildi`;
 }
 
-export function reprintGScaleArchiveReceipt(session: Session, context: GScaleArchiveContext, entry: ArchivePrintEntry): Promise<string | null> {
+export function reprintGScaleArchiveReceipt(session: Session, context: GScaleArchiveContext, entry: ArchivePrintEntry, beforeWrite?: () => void): Promise<string | null> {
   const printer = currentArchivePrinterChoice(context);
   return reprintArchiveReceipt(entry, printer, {
-    prepare: epc => adminPrepareRawMaterialStockReprint(session, epc),
-    confirm: (barcode, id) => adminConfirmRawMaterialStockReprint(session, barcode, id),
+    prepare: epc => { beforeWrite?.(); return adminPrepareRawMaterialStockReprint(session, epc); },
+    confirm: (barcode, id) => { beforeWrite?.(); return adminConfirmRawMaterialStockReprint(session, barcode, id); },
     print: async label => {
+      beforeWrite?.();
       if (context.transport !== 'wifi') return PrintService.printRps(label, { transport: context.transport,
         printerProfile: context.selection?.transport === 'offline' ? context.selection.offlinePrinter : null,
         bluetoothPrinter: context.selection?.transport === 'bluetooth' ? context.selection.bluetoothPrinter : null });

@@ -15,6 +15,7 @@ import { MobileApiException } from '../shared/mobileApiException';
 import type { ArchivePrintEntry, ArchiveSession } from './gscaleArchive';
 import type { GScaleArchiveContext } from './gscaleArchiveRuntime';
 import type { PrintDeviceSelection } from './gscalePreferences';
+import type { MaterialGScaleOperation } from './gscaleMaterialPolicy';
 
 type Receipt = ReturnType<typeof materialReceiptPrintResponseFromJson>;
 type Item = { code: string; name: string; requiresDimensions: boolean };
@@ -41,6 +42,9 @@ export type GScaleOperatorState = { draft: OperatorControlDraft; draftRestored: 
   requestInFlight: boolean; startConflict: boolean; error: string; notice: string; lastReceipt: Receipt | null;
   archive: ArchiveSession[]; archiveLoading: boolean; archiveError: string; archivePrintingId: string; printerStatusOverride: string };
 
+export type GScaleWritePolicy = { readonly restrictPrinter: boolean; isPrinterChoiceAllowed(value: string): boolean;
+  assertOperation(operation: MaterialGScaleOperation, state: GScaleOperatorState): void };
+
 /** Shared dashboard state. Platform views bind to this controller. */
 export class GScaleOperatorStore {
   private state: GScaleOperatorState;
@@ -61,7 +65,8 @@ export class GScaleOperatorStore {
   private linkedOrderId: string;
   private args: GScaleModeArgs;
 
-  constructor(private readonly role: string, args: GScaleModeArgs, private readonly deps: GScaleOperatorDependencies) {
+  constructor(private readonly role: string, args: GScaleModeArgs, private readonly deps: GScaleOperatorDependencies,
+    private readonly writePolicy?: GScaleWritePolicy) {
     this.args = { ...args, order: args.order ? { ...args.order } : null };
     this.controlOnly = role === 'material_taminotchi' || role === 'tayyorlov_masteri';
     this.linkedOrderId = args.order?.id.trim() ?? '';
@@ -75,6 +80,11 @@ export class GScaleOperatorStore {
   }
   getSnapshot = () => this.state;
   isActive = () => this.alive;
+  isPrinterRestricted = () => this.writePolicy?.restrictPrinter === true;
+  private operationError(operation: MaterialGScaleOperation): string {
+    try { this.writePolicy?.assertOperation(operation, this.state); return ''; }
+    catch (error) { return error instanceof Error ? error.message : String(error); }
+  }
   currentArgs = () => this.args;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private update(patch: Partial<GScaleOperatorState>) {
@@ -260,7 +270,7 @@ export class GScaleOperatorStore {
     const kind = monitor.printerKind.trim().toLowerCase(), label = monitor.printerLabel.trim().toLowerCase();
     const printer = kind === 'zebra' || kind === 'godex' ? kind : label.startsWith('zebra') ? 'zebra' :
       label.startsWith('godex') || label.startsWith('go-dex') ? 'godex' : '';
-    if (printer && printer !== this.state.draft.printer) {
+    if (printer && (!this.writePolicy || this.writePolicy.isPrinterChoiceAllowed(printer)) && printer !== this.state.draft.printer) {
       this.setDraft({ ...this.state.draft, printer, ...(printer === 'godex' ? { print_mode: 'label' } : {}) });
     }
     if (monitor.printerEventKey && monitor.printerEventKey !== previous.printerEventKey) {
@@ -289,6 +299,9 @@ export class GScaleOperatorStore {
   }
 
   editDraft(patch: Partial<OperatorControlDraft>): void {
+    if (patch.printer != null && this.writePolicy && !this.writePolicy.isPrinterChoiceAllowed(patch.printer)) {
+      this.update({ error: 'Printer ulanmagan' }); return;
+    }
     if (this.state.actionLoading || this.state.batch.loading || this.state.manualPrintLoading || this.state.simpleLoading) return;
     const editableDuringBatch = new Set(['manual_qty_text', 'manual_duplicate_text', 'material_supplier', 'babina_text']);
     const changesContext = Object.keys(patch).some(key => !editableDuringBatch.has(key));
@@ -341,6 +354,7 @@ export class GScaleOperatorStore {
   }
 
   async startBatch(choose: (options: Record<string, string>) => Promise<string | null>, autoPrintStable: boolean): Promise<void> {
+    const blocked = this.operationError('start'); if (blocked) { this.update({ error: blocked }); return; }
     if (this.state.manualPrintLoading || this.state.actionLoading || this.state.batch.loading || this.state.requestInFlight) return;
     if (!this.state.batch.resolved || this.state.batch.batch?.active) { this.update({ error: 'Avval faol batchni to‘xtating va holatni yangilang' }); return; }
     this.update({ actionLoading: true, startConflict: false, error: '' });
@@ -373,6 +387,7 @@ export class GScaleOperatorStore {
   }
 
   async stopBatch(): Promise<void> {
+    const blocked = this.operationError('stop'); if (blocked) { this.update({ error: blocked }); return; }
     if (this.state.manualPrintLoading || this.state.actionLoading || this.state.batch.loading || this.state.requestInFlight) return;
     await this.deps.batch.stop(); this.autoPrintKey = '';
   }
@@ -388,6 +403,7 @@ export class GScaleOperatorStore {
   }
 
   private async print(gross: number, count: number, auto: boolean): Promise<void> {
+    const blocked = this.operationError('print'); if (blocked) { this.update({ error: blocked }); return; }
     const selection = this.state.device.selection, batch = this.state.batch.batch;
     this.update(auto ? { actionLoading: true, error: '' } : { manualPrintLoading: true, error: '' });
     try {
@@ -445,6 +461,7 @@ export class GScaleOperatorStore {
   }
 
   async printArchive(session: ArchiveSession): Promise<void> {
+    const blocked = this.operationError('archive'); if (blocked) { this.update({ archiveError: blocked }); return; }
     if (this.state.archivePrintingId || !this.alive) return;
     this.update({ archivePrintingId: session.session_id, archiveError: '', notice: '' });
     try { this.update({ notice: await this.deps.printArchive(this.archiveContext(), session), archivePrintingId: '' }); }
@@ -452,6 +469,7 @@ export class GScaleOperatorStore {
   }
 
   async reprintArchiveReceipt(entry: ArchivePrintEntry): Promise<string | null> {
+    const blocked = this.operationError('reprint'); if (blocked) throw new Error(blocked);
     if (!entry.epc.trim()) throw new Error('Receipt EPC kodi topilmadi');
     return this.deps.reprintArchiveReceipt(this.archiveContext(), entry);
   }

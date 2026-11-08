@@ -1,4 +1,5 @@
-import type { Session } from '../auth';
+import { activeSessionToken, type Session } from '../auth';
+import { sessionReadScope } from '../sessionReadScope';
 import { appPreferences } from '../appPreferences';
 import { preparationSnapshot } from '../preparationReadApi';
 import { gscaleSimpleMaterialReceipt } from '../preparation/preparationCommandApi';
@@ -18,6 +19,9 @@ import { GScaleOperatorStore } from './gscaleOperatorState';
 import { createGScaleCatalogRuntime } from './gscaleCatalogRuntime';
 import { loadGScaleArchive, printGScaleArchiveSession, reprintGScaleArchiveReceipt } from './gscaleArchiveRuntime';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
+import { MaterialGScalePolicy, materialPreferenceOverlay, materialPrinterSelectionKey,
+  type MaterialGScaleOperation } from './gscaleMaterialPolicy';
+import type { PrintDeviceSelection } from './gscalePreferences';
 
 async function timed<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -36,17 +40,36 @@ export async function materialAssignedWarehouseNames(session: Session): Promise<
     .map(value => value.warehouse.trim().toLowerCase()).filter(Boolean));
 }
 
-export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs): GScaleOperatorStore {
+export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs,
+  options: { materialPrinterSafety?: boolean } = {}): GScaleOperatorStore {
   const role = String(session.profile.role ?? ''), controlOnly = role === 'material_taminotchi' || role === 'tayyorlov_masteri';
-  const batch = new GScaleBatchStateStore({ state: () => gscaleRpsBatchState(session), stop: (id, rev) => gscaleRpsBatchStop(session, id, rev) });
+  if (options.materialPrinterSafety && role !== 'material_taminotchi') throw new Error('Material printer policy requires Material role');
+  const scope = options.materialPrinterSafety ? sessionReadScope(session) : '', policy = options.materialPrinterSafety
+    ? new MaterialGScalePolicy(() => !!activeSessionToken(session) && sessionReadScope(session) === scope) : undefined;
+  const storage = policy ? materialPreferenceOverlay(appPreferences) : appPreferences;
+  let store: GScaleOperatorStore;
+  const batch = new GScaleBatchStateStore({ state: () => gscaleRpsBatchState(session), stop: (id, rev) => {
+    policy?.assertOperation('stop', store.getSnapshot(), { batchId: id, batchRevision: rev });
+    return gscaleRpsBatchStop(session, id, rev);
+  } }, policy ? { prepareAutomaticStop: expected => {
+    const selection = materialPrinterSelectionKey(store.getSnapshot().device.selection) ?? '';
+    return () => {
+      try { policy.assertOperation('stop', store.getSnapshot(), { selection, batchId: expected.id, batchRevision: expected.revision }); return true; }
+      catch { return false; }
+    };
+  } } : undefined);
+  const selectionKey = (selection: PrintDeviceSelection | null) => materialPrinterSelectionKey(selection) ?? '';
+  const beforeWrite = (operation: MaterialGScaleOperation, selection: string, expectedBatch?: { id: string; revision: number } | null) =>
+    () => policy?.assertOperation(operation, store.getSnapshot(), { selection,
+      ...(expectedBatch ? { batchId: expectedBatch.id, batchRevision: expectedBatch.revision } : {}) });
   const catalog = createGScaleCatalogRuntime(session, () => materialAssignedWarehouseNames(session));
   const materialWarehouses = async () => (await timed(preparationSnapshot(session), 4000)).material_warehouses;
   const warehouseAllowed = async (warehouse: string) => role !== 'material_taminotchi' ||
     (await materialAssignedWarehouseNames(session)).has(warehouse.trim().toLowerCase());
-  let store: GScaleOperatorStore;
   store = new GScaleOperatorStore(role, args, {
-    devices: createGScaleDeviceStore(), batch, refreshProfileScope: async () => { await profile(session); },
-    loadDraft: () => loadOperatorControlDraft(appPreferences), saveDraft: draft => saveOperatorControlDraft(appPreferences, draft),
+    devices: createGScaleDeviceStore(policy ? { storage, allowSelection: value => policy.allowSelection(value), rememberBluetooth: false } : {}),
+    batch, refreshProfileScope: async () => { await profile(session); },
+    loadDraft: () => loadOperatorControlDraft(storage), saveDraft: draft => saveOperatorControlDraft(storage, draft),
     loadMaterialWarehouses: materialWarehouses,
     prefillMaterialOrder: async orderId => {
       const choice = await catalog.singleOrderChoice(orderId);
@@ -61,22 +84,47 @@ export function createGScaleOperatorStore(session: Session, args: GScaleModeArgs
       return item ? { code: item.code, name: item.name || item.code, requiresDimensions: item.requires_dimensions } : null;
     },
     warehouseAllowed,
-    startBatch: (context, choose) => startGScaleBatch(context, {
+    startBatch: (context, choose) => {
+      const selection: PrintDeviceSelection | null = context.transport === 'offline' && context.offlinePrinter
+        ? { transport: 'offline', offlinePrinter: context.offlinePrinter } : context.transport === 'bluetooth' && context.bluetoothPrinter
+          ? { transport: 'bluetooth', bluetoothPrinter: context.bluetoothPrinter } : context.transport === 'wifi' && context.server
+            ? { transport: 'wifi', server: context.server } : null;
+      const expectedSelection = policy ? selectionKey(selection) : '';
+      policy?.assertOperation('start', store.getSnapshot(), { selection: expectedSelection });
+      return startGScaleBatch(context, {
       warehouseAllowed, detectOfflinePrinter: () => PrintService.detectOfflinePrinter(),
       itemPage: (query, orderId, useBackend) => gscaleItemsPage(session, { query, orderId, offset: 0, limit: 200, useBackend }),
       chooseApparatus: choose,
       current: () => { const state = store.getSnapshot(); return { mounted: store.isActive(), linkedOrderId: store.currentArgs().order?.id ?? '',
         draftOrderId: state.draft.order_id, batchResolved: state.batch.resolved, batchActive: state.batch.batch?.active === true }; },
-      start: request => gscaleRpsBatchStart(session, request),
-    }),
-    printBatch: context => printGScaleBatch(session, context, () => batch.refresh()),
+      start: request => {
+        policy?.assertOperation('start', store.getSnapshot(), { selection: expectedSelection, requestPrinter: request.printer, requestDriverUrl: request.driver_url });
+        return gscaleRpsBatchStart(session, request);
+      },
+    }); },
+    printBatch: context => {
+      const selection: PrintDeviceSelection | null = context.transport === 'offline' && context.offlinePrinter
+        ? { transport: 'offline', offlinePrinter: context.offlinePrinter } : context.transport === 'bluetooth' && context.bluetoothPrinter
+          ? { transport: 'bluetooth', bluetoothPrinter: context.bluetoothPrinter } : context.transport === 'wifi' && context.server
+            ? { transport: 'wifi', server: context.server } : null;
+      const guard = policy ? beforeWrite('print', selectionKey(selection), context.batch) : undefined;
+      guard?.();
+      return printGScaleBatch(session, context, () => batch.refresh(), guard);
+    },
     submitSimple: (itemCode, warehouse, quantityText, previous) => submitSimpleGScaleReceipt({ itemCode, warehouse, quantityText, role,
       controlOnly, freshForm: args.freshForm === true, materialWarehouses: previous,
       refreshMaterialWarehouses: materialWarehouses, submit: payload => gscaleSimpleMaterialReceipt(session, payload) }),
     refreshMonitor: baseUrl => refreshGScaleMonitor(fetch, baseUrl),
     makeLive: (server, callbacks) => createGScaleLiveMonitor(server.endpoint.baseUrl, callbacks),
-    loadArchive: context => loadGScaleArchive(session, context), printArchive: printGScaleArchiveSession,
-    reprintArchiveReceipt: (context, entry) => reprintGScaleArchiveReceipt(session, context, entry),
-  });
+    loadArchive: context => loadGScaleArchive(session, context),
+    printArchive: (context, archive) => {
+      const guard = policy ? beforeWrite('archive', selectionKey(context.selection)) : undefined; guard?.();
+      return printGScaleArchiveSession(context, archive, guard);
+    },
+    reprintArchiveReceipt: (context, entry) => {
+      const guard = policy ? beforeWrite('reprint', selectionKey(context.selection)) : undefined; guard?.();
+      return reprintGScaleArchiveReceipt(session, context, entry, guard);
+    },
+  }, policy);
   return store;
 }

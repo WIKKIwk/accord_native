@@ -33,7 +33,7 @@ export class MaterialGScalePolicy {
   readonly restrictPrinter = true;
   constructor(private readonly isCurrent: () => boolean) {}
   isPrinterChoiceAllowed(value: string): boolean { return canonical(value) === 'zebra'; }
-  allowSelection(selection: PrintDeviceSelection): boolean { return !!materialPrinterSelectionKey(selection); }
+  allowSelection(selection: PrintDeviceSelection): boolean { return this.isCurrent() && !!materialPrinterSelectionKey(selection); }
   assertOperation(operation: MaterialGScaleOperation, state: GScaleOperatorState, expected: MaterialGScaleExpectation = {}): void {
     if (!this.isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.');
     const selected = state.device.selection, key = materialPrinterSelectionKey(selected);
