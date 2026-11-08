@@ -10,6 +10,8 @@ export type DevicePickerAdapter = {
   scanDevices: () => Promise<void>;
   checkDeviceAddress: (raw: string) => Promise<DiscoveredServer | null>;
   selectDevice: (selection: PrintDeviceSelection) => Promise<void | boolean>;
+  // One-shot adapters initiate closure; their owner resolves the result only on sheet dismissal.
+  completeSelection?: (close: () => void) => void;
   // Optional for one-shot adapters; GScale intentionally retains its existing behavior.
   selectionToken?: () => number;
   isSelectionCurrent?: (token: number) => boolean;

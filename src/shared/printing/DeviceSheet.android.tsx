@@ -8,10 +8,10 @@ import { useDevicePicker } from './useDevicePicker';
 type LabelProps = { children: string };
 type ActionProps = { label: string; detail?: string; onPress(): void; disabled?: boolean; id?: string };
 type DeviceSheetProps = { operator: DevicePickerAdapter; close(): void; useText: DevicePickerTextHook;
-  Label: ComponentType<LabelProps>; Action: ComponentType<ActionProps> };
+  Label: ComponentType<LabelProps>; Action: ComponentType<ActionProps>; safe?: boolean };
 
-export function DeviceSheet({ operator, close, useText, Label, Action }: DeviceSheetProps) {
-  const picker = useDevicePicker(operator, close), address = useNativeState(picker.address), t = useText();
+export function DeviceSheet({ operator, close, useText, Label, Action, safe }: DeviceSheetProps) {
+  const picker = useDevicePicker(operator, close, safe), address = useNativeState(picker.address), t = useText();
   return <View style={{ minHeight: 400, padding: 16, gap: 10 }}><Label>{t('Qurilma tanlash')}</Label>
     <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
       {picker.device.connection == null ? <>

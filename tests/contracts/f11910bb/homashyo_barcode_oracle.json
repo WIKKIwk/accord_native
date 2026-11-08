@@ -1,0 +1,2591 @@
+{
+  "source_sha": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "source_file": "lib/src/features/admin/presentation/raw_material_scan_dialog_widgets_part_01.dart:24-47",
+  "dart_sdk": "3.13.7 macos_arm64",
+  "fuzz_seed": "0xabcdef",
+  "known_mismatches": [
+    "https://%FF/a"
+  ],
+  "cases": [
+    {
+      "raw": "Milano Premium 30/40",
+      "value": "Milano Premium 30/40"
+    },
+    {
+      "raw": " parent ",
+      "value": "parent"
+    },
+    {
+      "raw": "https://example.test/path?barcode=A&barcode=B",
+      "value": "B"
+    },
+    {
+      "raw": "https://example.test/path?barcode=A&barcode=&epc=EPC",
+      "value": "EPC"
+    },
+    {
+      "raw": "https://example.test/path?epc=A&epc=B",
+      "value": "B"
+    },
+    {
+      "raw": "https://example.test/path?barcode=%FF&epc=EPC",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/path?barcode=%E0%A4%A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a%2Fb",
+      "value": "a/b"
+    },
+    {
+      "raw": "https://example.test/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "https://example.test/path?barcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "https://example.test/path?barcode=%20&epc=EPC",
+      "value": "EPC"
+    },
+    {
+      "raw": "https://example.test/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "http://example.test",
+      "value": "http://example.test"
+    },
+    {
+      "raw": "foo://example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "//example.test/a",
+      "value": "//example.test/a"
+    },
+    {
+      "raw": "https://user:pass@example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/a?%62arcode=x",
+      "value": "x"
+    },
+    {
+      "raw": "https://example.test/a?BARCODE=A",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/a?barcode=first&barcode=second&barcode=third",
+      "value": "third"
+    },
+    {
+      "raw": "https://example.test/a?barcode=A%00B",
+      "value": "A\u0000B"
+    },
+    {
+      "raw": "https://example.test/a?barcode=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a?barcode=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://example.test/a/%E2%80%8B",
+      "value": "​"
+    },
+    {
+      "raw": "https://example.test/a/%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "https://example.test/%20",
+      "value": "https://example.test/%20"
+    },
+    {
+      "raw": "https://example.test/a/",
+      "value": "https://example.test/a/"
+    },
+    {
+      "raw": "https://example.test/a?qr=1&qr=2",
+      "value": "2"
+    },
+    {
+      "raw": "https://example.test/a?barcode=&qr=Q",
+      "value": "Q"
+    },
+    {
+      "raw": "https:foo",
+      "value": "https:foo"
+    },
+    {
+      "raw": "http:////example.test/a",
+      "value": "http:////example.test/a"
+    },
+    {
+      "raw": "https://example.test:99999/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://EXAMPLE.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://user@EXAMPLE.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://[::1]/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "https://example.test/a/%2E%2E/B",
+      "value": "B"
+    },
+    {
+      "raw": "https://example.test/%2F",
+      "value": "/"
+    },
+    {
+      "raw": "https://example.test/%252F",
+      "value": "%2F"
+    },
+    {
+      "raw": "https://example.test/a/%FF/b?qr=Q",
+      "value": "Q"
+    },
+    {
+      "raw": "https://example.test/a/%FF/b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a?unknown=%FF&barcode=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a?barcode=B&unknown=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a?barcode=%00",
+      "value": "\u0000"
+    },
+    {
+      "raw": "https://example.test/a?barcode=%EF%BB%BFZ%EF%BB%BF",
+      "value": "Z"
+    },
+    {
+      "raw": "https://example.test/a?barcode=1;epc=2",
+      "value": "1;epc=2"
+    },
+    {
+      "raw": "https://example.test/a?barcode=1&&barcode=2",
+      "value": "2"
+    },
+    {
+      "raw": "https://example.test/a?barcode",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/a?=x&qr=Q",
+      "value": "Q"
+    },
+    {
+      "raw": "ftp://example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "foo://example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "file://localhost/a",
+      "value": "a"
+    },
+    {
+      "raw": "file://example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "http://bücher.example/a",
+      "value": "a"
+    },
+    {
+      "raw": "http://example.test/a%2Fb?x=%ZZ",
+      "value": "a/b"
+    },
+    {
+      "raw": "https://example.test/first%FF/last",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a?x=%E2%80%8B&qr=Q",
+      "value": "Q"
+    },
+    {
+      "raw": "https://example.test/%2e",
+      "value": "https://example.test/%2e"
+    },
+    {
+      "raw": "https://example.test/%2E%2E",
+      "value": "https://example.test/%2E%2E"
+    },
+    {
+      "raw": "https://example.test/a/..",
+      "value": "https://example.test/a/.."
+    },
+    {
+      "raw": "https://example.test/a?barcode=a%2Bb",
+      "value": "a+b"
+    },
+    {
+      "raw": "https://example.test/a?barcode=%252F",
+      "value": "%2F"
+    },
+    {
+      "raw": "https://example.test/a?barcode=%E2%82%AC",
+      "value": "€"
+    },
+    {
+      "raw": "https://example.test/a?%FF=x&barcode=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a?barcode=%26%3D",
+      "value": "&="
+    },
+    {
+      "raw": "https://example.test/a?barcode=A#X",
+      "value": "A"
+    },
+    {
+      "raw": "https://example.test/a?barcode=one&%62arcode=two",
+      "value": "two"
+    },
+    {
+      "raw": "https://example.test/a?barcode=first&barcode&epc=E",
+      "value": "E"
+    },
+    {
+      "raw": "https://example.test/ ",
+      "value": "https://example.test/"
+    },
+    {
+      "raw": "https://example.test/a?barcode= ",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/a?barcode=%20%20",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/a?barcode=A%00",
+      "value": "A\u0000"
+    },
+    {
+      "raw": " https://example.test/a?barcode= A ",
+      "value": "A"
+    },
+    {
+      "raw": "foo://localhost/%2F?=%20&=%2F&epc=",
+      "value": "/"
+    },
+    {
+      "raw": "file://host.test:99999",
+      "value": "file://host.test:99999"
+    },
+    {
+      "raw": "foo://bücher.example/x/%ZZ?%62arcode=a+b&bad%FF=A&=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/?=a+b&qr=%20&bad%FF=A&bad%FF=%20#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a+b?bad%FF=%2F&%62arcode=a+b&%62arcode=%2F#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "foo://bücher.example/a/b?barcode=%FF&%62arcode=&%62arcode=%20&barcode=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a/../B?epc=&x=abc%00def&x=A",
+      "value": "B"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a%FF?qr=%20&bad%FF=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a/%E2%80%8B?=%FF#fragment",
+      "value": "​"
+    },
+    {
+      "raw": "foo://bücher.example/x/%ZZ?bad%FF=%FF&qr=&bad%FF=%2F&x=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a/../B?bad%FF=%FF&qr=B&%62arcode=%C0%AF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a/../B?qr=&qr=%F0%9F%93%A6&qr=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a/%E2%80%8B?epc=%20&epc=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "foo://bücher.example/%2F",
+      "value": "/"
+    },
+    {
+      "raw": "https://[::1]/%2F?=%C0%AF&x=%ZZ&%62arcode=%C0%AF&barcode=%ZZ#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test?x=a+b",
+      "value": "http://user:pass@example.test?x=a+b"
+    },
+    {
+      "raw": "https://[::1]/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/../B?=%C0%AF#fragment",
+      "value": "B"
+    },
+    {
+      "raw": "https://[::1]/x/%ZZ?qr=B&qr=B",
+      "value": "B"
+    },
+    {
+      "raw": "http://user:pass@example.test/?epc=A",
+      "value": "A"
+    },
+    {
+      "raw": "https://[::1]/a%FF?barcode=%20#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a/../B?bad%FF=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a+b?x=a+b&barcode=&%62arcode=A&=",
+      "value": "A"
+    },
+    {
+      "raw": "foo://bücher.example/a/%E2%80%8B",
+      "value": "​"
+    },
+    {
+      "raw": "https://[::1]/a?epc=%F0%9F%93%A6&x=%F0%9F%93%A6&x=%ZZ&bad%FF=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/a/../B?bad%FF=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://bücher.example/x/%ZZ?=&bad%FF=A#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a/../B?epc=abc%00def&epc=%20#fragment",
+      "value": "B"
+    },
+    {
+      "raw": "foo://localhost/a/b?%62arcode=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/%2F?barcode=a+b&%62arcode=%F0%9F%93%A6&qr=%20&%62arcode=B",
+      "value": "B"
+    },
+    {
+      "raw": "foo://localhost/a+b?epc=A&qr=&barcode=%2F&qr=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a/%E2%80%8B?=%2F#fragment",
+      "value": "​"
+    },
+    {
+      "raw": "foo://bücher.example/a?barcode=%2F&bad%FF=%F0%9F%93%A6&qr=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/../B?%62arcode=A",
+      "value": "A"
+    },
+    {
+      "raw": "http://bücher.example/a%FF?epc=B&x=%C0%AF&epc=abc%00def&qr=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/%E2%80%8B?=abc%00def&barcode=#fragment",
+      "value": "​"
+    },
+    {
+      "raw": "foo://bücher.example/a/b?%62arcode=%20",
+      "value": "b"
+    },
+    {
+      "raw": "file://[::1]/%20",
+      "value": "file://[::1]/%20"
+    },
+    {
+      "raw": "foo://user:pass@example.test/?%62arcode=%2F&epc=%20",
+      "value": "/"
+    },
+    {
+      "raw": "https://host.test:99999/a?=%F0%9F%93%A6&x=",
+      "value": "a"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/%E2%80%8B?bad%FF=a+b&epc=%20#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/%E2%80%8B?=%20&bad%FF=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/%20?epc=%C0%AF&x=abc%00def&=%FF&x=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/x/%ZZ?barcode=%ZZ&x=B&x=%F0%9F%93%A6&=%ZZ#fragment",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://host.test:99999/%20?barcode=a+b&%62arcode=A&qr=B#fragment",
+      "value": "A"
+    },
+    {
+      "raw": "http://localhost/a%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a?qr=%20&bad%FF=%FF&=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/%20?epc=%F0%9F%93%A6&bad%FF=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/%E2%80%8B?barcode=&x=%F0%9F%93%A6&bad%FF=a+b&epc=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/%E2%80%8B?=%20&qr=%F0%9F%93%A6&bad%FF=abc%00def&epc=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a/b?=%F0%9F%93%A6&x=abc%00def",
+      "value": "b"
+    },
+    {
+      "raw": "http://user:pass@example.test/a+b?qr=%ZZ&%62arcode=%20&%62arcode=a+b&barcode=B",
+      "value": "B"
+    },
+    {
+      "raw": "file://host.test:99999/%2F?qr=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "http://bücher.example/a?barcode=%FF&%62arcode=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/b?epc=%ZZ&x=abc%00def&barcode=&x=abc%00def#fragment",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "foo://bücher.example/a/b?bad%FF=%20&barcode=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/%20?=abc%00def&barcode=abc%00def#fragment",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "http://bücher.example/%20?barcode=%20&epc=abc%00def&barcode=%FF&=abc%00def#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/?=a+b&epc=A&%62arcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "http://bücher.example?bad%FF=%FF&bad%FF=A&%62arcode=%FF&barcode=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/%20?qr=%ZZ&x=%F0%9F%93%A6&epc=a+b&=abc%00def",
+      "value": "a b"
+    },
+    {
+      "raw": "foo://user:pass@example.test/%20?%62arcode=B&=B&barcode=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/?epc=abc%00def&qr=&x=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/x/%ZZ?bad%FF=a+b&qr=%C0%AF&barcode=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a/b?=%FF&epc=%ZZ&barcode=abc%00def&%62arcode=A",
+      "value": "A"
+    },
+    {
+      "raw": "http://user:pass@example.test?barcode=%F0%9F%93%A6&=%FF&%62arcode=",
+      "value": "http://user:pass@example.test?barcode=%F0%9F%93%A6&=%FF&%62arcode="
+    },
+    {
+      "raw": "https://example.test/%20?%62arcode=",
+      "value": "https://example.test/%20?%62arcode="
+    },
+    {
+      "raw": "foo://user:pass@example.test/?qr=%C0%AF&qr=%C0%AF&bad%FF=abc%00def&=%ZZ#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/%20?bad%FF=B#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a+b?%62arcode=%2F&=%ZZ&%62arcode=%F0%9F%93%A6&epc=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "http://bücher.example/a/b?%62arcode=A&%62arcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "file://example.test/a/b?=abc%00def#fragment",
+      "value": "b"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/%E2%80%8B?barcode=%2F&=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "file://host.test:99999/?epc=&bad%FF=abc%00def&bad%FF=&%62arcode=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/x/%ZZ?barcode=B&bad%FF=%2F&x=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a%FF?barcode=&=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a+b?epc=%C0%AF&bad%FF=%FF&epc=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/../B?qr=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/%E2%80%8B?=%C0%AF&epc=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "file://host.test:99999?%62arcode=%F0%9F%93%A6&qr=&%62arcode=&x=%20",
+      "value": "file://host.test:99999?%62arcode=%F0%9F%93%A6&qr=&%62arcode=&x=%20"
+    },
+    {
+      "raw": "foo://bücher.example/a%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/?barcode=%2F&epc=%ZZ",
+      "value": "/"
+    },
+    {
+      "raw": "http://bücher.example/a%FF?epc=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/%20?%62arcode=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "foo://bücher.example/a?epc=%2F&epc=A&%62arcode=%FF&epc=abc%00def#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a%FF?epc=%FF&qr=%ZZ&barcode=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/%E2%80%8B?x=%2F",
+      "value": "​"
+    },
+    {
+      "raw": "file://host.test:99999/%20",
+      "value": "file://host.test:99999/%20"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a?bad%FF=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/x/%ZZ?x=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://bücher.example/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://example.test/a/../B#fragment",
+      "value": "B"
+    },
+    {
+      "raw": "foo://user:pass@example.test/%20?qr=A&%62arcode=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://host.test:99999/%20?=%2F&qr=",
+      "value": "https://host.test:99999/%20?=%2F&qr="
+    },
+    {
+      "raw": "http://user:pass@example.test?qr=%F0%9F%93%A6&epc=%C0%AF&bad%FF=%ZZ&qr=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a?=%20&%62arcode=A",
+      "value": "A"
+    },
+    {
+      "raw": "foo://user:pass@example.test",
+      "value": "foo://user:pass@example.test"
+    },
+    {
+      "raw": "https://host.test:99999/a/../B?=a+b&%62arcode=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/%20?qr=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "https://[::1]/a%FF?=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a+b?bad%FF=A&bad%FF=%C0%AF&epc=B&%62arcode=#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/?=%FF&%62arcode=B&barcode=abc%00def&=%C0%AF#fragment",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/../B?bad%FF=%2F&epc=%20&=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a+b?barcode=A&=%FF&barcode=A&%62arcode=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "http://bücher.example/?epc=abc%00def&%62arcode=B",
+      "value": "B"
+    },
+    {
+      "raw": "file://host.test:99999",
+      "value": "file://host.test:99999"
+    },
+    {
+      "raw": "foo://user:pass@example.test/?bad%FF=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a?bad%FF=%20&bad%FF=%20#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/%2F?barcode=B&barcode=abc%00def&=%F0%9F%93%A6",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "file://host.test:99999/x/%ZZ?bad%FF=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/%20?bad%FF=a+b&%62arcode=%20&x=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a/b?bad%FF=%20&%62arcode=abc%00def&x=%F0%9F%93%A6&=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/a%FF?x=%ZZ&x=%FF&x=%F0%9F%93%A6&bad%FF=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/%20?%62arcode=%FF&%62arcode=%2F&x=%F0%9F%93%A6&bad%FF=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "https://[::1]/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "http://user:pass@example.test/a?%62arcode=%ZZ&barcode=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a%FF?x=B&qr=%ZZ&qr=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost?barcode=%FF&epc=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]?qr=%FF&%62arcode=B&epc=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/a%FF?bad%FF=%FF&bad%FF=%C0%AF&%62arcode=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/%2F?x=%FF&x=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test",
+      "value": "http://user:pass@example.test"
+    },
+    {
+      "raw": "file://host.test:99999/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "foo://user:pass@example.test?x=%ZZ#fragment",
+      "value": "foo://user:pass@example.test?x=%ZZ#fragment"
+    },
+    {
+      "raw": "file://host.test:99999/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "foo://bücher.example/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "https://host.test:99999/a/../B?qr=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "foo://localhost/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/%2F?x=A&=&%62arcode=",
+      "value": "/"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a+b?x=&%62arcode=%ZZ&%62arcode=%2F&bad%FF=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/x/%ZZ?x=A&%62arcode=abc%00def&barcode=a+b#fragment",
+      "value": "a b"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a/b?barcode=%FF&epc=%2F&bad%FF=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example?epc=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "file://[::1]?x=%2F&qr=%20#fragment",
+      "value": "file://[::1]?x=%2F&qr=%20#fragment"
+    },
+    {
+      "raw": "foo://localhost/a?qr=&barcode=%2F&barcode=&qr=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://[::1]/%2F?qr=%ZZ&bad%FF=%2F&bad%FF=%C0%AF&qr=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/b?bad%FF=%FF&barcode=%F0%9F%93%A6&bad%FF=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/%2F?epc=%20&x=A&%62arcode=%C0%AF&bad%FF=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/a%FF?qr=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a?=abc%00def&%62arcode=%20",
+      "value": "a"
+    },
+    {
+      "raw": "http://localhost/%20",
+      "value": "http://localhost/%20"
+    },
+    {
+      "raw": "file://[::1]?barcode=A",
+      "value": "A"
+    },
+    {
+      "raw": "http://localhost/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "file://example.test/a?qr=abc%00def&=%ZZ&epc=%20#fragment",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "http://localhost/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://host.test:99999/%2F?qr=%20&barcode=%F0%9F%93%A6&bad%FF=&epc=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a?epc=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "file://host.test:99999/x/%ZZ?epc=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "http://localhost/a/%E2%80%8B?epc=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/%20?x=a+b&barcode=%2F#fragment",
+      "value": "/"
+    },
+    {
+      "raw": "http://localhost/a/../B?qr=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "https://example.test/a?=%F0%9F%93%A6",
+      "value": "a"
+    },
+    {
+      "raw": "foo://localhost/a/%E2%80%8B?qr=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a+b?epc=%C0%AF&bad%FF=&barcode=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/a+b?barcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "https://[::1]/x/%ZZ?epc=&bad%FF=%2F&bad%FF=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/?bad%FF=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/%2F?bad%FF=A&qr=%FF&qr=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/a/%E2%80%8B?epc=%F0%9F%93%A6&bad%FF=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a/b?=A",
+      "value": "b"
+    },
+    {
+      "raw": "file://host.test:99999/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "foo://bücher.example/a/b?qr=a+b&=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "https://host.test:99999/a/b?bad%FF=%20&=%C0%AF&%62arcode=%ZZ&epc=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/x/%ZZ?epc=a+b&qr=%ZZ",
+      "value": "a b"
+    },
+    {
+      "raw": "file://host.test:99999/%20",
+      "value": "file://host.test:99999/%20"
+    },
+    {
+      "raw": "foo://user:pass@example.test/x/%ZZ?barcode=B&bad%FF=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a?qr=A&bad%FF=B&=%20&barcode=%2F#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a?x=%FF&x=%20&barcode=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a?epc=&barcode=B",
+      "value": "B"
+    },
+    {
+      "raw": "http://localhost/a%FF?%62arcode=B#fragment",
+      "value": "B"
+    },
+    {
+      "raw": "https://[::1]/a+b?epc=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "foo://localhost/a+b?bad%FF=%FF&barcode=%ZZ#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a?%62arcode=&x=%ZZ&bad%FF=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a/b?%62arcode=%F0%9F%93%A6&epc=&barcode=%2F&qr=%20",
+      "value": "/"
+    },
+    {
+      "raw": "https://example.test/a?epc=&=a+b&bad%FF=a+b&barcode=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]?qr=A",
+      "value": "A"
+    },
+    {
+      "raw": "http://localhost/a%FF?=%20&epc=A&barcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "https://host.test:99999/a+b?x=a+b&barcode=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/?=%FF&barcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "file://[::1]/a",
+      "value": "a"
+    },
+    {
+      "raw": "foo://localhost/a/%E2%80%8B?epc=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "file://example.test/%2F?epc=abc%00def&epc=a+b&qr=abc%00def#fragment",
+      "value": "a b"
+    },
+    {
+      "raw": "http://user:pass@example.test#fragment",
+      "value": "http://user:pass@example.test#fragment"
+    },
+    {
+      "raw": "file://example.test/a/%E2%80%8B?barcode=%ZZ&qr=&epc=%F0%9F%93%A6",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://bücher.example/a/b?qr=%20&barcode=A&=%C0%AF",
+      "value": "A"
+    },
+    {
+      "raw": "https://[::1]/x/%ZZ?=%F0%9F%93%A6",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "foo://localhost?%62arcode=%F0%9F%93%A6&barcode=&qr=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "file://[::1]/a/%E2%80%8B?barcode=B&bad%FF=%ZZ&barcode=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/%20?epc=&%62arcode=a+b&epc=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a/%E2%80%8B?epc=%20&epc=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/a+b#fragment",
+      "value": "a+b"
+    },
+    {
+      "raw": "file://[::1]/%20?%62arcode=%20&barcode=&bad%FF=B&qr=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/%20?epc=%FF&epc=a+b#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a/%E2%80%8B?epc=A&%62arcode=%ZZ&qr=%ZZ&qr=%ZZ#fragment",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://bücher.example/a?=A&barcode=%FF&%62arcode=B&epc=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/../B?x=A&bad%FF=%FF&=&bad%FF=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a+b?x=%2F#fragment",
+      "value": "a+b"
+    },
+    {
+      "raw": "file://example.test/%20?%62arcode=%ZZ&bad%FF=B&qr=%FF&qr=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "https://example.test?bad%FF=&qr=#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/%20?epc=%ZZ&%62arcode=%20#fragment",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://example.test/a+b?bad%FF=%ZZ&bad%FF=%2F&bad%FF=%2F&bad%FF=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/%20?=%FF&qr=%F0%9F%93%A6&%62arcode=abc%00def#fragment",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "file://example.test?barcode=B&bad%FF=%ZZ&=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/a/%E2%80%8B?barcode=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "https://host.test:99999/a/%E2%80%8B?epc=%F0%9F%93%A6&bad%FF=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/a?=%F0%9F%93%A6&bad%FF=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a/%E2%80%8B?barcode=%C0%AF&barcode=a+b&epc=%F0%9F%93%A6&epc=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/%2F?x=%FF&x=A&bad%FF=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/?qr=%20",
+      "value": "file://example.test/?qr=%20"
+    },
+    {
+      "raw": "http://localhost/%20?=abc%00def&epc=abc%00def&epc=&barcode=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "file://example.test/%2F?%62arcode=A&%62arcode=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a?qr=%FF&bad%FF=%20&epc=B&%62arcode=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a/../B?%62arcode=&barcode=A&x=B",
+      "value": "A"
+    },
+    {
+      "raw": "foo://bücher.example/a%FF?epc=A",
+      "value": "A"
+    },
+    {
+      "raw": "file://[::1]/a/%E2%80%8B",
+      "value": "​"
+    },
+    {
+      "raw": "foo://bücher.example/a%FF?=A&=%2F&bad%FF=abc%00def&barcode=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a/b?barcode=abc%00def&qr=&x=%20&%62arcode=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "http://localhost/a/%E2%80%8B?x=%ZZ&bad%FF=abc%00def&epc=%F0%9F%93%A6&bad%FF=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a/%E2%80%8B?qr=",
+      "value": "​"
+    },
+    {
+      "raw": "http://localhost/a+b?bad%FF=%C0%AF&barcode=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a/b?%62arcode=B&bad%FF=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example?barcode=%C0%AF&%62arcode=%FF&%62arcode=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/%2F?epc=%ZZ&bad%FF=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "https://example.test/a/%E2%80%8B?qr=%20&=%20&epc=&=A",
+      "value": "​"
+    },
+    {
+      "raw": "http://localhost/a/../B?%62arcode=%2F&x=%ZZ&qr=%C0%AF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/%20?=abc%00def#fragment",
+      "value": "https://[::1]/%20?=abc%00def#fragment"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/b?epc=%ZZ&=%2F&%62arcode=%2F&x=",
+      "value": "/"
+    },
+    {
+      "raw": "https://example.test/",
+      "value": "https://example.test/"
+    },
+    {
+      "raw": "http://bücher.example/?qr=a+b&%62arcode=%2F&epc=&=%ZZ",
+      "value": "/"
+    },
+    {
+      "raw": "file://host.test:99999/x/%ZZ?qr=%ZZ&qr=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a?x=%2F#fragment",
+      "value": "a"
+    },
+    {
+      "raw": "file://example.test/?x=%20&epc=%ZZ&=a+b",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://localhost/%20?epc=%F0%9F%93%A6&x=a+b&bad%FF=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "file://[::1]#fragment",
+      "value": "file://[::1]#fragment"
+    },
+    {
+      "raw": "foo://user:pass@example.test/?epc=abc%00def&barcode=%2F&x=&=%C0%AF",
+      "value": "/"
+    },
+    {
+      "raw": "https://host.test:99999/a/b?bad%FF=a+b&epc=%C0%AF&barcode=%FF&qr=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/%20?=abc%00def&x=%2F&x=%C0%AF&%62arcode=%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999?barcode=abc%00def&bad%FF=A&=%20&barcode=a+b#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://[::1]?%62arcode=%F0%9F%93%A6&x=%F0%9F%93%A6&%62arcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "foo://localhost",
+      "value": "foo://localhost"
+    },
+    {
+      "raw": "https://[::1]/%20?epc=A",
+      "value": "A"
+    },
+    {
+      "raw": "foo://localhost/a?x=%F0%9F%93%A6#fragment",
+      "value": "a"
+    },
+    {
+      "raw": "file://host.test:99999/a%FF?epc=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "file://[::1]?%62arcode=%2F&epc=%2F&qr=a+b&=A",
+      "value": "/"
+    },
+    {
+      "raw": "foo://localhost/%2F?%62arcode=a+b&bad%FF=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a/%E2%80%8B?=abc%00def&=abc%00def&=%2F",
+      "value": "​"
+    },
+    {
+      "raw": "foo://user:pass@example.test/x/%ZZ?%62arcode=%ZZ&%62arcode=%20&=B&epc=%20",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://example.test/?barcode=abc%00def&%62arcode=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/%E2%80%8B?epc=%F0%9F%93%A6&epc=%ZZ&qr=a+b&epc=%20",
+      "value": "a b"
+    },
+    {
+      "raw": "file://host.test:99999/a/%E2%80%8B?barcode=abc%00def&bad%FF=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/../B?=%20&epc=%2F&barcode=%2F#fragment",
+      "value": "/"
+    },
+    {
+      "raw": "file://example.test/a/b?=%2F&=%20&bad%FF=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/%20?barcode=%FF&%62arcode=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/x/%ZZ?epc=%2F&%62arcode=B&barcode=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "http://user:pass@example.test/?barcode=%FF&epc=a+b&bad%FF=B&%62arcode=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a%FF?epc=%2F&=%C0%AF",
+      "value": "/"
+    },
+    {
+      "raw": "foo://localhost/a/%E2%80%8B?%62arcode=%20&x=abc%00def",
+      "value": "​"
+    },
+    {
+      "raw": "https://[::1]/a%FF?barcode=A&%62arcode=&%62arcode=%C0%AF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a/%E2%80%8B?epc=%2F&qr=%FF&=A&%62arcode=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a+b?barcode=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "foo://user:pass@example.test#fragment",
+      "value": "foo://user:pass@example.test#fragment"
+    },
+    {
+      "raw": "https://example.test/a/../B?%62arcode=",
+      "value": "B"
+    },
+    {
+      "raw": "foo://localhost/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://[::1]/%2F?qr=%20#fragment",
+      "value": "/"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "https://host.test:99999/a/../B?qr=%FF&bad%FF=%2F&x=&bad%FF=%C0%AF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/../B?x=B&%62arcode=%20",
+      "value": "B"
+    },
+    {
+      "raw": "file://example.test/%20?bad%FF=%2F&=a+b#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/%20?epc=A&barcode=abc%00def#fragment",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "https://[::1]/?epc=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "foo://localhost/%20?bad%FF=A&qr=%2F#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a?x=B&%62arcode=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "http://bücher.example/?%62arcode=%20&qr=%20&=%2F&barcode=B#fragment",
+      "value": "B"
+    },
+    {
+      "raw": "file://[::1]/a?barcode=&qr=&x=B&x=",
+      "value": "a"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/b?qr=abc%00def#fragment",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "file://[::1]/a+b?barcode=A&epc=%ZZ&%62arcode=#fragment",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://bücher.example/a?%62arcode=&x=%F0%9F%93%A6&barcode=%FF&=%ZZ#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/%2F?=%ZZ&epc=B&=%C0%AF&qr=%2F",
+      "value": "B"
+    },
+    {
+      "raw": "foo://localhost?barcode=%20&=abc%00def&qr=%ZZ&barcode=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "https://[::1]/a?=%FF",
+      "value": "a"
+    },
+    {
+      "raw": "foo://localhost/%2F?x=&bad%FF=%2F&barcode=%FF&=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/%20?qr=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/%2F?qr=&qr=abc%00def&=%ZZ",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "file://example.test/x/%ZZ?%62arcode=%C0%AF&epc=A&x=%FF&epc=a+b#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test?epc=%F0%9F%93%A6&=&%62arcode=%20",
+      "value": "📦"
+    },
+    {
+      "raw": "file://[::1]/%20?%62arcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "http://localhost/a/%E2%80%8B",
+      "value": "​"
+    },
+    {
+      "raw": "file://example.test/a/../B?epc=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/%2F?epc=B",
+      "value": "B"
+    },
+    {
+      "raw": "https://example.test/%2F?qr=A&x=a+b&%62arcode=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/b?barcode=%F0%9F%93%A6#fragment",
+      "value": "📦"
+    },
+    {
+      "raw": "file://[::1]/",
+      "value": "file://[::1]/"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/../B?barcode=abc%00def&%62arcode=%F0%9F%93%A6&qr=%20&qr=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test",
+      "value": "https://example.test"
+    },
+    {
+      "raw": "http://bücher.example/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://[::1]/a/%E2%80%8B?qr=A#fragment",
+      "value": "A"
+    },
+    {
+      "raw": "http://localhost/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "file://[::1]/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "foo://user:pass@example.test",
+      "value": "foo://user:pass@example.test"
+    },
+    {
+      "raw": "https://host.test:99999/a/b?x=%C0%AF&barcode=abc%00def&x=%C0%AF&epc=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "file://[::1]/a+b?qr=A",
+      "value": "A"
+    },
+    {
+      "raw": "http://user:pass@example.test/a+b?qr=B&=%F0%9F%93%A6&bad%FF=A&qr=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/%20?bad%FF=a+b&%62arcode=&%62arcode=%F0%9F%93%A6&bad%FF=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "file://example.test/%20?%62arcode=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "http://bücher.example/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "file://example.test/a/b?x=%FF&%62arcode=%C0%AF&barcode=%F0%9F%93%A6",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/x/%ZZ?qr=A&x=abc%00def&barcode=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://example.test",
+      "value": "https://example.test"
+    },
+    {
+      "raw": "http://localhost/x/%ZZ?qr=%20",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://[::1]/a?bad%FF=%F0%9F%93%A6&qr=A&barcode=%20&x=a+b#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/%2F?x=%ZZ&=%FF&qr=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "https://[::1]/a?epc=%ZZ&=%F0%9F%93%A6&qr=&epc=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/a%FF?epc=B",
+      "value": "B"
+    },
+    {
+      "raw": "https://example.test/x/%ZZ?qr=%C0%AF&epc=B&x=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/x/%ZZ?barcode=%FF&%62arcode=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a+b?%62arcode=%C0%AF&qr=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/../B?barcode=%FF&bad%FF=B&barcode=%C0%AF&barcode=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "foo://bücher.example/%2F#fragment",
+      "value": "/"
+    },
+    {
+      "raw": "https://[::1]/a+b?bad%FF=&qr=%F0%9F%93%A6#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/a?qr=%C0%AF&%62arcode=a+b&qr=%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/%20?x=abc%00def&epc=%20&%62arcode=B#fragment",
+      "value": "B"
+    },
+    {
+      "raw": "foo://localhost/a/b?=B&barcode=#fragment",
+      "value": "b"
+    },
+    {
+      "raw": "https://host.test:99999/a+b?barcode=B&epc=B&x=%F0%9F%93%A6",
+      "value": "B"
+    },
+    {
+      "raw": "foo://localhost/a/../B?qr=A&bad%FF=B&epc=%F0%9F%93%A6&bad%FF=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a?x=B&%62arcode=B&bad%FF=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/x/%ZZ?x=B&%62arcode=%FF&=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a%FF?%62arcode=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "http://bücher.example/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "file://host.test:99999/a/%E2%80%8B?epc=B&x=%F0%9F%93%A6&=B&%62arcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "foo://bücher.example/a/b?barcode=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "file://host.test:99999/a/%E2%80%8B?barcode=%2F&=%2F&bad%FF=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a?%62arcode=%FF&x=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a+b?bad%FF=%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a%FF?barcode=B&=%FF",
+      "value": "B"
+    },
+    {
+      "raw": "file://example.test/a%FF?epc=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/../B?bad%FF=A&epc=%F0%9F%93%A6&bad%FF=A&=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/../B?=%ZZ&bad%FF=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a/%E2%80%8B?=%C0%AF&barcode=",
+      "value": "​"
+    },
+    {
+      "raw": "https://host.test:99999/a+b?qr=%F0%9F%93%A6&qr=%F0%9F%93%A6&barcode=%F0%9F%93%A6&=a+b",
+      "value": "📦"
+    },
+    {
+      "raw": "http://bücher.example/%20?barcode=%C0%AF&epc=a+b&epc=abc%00def&qr=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/%20?bad%FF=%20&epc=B&=&=#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://[::1]/%2F?barcode=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://host.test:99999/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "http://localhost/a?=abc%00def&epc=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "file://example.test/a/b?epc=%F0%9F%93%A6&qr=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/a/%E2%80%8B?=%2F&barcode=a+b&x=a+b#fragment",
+      "value": "a b"
+    },
+    {
+      "raw": "file://example.test/a/b?qr=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "http://bücher.example/a%FF?barcode=%C0%AF&x=A&epc=#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/%E2%80%8B?bad%FF=%20&qr=B&epc=%C0%AF&barcode=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999?bad%FF=abc%00def&qr=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/x/%ZZ?=%20",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://host.test:99999/a?x=abc%00def&epc=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "foo://bücher.example/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "https://host.test:99999?x=%F0%9F%93%A6#fragment",
+      "value": "https://host.test:99999?x=%F0%9F%93%A6#fragment"
+    },
+    {
+      "raw": "foo://localhost/?=%ZZ",
+      "value": "foo://localhost/?=%ZZ"
+    },
+    {
+      "raw": "file://example.test/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "foo://localhost/%2F?barcode=%2F&=%FF",
+      "value": "/"
+    },
+    {
+      "raw": "https://host.test:99999/%2F?barcode=A&bad%FF=A&bad%FF=a+b&=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/?x=%F0%9F%93%A6&epc=%20&%62arcode=%20&=%ZZ#fragment",
+      "value": "http://bücher.example/?x=%F0%9F%93%A6&epc=%20&%62arcode=%20&=%ZZ#fragment"
+    },
+    {
+      "raw": "file://example.test/%2F?barcode=A&qr=%ZZ&x=%ZZ",
+      "value": "A"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/../B?=a+b",
+      "value": "B"
+    },
+    {
+      "raw": "https://host.test:99999/a%FF?barcode=%C0%AF&bad%FF=%2F&=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/%E2%80%8B",
+      "value": "​"
+    },
+    {
+      "raw": "https://[::1]/",
+      "value": "https://[::1]/"
+    },
+    {
+      "raw": "http://localhost/a/../B?qr=a+b&qr=#fragment",
+      "value": "B"
+    },
+    {
+      "raw": "file://host.test:99999/a+b?epc=&barcode=&%62arcode=&=%ZZ",
+      "value": "a+b"
+    },
+    {
+      "raw": "foo://localhost/x/%ZZ?bad%FF=abc%00def&epc=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a/b?=&bad%FF=%20&bad%FF=a+b#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test",
+      "value": "foo://user:pass@example.test"
+    },
+    {
+      "raw": "https://[::1]/%2F",
+      "value": "/"
+    },
+    {
+      "raw": "http://localhost/a/%E2%80%8B?epc=abc%00def&qr=%ZZ&=%2F&x=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/%20?bad%FF=abc%00def&x=a+b&barcode=A&%62arcode=%F0%9F%93%A6#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/%2F?=&barcode=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://[::1]/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "http://localhost/%2F?=%ZZ&barcode=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "file://host.test:99999/%2F?x=%FF&barcode=%20&bad%FF=%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/%E2%80%8B?barcode=abc%00def&barcode=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://[::1]/a/%E2%80%8B",
+      "value": "​"
+    },
+    {
+      "raw": "foo://localhost/a%FF?%62arcode=A&%62arcode=B&x=A&bad%FF=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a%FF?bad%FF=%FF&bad%FF=abc%00def&x=%C0%AF&barcode=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/a%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/x/%ZZ?qr=%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/a?=%C0%AF&epc=A&qr=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/a/../B?bad%FF=abc%00def&qr=B&epc=%ZZ&qr=%F0%9F%93%A6#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/?barcode=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "https://[::1]/?epc=%20",
+      "value": "https://[::1]/?epc=%20"
+    },
+    {
+      "raw": "foo://bücher.example/?barcode=%F0%9F%93%A6&x=%20&epc=a+b&bad%FF=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a/b?epc=A&%62arcode=a+b&qr=abc%00def&barcode=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "http://bücher.example/a%FF?%62arcode=%C0%AF&x=%F0%9F%93%A6&x=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a/%E2%80%8B?qr=%C0%AF&qr=%F0%9F%93%A6&epc=%2F&epc=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/?qr=%2F&epc=%F0%9F%93%A6&qr=",
+      "value": "📦"
+    },
+    {
+      "raw": "https://example.test/a+b?x=abc%00def&epc=&bad%FF=%ZZ&%62arcode=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/x/%ZZ?epc=&%62arcode=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/%20?barcode=%FF&%62arcode=abc%00def",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a?bad%FF=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a#fragment",
+      "value": "a"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a?%62arcode=%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://[::1]/a/../B?epc=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "http://user:pass@example.test/a%FF?qr=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "https://[::1]/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "http://user:pass@example.test/a%FF?barcode=%FF&epc=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a/%E2%80%8B?%62arcode=%F0%9F%93%A6&=B&x=%ZZ",
+      "value": "📦"
+    },
+    {
+      "raw": "http://localhost/a",
+      "value": "a"
+    },
+    {
+      "raw": "file://host.test:99999/%20?bad%FF=%2F&%62arcode=abc%00def&bad%FF=%F0%9F%93%A6&qr=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://localhost/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://host.test:99999/a?qr=a+b&x=%ZZ&bad%FF=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a/%E2%80%8B?x=abc%00def&epc=&%62arcode=%20#fragment",
+      "value": "​"
+    },
+    {
+      "raw": "file://[::1]/a+b?=B&x=A&x=A&qr=#fragment",
+      "value": "a+b"
+    },
+    {
+      "raw": "foo://user:pass@example.test/?x=%F0%9F%93%A6&=%F0%9F%93%A6&%62arcode=a+b&=%20",
+      "value": "a b"
+    },
+    {
+      "raw": "https://host.test:99999/%2F?x=%20&qr=%20&barcode=B&%62arcode=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "http://localhost/a/%E2%80%8B?epc=abc%00def&barcode=%20&barcode=%C0%AF&bad%FF=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/x/%ZZ?qr=A&barcode=abc%00def&%62arcode=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "http://localhost/a?barcode=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "https://example.test/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "http://localhost/a/%E2%80%8B?=&epc=&barcode=%F0%9F%93%A6&bad%FF=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/%2F?qr=B",
+      "value": "B"
+    },
+    {
+      "raw": "http://localhost/x/%ZZ",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://[::1]/a/../B?x=B",
+      "value": "B"
+    },
+    {
+      "raw": "http://user:pass@example.test/%20?epc=%2F&barcode=%2F&x=a+b&x=%20",
+      "value": "/"
+    },
+    {
+      "raw": "file://[::1]/x/%ZZ?x=%20",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://localhost/a/%E2%80%8B?=%C0%AF&qr=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/?epc=%20",
+      "value": "file://example.test/?epc=%20"
+    },
+    {
+      "raw": "http://localhost/a%FF?bad%FF=%2F&epc=%F0%9F%93%A6&qr=abc%00def&=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/%2F",
+      "value": "/"
+    },
+    {
+      "raw": "foo://bücher.example/?epc=%2F&%62arcode=%2F",
+      "value": "/"
+    },
+    {
+      "raw": "https://host.test:99999/a+b",
+      "value": "a+b"
+    },
+    {
+      "raw": "http://localhost/a",
+      "value": "a"
+    },
+    {
+      "raw": "file://[::1]/x/%ZZ?bad%FF=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/x/%ZZ?x=%2F&epc=%2F&barcode=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/%2F?x=A&%62arcode=abc%00def&qr=A",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "foo://user:pass@example.test/?%62arcode=%C0%AF&=%FF&x=%20&=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/?x=B&x=%2F&x=a+b&bad%FF=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "file://example.test/x/%ZZ?barcode=%C0%AF&bad%FF=%C0%AF&x=%20",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/b?epc=%2F&epc=a+b&qr=a+b",
+      "value": "a b"
+    },
+    {
+      "raw": "https://example.test/a%FF?x=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/x/%ZZ?qr=%ZZ&bad%FF=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host.test:99999/?=A&%62arcode=%20#fragment",
+      "value": "https://host.test:99999/?=A&%62arcode=%20#fragment"
+    },
+    {
+      "raw": "http://localhost/?=%F0%9F%93%A6&%62arcode=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a%FF?bad%FF=%C0%AF&=abc%00def&qr=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/a%FF?%62arcode=%2F&qr=abc%00def&=abc%00def",
+      "value": "/"
+    },
+    {
+      "raw": "https://host.test:99999?barcode=%FF&%62arcode=%ZZ&epc=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test/?barcode=%C0%AF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a/b?epc=%FF&bad%FF=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://user:pass@example.test?=abc%00def&bad%FF=abc%00def&=a+b&x=%FF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/%2F?=%ZZ&qr=&%62arcode=%20#fragment",
+      "value": "/"
+    },
+    {
+      "raw": "foo://bücher.example/x/%ZZ?%62arcode=%ZZ&qr=%2F&=%F0%9F%93%A6",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "file://example.test/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "foo://user:pass@example.test/a%FF?x=A&=B&x=",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://host.test:99999/a+b?=a+b&epc=%20&epc=%20",
+      "value": "a+b"
+    },
+    {
+      "raw": "http://localhost/a/b?=B",
+      "value": "b"
+    },
+    {
+      "raw": "https://host.test:99999/x/%ZZ#fragment",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://localhost/?barcode=%FF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/a+b#fragment",
+      "value": "a+b"
+    },
+    {
+      "raw": "http://localhost/a?barcode=%ZZ&%62arcode=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "file://example.test/a/../B?bad%FF=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://bücher.example/a/../B?%62arcode=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "https://example.test/a+b?barcode=B&=%F0%9F%93%A6&epc=%F0%9F%93%A6&qr=%2F",
+      "value": "B"
+    },
+    {
+      "raw": "http://user:pass@example.test?qr=B&x=%ZZ&epc=a+b&bad%FF=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/x/%ZZ?%62arcode=%F0%9F%93%A6&%62arcode=%2F&=a+b",
+      "value": "/"
+    },
+    {
+      "raw": "http://localhost/a+b?=A&=%2F&epc=%FF&x=%2F",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://[::1]/a/b?%62arcode=%ZZ&epc=abc%00def&x=%F0%9F%93%A6#fragment",
+      "value": "%ZZ"
+    },
+    {
+      "raw": "http://user:pass@example.test/a+b?barcode=a+b&barcode=&=%C0%AF",
+      "value": "a+b"
+    },
+    {
+      "raw": "https://example.test/a/b?epc=%20&qr=%C0%AF&bad%FF=%C0%AF#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "foo://bücher.example/?%62arcode=%F0%9F%93%A6&epc=%F0%9F%93%A6",
+      "value": "📦"
+    },
+    {
+      "raw": "https://host.test:99999/a%FF?epc=%C0%AF&x=A&%62arcode=%F0%9F%93%A6&bad%FF=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://localhost/?=%FF&qr=%F0%9F%93%A6&epc=%C0%AF",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://[::1]/?barcode=&x=%2F&qr=%2F&qr=B",
+      "value": "B"
+    },
+    {
+      "raw": "http://user:pass@example.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "file://[::1]/?%62arcode=a+b#fragment",
+      "value": "a b"
+    },
+    {
+      "raw": "http://bücher.example/a+b?%62arcode=abc%00def&barcode=abc%00def",
+      "value": "abc\u0000def"
+    },
+    {
+      "raw": "file://host.test:99999/%20?barcode=%20&bad%FF=%F0%9F%93%A6&epc=%ZZ",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a/../B?barcode=a+b&epc=%20&%62arcode=a+b&x=A",
+      "value": "a b"
+    },
+    {
+      "raw": "file://example.test/x/%ZZ?bad%FF=%ZZ&epc=%FF&=a+b",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://user:pass@example.test/a+b?bad%FF=abc%00def&qr=B",
+      "error": "FormatException"
+    },
+    {
+      "raw": "file://example.test/a/../B",
+      "value": "B"
+    },
+    {
+      "raw": "foo://localhost/a?barcode=%FF&qr=a+b&epc=%ZZ&bad%FF=#fragment",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://example.test/a/%E2%80%8B?bad%FF=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "http://:99999/a/b",
+      "value": "http://:99999/a/b"
+    },
+    {
+      "raw": "file://:99999/a/b",
+      "value": "file://:99999/a/b"
+    },
+    {
+      "raw": "http://user@:99999/a/b",
+      "value": "http://user@:99999/a/b"
+    },
+    {
+      "raw": "http://@host:99999/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "https://host:abc/a/b",
+      "value": "https://host:abc/a/b"
+    },
+    {
+      "raw": "https://host:/a/b",
+      "value": "b"
+    },
+    {
+      "raw": "https://host:00000000000000000000000000000000000001/a",
+      "value": "a"
+    },
+    {
+      "raw": "foo://:12345/a/b",
+      "value": "foo://:12345/a/b"
+    },
+    {
+      "raw": "file:///a/b",
+      "value": "file:///a/b"
+    },
+    {
+      "raw": "foo:///a/b",
+      "value": "foo:///a/b"
+    },
+    {
+      "raw": "https://user@@host/a",
+      "value": "https://user@@host/a"
+    },
+    {
+      "raw": "https://example.test:65536/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://%65xample.test/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://%FF/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://example.test/a?=bad%FF&qr=Q",
+      "value": "Q"
+    },
+    {
+      "raw": "https://example.test/a?x=%FF&qr=Q",
+      "error": "FormatException"
+    },
+    {
+      "raw": "\tCODE\t",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode=\tCODE\t",
+      "value": "CODE"
+    },
+    {
+      "raw": "\nCODE\n",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode=\nCODE\n",
+      "value": "CODE"
+    },
+    {
+      "raw": "\u000bCODE\u000b",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode=\u000bCODE\u000b",
+      "value": "CODE"
+    },
+    {
+      "raw": "\fCODE\f",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode=\fCODE\f",
+      "value": "CODE"
+    },
+    {
+      "raw": "\rCODE\r",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode=\rCODE\r",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "CODE",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode=CODE",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "᠎CODE᠎",
+      "value": "᠎CODE᠎"
+    },
+    {
+      "raw": "https://example.test/a?barcode=᠎CODE᠎",
+      "value": "᠎CODE᠎"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "​CODE​",
+      "value": "​CODE​"
+    },
+    {
+      "raw": "https://example.test/a?barcode=​CODE​",
+      "value": "​CODE​"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": " CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode= CODE ",
+      "value": "CODE"
+    },
+    {
+      "raw": "　CODE　",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode=　CODE　",
+      "value": "CODE"
+    },
+    {
+      "raw": "﻿CODE﻿",
+      "value": "CODE"
+    },
+    {
+      "raw": "https://example.test/a?barcode=﻿CODE﻿",
+      "value": "CODE"
+    }
+  ]
+}
