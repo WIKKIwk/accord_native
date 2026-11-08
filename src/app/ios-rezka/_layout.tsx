@@ -28,7 +28,10 @@ export default function IosRezkaLayout() {
   const navigate = (destination: RezkaDestination) => {
     if (isRezkaSessionCurrent(snapshot, 'master') && rezkaShellCanNavigate(session, destination)) router.navigate(paths[destination]);
   };
-  const onLogout = () => { setSigningOut(true); logoutRezkaSession(session, () => router.replace('/')); };
+  const onLogout = () => {
+    if (!isRezkaSessionCurrent(snapshot, 'master')) return;
+    setSigningOut(true); logoutRezkaSession(snapshot, () => router.replace('/'));
+  };
   const active = pathname === '/ios-rezka' ? 'queue' : pathname === '/ios-rezka/workers' ? 'workers'
     : pathname === '/ios-rezka/daily' ? 'daily' : pathname === '/ios-rezka/profile' ? 'profile' : '';
   return <RezkaShellContext.Provider value={{ snapshot, openDrawer: () => setDrawerOpen(true), onLogout, navigate }}>

@@ -36,13 +36,13 @@ function shellHook(loaded, options = {}) {
   const react = { useState: () => [state, value => { state = value; change.push(value); }], useEffect: fn => { effect = fn; }, useSyncExternalStore: (_s, g) => g() };
   const auth = { loadSession: () => { calls.push('load'); return options.delayed ? new Promise(resolve => { resolveLoad = resolve; }) : Promise.resolve(loaded); },
     sessionWitnessTransitioning: () => options.transitioning === true,
-    logout: async () => calls.push('logout'), registerSessionResetHook: fn => { reset = fn; return () => calls.push('unregister'); },
+    currentSession: () => loaded, logout: async () => calls.push('logout'), registerSessionResetHook: fn => { reset = fn; return () => calls.push('unregister'); },
     subscribeSessionWitness: fn => { watch = fn; if (options.invalidateDuringSubscribe) options.current = false; return () => calls.push('unwatch'); } };
   let valid = options.current !== false;
   const guard = { captureRezkaSession: s => { calls.push('capture'); return { session: s }; },
     isRezkaSessionCurrent: () => valid && options.current !== false };
-  const exports = compile('rezka/useRezkaShell.ts', { react, '../auth': auth, '../appLock': { clearAppLock: async () => {} },
-    '../shared/localization/runtime': { localeController: { locale: 'uz', addListener: () => () => {} } }, '../shared/switchPinRuntime': { switchPinStore: { clear: async () => {} } },
+  const exports = compile('rezka/useRezkaShell.ts', { react, '../auth': auth,
+    '../shared/localization/runtime': { localeController: { locale: 'uz', addListener: () => () => {} } },
     './rezkaSessionGuard': guard, './rezkaShellModel': model });
   exports.useRezkaShellSession(); const cleanup = effect();
   return { state: () => state, changes: () => change, calls, cleanup, invalidate: () => { valid = false; watch?.(); },
@@ -66,7 +66,7 @@ test('unmounted shell ignores a pending session load', async () => {
 function nodes(node, predicate) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(n => nodes(n, predicate));
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)]; }
 test('Android shell composes real Worker and settings screens, with no new Chat route', () => {
-  const s = session(), snapshot = { session: s }, states = [false, 'queue', false], actions = []; let index = 0;
+  const s = session(), snapshot = { session: s }, states = [false, 'queue', false], actions = []; let index = 0, current = true, logoutDialog;
   const react = { useState: init => { const i = index++; if (states[i] === undefined) states[i] = init; return [states[i], v => { states[i] = v; actions.push(['state', i, v]); }]; }, useEffect() {} };
   const mocks = { 'react/jsx-runtime': jsx, react, 'expo-router': { Redirect: 'Redirect', router: { replace: x => actions.push(['replace', x]) } },
     'react-native': { ActivityIndicator: 'ActivityIndicator', BackHandler: {}, Platform: { OS: 'android' }, View: 'View' },
@@ -74,11 +74,11 @@ test('Android shell composes real Worker and settings screens, with no new Chat 
     '../WorkerScreen': { WorkerScreen: 'WorkerScreen' }, '../components/DailyWorkScreen': { DailyWorkScreen: 'DailyWorkScreen' },
     './RezkaProfile': { RezkaProfile: 'RezkaProfile' }, '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
     '../shared/localization': localization, '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
-    '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: fn => fn() },
+    '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: fn => { logoutDialog = fn; } },
     './RezkaWorkerSettings': { RezkaWorkerSettingsScreen: 'RezkaWorkerSettingsScreen' }, './RezkaTestSessionUnavailable': { RezkaTestSessionUnavailable: 'TestUnavailable' },
     './RezkaSessionWaiting': { RezkaSessionWaiting: 'SessionWaiting' },
-    './rezkaSessionGuard': { isRezkaSessionCurrent: () => true }, './rezkaShellModel': model,
-    './useRezkaShell': { useRezkaShellSession: () => snapshot, useRezkaLocale: () => 'uz', logoutRezkaSession: (_s, fn) => fn() } };
+    './rezkaSessionGuard': { isRezkaSessionCurrent: () => current }, './rezkaShellModel': model,
+    './useRezkaShell': { useRezkaShellSession: () => snapshot, useRezkaLocale: () => 'uz', logoutRezkaSession: (_s, fn) => { actions.push('logout'); fn(); } } };
   const { RezkaAndroidShell } = compile('rezka/RezkaAndroidShell.android.tsx', mocks);
   const render = () => { index = 0; return RezkaAndroidShell(); };
   let page = render(); assert.equal(nodes(page, n => n.type === 'WorkerScreen').length, 1);
@@ -86,6 +86,8 @@ test('Android shell composes real Worker and settings screens, with no new Chat 
   drawer.props.onSelect('workers'); page = render(); const settings = nodes(page, n => n.type === 'RezkaWorkerSettingsScreen')[0];
   assert.equal(settings.props.allowAssignments, true); assert.equal(settings.props.snapshot, snapshot);
   const bar = nodes(page, n => n.type === 'RoleBottomBar')[0]; assert.equal(bar.props.active, ''); assert.ok(!JSON.stringify(bar.props.items).includes('chat'));
+  drawer = nodes(page, n => n.type === 'RoleDrawer')[0]; drawer.props.onSelect('logout'); current = false; logoutDialog();
+  assert.ok(!actions.includes('logout')); assert.ok(!actions.some(x => Array.isArray(x) && x[0] === 'replace'));
 });
 
 test('a shell mounted during a transition waits, but an invalidated old shell never recaptures', async () => {
@@ -96,7 +98,7 @@ test('a shell mounted during a transition waits, but an invalidated old shell ne
 });
 
 test('iOS shell uses native tabs, real worker settings route and refuses invalid snapshots', () => {
-  const s = session(), snapshot = { session: s }, calls = [], states = [false, false]; let index = 0, current = true;
+  const s = session(), snapshot = { session: s }, calls = [], states = [false, false]; let index = 0, current = true, logoutDialog;
   const react = { useState: init => { const i = index++; if (states[i] === undefined) states[i] = init; return [states[i], v => { states[i] = v; }]; } };
   const Trigger = Object.assign(function Trigger() {}, { Icon: 'Icon', Label: 'Label' });
   const NativeTabs = Object.assign(function NativeTabs() {}, { Trigger });
@@ -104,14 +106,14 @@ test('iOS shell uses native tabs, real worker settings route and refuses invalid
       usePathname: () => '/ios-rezka', router: { navigate: value => calls.push(['navigate', value]), replace: value => calls.push(['replace', value]) } },
     'expo-router/native-tabs': { NativeTabs }, 'react-native': { Platform: { OS: 'ios' }, ActivityIndicator: 'ActivityIndicator', View: 'View', useColorScheme: () => 'light' },
     '../../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, '../../shared/localization': localization,
-    '../../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: fn => fn() },
+    '../../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: fn => { logoutDialog = fn; } },
     '../../rezka/RezkaShellContext': { RezkaShellContext: { Provider: 'Provider' } }, '../../rezka/RezkaTestSessionUnavailable': { RezkaTestSessionUnavailable: 'TestUnavailable' },
     '../../rezka/RezkaSessionWaiting': { RezkaSessionWaiting: 'SessionWaiting' }, '../../rezka/rezkaSessionGuard': { isRezkaSessionCurrent: () => current },
-    '../../rezka/rezkaShellModel': model, '../../rezka/useRezkaShell': { useRezkaShellSession: () => snapshot, useRezkaLocale: () => 'uz', logoutRezkaSession: (_s, fn) => fn() } };
+    '../../rezka/rezkaShellModel': model, '../../rezka/useRezkaShell': { useRezkaShellSession: () => snapshot, useRezkaLocale: () => 'uz', logoutRezkaSession: (_s, fn) => { actions.push('logout'); fn(); } } };
   const Component = compile('app/ios-rezka/_layout.tsx', mocks).default;
   const render = () => { index = 0; return Component(); }; const page = render(), drawer = nodes(page, n => n.type === 'RoleDrawer')[0];
   assert.ok(drawer); assert.ok(!JSON.stringify(drawer.props.items).includes('chat')); drawer.props.onSelect('workers');
-  assert.deepEqual(calls.at(-1), ['navigate', '/ios-rezka/workers']); current = false;
+  assert.deepEqual(calls.at(-1), ['navigate', '/ios-rezka/workers']); drawer.props.onSelect('logout'); current = false; logoutDialog();
   assert.equal(render().type, 'Redirect'); drawer.props.onSelect('daily'); assert.equal(calls.length, 1);
 });
 

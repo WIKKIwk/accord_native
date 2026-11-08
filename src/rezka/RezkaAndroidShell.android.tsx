@@ -36,7 +36,10 @@ export function RezkaAndroidShell() {
   const navigate = (destination: RezkaDestination) => {
     if (isRezkaSessionCurrent(snapshot, 'master') && rezkaShellCanNavigate(session, destination)) setSection(destination);
   };
-  const onLogout = () => { setSigningOut(true); logoutRezkaSession(session, () => router.replace('/')); };
+  const onLogout = () => {
+    if (!isRezkaSessionCurrent(snapshot, 'master')) return;
+    setSigningOut(true); logoutRezkaSession(snapshot, () => router.replace('/'));
+  };
   const items: RoleNavigationItem[] = [{ id: 'queue', label: localizedGetter('homeNavTitle', locale), icon: 'home' },
     { id: 'profile', label: localizedGetter('profileTitle', locale), icon: 'person' }];
   const content = section === 'workers'

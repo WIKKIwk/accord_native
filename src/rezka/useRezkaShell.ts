@@ -1,8 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { clearAppLock } from '../appLock';
-import { loadSession, logout, registerSessionResetHook, sessionWitnessTransitioning, subscribeSessionWitness, type Session } from '../auth';
+import { currentSession, loadSession, logout, registerSessionResetHook, sessionWitnessTransitioning, subscribeSessionWitness } from '../auth';
 import { localeController } from '../shared/localization/runtime';
-import { switchPinStore } from '../shared/switchPinRuntime';
 import { captureRezkaSession, isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 import { canEnterRezkaShell } from './rezkaShellModel';
 
@@ -52,8 +50,11 @@ export function useRezkaShellSession(): RezkaShellSession {
   return snapshot;
 }
 
-/** Match the existing root's cleanup without changing Worker logout behavior. */
-export function logoutRezkaSession(session: Session, finished: () => void): void {
-  void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {}),
-    switchPinStore.clear(session).catch(() => {})]).finally(finished);
+/** Do not let a queued old-account dialog or a late completion affect a new session. */
+export function logoutRezkaSession(snapshot: RezkaSessionSnapshot, finished: () => void): boolean {
+  if (!isRezkaSessionCurrent(snapshot, 'master')) return false;
+  void logout(snapshot.session).catch(() => {}).finally(() => {
+    if (!currentSession() && !sessionWitnessTransitioning()) finished();
+  });
+  return true;
 }
