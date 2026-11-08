@@ -6,8 +6,9 @@ import { useRoleDrawerState } from '../shared/navigation/roleDrawerContext';
 import { confirmRoleDrawerLogout } from '../shared/navigation/roleDrawerLogout';
 import { useBoyoqchiContext } from './BoyoqchiContext';
 import { useBoyoqchiGetter, useBoyoqchiText } from './useBoyoqchiText';
+import { queueBoyoqchiDockNavigation } from './boyoqchiDockScheduler';
 export function BoyoqchiDrawer({ children }: { children: ReactNode }) {
-  const state = useRoleDrawerState(), { onLogout } = useBoyoqchiContext(), pathname = usePathname();
+  const state = useRoleDrawerState(), { onLogout, profileNavigation } = useBoyoqchiContext(), pathname = usePathname();
   const t = useBoyoqchiText(), getter = useBoyoqchiGetter();
   const base = Platform.OS === 'ios' ? '/ios-boyoqchi' : '/android-boyoqchi';
   const active = pathname.includes('/chat') ? 'chat' : pathname.endsWith('/profile') ? 'profile' : pathname.endsWith('/astatka') ? 'astatka' : 'home';
@@ -19,6 +20,13 @@ export function BoyoqchiDrawer({ children }: { children: ReactNode }) {
   ];
   const select = (id: string) => {
     if (id === 'logout') { confirmRoleDrawerLogout(onLogout); return; }
+    if (id !== 'home' && id !== 'astatka' && id !== 'chat' && id !== 'profile') return;
+    if (Platform.OS === 'android' && active === 'profile') {
+      const registered = profileNavigation.current;
+      if (registered) queueBoyoqchiDockNavigation({ destination: id, active: () => 'profile',
+        isMounted: registered.isMounted, dispatch: registered.dispatch });
+      return;
+    }
     const target = id === 'home' ? base : `${base}/${id}`;
     if (active === 'home' || active === 'astatka') router.replace(target as Href);
     else router.navigate(target as Href);

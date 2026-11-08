@@ -49,7 +49,8 @@ test('mounting the role provider does not start the opt-in unread runtime or inv
   const loaded = new Module(filename, module), onLogout = () => {};
   let starts = 0;
   const mocks = {
-    react: { createContext: () => ({ Provider: 'Provider' }), useContext: () => null, useState: value => [value, () => {}] },
+    react: { createContext: () => ({ Provider: 'Provider' }), useContext: () => null, useRef: value => ({ current: value }),
+      useState: value => [value, () => {}] },
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
     '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => { starts++; return 7; } },
   };

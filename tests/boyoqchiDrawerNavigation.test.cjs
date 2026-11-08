@@ -50,6 +50,11 @@ function harness(platform) {
     return name === 'index' || name === '(home)' ? base : `${base}/${name === '(astatka)' ? 'astatka' : name}`;
   };
   let closes = 0, logouts = 0;
+  const profileNavigation = { current: { isMounted: () => true, dispatch: event => {
+    events.push(['profile-dispatch', event.payload.name]); action(event);
+  } } };
+  const immediateQueue = request => request.dispatch({ type: 'NAVIGATE',
+    payload: { name: request.destination === 'home' ? 'index' : request.destination, pop: true } });
   const { BoyoqchiDrawer } = load('boyoqchi/BoyoqchiDrawer', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
     'expo-router': { router, usePathname: currentPath },
@@ -57,8 +62,9 @@ function harness(platform) {
     '../shared/navigation/RoleDrawer': { RoleDrawer() {} },
     '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({ visible: true, onClose: () => { closes++; }, onOpen() {} }) },
     '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: () => { logouts++; } },
-    './BoyoqchiContext': { useBoyoqchiContext: () => ({ onLogout() {} }) },
+    './BoyoqchiContext': { useBoyoqchiContext: () => ({ onLogout() {}, profileNavigation }) },
     './useBoyoqchiText': { useBoyoqchiText: () => value => value, useBoyoqchiGetter: () => value => value },
+    './boyoqchiDockScheduler': { queueBoyoqchiDockNavigation: immediateQueue },
   }, 'tsx');
   const { BoyoqchiDock } = load('boyoqchi/BoyoqchiDock.android', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
@@ -70,8 +76,7 @@ function harness(platform) {
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar() {} },
     './useBoyoqchiText': { useBoyoqchiText: () => value => value, useBoyoqchiGetter: () => value => value },
-    './boyoqchiDockScheduler': { queueBoyoqchiDockNavigation: request => request.dispatch({ type: 'NAVIGATE',
-      payload: { name: request.destination === 'home' ? 'index' : request.destination, pop: true } }) },
+    './boyoqchiDockScheduler': { queueBoyoqchiDockNavigation: immediateQueue },
   }, 'tsx');
   function select(id) {
     const props = BoyoqchiDrawer({ children: null }).props;
@@ -116,17 +121,17 @@ test('iOS native-tab reducer handles replacement from Home and Astatka', () => {
   assert.deepEqual(nav.events.map(([event]) => event), Array(3).fill('replace'));
 });
 
-test('drawer outside Home/Astatka preserves its previous navigation action', () => {
+test('Profile drawer uses the registered role stack on Android and preserves iOS navigation', () => {
   for (const platform of ['android', 'ios']) {
     const nav = harness(platform);
     nav.select('profile');
     nav.select('astatka');
-    assert.equal(nav.events.at(-1)[0], 'navigate');
+    assert.equal(nav.events.at(-1)[0], platform === 'android' ? 'profile-dispatch' : 'navigate');
     assert.equal(nav.state.routes[nav.state.index].name, platform === 'ios' ? '(astatka)' : 'astatka');
   }
 });
 
-test('SDK Android Profile drawer still pushes an existing route instead of popping to it', () => {
+test('SDK Android Profile drawer pushes an absent route and pops to an existing route', () => {
   const nav = harness('android');
   nav.action(StackActions.push('profile'));
   nav.select('astatka');
@@ -135,12 +140,7 @@ test('SDK Android Profile drawer still pushes an existing route instead of poppi
   const existing = harness('android');
   existing.action(StackActions.push('profile'));
   existing.select('home');
-  assert.deepEqual(existing.state.routes.map(route => route.name), ['entry', 'index', 'profile', 'index']);
-  // V2 AppRootNavigation pops to the existing index, rather than retaining the duplicate.
-  const v2Equivalent = harness('android');
-  v2Equivalent.action(StackActions.push('profile'));
-  v2Equivalent.action({ type: 'NAVIGATE', payload: { name: 'index', pop: true } });
-  assert.deepEqual(v2Equivalent.state.routes.map(route => route.name), ['entry', 'index']);
+  assert.deepEqual(existing.state.routes.map(route => route.name), ['entry', 'index']);
 });
 
 test('Android dock should pop an existing destination without duplicating it', () => {

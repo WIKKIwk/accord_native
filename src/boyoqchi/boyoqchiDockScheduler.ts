@@ -1,7 +1,7 @@
 import { Keyboard } from 'react-native';
 
 export type BoyoqchiDockDestination = 'home' | 'astatka' | 'profile' | 'chat';
-type BoyoqchiDockAction = { type: 'NAVIGATE'; payload: { name: string; pop: true } };
+export type BoyoqchiDockAction = { type: 'NAVIGATE'; payload: { name: string; pop: true } };
 type Request = { destination: BoyoqchiDockDestination; active: () => BoyoqchiDockDestination | '';
   isMounted: () => boolean; dispatch: (action: BoyoqchiDockAction) => void };
 
