@@ -1,9 +1,10 @@
 import type { AdminApparatus } from '../apparatusApi';
 import { MobileApiException } from '../shared/mobileApiException';
+import { dartTrim } from '../shared/dartApparatus';
 import { WorkerControlException } from '../workerControlsApi';
 import type { AdminRawMaterialEvent } from './materialHistoryApi';
 
-const label = (value: string, values: Record<string, string>) => values[value.trim().toLowerCase()] ?? value.trim().toLowerCase();
+const label = (value: string, values: Record<string, string>) => values[dartTrim(value).toLowerCase()] ?? dartTrim(value).toLowerCase();
 const eventLabels: Record<string, string> = {
   receipt_posted: 'Omborga kirim qilindi', order_reserved: 'Zakaz uchun band qilindi', order_unreserved: 'Zakaz bandi yechildi',
   usage_started: 'Ishlatishga o‘tkazildi', usage_cancelled: 'Boshlash bekor qilindi',
@@ -17,19 +18,19 @@ const sourceLabels: Record<string, string> = { gscale_receipt: 'Tarozi kirimi', 
   consumption: 'Sarflanish', manual_adjustment: 'Qo‘lda tuzatish', warehouse_transfer: 'Omborlararo transfer',
   material_delivery: 'Apparat oldiga yetkazish', system: 'Tizim' };
 const two = (n: number) => String(n).padStart(2, '0');
-const reference = (value: string) => { const name = value.trim(); return name && !name.includes(':') ? name : ''; };
+const reference = (value: string) => { const name = dartTrim(value); return name && !name.includes(':') ? name : ''; };
 
 /** @v2 _materialFriendlyApparatus */
 export function materialFriendlyApparatus(id: string, catalog: Pick<AdminApparatus, 'id' | 'name'>[]): string {
-  const value = id.trim();
+  const value = dartTrim(id);
   if (!value) return '';
   // The source constructs a map, so the last duplicate ID wins.
-  const names = new Map(catalog.filter(item => item.id.trim() && item.name.trim()).map(item => [item.id.trim(), item.name.trim()]));
+  const names = new Map(catalog.filter(item => dartTrim(item.id) && dartTrim(item.name)).map(item => [dartTrim(item.id), dartTrim(item.name)]));
   return reference(names.get(value) ?? value);
 }
 /** @v2 _materialHistoryTitle */
 export function materialHistoryTitle(event: AdminRawMaterialEvent): string {
-  const item = event.item_name.trim() || event.item_code.trim();
+  const item = dartTrim(event.item_name) || dartTrim(event.item_code);
   const qty = event.qty_delta === 0 ? '' : ` ${Math.abs(event.qty_delta).toFixed(3)} ${event.uom}`;
   const titles: Record<string, string> = { receipt_posted: `${item} kirim${qty}`, order_reserved: `${item} berildi`,
     order_unreserved: `${item} yechildi`, usage_started: `${item} ishlatishga o‘tdi`,
@@ -42,7 +43,7 @@ export function materialHistoryTitle(event: AdminRawMaterialEvent): string {
 /** @v2 _materialHistorySubtitle */
 export function materialHistorySubtitle(event: AdminRawMaterialEvent, catalog: Pick<AdminApparatus, 'id' | 'name'>[]): string {
   const machine = materialFriendlyApparatus(event.apparatus, catalog);
-  return [event.warehouse.trim(), event.order_id.trim() ? `Zakaz ${event.order_id.trim()}` : '', machine, event.barcode.trim()].filter(Boolean).join(' • ');
+  return [dartTrim(event.warehouse), dartTrim(event.order_id) ? `Zakaz ${dartTrim(event.order_id)}` : '', machine, dartTrim(event.barcode)].filter(Boolean).join(' • ');
 }
 /** @v2 _materialHistoryTime */
 export function materialHistoryTime(unix: number, now = new Date()): string {
@@ -60,11 +61,11 @@ export function materialHistoryDateTime(unix: number): string {
 /** @v2 _materialHistoryDetails */
 export function materialHistoryDetails(event: AdminRawMaterialEvent, catalog: Pick<AdminApparatus, 'id' | 'name'>[]) {
   const details: { label: string; value: string }[] = [];
-  const add = (name: string, value: string) => { if (value.trim()) details.push({ label: name, value: value.trim() }); };
+  const add = (name: string, value: string) => { if (dartTrim(value)) details.push({ label: name, value: dartTrim(value) }); };
   add('Harakat turi', label(event.event_type, eventLabels));
-  add('Mahsulot', event.item_name.trim() || event.item_code);
+  add('Mahsulot', dartTrim(event.item_name) || event.item_code);
   add('Mahsulot kodi', event.item_code); add('Ombor', event.warehouse);
-  add('Miqdor', event.qty_delta === 0 ? '' : `${event.qty_delta > 0 ? '+' : ''}${event.qty_delta.toFixed(3)}${event.uom.trim() ? ` ${event.uom.trim()}` : ''}`);
+  add('Miqdor', event.qty_delta === 0 ? '' : `${event.qty_delta > 0 ? '+' : ''}${event.qty_delta.toFixed(3)}${dartTrim(event.uom) ? ` ${dartTrim(event.uom)}` : ''}`);
   add('Shtrix-kod', event.barcode);
   const before = label(event.stock_status_before, statusLabels), after = label(event.stock_status_after, statusLabels);
   add('Holati', !before || !after || before === after ? after || before : `${before} → ${after}`);
@@ -73,7 +74,7 @@ export function materialHistoryDetails(event: AdminRawMaterialEvent, catalog: Pi
     const person = event.payload_json.delivered_by;
     if (person && typeof person === 'object' && !Array.isArray(person)) add('Olib kelgan', String((person as Record<string, unknown>).name ?? ''));
   }
-  const actor = event.actor_display_name.trim(), owner = event.owner_display_name.trim();
+  const actor = dartTrim(event.actor_display_name), owner = dartTrim(event.owner_display_name);
   add(event.event_type === 'delivery_received' ? 'Qabul qilgan' : 'Bajargan', actor && !actor.includes(':') ? actor : reference(event.actor_ref));
   add('Rol', label(event.actor_role, roleLabels));
   add('Egasi', owner && !owner.includes(':') ? owner : reference(event.owner_ref));

@@ -14,8 +14,11 @@ function load(name, mocks = {}) {
 const errors = load('shared/mobileApiException');
 function setup(fetch) {
   const controls = load('workerControlsApi', { './authorizedFetch': { authorizedFetch: fetch }, './sessionReadScope': { sessionReadScope: () => '' } });
-  const api = load('material/materialHistoryApi', { '../authorizedFetch': { authorizedFetch: fetch }, '../shared/mobileApiException': errors, '../workerControlsApi': controls });
-  const presentation = load('material/materialHistoryPresentation', { '../shared/mobileApiException': errors, '../workerControlsApi': controls });
+  const dart = load('shared/dartApparatus', { '../workerControlsApi': controls });
+  const api = load('material/materialHistoryApi', { '../authorizedFetch': { authorizedFetch: fetch }, '../shared/mobileApiException': errors,
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls });
+  const presentation = load('material/materialHistoryPresentation', { '../shared/mobileApiException': errors,
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls });
   return { ...api, ...presentation };
 }
 const station = 'apparatus:default:bosma_7';
@@ -77,4 +80,28 @@ test('history renders signed quantity, status transitions, unknown labels, times
   assert.equal(api.materialHistoryTime(seconds, date), '09:04');
   assert.equal(api.materialHistoryTime(seconds, new Date(2026, 10, 9)), '08.11 09:04');
   assert.equal(api.materialHistoryDateTime(seconds), '08.11.2026 09:04');
+});
+
+test('history filters, safe labels and detail rows use Dart whitespace at both edges', async () => {
+  const calls = [], api = setup(async (_session, url) => { calls.push(url); return { status: 200, json: async () => [] }; });
+  const whitespace = require('./contracts/f11910bb/material_unicode_trim.json').trim;
+  for (const point of whitespace) {
+    const w = String.fromCodePoint(point), wrapped = value => `${w}${value}${w}`;
+    const event = api.rawMaterialEvent({ event_type: 'receipt_posted', item_name: wrapped('Rulon'), warehouse: wrapped('Ombor'),
+      order_id: wrapped('42'), barcode: wrapped('QR'), apparatus: wrapped(station), actor_display_name: wrapped('Ali'),
+      stock_status_before: wrapped('available'), stock_status_after: wrapped('reserved') });
+    assert.equal(event.apparatus, station); assert.equal(api.materialHistoryTitle(event), 'Rulon kirim');
+    assert.equal(api.materialHistorySubtitle(event, [{ id: wrapped(station), name: wrapped('Bosma') }]), 'Ombor • Zakaz 42 • Bosma • QR');
+    const details = api.materialHistoryDetails(event, []);
+    assert.ok(details.some(item => item.label === 'Bajargan' && item.value === 'Ali'));
+    assert.ok(details.some(item => item.label === 'Holati' && item.value === 'Mavjud → Band qilingan'));
+  }
+  await api.adminRawMaterialHistory({}, { warehouse: '\u0085Ombor\u0085', eventType: '\u0085receipt_posted\u0085' });
+  assert.deepEqual(Object.fromEntries(new URL(calls[0], 'https://example.test').searchParams),
+    { warehouse: 'Ombor', event_type: 'receipt_posted', limit: '50' });
+});
+
+test('unverified non-ASCII history apparatus IDs fail closed rather than using JS-only canonical rules', () => {
+  const api = setup(() => {});
+  assert.throws(() => api.rawMaterialEvent({ apparatus: 'apparatus:default:\u037f' }), error => error.code === 'apparatus_id_invalid');
 });

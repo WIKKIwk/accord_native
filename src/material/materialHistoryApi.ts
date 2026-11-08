@@ -1,7 +1,8 @@
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
-import { isCanonicalApparatusId, productionMapResponseError, WorkerControlException } from '../workerControlsApi';
+import { dartTrim, isAsciiCanonicalApparatusId } from '../shared/dartApparatus';
+import { productionMapResponseError, WorkerControlException } from '../workerControlsApi';
 
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): ObjectValue | null => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -25,8 +26,8 @@ export type AdminRawMaterialEvent = {
 export function rawMaterialEvent(raw: unknown): AdminRawMaterialEvent {
   const row = object(raw);
   if (!row) throw new TypeError('Invalid raw material event');
-  const apparatus = text(row.apparatus).trim();
-  if (apparatus && !isCanonicalApparatusId(apparatus)) {
+  const apparatus = dartTrim(text(row.apparatus));
+  if (apparatus && !isAsciiCanonicalApparatusId(apparatus)) {
     throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
   }
   return {
@@ -43,7 +44,7 @@ export function rawMaterialEvent(raw: unknown): AdminRawMaterialEvent {
 
 /** @v2 adminRawMaterialHistory */
 export async function adminRawMaterialHistory(session: Session, options: { warehouse?: string; eventType?: string; limit?: number } = {}) {
-  const query = new URLSearchParams(), warehouse = (options.warehouse ?? '').trim(), eventType = (options.eventType ?? '').trim();
+  const query = new URLSearchParams(), warehouse = dartTrim(options.warehouse ?? ''), eventType = dartTrim(options.eventType ?? '');
   const limit = options.limit ?? 50;
   if (warehouse) query.set('warehouse', warehouse);
   if (eventType) query.set('event_type', eventType);
