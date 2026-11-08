@@ -2,7 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import type { qolipProductFromJson } from '../qolipCatalogApi';
 import { MobileApiException } from '../shared/mobileApiException';
-import { dartQuery, jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { assertQolipReadCurrent, dartQuery, jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart, type QolipReadGuard } from './qolipApiCommon';
 import type { QolipBlock } from './qolipBlocksApi';
 
 /** @v2 QolipLocationEntry */
@@ -20,22 +20,34 @@ export function qolipLocationFromJson(value: unknown): QolipLocationEntry {
     column_number: optionalInteger(row.column_number), location_label: optionalText(row.location_label) };
 }
 
-async function send(session: Session, path: string, body?: Record<string, unknown>): Promise<Response> {
+async function send(session: Session, path: string, body?: Record<string, unknown>, guard?: QolipReadGuard): Promise<Response> {
+  assertQolipReadCurrent(guard);
   await Promise.resolve();
   if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
-  return authorizedFetch(session, path, body === undefined ? {} : {
+  const init = body === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
+  };
+  const beforeSend = () => {
+    assertQolipReadCurrent(guard);
+    if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
+  };
+  return guard === undefined ? authorizedFetch(session, path, init) : authorizedFetch(session, path, init, beforeSend);
 }
 
 /** @v2 qolipLocations */
-export async function qolipLocations(session: Session, block: string): Promise<QolipLocationEntry[]> {
+export async function qolipLocations(session: Session, block: string, guard?: QolipReadGuard): Promise<QolipLocationEntry[]> {
+  assertQolipReadCurrent(guard);
   const query = dartQuery({ block: trimDart(block) });
-  const response = await send(session, `/v1/mobile/qolip/locations?${query}`);
+  const response = await send(session, `/v1/mobile/qolip/locations?${query}`, undefined, guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw new Error('Qolip locations failed');
-  const data = jsonObject(await response.json());
+  const raw: unknown = await response.json();
+  assertQolipReadCurrent(guard);
+  const data = jsonObject(raw);
   if (!data) throw new TypeError('Invalid Qolip locations');
-  return Array.isArray(data.locations) ? data.locations.map(qolipLocationFromJson) : [];
+  const result = Array.isArray(data.locations) ? data.locations.map(qolipLocationFromJson) : [];
+  assertQolipReadCurrent(guard);
+  return result;
 }
 
 type Product = ReturnType<typeof qolipProductFromJson>;

@@ -1,7 +1,7 @@
 import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
-import { dartString, jsonObject, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { assertQolipReadCurrent, dartString, jsonObject, optionalText, qolipApiResponseError, trimDart, type QolipReadGuard } from './qolipApiCommon';
 
 /** @v2 QolipBlock */
 export type QolipBlock = { name: string; warehouse: string };
@@ -24,11 +24,17 @@ export function qolipBlocksResultFromJson(value: unknown): QolipBlocksResult {
   };
 }
 
-async function send(session: Session, init: RequestInit = {}): Promise<Response> {
+async function send(session: Session, init: RequestInit = {}, guard?: QolipReadGuard): Promise<Response> {
+  assertQolipReadCurrent(guard);
   // V2 checks test mode before the request. Its in-memory branch is deferred.
   await Promise.resolve();
   if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
-  return authorizedFetch(session, '/v1/mobile/qolip/blocks', init);
+  const beforeSend = () => {
+    assertQolipReadCurrent(guard);
+    if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
+  };
+  return guard === undefined ? authorizedFetch(session, '/v1/mobile/qolip/blocks', init)
+    : authorizedFetch(session, '/v1/mobile/qolip/blocks', init, beforeSend);
 }
 
 function jsonBody(method: 'POST' | 'PUT' | 'DELETE', body: Record<string, string>): RequestInit {
@@ -36,15 +42,20 @@ function jsonBody(method: 'POST' | 'PUT' | 'DELETE', body: Record<string, string
 }
 
 /** @v2 qolipBlocksData */
-export async function qolipBlocksData(session: Session): Promise<QolipBlocksResult> {
-  const response = await send(session);
+export async function qolipBlocksData(session: Session, guard?: QolipReadGuard): Promise<QolipBlocksResult> {
+  const response = await send(session, {}, guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw new Error('Qolip blocks failed');
-  return qolipBlocksResultFromJson(await response.json());
+  const data: unknown = await response.json();
+  assertQolipReadCurrent(guard);
+  const result = qolipBlocksResultFromJson(data);
+  assertQolipReadCurrent(guard);
+  return result;
 }
 
 /** @v2 qolipBlocks */
-export async function qolipBlocks(session: Session): Promise<QolipBlock[]> {
-  return (await qolipBlocksData(session)).blocks;
+export async function qolipBlocks(session: Session, guard?: QolipReadGuard): Promise<QolipBlock[]> {
+  return (await qolipBlocksData(session, guard)).blocks;
 }
 
 /** @v2 qolipCreateBlock */

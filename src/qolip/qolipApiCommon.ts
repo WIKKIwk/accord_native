@@ -1,6 +1,24 @@
 import { MobileApiException } from '../shared/mobileApiException';
 
 export type JsonObject = Record<string, unknown>;
+/** Opt-in read lifetime. Only synchronous true permits a Home request or result. */
+export type QolipReadGuard = () => boolean;
+const checkingReadGuards = new WeakMap<QolipReadGuard, { reentered: boolean }>();
+export function assertQolipReadCurrent(guard?: QolipReadGuard): void {
+  if (guard === undefined) return;
+  if (typeof guard !== 'function') throw new Error('qolip_read_expired');
+  const previous = checkingReadGuards.get(guard);
+  if (previous) { previous.reentered = true; throw new Error('qolip_read_expired'); }
+  const frame = { reentered: false }; checkingReadGuards.set(guard, frame);
+  try {
+    const result: unknown = guard();
+    if (result !== true) {
+      if (result !== null && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
+      throw new Error('qolip_read_expired');
+    }
+    if (frame.reentered) throw new Error('qolip_read_expired');
+  } finally { checkingReadGuards.delete(guard); }
+}
 export const jsonObject = (value: unknown): JsonObject | null => value !== null && typeof value === 'object' && !Array.isArray(value)
   ? value as JsonObject : null;
 export const trimDart = (value: string) => value.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');

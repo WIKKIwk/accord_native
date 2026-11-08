@@ -1,6 +1,6 @@
 import type { QolipLocationEntry } from './qolipLocationsApi';
 
-/** Required non-revivable original-session boundary. The real shared witness adapter is not implemented in this branch. */
+/** Required non-revivable original-session boundary. Use the injected shared-witness adapter, never an identity/scope substitute. */
 export type QolipHomeReadBoundary = {
   current: () => boolean;
   subscribe: (listener: () => void) => () => void;

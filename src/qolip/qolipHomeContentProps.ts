@@ -19,6 +19,11 @@ export type QolipHomeContentProps = {
   onReorderBlocks: (oldIndex: number, newIndex: number) => void;
   retry: () => Promise<void>;
   refreshBlock: (blockName: string) => Promise<void>;
-  renderBlock: (block: QolipBlock, content: QolipHomeBlockContent) => ReactNode;
   dock?: ReactNode;
-};
+} & ({
+  renderBlock: (block: QolipBlock, content: QolipHomeBlockContent) => ReactNode;
+  renderRetainedBlocks?: never;
+} | {
+  renderBlock?: never;
+  renderRetainedBlocks: (home: Extract<QolipHomePresentation, { kind: 'blocks' }>) => ReactNode;
+});

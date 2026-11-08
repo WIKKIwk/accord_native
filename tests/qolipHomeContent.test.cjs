@@ -103,3 +103,11 @@ for (const platform of ['ios', 'android']) {
     header.onMenu(); header.onProfile(); assert.deepEqual(h.calls, [['search', ' New  '], ['search', ''], ['menu'], ['profile']]);
   });
 }
+
+for (const platform of ['ios', 'android']) {
+  test(`${platform} retained-body owner slot is not keyed by the selected tab and receives the complete real block model`, () => {
+    const seen = [], model = home(), h = screen(platform, model, { renderRetainedBlocks: value => { seen.push(value); return React.createElement('div', null, 'RETAINED-REAL-BODIES'); } });
+    assert.ok(h.render().includes('RETAINED-REAL-BODIES')); assert.equal(seen[0], model); assert.equal(h.captures.Block, undefined);
+    h.props.home = home({ selectedIndex: 1 }); h.render(); assert.equal(seen[1], h.props.home); assert.equal(h.captures.Block, undefined);
+  });
+}

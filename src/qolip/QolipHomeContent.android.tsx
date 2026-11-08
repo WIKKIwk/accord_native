@@ -41,10 +41,10 @@ export function QolipHomeContent(props: QolipHomeContentProps) {
               <Text color="#FFFFFF" style={{ typography: 'labelSmall', fontWeight: '900' }}>{String(tab.matchCount)}</Text>
             </Box>}
           </Row></Host>} />
-        <View key={home.selected.key} style={styles.root}>{props.renderBlock(home.selected.block, {
+        {props.renderRetainedBlocks ? props.renderRetainedBlocks(home) : <View key={home.selected.key} style={styles.root}>{props.renderBlock(home.selected.block, {
           index: home.selected.index, searchCounts: home.cellCounts[home.selected.key] ?? {},
           refresh: () => props.refreshBlock(home.selected.block.name),
-        })}</View>
+        })}</View>}
       </View> : null}
     {props.dock}
   </View>;

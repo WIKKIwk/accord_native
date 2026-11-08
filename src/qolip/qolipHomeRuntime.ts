@@ -6,6 +6,7 @@ import { qolipHomeBlockOrderKey } from './qolipHomeLogic';
 import { QolipHomeState } from './qolipHomeState';
 import { qolipLocations } from './qolipLocationsApi';
 
+/** Legacy unmounted runtime, not a session witness. The guarded owner uses qolipHomeOwnerRuntime instead. */
 export function createQolipHomeState(session: Session): QolipHomeState {
   return new QolipHomeState({
     blocks: () => qolipBlocksData(session), locations: block => qolipLocations(session, block),
