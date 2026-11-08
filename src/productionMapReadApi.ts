@@ -4,9 +4,10 @@ import { productionMapResponseError } from './workerControlsApi';
 import { productionMapSavedFromJson } from './workerProductionMapSaved';
 
 /** @v2 adminProductionMap */
-export async function adminProductionMap(session: Session, id: string) {
+export async function adminProductionMap(session: Session, id: string, beforeSend?: () => void) {
   const query = new URLSearchParams({ id: id.trim() });
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps?${query}`);
+  const path = `/v1/mobile/admin/production-maps?${query}`;
+  const response = beforeSend ? await authorizedFetch(session, path, {}, beforeSend) : await authorizedFetch(session, path);
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
