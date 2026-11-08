@@ -30,7 +30,7 @@ const modifiers = new Proxy({ shapes: { rectangle: () => ({}), circle: () => ({}
 function render(platform, role, onDailyWork) {
   const sheet = { isOpen: () => false, open() {}, close() {}, update() {} };
   const mocks = {
-    react, '@expo/ui': ui, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
+    react, 'expo-router': { useFocusEffect() {} }, '@expo/ui': ui, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
     '@expo/ui/jetpack-compose': { PullToRefreshBox: 'PullToRefreshBox', useMaterialColors: () => ({}) },
     'react-native': { Alert: { alert() {} }, useColorScheme: () => 'light', PlatformColor: value => value },
     '../profileModel': { profileDisplay: () => display }, '../nativeSheet': { useNativeSheet: () => sheet },
@@ -77,10 +77,11 @@ test('ProfileScreen forwards the supplied callback or its absence to the platfor
     '../shared/profileAvatarRuntime': { cachedProfileAvatar: () => null },
     './ProfileView': { ProfileView: 'ProfileView' },
   };
-  const { ProfileScreen } = load('ProfileScreen.tsx', mocks), callback = () => {};
+  const { ProfileScreen } = load('ProfileScreen.tsx', mocks), callback = () => {}, registerSettingsOpener = () => () => {};
   for (const onDailyWork of [callback, undefined]) {
-    const wrapper = ProfileScreen({ session: { imageCacheScope: 'scope', profile: {} }, onLogout() {}, onDailyWork });
+    const wrapper = ProfileScreen({ session: { imageCacheScope: 'scope', profile: {} }, onLogout() {}, onDailyWork, registerSettingsOpener });
     const view = wrapper.type(wrapper.props);
     assert.equal(view.type, 'ProfileView'); assert.equal(view.props.onDailyWork, onDailyWork);
+    assert.equal(view.props.registerSettingsOpener, registerSettingsOpener);
   }
 });

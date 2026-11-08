@@ -34,7 +34,7 @@ function fixture(platform, role = 'boyoqchi', showDirectLogout) {
     sheets.push(sheet); return sheet;
   };
   const mocks = {
-    react, '@expo/ui': ui, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
+    react, 'expo-router': { useFocusEffect() {} }, '@expo/ui': ui, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
     '@expo/ui/jetpack-compose': { PullToRefreshBox: 'PullToRefreshBox', useMaterialColors: () => ({}) },
     'react-native': { Alert: { alert: (...args) => alerts.push(args) }, useColorScheme: () => 'light', PlatformColor: value => value },
     '../profileModel': { profileDisplay: () => ({ name: 'Name', role: 'Role', phone: '', legalName: '', apparatusLabels: [] }) },

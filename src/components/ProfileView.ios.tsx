@@ -1,6 +1,7 @@
 import { BottomSheet, Button, DisclosureGroup, Group, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
 import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, refreshable, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
-import { useState, type ComponentProps } from 'react';
+import { useCallback, useState, type ComponentProps } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { PlatformColor } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { themeController } from '../shared/themeRuntime';
@@ -104,16 +105,25 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
   </Group>;
 }
 
+function SettingsOpenerRegistration({ register, setOpen }: { register: NonNullable<ProfileViewProps['registerSettingsOpener']>; setOpen: (open: boolean) => void }) {
+  useFocusEffect(useCallback(() => {
+    let focused = true;
+    const unregister = register(() => { if (focused) setOpen(true); });
+    return () => { focused = false; unregister(); };
+  }, [register, setOpen]));
+  return null;
+}
+
 // @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout, registerSettingsOpener } = props;
   const details = profileDisplay(snapshot);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const { text } = useBaseLocale();
   const switchPin = useSwitchPinSetup(session);
   const closeSettings = () => { if (!switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
-  return <><Host style={{ flex: 1 }}>
+  return <>{registerSettingsOpener ? <SettingsOpenerRegistration register={registerSettingsOpener} setOpen={setSettingsOpen} /> : null}<Host style={{ flex: 1 }}>
     <List modifiers={[listStyle('insetGrouped'), refreshable(props.onRefresh)]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), padding({ vertical: 14 })]}>
         <Spacer />
