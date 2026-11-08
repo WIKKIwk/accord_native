@@ -11,7 +11,7 @@ const result = new model.RawSplitResult({ id: 'result', source, source_kg: '100'
   { ...source, stock_id: 'c2', barcode: 'c2', kg: '59', gross_kg: '60', bobina_kg: '1', width_mm: '600' }] });
 function setup() {
   let selection = { transport: 'bluetooth', printer: {} }, calls = [], notices = [];
-  const options = { ticket: { session: {}, check() {} }, snapshot: async () => new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] }),
+  const options = { ticket: { session: {}, check() {} }, canMutate: () => true, snapshot: async () => new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] }),
     scope: () => 'account-1', selectPrinter: async () => selection, printOne: async (_result, output) => { calls.push(output.barcode); }, onMessage: message => notices.push(message),
     printerSupported: () => true, onUnsupportedPrinter: () => notices.push('unsupported-printer') };
   return { c: new RawSplitHistoryController(options), options, calls, notices, setSelection: value => { selection = value; } };
@@ -100,4 +100,10 @@ test('disposing a history owner during a pending print prevents later outputs an
   h.c.subscribe(() => updates++); const pending = h.c.reprint(result); await new Promise(resolve => setImmediate(resolve));
   h.c.dispose(); const oldUpdates = updates; finish(); await pending;
   assert.deepEqual(h.calls, ['c1']); assert.deepEqual(h.notices, []); assert.equal(updates, oldUpdates);
+});
+
+
+test('read-only session blocks reprints before device selection or printer calls', async () => {
+  const h = setup(); let picked = 0; h.options.canMutate = () => false; h.options.selectPrinter = async () => { picked++; return null; };
+  await h.c.reprint(result); assert.equal(picked, 0); assert.deepEqual(h.calls, []); assert.match(h.notices[0], /Sessiya xavfsizligi/);
 });

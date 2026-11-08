@@ -1,7 +1,7 @@
 # homashyo
 
 Status: part 1 in progress
-Stopped at: Wire native home/history/details, scanner/picker/print runtime, role navigation and feedback; then complete text and surface audits.
+Stopped at: Wire native home/history/profile, scanner, picker and detail sheets; the role opens read-only while exact-session write protection is under review.
 
 Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot. The original V2 checkout is read-only.
 
@@ -20,6 +20,7 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot
 | Test mode | `rawSplitSave`, `rawSplitReportIssue` | Implement the shared test-mode policy in the deferred test-mode pass. |
 
 ## Verification so far
+- Explicit role write gate now fails closed when no trustworthy session witness is available: stock/issue saves and reprints stop before printer selection or requests. It is rechecked after asynchronous selection and before each label. Sixty-two focused controller/runtime/view tests passed, including revocation during printer selection. Already-sent outcomes remain uncertain and are never automatically resubmitted.
 - Role-owned picker coordinator now waits for its overlay removal before handing a selected device to callers, and cancels on back, session change or owner disposal. Thirty-three focused coordinator/device/transient tests passed; the overlay and screen entry are still being wired. Swipe/outside dismissal and real native timing remain open.
 - Barcode fast-path checkpoint: 32 focused tests passed; full Node suite 1,386 passed and 6 known Preparation Android Expo UI ESM-resolution failures. iOS typecheck and uncached lint passed; Android typecheck retains 9 known Worker errors. Ledger: 583 V2 and 63 test tags resolve, 9 existing endpoint warnings. Source checkout remained clean.
 - `node --test tests/homashyo*.test.cjs`: 132 passed, including mocked iOS/Android home/history/detail/scanner render trees, callbacks and source-derived labels, including selected-baseline wire replays.

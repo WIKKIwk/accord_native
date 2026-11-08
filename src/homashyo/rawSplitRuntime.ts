@@ -6,9 +6,9 @@ import { printRawSplitResult, printRawSplitRoll, rawSplitPrinterSupported } from
 
 type Device = PreparationDeviceSelection;
 /** Compose existing native printing with the independent V2 home and history state machines. */
-export function createRawSplitRuntime(options: { ticket: RawSplitSessionTicket; selectPrinter: () => Promise<Device | null>;
+export function createRawSplitRuntime(options: { ticket: RawSplitSessionTicket; canMutate: () => boolean; selectPrinter: () => Promise<Device | null>;
   onMessage: (message: string) => void; onIssueVisible: () => void; onUnsupportedPrinter: () => void }) {
-  const common = { ticket: options.ticket, selectPrinter: options.selectPrinter, onMessage: options.onMessage,
+  const common = { ticket: options.ticket, canMutate: options.canMutate, selectPrinter: options.selectPrinter, onMessage: options.onMessage,
     printerSupported: rawSplitPrinterSupported, onUnsupportedPrinter: options.onUnsupportedPrinter };
   const home = new RawSplitController({ ...common, onIssueVisible: options.onIssueVisible,
     print: (result, printer, wifiPrinter, guard) => printRawSplitResult(options.ticket, result, printer, wifiPrinter, guard) });

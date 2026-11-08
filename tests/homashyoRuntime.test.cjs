@@ -14,7 +14,7 @@ test('runtime reuses real-path print functions, preflight and independent home/h
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   const selectPrinter = async () => device, onMessage = () => {}, onIssueVisible = () => {}, onUnsupportedPrinter = () => {};
-  const runtime = mod.exports.createRawSplitRuntime({ ticket, selectPrinter, onMessage, onIssueVisible, onUnsupportedPrinter });
+  const runtime = mod.exports.createRawSplitRuntime({ ticket, canMutate: () => true, selectPrinter, onMessage, onIssueVisible, onUnsupportedPrinter });
   assert.equal(runtime.home.options.printerSupported, preflight); assert.equal(runtime.history.options.printerSupported, preflight);
   assert.equal(runtime.home.options.selectPrinter, selectPrinter); assert.equal(runtime.history.options.selectPrinter, selectPrinter);
   assert.equal(runtime.home.options.onIssueVisible, onIssueVisible); assert.equal(runtime.home.options.onUnsupportedPrinter, onUnsupportedPrinter);

@@ -5,7 +5,7 @@ import type { RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitM
 type Device = PreparationDeviceSelection;
 export type RawSplitHistoryState = { snapshot: RawSplitSnapshot | null; printer: Device | null; wifiPrinter: string;
   error: string | null; busy: boolean };
-export type RawSplitHistoryOptions = { ticket: RawSplitSessionTicket; selectPrinter: () => Promise<Device | null>;
+export type RawSplitHistoryOptions = { ticket: RawSplitSessionTicket; canMutate: () => boolean; selectPrinter: () => Promise<Device | null>;
   printOne: (result: RawSplitResult, output: RawSplitRoll, printer: Device, wifiPrinter: string, guard: () => void) => Promise<void>;
   onMessage: (message: string) => void; printerSupported: (printer: Device, wifiPrinter: string) => boolean;
   onUnsupportedPrinter: () => void; snapshot?: typeof rawSplitSnapshot; scope?: () => string };
@@ -25,6 +25,7 @@ export class RawSplitHistoryController {
     try { return this.active && this.sessionCurrent() && this.scopeNow() === this.scope; } catch { return false; }
   };
   private checkScope = (): void => { if (!this.isCurrent()) throw new Error('Akkaunt o‘zgargan'); };
+  private writeAllowed(): boolean { try { return this.options.canMutate() === true; } catch { return false; } }
   getSnapshot = (): RawSplitHistoryState => this.state;
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   dispose(): void { this.active = false; this.listeners.clear(); }
@@ -47,6 +48,7 @@ export class RawSplitHistoryController {
   setWifiPrinter(value: string): void { if (!this.state.busy) this.update({ wifiPrinter: value }); }
   async reprint(result: RawSplitResult, only?: RawSplitRoll): Promise<void> {
     if (!this.isCurrent() || this.state.busy) return;
+    if (!this.writeAllowed()) { this.options.onMessage('Sessiya xavfsizligi tasdiqlanmaguncha chop etib bo‘lmaydi.'); return; }
     this.update({ busy: true, error: null });
     try {
       if (!this.state.printer) { await this.selectPrinter(); if (!this.state.printer) return; }
@@ -54,7 +56,7 @@ export class RawSplitHistoryController {
       if (!this.options.printerSupported(printer, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
       for (const output of only ? [only] : result.outputs) {
         if (!this.isCurrent()) return;
-        this.checkScope();
+        this.checkScope(); if (!this.writeAllowed()) throw new Error('Sessiya xavfsizligi tasdiqlanmagan');
         await this.options.printOne(result, output, printer, this.state.wifiPrinter, this.checkScope);
       }
       this.checkScope(); this.options.onMessage('Chop etildi');

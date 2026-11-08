@@ -211,7 +211,7 @@ for (const platform of ['ios', 'android']) {
   });
   test(`${platform} a closed sheet still lets the current history owner report a print failure`, async () => {
     const { RawSplitHistoryController } = load('rawSplitHistoryController.ts', { './rawSplitApi': { rawSplitSessionIsCurrent: () => true } });
-    let reject; const options = { ticket: {}, scope: () => 'account', selectPrinter: async () => ({ transport: 'bluetooth', printer: {} }),
+    let reject; const options = { ticket: {}, canMutate: () => true, scope: () => 'account', selectPrinter: async () => ({ transport: 'bluetooth', printer: {} }),
       printerSupported: () => true, onUnsupportedPrinter: () => {}, onMessage: () => {},
       printOne: () => new Promise((_resolve, fail) => { reject = fail; }) };
     const controller = new RawSplitHistoryController(options), hooks = mountedHooks(), h = details(platform, null, value => value, issue, hooks.react);

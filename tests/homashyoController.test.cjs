@@ -24,7 +24,7 @@ function setup(overrides = {}) {
   const ops = { rawSplitScope: () => scope, rawSplitSessionIsCurrent: () => true, rawSplitPending: async () => pending, rawSplitIssuePending: async () => pendingIssue,
     rawSplitSnapshot: async () => snapshot, rawSplitSource: async () => source, rawSplitSave: async (_session, payload) => { stockCalls.push(payload); return result; },
     rawSplitReportIssue: async (_session, payload) => { issueCalls.push(payload); return { id: 'issue-1' }; }, ...overrides };
-  const options = { ticket: { session: {}, check() {} }, operations: ops, requestId: async () => 'split-id', selectPrinter: async () => pick,
+  const options = { ticket: { session: {}, check() {} }, canMutate: () => true, operations: ops, requestId: async () => 'split-id', selectPrinter: async () => pick,
     print: async (...args) => { prints.push(args); }, onMessage: value => notices.push(value), onIssueVisible: () => notices.push('issue-visible'),
     printerSupported: () => true, onUnsupportedPrinter: () => notices.push('unsupported-printer') };
   const controller = new RawSplitController(options);
@@ -109,4 +109,19 @@ test('manual lookup uses the V2 last duplicate barcode and rejects invalid UTF-8
   assert.deepEqual(requested, ['B', 'a', 'https:30/40']);
   await assert.rejects(h.controller.lookup('https://example.test/path?barcode=%FF'), URIError);
   assert.deepEqual(requested, ['B', 'a', 'https:30/40']);
+});
+
+
+test('read-only security hold blocks stock and issue writes before picking a printer', async () => {
+  const h = setup(); let picked = 0; h.options.canMutate = () => false; h.options.selectPrinter = async () => { picked++; return null; };
+  await fill(h.controller); await h.controller.save(); await h.controller.saveIssue();
+  assert.equal(picked, 0); assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.issueCalls, []);
+  assert.match(h.controller.getSnapshot().error, /Sessiya xavfsizligi/);
+  assert.match(h.controller.getSnapshot().issueError, /Sessiya xavfsizligi/);
+});
+test('session write permission lost during device choice prevents a later stock request', async () => {
+  const h = setup(); let allowed = true, resolve; h.options.canMutate = () => allowed;
+  h.options.selectPrinter = () => new Promise(done => { resolve = done; }); await fill(h.controller);
+  const pending = h.controller.save(); await new Promise(done => setImmediate(done)); allowed = false;
+  resolve({ transport: 'bluetooth', printer: {} }); await pending; assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []);
 });

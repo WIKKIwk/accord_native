@@ -17,7 +17,7 @@ export type RawSplitControllerState = {
   showIssue: boolean; issueSaved: boolean; savedIssueId: string | null; busy: boolean;
 };
 export type RawSplitControllerOptions = {
-  ticket: api.RawSplitSessionTicket; selectPrinter: () => Promise<Device | null>;
+  ticket: api.RawSplitSessionTicket; canMutate: () => boolean; selectPrinter: () => Promise<Device | null>;
   print: (result: RawSplitResult, printer: Device, wifiPrinter: string, guard: () => void) => Promise<void>;
   onMessage: (message: string) => void; onIssueVisible: () => void;
   printerSupported: (printer: Device, wifiPrinter: string) => boolean; onUnsupportedPrinter: () => void;
@@ -49,6 +49,7 @@ export class RawSplitController {
   private checkScope = (): void => {
     if (!this.isCurrent()) throw new Error('Akkaunt o‘zgargan');
   };
+  private writeAllowed(): boolean { try { return this.options.canMutate() === true; } catch { return false; } }
   get locked(): boolean { return this.state.busy || this.state.pending !== null || this.state.pendingIssue !== null; }
   get widthPlan(): RawSplitWidthPlan | null {
     return this.state.source ? new RawSplitWidthPlan(this.state.source.widthMm, this.state.outputs.map(output => output.width)) : null;
@@ -116,13 +117,14 @@ export class RawSplitController {
   }
   async save(retry = false): Promise<void> {
     if (!this.isCurrent() || this.state.busy || (!retry && this.locked)) return;
+    if (!this.writeAllowed()) { this.update({ error: 'Sessiya xavfsizligi tasdiqlanmaguncha saqlash mumkin emas.' }); return; }
     this.update({ busy: true, error: null });
     try {
       const payload = retry ? this.state.pending : await this.payload(false);
       if (!payload) return;
       if (!this.state.printer && !await this.selectPrinter()) return;
       if (!this.options.printerSupported(this.state.printer!, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
-      this.checkScope();
+      this.checkScope(); if (!this.writeAllowed()) throw new Error('Sessiya xavfsizligi tasdiqlanmaguncha saqlash mumkin emas.');
       const result = await this.ops.rawSplitSave(this.options.ticket, payload); this.checkScope();
       this.update({ saved: result, source: null, pending: null, barcode: '' });
       await this.options.print(result, this.state.printer!, this.state.wifiPrinter, this.checkScope);
@@ -136,11 +138,13 @@ export class RawSplitController {
   }
   async saveIssue(retry = false): Promise<void> {
     if (!this.isCurrent() || this.state.busy || (!retry && (this.locked || this.state.issueSaved))) return;
+    if (!this.writeAllowed()) { this.update({ issueError: 'Sessiya xavfsizligi tasdiqlanmaguncha saqlash mumkin emas.' }); return; }
     this.update({ busy: true, issueError: null, error: null });
     try {
       if (!retry && !this.state.issueNote.trim()) throw new Error('Farq sababini yozing');
       const payload = retry ? this.state.pendingIssue : { command: await this.payload(true), note: this.state.issueNote.trim() };
       if (!payload) return;
+      this.checkScope(); if (!this.writeAllowed()) throw new Error('Sessiya xavfsizligi tasdiqlanmaguncha saqlash mumkin emas.');
       const issue = await this.ops.rawSplitReportIssue(this.options.ticket, payload); this.checkScope();
       this.update({ pendingIssue: null, issueSaved: true, savedIssueId: issue.id });
       if (!this.state.source && this.isCurrent()) this.options.onMessage('Muammo saqlandi');
