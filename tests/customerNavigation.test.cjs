@@ -97,7 +97,7 @@ function routeFixture(platform, params = {}) {
       useCustomerContext: () => ({ session: { token: 'test' }, onLogout() {} }) },
     './CustomerDelivery': { CustomerDeliveryDetailScreen: 'CustomerDeliveryDetailScreen' },
     './CustomerHome': { CustomerHomeScreen: 'CustomerHomeScreen', CustomerStatusDetailScreen: 'CustomerStatusDetailScreen' },
-    [`./CustomerNotifications.${platform}`]: { CustomerNotificationsScreen: 'CustomerNotificationsScreen' },
+    [`./CustomerNotificationsView.${platform}`]: { CustomerNotificationsScreen: 'CustomerNotificationsScreen' },
     './CustomerShell': { useCustomerChatClosing: () => () => {} }, './CustomerDock.android': { CustomerDock: 'CustomerDock' },
     './customerNavigation': nav, './customerPresentation': { customerStatusTitleKey: kind => `title:${kind}` },
     './useCustomerNavigation': { useCustomerNavigation: () => navigation },
@@ -133,12 +133,12 @@ test('Android Customer dock reuses native bar, suppresses notification dot on it
       'react/jsx-runtime': jsx, 'expo-router': { router: { dismissTo: target => calls.push(target) } },
       'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 12 }) },
       '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
-      './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => true },
+      './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => true, useCustomerContext: () => ({ chatUnread: 2 }) },
       './customerNavigation': nav,
     }).CustomerDock({ active });
     assert.equal(dock.type, 'RoleBottomBar'); assert.equal(dock.props.active, active ?? ''); assert.equal(dock.props.bottomInset, 12);
     assert.deepEqual(dock.props.items.map(item => item.id), ['home', 'notifications', 'chat']);
-    assert.equal(dock.props.items[1].showBadge, active !== 'notifications');
+    assert.equal(dock.props.items[1].showBadge, active !== 'notifications'); assert.equal(dock.props.items[2].showBadge, true);
     if (active) dock.props.onSelect(active);
     dock.props.onSelect('notifications');
     assert.deepEqual(calls, active === 'notifications' ? [] : ['/android-customer/notifications']);
@@ -161,4 +161,58 @@ test('Customer drawer delegates current-item and logout behavior to the existing
   assert.deepEqual(drawer.props.items.map(item => item.id), ['home', 'notifications', 'profile']);
   drawer.props.onSelect('notifications'); drawer.props.onSelect('profile'); drawer.props.onSelect('logout');
   assert.deepEqual(calls, [['dismiss', '/android-customer/notifications'], ['dismiss', '/android-customer/profile'], 'logout']);
+});
+
+test('iOS Customer native tabs show the shared Chat unread dot and suppress the notification dot while active', () => {
+  for (const count of [0, 2]) for (const pathname of ['/ios-customer', '/ios-customer/notifications']) {
+    const Trigger = Object.assign(function Trigger() {}, { Icon: 'Icon', Label: 'Label', Badge: 'Badge' });
+    const NativeTabs = Object.assign(function NativeTabs() {}, { Trigger });
+    const shell = load('src/customer/CustomerShell.ios.tsx', {
+      'react/jsx-runtime': jsx, 'expo-router': { usePathname: () => pathname }, 'expo-router/native-tabs': { NativeTabs },
+      react: { createContext: () => ({ Provider: 'Provider' }), useContext: () => () => {}, useState: value => [value, () => {}] },
+      './CustomerDrawer': { CustomerDrawer: 'CustomerDrawer' },
+      './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerContext: () => ({ chatUnread: count }), useCustomerUnread: () => true },
+      './customerNavigation': nav,
+    }).CustomerShell();
+    const triggers = nodes(shell, node => node.type === Trigger);
+    assert.deepEqual(triggers.map(item => item.props.name), ['(home)', 'notifications', 'chat']);
+    assert.equal(nodes(triggers[1], node => node.type === 'Badge').length, pathname.endsWith('/notifications') ? 0 : 1);
+    assert.equal(nodes(triggers[2], node => node.type === 'Badge').length, count > 0 ? 1 : 0);
+  }
+});
+
+test('Android Customer dock hides the shared Chat dot at zero unread', () => {
+  const dock = load('src/customer/CustomerDock.android.tsx', {
+    'react/jsx-runtime': jsx, 'expo-router': { router: { dismissTo() {} } },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
+    '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
+    './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => false, useCustomerContext: () => ({ chatUnread: 0 }) },
+    './customerNavigation': nav,
+  }).CustomerDock({ active: 'home' });
+  assert.equal(dock.props.items[2].showBadge, false);
+});
+
+test('persistent Customer session provider starts the shared unread hook once with its own session', () => {
+  const calls = [], session = { imageCacheScope: 'customer-account', profile: { role: 'customer' } };
+  class Notifications { constructor() {} }
+  const modules = {
+    'react/jsx-runtime': jsx,
+    react: { createContext: () => ({ Provider: 'CustomerContextProvider' }), useCallback: fn => fn, useContext() {}, useEffect() {},
+      useMemo: fn => fn(), useRef: value => ({ current: value }), useState: () => [session, () => {}], useSyncExternalStore() {} },
+    'expo-router': { Redirect: 'Redirect', router: { replace() {} } },
+    'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: 'ios' }, View: 'View' },
+    '../auth': { loadSession() {}, logout() {}, registerSessionResetHook() {} }, '../appLock': { clearAppLock() {} },
+    '../appPreferences': { appPreferences: {} }, '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
+    '../shared/appRoutes': { appRoutes: { customerHome: '/customer-home' }, canOpenRoute: () => true },
+    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: value => { calls.push(value); return 4; } },
+    '../shared/localization': { localizedGetter() {}, localizedMethod() {} }, '../shared/localization/runtime': { localeController: {} },
+    '../shared/notificationStoresRuntime': { notificationHiddenStore: {}, notificationUnreadStore: {}, refreshHub: {} },
+    './customerNotifications': { CustomerNotificationsController: Notifications }, './customerRuntime': { createCustomerStore: () => ({}) },
+  };
+  const gate = load('src/customer/CustomerContext.tsx', modules).CustomerGate({ platform: 'ios', children: 'role-shell' });
+  assert.equal(gate.type, 'WorkerSecurityProvider');
+  const provider = gate.props.children.type(gate.props.children.props);
+  assert.equal(provider.type, 'CustomerContextProvider');
+  assert.equal(provider.props.value.session, session); assert.equal(provider.props.value.chatUnread, 4);
+  assert.deepEqual(calls, [session]);
 });

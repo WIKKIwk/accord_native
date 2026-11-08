@@ -14,7 +14,7 @@ import { useCustomerContext, useCustomerText } from './CustomerContext';
 import { CustomerDeliveryDetailScreen } from './CustomerDelivery';
 import { CustomerDock } from './CustomerDock.android';
 import { CustomerHomeScreen, CustomerStatusDetailScreen } from './CustomerHome';
-import { CustomerNotificationsScreen } from './CustomerNotifications.android';
+import { CustomerNotificationsScreen } from './CustomerNotificationsView.android';
 import { customerStatusKind } from './customerNavigation';
 import { customerStatusTitleKey } from './customerPresentation';
 import { useCustomerNavigation } from './useCustomerNavigation';

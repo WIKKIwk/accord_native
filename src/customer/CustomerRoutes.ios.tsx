@@ -12,7 +12,7 @@ import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { useCustomerContext, useCustomerText } from './CustomerContext';
 import { CustomerDeliveryDetailScreen } from './CustomerDelivery';
 import { CustomerHomeScreen, CustomerStatusDetailScreen } from './CustomerHome';
-import { CustomerNotificationsScreen } from './CustomerNotifications.ios';
+import { CustomerNotificationsScreen } from './CustomerNotificationsView.ios';
 import { useCustomerChatClosing } from './CustomerShell';
 import { customerStatusKind } from './customerNavigation';
 import { customerStatusTitleKey } from './customerPresentation';

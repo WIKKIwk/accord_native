@@ -2,14 +2,14 @@ import { usePathname } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { createContext, useContext, useState } from 'react';
 import { CustomerDrawer } from './CustomerDrawer';
-import { useCustomerText, useCustomerUnread } from './CustomerContext';
+import { useCustomerContext, useCustomerText, useCustomerUnread } from './CustomerContext';
 import { customerNotificationBadge } from './customerNavigation';
 
 const ChatClosingContext = createContext<(closing: boolean) => void>(() => {});
 export const useCustomerChatClosing = () => useContext(ChatClosingContext);
 
 export function CustomerShell() {
-  const { text } = useCustomerText(), pathname = usePathname(), unread = useCustomerUnread();
+  const { text } = useCustomerText(), { chatUnread } = useCustomerContext(), pathname = usePathname(), unread = useCustomerUnread();
   const [chatClosing, setChatClosing] = useState(false);
   const notificationActive = pathname === '/ios-customer/notifications';
   return <ChatClosingContext.Provider value={setChatClosing}><CustomerDrawer>
@@ -21,7 +21,8 @@ export function CustomerShell() {
         {customerNotificationBadge(unread, notificationActive ? 'notifications' : null) ? <NativeTabs.Trigger.Badge /> : null}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="chat"><NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
-        <NativeTabs.Trigger.Label>Chat</NativeTabs.Trigger.Label></NativeTabs.Trigger>
+        <NativeTabs.Trigger.Label>Chat</NativeTabs.Trigger.Label>
+        {chatUnread > 0 ? <NativeTabs.Trigger.Badge /> : null}</NativeTabs.Trigger>
     </NativeTabs>
   </CustomerDrawer></ChatClosingContext.Provider>;
 }

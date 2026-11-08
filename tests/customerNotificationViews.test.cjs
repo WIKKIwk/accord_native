@@ -32,7 +32,7 @@ function fixture(platform, state, confirm = false) {
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' },
     './CustomerContext': { useCustomerText: () => ({ text: key => key }) }, './customerPresentation': presentation,
     './useCustomerScreens': { useCustomerNotifications: () => state } };
-  return { ...load(`CustomerNotifications.${platform}.tsx`, mocks), updates, cleanups, refs };
+  return { ...load(`CustomerNotificationsView.${platform}.tsx`, mocks), updates, cleanups, refs };
 }
 test('both notification views mark the tapped item seen before opening it', async () => {
   for (const platform of ['ios', 'android']) {

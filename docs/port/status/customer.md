@@ -1,7 +1,7 @@
 # customer
 
 Status: part 1 of 1 in progress
-Stopped at: integrate the reviewed shared Chat unread runtime and Supplier notification detail, implement the V2 home/notifications swipe, then complete the text and surface audits on both platforms.
+Stopped at: integrate Supplier notification detail, implement the V2 home/notifications swipe, then complete the text and surface audits on both platforms.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -16,7 +16,7 @@ Stopped at: integrate the reviewed shared Chat unread runtime and Supplier notif
 | Return dialogs | `customer_delivery_detail_screen__CustomerDeliveryDetailScreenState_methods_01.dart` `_showReturnDialog` | Native centered return/partial/claim dialogs are implemented on both platforms; verify keyboard, outside/back dismissal, focus, resizing and accessibility on real phones. |
 | Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home, status, notifications, delivery, shared profile and shared Chat are routed on both platforms using the existing drawer, bottom controls and shared screens. Shared NotificationDetailScreen integration, text and surface audits remain open; the discussion action is intentionally unavailable until that real destination is connected. Both platforms still need the V2 home/notifications horizontal swipe. |
 | iOS native tabs on secondary screens | `customer_dock.dart`, `customer_status_detail_screen.dart`, `customer_delivery_detail_screen.dart`, `profile_screen.dart` | V2 shows no selected dock destination on status, detail and profile. Expo native tabs keep the containing tab selected; resolve with supported native controls or explicitly defer after real-phone review. Android passes no selection for these screens. |
-| Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | Connect the reviewed shared live chat unread hook after integrating main. Initialized push delivery remains unverified. |
+| Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | The reviewed shared session-scoped Chat unread hook is now mounted once in the Customer provider and supplies both platform dock dots. The shared Chat status documents inherited V2 reliability quirks; live backend, account-switch and real-phone behavior, as well as initialized push delivery, remain unverified. |
 
 ## Baseline evidence
 
@@ -32,7 +32,9 @@ Stopped at: integrate the reviewed shared Chat unread runtime and Supplier notif
 
 ## Verification
 
-- Customer shell/routes: `tests/customerNavigation.test.cjs` covers both home targets, destination mapping, notification badge suppression, role guards, status/detail transitions, refresh-after-return and shared profile reuse. The existing drawer, profile and chat components are reused; the shared Chat unread hook and notification detail remain explicitly pending. iOS typecheck and lint passed; Android has the same nine baseline worker type errors. Offline iOS and Android JavaScript exports passed, without a simulator or device. Native tab selection, drawer navigation, hardware back and the badge require real-phone checks.
+- Customer Chat badge: after merging main `f0d1fcc`, the existing shared `useChatUnreadCount(session)` runs once in the persistent Customer provider and drives iOS native-tab and Android native-dock dots. 26 focused Customer notification/navigation and shared Chat runtime tests passed, including read-clearing and account reset. iOS typecheck and uncached Expo lint passed; Android retains the nine baseline worker errors. Real-device/backend behavior remains open. The Customer notification view files were renamed without behavioral changes to remove a case-insensitive resolver collision with the controller.
+
+- Customer shell/routes: `tests/customerNavigation.test.cjs` covers both home targets, destination mapping, notification badge suppression, role guards, status/detail transitions, refresh-after-return and shared profile reuse. The existing drawer, profile and chat components are reused; the shared notification detail remains explicitly pending; this checkpoint preceded the subsequent Chat badge hookup. iOS typecheck and lint passed; Android has the same nine baseline worker type errors. Offline iOS and Android JavaScript exports passed, without a simulator or device. Native tab selection, drawer navigation, hardware back and the badge require real-phone checks.
 
 - Customer delivery content: `tests/customerDeliveryViews.test.cjs`, `tests/customerReturnDialogViews.test.cjs` and `tests/customerLogic.test.cjs` passed 12 source-derived tests for permissions, action order, confirmations, response parameters, discussion callback and retry. iOS typecheck and Expo lint passed; Android has the same nine worker baseline errors. Snackbar and native interaction still require real-phone checks.
 
