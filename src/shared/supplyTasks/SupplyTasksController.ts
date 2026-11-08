@@ -1,4 +1,4 @@
-import { activeSessionToken, type Session } from '../../auth';
+import { activeSessionEpoch, activeSessionToken, type Session } from '../../auth';
 import { sessionReadScope } from '../../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../appRoutes';
 import { isSynchronouslyTrue } from '../camera/synchronousGuard';
@@ -27,7 +27,7 @@ const empty = (kind: SupplyTaskKind, apparatus = ''): SupplyTasksState => Object
 export class SupplyTasksController {
   private readonly session: Session;
   private readonly scope: string;
-  private readonly token: string | null;
+  private readonly epoch: number | null;
   private readonly isCurrent: () => boolean;
   private readonly loadWindow: Dependencies['loadWindow'];
   private readonly schedule: NonNullable<Dependencies['schedule']>;
@@ -43,7 +43,7 @@ export class SupplyTasksController {
 
   constructor(options: Dependencies) {
     if (options.kind !== 'material' && options.kind !== 'qolip') throw new TypeError('Invalid supply task kind');
-    this.session = options.session; this.scope = sessionReadScope(options.session); this.token = activeSessionToken(options.session);
+    this.session = options.session; this.scope = sessionReadScope(options.session); this.epoch = activeSessionEpoch(options.session);
     this.isCurrent = options.isCurrent; this.loadWindow = options.loadWindow;
     this.schedule = options.schedule ?? setTimeout; this.cancel = options.cancel ?? clearTimeout;
     this.route = options.kind === 'material' ? appRoutes.materialTasks : appRoutes.qolipTasks;
@@ -51,6 +51,7 @@ export class SupplyTasksController {
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.state;
+  canInteract = () => this.current();
   private update(patch: Partial<SupplyTasksState>) {
     this.state = Object.freeze({ ...this.state, ...patch });
     this.listeners.forEach(listener => listener());
@@ -58,9 +59,10 @@ export class SupplyTasksController {
   private current(generation = this.generation): boolean {
     try {
       const allowed = () => sessionReadScope(this.session) === this.scope && canOpenRoute(this.session, this.route);
-      return !this.closed && this.state.active && generation === this.generation && !!this.token &&
-        activeSessionToken(this.session) === this.token && allowed() && isSynchronouslyTrue(this.isCurrent) &&
-        activeSessionToken(this.session) === this.token && allowed() && !this.closed && generation === this.generation;
+      return !this.closed && this.state.active && generation === this.generation && this.epoch !== null &&
+        activeSessionEpoch(this.session) === this.epoch && !!activeSessionToken(this.session) && allowed() && isSynchronouslyTrue(this.isCurrent) &&
+        activeSessionEpoch(this.session) === this.epoch && !!activeSessionToken(this.session) && allowed() &&
+        !this.closed && generation === this.generation;
     } catch { return false; }
   }
   activate(): Promise<void> {

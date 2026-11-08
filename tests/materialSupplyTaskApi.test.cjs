@@ -17,13 +17,15 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 function setup(plan, change = '') {
   const session = { token: 'old', baseUrl: 'https://example.test', profile: { role: 'material_taminotchi', ref: 'one' },
     capabilities: ['raw_material.assign'], assigned_apparatus: ['apparatus:default:bosma_7'] };
-  let active = true, calls = [], refreshes = 0;
-  const auth = { activeSessionToken: s => active && s === session ? session.token : null, refreshSession: async () => {
+  let active = true, epoch = 1, calls = [], refreshes = 0;
+  const auth = { activeSessionToken: s => active && s === session ? session.token : null,
+    activeSessionEpoch: s => active && s === session ? epoch : null, refreshSession: async () => {
     refreshes++; session.token = 'fresh';
     if (change === 'role') session.profile.role = 'admin';
     if (change === 'permission') session.capabilities = [];
     if (change === 'identity') session.profile.ref = 'other';
     if (change === 'account') active = false;
+    if (change === 'epoch') epoch++;
     return true;
   } };
   const scope = compile('sessionReadScope'), authorized = compile('authorizedFetch', { './auth': auth });
@@ -45,7 +47,7 @@ function setup(plan, change = '') {
     const result = await next;
     return new Response(result.body, { status: result.status, headers: { 'content-type': 'application/json' } });
   };
-  return { session, api, authorized, calls, refreshes: () => refreshes, setActive: value => { active = value; },
+  return { session, api, authorized, auth, scope, dart, calls, refreshes: () => refreshes, setActive: value => { active = value; },
     restore: () => { global.fetch = original; } };
 }
 const wire = fixture.windows.material.input;
@@ -203,3 +205,29 @@ test('reentrant supply guard at beforeSend blocks the GET, and after response bl
     } finally { h.restore(); }
   }
 });
+
+test('task controller accepts the real reader 401 retry when token rotates within the captured session epoch', async () => {
+  const h = setup([response({ error: 'expired' }, 401), response(wire)]);
+  const { SupplyTasksController } = compile('shared/supplyTasks/SupplyTasksController', {
+    '../../auth': h.auth, '../../sessionReadScope': h.scope, '../appRoutes': compile('shared/appRoutes'),
+    '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'), '../dartApparatus': h.dart });
+  const controller = new SupplyTasksController({ session: h.session, kind: 'material', isCurrent: () => true,
+    loadWindow: (query, current) => h.api.readSupplyTaskWindow(h.session, query, current) });
+  try {
+    await controller.activate(); assert.equal(h.calls.length, 2); assert.equal(h.calls[1].init.headers.get('authorization'), 'Bearer fresh');
+    assert.equal(controller.getSnapshot().window.kind, 'material'); assert.equal(controller.canInteract(), true);
+  } finally { controller.dispose(); h.restore(); }
+});
+
+for (const change of ['role', 'permission', 'identity', 'account', 'epoch']) {
+  test(`task controller prevents reader 401 retry after ${change} changes`, async () => {
+    const h = setup([response({ error: 'expired' }, 401), response(wire)], change);
+    const { SupplyTasksController } = compile('shared/supplyTasks/SupplyTasksController', {
+      '../../auth': h.auth, '../../sessionReadScope': h.scope, '../appRoutes': compile('shared/appRoutes'),
+      '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'), '../dartApparatus': h.dart });
+    const controller = new SupplyTasksController({ session: h.session, kind: 'material', isCurrent: () => true,
+      loadWindow: (query, current) => h.api.readSupplyTaskWindow(h.session, query, current) });
+    try { await controller.activate(); assert.equal(h.calls.length, 1); assert.equal(controller.getSnapshot().window, null); }
+    finally { controller.dispose(); h.restore(); }
+  });
+}

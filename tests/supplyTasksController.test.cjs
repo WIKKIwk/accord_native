@@ -19,10 +19,11 @@ function windowFor(query, changes = {}) { return { kind: query.kind, limit: quer
 function setup(overrides = {}) {
   const session = { token: 'token-a', baseUrl: 'https://example.test', profile: { role: 'material_taminotchi', ref: 'user-a' },
     capabilities: ['raw_material.assign'], assigned_apparatus: [], assigned_item_groups: ['group-a'], assigned_warehouses: [] };
-  let active = true, live = true, loads = 0; const timers = [];
+  let active = true, live = true, epoch = 1, loads = 0; const timers = [];
   const dart = compile('shared/dartApparatus', { '../workerControlsApi': { isCanonicalApparatusId: () => true } });
   const { SupplyTasksController } = compile('shared/supplyTasks/SupplyTasksController', {
-    '../../auth': { activeSessionToken: value => active && value === session ? value.token : null },
+    '../../auth': { activeSessionToken: value => active && value === session ? value.token : null,
+      activeSessionEpoch: value => active && value === session ? epoch : null },
     '../../sessionReadScope': compile('sessionReadScope'), '../appRoutes': compile('shared/appRoutes'),
     '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'), '../dartApparatus': dart });
   const options = { session, kind: 'material', isCurrent: () => live,
@@ -30,7 +31,8 @@ function setup(overrides = {}) {
     schedule: (callback, ms) => { const timer = { callback, ms, cancelled: false }; timers.push(timer); return timer; },
     cancel: timer => { timer.cancelled = true; }, ...overrides };
   const controller = new SupplyTasksController(options);
-  return { session, options, controller, timers, calls: () => loads, deactivate: () => { active = false; }, disposeScreen: () => { live = false; } };
+  return { session, options, controller, timers, calls: () => loads, deactivate: () => { active = false; },
+    newEpoch: () => { epoch++; }, disposeScreen: () => { live = false; } };
 }
 
 test('activation loads once, deduplicates the same in-flight refresh, and uses the returned apparatus', async () => {
@@ -90,7 +92,7 @@ test('query mismatch or an already retired server epoch is rejected without repl
   await h.controller.refresh(); assert.equal(h.controller.getSnapshot().window.epoch, 'epoch-b'); assert.ok(h.controller.getSnapshot().error); h.controller.dispose();
 });
 
-for (const change of ['role', 'identity', 'permission', 'groups', 'warehouses', 'token', 'account', 'screen']) {
+for (const change of ['role', 'identity', 'permission', 'groups', 'warehouses', 'epoch', 'account', 'screen']) {
   test(`in-flight result is not published after ${change} changes`, async () => {
     const wait = deferred(), h = setup({ loadWindow: () => wait.promise });
     const pending = h.controller.activate(); await Promise.resolve();
@@ -99,7 +101,7 @@ for (const change of ['role', 'identity', 'permission', 'groups', 'warehouses', 
     if (change === 'permission') h.session.capabilities = [];
     if (change === 'groups') h.session.assigned_item_groups = ['other'];
     if (change === 'warehouses') h.session.assigned_warehouses = ['other'];
-    if (change === 'token') h.session.token = 'token-b';
+    if (change === 'epoch') h.newEpoch();
     if (change === 'account') h.deactivate();
     if (change === 'screen') h.disposeScreen();
     wait.resolve(windowFor(h.controller.getSnapshot().query)); await pending;
@@ -157,4 +159,19 @@ test('a reentrant reader lifetime callback invalidation prevents late publicatio
   let h; const wait = deferred(); h = setup({ loadWindow: (_query, current) => { assert.equal(current(), true); h.controller.invalidate(); return wait.promise; } });
   const pending = h.controller.activate(); await Promise.resolve(); wait.resolve(windowFor(h.controller.getSnapshot().query)); await pending;
   assert.equal(h.controller.getSnapshot().window, null); assert.equal(h.controller.getSnapshot().active, false); h.controller.dispose();
+});
+
+test('a same-session token refresh with unchanged epoch and scope keeps the task request usable', async () => {
+  const wait = deferred(), h = setup({ loadWindow: () => wait.promise });
+  const pending = h.controller.activate(); await Promise.resolve(); h.session.token = 'fresh-token';
+  wait.resolve(windowFor(h.controller.getSnapshot().query)); await pending;
+  assert.equal(h.controller.canInteract(), true); assert.equal(h.controller.getSnapshot().window.rows[0].id, 'order-a'); h.controller.dispose();
+});
+
+test('a login epoch change and rollback to the same session cannot revive the old controller', async () => {
+  const wait = deferred(), h = setup({ loadWindow: () => wait.promise });
+  const pending = h.controller.activate(); await Promise.resolve(); h.newEpoch();
+  // Same object and token are restored by a hypothetical login rollback, but the epoch remains advanced.
+  h.session.token = 'token-a'; wait.resolve(windowFor(h.controller.getSnapshot().query)); await pending;
+  assert.equal(h.controller.canInteract(), false); assert.equal(h.controller.getSnapshot().window, null); h.controller.dispose();
 });
