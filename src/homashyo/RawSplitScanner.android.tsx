@@ -1,6 +1,6 @@
 import { Host, OutlinedTextField, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
-import { CameraView } from 'expo-camera';
+import { CameraSurface } from '../shared/camera/CameraSurface';
 import { useEffect } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,19 +8,19 @@ import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { useRawSplitScanner } from './useRawSplitScanner';
 
-export function RawSplitScanner({ visible, onClose, onComplete }: { visible: boolean; onClose: () => void; onComplete: (barcode: string) => void }) {
-  return visible ? <ScannerSession onClose={onClose} onComplete={onComplete} /> : null;
+export function RawSplitScanner({ visible, active, onClose, onComplete }: { visible: boolean; active: boolean; onClose: () => void; onComplete: (barcode: string) => void }) {
+  return visible ? <ScannerSession active={active} onClose={onClose} onComplete={onComplete} /> : null;
 }
-function ScannerSession({ onClose, onComplete }: { onClose: () => void; onComplete: (barcode: string) => void }) {
-  const scan = useRawSplitScanner(onComplete), input = useNativeState(''), insets = useSafeAreaInsets(), colors = useMaterialColors();
+function ScannerSession({ active, onClose, onComplete }: { active: boolean; onClose: () => void; onComplete: (barcode: string) => void }) {
+  const scan = useRawSplitScanner(active, onComplete), input = useNativeState(''), insets = useSafeAreaInsets(), colors = useMaterialColors();
   useEffect(() => { if (input.get() !== scan.manual) input.set(scan.manual); }, [input, scan.manual]);
   return <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
     <View style={[styles.root, { backgroundColor: colors.surface, paddingTop: insets.top }]}>
       <RoleHeader title={scan.title} navigation={{ icon: 'back', label: 'Orqaga', onPress: onClose }} />
       <View style={styles.preview}>
-        {scan.permission?.granted && !scan.failed ? <CameraView style={StyleSheet.absoluteFill} facing="back"
-          barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }} onMountError={scan.cameraFailed}
-          onBarcodeScanned={event => scan.complete(event.raw ?? event.data)} /> : scan.permission === null && !scan.failed ?
+        {scan.permission?.granted && !scan.failed ? <CameraSurface active={active} permission={scan.permission} style={StyleSheet.absoluteFill} facing="back" torch={false}
+          barcodeTypes={['qr', 'datamatrix']} sessionKey="homashyo" onMountError={scan.cameraFailed}
+          onDetection={event => scan.complete(event.raw ?? event.data)} /> : scan.permission === null && !scan.failed ?
           <ActivityIndicator /> : <Text style={{ color: colors.onSurface }}>{scan.unavailable}</Text>}
         {scan.permission?.granted && !scan.failed && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           <View style={styles.guide}><View style={styles.verticalOne} /><View style={styles.verticalTwo} />

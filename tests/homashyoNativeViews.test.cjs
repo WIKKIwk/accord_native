@@ -153,7 +153,7 @@ for (const platform of ['ios', 'android']) test(`${platform} reprint errors retu
   else find(tree, n => n.type === 'IconButton')[0].props.onClick();
   await new Promise(resolve => setImmediate(resolve)); assert.deepEqual(h.calls, [['error', error]]);
 });
-function scanner(platform, granted) {
+function scanner(platform, granted, active = true) {
   const calls = [], scan = { permission: { granted }, failed: false, manual: 'manual-code', setManual: value => calls.push(['manual', value]),
     complete: value => calls.push(['complete', value]), cameraFailed: () => calls.push('camera-failed'), title: 'Homashyo QR',
     manualLabel: 'Barcode', unavailable: 'Kamera ochilmadi. Quyidagi maydonga QR yoki barcode kiriting.', guide: 'QR kodni shu to‘r ichiga olib keling' };
@@ -162,7 +162,7 @@ function scanner(platform, granted) {
   const compose = new Proxy({ useNativeState: state, useMaterialColors: () => ({ surface: 'surface', onSurface: 'text' }) }, { get: (o, name) => o[name] ?? name });
   const mocks = { 'react/jsx-runtime': jsx, react: { useEffect: fn => fn() }, '@expo/ui/swift-ui': swift,
     '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }), '@expo/ui/jetpack-compose': compose,
-    '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }), 'expo-camera': { CameraView: 'CameraView' },
+    '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }), '../shared/camera/CameraSurface': { CameraSurface: 'CameraSurface' },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Modal: 'Modal', Text: 'NativeText', View: 'View', PlatformColor: x => x,
       StyleSheet: { create: value => value, absoluteFill: {} } }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
     '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
@@ -170,20 +170,20 @@ function scanner(platform, granted) {
   // Compose slots are components, represented by names in this static render harness.
   mocks['@expo/ui/jetpack-compose'].OutlinedTextField = Object.assign('OutlinedTextField', { Label: 'OutlinedTextField.Label' });
   const component = load(`RawSplitScanner.${platform}.tsx`, mocks, true).RawSplitScanner;
-  const root = component({ visible: true, onClose: () => calls.push('close'), onComplete: () => {} });
+  const root = component({ visible: true, active, onClose: () => calls.push('close'), onComplete: () => {} });
   return { calls, scan, tree: root.type(root.props) };
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform} scanner forwards camera and manual codes and closes on back`, () => {
-    const h = scanner(platform, true), camera = find(h.tree, n => n.type === 'CameraView')[0];
-    assert.ok(camera); assert.deepEqual(camera.props.barcodeScannerSettings.barcodeTypes, ['qr', 'datamatrix']);
-    camera.props.onBarcodeScanned({ raw: 'raw-code', data: 'display-code' });
+    const h = scanner(platform, true), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
+    assert.ok(camera); assert.deepEqual(camera.props.barcodeTypes, ['qr', 'datamatrix']);
+    camera.props.onDetection({ raw: 'raw-code', data: 'display-code' });
     find(h.tree, n => n.type === 'WorkerSheetButton' && n.props.label === 'OK')[0].props.onPress();
     find(h.tree, n => n.type === 'Modal')[0].props.onRequestClose();
     assert.deepEqual(h.calls, [['complete', 'raw-code'], ['complete', 'manual-code'], 'close']);
   });
   test(`${platform} scanner permission failure retains manual entry`, () => {
-    const h = scanner(platform, false); assert.equal(find(h.tree, n => n.type === 'CameraView').length, 0);
+    const h = scanner(platform, false); assert.equal(find(h.tree, n => n.type === 'CameraSurface').length, 0);
     assert.match(text(h.tree), /Kamera ochilmadi/); assert.ok(find(h.tree, n => n.type === 'WorkerSheetButton' && n.props.label === 'OK').length);
   });
 }
@@ -204,4 +204,11 @@ for (const platform of ['ios', 'android']) test(`${platform} reuses actual Urdu 
     : text(historyTree).includes(translateUrdu('Muammolar')));
   const d = details(platform, null, translateUrdu); assert.ok(find(d.resultTree(), n => n.type === buttonType && n.props.label === translateUrdu('Printer tanlash')).length);
   assert.notEqual(translateUrdu('Skanerlash'), 'Skanerlash'); assert.notEqual(translateUrdu('Muammolar'), 'Muammolar');
+});
+
+for (const platform of ['ios', 'android']) test(`${platform} candidate passes active lifecycle control to the shared camera surface`, () => {
+  const h = scanner(platform, true, false), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
+  assert.equal(camera.props.active, false); assert.equal(camera.props.torch, false);
+  // V2 uses raw when present, even an empty raw string; role gate decides whether it is usable.
+  camera.props.onDetection({ raw: '', data: 'display-value' }); assert.deepEqual(h.calls, [['complete', '']]);
 });
