@@ -11,7 +11,8 @@ const object = (value: unknown): ObjectValue | null => value !== null && typeof 
   ? value as ObjectValue : null;
 const number = (value: unknown, integer = false): number => {
   if (value == null) return 0;
-  if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError('Invalid raw material event number');
+  // V2 toDouble retains nonfinite quantities; its timestamp toInt conversion cannot.
+  if (typeof value !== 'number' || (integer && !Number.isFinite(value))) throw new TypeError('Invalid raw material event number');
   return integer ? Math.trunc(value) : value;
 };
 

@@ -245,3 +245,28 @@ test('History rejects positive dates outside the source constructor range instea
     assert.throws(() => api.materialHistoryDetails(api.rawMaterialEvent({ recorded_at_unix: seconds }), []), RangeError);
   }
 });
+
+// f119 AdminRawMaterialEvent.fromJson: qty_delta uses num?.toDouble(), but the two timestamps use num?.toInt().
+// Read-only Dart SDK 3.13.7 evidence: vm/lib/convert_patch.dart:1406-1423 emits signed infinity for exponent >400;
+// vm/lib/double.dart:237-239 keeps the double, and :263-284 returns nonfinite fixed text (core/double.dart documents spelling).
+// These are source-derived expectations, not executed Flutter results or general raw-token/Hermes equivalence.
+test('History accepts source numeric overflow quantities and preserves signed nonfinite display', async () => {
+  const body = '[{"event_type":"receipt_posted","item_name":"Rulon","qty_delta":1e401,"uom":" kg "},' +
+    '{"event_type":"consumption_posted","item_name":"Rulon","qty_delta":-1e401,"uom":"kg"}]';
+  const api = setup(async () => new Response(body, { status: 200 })), rows = await api.adminRawMaterialHistory({});
+  assert.equal(rows[0].qty_delta, Infinity); assert.equal(rows[1].qty_delta, -Infinity);
+  assert.equal(api.materialHistoryTitle(rows[0]), 'Rulon kirim Infinity  kg ');
+  assert.equal(api.materialHistoryTitle(rows[1]), 'Rulon sarflandi Infinity kg');
+  assert.ok(api.materialHistoryDetails(rows[0], []).some(row => row.label === 'Miqdor' && row.value === '+Infinity kg'));
+  assert.ok(api.materialHistoryDetails(rows[1], []).some(row => row.label === 'Miqdor' && row.value === '-Infinity kg'));
+});
+
+test('History nullable numeric conversions distinguish quantity doubles from integer timestamps', () => {
+  const api = setup(() => {});
+  assert.equal(api.rawMaterialEvent({ qty_delta: null }).qty_delta, 0);
+  assert.ok(Number.isNaN(api.rawMaterialEvent({ qty_delta: NaN }).qty_delta)); // A direct fromJson num, not a valid JSON NaN token.
+  for (const field of ['occurred_at_unix', 'recorded_at_unix']) for (const value of [NaN, Infinity, -Infinity]) {
+    assert.throws(() => api.rawMaterialEvent({ [field]: value }), TypeError);
+  }
+  for (const value of ['1e401', 'Infinity', true, [], {}]) assert.throws(() => api.rawMaterialEvent({ qty_delta: value }), TypeError);
+});
