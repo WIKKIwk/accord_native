@@ -1,12 +1,14 @@
 import { Column, Host, Text as ComposeText, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useNativeSheet } from '../nativeSheet';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { OrdersList } from '../shared/orders/OrdersList';
 import type { AdminApparatus } from '../apparatusApi';
 import type { AdminRawMaterialEvent } from './materialHistoryApi';
 import { materialHistoryDetails, materialHistorySubtitle, materialHistoryTime, materialHistoryTitle } from './materialHistoryPresentation';
@@ -32,13 +34,13 @@ function MaterialHistoryDetails({ event, catalog, session }: { event: AdminRawMa
 export function MaterialHistory() {
   const { session } = useMaterialContext(), history = useMaterialHistory(session), sheet = useNativeSheet();
   const colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   useEffect(() => registerSessionResetHook(async () => { sheet.close(); }), [sheet]);
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
     <RoleHeader title="Harakatlar tarixi" navigation={{ icon: 'back', label: 'Orqaga', onPress: () => {
       if (router.canGoBack()) router.back(); else router.navigate('/android-material' as Href);
     } }} />
-    <ScrollView contentContainerStyle={{ flexGrow: 1, paddingVertical: 8 }}
-      refreshControl={<RefreshControl refreshing={history.refreshing} onRefresh={() => { void history.refresh(); }} />}>
+    <OrdersList onRefresh={history.refresh} active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={() => true}>
       {history.loading ? <ActivityIndicator /> : history.error ? <WorkerQueueCard backgroundColor={colors.surface} first last onPress={history.reload}>
         <View style={{ padding: 12 }}><Text style={{ color: colors.onSurface }}>Tarix yuklanmadi</Text>
           <Text style={{ color: colors.onSurfaceVariant }}>{history.error}</Text></View>
@@ -51,6 +53,6 @@ export function MaterialHistory() {
             <Text style={{ color: colors.onSurfaceVariant }} numberOfLines={2}>{materialHistorySubtitle(event, history.apparatus)}</Text></View>
           <Text style={{ color: colors.onSurfaceVariant }}>{materialHistoryTime(event.occurred_at_unix)}</Text>
         </WorkerQueueCard>)}
-    </ScrollView>
+    </OrdersList>
   </View>;
 }
