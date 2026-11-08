@@ -1,13 +1,14 @@
 # chat
 
 Status: in progress
-Stopped at: opt-in native session adapter, React hook and existing thread bridge; role shells are not yet connected.
+Stopped at: opt-in native session adapter, React hook and existing thread bridge. New role shells are not connected. A transport security hold blocks both new unread subscriptions and new-role access to the existing Chat screens until the socket is reviewed and made safe for that use.
 
 ## Open items
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Shared unread runtime | `ChatRuntime`, `ChatStore.startForCurrentSession` | Role shells can opt in through `useChatUnreadCount(session)`. It is not installed in common app entry and does not start for worker or preparation by itself. Validate lifecycle and badge behavior on real devices and against the backend. |
+| Shared unread runtime | `ChatRuntime`, `ChatStore.startForCurrentSession` | `useChatUnreadCount(session)` is implemented but must not be wired to new role shells while the socket security hold below is open. It is not installed in common app entry and does not start for worker or preparation by itself. Validate lifecycle and badge behavior on real devices and against the backend after the hold is resolved. |
+| Socket transport security hold | `src/chatLive.ts`; installed React Native `WebSocketModule.kt` and `RCTWebSocketModule.mm` | The existing React Native socket reads matching origin cookies into its request on both platforms. On Android, the installed module uses OkHttp defaults for redirects; with a matching cookie present, an origin redirect to another origin may forward that explicit Cookie header. The installed React Native version catalog lists OkHttp 4.9.2; the final Gradle dependency resolution has not been verified. iOS redirect behavior remains unverified. The socket ticket is not automatically copied to a different redirect URL; a redirect that explicitly reflects it is a separate risk. No disclosure or live backend request was observed. The existing Chat list can open this socket when focused even without the new unread hook, so do not expose the existing Chat screens to additional roles or start new unread subscriptions until a no-cookie, no-redirect transport is reviewed and validated. Preserve existing worker/preparation behavior. |
 | Chat synchronization | `ChatStore._synchronizeChat`, `_fillMessageGap`, `_acceptRealtimeMessage` | The native adapter composes the tested runtime with existing network/socket and local storage, but needs device and backend validation. The existing native message model omits some V2 fields, which remain open for the full Chat role. |
 | Live conversation display | `ChatStore._acceptMessage` | Unread state updates the latest sequence and cache ordering time, but does not yet replace the displayed last-message preview or re-sort a live list. Complete that behavior in the Chat role audit before claiming full screen parity. |
 | Malformed recovery payloads | `ChatSyncPage.fromJson`, `ChatMessage.fromJson` | V4 currently rejects a message map that its existing parser cannot preserve rather than advancing past it; V2 supplies defaults for some missing fields. Compare malformed backend responses and resolve this explicit difference in the full Chat audit. |
