@@ -29,7 +29,8 @@ function fixture(body = [], status = 200) {
     './searchActivityStore': { SearchActivityStore: class {} },
     './mobileApiException': { MobileApiException: class extends Error {} },
   });
-  const notifications = loadTs('shared/notificationApi.ts', { '../authorizedFetch': { authorizedFetch: fetch } });
+  const notifications = loadTs('shared/notificationApi.ts', { '../authorizedFetch': { authorizedFetch: fetch },
+    './notification/notificationDetailModel': loadTs('shared/notification/notificationDetailModel.ts') });
   const api = loadTs('supplier/supplierApi.ts', {
     '../authorizedFetch': { authorizedFetch: fetch },
     '../shared/catalogApi': catalog,

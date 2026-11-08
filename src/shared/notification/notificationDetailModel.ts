@@ -12,6 +12,10 @@ export function notificationCustomerRedirect(role: NotificationRole, receiptId: 
   return role === 'customer' && receiptId.startsWith('MAT-DN-');
 }
 
+export function notificationRoleHasDock(role: NotificationRole): boolean {
+  return role === 'supplier' || role === 'werka';
+}
+
 export function notificationStatusLabel(status: DispatchRecord['status']): string {
   switch (status) {
     case 'pending': return 'Kutilmoqda';
@@ -38,4 +42,12 @@ export function notificationDetailPolicy(role: NotificationRole, profileRef: str
     && !(role === 'supplier' && supplierAcknowledged);
   return { belongs, canConfirm, canRespond, supplierAcknowledged, canAcknowledge, canWriteIssueComment,
     showHighlight: record.event_type === 'supplier_ack' && !!trimNotificationText(record.highlight) };
+}
+
+/** A reachable Werka action must never silently turn into a no-op. */
+export function notificationWerkaAction(policy: { canConfirm: boolean }, record: DispatchRecord,
+  onWerkaDetail?: (record: DispatchRecord) => void): (() => void) | null {
+  if (!policy.canConfirm) return null;
+  if (!onWerkaDetail) throw new Error('Werka detail destination is unavailable');
+  return () => onWerkaDetail(record);
 }

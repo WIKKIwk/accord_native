@@ -27,5 +27,5 @@ export function useNotificationDetail(props: NotificationDetailScreenProps) {
   [controller, props.onCustomerDetail, props.onForeignReceipt, notice.show]);
   useEffect(() => { controller.start(); return () => controller.stop(); }, [controller]);
   const policy = state.detail ? notificationDetailPolicy(role, profileRef, state.detail) : null;
-  return { controller, state, policy, notice: notice.message };
+  return { controller, state, policy, role, notice: notice.message };
 }

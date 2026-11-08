@@ -46,6 +46,24 @@ test('V2 detail redirects customer MAT-DN IDs without marking or fetching, not r
   assert.deepEqual(discussion.events.slice(0, 2), [['seen', 'customer_delivery_result:MAT-DN-12'], ['read', 'customer_delivery_result:MAT-DN-12']]);
 });
 
+test('Supplier has no Customer redirect or Werka action; reachable cross-role destinations fail closed if missing', () => {
+  for (const status of ['draft', 'pending']) {
+    const item = detail({ status });
+    assert.equal(model.notificationCustomerRedirect('supplier', 'MAT-DN-12'), false);
+    assert.equal(model.notificationWerkaAction(model.notificationDetailPolicy('supplier', 'S', item), item.record), null);
+    const werka = model.notificationDetailPolicy('werka', 'S', item), opened = [];
+    assert.throws(() => model.notificationWerkaAction(werka, item.record), /Werka detail destination is unavailable/);
+    model.notificationWerkaAction(werka, item.record, value => opened.push(value))();
+    assert.deepEqual(opened, [item.record]);
+  }
+  const customer = fixture({ role: 'customer', id: 'MAT-DN-12' });
+  customer.controller.setCallbacks({ onForeignReceipt: () => {}, onNotice: () => {} });
+  assert.throws(() => customer.controller.start(), /Customer detail destination is unavailable/);
+  assert.equal(model.notificationRoleHasDock('customer'), false);
+  assert.equal(model.notificationRoleHasDock('supplier'), true);
+  assert.equal(model.notificationRoleHasDock('werka'), true);
+});
+
 test('V2 permissions distinguish supplier responses, acknowledgments, notes and Werka acceptance', () => {
   const policy = (role, row, comments = []) => model.notificationDetailPolicy(role, 'S', detail(row, comments));
   assert.equal(policy('supplier', { supplier_ref: ' another ' }).belongs, false);
@@ -142,7 +160,7 @@ test('both platform detail views keep native dialog, feedback and role navigatio
     const source = fs.readFileSync(path.resolve(__dirname, '../src/shared/notification', `NotificationDetailScreen.${platform}.tsx`), 'utf8');
     for (const expected of ['@v2 NotificationDetailScreen', 'WorkerAlert', 'PreparationNotice', 'ReasonDialog',
       'controller.respond(false, reason)', 'controller.acknowledge()', 'controller.sendComment()',
-      'props.onWerkaDetail(record)', 'props.onBack', 'props.footer']) assert.ok(source.includes(expected), `${platform}: ${expected}`);
+      'notificationWerkaAction(policy, record, props.onWerkaDetail)', 'props.onBack', 'props.footer']) assert.ok(source.includes(expected), `${platform}: ${expected}`);
     if (platform === 'ios') assert.match(source, /<Modal visible transparent/);
     else assert.match(source, /dismissOnBackPress: true, dismissOnClickOutside: true/);
   }

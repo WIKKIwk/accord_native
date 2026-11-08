@@ -10,7 +10,7 @@ export type NotificationDetailServices = {
   recordDecision: (from: DispatchRecord['status'], to: DispatchRecord['status']) => void;
 };
 export type NotificationDetailCallbacks = {
-  onCustomerDetail: (receiptId: string) => void;
+  onCustomerDetail?: (receiptId: string) => void;
   onForeignReceipt: (message: string) => void;
   onNotice: (message: string) => void;
 };
@@ -42,6 +42,7 @@ export class NotificationDetailController {
   start(): void {
     this.active = true;
     if (notificationCustomerRedirect(this.role, this.receiptId)) {
+      if (!this.callbacks.onCustomerDetail) throw new Error('Customer detail destination is unavailable');
       if (!this.redirected) { this.redirected = true; this.callbacks.onCustomerDetail(this.receiptId); }
       return;
     }

@@ -1,5 +1,6 @@
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
+import { trimNotificationText } from './notification/notificationDetailModel';
 
 type ObjectValue = Record<string, unknown>;
 export type DispatchRecord = {
@@ -25,10 +26,13 @@ function number(value: unknown): number {
   if (typeof value !== 'number') throw new TypeError('Invalid notification number');
   return value;
 }
+class NotificationApiException extends Error {
+  toString(): string { return `Exception: ${this.message}`; }
+}
 /** @v2 DispatchRecord.fromJson */
 export function dispatchRecordFromJson(value: unknown): DispatchRecord {
   const record = object(value);
-  const rawStatus = text(record.status).trim().toLowerCase();
+  const rawStatus = trimNotificationText(text(record.status)).toLowerCase();
   const status = (['accepted', 'partial', 'rejected', 'cancelled', 'draft'].includes(rawStatus)
     ? rawStatus : 'pending') as DispatchRecord['status'];
   return {
@@ -61,7 +65,7 @@ function parseDetail(value: unknown): NotificationDetail {
 export async function notificationDetail(session: Session, receiptId: string): Promise<NotificationDetail> {
   const query = new URLSearchParams({ receipt_id: receiptId });
   const response = await authorizedFetch(session, `/v1/mobile/notifications/detail?${query}`);
-  if (response.status !== 200) throw new Error('Notification detail failed');
+  if (response.status !== 200) throw new NotificationApiException('Notification detail failed');
   return parseDetail(await response.json());
 }
 
@@ -71,7 +75,7 @@ export async function addNotificationComment(session: Session, receiptId: string
   const response = await authorizedFetch(session, `/v1/mobile/notifications/comments?${query}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }),
   });
-  if (response.status !== 200) throw new Error('Notification comment failed');
+  if (response.status !== 200) throw new NotificationApiException('Notification comment failed');
   return parseDetail(await response.json());
 }
 
@@ -80,6 +84,6 @@ export async function supplierRespondUnannounced(session: Session, receiptId: st
   const response = await authorizedFetch(session, '/v1/mobile/supplier/unannounced/respond', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt_id: receiptId, approve, reason }),
   });
-  if (response.status !== 200) throw new Error('Supplier unannounced response failed');
+  if (response.status !== 200) throw new NotificationApiException('Supplier unannounced response failed');
   return parseDetail(await response.json());
 }

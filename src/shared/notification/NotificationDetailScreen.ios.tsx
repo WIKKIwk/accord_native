@@ -11,7 +11,7 @@ import { PreparationNotice } from '../../preparation/PreparationNotice';
 import { localizedGetter } from '../localization';
 import { localeController } from '../localization/runtime';
 import { RoleHeaderButton } from '../navigation/RoleHeaderButton';
-import { notificationStatusLabel, trimNotificationText } from './notificationDetailModel';
+import { notificationRoleHasDock, notificationStatusLabel, notificationWerkaAction, trimNotificationText } from './notificationDetailModel';
 import type { NotificationDetailScreenProps } from './notificationDetailTypes';
 import { useNotificationDetail } from './useNotificationDetail';
 
@@ -39,7 +39,7 @@ const currentLocale = () => localeController.locale;
 
 // @v2 NotificationDetailScreen
 export function NotificationDetailScreen(props: NotificationDetailScreenProps) {
-  const { controller, state, policy, notice } = useNotificationDetail(props);
+  const { controller, state, policy, role, notice } = useNotificationDetail(props);
   const t = usePreparationText(), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const input = useNativeState('');
   const [alert, setAlert] = useState<WorkerAlertData | null>(null), [rejecting, setRejecting] = useState(false);
@@ -50,6 +50,7 @@ export function NotificationDetailScreen(props: NotificationDetailScreenProps) {
       if (kind === 'approve') void controller.respond(true); else void controller.acknowledge();
     } });
   const detail = state.detail, record = detail?.record;
+  const werkaAction = record && policy ? notificationWerkaAction(policy, record, props.onWerkaDetail) : null;
   return <View style={{ flex: 1 }}>
     <Stack.Screen options={{ title: 'Batafsil', headerLeft: () => <RoleHeaderButton icon="back" label={t('Orqaga')}
       onPress={props.onBack} tintColor={PlatformColor('label')} /> }} />
@@ -68,7 +69,7 @@ export function NotificationDetailScreen(props: NotificationDetailScreenProps) {
         </Section>
         {!!trimNotificationText(record.note) && <Section><Text>{record.note}</Text></Section>}
         {policy.showHighlight && <Section><Text>{record.highlight}</Text></Section>}
-        {policy.canConfirm && <Section><Button label={t('Qabul qilishga o‘tish')} onPress={() => props.onWerkaDetail(record)} /></Section>}
+        {werkaAction && <Section><Button label={t('Qabul qilishga o‘tish')} onPress={werkaAction} /></Section>}
         {policy.canRespond && <Section><HStack spacing={12}>
           <Button label={t('Rad etaman')} modifiers={[disabled(state.sending)]} onPress={() => setRejecting(true)} />
           <Button label={t(state.sending ? 'Yuborilmoqda...' : 'Tasdiqlayman')} modifiers={[disabled(state.sending)]}
@@ -89,7 +90,7 @@ export function NotificationDetailScreen(props: NotificationDetailScreenProps) {
         </Section>}
       </>}
     </PreparationList>
-    {props.footer}
+    {notificationRoleHasDock(role) ? props.footer : null}
     <PreparationNotice message={t(notice)} />
     <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
     {rejecting && <ReasonDialog close={() => setRejecting(false)} confirm={reason => {
