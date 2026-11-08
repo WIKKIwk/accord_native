@@ -2,10 +2,10 @@ import { useLayoutEffect, useMemo, useSyncExternalStore } from 'react';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import { QolipGridCellPickerState } from './qolipGridCellPickerState';
 
-type Props = { boundary: QolipHomeReadBoundary; excludeCellLabel?: string | null; select: (label: string) => void };
+export type QolipGridCellPickerProps = { boundary: QolipHomeReadBoundary; title?: string; excludeCellLabel?: string | null; select: (label: string) => void };
 
 /** Unmounted picker content model; selection returns a label only, never dispatches a write. */
-export function useQolipGridCellPicker(props: Props) {
+export function useQolipGridCellPicker(props: QolipGridCellPickerProps) {
   const controller = useMemo(() => new QolipGridCellPickerState(props.excludeCellLabel, props.boundary), [props.boundary, props.excludeCellLabel]);
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useLayoutEffect(() => { controller.activate(); return () => controller.suspend(); }, [controller]);

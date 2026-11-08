@@ -132,7 +132,7 @@ Source: `widgets/qolip_cell_picker_sheet.dart:35–450`. This is the letter/colu
 
 Without a trimmed search query, show a horizontal A–Z row selector under `cell_picker.row` and a three-column A1–A13 style grid under `cell_picker.row_heading`. Start on A, or the first normalized letter of a supplied excluded label. The opener trims and uppercases the exclusion, but exclusion comparison uses that raw result rather than replacing it with its normalized cell; for example `A-1` selects row A but does not exclude `A1`. An excluded cell is disabled. With a nonblank query, show at most 24 search results after excluding the exact excluded label. A valid normalized first match is a prominent `cell_picker.select` button; if other results exist show `cell_picker.other_matches` before them. No results shows `cell_picker.no_match`. Tapping an allowed result returns its cell label. Ordinary backdrop/back/drag dismissal returns no label.
 
-`qolipGridCellPickerState.ts` and its unmounted hook reproduce the letter, raw search, exclusion, 24-result, primary/result and keyboard-submit rules using the mandatory original read boundary. They return only a current label, never dispatch a placement, return or move. Native picker content/opener, keyboard, inset, sizing, accessibility, RTL and phone gesture checks remain open.
+`qolipGridCellPickerState.ts` and its unmounted native content views reproduce the letter, raw search, exclusion, 24-result, primary/result and keyboard-submit rules using the mandatory original read boundary. They return only a current label, never dispatch a placement, return or move. The actual modal opener, keyboard/inset behavior, sizing, accessibility, RTL and phone gesture checks remain open.
 
 ## Surface inventory awaiting contracts
 
