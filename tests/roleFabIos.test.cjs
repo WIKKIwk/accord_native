@@ -45,7 +45,7 @@ function harness() {
       if (++loops > 10) throw Error('unexpected render loop'); } while (dirty);
     return tree;
   };
-  return { render,
+  return { render, flush() { return render(lastProps); },
     replayEffects() { for (const hook of hooks) if (hook?.effect) { if (hook.cleanup) hook.cleanup(); hook.cleanup = hook.effect(); } return render(lastProps); },
     unmount() { for (const hook of hooks) if (hook?.cleanup) hook.cleanup(); } };
 }
@@ -60,7 +60,9 @@ test('presentations preserve public order, labels, SF icons and per-action disab
   assert.deepEqual(presentation.menuActions.map(item => !!item.attributes?.disabled), [false, false, true]);
   const calls = [], gate = model.createRoleFabGate(presentation, () => true, id => calls.push(id));
   for (const item of presentation.menuActions) gate.select(presentation.key, item.id);
-  assert.deepEqual(calls, ['receipt', 'scan']);
+  assert.deepEqual(calls, ['receipt']);
+  const next = model.createRoleFabPresentation(actions()), nextGate = model.createRoleFabGate(next, () => true, id => calls.push(id));
+  nextGate.select(next.key, next.menuActions[1].id); assert.deepEqual(calls, ['receipt', 'scan']);
   assert.equal(Object.isFrozen(presentation.menuActions), true); assert.equal(Object.isFrozen(presentation.menuActions[0]), true);
 });
 
@@ -125,8 +127,8 @@ test('reentrant guard invalidation or action mutation prevents its own selection
 
 test('async, rejected, false or throwing focus guards never select and rejection is observed', async () => {
   for (const isCurrent of [() => false, () => 1, () => Promise.resolve(true), () => Promise.reject(Error('async guard')), () => { throw Error('guard'); }]) {
-    const h = harness(), calls = [], menu = menuOf(h.render(base({ isCurrent, onSelect: id => calls.push(id) })));
-    fire(menu, menu.props.actions[0].id); assert.deepEqual(calls, []); h.unmount();
+    const h = harness(), calls = [], tree = h.render(base({ isCurrent, onSelect: id => calls.push(id) }));
+    assert.equal(tree, null); assert.deepEqual(calls, []); h.unmount();
   }
   await new Promise(resolve => setImmediate(resolve));
 });
@@ -142,11 +144,98 @@ test('reentry from guard or selected callback cannot dispatch the same event twi
     if (!callbackReentered) { callbackReentered = true; gate.select(presentation.key, eventId); }
   });
   gate.select(presentation.key, eventId); assert.deepEqual(calls, ['receipt']);
-  gate.select(presentation.key, eventId); assert.deepEqual(calls, ['receipt', 'receipt']);
+  gate.select(presentation.key, eventId); assert.deepEqual(calls, ['receipt']);
 });
 
 test('malformed native events and stale or disabled event IDs never dispatch', () => {
   const h = harness(), calls = [], menu = menuOf(h.render(base({ onSelect: id => calls.push(id) })));
   for (const event of [undefined, {}, { nativeEvent: {} }, { nativeEvent: { event: null } }]) menu.props.onPressAction(event);
   fire(menu, menu.props.actions[2].id); fire(menu, 'unrecognized'); assert.deepEqual(calls, []); h.unmount();
+});
+
+test('duplicate native delivery invokes once and a later menu receives a new event namespace', () => {
+  const h = harness(), calls = [], menu = menuOf(h.render(base({ onSelect: id => { calls.push(id); } })));
+  const oldId = menu.props.actions[0].id; fire(menu, oldId); fire(menu, oldId); assert.deepEqual(calls, ['receipt']);
+  const next = menuOf(h.flush()), newId = next.props.actions[0].id; assert.notEqual(newId, oldId);
+  fire(next, oldId); assert.deepEqual(calls, ['receipt']); fire(next, newId); assert.deepEqual(calls, ['receipt', 'receipt']); h.unmount();
+});
+
+test('async selection hides the consumed menu until settlement and never repeats the old event', async () => {
+  let resolve; const wait = new Promise(r => { resolve = r; }), calls = [], h = harness();
+  const menu = menuOf(h.render(base({ onSelect: async id => { calls.push(id); await wait; } })));
+  const oldId = menu.props.actions[0].id; fire(menu, oldId); fire(menu, oldId); assert.deepEqual(calls, ['receipt']);
+  assert.equal(h.flush(), null); resolve(); await new Promise(r => setImmediate(r));
+  const next = menuOf(h.flush()); assert.ok(next); const newId = next.props.actions[0].id; assert.notEqual(oldId, newId);
+  fire(next, oldId); assert.deepEqual(calls, ['receipt']); fire(next, newId); assert.deepEqual(calls, ['receipt', 'receipt']);
+  await new Promise(r => setImmediate(r)); h.unmount();
+});
+
+test('async rejection reports once and remains blocked until an explicit reset', async () => {
+  const h = harness(), calls = [], errors = [], props = base({ onSelect: async id => { calls.push(id); throw Error('failed'); },
+    onSelectionError: error => errors.push(error.message) });
+  const menu = menuOf(h.render(props)), oldId = menu.props.actions[0].id; fire(menu, oldId); fire(menu, oldId);
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(h.flush(), null);
+  assert.deepEqual(calls, ['receipt']); assert.deepEqual(errors, ['failed']);
+  const reset = menuOf(h.render({ ...props, resetKey: 'epoch-2' })); assert.ok(reset);
+  fire(reset, oldId); assert.deepEqual(calls, ['receipt']); h.unmount();
+});
+
+test('an old async completion or failure cannot rearm or report after reset or unmount', async () => {
+  let resolve; const p = new Promise(a => { resolve = a; });
+  const h = harness(), calls = [], errors = [], props = base({ onSelect: id => { calls.push(id); return p; },
+    onSelectionError: error => errors.push(error.message) });
+  const old = menuOf(h.render(props)), oldId = old.props.actions[0].id; fire(old, oldId); assert.equal(h.flush(), null);
+  const next = menuOf(h.render({ ...props, resetKey: 'epoch-2' })), newId = next.props.actions[0].id;
+  resolve(); await new Promise(r => setImmediate(r)); fire(next, oldId); assert.deepEqual(calls, ['receipt']);
+  fire(next, newId); assert.deepEqual(calls, ['receipt', 'receipt']); h.unmount();
+  // Separate rejection after unmount must be consumed and must not notify an old owner.
+  let rejectOld; const waiting = new Promise((_a, b) => { rejectOld = b; });
+  const h2 = harness(), old2 = menuOf(h2.render(base({ onSelect: () => waiting, onSelectionError: error => errors.push(error.message) })));
+  fire(old2, old2.props.actions[0].id); h2.unmount(); rejectOld(Error('stale')); await new Promise(r => setImmediate(r));
+  assert.deepEqual(errors, []);
+});
+
+test('invalidation reentered by a store subscriber prevents the selected callback', () => {
+  const list = actions(), calls = [];
+  // Avoid recursively invalidating on the invalidation's own publication.
+  let armed = false; const second = model.createRoleFabStore(list, 'epoch-1', () => true, id => calls.push(id), model.roleFabFingerprint(list));
+  second.subscribe(() => { if (armed && !second.getSnapshot()) { armed = false; second.invalidate(); } });
+  second.activate(); const entry = second.getSnapshot(); armed = true;
+  entry.gate.select(entry.presentation.key, entry.presentation.menuActions[0].id); assert.deepEqual(calls, []); assert.equal(second.getSnapshot(), null);
+});
+
+test('scope lost during a pending selection neither reopens a menu nor reports to the old owner', async () => {
+  for (const outcome of ['resolve', 'reject']) {
+    let finish, valid = true; const promise = new Promise((resolve, reject) => { finish = outcome === 'resolve' ? resolve : reject; });
+    const h = harness(), errors = [], menu = menuOf(h.render(base({ isCurrent: () => valid, onSelect: () => promise,
+      onSelectionError: error => errors.push(error.message) })));
+    fire(menu, menu.props.actions[0].id); assert.equal(h.flush(), null); valid = false;
+    finish(outcome === 'reject' ? Error('old scope') : undefined); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.flush(), null); assert.deepEqual(errors, []); h.unmount();
+  }
+});
+
+test('scope changed reentrantly during pending publication prevents the selected callback', () => {
+  const list = actions(), calls = []; let valid = true, armed = false;
+  const store = model.createRoleFabStore(list, 'epoch-1', () => valid, id => calls.push(id), model.roleFabFingerprint(list));
+  store.subscribe(() => { if (armed && !store.getSnapshot()) valid = false; });
+  store.activate(); const entry = store.getSnapshot(); armed = true;
+  entry.gate.select(entry.presentation.key, entry.presentation.menuActions[0].id);
+  assert.deepEqual(calls, []); assert.equal(store.getSnapshot(), null);
+});
+
+test('reentrant activation during the lifetime guard fails closed without recursion', () => {
+  const list = actions(), calls = []; let store, attempted = false;
+  store = model.createRoleFabStore(list, 'epoch-1', () => { if (!attempted) { attempted = true; store.activate(); } return true; },
+    id => calls.push(id), model.roleFabFingerprint(list));
+  store.activate(); assert.equal(attempted, true); assert.equal(store.getSnapshot(), null); assert.deepEqual(calls, []);
+});
+
+test('reentrant invalidation from a subscriber does not recurse', () => {
+  const list = actions(), calls = [], store = model.createRoleFabStore(list, 'epoch-1', () => true,
+    id => calls.push(id), model.roleFabFingerprint(list));
+  store.subscribe(() => { if (!store.getSnapshot()) store.invalidate(); });
+  store.activate(); const entry = store.getSnapshot();
+  entry.gate.select(entry.presentation.key, entry.presentation.menuActions[0].id);
+  assert.equal(store.getSnapshot(), null); assert.deepEqual(calls, []);
 });

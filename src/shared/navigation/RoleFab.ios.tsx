@@ -5,16 +5,17 @@ import { PlatformColor, StyleSheet, View } from 'react-native';
 import { createRoleFabStore, roleFabFingerprint, type RoleFabAction } from './roleFabMenu';
 
 export type { RoleFabAction } from './roleFabMenu';
-type Props = { actions: readonly RoleFabAction[]; onSelect: (id: string) => void; isCurrent: () => boolean;
-  resetKey: string; bottomOffset?: number; testIDPrefix?: string; openLabel?: string; closeLabel?: string };
+type Props = { actions: readonly RoleFabAction[]; onSelect: (id: string) => void | Promise<void>; isCurrent: () => boolean;
+  onSelectionError?: (error: unknown) => void; resetKey: string; bottomOffset?: number;
+  testIDPrefix?: string; openLabel?: string; closeLabel?: string };
 
 /** Shared iOS role FAB using the same native MenuView and trigger pattern as Worker. */
-export function RoleFab({ actions, onSelect, isCurrent, resetKey, bottomOffset = 88, testIDPrefix = 'role-fab',
+export function RoleFab({ actions, onSelect, isCurrent, onSelectionError, resetKey, bottomOffset = 88, testIDPrefix = 'role-fab',
   openLabel = 'Amallar' }: Props) {
   const fingerprint = roleFabFingerprint(actions);
-  const store = useMemo(() => createRoleFabStore(actions, resetKey, isCurrent, onSelect, fingerprint),
+  const store = useMemo(() => createRoleFabStore(actions, resetKey, isCurrent, onSelect, fingerprint, onSelectionError),
     // The fingerprint catches in-place action changes; a new array also starts a fresh native menu.
-    [actions, fingerprint, resetKey, isCurrent, onSelect]);
+    [actions, fingerprint, resetKey, isCurrent, onSelect, onSelectionError]);
   const entry = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   useLayoutEffect(() => {
     // A fresh native event namespace is created for every committed effect,

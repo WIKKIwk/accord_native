@@ -53,6 +53,8 @@ export function createRoleFabGate(presentation: RoleFabPresentation, isCurrent: 
       try {
         const id = presentation.resolve(eventId);
         if (id === undefined || !isSynchronouslyTrue(isCurrent) || !active) return;
+        // A native presentation can deliver at most one selected action.
+        active = false;
         onSelect(id);
       } finally { selecting = false; }
     },
@@ -61,26 +63,58 @@ export function createRoleFabGate(presentation: RoleFabPresentation, isCurrent: 
 
 /** External store binds native menu identity to each committed component lifecycle. */
 export function createRoleFabStore(actions: readonly RoleFabAction[], resetKey: string,
-  isCurrent: () => boolean, onSelect: (id: string) => void, fingerprint: string | null) {
+  isCurrent: () => boolean, onSelect: (id: string) => void | Promise<void>, fingerprint: string | null,
+  onSelectionError?: (error: unknown) => void) {
   const listeners = new Set<() => void>();
   let entry: Readonly<{ presentation: RoleFabPresentation; gate: ReturnType<typeof createRoleFabGate> }> | null = null;
+  let live = false, pending = false, installing = false;
   const publish = () => { for (const listener of listeners) listener(); };
-  return {
-    subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
-    getSnapshot: () => entry,
-    activate: () => {
-      entry?.gate.invalidate(); entry = null;
-      if (typeof resetKey === 'string' && !!resetKey && fingerprint !== null &&
-          typeof isCurrent === 'function' && typeof onSelect === 'function') {
+  const scopeValid = () => roleFabFingerprint(actions) === fingerprint && isSynchronouslyTrue(isCurrent) &&
+    roleFabFingerprint(actions) === fingerprint;
+  const install = () => {
+    if (installing) { live = false; entry?.gate.invalidate(); entry = null; pending = false; return; }
+    installing = true;
+    try {
+      entry?.gate.invalidate(); entry = null; pending = false;
+      if (live && typeof resetKey === 'string' && !!resetKey && fingerprint !== null &&
+          typeof isCurrent === 'function' && typeof onSelect === 'function' && isSynchronouslyTrue(scopeValid) && live) {
         const presentation = createRoleFabPresentation(actions);
-        if (presentation && presentation.fingerprint === fingerprint) {
-          const gate = createRoleFabGate(presentation, () => roleFabFingerprint(actions) === fingerprint &&
-            isSynchronouslyTrue(isCurrent) && roleFabFingerprint(actions) === fingerprint, onSelect);
+        if (presentation && presentation.fingerprint === fingerprint && isSynchronouslyTrue(scopeValid) && live) {
+          const gate = createRoleFabGate(presentation, scopeValid, id => {
+            const selected = entry;
+            if (!live || !selected || selected.gate !== gate) return;
+            pending = true; publish();
+            if (!live || entry !== selected || !isSynchronouslyTrue(scopeValid) || !live || entry !== selected) return;
+            const settled = () => { if (live && entry === selected) install(); };
+            const failed = (error: unknown) => {
+              if (!live || entry !== selected || !isSynchronouslyTrue(scopeValid) || !live || entry !== selected) return;
+              // Leave this presentation unavailable; the owner must report the
+              // error and explicitly reset or replace it, never auto-retry.
+              if (typeof onSelectionError === 'function') {
+                try {
+                  const result: unknown = onSelectionError(error);
+                  if (result !== null && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
+                } catch { /* The owner is responsible for its error presentation. */ }
+              }
+            };
+            try {
+              const result: unknown = onSelect(id);
+              if (result !== null && (typeof result === 'object' || typeof result === 'function') &&
+                  typeof (result as { then?: unknown }).then === 'function') {
+                void Promise.resolve(result).then(settled, failed).catch(failed);
+              } else settled();
+            } catch (error) { failed(error); }
+          });
           entry = Object.freeze({ presentation, gate });
         }
       }
       publish();
-    },
-    invalidate: () => { entry?.gate.invalidate(); entry = null; publish(); },
+    } finally { installing = false; }
+  };
+  return {
+    subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
+    getSnapshot: () => pending ? null : entry,
+    activate: () => { live = true; install(); },
+    invalidate: () => { if (!live && !entry && !pending) return; live = false; entry?.gate.invalidate(); entry = null; pending = false; publish(); },
   };
 }
