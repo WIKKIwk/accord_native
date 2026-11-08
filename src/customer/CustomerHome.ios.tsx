@@ -21,9 +21,18 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
     <Section title={text('recentShipmentsTitle')}>
       {state.records.length === 0 ? <Text>{text('noShipments')}</Text> : state.records.map(record => {
         const row = customerHomeRecord(record);
-        return <ListItem key={record.id} onPress={() => onOpenDetail(record.id)}
-          supportingText={<Text numberOfLines={1} modifiers={[foregroundStyle({ type: 'color', color: 'secondaryLabel' })]}>{row.code}</Text>}
-          trailing={<Text>{row.quantity}</Text>}><Text numberOfLines={1}>{row.name}</Text></ListItem>;
+        return <Button key={record.id} onPress={() => onOpenDetail(record.id)} modifiers={[buttonStyle('plain')]}>
+          <HStack alignment="center" spacing={16} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' }),
+            foregroundStyle(PlatformColor('label')), contentShape(shapes.rectangle())]}>
+            <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+              <Text numberOfLines={1} modifiers={[font({ textStyle: 'body', weight: 'medium' }), fixedSize({ horizontal: false, vertical: true })]}>{row.name}</Text>
+              <Text numberOfLines={1} modifiers={[font({ textStyle: 'caption' }), foregroundStyle({ type: 'color', color: 'secondaryLabel' }),
+                fixedSize({ horizontal: false, vertical: true })]}>{row.code}</Text>
+            </VStack>
+            <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }), foregroundStyle({ type: 'color', color: 'secondaryLabel' }),
+              fixedSize({ horizontal: true, vertical: true })]}>{row.quantity}</Text>
+          </HStack>
+        </Button>;
       })}
     </Section>
   </List></Host>;

@@ -37,11 +37,12 @@ function fixture(platform, state) {
 const state = { loading: false, loaded: true, error: null, summary: { pendingCount: 2, confirmedCount: 1, rejectedCount: 0 }, records: [record], refresh: async () => {} };
 test('iOS home exposes all status destinations and the shipment detail with native list rows', () => {
   const calls = [], screen = fixture('ios', state).CustomerHomeScreen({ onOpenStatus: kind => calls.push(kind), onOpenDetail: id => calls.push(id) });
-  const rows = nodes(screen, item => item.type === 'ListItem'); assert.equal(rows.length, 4);
+  const rows = nodes(screen, item => item.type === 'ListItem'); assert.equal(rows.length, 3);
   assert.deepEqual(rows[0].props.modifiers, [['background', 'secondarySystemFill']]); assert.equal(rows[1].props.modifiers, undefined);
-  rows[0].props.onPress(); rows[1].props.onPress(); rows[2].props.onPress(); rows[3].props.onPress();
+  rows[0].props.onPress(); rows[1].props.onPress(); rows[2].props.onPress();
+  const shipment = nodes(screen, item => item.type === 'Button')[0]; shipment.props.onPress();
   assert.deepEqual(calls, ['pending', 'confirmed', 'rejected', 'dn']);
-  assert.equal(rows[3].props.supportingText.props.children, 'P1');
+  assert.ok(nodes(shipment, item => item.type === 'Text' && item.props.children === 'P1').length);
 });
 test('Android home reuses queue cards, routes every status and opens shipment', () => {
   const calls = [], screen = fixture('android', state).CustomerHomeScreen({ onOpenStatus: kind => calls.push(kind), onOpenDetail: id => calls.push(id) });
@@ -78,7 +79,7 @@ test('home previews keep V2 one-line name and code limits without changing conte
   const longRecord = { ...record, item_name: 'Mahsulot نام '.repeat(40), item_code: 'PRODUCT-'.repeat(40) };
   for (const platform of ['ios', 'android']) {
     const screen = fixture(platform, { ...state, records: [longRecord] }).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
-    const row = platform === 'ios' ? nodes(screen, item => item.type === 'ListItem')[3]
+    const row = platform === 'ios' ? nodes(screen, item => item.type === 'Button')[0]
       : screen.props.renderItem({ item: longRecord, index: 0 });
     const texts = nodes(row, item => item.type === 'Text');
     if (platform === 'ios') texts.push(...nodes(row.props.supportingText, item => item.type === 'Text'));
@@ -87,7 +88,7 @@ test('home previews keep V2 one-line name and code limits without changing conte
       assert.ok(text, `${platform} retains the complete input for native truncation`);
       assert.equal(text.props.numberOfLines, 1, `${platform} preview limit`);
       if (platform === 'android') assert.equal(text.props.ellipsizeMode, 'tail');
-      else if (value === longRecord.item_code) assert.deepEqual(text.props.modifiers, [['foregroundStyle', { type: 'color', color: 'secondaryLabel' }]]);
+      else if (value === longRecord.item_code) assert.ok(text.props.modifiers.some(m => m[0] === 'foregroundStyle' && m[1].type === 'color' && m[1].color === 'secondaryLabel'));
     }
   }
 });
@@ -186,4 +187,48 @@ test('iOS status rows retain one full-width native target, Dynamic Type and verb
     assert.ok(text.props.modifiers.some(m => m[0] === 'lineLimit' && m.length === 1));
   }
   assert.ok(texts[1].props.modifiers.some(m => m[0] === 'fixedSize' && m[1].horizontal === true));
+});
+
+// Source-derived: _CustomerPreviewRow's expanded name/code column, 3 gap and intrinsic quantity after a 16 gap.
+for (const platform of ['ios', 'android']) test(`${platform} shipment previews retain separate text/quantity layout and source emphasis`, () => {
+  const screen = fixture(platform, state).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail() {} });
+  const row = platform === 'ios' ? nodes(screen, item => ['ListItem', 'Button'].includes(item.type)).at(-1)
+    : screen.props.renderItem({ item: record, index: 0 });
+  const body = row.props.children;
+  assert.equal(body.type, platform === 'ios' ? 'HStack' : 'View');
+  const [details, quantity] = body.props.children;
+  assert.deepEqual(nodes(details, item => item.type === 'Text').map(item => item.props.children), [record.item_name, record.item_code]);
+  assert.equal(quantity.props.children, '3 kg');
+  if (platform === 'ios') {
+    assert.equal(body.props.spacing, 16); assert.equal(body.props.alignment, 'center');
+    assert.equal(details.props.spacing, 3);
+    assert.ok(quantity.props.modifiers.some(m => m[0] === 'font' && m[1].textStyle === 'subheadline' && m[1].weight === 'semibold'));
+    assert.ok(quantity.props.modifiers.some(m => m[0] === 'fixedSize' && m[1].horizontal === true));
+  } else {
+    assert.equal(body.props.style.flexDirection, 'row'); assert.equal(body.props.style.gap, 16);
+    assert.equal(body.props.style.alignItems, 'center'); assert.equal(details.props.style.gap, 3);
+    assert.equal(quantity.props.style.fontSize, 14); assert.equal(quantity.props.style.fontWeight, '600');
+    assert.equal(details.props.children[0].props.style.fontWeight, '500');
+    assert.equal(body.props.style.paddingHorizontal, 10); assert.equal(body.props.style.paddingVertical, 10);
+  }
+});
+
+test('shipment previews retain exact fields and one real target with native intrinsic quantity sizing', () => {
+  const raw = { ...record, item_name: 'Mahsulot نام '.repeat(25), item_code: 'PRODUCT-'.repeat(25), sent_qty: 7.4,
+    uom: 'kg / m²', note: 'not preview content', created_label: 'not a preview date' };
+  for (const platform of ['ios', 'android']) {
+    const calls = [], screen = fixture(platform, { ...state, records: [raw] }).CustomerHomeScreen({ onOpenStatus() {}, onOpenDetail: id => calls.push(id) });
+    const row = platform === 'ios' ? nodes(screen, item => item.type === 'Button')[0]
+      : screen.props.renderItem({ item: raw, index: 0 });
+    row.props.onPress(); assert.deepEqual(calls, [raw.id]);
+    const texts = nodes(row, item => item.type === 'Text');
+    assert.deepEqual(texts.map(item => item.props.children), [raw.item_name, raw.item_code, '7 kg / m²']);
+    const quantity = texts[2]; assert.equal(quantity.props.numberOfLines, undefined);
+    assert.equal(nodes(row.props.children, item => ['Button', 'Pressable', 'ListItem'].includes(item.type)).length, 0);
+    if (platform === 'ios') {
+      assert.deepEqual(row.props.modifiers, [['buttonStyle', 'plain']]);
+      assert.ok(row.props.children.props.modifiers.some(m => m[0] === 'contentShape' && m[1][0] === 'rectangle'));
+      assert.ok(quantity.props.modifiers.some(m => m[0] === 'foregroundStyle' && m[1].color === 'secondaryLabel'));
+    } else assert.equal(quantity.props.style.color, 'muted');
+  }
 });

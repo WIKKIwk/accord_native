@@ -16,6 +16,7 @@ Source: `customer_home_screen.dart`, `customer_home_screen_widgets_part_01.dart`
 
 - Title `customerRoleName` (Haridor). The first card has rows `pendingLabel` (Kutilmoqda), `confirmedStatus` (Tasdiqlangan), `rejectedLabel` (Rad etilgan), each with its corresponding count and a tap target to the matching `CustomerStatusDetailScreen`. Always refresh on returning from status detail.
 - Next card title `recentShipmentsTitle` (So‘nggi jo‘natmalar). With no history show `noShipments` (Jo‘natma yo‘q); otherwise show all merged history records in order, each with item name and item code capped at one line with a trailing ellipsis, and sent quantity fixed to zero decimal places plus unit. Open the corresponding Customer delivery detail. Refresh on return when the detail reports a change.
+- A shipment preview is one full-row action: an expanded leading name/code column with a 3 gap, then a 16 gap and an intrinsic-width quantity. The quantity uses secondary text color and semibold emphasis. Android retains the pinned theme's 16/medium name, 12 code and 14/semibold quantity with 18/16 total row padding; iOS uses corresponding native Dynamic Type styles. The preview does not show the record note or created label.
 
 ## CustomerStatusDetailScreen
 

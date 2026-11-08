@@ -31,10 +31,13 @@ export function CustomerHomeScreen({ onOpenStatus, onOpenDetail }: HomeProps) {
     renderItem={({ item, index }: { item: DispatchRecord; index: number }) => {
       const row = customerHomeRecord(item);
       return <WorkerQueueCard backgroundColor={colors.surfaceContainerLow} first={index === 0} last={index === state.records.length - 1}
-        onPress={() => onOpenDetail(item.id)}><View style={{ flex: 1 }}>
-          <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurface, fontSize: 16 }}>{row.name}</Text>
-          <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.code}</Text>
-        </View><Text style={{ color: colors.onSurfaceVariant }}>{row.quantity}</Text></WorkerQueueCard>;
+        onPress={() => onOpenDetail(item.id)}><View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16,
+          paddingHorizontal: 10, paddingVertical: 10 }}>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurface, fontSize: 16, fontWeight: '500' }}>{row.name}</Text>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{row.code}</Text>
+          </View><Text style={{ color: colors.onSurfaceVariant, fontSize: 14, fontWeight: '600' }}>{row.quantity}</Text>
+        </View></WorkerQueueCard>;
     }} />;
 }
 
