@@ -30,7 +30,9 @@ export class NotificationDetailController {
   private generation = 0;
   private redirected = false;
   constructor(private readonly session: Session, readonly receiptId: string, readonly role: NotificationRole,
-    private readonly services: NotificationDetailServices, private readonly callbacks: NotificationDetailCallbacks) {}
+    private readonly services: NotificationDetailServices, private callbacks: NotificationDetailCallbacks,
+    private readonly profileRef = typeof session.profile.ref === 'string' ? session.profile.ref : '') {}
+  setCallbacks(callbacks: NotificationDetailCallbacks): void { this.callbacks = callbacks; }
   getSnapshot = (): NotificationDetailState => this.state;
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private set(patch: Partial<NotificationDetailState>): void {
@@ -60,12 +62,10 @@ export class NotificationDetailController {
   }
   setComment(comment: string): void { this.set({ comment }); }
   private policy() {
-    const ref = typeof this.session.profile.ref === 'string' ? this.session.profile.ref : '';
-    return this.state.detail ? notificationDetailPolicy(this.role, ref, this.state.detail) : null;
+    return this.state.detail ? notificationDetailPolicy(this.role, this.profileRef, this.state.detail) : null;
   }
   private accept(detail: NotificationDetail): void {
-    const ref = typeof this.session.profile.ref === 'string' ? this.session.profile.ref : '';
-    if (!notificationDetailPolicy(this.role, ref, detail).belongs) {
+    if (!notificationDetailPolicy(this.role, this.profileRef, detail).belongs) {
       this.set({ loading: false, detail: null });
       this.callbacks.onForeignReceipt('Bu receipt sizga tegishli emas.');
       return;

@@ -114,3 +114,34 @@ test('later reload wins and a stopped screen ignores stale response state', asyn
   const last = f.controller.reload(); await wait(); f.controller.stop(); pending[2](detail({ id: 'stale' })); await last;
   assert.equal(f.controller.getSnapshot().detail.record.id, 'new');
 });
+
+test('a host can replace navigation callbacks without restarting the detail read', async () => {
+  const f = fixture({ detail: detail({ supplier_ref: 'other' }) });
+  const messages = [];
+  f.controller.setCallbacks({ onCustomerDetail: () => assert.fail('unexpected redirect'),
+    onForeignReceipt: message => messages.push(message), onNotice: () => assert.fail('unexpected notice') });
+  f.controller.start(); await wait();
+  assert.deepEqual(messages, ['Bu receipt sizga tegishli emas.']);
+  assert.deepEqual(f.events, [['seen', 'R'], ['read', 'R']]);
+});
+
+test('each detail controller keeps its original account reference while requests are in flight', async () => {
+  let finish;
+  const f = fixture({ services: { read: async () => new Promise(resolve => { finish = resolve; }) } });
+  f.controller.start(); await wait();
+  f.session.profile.ref = 'OTHER';
+  finish(detail({ supplier_ref: 'S' })); await wait();
+  assert.equal(f.controller.getSnapshot().detail.record.supplier_ref, 'S');
+  assert.ok(!f.events.some(event => event[0] === 'foreign'));
+});
+
+test('both platform detail views keep native dialog, feedback and role navigation hooks', () => {
+  for (const platform of ['ios', 'android']) {
+    const source = fs.readFileSync(path.resolve(__dirname, '../src/shared/notification', `NotificationDetailScreen.${platform}.tsx`), 'utf8');
+    for (const expected of ['@v2 NotificationDetailScreen', 'WorkerAlert', 'PreparationNotice', 'ReasonDialog',
+      'controller.respond(false, reason)', 'controller.acknowledge()', 'controller.sendComment()',
+      'props.onWerkaDetail(record)', 'props.onBack', 'props.footer']) assert.ok(source.includes(expected), `${platform}: ${expected}`);
+    if (platform === 'ios') assert.match(source, /<Modal visible transparent/);
+    else assert.match(source, /dismissOnBackPress: true, dismissOnClickOutside: true/);
+  }
+});
