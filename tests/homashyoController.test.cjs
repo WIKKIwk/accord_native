@@ -8,7 +8,8 @@ const model = load('homashyo/rawSplitModel'); const width = load('homashyo/rawSp
 const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
 const inventory = load('preparation/preparationInventory', { '../auth': {}, '../shared/appRoutes': {}, '../shared/inventoryViewRuntime': {},
   '../inventoryReadApi': {}, './preparationInventoryTransfers': {} });
-const barcode = load('homashyo/rawSplitBarcode', { '../preparation/preparationInventory': inventory });
+const sharedBarcode = load('shared/barcode/rawMaterialBarcode');
+const barcode = load('homashyo/rawSplitBarcode', { '../preparation/preparationInventory': inventory, '../shared/barcode/rawMaterialBarcode': sharedBarcode });
 const { RawSplitController } = load('homashyo/rawSplitController', { './rawSplitBarcode': barcode,
   './rawSplitApi': {}, './rawSplitDraft': draft, './rawSplitModel': model, './rawSplitWidthPlan': width });
 const raw = { revision: '1.000000', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM',
@@ -103,7 +104,9 @@ test('same-account new login cannot apply an old controller lookup result or emi
 
 test('manual lookup uses the V2 last duplicate barcode and rejects invalid UTF-8 before any API call', async () => {
   const requested = [], h = setup({ rawSplitSource: async (_ticket, code) => { requested.push(code); return source; } });
-  await h.controller.lookup('https://example.test/path?barcode=A&barcode=B'); assert.deepEqual(requested, ['B']);
+  await h.controller.lookup('https://example.test/path?barcode=A&barcode=B');
+  await h.controller.lookup('https://%FF/a'); await h.controller.lookup('https:30/40');
+  assert.deepEqual(requested, ['B', 'a', 'https:30/40']);
   await assert.rejects(h.controller.lookup('https://example.test/path?barcode=%FF'), URIError);
-  assert.deepEqual(requested, ['B']);
+  assert.deepEqual(requested, ['B', 'a', 'https:30/40']);
 });

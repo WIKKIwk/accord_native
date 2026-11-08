@@ -7,10 +7,11 @@ function load(file, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : {};
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
 const inventory = load('preparation/preparationInventory'), realBarcode = inventory.preparationInventoryBarcode;
+const shared = load('shared/barcode/rawMaterialBarcode');
 let sharedCalls = 0;
 const barcode = load('homashyo/rawSplitBarcode', { '../preparation/preparationInventory': {
   preparationInventoryBarcode: raw => { sharedCalls++; return realBarcode(raw); },
-} }).rawSplitBarcode;
+}, '../shared/barcode/rawMaterialBarcode': shared }).rawSplitBarcode;
 
 test('f119 oracle inputs and seeded fuzz cases are reproducible', () => {
   assert.equal(fixture.source_sha, 'f11910bb2c8c7081ce26770e69811b03fd0739ed');
@@ -18,19 +19,18 @@ test('f119 oracle inputs and seeded fuzz cases are reproducible', () => {
   assert.deepEqual(generateInputs(), fixture.cases.map(row => row.raw));
 });
 
-test('role adapter matches 644 source oracle results and reuses the existing parser for ordinary inputs', () => {
+test('role adapter matches all 645 historical source oracle results and reuses the existing parser safely', () => {
   let count = 0;
   for (const row of fixture.cases) {
-    if (fixture.known_mismatches.includes(row.raw)) continue;
     if (row.error) assert.throws(() => barcode(row.raw), URIError, row.raw);
     else assert.equal(barcode(row.raw), row.value, row.raw);
     count++;
   }
-  assert.equal(count, 644); assert.ok(sharedCalls > 0);
+  assert.equal(count, 645); assert.ok(sharedCalls > 0);
 });
 
-test('invalid UTF-8 in a percent-encoded host is a documented open URI mismatch', () => {
+test('the previously observed percent-encoded host mismatch is resolved without rewriting the historical fixture', () => {
   const row = fixture.cases.find(value => value.raw === 'https://%FF/a');
-  assert.equal(row.value, 'a'); assert.equal(barcode(row.raw), row.raw);
-  assert.notEqual(barcode(row.raw), row.value);
+  assert.ok(fixture.known_mismatches.includes(row.raw)); assert.equal(row.value, 'a'); assert.equal(barcode(row.raw), row.value);
+  assert.equal(barcode('https:30/40'), 'https:30/40');
 });

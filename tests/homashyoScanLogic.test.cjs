@@ -5,7 +5,8 @@ function compile(file, mocks = {}) { const filename = path.resolve(__dirname, `.
   mod.filename = filename; mod.paths = module.paths; mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : {};
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return mod.exports; }
 const inventory = compile('preparation/preparationInventory');
-const barcode = compile('homashyo/rawSplitBarcode', { '../preparation/preparationInventory': inventory });
+const sharedBarcode = compile('shared/barcode/rawMaterialBarcode');
+const barcode = compile('homashyo/rawSplitBarcode', { '../preparation/preparationInventory': inventory, '../shared/barcode/rawMaterialBarcode': sharedBarcode });
 const { RawSplitScanGate } = compile('homashyo/rawSplitScanLogic', { './rawSplitBarcode': barcode });
 test('scanner rejects empty input and accepts only the first non-empty result', () => {
   const gate = new RawSplitScanGate(); assert.equal(gate.accept('  '), null); assert.equal(gate.accept(' parent '), 'parent');
@@ -21,6 +22,8 @@ test('scanner reuses existing opaque and absolute-URL material parsing', () => {
 
 test('scanner uses V2 last duplicate query value and never completes invalid UTF-8', () => {
   assert.equal(new RawSplitScanGate().accept('https://example.test/?barcode=A&barcode=B'), 'B');
+  assert.equal(new RawSplitScanGate().accept('https://%FF/a'), 'a');
+  assert.equal(new RawSplitScanGate().accept('https:30/40'), 'https:30/40');
   const gate = new RawSplitScanGate(); assert.throws(() => gate.accept('https://example.test/?barcode=%FF'), URIError);
   assert.equal(gate.accept('next'), 'next');
 });
