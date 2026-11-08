@@ -41,6 +41,12 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - `qolipStartSettings` reuses the existing Worker `productionMapResponseError` on non-200 replies. That parser has a smaller V2 error-code message map and does not retain all V2 fields such as `x-request-id`, apparatus options, blockers and counts; those inherited error differences need an integrator fix without altering protected Worker behavior. JS JSON parsing also cannot distinguish revision `1.0` from integer `1`, and loses large integer precision. The safety-sensitive automatic readiness and start/resume models are existing Worker code, not rewritten or claimed complete here.
 - Corrected this role's `adminApiError` lookup so a server error named `constructor` is treated as the V2 unknown code rather than an inherited JavaScript object property; a regression test covers it.
 
+## Checkpoint: raw-material stock
+
+- `rawMaterialStockApi.ts` ports live raw-stock list/update/delete paths, validation and V2 operation-specific error messages, reusing `rawMaterialStockFromJson` from the integrated shared print API. Demo-mode mutation checks and warehouse UI remain unported; no live stock was changed.
+- The previously passed f119 warehouse widget test supplies the raw-stock list replay. A locally authored source-derived f119 mock probe passed 2/2, then its update and locked-delete requests were recorded and replayed under `tests/contracts/f11910bb/admin_raw_stock_probe_test.json`; it is not an upstream V2 test. Fourteen related V4 tests, iOS typecheck and lint passed.
+- The existing shared parser preserves JS `String` coercion where Dart formats nested collections differently; JSON numeric precision and integer-valued-double serialization differences remain open.
+
 ## Checkpoint: warehouse creation and stock reads
 
 - After merging main `1964743`, `adminCreateWarehouse` reuses `adminWarehouseFromJson` exported from the existing GScale code; no second warehouse parser was introduced. `warehouseStockApi.ts` adds live `adminWarehouseItemsPage` and `adminWarehouseItemRolls`, their model decoders, empty-scope guards and paging/query rules. The warehouse screens and assignment flows are not wired.
@@ -132,6 +138,7 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 |---|---|
 | `adminItemGroups`, `adminItemGroupTree`, `adminItemUoms`, `adminItems` | Their namesakes read or derive test-mode demo data; this shared mode is deferred and has not been added to the live-path functions. |
 | `adminApparatusCollections`, `adminCreateApparatusCollection`, `adminUpdateApparatusCollection`, `adminDeleteApparatusCollection` | V2 sorts its demo collection list and mutates the in-memory catalog with member, duplicate-name and revision checks; those branches remain unported. |
+| `adminRawMaterialStock`, `adminUpdateRawMaterialStock`, `adminDeleteRawMaterialStock` | V2 filters and validates/mutates in-memory demo inventory in test mode; those branches remain unported. |
 | `adminWarehouseSummaries`, `adminCreateWarehouse`, `adminDeleteWarehouse`, `adminWarehouseItemsPage`, `adminWarehouseItemRolls` | V2 derives summaries and validates/mutates in-memory warehouses and stock pages in test mode; those branches remain unported. |
 | `adminFactoryLocations`, `adminCreateFactoryLocation`, `adminUpdateFactoryLocation`, `adminReplaceFactoryLocationApparatus` | Their namesakes read or mutate the in-memory factory-location catalog in test mode, including duplicate-name and apparatus membership checks. |
 | `adminServerMonitor`, `adminStartBackup`, `adminServerMonitorLiveEvents` | V2 reads and updates in-memory demo backup data, and completes the live event stream without opening a socket, in test mode. |
@@ -144,6 +151,7 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 - Extract the `src/apparatusApi.ts` family/kind literal lookup into reusable exported helpers without changing existing JS normalization, prototype-key edge behavior or Worker consumers; Admin options can apply its own V2 normalization. Regression coverage is needed before integration.
 - Extract only the canonical role set and alias lookup shared by login and Admin. Keep login's existing JS trim/lower, error type and normalized error text byte-for-byte. Add a separate V2-compatible Admin adapter (Dart-style U+0085 trim and U+0130 lowercase, with raw-input error semantics), and compare before/after login outputs over all canonical values, alias, invalid/null/non-string and Unicode cases. A f119 oracle confirmed these examples; exhaustive current Dart/Node scalar checks found U+0085 as the only trim-set difference and U+0130 as the only difference for single-scalar lowercasing to ASCII. No auth/base file was changed here.
 - Do not enable `useChatUnreadCount` for Admin until a no-redirect, no-cookie live transport is verified; preserve existing worker and preparation Chat behavior.
+- Hold Admin activity route and `NotificationHiddenStore.load` / `hideAll` integration until the shared account-switch race is resolved: an old asynchronous operation can write hidden IDs after reset into another server with the same role/ref. Do not modify the shared store or protected roles here.
 - Integrate other role branches and shared navigation only after reviewing conflicts and role guards. The Admin home and routes are not wired by this checkpoint.
 - Preserve the protected worker and preparation code. Admin's separate branches of shared production queue surfaces still require a reviewed integration plan.
 
