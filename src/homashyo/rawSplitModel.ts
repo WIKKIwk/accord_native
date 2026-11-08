@@ -133,7 +133,7 @@ export class RawSplitIssue {
     this.note = required(row, 'note'); this.actorRef = required(row, 'actor_ref'); this.actorName = required(row, 'actor_name');
     this.createdAt = new Date(required(row, 'created_at')); if (Number.isNaN(this.createdAt.getTime())) throw new Error('Invalid date');
     if (typeof row.entered_waste_kg !== 'string') throw new TypeError('Invalid entered waste');
-    this.enteredWaste = row.entered_waste_kg; this.outputs = list(row.outputs).map(object);
+    this.enteredWaste = row.entered_waste_kg; this.outputs = list(row.outputs).map(value => ({ ...object(value) }));
     let sum = 0n;
     for (const output of this.outputs) {
       const net = rawSplitQuantity(required(output, 'kg'));

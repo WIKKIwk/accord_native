@@ -16,12 +16,13 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot
 | Test mode | `rawSplitSave`, `rawSplitReportIssue` | Implement the shared test-mode policy in the deferred test-mode pass. |
 
 ## Verification so far
-- `node --test tests/homashyoModel.test.cjs tests/homashyoApi.test.cjs tests/homashyoDraft.test.cjs`: 19 passed, including selected-baseline wire replays.
+- `node --test tests/homashyo*.test.cjs`: 26 passed, including selected-baseline wire replays.
 - `tests/contracts/f11910bb/raw_material_split_test.json` is a new f119 recording; prior historical fixtures remain untouched. The file includes requests from the three failed V2 widget tests, which must not be treated as specifications.
 - `npx tsc --noEmit -p tsconfig.ios.json`: passed after regenerating the worktree’s stale ignored Expo Router types.
 - Selected-baseline Flutter oracle: 16 passed, 3 failed; no simulator or device.
 
 ## Deviations candidates
+- `raw_material_split_screen.dart:481–484`: editing a measurement, including an invalid waste value after an issue was saved, clears `_issueSaved`; the user must record the issue again. The controller preserves this V2 behaviour.
 
 ## Test mode pending
 `rawSplitSave` and `rawSplitReportIssue` reject test mode in V2; this is deferred to the centralized test-mode pass.
@@ -32,7 +33,7 @@ Do not expose a Homashyo Chat route until the shared WebSocket redirect/cookie s
 ## Surface audit
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
-| `RawMaterialSplitScreen`, `raw_material_split_screen.dart:16` | not implemented | open | open | Role controller, source/scan form, pending retries, issue reporting, save and printing need platform views. |
+| `RawMaterialSplitScreen`, `raw_material_split_screen.dart:16` | not implemented | open | open | Shared controller exists and is unit-tested; source/scan form, pending retries, issue reporting, save and printing still need platform views and native runtime wiring. |
 | `RawMaterialSplitHistoryScreen`, `raw_material_split_history_screen.dart:17` | not implemented | open | open | History, issues, refresh and navigation need platform views. |
 | `RawSplitDetailsSheet`, `raw_material_split_result_view.dart:230` | not implemented | open | open | Detail and reprint sheet not wired. |
 | `RawSplitIssueDetailsSheet`, `raw_material_split_result_view.dart:463` | not implemented | open | open | Issue detail sheet not wired. |

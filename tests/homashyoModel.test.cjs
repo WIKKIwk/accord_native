@@ -59,7 +59,8 @@ test('issue validates returned exact totals, note and kind before allowing compl
   const issue = { id: 'raw-issue:test', request_id: 'id', source, source_kg: '100.000000', output_kg: '98.000000',
     entered_waste_kg: '1', waste_kg: '1.000000', difference_kg: '1.000000', kind: 'missing_weight', outputs: result.outputs,
     note: 'Tarozi', actor_ref: 'split-1', actor_name: 'Cutter', created_at: '2026-09-08T12:00:00+00:00' };
-  assert.equal(new Issue(issue).check.difference, 1000000n);
+  const parsed = new Issue(issue); assert.equal(parsed.check.difference, 1000000n);
+  assert.notEqual(parsed.outputs[0], issue.outputs[0]);
   for (const change of [{ difference_kg: '2.000000' }, { kind: 'excess_weight' }, { output_kg: '98' }, { note: '' }])
     assert.throws(() => new Issue({ ...issue, ...change }));
 });
