@@ -40,3 +40,9 @@ both	${rawSplitDisplay(output.width_mm as string)} mm · Og‘irlik: ${rawSplitD
 both	Babina: ${rawSplitDisplay(output.bobina_kg as string)} kg · Netto: ${rawSplitDisplay(output.kg as string)} kg	raw_material_split_result_view.dart:557-561 shows the same issue Babina and Netto values; the scanner splits the template.
 both	Asl: ${rawSplitDisplay(issue.source.kg)} kg · Atxot: ${issue.enteredWaste || 'kiritilmagan'} kg	raw_material_split_result_view.dart:549-552 shows Asl as the label and the same weight/Atxot content as the value.
 both	Sessiya tekshiruvi kerak	Role-only API rejects calls without an issued epoch-checked session ticket; the fail-closed guard has no V2 equivalent.
+both	Zebra yoki Bluetooth printerni tanlang.	PORT.md D13 excludes GoDEX; the role explicitly explains unsupported printing before any stock write.
+both	Homashyo sessiyasi mavjud emas	RawSplitContext.tsx throws this developer invariant only when a role view is rendered outside its authenticated provider.
+both	Menyuni yopish	RawSplitDrawer.tsx supplies an accessibility label for the reused native drawer close gesture; V2 has no equivalent visible text.
+both	Sessiya xavfsizligi mavjud emas.	RawSplitSessionGate.tsx fails closed when the required main auth epoch accessor is unavailable, rather than using an unsafe identity-only fallback.
+both	Sessiya xavfsizligi tasdiqlanmagan	RawSplitController.ts and rawSplitHistoryController.ts fail closed before a write or print when the required session witness is unavailable or revoked.
+both	Sessiya xavfsizligi tasdiqlanmaguncha chop etib bo‘lmaydi.	RawSplitHistoryController.ts explicitly tells the operator that printing is blocked until the required session witness is available.

@@ -210,7 +210,7 @@ for (const platform of ['ios', 'android']) {
     assert.deepEqual(h.calls, []); assert.equal(hooks.writes.some(write => write.afterUnmount), false);
   });
   test(`${platform} a closed sheet still lets the current history owner report a print failure`, async () => {
-    const { RawSplitHistoryController } = load('rawSplitHistoryController.ts', { './rawSplitApi': { rawSplitSessionIsCurrent: () => true } });
+    const { RawSplitHistoryController } = load('rawSplitHistoryController.ts', { '../shared/camera/synchronousGuard': load('../shared/camera/synchronousGuard.ts'), './rawSplitApi': { rawSplitSessionIsCurrent: () => true } });
     let reject; const options = { ticket: {}, canMutate: () => true, scope: () => 'account', selectPrinter: async () => ({ transport: 'bluetooth', printer: {} }),
       printerSupported: () => true, onUnsupportedPrinter: () => {}, onMessage: () => {},
       printOne: () => new Promise((_resolve, fail) => { reject = fail; }) };

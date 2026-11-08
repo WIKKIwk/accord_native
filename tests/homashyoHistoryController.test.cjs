@@ -4,7 +4,8 @@ const path = require('node:path'); const test = require('node:test'); const ts =
 function load(name, mocks = {}) { const filename = path.resolve(__dirname, `../src/homashyo/${name}.ts`), m = new Module(filename, module);
   m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
-const model = load('rawSplitModel'), { RawSplitHistoryController } = load('rawSplitHistoryController', { './rawSplitApi': { rawSplitSessionIsCurrent: ticket => { try { ticket.check(); return true; } catch { return false; } } } });
+const syncGuard = load('../shared/camera/synchronousGuard');
+const model = load('rawSplitModel'), { RawSplitHistoryController } = load('rawSplitHistoryController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitApi': { rawSplitSessionIsCurrent: ticket => { try { ticket.check(); return true; } catch { return false; } } } });
 const source = { revision: '1', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM', item_name: 'Film', kg: '100', width_mm: '1000', micron: '20' };
 const result = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2', outputs: [
   { ...source, stock_id: 'c1', barcode: 'c1', kg: '39', gross_kg: '40', bobina_kg: '1', width_mm: '400' },
@@ -106,4 +107,11 @@ test('disposing a history owner during a pending print prevents later outputs an
 test('read-only session blocks reprints before device selection or printer calls', async () => {
   const h = setup(); let picked = 0; h.options.canMutate = () => false; h.options.selectPrinter = async () => { picked++; return null; };
   await h.c.reprint(result); assert.equal(picked, 0); assert.deepEqual(h.calls, []); assert.match(h.notices[0], /Sessiya xavfsizligi/);
+});
+
+test('write witness revoked during a print prevents later output and success notice', async () => {
+  const h = setup(); let allowed = true; h.options.canMutate = () => allowed;
+  h.options.printOne = async (_result, output, _printer, _kind, guard) => { guard(); h.calls.push(output.barcode); allowed = false; guard(); };
+  await h.c.reprint(result); assert.deepEqual(h.calls, ['c1']); assert.deepEqual(h.notices, []);
+  assert.match(h.c.getSnapshot().error, /Sessiya xavfsizligi/);
 });

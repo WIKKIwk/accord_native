@@ -10,7 +10,8 @@ const inventory = load('preparation/preparationInventory', { '../auth': {}, '../
   '../inventoryReadApi': {}, './preparationInventoryTransfers': {} });
 const sharedBarcode = load('shared/barcode/rawMaterialBarcode');
 const barcode = load('homashyo/rawSplitBarcode', { '../preparation/preparationInventory': inventory, '../shared/barcode/rawMaterialBarcode': sharedBarcode });
-const { RawSplitController } = load('homashyo/rawSplitController', { './rawSplitBarcode': barcode,
+const syncGuard = load('shared/camera/synchronousGuard');
+const { RawSplitController } = load('homashyo/rawSplitController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitBarcode': barcode,
   './rawSplitApi': {}, './rawSplitDraft': draft, './rawSplitModel': model, './rawSplitWidthPlan': width });
 const raw = { revision: '1.000000', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM',
   item_name: 'Film', kg: '100', width_mm: '1000', micron: '20' };
@@ -114,9 +115,9 @@ test('manual lookup uses the V2 last duplicate barcode and rejects invalid UTF-8
 
 test('read-only security hold blocks stock and issue writes before picking a printer', async () => {
   const h = setup(); let picked = 0; h.options.canMutate = () => false; h.options.selectPrinter = async () => { picked++; return null; };
-  await fill(h.controller); await h.controller.save(); await h.controller.saveIssue();
+  await fill(h.controller); await h.controller.save(); assert.match(h.controller.getSnapshot().error, /Sessiya xavfsizligi/);
+  h.controller.setWaste('1'); h.controller.setIssueNote('cause'); await h.controller.saveIssue();
   assert.equal(picked, 0); assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.issueCalls, []);
-  assert.match(h.controller.getSnapshot().error, /Sessiya xavfsizligi/);
   assert.match(h.controller.getSnapshot().issueError, /Sessiya xavfsizligi/);
 });
 test('session write permission lost during device choice prevents a later stock request', async () => {
@@ -124,4 +125,26 @@ test('session write permission lost during device choice prevents a later stock 
   h.options.selectPrinter = () => new Promise(done => { resolve = done; }); await fill(h.controller);
   const pending = h.controller.save(); await new Promise(done => setImmediate(done)); allowed = false;
   resolve({ transport: 'bluetooth', printer: {} }); await pending; assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []);
+});
+
+test('permission revoked after committed stock prevents printing without resending or erasing the saved result', async () => {
+  const h = setup(); let allowed = true, printing = 0; h.options.canMutate = () => allowed;
+  h.ops.rawSplitSave = async (_ticket, payload) => { h.stockCalls.push(payload); allowed = false; return result; };
+  h.options.print = async (_result, _device, _wifi, guard) => { guard(); printing++; };
+  await fill(h.controller); await h.controller.save(); assert.equal(h.stockCalls.length, 1); assert.equal(printing, 0);
+  assert.equal(h.controller.getSnapshot().saved, result); assert.equal(h.controller.getSnapshot().source, null);
+  assert.match(h.controller.getSnapshot().error, /Omborga saqlandi/); await h.controller.save(); assert.equal(h.stockCalls.length, 1);
+});
+test('async or throwing write guards fail closed without an unhandled rejection', async () => {
+  for (const guard of [() => Promise.resolve(true), () => Promise.reject(new Error('no')), () => { throw new Error('no'); }]) {
+    const h = setup(); h.options.canMutate = guard; await fill(h.controller); await h.controller.save(); h.controller.setWaste('1'); h.controller.setIssueNote('cause'); await h.controller.saveIssue();
+    assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.issueCalls, []);
+  }
+  await new Promise(resolve => setImmediate(resolve));
+});
+
+test('read-only mode still performs local waste validation and reveals the issue form without writing', async () => {
+  const h = setup(); h.options.canMutate = () => false; await fill(h.controller); h.controller.setWaste('1'); await h.controller.save();
+  assert.equal(h.controller.getSnapshot().showIssue, true); assert.ok(h.notices.includes('issue-visible'));
+  assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.issueCalls, []); assert.deepEqual(h.prints, []);
 });

@@ -1,4 +1,5 @@
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { rawSplitScope, rawSplitSessionIsCurrent, rawSplitSnapshot, type RawSplitSessionTicket } from './rawSplitApi';
 import type { RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitModel';
 
@@ -25,7 +26,12 @@ export class RawSplitHistoryController {
     try { return this.active && this.sessionCurrent() && this.scopeNow() === this.scope; } catch { return false; }
   };
   private checkScope = (): void => { if (!this.isCurrent()) throw new Error('Akkaunt o‘zgargan'); };
-  private writeAllowed(): boolean { try { return this.options.canMutate() === true; } catch { return false; } }
+  private writeAllowed(): boolean { return isSynchronouslyTrue(this.options.canMutate); }
+  private checkWriteScope = (): void => {
+    this.checkScope();
+    if (!this.writeAllowed()) throw new Error('Sessiya xavfsizligi tasdiqlanmagan');
+    this.checkScope();
+  };
   getSnapshot = (): RawSplitHistoryState => this.state;
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   dispose(): void { this.active = false; this.listeners.clear(); }
@@ -56,10 +62,10 @@ export class RawSplitHistoryController {
       if (!this.options.printerSupported(printer, this.state.wifiPrinter)) { this.options.onUnsupportedPrinter(); return; }
       for (const output of only ? [only] : result.outputs) {
         if (!this.isCurrent()) return;
-        this.checkScope(); if (!this.writeAllowed()) throw new Error('Sessiya xavfsizligi tasdiqlanmagan');
-        await this.options.printOne(result, output, printer, this.state.wifiPrinter, this.checkScope);
+        this.checkWriteScope();
+        await this.options.printOne(result, output, printer, this.state.wifiPrinter, this.checkWriteScope);
       }
-      this.checkScope(); this.options.onMessage('Chop etildi');
+      this.checkWriteScope(); this.options.onMessage('Chop etildi');
     } catch (reason) { this.update({ error: `Ombordagi hisob o‘zgarmadi. Chop etish: ${message(reason)}` }); }
     finally { this.update({ busy: false }); }
   }
