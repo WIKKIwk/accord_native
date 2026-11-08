@@ -12,7 +12,7 @@ import { PreparationNotice } from '../preparation/PreparationNotice';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { RezkaItemPicker } from './RezkaItemPicker';
 import { formatRezkaQty, type RezkaDraft } from './rezkaSplitLogic';
-import { rezkaSplitNoticeText } from './rezkaSplitController';
+import { isExcludedRezkaPrinter, rezkaSplitNoticeText } from './rezkaSplitController';
 import type { RezkaSplitScreenProps } from './rezkaSplitScreenTypes';
 import { useRezkaSplit, useRezkaText } from './useRezkaSplit';
 
@@ -105,7 +105,7 @@ export function RezkaSplitScreen({ session, printer, scan, onBack }: RezkaSplitS
           {printerOpen ? <><Field label={t('Driver URL')} value={state.driverUrl} change={value => controller.setPrinter({ driverUrl: value })} />
             <Field label={t('Printer')} value={state.printer} change={value => controller.setPrinter({ printer: value })} />
             <Field label={t('Mode')} value={state.printMode} change={value => controller.setPrinter({ printMode: value })} /></> : null}
-          {!state.uncertain && !state.blockedPrinter && !device.excluded && !(state.transport === 'wifi' && /godex/i.test(state.printer))
+          {!state.uncertain && !state.blockedPrinter && !device.excluded && !(state.transport === 'wifi' && isExcludedRezkaPrinter(state.printer))
             ? <Action label={t('Bo‘lish va QR chiqarish')} id="rezka-submit-split" disabled={state.submitting} press={() => { void controller.submit(); }} /> : null}
           {state.submitting ? <ActivityIndicator /> : null}
         </View>

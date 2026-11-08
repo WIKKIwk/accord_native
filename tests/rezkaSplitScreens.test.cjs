@@ -36,7 +36,7 @@ function setup(platform) {
     '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' }, './RezkaItemPicker': { RezkaItemPicker: 'RezkaItemPicker' },
     './rezkaSplitLogic': { formatRezkaQty: value => Number.isInteger(value) ? String(value) : value.toFixed(3) },
-    './rezkaSplitController': { rezkaSplitNoticeText: value => value.message ?? null },
+    './rezkaSplitController': { rezkaSplitNoticeText: value => value.message ?? null, isExcludedRezkaPrinter: value => /go[\s_-]*dex|\bg500\b/i.test(value) },
     './useRezkaSplit': { useRezkaSplit: () => hook, useRezkaText: () => text => text } };
   const filename = path.resolve(__dirname, `../src/rezka/RezkaSplit.${platform}.tsx`), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths; mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);

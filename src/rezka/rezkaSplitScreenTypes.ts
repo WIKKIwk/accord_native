@@ -8,7 +8,7 @@ export type RezkaPrinterBridge = {
   getSnapshot(): { title: string; subtitle: string; excluded?: boolean };
   choose(): Promise<{ transport: RezkaTransport; driverUrl?: string } | null>;
   resolve(state: RezkaSplitState): Promise<RezkaPrinterTarget | null>;
-  print(output: RezkaOutput, target: RezkaPrinterTarget): Promise<void>;
+  print(output: RezkaOutput, target: RezkaPrinterTarget): Promise<{ ok: boolean }>;
 };
 export type RezkaSplitScreenProps = { session: Session; printer: RezkaPrinterBridge;
   /** The reviewed full-screen QR/Data Matrix scanner; omitted until available. */

@@ -24,8 +24,8 @@ function setup(overrides = {}) {
   const calls = []; let current = true;
   const deps = { isCurrent: () => current, loadSource: async barcode => { calls.push(['source', barcode]); return { ok: true, source }; },
     resolvePrinter: async () => target, split: async req => { calls.push(['split', req]); return reply([label('e')]); },
-    prepare: async req => { calls.push(['prepare', req]); return reply([label('e1'), label('e2', false)]); },
-    print: async output => { calls.push(['print', output.epc]); }, confirm: async req => { calls.push(['confirm', req]); return reply([label('e1'), label('e2', false)]); }, ...overrides };
+    prepare: async req => { calls.push(['prepare', req]); return reply([label('e1'), label('e2')]); },
+    print: async output => { calls.push(['print', output.epc]); return { ok: true }; }, confirm: async req => { calls.push(['confirm', req]); return reply([label('e1'), label('e2')]); }, ...overrides };
   return { controller: new RezkaSplitController(deps), calls, deactivate: () => { current = false; } };
 }
 async function fill(c) {
@@ -51,10 +51,12 @@ test('validation opens remainder action, adds scrap without sending, and blocks 
   assert.equal(t.controller.getSnapshot().notice.kind, 'outputInvalid');
 });
 test('local flow prints only QR outputs then confirms exact EPCs once', async () => {
-  const t = setup(); await fill(t.controller); await t.controller.submit();
+  const t = setup(); await fill(t.controller); t.controller.editOutput(1, { print_qr: false });
+  const prepare = async req => { t.calls.push(['prepare', req]); return reply([label('e1'), label('e2', false)]); };
+  const c = t.controller; c.deps.prepare = prepare; c.deps.confirm = async req => { t.calls.push(['confirm', req]); return reply([label('e1'), label('e2', false)]); }; await c.submit();
   assert.deepEqual(t.calls.map(row => row[0]), ['source', 'prepare', 'print', 'confirm']);
   assert.equal(t.calls[2][1], 'e1'); assert.deepEqual(t.calls[3][1].outputs.map(row => row.epc), ['e1', 'e2']);
-  assert.equal(t.controller.getSnapshot().notice.kind, 'success'); assert.equal(rezkaSplitNoticeText(t.controller.getSnapshot().notice), '1 ta QR chiqarildi.');
+  assert.equal(c.getSnapshot().notice.kind, 'success'); assert.equal(rezkaSplitNoticeText(c.getSnapshot().notice), '1 ta QR chiqarildi.');
 });
 test('failed physical print is uncertain, never confirms, retries or reports success', async () => {
   let prints = 0;
@@ -91,14 +93,14 @@ test('Wi-Fi uses the visible settings rather than a different injected printer t
 test('scope change during local print redacts state and never confirms', async () => {
   let release; const t = setup({ print: () => new Promise(resolve => { release = resolve; }) }); await fill(t.controller);
   const pending = t.controller.submit(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
-  assert.equal(typeof release, 'function'); t.deactivate(); release(); await pending;
+  assert.equal(typeof release, 'function'); t.deactivate(); release({ ok: true }); await pending;
   assert.equal(t.controller.getSnapshot().source, null); assert.equal(t.controller.getSnapshot().uncertain, true);
   assert.equal(t.calls.some(x => x[0] === 'confirm'), false);
 });
 test('explicit account reset during an in-flight print retains uncertain outcome', async () => {
   let release; const t = setup({ print: () => new Promise(resolve => { release = resolve; }) }); await fill(t.controller);
   const pending = t.controller.submit(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
-  t.controller.invalidate(); release(); await pending;
+  t.controller.invalidate(); release({ ok: true }); await pending;
   assert.equal(t.controller.getSnapshot().uncertain, true); assert.equal(t.controller.getSnapshot().source, null);
   assert.equal(t.calls.some(x => x[0] === 'confirm'), false);
 });
@@ -109,4 +111,36 @@ test('draft keys remain stable when another output is removed', async () => {
   t.controller.editOutput(1, { qty: '3' }); t.controller.removeOutput(0);
   assert.deepEqual(t.controller.getSnapshot().outputs.map(output => output.key), [second, third]);
   assert.equal(t.controller.getSnapshot().outputs[0].qty, '3');
+});
+
+
+test('a false native print result never confirms or reports success', async () => {
+  const t = setup({ print: async () => ({ ok: false }) }); await fill(t.controller); await t.controller.submit();
+  assert.equal(t.controller.getSnapshot().uncertain, true); assert.equal(t.controller.getSnapshot().notice, null);
+  assert.equal(t.calls.some(row => row[0] === 'confirm'), false);
+});
+test('false prepare and false remote result cannot become success', async () => {
+  let prints = 0;
+  const local = setup({ prepare: async () => ({ ...reply([label('x'), label('y')]), ok: false }), print: async () => { prints++; return { ok: true }; } });
+  await fill(local.controller); await local.controller.submit(); assert.equal(prints, 0); assert.equal(local.controller.getSnapshot().uncertain, true);
+  const remote = setup({ split: async () => ({ ...reply([]), ok: false }) }); await fill(remote.controller);
+  remote.controller.setPrinter({ transport: 'wifi', printer: 'zebra' }); await remote.controller.submit();
+  assert.equal(remote.controller.getSnapshot().uncertain, true); assert.equal(remote.controller.getSnapshot().notice, null);
+});
+test('GoDEX aliases and model identifiers are excluded before backend mutation', async () => {
+  for (const model of ['Go-DEX G500', 'g500', 'GO_DEX']) {
+    const t = setup({ resolvePrinter: async () => ({ ...target, printer: 'usb', model }) }); await fill(t.controller); await t.controller.submit();
+    assert.equal(t.controller.getSnapshot().blockedPrinter, true, model); assert.equal(t.calls.some(row => row[0] === 'prepare'), false);
+  }
+});
+
+
+test('incomplete or inconsistent prepared labels stop before physical printing and confirm', async () => {
+  for (const outputs of [[label('only')], [label(''), label('e2')], [label('e1'), label('e2', false)]]) {
+    let prints = 0, confirms = 0;
+    const t = setup({ prepare: async () => reply(outputs), print: async () => { prints++; return { ok: true }; },
+      confirm: async () => { confirms++; return reply([]); } });
+    await fill(t.controller); await t.controller.submit();
+    assert.equal(prints, 0); assert.equal(confirms, 0); assert.equal(t.controller.getSnapshot().uncertain, true);
+  }
 });

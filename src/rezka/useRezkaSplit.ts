@@ -29,7 +29,9 @@ export function useRezkaSplit(session: Session, printer: RezkaPrinterBridge) {
     confirm: request => rezkaSplitClientPrintConfirm(session, request, scope),
   }), [session, scope, printer]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const device = useSyncExternalStore(printer.subscribe, printer.getSnapshot, printer.getSnapshot);
+  const subscribePrinter = useCallback((listener: () => void) => printer.subscribe(listener), [printer]);
+  const printerSnapshot = useCallback(() => printer.getSnapshot(), [printer]);
+  const device = useSyncExternalStore(subscribePrinter, printerSnapshot, printerSnapshot);
   const leases = useRef(new Map<RezkaSplitController, number>());
   useEffect(() => {
     const owners = leases.current;

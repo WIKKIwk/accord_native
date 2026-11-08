@@ -4,7 +4,7 @@ export type RezkaItemPickerState = { query: string; items: SupplierItem[]; loadi
 export type RezkaItemPickerDependencies = { isCurrent(): boolean; load(query: string, limit: number): Promise<SupplierItem[]>;
   schedule?(callback: () => void, milliseconds: number): () => void };
 
-/** Search behavior from @v2 _RezkaItemPickerSheetState. */
+/** @v2 _RezkaItemPickerSheetState */
 export class RezkaItemPickerController {
   private state: RezkaItemPickerState = { query: '', items: [], loading: true };
   private listeners = new Set<() => void>();

@@ -22,7 +22,7 @@ export type RezkaSplitDependencies = {
   resolvePrinter(state: RezkaSplitState): Promise<RezkaPrinterTarget | null>;
   split(request: RezkaSplitInput): Promise<RezkaSplitResponse>;
   prepare(request: RezkaSplitInput): Promise<RezkaSplitResponse>;
-  print(output: RezkaOutput, target: RezkaPrinterTarget): Promise<void>;
+  print(output: RezkaOutput, target: RezkaPrinterTarget): Promise<{ ok: boolean }>;
   confirm(request: RezkaSplitInput): Promise<RezkaSplitResponse>;
 };
 const initial = (): RezkaSplitState => ({ barcode: '', reason: '', driverUrl: 'http://gscale.local:39117', printer: 'godex', printMode: 'label',
@@ -30,6 +30,9 @@ const initial = (): RezkaSplitState => ({ barcode: '', reason: '', driverUrl: 'h
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 function knownServerResponse(error: unknown): boolean {
   return !!error && typeof error === 'object' && typeof (error as { statusCode?: unknown }).statusCode === 'number';
+}
+export function isExcludedRezkaPrinter(...values: (string | undefined)[]): boolean {
+  return values.some(value => !!value && (/go[\s_-]*dex/i.test(value) || /\bg500\b/i.test(value)));
 }
 function mayHaveExecuted(error: unknown): boolean {
   return !!error && typeof error === 'object' && (error as { mayHaveExecuted?: unknown }).mayHaveExecuted === true;
@@ -133,7 +136,7 @@ export class RezkaSplitController {
         this.update({ notice: { kind: snapshot.transport === 'bluetooth' ? 'bluetoothMissing' : snapshot.transport === 'offline' ? 'usbMissing' : 'printerUnavailable' } });
         return;
       }
-      if (/godex/i.test(`${target.printer} ${target.model ?? ''}`)) { this.update({ blockedPrinter: true, notice: { kind: 'godexExcluded' } }); return; }
+      if (isExcludedRezkaPrinter(target.printer, target.model)) { this.update({ blockedPrinter: true, notice: { kind: 'godexExcluded' } }); return; }
       const request: RezkaSplitInput = { source_barcode: source.barcode, source_stock_entry: source.stock_entry_name,
         source_line_index: source.line_index, reason: snapshot.reason, driver_url: target.driver_url, printer: target.printer,
         print_mode: target.print_mode, outputs };
@@ -144,18 +147,23 @@ export class RezkaSplitController {
         const result = await this.deps.prepare(request);
         prepared = true;
         if (!this.active()) return;
+        if (!result.ok) { this.update({ uncertain: true }); return; }
+        const confirm = withPreparedOutputs(request, result.outputs);
+        if (result.outputs.some((output, index) => output.print_qr !== (request.outputs[index].print_qr !== false) ||
+            (output.print_qr && !output.epc.trim()))) { this.update({ uncertain: true }); return; }
         for (const output of result.outputs) {
           if (!output.print_qr || !output.epc.trim()) continue;
           if (!this.active()) return;
           printAttempted = true;
-          await this.deps.print(output, target);
+          const printed = await this.deps.print(output, target);
           if (!this.active()) return;
+          if (!printed.ok) { this.update({ uncertain: true }); return; }
         }
-        const confirm = withPreparedOutputs(request, result.outputs);
         if (!this.active()) return;
         response = await this.deps.confirm(confirm);
       }
       if (!this.active()) return;
+      if (!response.ok) { this.update({ uncertain: true }); return; }
       this.update({ notice: { kind: 'success', count: response.outputs.filter(output => output.print_qr).length } });
     } catch (error) {
       if (!this.active()) return;

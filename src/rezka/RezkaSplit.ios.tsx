@@ -8,7 +8,7 @@ import { PreparationNotice } from '../preparation/PreparationNotice';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { RezkaItemPicker } from './RezkaItemPicker';
 import { formatRezkaQty, type RezkaDraft } from './rezkaSplitLogic';
-import { rezkaSplitNoticeText } from './rezkaSplitController';
+import { isExcludedRezkaPrinter, rezkaSplitNoticeText } from './rezkaSplitController';
 import type { RezkaSplitScreenProps } from './rezkaSplitScreenTypes';
 import { useRezkaSplit, useRezkaText } from './useRezkaSplit';
 
@@ -81,7 +81,7 @@ export function RezkaSplitScreen({ session, printer, scan, onBack }: RezkaSplitS
             <Field label={t('Printer')} value={state.printer} change={value => controller.setPrinter({ printer: value })} />
             <Field label={t('Mode')} value={state.printMode} change={value => controller.setPrinter({ printMode: value })} />
           </DisclosureGroup>
-          {!state.uncertain && !state.blockedPrinter && !device.excluded && !(state.transport === 'wifi' && /godex/i.test(state.printer)) ? <Button modifiers={[buttonStyle('borderedProminent'), disabled(state.submitting), accessibilityIdentifier('rezka-submit-split')]}
+          {!state.uncertain && !state.blockedPrinter && !device.excluded && !(state.transport === 'wifi' && isExcludedRezkaPrinter(state.printer)) ? <Button modifiers={[buttonStyle('borderedProminent'), disabled(state.submitting), accessibilityIdentifier('rezka-submit-split')]}
             onPress={() => { void controller.submit(); }}><HStack>{state.submitting ? <ProgressView /> : null}<Text>{t('Bo‘lish va QR chiqarish')}</Text></HStack></Button> : null}
         </Section>
       </> : null}
