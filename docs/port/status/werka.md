@@ -7,6 +7,7 @@ Stopped at: Port the remaining Werka API, store, UI contract, both platform view
 | Where | V2 reference | What is needed |
 |---|---|---|
 | Werka screens and routes | `.port/role-werka.md`: 28 surfaces, 24 routes | Port each reachable screen, sheet, dialog and navigation edge on iOS and Android. No role entry has been wired. |
+| UI contract | `docs/port/roles/werka.md` | Home, status, create index, archive index and shell have partial source notes. Complete every other surface and its dialogs, text, states and navigation before using it as a finished UI contract. |
 | Werka APIs and stores | `.port/role-werka.md`: 26 methods; `werka_store.dart`, `werka_notification_store.dart` | Port and test remaining API, model, state and account-reset behavior. Reuse existing shared parsers and components where appropriate; check their documented parity limits. |
 | Shared Paddon and WIP models/errors | `AdminPaddonSnapshot`, `AdminProgressBatch`, `_adminProductionMapException` | Werka reuses existing shared decoders and error mapper. Complete their documented cross-role parsing and error-field parity before exposing the receiving flow. |
 | Werka record API verification | `werkaPending`, `werkaSummary`, `werkaStatusBreakdown`, `werkaStatusDetails`, `werkaHistory`, `werkaNotifications`, `confirmReceipt` | V2 has no direct recordings for these methods. Source-derived tests cover requests and basic decoding; live server and full shared parser/error parity remain unverified. No route calls these functions yet. |
@@ -29,6 +30,14 @@ Stopped at: Port the remaining Werka API, store, UI contract, both platform view
 Role-specific test-mode branches remain for the coordinated final pass.
 
 The isolated f119 oracle passed all five `werka_paddon_api_test.dart` cases and all six `werka_archive_batch_qr_test.dart` cases. Its seven API request records are in `tests/contracts/f11910bb/werka_paddon_api_test.json`; the historical fixtures were not overwritten.
+
+## Verification at this checkpoint
+
+- V2 original and the isolated ledger clone both remained clean at `f11910bb2c8c7081ce26770e69811b03fd0739ed` after the work. The ledger finds all 26 role API tags, but this is not proof of parity or of completed views.
+- `node --test tests/werka*.test.cjs`: 38 passed. The full suite with concurrency 2 had 1,233 passed and six known Preparation Android Expo UI ESM-resolution failures. No real credentials or live backend mutation were used.
+- iOS typecheck and Expo lint passed. Android typecheck reported the same nine pre-existing Worker errors in `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx`; no new Werka errors appeared.
+- Offline Expo iOS and Android JS exports passed. Since Werka has no routes yet, these exports do not verify the new role's runtime views.
+- `port_ledger.mjs check` passed its tag checks with eight existing unrelated endpoint warnings. The text gate failed: iOS has 161 V2 texts missing and 48 V4-only texts; Android has 160 missing and 59 V4-only texts. Zero text exceptions were accepted. The surface audit and all 28 native surfaces remain open.
 
 ## Needs from the integrator
 
