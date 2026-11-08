@@ -77,3 +77,32 @@ test('cancelling before asynchronous connection prevents socket creation', async
   try { f.stop(); await tickMicrotasks(); assert.equal(f.sockets.length, 0); assert.equal(f.done, 0); }
   finally { f.restore(); }
 });
+
+test('pause buffers events, suspends the silence timer and resumes in order while pings continue', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval', 'Date'], now: 1000 });
+  const f = fixture();
+  try {
+    await tickMicrotasks(); const socket = f.sockets[0]; socket.open(); f.stop.pause();
+    socket.onmessage({ data: '{"type":"pong","sent_at_ms":1000}' });
+    socket.onmessage({ data: '{"ok":true,"server":{"status":"running"}}' });
+    t.mock.timers.tick(10000);
+    assert.equal(f.events.length, 0); assert.equal(f.errors.length, 0); assert.equal(socket.readyState, 1);
+    assert.ok(socket.sent.length >= 2);
+    f.stop.resume();
+    assert.equal(f.events.length, 2); assert.equal(f.events[0].latency_ms, 10000);
+    assert.equal(f.events[1].report.server.status, 'running');
+    t.mock.timers.tick(7000); assert.equal(f.errors[0].name, 'TimeoutError');
+  } finally { f.restore(); }
+});
+
+test('nested pause calls require matching resumes and an optional signal resumes once', async () => {
+  const f = fixture();
+  try {
+    await tickMicrotasks(); const socket = f.sockets[0]; socket.open();
+    let resolve; const signal = new Promise(done => { resolve = done; });
+    f.stop.pause(signal); f.stop.pause();
+    socket.onmessage({ data: '{"ok":true,"server":{"status":"running"}}' });
+    resolve(); await tickMicrotasks(); assert.equal(f.events.length, 0);
+    f.stop.resume(); assert.equal(f.events.length, 1);
+  } finally { f.restore(); }
+});
