@@ -6,13 +6,17 @@ import type { DevicePickerAdapter } from './devicePickerTypes';
 
 type Connection = GScaleDeviceState['connection'];
 type Dependencies = { isCurrent(): boolean; scan(): Promise<DiscoveryResult>; probe(endpoint: ServerEndpoint): Promise<DiscoveredServer | null>;
-  validateSelection?: (selection: PrintDeviceSelection) => void | Promise<void> };
+  validateSelection?: (selection: PrintDeviceSelection) => void | Promise<void>; dismissTimeoutMs?: number };
 
-/** A one-shot picker. Unlike the GScale operator, it never restores or saves a device or session Bluetooth printer. */
+/** A one-shot picker. It never restores or saves a device or Bluetooth session.
+ * The sheet owner must call onLeaving when dismissal starts, onDismiss after the sheet entry is removed,
+ * and dispose on owner unmount/account change. cancel is for a request that cannot be presented. */
 export function createTransientDevicePicker(deps: Dependencies) {
   let device: GScaleDeviceState = { selection: null, transport: 'wifi', needsAttention: false, connection: null,
     scanning: false, scanResult: null, checkingAddress: false, addressError: '' };
-  let snapshot = { device }, finished = false, generation = 0, acceptedGeneration: number | null = null;
+  let snapshot = { device }, finished = false, leaving = false, closingForSelection = false, generation = 0, selecting = false;
+  let staged: PrintDeviceSelection | null = null;
+  let dismissalTimer: ReturnType<typeof setTimeout> | undefined;
   const listeners = new Set<() => void>();
   let resolveResult: (selection: PrintDeviceSelection | null) => void = () => {};
   const result = new Promise<PrintDeviceSelection | null>(resolve => { resolveResult = resolve; });
@@ -22,15 +26,18 @@ export function createTransientDevicePicker(deps: Dependencies) {
     for (const listener of listeners) listener();
   };
   const scopeCurrent = () => { try { return deps.isCurrent(); } catch { return false; } };
-  const finish = (selection: PrintDeviceSelection | null) => {
-    if (finished) { if (selection === null) acceptedGeneration = null; return; }
-    const accepted = scopeCurrent() ? selection : null;
-    acceptedGeneration = accepted === null ? null : generation;
-    finished = true; generation++; listeners.clear(); resolveResult(accepted);
+  const clearDismissalTimer = () => { if (dismissalTimer !== undefined) clearTimeout(dismissalTimer); dismissalTimer = undefined; };
+  const cancel = () => {
+    if (finished) return;
+    clearDismissalTimer(); finished = true; staged = null; generation++; listeners.clear(); resolveResult(null);
+  };
+  // A prevented or lost navigation must not leave a stock action waiting forever.
+  const watchDismissal = () => {
+    if (dismissalTimer === undefined) dismissalTimer = setTimeout(cancel, deps.dismissTimeoutMs ?? 15000);
   };
   const current = () => {
-    if (finished) return false;
-    if (!scopeCurrent()) { finish(null); return false; }
+    if (finished || leaving || closingForSelection) return false;
+    if (!scopeCurrent()) { cancel(); return false; }
     return true;
   };
   const adapter: DevicePickerAdapter = {
@@ -39,7 +46,7 @@ export function createTransientDevicePicker(deps: Dependencies) {
     selectConnection: (connection: Connection) => {
       if (!current()) return;
       // Going back invalidates in-flight discovery/probes; their results must not select or update a later page.
-      generation++; update({ connection, scanning: false, checkingAddress: false, addressError: '' });
+      generation++; staged = null; update({ connection, scanning: false, checkingAddress: false, addressError: '' });
       if (connection === 'wifi') void adapter.scanDevices();
     },
     scanDevices: async () => {
@@ -68,15 +75,32 @@ export function createTransientDevicePicker(deps: Dependencies) {
       return server;
     },
     selectionToken: () => generation,
-    isSelectionCurrent: token => finished ? acceptedGeneration === token && scopeCurrent() : current() && token === generation,
+    isSelectionCurrent: token => current() && token === generation,
     selectDevice: async selection => {
-      if (!current()) return false;
-      const version = generation;
+      if (!current() || selecting || staged !== null) return false;
+      const version = generation; selecting = true;
       try { await deps.validateSelection?.(selection); }
       catch (error) { if (!current() || version !== generation) return false; throw error; }
+      finally { selecting = false; }
       if (!current() || version !== generation) return false;
-      finish(selection); return true;
+      staged = selection; return true;
+    },
+    completeSelection: close => {
+      if (!current() || staged === null) return;
+      // Keep the result pending until the originating sheet's onDismiss runs after its entry is removed.
+      closingForSelection = true; generation++; listeners.clear(); watchDismissal();
+      try { close(); } catch (error) { cancel(); throw error; }
     },
   };
-  return { adapter, result, cancel: () => finish(null), dispose: () => finish(null) };
+  const onLeaving = () => {
+    if (finished || leaving || closingForSelection) return;
+    // Invalidate late work immediately, but wait for the native sheet entry to disappear before settling.
+    leaving = true; staged = null; generation++; listeners.clear(); watchDismissal();
+  };
+  const onDismiss = () => {
+    if (finished) return;
+    const selection = closingForSelection && scopeCurrent() ? staged : null;
+    clearDismissalTimer(); finished = true; staged = null; generation++; listeners.clear(); resolveResult(selection);
+  };
+  return { adapter, result, cancel, dispose: cancel, onLeaving, onDismiss, onRemovalPrevented: cancel };
 }

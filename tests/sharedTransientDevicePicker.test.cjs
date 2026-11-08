@@ -19,15 +19,15 @@ function setup(overrides = {}) { const calls = []; let valid = true; const reque
 
 test('picker is transient and returns the complete Wi-Fi server without discovery or storage on creation', async () => {
   const h = setup(); assert.deepEqual(h.calls, []); assert.equal(h.adapter.getSnapshot().device.connection, null);
-  const selection = { transport: 'wifi', server }; await h.adapter.selectDevice(selection);
+  const selection = { transport: 'wifi', server }; await h.adapter.selectDevice(selection); h.adapter.completeSelection(() => {}); h.onDismiss();
   assert.equal(await h.result, selection); assert.equal((await h.result).server, server);
   assert.equal(driverUrlForRs((await h.result).server), 'http://100.117.62.18:39117'); assert.deepEqual(h.calls, []);
 });
 for (const selection of [{ transport: 'bluetooth', bluetoothPrinter: { name: 'printer', address: 'AA' } },
   { transport: 'offline', offlinePrinter: { kind: 'zebra', deviceName: 'USB' } }]) {
   test(`${selection.transport} selection is returned once without persistence/session dependencies`, async () => {
-    const h = setup(); await h.adapter.selectDevice(selection); await h.adapter.selectDevice({ transport: 'wifi', server });
-    h.cancel(); assert.equal(await h.result, selection); assert.deepEqual(h.calls, []);
+    const h = setup(); await h.adapter.selectDevice(selection); assert.equal(await h.adapter.selectDevice({ transport: 'wifi', server }), false);
+    h.adapter.completeSelection(() => {}); h.onDismiss(); h.cancel(); assert.equal(await h.result, selection); assert.deepEqual(h.calls, []);
   });
 }
 test('Wi-Fi scan and manual probe use the existing endpoint validation and preserve full response', async () => {
@@ -76,7 +76,7 @@ test('a rejected selection remains open and can subsequently accept a supported 
   let attempts = 0; const h = setup({ validateSelection: async value => { attempts++; if (value.offlinePrinter?.kind !== 'zebra') throw new Error('Unsupported printer'); } });
   await assert.rejects(h.adapter.selectDevice({ transport: 'offline', offlinePrinter: { kind: 'godex' } }), /Unsupported printer/);
   assert.equal(attempts, 1); const accepted = { transport: 'offline', offlinePrinter: { kind: 'zebra' } };
-  assert.equal(await h.adapter.selectDevice(accepted), true); assert.equal(await h.result, accepted);
+  assert.equal(await h.adapter.selectDevice(accepted), true); h.adapter.completeSelection(() => {}); h.onDismiss(); assert.equal(await h.result, accepted);
 });
 test('pending async validation cannot select after cancel, back, unmount or session change', async () => {
   for (const action of ['cancel', 'back', 'dispose', 'session']) {
@@ -91,8 +91,11 @@ test('session lookup exceptions resolve a transient request as cancelled', async
   const h = setup({ isCurrent: () => { throw new Error('logged out'); } });
   assert.equal(await h.adapter.selectDevice({ transport: 'wifi', server }), false); assert.equal(await h.result, null);
 });
-test('cancel after successful result invalidates its close token without changing the settled result', async () => {
-  const h = setup(), token = h.adapter.selectionToken(); const selection = { transport: 'wifi', server };
-  assert.equal(await h.adapter.selectDevice(selection), true); assert.equal(h.adapter.isSelectionCurrent(token), true);
-  h.cancel(); assert.equal(h.adapter.isSelectionCurrent(token), false); assert.equal(await h.result, selection);
+test('cancel or owner unmount after selection starts closing settles null before dismissal', async () => {
+  for (const action of ['cancel', 'dispose']) {
+    const h = setup(), token = h.adapter.selectionToken(); const selection = { transport: 'wifi', server };
+    assert.equal(await h.adapter.selectDevice(selection), true); let closes = 0; h.adapter.completeSelection(() => closes++);
+    assert.equal(h.adapter.isSelectionCurrent(token), false); h[action](); h.onDismiss();
+    assert.equal(await h.result, null); assert.equal(closes, 1);
+  }
 });

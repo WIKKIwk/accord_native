@@ -89,7 +89,7 @@ test('late USB detection cannot select or close a new sheet after back, cancel, 
       '../../gscale/gscaleBluetoothDevices': { watchGScaleBluetoothDevices: async () => () => {} },
       '../../printing/nativePrinter': { NativeBluetoothPrinter: {} },
       '../../printing/printService': { PrintService: { detectOfflinePrinter: () => detection } } });
-    const picker = useDevicePicker(operator, () => closed++); picker.choose('usb'); const pending = picker.selectUsb();
+    const picker = useDevicePicker(operator, () => closed++, true); picker.choose('usb'); const pending = picker.selectUsb();
     if (reason === 'back') picker.choose(null); else active = false;
     complete({ kind: 'zebra', deviceName: 'USB' }); await pending;
     assert.equal(selected, 0, reason); assert.equal(closed, 0, reason);
@@ -119,7 +119,7 @@ function guardedHook(overrides = {}) {
     '../../gscale/gscaleBluetoothDevices': { watchGScaleBluetoothDevices: async () => () => {} },
     '../../printing/nativePrinter': { NativeBluetoothPrinter: {} },
     '../../printing/printService': { PrintService: { detectOfflinePrinter: overrides.detectOfflinePrinter ?? (async () => ({ kind: 'godex' })) } } });
-  const picker = useDevicePicker(operator, () => closed++);
+  const picker = useDevicePicker(operator, () => closed++, true);
   return { picker, calls, closed: () => closed, invalidate: () => { active = false; }, back: () => operator.selectConnection(null) };
 }
 test('rejected Wi-Fi, Bluetooth and USB selection shows the error and keeps the picker open', async () => {
@@ -173,4 +173,18 @@ test('late Bluetooth discovery events after unmount do not update UI state', asy
   useDevicePicker(operator, () => {}); const cleanup = effects.map(effect => effect()); await new Promise(resolve => setImmediate(resolve));
   cleanup.forEach(fn => fn?.()); const before = changes.length; callback({ printer: { address: 'late' }, complete: true });
   assert.equal(stopped, 1); assert.equal(changes.length, before);
+});
+
+test('default GScale Wi-Fi/Bluetooth rejection remains a rejection rather than opt-in UI handling', async () => {
+  const effects = [], changes = []; const react = { useSyncExternalStore: (_sub, get) => get(), useEffect: fn => effects.push(fn),
+    useState: value => [value, next => changes.push(next)] };
+  const { useDevicePicker } = compile('shared/printing/useDevicePicker.ts', { react, 'react-native': { Platform: { OS: 'ios' } },
+    '../../gscale/gscaleBluetoothDevices': { watchGScaleBluetoothDevices: async () => () => {} },
+    '../../printing/nativePrinter': { NativeBluetoothPrinter: {} }, '../../printing/printService': { PrintService: {} } });
+  let closed = 0; const operator = { subscribe: () => () => {}, getSnapshot: () => ({ device: { connection: null } }),
+    selectDevice: async () => { throw new Error('original rejection'); } };
+  const picker = useDevicePicker(operator, () => closed++);
+  await assert.rejects(picker.selectServer({ endpoint: {}, handshake: {} }), /original rejection/);
+  await assert.rejects(picker.selectBluetooth({ address: 'AA' }), /original rejection/);
+  assert.equal(closed, 0); assert.deepEqual(changes, []);
 });
