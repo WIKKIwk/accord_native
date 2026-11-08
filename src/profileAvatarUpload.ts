@@ -5,12 +5,13 @@ import { activeSessionToken, type Session } from './auth';
 import { initialProfileSnapshot, type ProfileSnapshot } from './profileModel';
 import { uploadAvatar } from './shared/profileApi';
 import { cacheProfileAvatarBytes } from './shared/profileAvatarRuntime';
+import { isProfileSessionCurrent, type ProfileSessionGuard } from './shared/profileSessionGuard';
 
 export class AvatarUploadError extends Error {}
 
 /** Normalize photos, including HEIC, to the server's supported JPEG format. */
-export async function uploadProfileAvatar(session: Session, uri: string, signal: AbortSignal, filename?: string): Promise<ProfileSnapshot> {
-  if (!activeSessionToken(session) || signal.aborted) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
+export async function uploadProfileAvatar(session: Session, uri: string, signal: AbortSignal, filename?: string, isCurrent?: ProfileSessionGuard): Promise<ProfileSnapshot> {
+  if (!activeSessionToken(session) || signal.aborted || !isProfileSessionCurrent(isCurrent)) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
 
   let stage: 'prepare' | 'file' | 'upload' = 'prepare';
   let context: ReturnType<typeof ImageManipulator.manipulate> | undefined;
@@ -21,7 +22,7 @@ export async function uploadProfileAvatar(session: Session, uri: string, signal:
     image = await context.renderAsync();
     const output = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.82 });
     outputUri = output.uri;
-    if (!activeSessionToken(session) || signal.aborted) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
+    if (!activeSessionToken(session) || signal.aborted || !isProfileSessionCurrent(isCurrent)) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
 
     stage = 'file';
     const bytes = Platform.OS === 'web'
@@ -29,11 +30,13 @@ export async function uploadProfileAvatar(session: Session, uri: string, signal:
       : await new File(output.uri).bytes();
     if (!bytes.length) throw new AvatarUploadError('Rasmni o‘qib bo‘lmadi. Boshqa rasm tanlang.');
 
-    if (!activeSessionToken(session) || signal.aborted) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
+    if (!activeSessionToken(session) || signal.aborted || !isProfileSessionCurrent(isCurrent)) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
     stage = 'upload';
-    await uploadAvatar(session, bytes, filename || new File(uri).name || 'avatar.jpg', signal);
-    if (!activeSessionToken(session) || signal.aborted) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
-    cacheProfileAvatarBytes(session, session.profile, bytes);
+    if (isCurrent) await uploadAvatar(session, bytes, filename || new File(uri).name || 'avatar.jpg', signal, isCurrent);
+    else await uploadAvatar(session, bytes, filename || new File(uri).name || 'avatar.jpg', signal);
+    if (!activeSessionToken(session) || signal.aborted || !isProfileSessionCurrent(isCurrent)) throw new AvatarUploadError('Sessiya tugagan. Qayta kiring.');
+    if (isCurrent) cacheProfileAvatarBytes(session, session.profile, bytes, isCurrent);
+    else cacheProfileAvatarBytes(session, session.profile, bytes);
     return initialProfileSnapshot(session);
   } catch (error) {
     if (error instanceof AvatarUploadError) throw error;
