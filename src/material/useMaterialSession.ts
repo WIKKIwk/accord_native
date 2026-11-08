@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { currentSession, isSessionWitnessCurrent, logout, registerSessionResetHook,
   sessionWitnessVersion, subscribeSessionWitness } from '../auth';
-import { clearAppLock } from '../appLock';
 import { startMaterialSessionBootstrap, type MaterialSession } from './materialSessionBootstrap';
 import { isMaterialTestSession } from './materialTestSession';
 
@@ -24,7 +23,7 @@ export function useMaterialSession() {
   const onLogout = () => {
     if (!current || isMaterialTestSession(current.session) || !isSessionWitnessCurrent(current.witness)) return;
     const owner = current.session;
-    void Promise.all([logout(owner).catch(() => {}), clearAppLock(owner).catch(() => {})]).finally(() => {
+    void logout(owner).catch(() => {}).finally(() => {
       const active = currentSession();
       if (mounted.current && (active === owner || active === null)) setEntry(value => value?.session === owner ? null : value);
     });
