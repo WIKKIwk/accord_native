@@ -1,17 +1,18 @@
 # chat
 
 Status: in progress
-Stopped at: unread state, local storage, receipt flusher and the dependency-injected sync engine; no session runtime or role integration is connected yet.
+Stopped at: dependency-injected session runtime; the native adapter, React hook and role integration are not yet connected.
 
 ## Open items
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Shared unread runtime | `ChatRuntime`, `ChatStore.startForCurrentSession` | Connect the per-profile conversation cache to startup, manage foreground lifecycle and clear old-session state; connect a single shared service without changing worker or preparation files. |
-| Chat synchronization | `ChatStore._synchronizeChat`, `_fillMessageGap`, `_acceptRealtimeMessage` | Connect the tested sync engine and local storage to a session runtime and real realtime payloads. The existing native message model omits some V2 fields, which remain open for the full Chat role. |
+| Shared unread runtime | `ChatRuntime`, `ChatStore.startForCurrentSession` | Connect the tested runtime to native adapters, app lifecycle and a single session-scoped hook without changing worker or preparation files. |
+| Chat synchronization | `ChatStore._synchronizeChat`, `_fillMessageGap`, `_acceptRealtimeMessage` | Connect the tested runtime to real network, local storage and realtime adapters. The existing native message model omits some V2 fields, which remain open for the full Chat role. |
 | Live conversation display | `ChatStore._acceptMessage` | Unread state updates the latest sequence and cache ordering time, but does not yet replace the displayed last-message preview or re-sort a live list. Complete that behavior in the Chat role audit before claiming full screen parity. |
 | Malformed recovery payloads | `ChatSyncPage.fromJson`, `ChatMessage.fromJson` | V4 currently rejects a message map that its existing parser cannot preserve rather than advancing past it; V2 supplies defaults for some missing fields. Compare malformed backend responses and resolve this explicit difference in the full Chat audit. |
-| Read and delivery receipts | `ChatStore.markRead`, `_queueReceipt`, `_flushPendingReceipts` | Connect the durable queue and flusher to the shared runtime, including active-conversation clearing and recovery after interruption. |
+| Read and delivery receipts | `ChatStore.markRead`, `_queueReceipt`, `_flushPendingReceipts` | Connect the tested runtime to the durable queue and network adapters, including active-conversation clearing and recovery after interruption. |
+| Outgoing retry recovery | `ChatStore._recoverChatState` | Global recovery of pending text and media is still separate from the unread runtime; preserve the existing thread outbox and complete V2's background retry behavior in the full Chat role. |
 | Chat hook integration | `ChatDetailScreen`, `ChatConversationsScreen` | Connect existing shared Chat list and thread hooks to the same state and lifecycle without replacing their platform screens. |
 | App entry and logout | `ChatRuntime`, `AppRuntimeReset` | The integrator must connect the eventual session-scoped runtime at an authorized common entry point and ensure logout/account switches reset it. |
 | Chat role surfaces | `ChatDetailScreen`, `ChatParticipantProfileScreen` and Chat widgets | Audit and complete the full role on both platforms, including voice, participant profile, request cards and all text, sheets and actions. |
@@ -19,9 +20,9 @@ Stopped at: unread state, local storage, receipt flusher and the dependency-inje
 
 ## Source and drift notes
 
-- This checkpoint follows V2 commit `f11910bb2c8c7081ce26770e69811b03fd0739ed`; the repository baseline pin is still an integrator task. No historical replay fixture was used.
+- This checkpoint follows V2 commit `f11910bb2c8c7081ce26770e69811b03fd0739ed`, now pinned in merged main `dad5041`; an isolated clean source snapshot was verified at that SHA. No historical replay fixture was used.
 - The unread runtime/store/sync/model/local-store/realtime, Chat API part, session/reset, push handler and role dock paths checked are byte-identical between `7c87a54` and `f11910bb`. In the directly relevant changed files, `chat_detail_screen.dart` adds a `setState` forwarding helper without changing active-conversation entry or cleanup; its part uses that helper only for voice state, and `mobile_api.dart` removes an unused math import. This is a behavior-specific comparison, not a proof that all transitively imported library files are identical.
-- `ChatUnreadState` is only the synchronous unread-rule primitive. The local store follows V2 conversation and message upserts, 100-item restore order, cursor persistence and pending-receipt sequence coalescing/acknowledgment. V2 keys by role/ref; V4 deliberately includes server origin as well, matching its existing Chat outbox and preventing cross-server cache bleed. Neither is connected yet: the service does not fetch, sync, deliver receipts or drive a badge.
+- The local store follows V2 conversation and message upserts, 100-item restore order, cursor persistence and pending-receipt sequence coalescing/acknowledgment. V2 keys by role/ref; V4 deliberately includes server origin as well, matching its existing Chat outbox and preventing cross-server cache bleed. The session runtime currently uses injected adapters and does not yet drive a badge.
 - Expo SDK 58 documentation and the installed `expo-sqlite` types/source specify that exclusive transactions use their callback connection, commit or roll back, support iOS and Android, and may cause overlapping writes to fail with a database lock. This store serializes its own operations and uses a separate local database from the existing outbox. Native concurrency and persistence still need real-device verification.
 - The existing Chat socket keeps its invalidation callback and now optionally exposes each recognized raw event to a future shared runtime. Sync, after-sequence history and delivery APIs follow the `f11910bb` source; malformed message-map handling remains an open difference above.
 
@@ -35,5 +36,7 @@ Stopped at: unread state, local storage, receipt flusher and the dependency-inje
 - After the sync/delivery API and optional socket event changes, 46 focused Chat tests passed. iOS TypeScript and lint passed; Android retained the same nine worker errors.
 - The receipt flusher and related storage/transport/state tests: 44 passed. It preserves pending reads after a failed request and does not acknowledge an old account after a switch. iOS TypeScript and lint passed; Android retained the same nine worker errors.
 - The dependency-injected sync engine tests cover paginated cursor progress, 100-page bounds, gap recovery, persistence failures, concurrent calls, active-thread reads, realtime events and session switches. Sixteen sync/unread tests passed; the broader related run passed 46 before two additional focused tests. iOS TypeScript and lint passed; Android retained the same nine worker errors.
+- The session runtime and related transport/storage/sync tests passed 61 cases with mocked platform/network adapters. iOS TypeScript and lint passed; Android retained the same nine worker errors.
+- Pinned ledger reports 25 public API methods and 8 screens/sheets. The text gate fails with 157 unmatched V2 texts per platform and 41 iOS / 52 Android unmatched V4 texts; these scanner findings need a surface-by-surface audit. Ledger `check` passed with 8 endpoint warnings; it does not prove parity.
 - The worktree's incomplete copied dependencies were restored with `npm ci --ignore-scripts --no-audit --no-fund`. An offline Expo server was started briefly to refresh route types and stopped without using a device.
 - Full role gates, text/surface audit and device checks remain open.
