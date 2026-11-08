@@ -736,3 +736,74 @@ test('transition observer stays true until all overlapping attempts finish', asy
     assert.equal(api.currentSession(), null);
   } finally { global.fetch = original; }
 });
+
+test('new login retires only an older login already waiting on authentication', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous); const oldWitness = api.captureSessionWitness(previous);
+    const captures = []; const stop = api.subscribeSessionWitness(() => captures.push(!!api.captureSessionWitness(previous)));
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    const fast = await api.login('https://example.test', 'fast', 'code'); const witness = api.captureSessionWitness(fast);
+    assert.ok(witness); assert.equal(api.sessionWitnessTransitioning(), false); assert.equal(api.isSessionWitnessCurrent(oldWitness), false);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), fast); assert.equal(api.isSessionWitnessCurrent(witness), true);
+    assert.ok(captures.length > 0); assert.ok(captures.every(value => value === false)); stop();
+  } finally { global.fetch = original; }
+});
+
+test('pending endpoint setup is not retired by a newer successful login', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: JSON.parse(init.body).phone } }) });
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous);
+    const set = api.testEndpoints.setBaseUrl;
+    api.testEndpoints.setBaseUrl = async url => { if (url === 'https://old.test') { signal(); await new Promise(resolve => { release = resolve; }); } return set(url); };
+    const old = api.login('https://old.test', 'old', 'code'); const rejected = assert.rejects(old, /Sessiya o‘zgargan/); await entered;
+    const fast = await api.login('https://example.test', 'fast', 'code');
+    assert.equal(api.sessionWitnessTransitioning(), true); assert.equal(api.captureSessionWitness(fast), null);
+    release(); await rejected; assert.equal(api.currentSession(), fast); assert.ok(api.captureSessionWitness(fast));
+  } finally { global.fetch = original; }
+});
+
+test('a failed newer login can restore the previous session while a superseded auth request remains pending', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 401 };
+  };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous); const before = api.captureSessionWitness(previous);
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    await assert.rejects(api.login('https://example.test', 'bad', 'code'), /Login failed/);
+    assert.equal(api.currentSession(), previous); const witness = api.captureSessionWitness(previous); assert.ok(witness); assert.equal(api.isSessionWitnessCurrent(before), false);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), previous); assert.equal(api.isSessionWitnessCurrent(witness), true);
+  } finally { global.fetch = original; }
+});
+
+test('failed newer login storage rollback restores prior session without waiting for superseded auth', async () => {
+  const original = global.fetch, values = new Map(); let release, signal, failMetadata = false;
+  const entered = new Promise(resolve => { signal = resolve; });
+  const secure = { getItemAsync: async key => values.get(key) ?? null, deleteItemAsync: async key => values.delete(key),
+    setItemAsync: async (key, value) => { if (failMetadata && key === 'accord_v4_session') { failMetadata = false; throw Error('storage failure'); } values.set(key, value); } };
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth(secure, 'ios'), previous = oldSession(); await api.saveSession(previous);
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    failMetadata = true; await assert.rejects(api.login('https://example.test', 'new', 'code'), /storage failure/);
+    assert.equal(api.currentSession(), previous); assert.equal(values.get('accord_v4_token'), 'old-token');
+    const witness = api.captureSessionWitness(previous); assert.ok(witness);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), previous); assert.equal(api.isSessionWitnessCurrent(witness), true);
+  } finally { global.fetch = original; }
+});
