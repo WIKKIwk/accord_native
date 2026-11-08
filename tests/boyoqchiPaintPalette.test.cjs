@@ -21,19 +21,26 @@ function compile(relative, mocks = {}) {
 }
 const { paintOptions } = compile('workerOrderLogic.ts', { './workerControlsApi': {} });
 const { ReturnedPaintDraft } = compile('boyoqchi/returnedPaintDraft.ts', { './returnedPaintModel': {} });
-const { boyoqchiPaintCompletion } = compile('boyoqchi/boyoqchiPaintPaletteLogic.ts');
-function load(platform) {
+const paletteLogic = compile('boyoqchi/boyoqchiPaintPaletteLogic.ts');
+const { boyoqchiPaintCompletion } = paletteLogic;
+function load(platform, translate = value => value, direction = 'leftToRight') {
   const mods = Object.fromEntries(['accessibilityHidden','background','buttonStyle','font','foregroundStyle','frame','padding']
     .map(id => [id, (...args) => ({ id, args })]));
   mods.shapes = { capsule: () => 'capsule' };
+  const compose = Object.fromEntries(['Box','Button','Column','Host','RNHostView','Row','SingleChoiceSegmentedButtonRow','Spacer','Text']
+    .map(id => [id, id]));
+  compose.SegmentedButton = Object.assign(() => {}, { Label: 'SegmentedButton.Label' });
   return compile(`boyoqchi/BoyoqchiPaintPalette.${platform}.tsx`, {
     'react/jsx-runtime': jsx, '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', Image: 'Image', Text: 'Text', VStack: 'VStack', ZStack: 'ZStack' },
-    '@expo/ui/swift-ui/modifiers': mods, '../workerOrderLogic': { paintOptions }, './boyoqchiPaintPaletteLogic': { boyoqchiPaintCompletion },
-    './useBoyoqchiText': { useBoyoqchiText: () => value => value }, '../components/WorkerPaintPalette': { WorkerPaintPalette: 'WorkerPaintPalette' },
+    '@expo/ui/swift-ui/modifiers': mods, '@expo/ui/jetpack-compose': compose,
+    '@expo/ui/jetpack-compose/modifiers': Object.fromEntries(['align','fillMaxWidth','height','padding','weight'].map(id => [id, (...args) => ({ id, args })])),
+    'expo-symbols': { SymbolView: 'SymbolView' }, '../workerOrderLogic': { paintOptions }, './boyoqchiPaintPaletteLogic': paletteLogic,
+    './useBoyoqchiText': { useBoyoqchiText: () => translate },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ direction }) },
   }).BoyoqchiPaintPalette;
 }
 const draft = () => new ReturnedPaintDraft(() => {});
-const swatch = (tree, name) => nodes(tree, node => node.type === 'Button' && node.props.children?.type === 'ZStack' &&
+const swatch = (tree, name) => nodes(tree, node => node.type === 'Button' && ['ZStack', 'Box'].includes(node.props.children?.type) &&
   nodes(node.props.children, child => child.type === 'Text' && child.props.children === name).length)[0];
 
 test('iOS palette groups native swatches in three columns with exact V2 colors and usable choices', () => {
@@ -79,8 +86,114 @@ test('iOS completion indicators reflect real draft fields, Pantone Mix and selec
   assert.equal(glyph('astatka', 'Mix'), 'checkmark'); assert.equal(glyph('rasxot', 'Mix'), null);
 });
 
-test('Android delegates to the existing Worker palette with unchanged callbacks and no fabricated badge', () => {
-  const Palette = load('android'), props = { draft: draft(), usage: 'astatka', onUsage() {}, onSelect() {} };
-  const tree = Palette(props); assert.equal(tree.type, 'WorkerPaintPalette');
-  assert.deepEqual(tree.props, { usage: props.usage, onUsage: props.onUsage, onSelect: props.onSelect });
+test('Android palette reuses native controls with the same V2 groups, three columns, tones and actions', () => {
+  const Palette = load('android'), selections = [], usages = [];
+  const tree = Palette({ draft: draft(), usage: 'astatka', onUsage: value => usages.push(value), onSelect: value => selections.push(value) });
+  assert.equal(tree.type, 'Host'); assert.deepEqual(tree.props.matchContents, { vertical: true });
+  const texts = nodes(tree, node => node.type === 'Text');
+  for (const title of ['Ranglar','Laklar','Erituvchilar / spirtli suyuqliklar']) assert.equal(texts.filter(n => n.props.children === title).length, 1);
+  const rows = nodes(tree, node => node.type === 'Row');
+  assert.deepEqual(rows.map(row => row.props.children[0].length), [3,3,3,1,1]);
+  assert.deepEqual(rows.map(row => row.props.children[1].length), [0,0,0,2,2]);
+  for (const row of rows) assert.deepEqual(row.props.horizontalArrangement, { spacedBy: 10 });
+  const ios = load('ios')({ draft: draft(), usage: 'astatka', onUsage() {}, onSelect() {} });
+  for (const { name } of paintOptions) {
+    const button = swatch(tree, name), nativeTone = swatch(ios, name).props.children.props.modifiers.find(mod => mod.id === 'background').args[0];
+    assert.equal(button.props.colors.containerColor, nativeTone, name);
+    assert.deepEqual(button.props.modifiers, [{ id: 'weight', args: [1] }, { id: 'height', args: [64] }]);
+    assert.deepEqual(button.props.contentPadding, { start: 0, top: 0, end: 0, bottom: 0 });
+    assert.equal(button.props.children.props.contentAlignment, 'center'); button.props.onClick();
+  }
+  assert.deepEqual(selections, paintOptions.map(option => option.name));
+  assert.equal(nodes(tree, node => node.type === 'SymbolView').length, 0);
+  const tabs = nodes(tree, node => typeof node.type === 'function');
+  assert.deepEqual(tabs.map(tab => tab.props.selected), [false, true]);
+  tabs[0].props.onClick(); tabs[1].props.onClick(); assert.deepEqual(usages, ['rasxot', 'astatka']);
+  const other = Palette({ draft: draft(), usage: 'rasxot', onUsage() {}, onSelect() {} });
+  assert.deepEqual(nodes(other, node => typeof node.type === 'function').map(tab => tab.props.selected), [true, false]);
 });
+
+for (const platform of ['ios', 'android']) {
+  test(`${platform} indicators update from restored draft values, including named and cleared fields in both usages`, () => {
+    const Palette = load(platform), option = name => paintOptions.find(o => o.name === name), d = new ReturnedPaintDraft(() => {}, {
+      values: { 'rasxot:Oq': ['0'], 'rasxot:Pantone Mix': ['3'], 'astatka:Mix': ['0'] },
+      dynamic_field_labels: { 'rasxot:Pantone': ['Blue'], 'rasxot:Pantone Mix': ['Recipe'], 'astatka:Mix': ['Custom'] },
+    });
+    const render = usage => Palette({ draft: d, usage, onUsage() {}, onSelect() {} });
+    const glyph = (usage, name) => {
+      const image = nodes(swatch(render(usage), name), n => n.type === (platform === 'ios' ? 'Image' : 'SymbolView'))[0];
+      return image ? { name: platform === 'ios' ? image.props.systemName : image.props.name.android,
+        size: image.props.size, color: platform === 'ios' ? image.props.color : image.props.tintColor } : null;
+    };
+    const partial = platform === 'ios' ? 'star.fill' : 'star', complete = platform === 'ios' ? 'checkmark' : 'check';
+    assert.deepEqual(glyph('rasxot', 'Oq'), { name: partial, size: 16, color: '#332C26' });
+    assert.equal(glyph('astatka', 'Oq'), null);
+    assert.deepEqual(glyph('rasxot', 'Pantone'), { name: partial, size: 16, color: '#FFFFFF' });
+    d.setValue('rasxot:Pantone', 0, '2', 1);
+    assert.equal(glyph('rasxot', 'Pantone').name, complete);
+    d.setValue('rasxot:Pantone Mix', 0, ' ', 1); assert.equal(glyph('rasxot', 'Pantone').name, partial);
+    d.setValue('rasxot:Pantone', 0, '', 1); assert.equal(glyph('rasxot', 'Pantone'), null);
+    for (const name of ['Oq', 'Lak', 'Spirtlar']) {
+      const fields = option(name).fields;
+      fields.forEach((_, i) => d.setValue(`rasxot:${name}`, i, '0', fields.length));
+      assert.equal(glyph('rasxot', name).name, complete); assert.equal(glyph('rasxot', name).size, 17);
+      assert.equal(glyph('astatka', name), null);
+      d.addNamedField(`rasxot:${name}`, 'Custom'); assert.equal(glyph('rasxot', name).name, partial);
+      d.setValue(`rasxot:${name}`, fields.length, '1', fields.length + 1); assert.equal(glyph('rasxot', name).name, complete);
+      fields.forEach((_, i) => d.setValue(`rasxot:${name}`, i, '\t ', fields.length + 1));
+      d.setValue(`rasxot:${name}`, fields.length, '', fields.length + 1); assert.equal(glyph('rasxot', name), null);
+    }
+    assert.equal(glyph('astatka', 'Mix').name, complete); assert.equal(glyph('rasxot', 'Mix'), null);
+    d.setValue('astatka:Mix', 0, '', 1); assert.equal(glyph('astatka', 'Mix'), null);
+  });
+
+  test(`${platform} translates existing V2 labels without adding completion text or mutating the draft`, () => {
+    const translated = [], Palette = load(platform, value => { translated.push(value); return `translated:${value}`; }), d = draft();
+    const before = JSON.stringify(d.toJson());
+    const tree = Palette({ draft: d, usage: 'rasxot', onUsage() {}, onSelect() {} });
+    const expected = ['Rasxot', 'Astatka', 'Ranglar', ...paintOptions.filter(o => o.category === 'colors').map(o => o.name),
+      'Laklar', 'Lak', 'Erituvchilar / spirtli suyuqliklar', 'Spirtlar'];
+    assert.deepEqual(translated, expected);
+    assert.deepEqual(nodes(tree, node => node.type === 'Text').map(node => node.props.children).filter(Boolean), expected.map(value => `translated:${value}`));
+    assert.equal(JSON.stringify(d.toJson()), before);
+  });
+}
+
+test('Android completion symbols stay inside the button without becoming a second touch or accessibility target', () => {
+  const d = draft(); d.setValue('rasxot:Lak', 0, '1', 2);
+  const button = swatch(load('android')({ draft: d, usage: 'rasxot', onUsage() {}, onSelect() {} }), 'Lak');
+  const host = nodes(button, n => n.type === 'RNHostView')[0], glyph = host.props.children;
+  assert.equal(host.props.matchContents, true);
+  assert.deepEqual(host.props.modifiers, [{ id: 'align', args: ['topEnd'] }, { id: 'padding', args: [0, 8, 12, 0] }]);
+  assert.equal(glyph.props.pointerEvents, 'none'); assert.equal(glyph.props.accessible, false);
+  assert.equal(glyph.props.importantForAccessibility, 'no-hide-descendants');
+});
+
+test('completion follows V2 nonempty text rather than numeric validation and ignores unresolved stored values', () => {
+  const d = new ReturnedPaintDraft(() => {}, { values: { 'rasxot:Mix': ['old orphan value'], 'rasxot:Lak': ['invalid', '-1'] } });
+  const option = name => paintOptions.find(o => o.name === name);
+  assert.equal(boyoqchiPaintCompletion(d, 'rasxot', option('Mix')), null);
+  assert.equal(boyoqchiPaintCompletion(d, 'rasxot', option('Pantone')), null);
+  assert.equal(boyoqchiPaintCompletion(d, 'rasxot', option('Lak')), 'complete');
+  d.setValue('rasxot:Lak', 1, ' ', 2); assert.equal(boyoqchiPaintCompletion(d, 'rasxot', option('Lak')), 'partial');
+});
+
+for (const direction of ['leftToRight', 'rightToLeft']) {
+  test(`native palettes follow app ${direction} while retaining V2's absolute right indicator inset`, () => {
+    const d = draft(); d.setValue('rasxot:Lak', 0, '1', 2);
+    for (const platform of ['ios', 'android']) {
+      const tree = load(platform, value => value, direction)({ draft: d, usage: 'rasxot', onUsage() {}, onSelect() {} });
+      assert.equal(tree.props.layoutDirection, direction);
+      const button = swatch(tree, 'Lak'), rtl = direction === 'rightToLeft';
+      if (platform === 'ios') {
+        assert.equal(button.props.children.props.alignment, rtl ? 'topLeading' : 'topTrailing');
+        const image = nodes(button, node => node.type === 'Image')[0];
+        assert.deepEqual(image.props.modifiers[0], { id: 'padding', args: [rtl ? { top: 8, leading: 12 } : { top: 8, trailing: 12 }] });
+      } else {
+        const host = nodes(button, node => node.type === 'RNHostView')[0];
+        assert.deepEqual(host.props.modifiers, [{ id: 'align', args: [rtl ? 'topStart' : 'topEnd'] },
+          { id: 'padding', args: [rtl ? 12 : 0, 8, rtl ? 0 : 12, 0] }]);
+      }
+    }
+  });
+}
