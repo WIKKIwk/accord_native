@@ -10,14 +10,17 @@ export class BoyoqchiRequestsController {
   private generation = 0;
   private catalogGeneration = 0;
   constructor(private readonly loadRequests: () => Promise<ReturnedPaintRequestPage>,
-    private readonly loadApparatus: (() => Promise<AdminApparatus[]>) | null = null) {}
+    private readonly loadApparatus: (() => Promise<AdminApparatus[]>) | null = null,
+    private readonly isCurrent: () => boolean = () => true) {}
   getSnapshot = (): BoyoqchiRequestsState => this.state;
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private update(change: Partial<BoyoqchiRequestsState>) {
+    if (!this.isCurrent()) return;
     this.state = { ...this.state, ...change };
     this.listeners.forEach(listener => listener());
   }
   async refresh(propagateError = false): Promise<void> {
+    if (!this.isCurrent()) return;
     const current = ++this.generation;
     this.update({ phase: 'loading', expandedKey: null });
     try {
@@ -29,7 +32,7 @@ export class BoyoqchiRequestsController {
     }
   }
   async refreshApparatus(): Promise<void> {
-    if (!this.loadApparatus) return;
+    if (!this.loadApparatus || !this.isCurrent()) return;
     const current = ++this.catalogGeneration;
     try {
       const apparatus = await this.loadApparatus();
