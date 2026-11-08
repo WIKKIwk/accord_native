@@ -15,12 +15,12 @@ function setup(platform) {
   const worker = { id: 'ali', name: 'Ali', phone: '123', level: 'Master' }, apparatus = [{ id: 'apparatus:default:1', name: 'Rezka 1' }];
   const state = { phase: 'ready', team: { workers: [worker], apparatus, assignments: [] }, expandedId: 'ali', picker: null, notice: null, savingIds: [] };
   const controller = { getSnapshot: () => state, subscribe: () => () => {}, load: async () => calls.push('load'), expand: id => calls.push(['expand', id]),
-    openPicker: id => { calls.push(['open', id]); state.picker = { worker, previous: null, selected: [], saving: false, blocked: null }; },
+    isWriteLocked: () => false, openPicker: id => { calls.push(['open', id]); state.picker = { worker, previous: null, selected: [], saving: false, blocked: null }; },
     toggle: (id, value) => { calls.push(['toggle', id, value]); state.picker.selected = value ? [id] : []; },
     save: async () => calls.push('save'), closePicker: () => calls.push('close'), dismissPicker: () => calls.push('dismiss') };
   const sheet = { open: (content, options) => { sheetContent = content; sheetOptions = options; }, isOpen: () => !!sheetContent, close: () => calls.push('sheet.close') };
   const t = (key, values) => values ? `${key}:${JSON.stringify(values)}` : key;
-  const hooks = { useRezkaWorkerSettings: () => ({ controller, state, t, notice: value => t(value.key, value.values) }), useRezkaAdminText: () => t };
+  const hooks = { useRezkaWorkerSettings: () => ({ controller, state, t, notice: value => t(value.key, value.values) }), useRezkaAdminText: () => t, useRezkaNoticeText: () => value => t(value.key, value.values) };
   const elementTypes = new Proxy({ useMaterialColors: () => ({}) }, { get: (target, key) => target[key] ?? key });
   const modifiers = new Proxy({}, { get: (_target, key) => (...args) => ({ modifier: key, args }) });
   const mocks = { 'react/jsx-runtime': jsx, react: { useEffect() {}, useSyncExternalStore: (_subscribe, snapshot) => snapshot() },

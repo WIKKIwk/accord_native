@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { activeSessionEpoch, registerSessionResetHook, type Session } from '../auth';
+import { registerSessionResetHook, subscribeSessionWitness, type Session } from '../auth';
+import { appPreferences } from '../appPreferences';
+import { SearchActivityStore } from '../shared/searchActivityStore';
 import { gscaleItemsPage } from '../shared/catalogApi';
 import { uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { rezkaSource, rezkaSplit, rezkaSplitClientPrintConfirm, rezkaSplitClientPrintPrepare } from './rezkaSplitApi';
-import { currentRezkaScope, isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
+import { captureRezkaSession, guardedRezkaRequest, isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 import { RezkaItemPickerController } from './rezkaItemPickerController';
 import { RezkaSplitController } from './rezkaSplitController';
 import type { RezkaPrinterBridge } from './rezkaSplitScreenTypes';
@@ -17,8 +19,7 @@ export function useRezkaText() {
 }
 
 export function useRezkaSplit(session: Session, printer: RezkaPrinterBridge) {
-  const scope = currentRezkaScope(session), epoch = activeSessionEpoch(session);
-  const snapshot = useMemo(() => Object.freeze({ session, scope, epoch }), [session, scope, epoch]);
+  const snapshot = useMemo(() => captureRezkaSession(session), [session]);
   const controller = useMemo(() => new RezkaSplitController({
     isCurrent: () => isRezkaSessionCurrent(snapshot, 'split'), loadSource: barcode => rezkaSource(session, barcode, snapshot),
     resolvePrinter: state => printer.resolve(state), split: request => rezkaSplit(session, request, snapshot),
@@ -32,13 +33,15 @@ export function useRezkaSplit(session: Session, printer: RezkaPrinterBridge) {
   const leases = useRef(new Map<RezkaSplitController, number>());
   useEffect(() => {
     const owners = leases.current;
-    owners.set(controller, (owners.get(controller) ?? 0) + 1);
+    controller.resume(); owners.set(controller, (owners.get(controller) ?? 0) + 1);
     const unregister = registerSessionResetHook(async () => controller.invalidate());
+    const unwatch = subscribeSessionWitness(() => { if (!isRezkaSessionCurrent(snapshot, 'split')) controller.invalidate(); });
+    if (!isRezkaSessionCurrent(snapshot, 'split')) controller.invalidate();
     return () => {
-      unregister(); owners.set(controller, (owners.get(controller) ?? 1) - 1);
+      controller.suspend(); unregister(); unwatch(); owners.set(controller, (owners.get(controller) ?? 1) - 1);
       queueMicrotask(() => { if (owners.get(controller) === 0) { owners.delete(controller); controller.dispose(); } });
     };
-  }, [controller]);
+  }, [controller, snapshot]);
   useEffect(() => {
     if (!state.notice) return;
     const timer = setTimeout(() => controller.clearNotice(), 4000);
@@ -59,19 +62,23 @@ export function useRezkaSplit(session: Session, printer: RezkaPrinterBridge) {
 }
 
 export function useRezkaItemPicker(snapshot: RezkaSessionSnapshot) {
-  const controller = useMemo(() => new RezkaItemPickerController({ isCurrent: () => isRezkaSessionCurrent(snapshot, 'split'),
-    load: (query, limit) => gscaleItemsPage(snapshot.session, { query, limit }) }), [snapshot]);
+  // A picker has its own account-scoped reader; stale async loads cannot mutate the shared singleton.
+  const pickerScope = useMemo(() => ({ snapshot, activity: new SearchActivityStore(appPreferences) }), [snapshot]);
+  const controller = useMemo(() => new RezkaItemPickerController({ isCurrent: () => isRezkaSessionCurrent(pickerScope.snapshot, 'split'),
+    load: (query, limit) => guardedRezkaRequest(pickerScope.snapshot.session, 'split', pickerScope.snapshot, false,
+      beforeSend => gscaleItemsPage(pickerScope.snapshot.session, { query, limit }, beforeSend, pickerScope.activity)) }), [pickerScope]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const leases = useRef(new Map<RezkaItemPickerController, number>());
   useEffect(() => {
     const owners = leases.current;
-    owners.set(controller, (owners.get(controller) ?? 0) + 1);
+    controller.resume(); owners.set(controller, (owners.get(controller) ?? 0) + 1);
     const unregister = registerSessionResetHook(async () => controller.invalidate());
-    controller.start();
+    const unwatch = subscribeSessionWitness(() => { if (!isRezkaSessionCurrent(snapshot, 'split')) controller.invalidate(); });
+    if (isRezkaSessionCurrent(snapshot, 'split')) controller.start(); else controller.invalidate();
     return () => {
-      unregister(); owners.set(controller, (owners.get(controller) ?? 1) - 1);
+      controller.suspend(); unregister(); unwatch(); owners.set(controller, (owners.get(controller) ?? 1) - 1);
       queueMicrotask(() => { if (owners.get(controller) === 0) { owners.delete(controller); controller.dispose(); } });
     };
-  }, [controller]);
+  }, [controller, snapshot]);
   return { controller, state };
 }

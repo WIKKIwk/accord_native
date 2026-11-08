@@ -9,6 +9,7 @@ export class RezkaItemPickerController {
   private state: RezkaItemPickerState = { query: '', items: [], loading: true };
   private listeners = new Set<() => void>();
   private disposed = false;
+  private suspended = false;
   private started = false;
   private searchGeneration = 0;
   private loadGeneration = 0;
@@ -17,7 +18,7 @@ export class RezkaItemPickerController {
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private active() {
-    if (this.disposed) return false;
+    if (this.disposed || this.suspended) return false;
     if (!this.deps.isCurrent()) { this.invalidate(); return false; }
     return true;
   }
@@ -30,6 +31,8 @@ export class RezkaItemPickerController {
     this.disposed = true; this.cancelTimer?.(); this.cancelTimer = null; this.loadGeneration++;
     this.state = { query: '', items: [], loading: false }; this.listeners.forEach(listener => listener());
   }
+  suspend() { this.suspended = true; }
+  resume() { if (!this.disposed) this.suspended = false; }
   dispose() { this.disposed = true; this.cancelTimer?.(); this.cancelTimer = null; this.loadGeneration++; this.listeners.clear(); }
   start() {
     if (!this.active() || this.started) return;

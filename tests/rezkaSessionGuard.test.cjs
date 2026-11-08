@@ -25,12 +25,17 @@ function session(role = 'rezka_master', capabilities = ['rezka.master.access']) 
 const request = { source_barcode: 'b', source_stock_entry: 's', source_line_index: 0, reason: '', driver_url: 'https://printer',
   printer: 'z', print_mode: 'label', outputs: [{ item_code: 'i', item_name: 'I', qty: 1, uom: 'kg', target_warehouse: 'w', reason: '' }] };
 function setup(s, refresh = async () => true) {
-  let active = s, epoch = 1;
+  let active = s, epoch = 1, generation = 1, transitioning = false;
+  const issued = new WeakSet(), scope = value => JSON.stringify([value.profile, value.capabilities, value.assigned_apparatus, value.assigned_item_groups, value.assigned_warehouses]);
   const auth = { activeSessionToken: value => value === active ? value.token : null,
-    activeSessionEpoch: value => value === active ? epoch : null, refreshSession: refresh };
+    activeSessionEpoch: value => value === active ? epoch : null, refreshSession: refresh,
+    captureSessionWitness: value => { if (transitioning || value !== active) return null; const witness = { session: value, epoch, generation, scope: scope(value) }; issued.add(witness); return witness; },
+    isSessionWitnessCurrent: witness => { if (!witness || !issued.has(witness)) return false; const valid = !transitioning && witness.session === active &&
+      witness.epoch === epoch && witness.generation === generation && witness.scope === scope(witness.session); if (!valid) issued.delete(witness); return valid; } };
   const load = loader({ '../auth': auth, './auth': auth });
-  return { api: load('rezka/rezkaMasterApi'), split: load('rezka/rezkaSplitApi'), printSide: load('rezka/rezkaPrintSide'), guard: load('rezka/rezkaSessionGuard'),
-    switchTo: value => { active = value; }, bumpEpoch: () => { epoch++; } };
+  return { apparatus: load('apparatusApi'), api: load('rezka/rezkaMasterApi'), split: load('rezka/rezkaSplitApi'), printSide: load('rezka/rezkaPrintSide'), guard: load('rezka/rezkaSessionGuard'),
+    switchTo: value => { if (active !== value) generation++; active = value; }, bumpEpoch: () => { epoch++; generation++; },
+    beginTransition: () => { transitioning = true; generation++; }, endTransition: () => { transitioning = false; generation++; } };
 }
 test('master mutation requires active exact session, role, capability and captured scope before initial send', async () => {
   const previousFetch = global.fetch; let count = 0;
@@ -165,9 +170,43 @@ test('missing, inactive, or another session snapshot fails closed before sending
   } finally { global.fetch = previousFetch; }
 });
 
-test('documented epoch limits: same-epoch ABA and capture after login start are not detected', () => {
+test('witness rejects same-epoch ABA and cannot be captured during a login transition', () => {
   const s = session(), other = session(), t = setup(s), before = t.guard.captureRezkaSession(s);
-  t.switchTo(other); t.switchTo(s); assert.equal(t.guard.isRezkaSessionCurrent(before, 'master'), true);
-  t.bumpEpoch(); const duringTransition = t.guard.captureRezkaSession(s);
-  assert.equal(t.guard.isRezkaSessionCurrent(duringTransition, 'master'), true);
+  t.switchTo(other); t.switchTo(s); assert.equal(t.guard.isRezkaSessionCurrent(before, 'master'), false);
+  t.beginTransition(); const duringTransition = t.guard.captureRezkaSession(s);
+  assert.equal(duringTransition.witness, null); assert.equal(t.guard.isRezkaSessionCurrent(duringTransition, 'master'), false);
+  t.endTransition(); assert.equal(t.guard.isRezkaSessionCurrent(duringTransition, 'master'), false);
+});
+
+test('known fake test token cannot reach role reads, writes or split requests', async () => {
+  const previousFetch = global.fetch; let count = 0; global.fetch = async () => { count++; return new Response('{}', { status: 200 }); };
+  try {
+    const master = session(); master.token = 'test-mode-token'; const t = setup(master), snapshot = t.guard.captureRezkaSession(master);
+    await assert.rejects(t.api.rezkaMasterWorkers(master, snapshot), e => !e.mayHaveExecuted);
+    await assert.rejects(t.api.rezkaMasterAssignWorker(master, 'w', [], [], snapshot), e => !e.mayHaveExecuted);
+    await assert.rejects(t.printSide.rezkaMasterSavePrintSideGuarded(master, 'o', false, true, snapshot), e => !e.mayHaveExecuted);
+    const admin = session('admin', ['rezka.split.manage']); admin.token = 'test-mode-token'; const split = setup(admin);
+    await assert.rejects(split.split.rezkaSplit(admin, request, split.guard.captureRezkaSession(admin)), e => !e.mayHaveExecuted);
+    assert.equal(count, 0);
+  } finally { global.fetch = previousFetch; }
+});
+
+test('a role snapshot once observed invalid remains retired if a fake token or capability returns', () => {
+  const s = session(), t = setup(s), first = t.guard.captureRezkaSession(s);
+  s.token = 'test-mode-token'; assert.equal(t.guard.isRezkaSessionCurrent(first, 'master'), false);
+  s.token = 'test-token'; assert.equal(t.guard.isRezkaSessionCurrent(first, 'master'), false);
+  const second = t.guard.captureRezkaSession(s); s.capabilities = [];
+  assert.equal(t.guard.isRezkaSessionCurrent(second, 'master'), false);
+  s.capabilities = ['rezka.master.access']; assert.equal(t.guard.isRezkaSessionCurrent(second, 'master'), false);
+});
+
+test('shared apparatus read rejects a 401 retry after witness or scope changes', async () => {
+  const original = global.fetch; let sends = 0, t;
+  global.fetch = async () => { sends++; return new Response('{}', { status: 401 }); };
+  try {
+    const s = session(); t = setup(s, async () => { t.beginTransition(); return true; }); const snapshot = t.guard.captureRezkaSession(s);
+    await assert.rejects(t.guard.guardedRezkaRequest(s, 'master', snapshot, false, beforeSend =>
+      t.apparatus.adminApparatus(s, { limit: 500, beforeSend })), e => e.name === 'RezkaScopeChanged');
+    assert.equal(sends, 1);
+  } finally { global.fetch = original; }
 });

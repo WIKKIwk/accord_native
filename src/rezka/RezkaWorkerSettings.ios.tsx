@@ -8,13 +8,13 @@ import { useNativeSheet } from '../nativeSheet';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import type { RezkaWorkerSettingsProps } from './rezkaWorkerScreenTypes';
 import { apparatusLabels, type RezkaWorkerSettingsController } from './rezkaWorkerController';
-import { useRezkaAdminText, useRezkaWorkerSettings } from './useRezkaWorkerSettings';
+import { useRezkaAdminText, useRezkaNoticeText, useRezkaWorkerSettings } from './useRezkaWorkerSettings';
 
 const levels: Record<string, string> = { Brigader: 'brigader', Master: 'master', '1 - darajali': 'one', '2 - darajali': 'two', '3 - darajali': 'three' };
 
 function AssignmentPicker({ controller }: { controller: RezkaWorkerSettingsController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const t = useRezkaAdminText(), picker = state.picker, team = state.team;
+  const t = useRezkaAdminText(), notice = useRezkaNoticeText(), picker = state.picker, team = state.team;
   if (!picker || !team) return null;
   return <View style={{ minHeight: 420 }}><Host style={{ flex: 1 }}><VStack>
     <Text modifiers={[font({ textStyle: 'title2', weight: 'bold' })]}>{t('scope.operator_title')}</Text>
@@ -28,9 +28,9 @@ function AssignmentPicker({ controller }: { controller: RezkaWorkerSettingsContr
       </Section>
     </List>
   </VStack></Host>
-    {picker.blocked ? <View accessibilityRole="alert" accessibilityLiveRegion="polite"><Host matchContents={{ vertical: true }}><Text>{t(picker.blocked.key, picker.blocked.values)}</Text></Host></View> : null}
+    {picker.blocked ? <View accessibilityRole="alert" accessibilityLiveRegion="polite"><Host matchContents={{ vertical: true }}><Text>{notice(picker.blocked)}</Text></Host></View> : null}
     <Host matchContents={{ vertical: true }}><Button label={t(picker.saving ? 'action.saving' : 'scope.save_action')}
-      modifiers={[buttonStyle('borderedProminent'), disabled(picker.saving || !picker.selected.length), accessibilityIdentifier('worker-apparatus-save')]}
+      modifiers={[buttonStyle('borderedProminent'), disabled(picker.saving || !picker.selected.length || controller.isWriteLocked(picker.worker.id)), accessibilityIdentifier('worker-apparatus-save')]}
       onPress={() => { void controller.save(); }} /></Host>
   </View>;
 }

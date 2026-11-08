@@ -43,6 +43,7 @@ export class RezkaSplitController {
   private state = initial();
   private listeners = new Set<() => void>();
   private disposed = false;
+  private suspended = false;
   private mutationStarted = false;
   private nextDraftKey = 0;
   constructor(private readonly deps: RezkaSplitDependencies) {}
@@ -50,7 +51,7 @@ export class RezkaSplitController {
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private active() {
-    if (this.disposed) return false;
+    if (this.disposed || this.suspended) return false;
     if (!this.deps.isCurrent()) { this.invalidate(this.mutationStarted); return false; }
     return true;
   }
@@ -65,6 +66,8 @@ export class RezkaSplitController {
     this.state = { ...initial(), uncertain };
     this.listeners.forEach(listener => listener());
   }
+  suspend() { this.suspended = true; }
+  resume() { if (!this.disposed) this.suspended = false; }
   dispose() { this.disposed = true; this.listeners.clear(); }
   setBarcode(barcode: string) { this.update({ barcode }); }
   setReason(reason: string) { this.update({ reason }); }

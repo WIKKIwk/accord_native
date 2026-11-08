@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { registerSessionResetHook } from '../auth';
+import { registerSessionResetHook, subscribeSessionWitness } from '../auth';
 import { adminText, localizedGetter, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { rezkaMasterSaveOrderSettings } from './rezkaMasterApi';
@@ -50,10 +50,12 @@ export function useRezkaOrderSettings({ snapshot, map, onSaved }: RezkaOrderQuic
     const leases = owners.current;
     controller.resume(); leases.set(controller, (leases.get(controller) ?? 0) + 1);
     const unregister = registerSessionResetHook(async () => controller.invalidate());
+    const unwatch = subscribeSessionWitness(() => { if (!isRezkaSessionCurrent(snapshot, 'master')) controller.invalidate(); });
+    if (!isRezkaSessionCurrent(snapshot, 'master')) controller.invalidate();
     return () => {
-      controller.suspend(); unregister(); leases.set(controller, (leases.get(controller) ?? 1) - 1);
+      controller.suspend(); unregister(); unwatch(); leases.set(controller, (leases.get(controller) ?? 1) - 1);
       queueMicrotask(() => { if (leases.get(controller) === 0) { leases.delete(controller); controller.dispose(); } });
     };
-  }, [controller]);
+  }, [controller, snapshot]);
   return { controller, state };
 }

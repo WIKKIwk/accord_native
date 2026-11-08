@@ -1,6 +1,7 @@
 import type { AdminApparatus } from '../apparatusApi';
 import { isCanonicalApparatusId } from '../workerControlsApi';
 import type { RezkaAssignment, RezkaWorker } from './rezkaMasterApi';
+import { RezkaScopeChanged } from './rezkaSessionGuard';
 
 export type RezkaTeam = { workers: RezkaWorker[]; apparatus: AdminApparatus[]; assignments: RezkaAssignment[] };
 export type RezkaNotice = { key: string; values?: Record<string, string>; tone: 'success' | 'error' };
@@ -10,10 +11,23 @@ export type RezkaWorkersState = { phase: 'loading' | 'ready' | 'error'; team: Re
 export type RezkaWorkerDependencies = {
   isCurrent(): boolean;
   canWrite(): boolean;
+  writeLocks: RezkaWorkerWriteLocks;
+  lockKey(workerId: string): string;
   loadTeam(): Promise<{ workers: RezkaWorker[]; assignments: RezkaAssignment[] }>;
   loadApparatus(): Promise<AdminApparatus[]>;
   save(workerId: string, ids: string[], previous: string[]): Promise<void>;
 };
+
+/** Process-local lock remains held after an uncertain assignment write; no implicit retry or unlock. */
+export class RezkaWorkerWriteLocks {
+  private readonly locks = new Map<string, 'sending' | 'uncertain'>();
+  status(key: string) { return this.locks.get(key) ?? null; }
+  begin(key: string) { if (this.locks.has(key)) return false; this.locks.set(key, 'sending'); return true; }
+  complete(key: string) { this.locks.delete(key); }
+  uncertain(key: string) { this.locks.set(key, 'uncertain'); }
+}
+export const rezkaWorkerWriteLocks = new RezkaWorkerWriteLocks();
+const assignmentRejections = new Set(['rezka_worker_has_open_run', 'rezka_assignment_changed', 'worker_not_found', 'rezka_apparatus_required']);
 
 /** @v2 canonicalApparatusIds */
 export function canonicalIds(values: readonly string[]): string[] {
@@ -44,11 +58,12 @@ export class RezkaWorkerSettingsController {
   private listeners = new Set<() => void>();
   private revision = 0;
   private disposed = false;
+  private suspended = false;
   constructor(private readonly deps: RezkaWorkerDependencies) {}
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private active() {
-    if (this.disposed) return false;
+    if (this.disposed || this.suspended) return false;
     if (!this.deps.isCurrent()) { this.invalidate(); return false; }
     return true;
   }
@@ -64,6 +79,8 @@ export class RezkaWorkerSettingsController {
     this.state = { phase: 'loading', team: null, expandedId: null, picker: null, notice: null, savingIds: [] };
     this.listeners.forEach(listener => listener());
   }
+  suspend() { this.suspended = true; }
+  resume() { if (!this.disposed) this.suspended = false; }
   dispose() { this.disposed = true; this.revision++; this.listeners.clear(); }
   async load(): Promise<void> {
     if (!this.active()) return;
@@ -82,9 +99,11 @@ export class RezkaWorkerSettingsController {
     this.update({ expandedId: this.state.expandedId === workerId ? null : workerId });
   }
   clearNotice() { this.update({ notice: null }); }
+  isWriteLocked(workerId: string) { return !!this.deps.writeLocks.status(this.deps.lockKey(workerId.trim())); }
   openPicker(workerId: string) {
     const team = this.state.team;
     if (!this.active() || !this.deps.canWrite() || this.state.phase !== 'ready' || !team || !team.apparatus.length) return;
+    if (this.isWriteLocked(workerId)) { this.update({ notice: { key: 'scope.outcome_unknown', tone: 'error' } }); return; }
     const worker = team.workers.find(item => item.id === workerId);
     if (!worker || !worker.id.trim() || this.state.savingIds.includes(worker.id.trim())) return;
     const assignments = new Map(team.assignments.map(item => [item.principal_ref, item]));
@@ -117,17 +136,28 @@ export class RezkaWorkerSettingsController {
         : { key: 'scope.already_saved', tone: 'success' } });
       return;
     }
+    const lock = this.deps.lockKey(workerId);
+    if (!this.deps.writeLocks.begin(lock)) { this.update({ notice: { key: 'scope.outcome_unknown', tone: 'error' } }); return; }
     this.update({ picker: { ...picker, saving: true, blocked: null }, savingIds: [...this.state.savingIds, workerId] });
     try {
       await this.deps.save(workerId, values.ids, values.previous);
+      if (!this.deps.isCurrent()) { this.deps.writeLocks.uncertain(lock); this.invalidate(); return; }
+      this.deps.writeLocks.complete(lock);
       if (!this.active()) return;
       this.update({ ...(this.state.picker?.worker.id === picker.worker.id ? { picker: null } : {}),
         notice: { key: 'scope.saved', tone: 'success' } });
       await this.load();
     } catch (error) {
-      if (!this.active()) return;
       const parts = errorParts(error);
-      if (parts.code === 'rezka_worker_has_open_run') {
+      const status = error && typeof error === 'object' && 'statusCode' in error ? error.statusCode : undefined;
+      const rejected = typeof status === 'number' && status >= 400 && status < 500 && assignmentRejections.has(parts.code);
+      const beforeSend = error instanceof RezkaScopeChanged && !error.mayHaveExecuted;
+      if (rejected || beforeSend) this.deps.writeLocks.complete(lock); else this.deps.writeLocks.uncertain(lock);
+      if (!this.active()) return;
+      if (!rejected && !beforeSend) {
+        const blocked: RezkaNotice = { key: 'scope.outcome_unknown', tone: 'error' };
+        this.update({ ...(this.state.picker?.worker.id === picker.worker.id ? { picker: { ...picker, saving: false, blocked } } : {}), notice: blocked });
+      } else if (parts.code === 'rezka_worker_has_open_run') {
         const labels = apparatusLabels(parts.details, team.apparatus);
         const blocked: RezkaNotice = labels.length
           ? { key: 'rezka_master.rezka_worker_has_open_run_details', values: { worker: picker.worker.name, apparatus: labels.join(', ') }, tone: 'error' }

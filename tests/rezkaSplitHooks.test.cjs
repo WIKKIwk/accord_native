@@ -13,21 +13,23 @@ function setup(session) {
     getSnapshot = () => this.state;
     setPrinter(value) { calls.push(['setPrinter', value]); }
     async scan(value) { calls.push(['scan', value]); }
+    resume() {} suspend() {}
     invalidate() { calls.push('invalidate'); }
     dispose() { calls.push('dispose'); }
   }
   class PickerController {
     constructor(deps) { this.deps = deps; this.state = { items: [], loading: true }; picker = this; }
-    subscribe = () => () => {}; getSnapshot = () => this.state; start() {} invalidate() {} dispose() {}
+    subscribe = () => () => {}; getSnapshot = () => this.state; start() {} resume() {} suspend() {} invalidate() {} dispose() {}
   }
   const api = Object.fromEntries(['rezkaSource', 'rezkaSplit', 'rezkaSplitClientPrintPrepare', 'rezkaSplitClientPrintConfirm']
     .map(name => [name, async (...args) => { calls.push([name, ...args]); return {}; }]));
   const react = { useCallback: fn => fn, useMemo: fn => fn(), useRef: value => ({ current: value }),
     useSyncExternalStore: (subscribe, get) => { const unsubscribe = subscribe(() => {}); unsubscribe(); return get(); }, useEffect: fn => effects.push(fn) };
-  const mocks = { react, '../auth': { activeSessionEpoch: s => s.active ? s.epoch : null, registerSessionResetHook: fn => { calls.push(['resetHook', fn]); return () => {}; } },
+  const mocks = { react, '../appPreferences': { appPreferences: {} }, '../shared/searchActivityStore': { SearchActivityStore: class {} }, '../auth': { activeSessionEpoch: s => s.active ? s.epoch : null, registerSessionResetHook: fn => { calls.push(['resetHook', fn]); return () => {}; }, subscribeSessionWitness: () => () => {} },
     '../shared/catalogApi': { gscaleItemsPage: async (...args) => { calls.push(['catalog', ...args]); return []; } }, '../shared/appRoutes': { appRoutes: { rezkaSplit: '/split' }, canOpenRoute: s => s.profile.role !== 'rezka_master' && s.capabilities.includes('rezka.split.manage') },
     '../shared/localization': { uiText: value => value }, '../shared/localization/runtime': { localeController: { addListener: () => () => {}, locale: 'uz' } },
-    './rezkaSplitApi': api, './rezkaSessionGuard': { currentRezkaScope: s => s.scope,
+    './rezkaSplitApi': api, './rezkaSessionGuard': { captureRezkaSession: s => Object.freeze({ session: s, scope: s.scope, epoch: s.epoch }),
+      guardedRezkaRequest: (_s, _a, _snap, _m, send) => send(() => {}),
       isRezkaSessionCurrent: (snapshot, access) => !!snapshot && snapshot.session.active && snapshot.session.epoch === snapshot.epoch &&
         snapshot.session.scope === snapshot.scope && access === 'split' && snapshot.session.profile.role !== 'rezka_master' &&
         snapshot.session.capabilities.includes('rezka.split.manage') }, './rezkaItemPickerController': { RezkaItemPickerController: PickerController },
@@ -74,4 +76,6 @@ test('item picker retains the parent view snapshot instead of recapturing after 
   await picker.deps.load('film', 30);
   assert.equal(t.calls.find(row => Array.isArray(row) && row[0] === 'catalog')[1], session);
   assert.deepEqual(t.calls.find(row => Array.isArray(row) && row[0] === 'catalog')[2], { query: 'film', limit: 30 });
+  const catalog = t.calls.find(row => Array.isArray(row) && row[0] === 'catalog');
+  assert.equal(typeof catalog[3], 'function'); assert.ok(catalog[4]);
 });

@@ -16,7 +16,7 @@ test('order hook preserves the parent snapshot and forwards V2 previous/new valu
     subscribe = () => () => {}; getSnapshot = () => ({}); resume() {} suspend() {} invalidate() {} dispose() {} }
   const react = { useMemo: fn => fn(), useRef: value => ({ current: value }), useEffect: fn => effects.push(fn),
     useSyncExternalStore: (_subscribe, get) => get() };
-  const mocks = { react, '../auth': { registerSessionResetHook: () => () => {} },
+  const mocks = { react, '../auth': { registerSessionResetHook: () => () => {}, subscribeSessionWitness: () => () => {} },
     '../shared/localization': { adminText: key => key, localizedGetter: key => key, productionText: key => key },
     '../shared/localization/runtime': { localeController: { addListener: () => () => {}, locale: 'uz' } },
     './rezkaMasterApi': { rezkaMasterSaveOrderSettings: async (...args) => { calls.push(['options', ...args]); } },

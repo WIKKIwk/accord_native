@@ -10,13 +10,13 @@ import { useNativeSheet } from '../nativeSheet';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import type { RezkaWorkerSettingsProps } from './rezkaWorkerScreenTypes';
 import { apparatusLabels, type RezkaWorkerSettingsController } from './rezkaWorkerController';
-import { useRezkaAdminText, useRezkaWorkerSettings } from './useRezkaWorkerSettings';
+import { useRezkaAdminText, useRezkaNoticeText, useRezkaWorkerSettings } from './useRezkaWorkerSettings';
 
 const levels: Record<string, string> = { Brigader: 'brigader', Master: 'master', '1 - darajali': 'one', '2 - darajali': 'two', '3 - darajali': 'three' };
 
 function AssignmentPicker({ controller }: { controller: RezkaWorkerSettingsController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const t = useRezkaAdminText(), picker = state.picker, team = state.team;
+  const t = useRezkaAdminText(), notice = useRezkaNoticeText(), picker = state.picker, team = state.team;
   if (!picker || !team) return null;
   return <View style={{ minHeight: 420, maxHeight: 650, paddingHorizontal: 16, paddingBottom: 16 }}>
     <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>
@@ -36,9 +36,9 @@ function AssignmentPicker({ controller }: { controller: RezkaWorkerSettingsContr
       </Column></Host>
     </ScrollView>
     {picker.blocked ? <View accessibilityRole="alert" accessibilityLiveRegion="polite">
-      <Host matchContents={{ vertical: true }}><Text>{t(picker.blocked.key, picker.blocked.values)}</Text></Host></View> : null}
+      <Host matchContents={{ vertical: true }}><Text>{notice(picker.blocked)}</Text></Host></View> : null}
     <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>
-      <Button enabled={!picker.saving && !!picker.selected.length} onClick={() => { void controller.save(); }}
+      <Button enabled={!picker.saving && !!picker.selected.length && !controller.isWriteLocked(picker.worker.id)} onClick={() => { void controller.save(); }}
         modifiers={[fillMaxWidth(), testID('worker-apparatus-save')]}><Text>{t(picker.saving ? 'action.saving' : 'scope.save_action')}</Text></Button>
     </Column></Host>
   </View>;
