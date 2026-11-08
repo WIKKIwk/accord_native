@@ -7,7 +7,7 @@ const test = require('node:test');
 const ts = require('typescript');
 const { contractFetch, recordedSession } = require('./support/contractFetch.cjs');
 
-const stem = 'f119/werka_paddon_api_test';
+const stem = 'f11910bb/werka_paddon_api_test';
 const filename = path.resolve(__dirname, '../src/werka/werkaPaddonApi.ts');
 function load(file, replay, cache = new Map()) {
   const resolved = path.resolve(file.endsWith('.ts') ? file : `${file}.ts`);

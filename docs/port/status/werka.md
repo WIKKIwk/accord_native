@@ -28,7 +28,7 @@ Stopped at: Port the remaining Werka API, store, UI contract, both platform view
 
 Role-specific test-mode branches remain for the coordinated final pass.
 
-The isolated f119 oracle passed all five `werka_paddon_api_test.dart` cases and all six `werka_archive_batch_qr_test.dart` cases. Its seven API request records are in `tests/contracts/f119/werka_paddon_api_test.json`; the historical fixtures were not overwritten.
+The isolated f119 oracle passed all five `werka_paddon_api_test.dart` cases and all six `werka_archive_batch_qr_test.dart` cases. Its seven API request records are in `tests/contracts/f11910bb/werka_paddon_api_test.json`; the historical fixtures were not overwritten.
 
 ## Needs from the integrator
 
