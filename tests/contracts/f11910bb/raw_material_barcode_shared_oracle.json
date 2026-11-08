@@ -1,0 +1,117 @@
+{
+  "source_sha": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "source_file": "lib/src/features/admin/presentation/raw_material_scan_dialog_widgets_part_01.dart:24-47",
+  "dart_sdk": "3.13.7 macos_arm64",
+  "digest_encoding": "sha256 of UTF-8 JSON.stringify(array of parsed Dart JSONL rows)",
+  "datasets": {
+    "expanded": {
+      "count": 12000,
+      "seed": "0x7b8e9c1d",
+      "sha256": "2859f13d5c4fb39daeccae975cfc1110d6a681100b54fa40a32ba99b03439c15"
+    },
+    "deep": {
+      "count": 50000,
+      "seed": "0x49e32a17",
+      "sha256": "d2a8bcc95d99d0cd77cf61d168e577c7615df547047f2bf082a9cebf9a1a8a4b"
+    },
+    "ipv6": {
+      "count": 20000,
+      "seed": "0xe34a920d",
+      "sha256": "a4efdbbe5af4cbf6ca14fbbb460bb0ab8acefe376198b8569c600b09746646a0"
+    },
+    "ascii": {
+      "count": 1920,
+      "seed": null,
+      "sha256": "a58b023ce02b41b2e74b06e4278d6516d28d743831f6044532f890b5d42fcdd8"
+    },
+    "unicode": {
+      "count": 4644,
+      "seed": "0x516ac9b7",
+      "sha256": "96bad3bbb4746bc8f55920e13d134f05cba7fbeb6bd5a9b4c0a06e2cc8722a0f"
+    },
+    "schemes": {
+      "count": 16,
+      "seed": null,
+      "sha256": "4e522cac67bd44197e80a3f6c7ae4a005055c274217d2687b7c66423484f436d"
+    },
+    "dotPort": {
+      "count": 84,
+      "seed": null,
+      "sha256": "88871de4f045df7f7cb941435e17a80059e280848707673a7f689d214d120e44"
+    }
+  },
+  "samples": [
+    {
+      "raw": "https:30/40",
+      "value": "https:30/40"
+    },
+    {
+      "raw": "https://%FF/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://%ZZ/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://[v1.a]/p",
+      "value": "p"
+    },
+    {
+      "raw": "https://[fe80::1%25en0]/p",
+      "value": "p"
+    },
+    {
+      "raw": "https://[::zzz]/path",
+      "value": "https://[::zzz]/path"
+    },
+    {
+      "raw": "https://host:0x10/a?barcode=A&barcode=B",
+      "value": "B"
+    },
+    {
+      "raw": "https://host:9999999999999999999999999/a/%FF?qr=Q",
+      "value": "https://host:9999999999999999999999999/a/%FF?qr=Q"
+    },
+    {
+      "raw": "https://host/a/.?barcode=+",
+      "value": "."
+    },
+    {
+      "raw": "foo://host/a/.?barcode=+",
+      "value": "."
+    },
+    {
+      "raw": "https://host/a/%2E%2E/b",
+      "value": "b"
+    },
+    {
+      "raw": "https://host/path?x=%FF&barcode=A",
+      "error": "FormatException"
+    },
+    {
+      "raw": "https://host/path?=bad%FF&qr=Q",
+      "value": "Q"
+    },
+    {
+      "raw": "https://[::192.168.0.1:]/a",
+      "value": "https://[::192.168.0.1:]/a"
+    },
+    {
+      "raw": "https://[fe80::1%25en#]/a",
+      "value": "a"
+    },
+    {
+      "raw": "https://user]@host/a",
+      "value": "https://user]@host/a"
+    },
+    {
+      "raw": "data://host/a?barcode=A",
+      "value": "data://host/a?barcode=A"
+    },
+    {
+      "raw": "https://host/?barcode=\ud800X\ud800",
+      "error": "FormatException"
+    }
+  ]
+}
