@@ -1,8 +1,9 @@
 import { saveSession, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { profileFromLogin } from '../authenticateAccount';
+import { assertProfileIdentity, assertProfileSessionCurrent, type ProfileSessionGuard } from './profileSessionGuard';
 
-async function updateSessionProfile(session: Session, value: unknown) {
+async function updateSessionProfile(session: Session, value: unknown, check?: () => void) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid profile');
   const row = value as Record<string, unknown>;
   const profile = profileFromLogin({ profile: row,
@@ -12,6 +13,8 @@ async function updateSessionProfile(session: Session, value: unknown) {
     assigned_item_groups: Array.isArray(row.assigned_item_groups) ? row.assigned_item_groups : [],
     assigned_warehouses: Array.isArray(row.assigned_warehouses) ? row.assigned_warehouses : [],
   });
+  check?.();
+  if (check) assertProfileIdentity(session, profile);
   session.profile = profile;
   session.capabilities = profile.capabilities;
   session.assigned_apparatus = profile.assigned_apparatus;
@@ -19,20 +22,26 @@ async function updateSessionProfile(session: Session, value: unknown) {
   session.assigned_item_groups = profile.assigned_item_groups;
   session.assigned_warehouses = profile.assigned_warehouses;
   await saveSession(session);
+  check?.();
   return profile;
 }
 
 /** @v2 updateNickname */
-export async function updateNickname(session: Session, nickname: string, signal?: AbortSignal) {
-  const response = await authorizedFetch(session, '/v1/mobile/profile', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname }), ...(signal ? { signal } : {}),
-  });
+export async function updateNickname(session: Session, nickname: string, signal?: AbortSignal, isCurrent?: ProfileSessionGuard) {
+  const check = isCurrent == null ? undefined : () => assertProfileSessionCurrent(isCurrent); check?.();
+  const init: RequestInit = { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nickname }), ...(signal ? { signal } : {}) };
+  const response = check ? await authorizedFetch(session, '/v1/mobile/profile', init, check)
+    : await authorizedFetch(session, '/v1/mobile/profile', init);
+  check?.();
   if (response.status !== 200) throw new Error('Nickname update failed');
-  return updateSessionProfile(session, await response.json());
+  const value: unknown = await response.json(); check?.();
+  return updateSessionProfile(session, value, check);
 }
 
 /** @v2 uploadAvatar */
-export async function uploadAvatar(session: Session, bytes: readonly number[] | Uint8Array, filename: string, signal?: AbortSignal) {
+export async function uploadAvatar(session: Session, bytes: readonly number[] | Uint8Array, filename: string, signal?: AbortSignal, isCurrent?: ProfileSessionGuard) {
+  const check = isCurrent == null ? undefined : () => assertProfileSessionCurrent(isCurrent); check?.();
   // Match package:http's multipart file headers and preserve the original bytes on native and web.
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let boundary = 'dart-http-boundary-';
@@ -43,9 +52,10 @@ export async function uploadAvatar(session: Session, bytes: readonly number[] | 
   const tail = encoder.encode(`\r\n--${boundary}--\r\n`);
   const content = Uint8Array.from(bytes), body = new Uint8Array(head.length + content.length + tail.length);
   body.set(head); body.set(content, head.length); body.set(tail, head.length + content.length);
-  const response = await authorizedFetch(session, '/v1/mobile/profile/avatar', {
-    method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body, ...(signal ? { signal } : {}),
-  }, undefined, null);
+  const init: RequestInit = { method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body, ...(signal ? { signal } : {}) };
+  const response = await authorizedFetch(session, '/v1/mobile/profile/avatar', init, check, null);
+  check?.();
   if (response.status !== 200) throw new Error('Avatar upload failed');
-  return updateSessionProfile(session, await response.json());
+  const value: unknown = await response.json(); check?.();
+  return updateSessionProfile(session, value, check);
 }
