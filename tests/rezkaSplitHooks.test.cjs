@@ -5,7 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
 const file = path.resolve(__dirname, '../src/rezka/useRezkaSplit.ts');
-function setup(session) {
+function setup(session, hasPrinter = true) {
   const calls = [], effects = []; let controller, picker;
   class SplitController {
     constructor(deps) { this.deps = deps; this.state = { notice: null }; controller = this; }
@@ -40,7 +40,8 @@ function setup(session) {
     getSnapshot() { assert.equal(this.marker, 'device'); return { title: 'real', subtitle: '' }; },
     async choose() { assert.equal(this.marker, 'device'); return { transport: 'bluetooth' }; },
     async resolve() { assert.equal(this.marker, 'device'); return {}; }, async print() { assert.equal(this.marker, 'device'); return { ok: true }; } };
-  const hook = mod.exports.useRezkaSplit(session, printer); effects.forEach(fn => fn());
+  const snapshot = Object.freeze({ session, scope: session.scope, epoch: session.epoch });
+  const hook = mod.exports.useRezkaSplit(snapshot, hasPrinter ? printer : null); effects.forEach(fn => fn());
   return { calls, hook, controller, printer, usePicker: snapshot => { mod.exports.useRezkaItemPicker(snapshot); return picker; } };
 }
 test('split hook binds printer bridge methods and passes the captured scope to APIs', async () => {
@@ -78,4 +79,14 @@ test('item picker retains the parent view snapshot instead of recapturing after 
   assert.deepEqual(t.calls.find(row => Array.isArray(row) && row[0] === 'catalog')[2], { query: 'film', limit: 30 });
   const catalog = t.calls.find(row => Array.isArray(row) && row[0] === 'catalog');
   assert.equal(typeof catalog[3], 'function'); assert.ok(catalog[4]);
+});
+
+
+test('route without a verified bridge blocks submit without invoking any printer', async () => {
+  const session = { active: true, token: 'x', scope: 'old', epoch: 7, profile: { role: 'customer' }, capabilities: ['rezka.split.manage'] };
+  const t = setup(session, false);
+  assert.equal(t.controller.deps.canSubmit(), false); assert.equal(await t.controller.deps.resolvePrinter({}), null);
+  await t.hook.choosePrinter(); assert.ok(!t.calls.some(x => Array.isArray(x) && x[0] === 'setPrinter'));
+  await assert.rejects(t.controller.deps.print({}, {}), /Printer unavailable/);
+  assert.equal(t.hook.snapshot.session, session);
 });

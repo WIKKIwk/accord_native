@@ -37,11 +37,11 @@ function setup(platform) {
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' }, './RezkaItemPicker': { RezkaItemPicker: 'RezkaItemPicker' },
     './rezkaSplitLogic': { formatRezkaQty: value => Number.isInteger(value) ? String(value) : value.toFixed(3) },
     './rezkaSplitController': { rezkaSplitNoticeText: value => value.message ?? null, isExcludedRezkaPrinter: value => /go[\s_-]*dex|\bg500\b/i.test(value) },
-    './useRezkaSplit': { useRezkaSplit: () => hook, useRezkaText: () => text => text } };
+    './useRezkaSplit': { useRezkaSplit: () => hook, useRezkaText: () => text => text, useRezkaPrintUnavailableText: () => 'Printer ulanishi tasdiqlanmagan' } };
   const filename = path.resolve(__dirname, `../src/rezka/RezkaSplit.${platform}.tsx`), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths; mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
-  return { state, calls, render: scan => mod.exports.RezkaSplitScreen({ session: {}, printer: {}, scan, onBack: () => calls.push('back') }), content: () => content };
+  return { state, calls, render: (scan, printer = {}) => mod.exports.RezkaSplitScreen({ snapshot: hook.snapshot, printer, scan, onBack: () => calls.push('back') }), content: () => content };
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform}: split shows real form and item picker, with no scanner action when unavailable`, () => {
@@ -65,6 +65,12 @@ for (const platform of ['ios', 'android']) {
     assert.ok(!JSON.stringify(t.render()).includes('Bo‘lish va QR chiqarish'));
     t.state.uncertain = false; t.state.blockedPrinter = true;
     assert.ok(!JSON.stringify(t.render()).includes('Bo‘lish va QR chiqarish'));
+  });
+  test(`${platform}: missing real bridge shows an explicit explanation and no print or picker action`, () => {
+    const t = setup(platform), page = t.render(undefined, null), text = JSON.stringify(page);
+    assert.ok(text.includes('Printer ulanishi tasdiqlanmagan'));
+    assert.ok(!text.includes('Bo‘lish va QR chiqarish'));
+    assert.ok(!text.includes('Bluetooth printer tanlanmagan'));
   });
   test(`${platform}: remainder action exposes the V2 choices`, () => {
     const t = setup(platform); t.state.remainder = { source: { qty: 10, uom: 'kg' }, total: 8, difference: 2 };

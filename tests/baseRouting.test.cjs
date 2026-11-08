@@ -86,3 +86,16 @@ test('only authorized Rezka masters use their native shell; worker and preparati
   assert.equal(homeTarget(session('tayyorlov_masteri', ['preparation.access']), 'ios'), '/ios-preparation');
   assert.equal(homeTarget(session('tayyorlov_masteri', ['preparation.access']), 'android'), '/android-preparation');
 });
+
+
+test('capability-only split home respects V2 role allowlists and keeps other homes intact', () => {
+  const split = session('customer', ['rezka.split.manage']);
+  assert.equal(homeTarget(split, 'ios'), '/rezka-split'); assert.equal(homeTarget(split, 'android'), '/rezka-split');
+  assert.equal(homeTarget(split, 'web'), null);
+  for (const role of ['rezka_master', 'brigader', 'sales_manager']) {
+    assert.equal(canOpenRoute(session(role, ['rezka.split.manage']), r.rezkaSplit), false, role);
+    assert.equal(homeTarget(session(role, ['rezka.split.manage']), 'ios'), null, role);
+  }
+  assert.equal(homeTarget(session('aparatchi', ['apparatus.queue.read']), 'ios'), '/ios-worker');
+  assert.equal(homeTarget(session('tayyorlov_masteri', ['preparation.access']), 'android'), '/android-preparation');
+});

@@ -1,8 +1,9 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { currentSession, loadSession, logout, registerSessionResetHook, sessionWitnessTransitioning, subscribeSessionWitness } from '../auth';
 import { localeController } from '../shared/localization/runtime';
-import { captureRezkaSession, isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
+import { captureRezkaSession, isRezkaSessionCurrent, type RezkaAccess, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 import { canEnterRezkaShell } from './rezkaShellModel';
+import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -10,7 +11,7 @@ export function useRezkaLocale() { return useSyncExternalStore(subscribeLocale, 
 export type RezkaShellSession = RezkaSessionSnapshot | 'test-token-unavailable' | 'transition-pending' | null | undefined;
 
 /** Capture once per mounted shell, subscribe and recheck; an invalidated shell never recaptures. */
-export function useRezkaShellSession(): RezkaShellSession {
+export function useRezkaShellSession(access: RezkaAccess = 'master'): RezkaShellSession {
   const [snapshot, setSnapshot] = useState<RezkaShellSession>(undefined);
   useEffect(() => {
     let mounted = true, terminal = false, pending = false, reloadAfter = false, revision = 0;
@@ -22,12 +23,12 @@ export function useRezkaShellSession(): RezkaShellSession {
       void loadSession().then(session => {
         if (!mounted || terminal || started !== revision) return;
         if (sessionWitnessTransitioning()) { reloadAfter = true; setSnapshot('transition-pending'); return; }
-        if (!canEnterRezkaShell(session)) { terminal = true; setSnapshot(null); return; }
+        if (!session || !(access === 'master' ? canEnterRezkaShell(session) : canOpenRoute(session, appRoutes.rezkaSplit))) { terminal = true; setSnapshot(null); return; }
         if (session.token === 'test-mode-token') { setSnapshot('test-token-unavailable'); return; }
         const candidate = captureRezkaSession(session);
-        if (!isRezkaSessionCurrent(candidate, 'master')) { terminal = true; setSnapshot(null); return; }
+        if (!isRezkaSessionCurrent(candidate, access)) { terminal = true; setSnapshot(null); return; }
         captured = candidate;
-        if (isRezkaSessionCurrent(candidate, 'master')) setSnapshot(candidate);
+        if (isRezkaSessionCurrent(candidate, access)) setSnapshot(candidate);
         else { terminal = true; captured = null; setSnapshot(null); }
       }).catch(() => { if (mounted && !terminal && started === revision) { terminal = true; setSnapshot(null); } }).finally(() => {
         pending = false;
@@ -38,7 +39,7 @@ export function useRezkaShellSession(): RezkaShellSession {
     const unwatch = subscribeSessionWitness(() => {
       if (!mounted || terminal) return;
       if (captured) {
-        if (!isRezkaSessionCurrent(captured, 'master')) { terminal = true; captured = null; setSnapshot(null); }
+        if (!isRezkaSessionCurrent(captured, access)) { terminal = true; captured = null; setSnapshot(null); }
       } else if (sessionWitnessTransitioning()) {
         revision++; reloadAfter = true; setSnapshot('transition-pending');
       } else if (pending) reloadAfter = true;
@@ -46,7 +47,7 @@ export function useRezkaShellSession(): RezkaShellSession {
     });
     attempt();
     return () => { mounted = false; unregister(); unwatch(); };
-  }, []);
+  }, [access]);
   return snapshot;
 }
 

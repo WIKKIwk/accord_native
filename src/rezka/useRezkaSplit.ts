@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { registerSessionResetHook, subscribeSessionWitness, type Session } from '../auth';
+import { registerSessionResetHook, subscribeSessionWitness } from '../auth';
 import { appPreferences } from '../appPreferences';
 import { SearchActivityStore } from '../shared/searchActivityStore';
 import { gscaleItemsPage } from '../shared/catalogApi';
 import { uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { rezkaSource, rezkaSplit, rezkaSplitClientPrintConfirm, rezkaSplitClientPrintPrepare } from './rezkaSplitApi';
-import { captureRezkaSession, guardedRezkaRequest, isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
+import { guardedRezkaRequest, isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 import { RezkaItemPickerController } from './rezkaItemPickerController';
 import { RezkaSplitController } from './rezkaSplitController';
 import type { RezkaPrinterBridge } from './rezkaSplitScreenTypes';
@@ -18,17 +18,30 @@ export function useRezkaText() {
   return useCallback((text: string) => uiText(text, locale), [locale]);
 }
 
-export function useRezkaSplit(session: Session, printer: RezkaPrinterBridge) {
-  const snapshot = useMemo(() => captureRezkaSession(session), [session]);
+const unavailablePrinter = Object.freeze({ title: '', subtitle: '', excluded: false });
+/** The route captures once; nested views must not obtain a fresh witness for a stale session. */
+export function useRezkaPrintUnavailableText() {
+  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale).toLowerCase().split(/[-_]/, 1)[0];
+  return ({ uz: 'Chop qilish hozircha mavjud emas. Printer ulanishi tasdiqlanmaguncha bo‘lish amalga oshirilmaydi.',
+    en: 'Printing is not available yet. Splitting is disabled until the printer connection is verified.',
+    ru: 'Печать пока недоступна. Разделение отключено до проверки подключения принтера.',
+    ur: 'پرنٹنگ ابھی دستیاب نہیں۔ پرنٹر کا کنکشن تصدیق ہونے تک تقسیم بند ہے۔' } as Record<string, string>)[locale]
+    ?? 'Printing is not available yet. Splitting is disabled until the printer connection is verified.';
+}
+
+export function useRezkaSplit(snapshot: RezkaSessionSnapshot, printer: RezkaPrinterBridge | null) {
+  const session = snapshot.session;
   const controller = useMemo(() => new RezkaSplitController({
-    isCurrent: () => isRezkaSessionCurrent(snapshot, 'split'), loadSource: barcode => rezkaSource(session, barcode, snapshot),
-    resolvePrinter: state => printer.resolve(state), split: request => rezkaSplit(session, request, snapshot),
-    prepare: request => rezkaSplitClientPrintPrepare(session, request, snapshot), print: (output, target) => printer.print(output, target),
+    isCurrent: () => isRezkaSessionCurrent(snapshot, 'split'), canSubmit: () => printer !== null,
+    loadSource: barcode => rezkaSource(session, barcode, snapshot),
+    resolvePrinter: state => printer ? printer.resolve(state) : Promise.resolve(null), split: request => rezkaSplit(session, request, snapshot),
+    prepare: request => rezkaSplitClientPrintPrepare(session, request, snapshot),
+    print: (output, target) => printer ? printer.print(output, target) : Promise.reject(new Error('Printer unavailable')),
     confirm: request => rezkaSplitClientPrintConfirm(session, request, snapshot),
   }), [session, snapshot, printer]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const subscribePrinter = useCallback((listener: () => void) => printer.subscribe(listener), [printer]);
-  const printerSnapshot = useCallback(() => printer.getSnapshot(), [printer]);
+  const subscribePrinter = useCallback((listener: () => void) => printer ? printer.subscribe(listener) : () => {}, [printer]);
+  const printerSnapshot = useCallback(() => printer ? printer.getSnapshot() : unavailablePrinter, [printer]);
   const device = useSyncExternalStore(subscribePrinter, printerSnapshot, printerSnapshot);
   const leases = useRef(new Map<RezkaSplitController, number>());
   useEffect(() => {
@@ -48,7 +61,7 @@ export function useRezkaSplit(session: Session, printer: RezkaPrinterBridge) {
     return () => clearTimeout(timer);
   }, [controller, state.notice]);
   const choosePrinter = async () => {
-    if (!isRezkaSessionCurrent(snapshot, 'split')) return;
+    if (!printer || !isRezkaSessionCurrent(snapshot, 'split')) return;
     const selection = await printer.choose();
     if (!selection || !isRezkaSessionCurrent(snapshot, 'split')) return;
     controller.setPrinter({ transport: selection.transport, ...(selection.driverUrl ? { driverUrl: selection.driverUrl } : {}) });

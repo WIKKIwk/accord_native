@@ -711,6 +711,7 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.boyoqchiHome]: { ios: '/ios-boyoqchi' as Href, android: '/android-boyoqchi' as Href },
   [appRoutes.materialHome]: { ios: '/ios-material' as Href, android: '/android-material' as Href },
   [appRoutes.rawMaterialSplit]: { ios: '/ios-homashyo' as Href, android: '/android-homashyo' as Href },
+  [appRoutes.rezkaSplit]: { ios: '/rezka-split' as Href, android: '/rezka-split' as Href },
 };
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
@@ -719,7 +720,7 @@ export function homeTarget(session: Session, platform: string): Href | 'worker' 
     if (route !== appRoutes.apparatusQueue || !canOpenRoute(session, appRoutes.apparatusQueue)) return null;
     return platform === 'ios' ? '/ios-rezka' as Href : platform === 'android' ? '/android-rezka' as Href : null;
   }
-  if (route === appRoutes.boyoqchiHome && !canOpenRoute(session, route)) return null;
+  if ((route === appRoutes.boyoqchiHome || route === appRoutes.rezkaSplit) && !canOpenRoute(session, route)) return null;
   const entry = homeTargets[route];
   return platform === 'ios' ? entry?.ios ?? null : platform === 'android' ? entry?.android ?? null : null;
 }
