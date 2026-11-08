@@ -19,47 +19,53 @@ function load(relative, mocks) {
   }).outputText, filename);
   return loaded.exports;
 }
-const session = { imageCacheScope: 'scope', profile: { role: 'boyoqchi', ref: 'paint-1' } }, onLogout = () => {};
-const witness = { session }, context = { session, witness, onLogout, profileNavigation: { current: null } };
-
-test('Android Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
-  const Profile = load('app/android-boyoqchi/profile', {
-    react: { useRef: value => ({ current: value }), useLayoutEffect() {} },
-    '../../auth': { isSessionWitnessCurrent: () => true },
+function fixture(platform) {
+  const session = { token: 'real-token', imageCacheScope: 'scope', profile: { role: 'boyoqchi', ref: 'paint-1' } };
+  const witness = { session }, onLogout = () => {}, context = { session, witness, onLogout, profileNavigation: { current: null } };
+  let valid = true;
+  const auth = { isSessionWitnessCurrent: value => value === witness && valid };
+  const text = { useBoyoqchiGetter: () => value => value, useBoyoqchiText: () => value => value };
+  const Profile = platform === 'android' ? load('app/android-boyoqchi/profile', {
+    react: { useCallback: fn => fn, useRef: value => ({ current: value }), useLayoutEffect() {} }, '../../auth': auth,
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
-    'expo-router': { useIsFocused: () => true, useNavigation: () => ({ dispatch() {} }), router: { navigate() {} } },
+    'expo-router': { useIsFocused: () => true, useNavigation: () => ({ dispatch() {} }) },
     'react-native': { View: 'View' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },
     '../../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
     '../../boyoqchi/BoyoqchiDock.android': { BoyoqchiDock: 'BoyoqchiDock' },
+    '../../boyoqchi/BoyoqchiMessage': { BoyoqchiMessage: 'BoyoqchiMessage' },
+    '../../boyoqchi/returnedPaintDemoGuard': { BOYOQCHI_DEMO_UNAVAILABLE: 'Demo unavailable' },
     '../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => context },
-    '../../boyoqchi/boyoqchiProfileNavigation': { registerBoyoqchiProfileNavigation() {} },
-    '../../boyoqchi/useBoyoqchiText': { useBoyoqchiGetter: () => key => key, useBoyoqchiText: () => key => key },
-  }).default;
-  const profiles = nodes(Profile(), 'ProfileScreen');
-  assert.equal(profiles.length, 1);
-  assert.equal(profiles[0].props.session, session);
-  assert.equal(profiles[0].props.onLogout, onLogout);
-  assert.equal(Object.hasOwn(profiles[0].props, 'onDailyWork'), false);
-  assert.equal(profiles[0].props.showDirectLogout, false);
-});
-
-test('iOS Boyoqchi reuses shared Profile without an unrelated daily-work action', () => {
-  const settings = { register: (value, opener) => { assert.equal(value, witness); assert.equal(typeof opener, 'function'); return () => {}; } };
-  const Profile = load('app/ios-boyoqchi/(tabs)/profile/index', {
-    react: { useCallback: fn => fn },
-    '../../../../boyoqchi/BoyoqchiProfileSettings.ios': { useBoyoqchiProfileSettings: () => settings },
-    'expo-router': { router: { navigate() {} } }, 'react-native': { PlatformColor: value => value },
-    'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
+    '../../boyoqchi/boyoqchiProfileNavigation': { registerBoyoqchiProfileNavigation() {} }, '../../boyoqchi/useBoyoqchiText': text,
+  }).default : load('app/ios-boyoqchi/(tabs)/profile/index', {
+    react: { useCallback: fn => fn }, '../../../../auth': auth,
+    'react-native': { PlatformColor: value => value }, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '../../../../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },
     '../../../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => context },
+    '../../../../boyoqchi/BoyoqchiMessage': { BoyoqchiMessage: 'BoyoqchiMessage' },
+    '../../../../boyoqchi/returnedPaintDemoGuard': { BOYOQCHI_DEMO_UNAVAILABLE: 'Demo unavailable' },
+    '../../../../boyoqchi/useBoyoqchiText': text,
   }).default;
-  const profiles = nodes(Profile(), 'ProfileScreen');
-  assert.equal(profiles.length, 1);
-  assert.equal(profiles[0].props.session, session);
-  assert.equal(profiles[0].props.onLogout, onLogout);
-  assert.equal(Object.hasOwn(profiles[0].props, 'onDailyWork'), false);
-  assert.equal(profiles[0].props.showDirectLogout, false);
-  assert.equal(typeof profiles[0].props.registerSettingsOpener(() => {}), 'function');
-});
+  return { session, witness, onLogout, render: () => Profile(), invalidate: () => { valid = false; } };
+}
+for (const platform of ['android', 'ios']) {
+  test(`${platform} reuses Profile with witness guard and explicitly unavailable Settings`, () => {
+    const f = fixture(platform), profiles = nodes(f.render(), 'ProfileScreen'); assert.equal(profiles.length, 1);
+    const props = profiles[0].props;
+    assert.equal(props.session, f.session); assert.equal(props.onLogout, f.onLogout);
+    assert.equal(Object.hasOwn(props, 'onDailyWork'), false); assert.equal(props.showDirectLogout, false);
+    assert.equal(props.settingsUnavailableMessage, 'Sozlamalar hozircha mavjud emas.');
+    assert.equal(Object.hasOwn(props, 'registerSettingsOpener'), false, 'iOS top Settings cannot open the unguarded sheet');
+    assert.equal(props.isCurrent(), true);
+    f.session.token = 'refreshed-token'; assert.equal(props.isCurrent(), true, 'same-session token refresh remains valid');
+    f.session.token = 'test-mode-token'; assert.equal(props.isCurrent(), false, 'a retained callback rejects a fake token');
+    f.session.token = 'real-token'; f.invalidate(); assert.equal(props.isCurrent(), false, 'a retained callback rejects a transition');
+  });
+  test(`${platform} shows demo unavailable without mounting Profile for a fake token`, () => {
+    const f = fixture(platform); f.session.token = 'test-mode-token'; const tree = f.render();
+    assert.deepEqual(nodes(tree, 'ProfileScreen'), []);
+    const notice = nodes(tree, 'BoyoqchiMessage'); assert.equal(notice.length, 1);
+    assert.equal(notice[0].props.title, 'Demo unavailable'); assert.equal(notice[0].props.error, true);
+  });
+}

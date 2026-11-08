@@ -34,6 +34,7 @@ function fixture(initialNames, scheduled = scheduler()) {
   const events = [], hooks = [], slot = { current: null };
   let hookIndex = 0, focused = true;
   const react = {
+    useCallback: fn => fn,
     useRef: value => { const index = hookIndex++; return hooks[index] ?? (hooks[index] = { current: value }); },
     useLayoutEffect: (effect, dependencies) => {
       const index = hookIndex++, previous = hooks[index];
@@ -62,6 +63,8 @@ function fixture(initialNames, scheduled = scheduler()) {
     '../../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
     '../../boyoqchi/BoyoqchiDock.android': { BoyoqchiDock: 'BoyoqchiDock' },
+    '../../boyoqchi/BoyoqchiMessage': { BoyoqchiMessage: 'BoyoqchiMessage' },
+    '../../boyoqchi/returnedPaintDemoGuard': { BOYOQCHI_DEMO_UNAVAILABLE: 'Demo unavailable' },
     '../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => context },
     '../../boyoqchi/boyoqchiProfileNavigation': registration,
     '../../boyoqchi/useBoyoqchiText': commonText,
@@ -169,6 +172,7 @@ test('retained Profile A re-registers on focus after Profile B is popped', () =>
     let focused = false, hookIndex = 0;
     const hooks = [];
     const react = {
+      useCallback: fn => fn,
       useRef: value => { const index = hookIndex++; return hooks[index] ?? (hooks[index] = { current: value }); },
       useLayoutEffect: (effect, dependencies) => {
         const index = hookIndex++, previous = hooks[index];
@@ -188,6 +192,8 @@ test('retained Profile A re-registers on focus after Profile B is popped', () =>
       '../../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
       '../../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
       '../../boyoqchi/BoyoqchiDock.android': { BoyoqchiDock: 'BoyoqchiDock' },
+    '../../boyoqchi/BoyoqchiMessage': { BoyoqchiMessage: 'BoyoqchiMessage' },
+    '../../boyoqchi/returnedPaintDemoGuard': { BOYOQCHI_DEMO_UNAVAILABLE: 'Demo unavailable' },
       '../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => context },
       '../../boyoqchi/boyoqchiProfileNavigation': registration, '../../boyoqchi/useBoyoqchiText': commonText,
     }, 'tsx').default;
