@@ -1,7 +1,7 @@
 # boyoqchi
 
 Status: part 1 of 1 in progress
-Stopped at: Both platform screens, role routes, form, Photos save and reused drawer/profile/chat are wired. Finish text and surface audit, resolve what can be fixed without changing protected roles, and run final gates.
+Stopped at: Both platform screens, role routes, form, Photos save and reused drawer/profile/chat are wired. The requested local work and gates have been run; independent review and the open items below remain.
 
 ## Baseline comparison evidence
 
@@ -51,11 +51,11 @@ Source Git objects `7c87a54e` and `f11910bb` were compared without modifying V2.
 
 - `v2_oracle.sh test/returned_paint_models_test.dart test/returned_paint_draft_store_test.dart test/boyoqchi_astatka_screen_test.dart` against isolated `f11910bb`: 10 passed. The oracle uses a temporary export, not a device.
 - Boyoqchi plus shared Chat unread/runtime and dock badge focused tests: 51 passed, 0 failed, including 34 Boyoqchi tests. Cases are source-derived; no V2 HTTP fixture exists for these requests. Filesystem and Photos permission tests use mocks, not a device or real permission grant.
-- `node --test tests/*.test.cjs` after the shared Chat merge: 1,199 passed, 6 failed. The six known Preparation Android tests fail because Node cannot resolve Expo UI's `jetpack-compose/modifiers/createModifier` ESM import; no Boyoqchi test failed.
+- `node --test tests/*.test.cjs` after the shared Chat and badge merges: 1,201 passed, 6 failed. The six known Preparation Android tests fail because Node cannot resolve Expo UI's `jetpack-compose/modifiers/createModifier` ESM import; no Boyoqchi test failed.
 - `npx tsc --noEmit -p tsconfig.ios.json`: passed after Expo regenerated ignored `.expo/types/router.d.ts` using an offline local Metro session. No simulator or device was started.
 - `npx tsc --noEmit -p tsconfig.android.json`: 9 existing errors, all in protected `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx`; no new Boyoqchi errors.
 - `npx expo lint`: passed.
-- `CI=1 EXPO_OFFLINE=1 npx expo export --platform ios` and `--platform android`: both bundled successfully. Bundling does not verify runtime behavior.
+- `CI=1 EXPO_OFFLINE=1 npx expo export --platform ios` and `--platform android` after the shared Chat and badge merges: both bundled successfully. Bundling does not verify runtime behavior.
 - `node .agents/skills/accord-port/scripts/port_ledger.mjs check`: passed with 8 repository-wide endpoint warnings outside this checkpoint.
 
 ## Surface audit
