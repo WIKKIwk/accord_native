@@ -706,6 +706,7 @@ export function canOpenRoute(session: Session | null, routeName: string | null):
 const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
   [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
+  [appRoutes.rawMaterialSplit]: { ios: '/ios-homashyo' as Href, android: '/android-homashyo' as Href },
 };
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
