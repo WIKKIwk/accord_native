@@ -5,6 +5,7 @@ import { adminProductionOrderPage, type ProductionOrderPageRequest } from '../pr
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
+import { MobileApiException } from '../shared/mobileApiException';
 import { checkedAdminGuard } from './adminProductionRequest';
 import type { AdminWorkMapDetailTicket, AdminWorkMapPage } from './adminWorkMapController';
 
@@ -34,11 +35,18 @@ export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () 
       const detail = await pendingOrderDetail(session, ticket.id, guard); guard();
       return { kind: 'pending' as const, template: detail.template };
     }
-    const snapshot = await adminProductionOrderDetail(session, { apparatus: '', order_id: ticket.id }, guard);
-    guard();
-    if (snapshot.epoch !== ticket.epoch || snapshot.revision == null || ticket.revision == null || snapshot.revision < ticket.revision || !snapshot.scope) {
-      throw new Error('Buyurtma yangilandi. Qayta oching.');
+    // V2 retries a stale detail once, not a failed HTTP request. Every retry
+    // still belongs to the original list ticket and session witness.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      guard();
+      const snapshot = await adminProductionOrderDetail(session, { apparatus: '', order_id: ticket.id }, guard);
+      guard();
+      if (snapshot.epoch === ticket.epoch && snapshot.revision != null && ticket.revision != null && snapshot.revision >= ticket.revision &&
+          snapshot.scope && snapshot.maps.length === 1 && snapshot.maps[0].map.id === ticket.id) {
+        const map = snapshot.maps[0].map, customers = snapshot.order_customers ?? {};
+        return { kind: 'order' as const, map, customer: Object.hasOwn(customers, ticket.id) ? customers[ticket.id] : map.customer_name };
+      }
     }
-    return { kind: 'order' as const, map: snapshot.maps[0].map };
+    throw new MobileApiException({ code: 'order_page_changed', message: 'Buyurtma yangilandi. Qayta oching.' });
   };
 }

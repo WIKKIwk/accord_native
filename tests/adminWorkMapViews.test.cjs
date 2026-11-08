@@ -58,11 +58,12 @@ test('opening a detail requires the current shell, enabled destination and a lis
   const row = { id: 'o', kind: 'order' }, ctrl = { detailTicket: () => ticket, setQuery() {} };
   const mocks = { react: { useCallback: fn => fn, useState: value => [value, () => {}], useSyncExternalStore: (_s, g) => g() },
     'expo-router': { router: { canGoBack: () => false, replace() {}, push() {} } }, 'react-native': { Platform: { OS: 'ios' } },
-    '../nativeSheet': { useNativeSheet: () => ({ open: value => opened.push(value), close() {} }) },
+    '../nativeSheet': { useNativeSheet: () => ({ open: (value, options) => opened.push({ value, options }), close() {} }) },
     '../shared/appRoutes': { appRoutes: { adminProductionMapOrders: route, profile: '/profile' } },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } }, './AdminWorkMapDetail': { AdminWorkMapDetail: 'Detail' },
     './AdminShellContext': { useAdminShell: () => shell }, './useAdminWorkMap': { useAdminWorkMap: () => ({ state: {}, controller: ctrl }) } };
   const view = load('admin/useAdminWorkMapView.tsx', mocks).useAdminWorkMapView();
   current = false; view.open(row); current = true; allowed = false; view.open(row); allowed = true; ticket = null; view.open(row); assert.equal(opened.length, 0);
-  ticket = { generation: 1, id: 'o' }; view.open(row); assert.equal(opened.length, 1); assert.equal(opened[0].props.row, row);
+  ticket = { generation: 1, id: 'o' }; view.open(row); assert.equal(opened.length, 1); assert.equal(opened[0].value.props.row, row); assert.equal(opened[0].options.dismissible, false);
+  const pending = { id: 'p', kind: 'pending' }; view.open(pending); assert.equal(opened[1].options.dismissible, true);
 });

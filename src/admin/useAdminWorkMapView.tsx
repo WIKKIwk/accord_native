@@ -23,7 +23,7 @@ export function useAdminWorkMapView() {
     if (!shell.isCurrent() || !shell.destination(appRoutes.adminProductionMapOrders, Platform.OS)) return;
     const ticket = controller.detailTicket(row); if (!ticket) return;
     sheet.open(<AdminWorkMapDetail session={shell.session} isCurrent={shell.isCurrent} controller={controller} row={row} ticket={ticket} close={sheet.close} />,
-      { dismissible: true });
+      { dismissible: row.kind !== 'order' });
   };
   return { shell, locale, state, controller, query, goBack, onProfile, search, open };
 }

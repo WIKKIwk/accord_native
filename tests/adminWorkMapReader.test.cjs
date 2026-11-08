@@ -11,7 +11,7 @@ function load(file, mocks = {}) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
-const routes = load('shared/appRoutes'), profileGuard = load('shared/profileSessionGuard');
+const routes = load('shared/appRoutes'), profileGuard = load('shared/profileSessionGuard'), exception = load('shared/mobileApiException');
 const adminGuard = load('admin/adminProductionRequest', { '../authorizedFetch': {}, '../shared/mobileApiException': {}, '../workerControlsApi': {} });
 function fixture() {
   const session = { baseUrl: 'https://server.example', token: 'token', profile: { role: 'admin', ref: 'me' }, capabilities: ['admin.access'] };
@@ -23,7 +23,7 @@ function fixture() {
     '../productionOrderDetailApi': { adminProductionOrderDetail: async (s, q, guard) => { calls.push(['detail', s, q]); guard(); duringRead(); guard(); return snapshot; } },
     '../pendingOrderApi': { pendingOrderDetail: async (s, id, guard) => { calls.push(['pending', s, id]); guard(); duringRead(); guard(); return { id, template: { product: 'P' } }; } },
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile, value.capabilities]) },
-    '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, './adminProductionRequest': adminGuard,
+    '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, '../shared/mobileApiException': exception, './adminProductionRequest': adminGuard,
   };
   const api = load('admin/adminWorkMapReader', apis);
   return { session, calls, api, witness: () => current, invalidate: () => { current = false; }, onRead: fn => { duringRead = fn; }, setSnapshot: value => { snapshot = value; } };
@@ -53,4 +53,41 @@ test('pending detail uses the existing API and never returns after witness inval
 test('async or malformed session witness fails closed before request', async () => {
   const f = fixture(), read = f.api.adminWorkMapReader(f.session, async () => false);
   await assert.rejects(read({ view: 'orders' }), /session changed/); assert.equal(f.calls.length, 0);
+});
+
+test('stale detail retries once and accepts a new matching snapshot without changing the requested ID', async () => {
+  const f = fixture(), stale = { epoch: 'old', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }] };
+  let attempt = 0;
+  f.onRead(() => f.setSnapshot(attempt++ ? { ...stale, epoch: 'e', order_customers: { o: 'Canonical' } } : stale));
+  const detail = await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4 });
+  assert.equal(f.calls.length, 2); assert.equal(detail.customer, 'Canonical');
+  assert.deepEqual(f.calls.map(call => call[2]), [{ apparatus: '', order_id: 'o' }, { apparatus: '', order_id: 'o' }]);
+});
+test('two stale snapshots stop with V2 order_page_changed code and message', async () => {
+  const f = fixture(); f.setSnapshot({ epoch: 'old', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }] });
+  await assert.rejects(f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4 }),
+    error => error.code === 'order_page_changed' && error.message === 'Buyurtma yangilandi. Qayta oching.');
+  assert.equal(f.calls.length, 2);
+});
+test('failed HTTP/detail read is not retried as though it were a stale snapshot', async () => {
+  const f = fixture(), failure = new Error('server error'); f.onRead(() => { throw failure; });
+  await assert.rejects(f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id: 'o', epoch: 'e', revision: 4 }), error => error === failure);
+  assert.equal(f.calls.length, 1);
+});
+test('list-ticket invalidation blocks a stale detail retry before any second send', async () => {
+  const f = fixture(); let ticketCurrent = true;
+  f.setSnapshot({ epoch: 'old', revision: 5, scope: 's', maps: [{ map: { id: 'o' } }] });
+  f.onRead(() => { ticketCurrent = false; });
+  const read = f.api.adminWorkMapDetailReader(f.session, () => f.witness() && ticketCurrent);
+  await assert.rejects(read({ kind: 'order', id: 'o', epoch: 'e', revision: 4 }), /session changed/);
+  assert.equal(f.calls.length, 1);
+});
+test('detail customer uses own snapshot entry, including empty text, then map fallback', async () => {
+  for (const [id, customers, expected] of [['o', { o: 'Canonical' }, 'Canonical'], ['o', { o: '' }, ''],
+    ['o', {}, 'Fallback'], ['__proto__', {}, 'Fallback']]) {
+    const f = fixture(); f.setSnapshot({ epoch: 'e', revision: 5, scope: 's', order_customers: customers,
+      maps: [{ map: { id, customer_name: 'Fallback' } }] });
+    const result = await f.api.adminWorkMapDetailReader(f.session, f.witness)({ kind: 'order', id, epoch: 'e', revision: 4 });
+    assert.equal(result.customer, expected);
+  }
 });
