@@ -1,0 +1,72 @@
+import { Button, Host } from '@expo/ui';
+import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { WorkerAlert } from '../components/WorkerAlert';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
+import { useCustomerText } from './CustomerContext';
+import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerReportClaim, trimCustomerInput, type CustomerReturnInput } from './customerLogic';
+import { customerDeliveryStatusKey, customerDiscussionEventId, type CustomerReturnKind } from './customerDeliveryView';
+import { CustomerReturnDialog } from './CustomerReturnDialog';
+import { CustomerSnackbar } from './CustomerSnackbar';
+import { useCustomerDelivery } from './useCustomerScreens';
+
+type Props = { deliveryNoteID: string; onChanged: () => void; onOpenDiscussion?: (receiptId: string) => void };
+
+// @v2 CustomerDeliveryDetailScreen
+export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpenDiscussion }: Props) {
+  const state = useCustomerDelivery(deliveryNoteID, onChanged), colors = useMaterialColors(), { text } = useCustomerText();
+  const [confirm, setConfirm] = useState(false), [dialog, setDialog] = useState<CustomerReturnKind | null>(null);
+  const returningFromDiscussion = useRef(false), reload = state.reload;
+  const openDiscussion = useCallback(() => {
+    if (!onOpenDiscussion) return;
+    returningFromDiscussion.current = true; onOpenDiscussion(customerDiscussionEventId(deliveryNoteID));
+  }, [deliveryNoteID, onOpenDiscussion]);
+  useFocusEffect(useCallback(() => { if (returningFromDiscussion.current) { returningFromDiscussion.current = false; void reload(); } }, [reload]));
+  if (state.loading) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
+  if (state.error || !state.detail) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+    <Text style={{ color: colors.onSurfaceVariant }}>{text('serverDisconnectedRetry')}</Text><Host matchContents>
+      <Button label={text('retry')} onPress={() => { void state.reload(); }} /></Host></View>;
+  const detail = state.detail, record = detail.record;
+  const hasDiscussion = ['accepted', 'partial', 'rejected'].includes(record.status);
+  const onReturn = (input: CustomerReturnInput) => {
+    const current = dialog; setDialog(null);
+    if (current === 'reject') void state.send(customerRejectAll(deliveryNoteID, record.sent_qty, input));
+    else if (current === 'partial') void state.send(customerAcceptPartial(deliveryNoteID, record.sent_qty, input));
+    else if (current === 'claim') void state.send(customerReportClaim(deliveryNoteID, input));
+  };
+  const line = (label: string, value: string) => <View key={label} style={{ paddingHorizontal: 16, paddingVertical: 7 }}>
+    <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{text(label)}</Text><Text style={{ color: colors.onSurface, fontSize: 16 }}>{value}</Text></View>;
+  const action = (label: string, onPress: () => void, blocked = false) => <Host key={label} matchContents={{ vertical: true }} style={{ width: '100%' }}>
+    <Button label={text(label)} disabled={blocked} onPress={onPress} style={{ width: '100%' }} /></Host>;
+  return <>
+    <ScrollView contentContainerStyle={{ paddingVertical: 8, paddingBottom: 24, gap: 12 }}
+      refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.reload(); }} />}>
+      <WorkerQueueCard backgroundColor={colors.surfaceContainerLow} first last><View style={{ flex: 1, gap: 6, paddingVertical: 12 }}>
+        <Text style={{ color: colors.onSurface, fontSize: 20, paddingHorizontal: 16 }}>{text('shipmentInfoTitle')}</Text>
+        {line('customerLabel', record.supplier_name)}{line('itemLabel', `${record.item_code} • ${record.item_name}`)}
+        {line('pendingStatus', `${record.sent_qty.toFixed(2)} ${record.uom}`)}
+        {record.accepted_qty > 0 ? line('acceptedFromQtyPrefix', `${record.accepted_qty.toFixed(2)} ${record.uom}`) : null}
+        {line('statusLabel', text(customerDeliveryStatusKey(record.status)))}
+        {trimCustomerInput(record.note) ? <View style={{ paddingHorizontal: 16, gap: 6 }}><Text style={{ color: colors.onSurface }}>{text('noteTitle')}</Text>
+          <Text style={{ color: colors.onSurface }}>{record.note}</Text></View> : null}
+        {hasDiscussion && onOpenDiscussion ? <View style={{ paddingHorizontal: 16, gap: 8 }}><Text style={{ color: colors.onSurface }}>{text('commentsTitle')}</Text>
+          <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+            <Button label={text('openDiscussionAction')} onPress={openDiscussion} style={{ width: '100%' }} />
+          </Host></View> : null}
+        {detail.canApprove || detail.canPartiallyAccept || detail.canReject || detail.canReportClaim ? <View style={{ paddingHorizontal: 16, gap: 12 }}>
+          <Text style={{ color: colors.onSurface }}>{text('responseTitle')}</Text>
+          {detail.canApprove ? action(state.submitting ? 'sending' : 'approveAction', () => setConfirm(true), state.submitting) : null}
+          {detail.canPartiallyAccept ? action('partialAcceptAction', () => setDialog('partial'), state.submitting) : null}
+          {detail.canReject ? action('rejectAction', () => setDialog('reject'), state.submitting) : null}
+          {detail.canReportClaim ? action('reportIssueAction', () => setDialog('claim'), state.submitting) : null}
+        </View> : null}
+      </View></WorkerQueueCard>
+    </ScrollView>
+    <WorkerAlert alert={confirm ? { title: text('confirmTitle'), message: text('confirmQuestion'), cancelLabel: text('no'),
+      confirmLabel: text('yes'), onConfirm: () => { void state.send(customerApproveAll(deliveryNoteID)); } } : null} onDismiss={() => setConfirm(false)} />
+    <CustomerReturnDialog kind={dialog} sentQty={record.sent_qty} uom={record.uom} onCancel={() => setDialog(null)} onConfirm={onReturn} />
+    <CustomerSnackbar message={state.message} onDismiss={state.clearMessage} />
+  </>;
+}

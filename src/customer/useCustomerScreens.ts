@@ -82,5 +82,6 @@ export function useCustomerDelivery(deliveryNoteID: string, onChanged: () => voi
       if (mounted.current) setMessage(method('responseSendFailed', { error: String(failure) }));
     } finally { submittingRef.current = false; if (mounted.current) setSubmitting(false); }
   };
-  return { detail, loading, error, submitting, message, clearMessage: () => setMessage(''), reload, send };
+  const clearMessage = useCallback(() => setMessage(''), []);
+  return { detail, loading, error, submitting, message, clearMessage, reload, send };
 }

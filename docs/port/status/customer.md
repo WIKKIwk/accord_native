@@ -14,7 +14,7 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 | In-flight refresh at account reset | `customer_store.dart` `clear`, `refresh` | V2 clears its singleton without explicitly cancelling an already pending refresh. Confirm whether an old response can update shared runtime state after an account switch before declaring that lifecycle fully audited. |
 | Timestamp ties | `customer_store.dart` `_mergeHistoryItems`, `customer_delivery_runtime_store.dart` `_sorted` | V2 Dart sorting does not guarantee tie order; JavaScript sorting is stable. Exact visible ordering of records with identical timestamps remains unverified. |
 | Return dialogs | `customer_delivery_detail_screen__CustomerDeliveryDetailScreenState_methods_01.dart` `_showReturnDialog` | Native centered return/partial/claim dialogs are implemented on both platforms; verify keyboard, outside/back dismissal, focus, resizing and accessibility on real phones. |
-| Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home, status and notifications content now have iOS and Android views, but routes, shells, delivery view, shared NotificationDetailScreen integration, text and surface audits remain open. |
+| Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Home, status, notifications and delivery content now have iOS and Android views. Routes, shells, shared NotificationDetailScreen integration, text and surface audits remain open; the discussion action is intentionally unavailable until that real destination is connected. |
 | Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | Connect a shared live chat unread total and initialized push delivery; neither is established by this checkpoint. |
 
 ## Baseline evidence
@@ -30,6 +30,8 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Customer delivery content: `tests/customerDeliveryViews.test.cjs`, `tests/customerReturnDialogViews.test.cjs` and `tests/customerLogic.test.cjs` passed 12 source-derived tests for permissions, action order, confirmations, response parameters, discussion callback and retry. iOS typecheck and Expo lint passed; Android has the same nine worker baseline errors. Snackbar and native interaction still require real-phone checks.
 
 - Customer return dialogs: `tests/customerReturnDialogViews.test.cjs` and `tests/customerLogic.test.cjs` passed 8 tests for reason order, quantity validation, cancel/confirm labels and response data. iOS typecheck and Expo lint passed; Android retained the same nine worker errors. No phone was used.
 
