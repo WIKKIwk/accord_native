@@ -79,6 +79,8 @@ None proposed in this checkpoint.
 - Offline `expo export` completed for iOS and Android with restricted routes. This verifies bundling only, not device behavior. Current iOS typecheck and lint pass; Android typecheck retains the nine baseline worker errors and has no Supplier errors.
 - `node --test tests/dispatchRecordParser.test.cjs`: 3 passed with the current shared parser and again with the exact `a947a1a` parser-only source supplied through `NOTIFICATION_API_TEST_FILE`. The isolated tests cover fields, defaults, types and notification-detail validation order; they do not record HTTP traffic.
 - `node --test tests/supplierMaterialText.test.cjs tests/supplierRestrictedRoutes.test.cjs tests/dispatchRecordParser.test.cjs`: 7 passed. Supplier drawer menu and dismissal accessibility labels follow Flutter's Material localization for all four supported locales.
+- Final focused Supplier/shared run: 72 tests, 71 passed, 0 failed, 1 explicit account-switch security TODO. Final iOS typecheck and lint passed. The f119 V2 snapshot remained clean.
+- Final `node --test tests/*.test.cjs`: 1,226 passed, 6 failed, 1 TODO. All six failures are the known preparation Android Node/Expo UI `jetpack-compose/modifiers/createModifier` module-resolution failures; no protected source was modified. This is not a green full suite.
 - A temporary Dart SDK/Node comparison checked `toStringAsFixed`/`toFixed` on ten representative halves, decimal ties, large, NaN and infinite values; all printed pairs matched. This is a narrow observation, not an exhaustive numeric oracle or a V2 recording.
 
 ## Surface audit
