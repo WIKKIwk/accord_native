@@ -10,11 +10,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { DeviceSheet } from '../shared/printing/DeviceSheet';
 import type { ArchivePrintEntry, ArchiveSession } from './gscaleArchive';
 import { gscaleDashboardSections, type GScaleRow } from './gscaleScreenModel';
 import type { GScaleOperatorStore } from './gscaleOperatorState';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
-import { useGScaleDevicePicker, useGScalePicker, useGScaleScreen, useGScaleSession, useGScaleText,
+import { useGScalePicker, useGScaleScreen, useGScaleSession, useGScaleText,
   type GScalePickerSpec } from './useGScaleScreen';
 
 function Label({ children }: { children: string }) {
@@ -64,36 +65,6 @@ function ChoiceSheet({ spec, close, session }: { spec: GScalePickerSpec; close()
     <Action label="Bekor qilish" onPress={close} /></View>;
 }
 
-function DeviceSheet({ operator, close }: { operator: GScaleOperatorStore; close(): void }) {
-  const picker = useGScaleDevicePicker(operator, close), address = useNativeState(picker.address), t = useGScaleText();
-  return <View style={{ minHeight: 400, padding: 16, gap: 10 }}><Label>{t('Qurilma tanlash')}</Label>
-    <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
-      {picker.device.connection == null ? <>
-        <Action label="Wi-Fi qurilma" onPress={() => picker.choose('wifi')} /><Action label="Bluetooth printer" onPress={() => picker.choose('bluetooth')} />
-        <Action label="USB printer" onPress={() => picker.choose('usb')} />
-      </> : <Action label="Orqaga" onPress={() => picker.choose(null)} />}
-      {picker.device.connection === 'wifi' && <>
-        <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={address} singleLine onValueChange={picker.setAddress} modifiers={[fillMaxWidth()]}>
-          <OutlinedTextField.Label><Text>{t('Server manzili')}</Text></OutlinedTextField.Label></OutlinedTextField></Host>
-        <Action label="Wi-Fi manzilini qo‘shish" disabled={picker.device.checkingAddress} onPress={() => void picker.checkAddress()} />
-        {!!picker.device.addressError && <Label>{picker.device.addressError}</Label>}
-        {picker.device.scanning && <ActivityIndicator />}
-        {!picker.device.scanning && !picker.device.scanResult?.servers.length && <Label>{t('Qurilma topilmadi')}</Label>}
-        {picker.device.scanResult?.servers.map(server => <Action key={server.endpoint.baseUrl} label={server.handshake.serverName}
-          detail={server.endpoint.baseUrl} onPress={() => void picker.selectServer(server)} />)}
-        <Action label="Yangilash" disabled={picker.device.scanning} onPress={picker.scan} />
-      </>}
-      {picker.device.connection === 'bluetooth' && <>{picker.scanning && <ActivityIndicator />}
-        {!picker.scanning && !picker.printers.length && <Label>{t('Printer topilmadi')}</Label>}
-        {picker.printers.map(printer => <Action key={printer.address} label={printer.displayName} detail={printer.address}
-          onPress={() => void picker.selectBluetooth(printer)} />)}
-        <Action label="Yangilash" disabled={picker.scanning} onPress={picker.rescanBluetooth} /></>}
-      {picker.device.connection === 'usb' && <>{picker.scanning && <ActivityIndicator />}
-        <Action label="USB printerni aniqlash" disabled={picker.scanning} onPress={() => void picker.selectUsb()} /></>}
-      {!!picker.error && <Label>{picker.error}</Label>}
-    </ScrollView><Action label="Bekor qilish" onPress={close} /></View>;
-}
-
 function ArchiveSheet({ batch, operator, close }: { batch: ArchiveSession; operator: GScaleOperatorStore; close(): void }) {
   const [entry, setEntry] = useState<ArchivePrintEntry | null>(null), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const t = useGScaleText();
@@ -140,7 +111,7 @@ function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType
     sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />, { onDismiss: () => resolve(null) });
   });
   const sections = gscaleDashboardSections(screen, section, {
-    pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} />),
+    pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} useText={useGScaleText} Label={Label} Action={Action} />),
     archive: batch => sheet.open(<ArchiveSheet batch={batch} operator={screen.operator} close={sheet.close} />),
     confirmArchivePrint: batch => Alert.alert(t('Partiya QR chop etish'), t('Shu partiya uchun QR chop etamizmi?'), [
       { text: t('Bekor qilish'), style: 'cancel' }, { text: t('Chop etish'), onPress: () => void screen.operator.printArchive(batch) },
