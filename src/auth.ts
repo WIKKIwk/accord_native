@@ -93,6 +93,8 @@ export function subscribeSessionWitness(listener: () => void): () => void {
   witnessListeners.add(listener); return () => { witnessListeners.delete(listener); };
 }
 export function sessionWitnessVersion(): number { return witnessGeneration; }
+/** Read-only indication that a tracked login, logout, account or scope transition is still pending. */
+export function sessionWitnessTransitioning(): boolean { return witnessTransitions.size > 0; }
 const secureStorage = chunkedStorage({ getItem: key => SecureStore.getItemAsync(key),
   setItem: (key, value) => SecureStore.setItemAsync(key, value), removeItem: key => SecureStore.deleteItemAsync(key) });
 const newImageCacheScope = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
