@@ -48,7 +48,7 @@ export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () 
     guard();
     if (ticket.kind === 'pending') {
       const detail = await pendingOrderDetail(session, ticket.id, guard); guard();
-      return { kind: 'pending' as const, template: detail.template };
+      return { kind: 'pending' as const, template: detail.template, managerName: detail.manager_name };
     }
     // V2 retries a stale detail once, not a failed HTTP request. Every retry
     // still belongs to the original list ticket and session witness.

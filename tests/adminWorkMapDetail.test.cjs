@@ -143,6 +143,8 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
     './useAdminWorkMapDetail': { useAdminWorkMapDetail: () => ({ ...detail, retry }) },
     './AdminWorkMapMetadata': { AdminWorkMapMetadata: 'Metadata' }, './adminWorkMapMetadataModel': metadata,
     './AdminWorkMapSummary': { AdminWorkMapSummary: 'Summary' }, './AdminWorkMapCombo': { AdminWorkMapCombo: 'Combo' },
+    './AdminWorkMapPending': { AdminWorkMapPending: 'Pending' },
+    './adminWorkMapPendingPresentation': load('admin/adminWorkMapPendingPresentation.ts', { './adminDartDouble': load('admin/adminDartDouble.ts') }),
     './adminWorkMapComboPresentation': { adminWorkMapComboPresentation: (combo, products) => ({ combo, products }) },
     './adminWorkMapDetailHeader': load('admin/adminWorkMapDetailHeader.ts', { './dartJsonString': load('admin/dartJsonString.ts') }),
     './adminWorkMapSummaryPresentation': { adminWorkMapSummaryPresentation: (map, state) => ({ map, ...state }) },
@@ -172,7 +174,12 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   assert.equal(failed.find(node => node.type === 'WorkerIconButton').props.label, 'worker.action.close');
   assert.equal(failed.find(node => node.type === 'WorkerIconButton').props.onPress, close);
   const pending = nodes(View({ ...props, ticket: { kind: 'pending' } }));
-  assert.equal(pending.find(node => node.type === 'Button' && node.props.label === 'closeAction').props.onPress, close);
-  assert.equal(pending.some(node => node.type === 'WorkerIconButton'), false);
+  assert.equal(pending.find(node => node.type === 'WorkerIconButton').props.onPress, close);
+  assert.equal(pending.find(node => node.type === 'WorkerIconButton').props.tonal, false);
+  detail = { valid: true, loading: false, value: { kind: 'pending', managerName: 'Manager', template: { order_number: '17', customer: 'Ana', product: 'Film', status: 'Rulon', kg: 100, frame_product_size_mm: 60, frame_count: 2, production_options: null, effective_layers: [] } } };
+  const hydratedPending = nodes(View({ ...props, ticket: { kind: 'pending' } }));
+  assert.equal(hydratedPending.find(node => node.type === 'Text').props.children, '№17 · Chala buyurtma');
+  assert.equal(hydratedPending.find(node => node.type === 'Pending').props.rows.at(-1).value, 'Manager');
+  assert.equal(hydratedPending.some(node => node.type === 'Summary' || node.type === 'Combo'), false);
   detail = { valid: false }; assert.equal(View(props).type, 'View'); assert.equal(nodes(View(props)).length, 1);
 });

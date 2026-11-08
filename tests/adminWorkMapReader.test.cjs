@@ -24,7 +24,7 @@ function fixture() {
     '../apparatusApi': { adminApparatus: async (s, options) => { calls.push(['catalog', s, options]); options.beforeSend(); duringRead(); options.beforeSend(); return [{ id: 'apparatus:default:asset-005', name: 'Pechat' }]; } },
     '../productionOrderPageApi': { adminProductionOrderPage: async (s, q, guard) => { calls.push(['page', s, q]); guard(); duringRead(); guard(); return { epoch: 'e' }; } },
     '../productionOrderDetailApi': { adminProductionOrderDetail: async (s, q, guard) => { calls.push(['detail', s, q]); guard(); duringRead(); guard(); return snapshot; } },
-    '../pendingOrderApi': { pendingOrderDetail: async (s, id, guard) => { calls.push(['pending', s, id]); guard(); duringRead(); guard(); return { id, template: { product: 'P' } }; } },
+    '../pendingOrderApi': { pendingOrderDetail: async (s, id, guard) => { calls.push(['pending', s, id]); guard(); duringRead(); guard(); return { id, template: { product: 'P' }, manager_name: 'Manager' }; } },
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile, value.capabilities]) },
     '../shared/appRoutes': routes, '../shared/profileSessionGuard': profileGuard, '../shared/mobileApiException': exception, './adminProductionRequest': adminGuard,
     './adminWorkMapMetadataModel': metadata,
@@ -52,7 +52,7 @@ test('order detail hydrates the exact ID and rejects stale epoch or revision', a
 });
 test('pending detail uses the existing API and never returns after witness invalidation', async () => {
   const f = fixture(), read = f.api.adminWorkMapDetailReader(f.session, f.witness), ticket = { kind: 'pending', id: 'p', epoch: 'e', revision: 4 };
-  assert.equal((await read(ticket)).template.product, 'P'); assert.equal(f.calls[0][2], 'p');
+  const detail = await read(ticket); assert.equal(detail.template.product, 'P'); assert.equal(detail.managerName, 'Manager'); assert.equal(f.calls[0][2], 'p');
   f.onRead(f.invalidate); await assert.rejects(read(ticket), /session changed/);
 });
 test('async or malformed session witness fails closed before request', async () => {
@@ -147,6 +147,22 @@ function loadRoot(name, mocks) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
+test('actual pending detail decodes manager and template under the original witness', async () => {
+  for (const invalidate of [false, true]) {
+    const f = fixture(), requests = [], raw = { id: 'p', manager_name: 'Manager', template: { order_number: '17', customer: 'Ana', product: 'Film',
+      status: 'Rulon', kg: 100, frame_product_size_mm: 60, frame_count: 2, layers: [{ material: 'PE', micron: '30' }] } };
+    const pendingApi = loadRoot('pendingOrderApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
+      requests.push(url); guard(); return { status: 200, json: async () => { if (invalidate) f.invalidate(); return raw; } };
+    } } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../pendingOrderApi': pendingApi }).adminWorkMapDetailReader(f.session, f.witness);
+    const pending = reader({ kind: 'pending', id: 'p', epoch: 'e', revision: 4 });
+    if (invalidate) await assert.rejects(pending, /session changed/);
+    else { const detail = await pending; assert.equal(detail.managerName, 'Manager'); assert.equal(detail.template.order_number, '17');
+      assert.deepEqual(detail.template.effective_layers.map(({ material, micron }) => [material, micron]), [['PE', '30']]); }
+    assert.equal(requests.length, 1); const query = new URL(requests[0], f.session.baseUrl);
+    assert.equal(query.pathname, '/v1/mobile/admin/pending-orders'); assert.deepEqual(Object.fromEntries(query.searchParams), { id: 'p' });
+  }
+});
 test('actual detail decoder supplies creation metadata only while the opening scope is still current', async () => {
   for (const invalidate of [false, true]) {
     const f = fixture(), requests = [], raw = { epoch: 'e', scope: 's', rev: 5, sequences: {}, visible_order_ids: {},

@@ -16,6 +16,8 @@ import { AdminWorkMapSummary } from './AdminWorkMapSummary';
 import { adminWorkMapDetailHeader } from './adminWorkMapDetailHeader';
 import { AdminWorkMapCombo } from './AdminWorkMapCombo';
 import { adminWorkMapComboPresentation } from './adminWorkMapComboPresentation';
+import { AdminWorkMapPending } from './AdminWorkMapPending';
+import { adminWorkMapPendingPresentation } from './adminWorkMapPendingPresentation';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeNow = () => localeController.locale;
@@ -29,6 +31,7 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
   const value = detail.value, data = value?.kind === 'order' ? value.map : value?.template;
   const title = value?.kind === 'order' ? value.map.title : value?.template.product;
   const customer = value?.kind === 'order' ? value.customer : value?.template.customer;
+  const pending = ticket.kind === 'pending' && value?.kind === 'pending' ? adminWorkMapPendingPresentation(value.template, value.managerName) : null;
   const header = ticket.kind === 'order' ? adminWorkMapDetailHeader(row, value?.kind === 'order' ? value.map : null,
     value?.kind === 'order' ? value.customer : row.customer, productionText('worker.order.fallback', locale)) : null;
   const weight = value?.kind === 'order' ? value.map.order_kg : value?.template.kg;
@@ -42,22 +45,21 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
     {header ? <View><Text style={{ color: colors.text }}>{productionText('worker.order.code', locale)}</Text>
       <Text style={[styles.title, { color: colors.text }]}>{header.code}</Text>
       <Text style={[styles.title, { color: colors.text }]}>{header.label}</Text></View>
-      : <Text style={[styles.title, { color: colors.text }]}>{[row.code || row.id, title || row.title].filter(Boolean).join(' • ')}</Text>}
+      : <Text style={[styles.title, styles.pendingTitle, { color: colors.text }]}>{pending?.title ?? [row.code || row.id, title || row.title].filter(Boolean).join(' • ')}</Text>}
     {detail.loading && <ActivityIndicator />}
     {detail.error && <><Text accessibilityRole="alert" style={{ color: colors.text }}>{detail.error}</Text>
       <Host matchContents={{ vertical: true }}><Button label={localizedGetter('retry', locale)} onPress={detail.retry} /></Host></>}
     {(metadata.length > 0 || data) && <Host matchContents={{ vertical: true }}><Column>
-      {!header && !!customer && <ListItem supportingText={customer}>{localizedGetter('customerLabel', locale)}</ListItem>}
+      {!header && !pending && !!customer && <ListItem supportingText={customer}>{localizedGetter('customerLabel', locale)}</ListItem>}
       {metadata.length > 0 && <AdminWorkMapMetadata rows={metadata} />}
       {combo && <AdminWorkMapCombo key={value?.kind === 'order' ? value.map.id : undefined} model={combo} />}
-      {showSummary ? <AdminWorkMapSummary model={adminWorkMapSummaryPresentation(value?.kind === 'order' ? value.map : null, summary, locale)} onToggle={summary.toggle} onRetry={summary.retry} /> : <>
+      {pending ? <AdminWorkMapPending rows={pending.rows} /> : showSummary ? <AdminWorkMapSummary model={adminWorkMapSummaryPresentation(value?.kind === 'order' ? value.map : null, summary, locale)} onToggle={summary.toggle} onRetry={summary.retry} /> : <>
         {typeof weight === 'number' && Number.isFinite(weight) && <ListItem supportingText={`${weight} kg`}>{productionText('worker.summary.weight', locale)}</ListItem>}
         {typeof length === 'number' && Number.isFinite(length) && <ListItem supportingText={`${length} m`}>{productionText('worker.summary.length', locale)}</ListItem>}
         {typeof width === 'number' && Number.isFinite(width) && <ListItem supportingText={`${width} mm`}>{productionText('worker.summary.material_width', locale)}</ListItem>}
       </>}
     </Column></Host>}
-    {ticket.kind !== 'order' && <Host matchContents={{ vertical: true }}><Button label={localizedGetter('closeAction', locale)} onPress={close} /></Host>}
-  </ScrollView>{ticket.kind === 'order' && <View style={styles.openedClose}><WorkerIconButton icon="close" label={productionText('worker.action.close', locale)} tonal onPress={close} /></View>}</View>;
+  </ScrollView><View style={styles.openedClose}><WorkerIconButton icon="close" label={productionText('worker.action.close', locale)} tonal={ticket.kind === 'order'} onPress={close} /></View></View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { padding: 16, gap: 12 }, openedContent: { paddingTop: 56 },
-  openedClose: { position: 'absolute', top: 4, right: 4 }, title: { fontSize: 20, fontWeight: '700' } });
+  openedClose: { position: 'absolute', top: 4, right: 4 }, title: { fontSize: 20, fontWeight: '700' }, pendingTitle: { paddingRight: 48 } });

@@ -14,7 +14,7 @@ function load(file, mocks = {}) {
   return mod.exports;
 }
 const locale = load('shared/localization/index.ts', { './catalog.json': require('../src/shared/localization/catalog.json') });
-const model = load('admin/adminWorkMapComboPresentation.ts', { '../shared/localization': locale });
+const model = load('admin/adminWorkMapComboPresentation.ts', { '../shared/localization': locale, './adminDartDouble': load('admin/adminDartDouble.ts') });
 const combo = { name: 'Combo name', item_code: 'SKU', revision: 7 }, products = [
   { product: 'Film', item_code: 'P1', frame_product_size_mm: 50, frame_count: 2 },
   { product: 'Bag', item_code: 'P2', frame_product_size_mm: 12.5, frame_count: 3 },
