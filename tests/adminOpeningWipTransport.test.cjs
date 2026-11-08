@@ -50,3 +50,25 @@ for (const [index, action] of calls.entries()) {
     finally { global.fetch = original; }
   });
 }
+
+test('invalid async/value guards fail before local validation or any transport send', async () => {
+  const invalid = [() => false, async () => false, async () => { throw new Error('async rejection'); },
+    () => ({ then(_resolve, reject) { setImmediate(() => reject(new Error('thenable rejected'))); } })];
+  for (const guard of invalid) {
+    const f = fixture(), original = global.fetch; let sends = 0; global.fetch = async () => { sends++; return new Response('{}', { status: 200 }); };
+    try {
+      await assert.rejects(f.api.adminCreateOpeningWip(f.session, { ...input, batches: [{ quantity_basis: 'measured',
+        finished_goods_meter: NaN, finished_goods_kg: 0, bobina_kg: 0 }] }, guard), /Invalid admin guard/);
+      await assert.rejects(f.api.adminOpeningWipQrReport(f.session, '', guard), /Invalid admin guard/); assert.equal(sends, 0);
+    } finally { global.fetch = original; }
+  }
+  await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve));
+});
+test('a guard returning a rejected promise on 401 retry blocks the second send and handles its rejection', async () => {
+  const f = fixture(), original = global.fetch; let sends = 0, checks = 0;
+  global.fetch = async () => { sends++; return new Response('', { status: 401 }); };
+  const guard = () => { checks++; if (checks === 3) return Promise.reject(new Error('async rejection')); };
+  try { await assert.rejects(f.api.adminOpeningWipQrReport(f.session, 'QR', guard), /Invalid admin guard/); assert.equal(sends, 1); }
+  finally { global.fetch = original; }
+  await new Promise(resolve => setImmediate(resolve));
+});

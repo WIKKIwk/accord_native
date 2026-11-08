@@ -4,7 +4,7 @@ import { apparatusCanonicalCapacityToJson, apparatusCapabilityRequirementToJson,
   apparatusDowntimeToJson, apparatusScheduleCandidateToJson, apparatusScheduleReservationFromJson, requireCapacityApparatusId,
   type AdminApparatusCapabilityRequirement, type AdminApparatusCapacityProfile, type AdminApparatusCapacitySnapshot, type AdminApparatusDowntime,
   type AdminApparatusScheduleCandidate, type AdminApparatusScheduleReservation } from './apparatusCapacityModel';
-import { adminProductionRequest, type AdminRequestGuard } from './adminProductionRequest';
+import { adminProductionRequest, checkedAdminGuard, type AdminRequestGuard } from './adminProductionRequest';
 import { dartTrim } from './dartJsonString';
 
 const path = '/v1/mobile/admin/production-maps/capacity';
@@ -14,7 +14,8 @@ const json = (value: unknown): RequestInit => ({ method: 'POST', headers: { 'Con
 
 /** Partial V2 live read; test mode and exact errors remain open. */
 export async function adminApparatusCapacitySnapshot(session: Session, guard?: AdminRequestGuard): Promise<AdminApparatusCapacitySnapshot> {
-  const value = await adminProductionRequest(session, path, undefined, 'apparatus_capacity', guard);
+  const check = checkedAdminGuard(guard); check?.();
+  const value = await adminProductionRequest(session, path, undefined, 'apparatus_capacity', check);
   if (!object(value)) throw new TypeError('Invalid apparatus capacity response');
   if (!Array.isArray(value.capacity)) throw new MobileApiException({ code: 'apparatus_capacity_invalid_response', message: 'Aparat quvvati olinmadi' });
   return { profiles: value.capacity.filter(object).map(apparatusCapacityProfileFromJson), downtimes: [], reservations: [] };
@@ -22,8 +23,9 @@ export async function adminApparatusCapacitySnapshot(session: Session, guard?: A
 
 /** Partial V2 live mutation; test mode and exact errors remain open. */
 export async function adminSaveApparatusDowntime(session: Session, downtime: AdminApparatusDowntime, guard?: AdminRequestGuard): Promise<AdminApparatusDowntime> {
+  const check = checkedAdminGuard(guard); check?.();
   requireCapacityApparatusId(downtime.apparatus_id);
-  const value = await adminProductionRequest(session, `${path}/downtime`, json(apparatusDowntimeToJson(downtime)), 'apparatus_downtime', guard);
+  const value = await adminProductionRequest(session, `${path}/downtime`, json(apparatusDowntimeToJson(downtime)), 'apparatus_downtime', check);
   if (!object(value)) throw new TypeError('Invalid apparatus downtime response');
   if (!object(value.downtime)) throw new MobileApiException({ code: 'apparatus_downtime_invalid_response', message: 'Aparat downtime saqlanmadi' });
   return apparatusDowntimeFromJson(value.downtime);
@@ -32,8 +34,9 @@ export async function adminSaveApparatusDowntime(session: Session, downtime: Adm
 /** Partial V2 live mutation; test mode and exact errors remain open. */
 export async function adminCancelApparatusScheduleReservation(session: Session, reservationId: string, reason = '',
   guard?: AdminRequestGuard): Promise<AdminApparatusScheduleReservation> {
+  const check = checkedAdminGuard(guard); check?.();
   const value = await adminProductionRequest(session, `${schedulePath}/cancel`, json({ reservation_id: dartTrim(reservationId), reason }),
-    'apparatus_schedule_cancel', guard);
+    'apparatus_schedule_cancel', check);
   if (!object(value)) throw new TypeError('Invalid schedule cancellation response');
   if (!object(value.reservation)) throw new MobileApiException({ code: 'apparatus_schedule_invalid_response', message: 'Jadval bandi bekor qilinmadi' });
   return apparatusScheduleReservationFromJson(value.reservation);
@@ -56,12 +59,13 @@ function generatedScheduleKey(value: string, orderId: string): string {
 /** Partial V2 live mutation. The required key factory is an integration dependency, not a default implementation. */
 export async function adminSaveApparatusCapacityProfile(session: Session, profile: AdminApparatusCapacityProfile,
   keys: Pick<CapacityIdempotencyKeys, 'capacity'>, guard?: AdminRequestGuard): Promise<AdminApparatusCapacityProfile> {
+  const check = checkedAdminGuard(guard); check?.();
   requireCapacityApparatusId(profile.apparatus_id);
   const key = generatedCapacityKey(keys.capacity());
   const init: RequestInit = { method: 'PUT', headers: { 'Content-Type': 'application/json', 'idempotency-key': key },
     body: JSON.stringify({ apparatus_id: dartTrim(profile.apparatus_id), expected_revision: profile.source_revision,
       capacity: apparatusCanonicalCapacityToJson(profile) }) };
-  const value = await adminProductionRequest(session, path, init, 'apparatus_capacity', guard);
+  const value = await adminProductionRequest(session, path, init, 'apparatus_capacity', check);
   if (!object(value)) throw new TypeError('Invalid apparatus capacity response');
   const committed = value.revision;
   if (!object(committed) || !object(committed.revision))
@@ -81,6 +85,7 @@ export type AdminApparatusScheduleInput = { order_id: string; apparatus_id: stri
 /** Partial V2 live mutation. Empty keys require an independently verified key factory before integration. */
 export async function adminScheduleApparatusOrder(session: Session, input: AdminApparatusScheduleInput,
   keys?: Pick<CapacityIdempotencyKeys, 'schedule'>, guard?: AdminRequestGuard): Promise<AdminApparatusScheduleReservation> {
+  const check = checkedAdminGuard(guard); check?.();
   const apparatusId = requireCapacityApparatusId(input.apparatus_id), candidates = input.candidate_apparatuses ?? [];
   for (const candidate of candidates) requireCapacityApparatusId(candidate.apparatus_id);
   const orderId = dartTrim(input.order_id), explicit = dartTrim(input.idempotency_key ?? '');
@@ -89,7 +94,7 @@ export async function adminScheduleApparatusOrder(session: Session, input: Admin
     earliest_start_unix: input.earliest_start_unix, latest_end_unix: input.latest_end_unix ?? null, duration_minutes: input.duration_minutes,
     priority: input.priority ?? 0, source: input.source ?? 'admin', reason: input.reason ?? '', idempotency_key: key,
     capability_requirements: (input.capability_requirements ?? []).map(apparatusCapabilityRequirementToJson),
-    candidate_apparatuses: candidates.map(apparatusScheduleCandidateToJson) }), 'apparatus_schedule', guard);
+    candidate_apparatuses: candidates.map(apparatusScheduleCandidateToJson) }), 'apparatus_schedule', check);
   if (!object(value)) throw new TypeError('Invalid schedule response');
   if (!object(value.reservation)) throw new MobileApiException({ code: 'apparatus_schedule_invalid_response', message: 'Aparat jadvali saqlanmadi' });
   return apparatusScheduleReservationFromJson(value.reservation);

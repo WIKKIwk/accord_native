@@ -1,7 +1,7 @@
 import type { Session } from '../auth';
 import { MobileApiException } from '../shared/mobileApiException';
 import { openingWipRecordFromJson } from '../workerOpeningWipRecordsApi';
-import { adminProductionRequest, type AdminRequestGuard } from './adminProductionRequest';
+import { adminProductionRequest, checkedAdminGuard, type AdminRequestGuard } from './adminProductionRequest';
 import { dartTrim } from './dartJsonString';
 import { openingWipCreateInputToJson, type AdminOpeningWipCreateInput } from './openingWipInput';
 
@@ -14,16 +14,16 @@ function record(value: unknown, code: string, message: string) {
 }
 /** Partial f119 live request. Demo mode, exact error parsing and account lifecycle remain open. */
 export async function adminCreateOpeningWip(session: Session, input: AdminOpeningWipCreateInput, guard?: AdminRequestGuard) {
-  guard?.();
+  const check = checkedAdminGuard(guard); check?.();
   const body = openingWipCreateInputToJson(input);
-  return record(await adminProductionRequest(session, path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 'opening_wip_create', guard), 'opening_wip_create', 'Opening WIP yaratilmadi');
+  return record(await adminProductionRequest(session, path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 'opening_wip_create', check), 'opening_wip_create', 'Opening WIP yaratilmadi');
 }
 /** Partial f119 live request. Demo mode, exact error parsing and account lifecycle remain open. */
 export async function adminOpeningWipQrReport(session: Session, qrPayload: string, guard?: AdminRequestGuard) {
-  guard?.();
+  const check = checkedAdminGuard(guard); check?.();
   const qr = dartTrim(qrPayload);
   if (!qr) throw new MobileApiException({ code: 'opening_wip_qr_not_found', message: 'Opening WIP QR topilmadi' });
   return record(await adminProductionRequest(session, `${path}/qr/report`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ qr_payload: qr }) }, 'opening_wip_qr_not_found', guard),
+    body: JSON.stringify({ qr_payload: qr }) }, 'opening_wip_qr_not_found', check),
     'opening_wip_qr_not_found', 'Opening WIP QR topilmadi');
 }

@@ -52,7 +52,7 @@ test('non-200 responses retain code, HTTP status and shared-worker parser behavi
 test('optional guard reaches the transport and rejects account/scope changes after response or body parsing', async () => {
   const f = fixture(); let allowed = true, checks = 0; const guard = () => { checks++; if (!allowed) throw new Error('scope changed'); };
   f.setResponse(new Response(JSON.stringify({ capacity: [] }), { status: 200 }));
-  await f.adminApparatusCapacitySnapshot(session, guard); assert.equal(f.calls[0].guard, guard); assert.equal(checks, 3);
+  await f.adminApparatusCapacitySnapshot(session, guard); assert.equal(typeof f.calls[0].guard, 'function'); assert.notEqual(f.calls[0].guard, guard); assert.equal(checks, 4);
   f.onSend(async () => { allowed = false; });
   await assert.rejects(f.adminApparatusCapacitySnapshot(session, guard), /scope changed/);
   allowed = true; f.onSend(null); f.setResponse({ status: 200, async json() { allowed = false; return { capacity: [] }; } });
@@ -94,12 +94,12 @@ test('schedule cancellation trims only the reservation ID and parses the returne
 test('mutation guard failures stop mocked sends or discard stale success without pretending it was not sent', async () => {
   const f = fixture(); let allowed = false; const guard = () => { if (!allowed) throw new Error('scope changed'); };
   await assert.rejects(f.adminCancelApparatusScheduleReservation(session, 'r', '', guard), /scope changed/);
-  // The mock transport receives the request but invokes the guard before any network send.
-  assert.equal(f.calls.length, 1);
+  // The local checked guard rejects before the transport is called.
+  assert.equal(f.calls.length, 0);
   allowed = true; f.onSend(async () => { allowed = false; });
   f.setResponse(new Response(JSON.stringify({ reservation: { apparatus_id: id, reservation_id: 'r' } }), { status: 200 }));
   await assert.rejects(f.adminCancelApparatusScheduleReservation(session, 'r', '', guard), /scope changed/);
-  assert.equal(f.calls.length, 2); // Post-send failure does not prove whether the server committed.
+  assert.equal(f.calls.length, 1); // Post-send failure does not prove whether the server committed.
 });
 
 test('capacity profile PUT uses one supplied V2-shaped key and canonical body, then reconstructs the committed profile', async () => {
@@ -148,4 +148,17 @@ test('schedule creation preserves explicit keys, validates candidates and fails 
   f.setResponse(new Response('{}', { status: 200 }));
   await assert.rejects(f.adminScheduleApparatusOrder(session, { ...input, idempotency_key: 'key' }),
     error => error.code === 'apparatus_schedule_invalid_response' && error.message === 'Aparat jadvali saqlanmadi');
+});
+
+test('invalid checked guard wins before every local validation or key generation', async () => {
+  const f = fixture(); let generated = 0; const guard = async () => false;
+  const profile = model.apparatusCapacityProfileFromJson({ apparatus_id: id }), downtime = model.apparatusDowntimeFromJson({ apparatus_id: id });
+  const calls = [() => f.adminApparatusCapacitySnapshot(session, guard),
+    () => f.adminSaveApparatusDowntime(session, { ...downtime, apparatus_id: 'bad' }, guard),
+    () => f.adminCancelApparatusScheduleReservation(session, '', '', guard),
+    () => f.adminSaveApparatusCapacityProfile(session, { ...profile, apparatus_id: 'bad' }, { capacity: () => { generated++; return 'bad'; } }, guard),
+    () => f.adminScheduleApparatusOrder(session, { order_id: '', apparatus_id: 'bad', apparatus: '', earliest_start_unix: 0, duration_minutes: 0 },
+      { schedule: () => { generated++; return 'bad'; } }, guard)];
+  for (const call of calls) await assert.rejects(call(), /Invalid admin guard/);
+  assert.equal(generated, 0); assert.equal(f.calls.length, 0); await new Promise(resolve => setImmediate(resolve));
 });
