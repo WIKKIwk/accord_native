@@ -1,0 +1,73 @@
+{
+ "source": "test/rezka_split_oracle_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "Rezka source and split requests and models at selected V2 baseline",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka/source?barcode=B+1",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-oracle-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"source\":{\"barcode\":\" B1 \",\"line_index\":\"3.8\",\"item_code\":\" I-1 \",\"qty\":\"2.5\",\"uom\":\" kg \"}}"
+   }
+  },
+  {
+   "test": "Rezka source and split requests and models at selected V2 baseline",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka/split",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-oracle-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_barcode\":\"B 1\",\"source_stock_entry\":\"SE\",\"source_line_index\":3,\"reason\":\"test\",\"driver_url\":\"http://printer\",\"printer\":\"Zebra\",\"print_mode\":\"label\",\"outputs\":[{\"item_code\":\"I-1\",\"item_name\":\"Film\",\"qty\":2.5,\"uom\":\"kg\",\"target_warehouse\":\"WH\",\"reason\":\"why\",\"print_qr\":true}]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"status\":\" ready \",\"outputs\":[{\"epc\":\" E1 \",\"qty\":\"2.5\",\"print_qr\":true},{\"epc\":\" E2 \",\"print_qr\":false}]}"
+   }
+  },
+  {
+   "test": "Rezka source and split requests and models at selected V2 baseline",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka/split/client-print/prepare",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-oracle-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_barcode\":\"B 1\",\"source_stock_entry\":\"SE\",\"source_line_index\":3,\"reason\":\"test\",\"driver_url\":\"http://printer\",\"printer\":\"Zebra\",\"print_mode\":\"label\",\"outputs\":[{\"item_code\":\"I-1\",\"item_name\":\"Film\",\"qty\":2.5,\"uom\":\"kg\",\"target_warehouse\":\"WH\",\"reason\":\"why\",\"print_qr\":true}]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"status\":\" ready \",\"outputs\":[{\"epc\":\" E1 \",\"qty\":\"2.5\",\"print_qr\":true},{\"epc\":\" E2 \",\"print_qr\":false}]}"
+   }
+  },
+  {
+   "test": "Rezka source and split requests and models at selected V2 baseline",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka/split/client-print/confirm",
+   "requestHeaders": {
+    "Authorization": "Bearer rezka-oracle-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"source_barcode\":\"B 1\",\"source_stock_entry\":\"SE\",\"source_line_index\":3,\"reason\":\"test\",\"driver_url\":\"http://printer\",\"printer\":\"Zebra\",\"print_mode\":\"label\",\"outputs\":[{\"item_code\":\"I-1\",\"item_name\":\"Film\",\"qty\":2.5,\"uom\":\"kg\",\"target_warehouse\":\"WH\",\"reason\":\"why\",\"print_qr\":true}]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"status\":\" ready \",\"outputs\":[{\"epc\":\" E1 \",\"qty\":\"2.5\",\"print_qr\":true},{\"epc\":\" E2 \",\"print_qr\":false}]}"
+   }
+  }
+ ]
+}

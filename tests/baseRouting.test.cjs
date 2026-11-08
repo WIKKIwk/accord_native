@@ -75,3 +75,14 @@ test('only available platform homes are selected', () => {
   assert.equal(homeTarget(session('supplier', ['supplier.access']), 'ios'), null);
   assert.equal(homeTarget(session('supplier', ['supplier.access']), 'android'), null);
 });
+
+test('only authorized Rezka masters use their native shell; worker and preparation defaults remain unchanged', () => {
+  const master = session('rezka_master', ['rezka.master.access']);
+  assert.equal(homeTarget(master, 'ios'), '/ios-rezka'); assert.equal(homeTarget(master, 'android'), '/android-rezka'); assert.equal(homeTarget(master, 'web'), null);
+  const denied = session('rezka_master', ['apparatus.queue.read']);
+  assert.equal(homeTarget(denied, 'ios'), null); assert.equal(homeTarget(denied, 'android'), null);
+  assert.equal(homeTarget(session('aparatchi', ['apparatus.queue.read']), 'ios'), '/ios-worker');
+  assert.equal(homeTarget(session('aparatchi', ['apparatus.queue.read']), 'android'), 'worker');
+  assert.equal(homeTarget(session('tayyorlov_masteri', ['preparation.access']), 'ios'), '/ios-preparation');
+  assert.equal(homeTarget(session('tayyorlov_masteri', ['preparation.access']), 'android'), '/android-preparation');
+});
