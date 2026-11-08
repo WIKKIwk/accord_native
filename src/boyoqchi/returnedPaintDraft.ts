@@ -30,6 +30,7 @@ export class ReturnedPaintDraft implements ReturnedPaintDraftData {
     if (next === this.selected) return;
     this.selected = next; this.onChanged();
   }
+  setUsage(value: number): void { this.selectedUsageIndex = value; }
   get image(): ReturnedPaintImage | null { return this.currentImage; }
   setImage(value: ReturnedPaintImage | null): void {
     if ((this.currentImage?.image_id ?? null) === (value?.image_id ?? null)) return;

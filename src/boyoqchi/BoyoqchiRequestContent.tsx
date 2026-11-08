@@ -1,0 +1,67 @@
+import type { Session } from '../auth';
+import type { AdminApparatus } from '../apparatusApi';
+import { WorkerSheetButton } from '../components/WorkerSheetButton';
+import { useWorkerColors } from '../components/useWorkerColors';
+import { StyleSheet, Text, View } from 'react-native';
+import { BoyoqchiImage } from './BoyoqchiImage';
+import { boyoqchiAmount, boyoqchiApparatusLabel, boyoqchiCategoryLabel, boyoqchiDate, boyoqchiGroups,
+  boyoqchiItemText, boyoqchiOperator, boyoqchiOrderLabel } from './boyoqchiLogic';
+import type { ReturnedPaintRequest } from './returnedPaintModel';
+import { useBoyoqchiText } from './useBoyoqchiText';
+
+function Row({ label, value, prominent = false }: { label: string; value: string; prominent?: boolean }) {
+  const colors = useWorkerColors(), t = useBoyoqchiText();
+  return <View style={styles.row}><Text style={[styles.rowLabel, { color: colors.text }]}>{t(label)}</Text>
+    <Text style={[styles.rowValue, { color: colors.text, fontWeight: prominent ? '700' : '500' }]}>{value}</Text></View>;
+}
+export function BoyoqchiRequestContent({ session, request, home, apparatus, onEdit }: {
+  session: Session; request: ReturnedPaintRequest; home: boolean; apparatus: readonly AdminApparatus[]; onEdit: () => void;
+}) {
+  const colors = useWorkerColors(), t = useBoyoqchiText();
+  if (home) return <View style={styles.content}>
+    <Row label="Order" value={boyoqchiOrderLabel(request)} prominent />
+    <Row label="Operator" value={request.sender_display_name.trim() || '—'} />
+    <Row label="Time" value={boyoqchiDate(request.created_at)} />
+    <Row label="Location" value={boyoqchiApparatusLabel(request.apparatus, apparatus)} />
+    {['rasxot', 'astatka'].map(usage => {
+      const groups = boyoqchiGroups(request.items, usage);
+      return groups.length ? <View key={usage} style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{usage === 'rasxot' ? 'Rasxot' : 'Astatka'}</Text>
+        {groups.map(group => <View key={group.category} style={styles.group}>
+          <Text style={[styles.groupTitle, { color: colors.text }]}>{t(boyoqchiCategoryLabel(group.category))}</Text>
+          {group.items.map((item, index) => <Text key={index} style={{ color: colors.text }}>{boyoqchiItemText(item)}</Text>)}
+        </View>)}
+      </View> : null;
+    })}
+  </View>;
+  const calculation = request.calculation;
+  return <View style={styles.content}>
+    <Row label="Order kodi" value={request.order_code.trim() || request.order_id.trim() || '—'} prominent />
+    <Row label="Operator" value={boyoqchiOperator(request)} />
+    <Row label="Sana va vaqt" value={boyoqchiDate(request.created_at)} />
+    {request.image && <BoyoqchiImage session={session} image={request.image} allowDownload />}
+    <View style={[styles.divider, { backgroundColor: colors.field }]} />
+    {request.status === 'waiting_for_boyoqchi_input' ? <>
+      <View style={[styles.waiting, { backgroundColor: colors.field }]}><Text style={{ color: colors.text, fontWeight: '600' }}>
+        {t('Qaytarilgan bo‘yoq qiymatlari kiritilmagan. Rasmdagi qiymatlarni Bo‘yoqchi to‘ldirishi kerak.')}
+      </Text></View>
+      <WorkerSheetButton label={t('Qaytarilgan bo‘yoq')} onPress={onEdit} variant="filled" />
+    </> : calculation ? <>
+      <Row label="Rasxot jami Mix" value={boyoqchiAmount(calculation.rasxot_mix_total)} />
+      <Row label="Astatka jami Mix" value={boyoqchiAmount(calculation.astatka_mix_total)} />
+      <Row label="Rasxot spirt miqdori" value={boyoqchiAmount(calculation.rasxot_alcohol)} />
+      <Row label="Astatka spirt miqdori" value={boyoqchiAmount(calculation.astatka_alcohol)} />
+      <Row label="Yakuniy ishlatilgan spirt" value={boyoqchiAmount(calculation.final_used_alcohol)} prominent />
+      <View style={[styles.divider, { backgroundColor: colors.field }]} />
+      <Row label="Rasxot sof bo‘yoq miqdori" value={boyoqchiAmount(calculation.rasxot_pure_paint)} />
+      <Row label="Astatka sof bo‘yoq miqdori" value={boyoqchiAmount(calculation.astatka_pure_paint)} />
+      <Row label="Yakuniy ishlatilgan bo‘yoq" value={boyoqchiAmount(calculation.final_used_paint)} prominent />
+    </> : <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('Ushbu eski hisobot uchun hisoblash ma’lumoti mavjud emas.')}</Text>}
+  </View>;
+}
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: 16, paddingBottom: 16, gap: 8 }, row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  rowLabel: { flex: 1, fontWeight: '700' }, rowValue: { flex: 1, textAlign: 'right' },
+  section: { gap: 8, marginTop: 10 }, sectionTitle: { fontSize: 16, fontWeight: '800' }, group: { gap: 5, paddingVertical: 7 },
+  groupTitle: { fontWeight: '800' }, divider: { height: StyleSheet.hairlineWidth, marginVertical: 8 }, waiting: { borderRadius: 12, padding: 12 },
+});

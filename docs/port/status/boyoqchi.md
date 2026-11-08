@@ -1,7 +1,7 @@
 # boyoqchi
 
 Status: part 1 of 1 in progress
-Stopped at: Models, pure rules, draft persistence, request-list, completion and image API live paths, request controller and UI contract. Continue platform views, routes, unresolved API behavior, audit and gates.
+Stopped at: Both platform screens, role routes, form and reused drawer/profile/chat are wired. Merge the integrator's photo-add config, remove the temporary iOS save guard, then finish text and surface audit and run final gates.
 
 ## Baseline comparison evidence
 
@@ -24,9 +24,14 @@ Source Git objects `7c87a54e` and `f11910bb` were compared without modifying V2.
 |---|---|---|
 | Numeric JSON | `ReturnedPaintItemInput.fromJson`, `ReturnedPaintCalculation.fromJson` | JS JSON parsing cannot recover whether a numeric token was `1` or `1.0` or represent every large integer. The current backend serializes these decimal fields as strings; compare legacy numeric payloads before parity is claimed. Integer-like map keys may also have a different iteration order. |
 | Returned-paint draft persistence | `ReturnedPaintDraftStore` | Full image metadata, legacy migration, serialized writes and actor/request scope have focused tests using the new role-owned file adapter. Verify actual Expo filesystem behavior on iOS and Android phones. Worker draft behavior is unchanged. |
-| Boyoqchi APIs, UI and routes | `.port/role-boyoqchi.md` | Image upload, delete and download live paths are implemented with focused source-derived tests but remain unchecked pending the training error and cross-origin items below. The unrestricted `returnedPaintImageHeaders` helper is not exposed. Both platform surfaces, sheet/dialog behavior, role navigation and full audit remain. |
+| Boyoqchi APIs | `.port/role-boyoqchi.md` | Image upload, delete and download live paths are implemented with focused source-derived tests but remain unchecked pending the training error and cross-origin items below. The unrestricted `returnedPaintImageHeaders` helper is not exposed. |
 | Training image errors | `uploadTrainingReturnedPaintImage`, `deleteTrainingReturnedPaintImage`, `_adminProductionMapException` | The existing shared production-map error helper is incomplete relative to V2. Resolve its full mapping before marking the training-image paths and callers complete; do not change the protected worker file in this role. |
 | Image origin | `returnedPaintImageUrl`, `downloadReturnedPaintImage` | V2 attaches bearer headers even to absolute external URLs; the existing native transport restricts authenticated requests to the server origin. Do not weaken credential protection; confirm required cross-origin behavior. |
+| Palette | `returned_paint_sheet.dart:175-231`, `returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:85-120` | The reused Worker palette does not expose filled/partial indicators; its iOS fallback omits the three category headings, and its tab control does not support V2's horizontal swipe. Do not modify the protected Worker component as part of this role. |
+| Sheet dismissal | `returned_paint_sheet.dart:240`, `src/components/WorkerOrderSheet.android.tsx` | A hardware-back handler and non-dismissible sheet option are set during saving, but the shared Android sheet always sets native `shouldDismissOnBackPress`; verify and resolve on a phone without changing Worker behavior. |
+| iOS photo save | `returned_paint_sheet_helpers_part_01.dart:279-300`; `app.json` | Photo saving is temporarily guarded on iOS until integrator commit `c678e86` is merged into this branch. A fresh development binary and real-phone permission test are still required. |
+| iOS chat dock | `chat_role_dock.dart`, `boyoqchi_dock.dart` | Existing shared Chat screens are reused. The iOS Chat list is outside the native tab navigator and currently lacks the Home/Astatka/Profile dock that V2 shows there. |
+| Native surface verification | `BoyoqchiHomeScreen`, `BoyoqchiAstatkaScreen`, `ReturnedPaintSheet` | Both Expo platform bundles compile, but no real phone was used. Verify navigation, gestures, images, local draft persistence, saving and accessibility in light/dark modes. |
 | Text gate | `port_ledger.mjs` `scopeFiles` | Unqualified `_refresh` and `_orderLabel` tags incorrectly bring GScale and Preparation folders into the Boyoqchi text scan. Scope or justify each discrepancy without modifying protected roles. |
 
 ## Deviations candidates
@@ -44,7 +49,21 @@ Source Git objects `7c87a54e` and `f11910bb` were compared without modifying V2.
 ## Checkpoint verification
 
 - `v2_oracle.sh test/returned_paint_models_test.dart test/returned_paint_draft_store_test.dart test/boyoqchi_astatka_screen_test.dart` against isolated `f11910bb`: 10 passed. The oracle uses a temporary export, not a device.
-- `node --test tests/boyoqchi*.test.cjs`: 28 passed, 0 failed. Cases are source-derived; no V2 HTTP fixture exists for these requests. Request tests include the existing same-origin authenticated transport; the filesystem adapter test uses a mock, not a device.
+- `node --test tests/boyoqchi*.test.cjs`: 30 passed, 0 failed. Cases are source-derived; no V2 HTTP fixture exists for these requests. Request tests include the existing same-origin authenticated transport; the filesystem adapter test uses a mock, not a device.
 - `npx tsc --noEmit -p tsconfig.ios.json`: passed after Expo regenerated ignored `.expo/types/router.d.ts` using an offline local Metro session. No simulator or device was started.
+- `npx tsc --noEmit -p tsconfig.android.json`: 9 existing errors, all in protected `WorkerOutputProgress.android.tsx` and `WorkerPaintPalette.android.tsx`; no new Boyoqchi errors.
 - `npx expo lint`: passed.
+- `CI=1 EXPO_OFFLINE=1 npx expo export --platform ios` and `--platform android`: both bundled successfully. Bundling does not verify runtime behavior.
 - `node .agents/skills/accord-port/scripts/port_ledger.mjs check`: passed with 8 repository-wide endpoint warnings outside this checkpoint.
+
+## Surface audit
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| `BoyoqchiHomeScreen`, `boyoqchi_home_screen_widgets_part_01.dart` | `BoyoqchiScreen.*`, `BoyoqchiRequestContent.tsx` | partial | partial | Loading, empty, refresh, expansion, grouped data and catalog fallback are implemented; no phone run. |
+| `BoyoqchiAstatkaScreen`, `boyoqchi_astatka_screen.dart` | `BoyoqchiScreen.*`, `BoyoqchiRequestContent.tsx`, `BoyoqchiImage.tsx` | partial | partial | Waiting/calculation/image flows are implemented; iOS photo-add config and phone verification remain. |
+| `ReturnedPaintSheet`, `returned_paint_sheet.dart` | `BoyoqchiForm.*`, `BoyoqchiFormContent.tsx` | partial | partial | Reused palette lacks indicators and tab swipe; iOS also lacks category headings. Saving/back guard needs phone validation. |
+| Named field `AlertDialog`, `returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:154-235` | `BoyoqchiFormContent.tsx` | partial | partial | Dialog, values, duplicate rule, cancel/add and order are implemented; presentation and keyboard need phone verification. |
+| Image-preview dialog and download snackbars, `returned_paint_sheet_helpers_part_01.dart:236-354` | `BoyoqchiImage.tsx` | partial | partial | Fullscreen preview, zoom and success/error messages exist; iOS photo saving is temporarily guarded, foreign-auth URLs stay restricted, gesture and gallery behavior need a phone. |
+| Image-source picker, `returned_paint_sheet__ReturnedPaintSheetState_methods_01.dart:240` | Not shown on Boyoqchi sheet | n/a | n/a | V2 opens it only when `allowImageEditing` is true; Astatka constructs the sheet with the default false (`boyoqchi_astatka_screen.dart:89-98`). |
+| `PopScope`, `returned_paint_sheet.dart:240` | `BoyoqchiFormContent.tsx`, `useReturnedPaintForm.tsx` | partial | partial | Swipe/outside dismissal is disabled while saving; Android hardware-back handling of the shared sheet needs phone validation. |

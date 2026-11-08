@@ -17,14 +17,15 @@ export class BoyoqchiRequestsController {
     this.state = { ...this.state, ...change };
     this.listeners.forEach(listener => listener());
   }
-  async refresh(): Promise<void> {
+  async refresh(propagateError = false): Promise<void> {
     const current = ++this.generation;
     this.update({ phase: 'loading', expandedKey: null });
     try {
       const page = await this.loadRequests();
       if (current === this.generation) this.update({ phase: 'ready', items: page.items });
-    } catch {
+    } catch (error) {
       if (current === this.generation) this.update({ phase: 'error' });
+      if (propagateError) throw error;
     }
   }
   async refreshApparatus(): Promise<void> {
