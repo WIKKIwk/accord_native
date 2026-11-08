@@ -1,12 +1,13 @@
-import { router, type Href } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoleBottomBar, type RoleNavigationItem } from '../shared/navigation/RoleBottomBar.android';
 import { useCustomerContext, useCustomerText, useCustomerUnread } from './CustomerContext';
-import { customerDestinationPath, customerNotificationBadge, type CustomerDestination } from './customerNavigation';
+import { customerNotificationBadge } from './customerNavigation';
 
 /** @v2 CustomerDock plus RoleDock's shared Chat destination. */
 export function CustomerDock({ active }: { active: 'home' | 'notifications' | 'chat' | null }) {
   const { text } = useCustomerText(), unread = useCustomerUnread(), { chatUnread } = useCustomerContext(), insets = useSafeAreaInsets();
+  const navigation = useNavigation('/android-customer');
   const items: RoleNavigationItem[] = [
     { id: 'home', label: text('homeNavTitle'), icon: 'home', testID: 'customer-home' },
     { id: 'notifications', label: text('notificationsShortTitle'), icon: 'notifications', testID: 'customer-notifications',
@@ -15,6 +16,8 @@ export function CustomerDock({ active }: { active: 'home' | 'notifications' | 'c
   ];
   return <RoleBottomBar active={active ?? ''} items={items} bottomInset={insets.bottom} onSelect={id => {
     if (id === active || (id !== 'home' && id !== 'notifications' && id !== 'chat')) return;
-    router.dismissTo(customerDestinationPath('android', id as CustomerDestination) as Href);
+    // V2 pops to an existing root destination but pushes when it is absent.
+    // StackRouter's NAVIGATE(pop) has those semantics; POP_TO replaces when absent.
+    navigation.dispatch({ type: 'NAVIGATE', payload: { name: id === 'home' ? 'index' : id, pop: true } });
   }} />;
 }

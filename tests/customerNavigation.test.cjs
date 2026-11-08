@@ -130,7 +130,7 @@ test('Android Customer dock reuses native bar, suppresses notification dot on it
   for (const active of ['home', 'notifications', 'chat', null]) {
     const calls = [];
     const dock = load('src/customer/CustomerDock.android.tsx', {
-      'react/jsx-runtime': jsx, 'expo-router': { router: { dismissTo: target => calls.push(target) } },
+      'react/jsx-runtime': jsx, 'expo-router': { useNavigation: parent => { assert.equal(parent, '/android-customer'); return { dispatch: action => calls.push(action) }; } },
       'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 12 }) },
       '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
       './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => true, useCustomerContext: () => ({ chatUnread: 2 }) },
@@ -141,7 +141,7 @@ test('Android Customer dock reuses native bar, suppresses notification dot on it
     assert.equal(dock.props.items[1].showBadge, active !== 'notifications'); assert.equal(dock.props.items[2].showBadge, true);
     if (active) dock.props.onSelect(active);
     dock.props.onSelect('notifications');
-    assert.deepEqual(calls, active === 'notifications' ? [] : ['/android-customer/notifications']);
+    assert.deepEqual(calls, active === 'notifications' ? [] : [{ type: 'NAVIGATE', payload: { name: 'notifications', pop: true } }]);
   }
 });
 
@@ -183,7 +183,7 @@ test('iOS Customer native tabs show the shared Chat unread dot and suppress the 
 
 test('Android Customer dock hides the shared Chat dot at zero unread', () => {
   const dock = load('src/customer/CustomerDock.android.tsx', {
-    'react/jsx-runtime': jsx, 'expo-router': { router: { dismissTo() {} } },
+    'react/jsx-runtime': jsx, 'expo-router': { useNavigation: () => ({ dispatch() {} }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
     './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => false, useCustomerContext: () => ({ chatUnread: 0 }) },
