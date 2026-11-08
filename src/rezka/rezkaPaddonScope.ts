@@ -1,7 +1,7 @@
 import type { AdminApparatus } from '../apparatusApi';
 import type { paddonFromJson } from '../paddonModels';
 
-type Paddon = ReturnType<typeof paddonFromJson>;
+export type RezkaPaddon = ReturnType<typeof paddonFromJson>;
 
 /** @v2 assignedPaddonApparatus */
 export function assignedPaddonApparatus(catalog: readonly AdminApparatus[], assigned: readonly string[]): AdminApparatus[] {
@@ -30,7 +30,7 @@ export function resolveRezkaPaddonScope(options: readonly AdminApparatus[], rout
 }
 
 /** V2 filters a scoped response again and totals the displayed rows, in server order. */
-export function rezkaPaddonList(rows: readonly Paddon[], apparatusId: string) {
+export function rezkaPaddonList(rows: readonly RezkaPaddon[], apparatusId: string) {
   const paddons = apparatusId ? rows.filter(row => row.apparatus_id === apparatusId) : [...rows];
   return { paddons, paddonCount: paddons.length, wipCount: paddons.reduce((sum, row) => sum + row.item_count, 0) };
 }
