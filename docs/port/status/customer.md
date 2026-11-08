@@ -1,7 +1,7 @@
 # customer
 
 Status: part 1 of 1 in progress
-Stopped at: connect CustomerStore to the Customer API and session lifecycle, then port the screens, navigation and surface audit after the integrator aligns the V2 baseline.
+Stopped at: connect CustomerStore to the Customer API and session lifecycle, then port the Customer screens, navigation and surface audit on both platforms.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -14,9 +14,10 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 | Timestamp ties | `customer_store.dart` `_mergeHistoryItems`, `customer_delivery_runtime_store.dart` `_sorted` | V2 Dart sorting does not guarantee tie order; JavaScript sorting is stable. Exact visible ordering of records with identical timestamps remains unverified. |
 | Role surfaces and routing | `.port/role-customer.md`, `.port/text-customer.md` | Port Customer home, notifications, status and delivery detail on iOS and Android; connect Supplier's shared NotificationDetailScreen, existing profile and chat, and complete the text and surface audits. |
 | Shared chat badge and push refresh | `role_dock.dart`, `customer_dock.dart`, `customer_store.dart` | Connect a shared live chat unread total and initialized push delivery; neither is established by this checkpoint. |
-| Wider V2 pin | `docs/port/V2_BASELINE` | The user selected f11910bb; the integrator is aligning the repository baseline and documenting the remaining drift before the rest of this role is implemented. |
 
 ## Baseline evidence
+
+- Main baseline alignment `dad5041` was merged into the Customer branch; the role-local V2 snapshot and original V2 checkout were verified clean at `f11910bb2c8c7081ce26770e69811b03fd0739ed` before and after the ledger run. A zero-drift result after pinning is not evidence that historical drift in other roles was ported.
 
 - `lib/src/core/api/customer/mobile_api_customer.dart` is byte-identical at V2 7c87a54 and f11910bb (blob `bef012db96c456b6e880b65207d70ceee213a72b`). The four role-ledger methods are now source-ported. `customerHistory` is not included: a pinned-source search found no call sites and the Customer store merges the three status lists instead.
 - `lib/src/features/customer/state/customer_store.dart` is byte-identical at both commits (blob `7b499b8a3d5a59c3d4b60e9bd350658ea9ef900c`); `lib/src/core/notifications/store/customer_delivery_runtime_store.dart` is also byte-identical (blob `5e1357676c76e9e2c988c4286a67209e61126d33`). The existing V4 runtime store is reused.
@@ -27,6 +28,8 @@ Stopped at: connect CustomerStore to the Customer API and session lifecycle, the
 - `lib/src/features/shared/models/app_models_declarations_part_01.dart` is byte-identical at both commits (blob `55a4dc08b96b01d1620188785249992e1e78e47f`); the installed Dart SDK documents and implements six-digit DateTime fractions. A source search found no worker or preparation imports/calls to the shared dispatch comparator or its runtime stores.
 
 ## Verification
+
+- Shared Android bottom bar adds optional `RoleNavigationItem.showBadge`; when absent or false the existing icon, labels, selection and interaction stay unchanged. `node --test tests/customerRoleBottomBar.test.cjs`: 2 passed. Android typecheck has the same nine pre-existing worker errors; no worker or preparation file was edited.
 
 - Customer API checkpoint: `node --test tests/customerApi.test.cjs tests/customerLogic.test.cjs tests/customerStore.test.cjs tests/customerDispatchTimestamp.test.cjs tests/baseNotificationApi.test.cjs tests/baseDispatchRuntimeStores.test.cjs` passed 32 tests. These cover all four source-derived request paths, parameters, bodies, status handling and parsing; no V2 Customer HTTP recording was found. The Supplier parser file remains byte-identical to its checkpoint. iOS typecheck and Expo lint passed; Android retained the same nine pre-existing worker errors.
 
@@ -49,5 +52,4 @@ No Customer test-mode branch was identified in the inspected response methods.
 
 ## Needs from the integrator
 
-- Align and pin the user-selected f11910bb source and document the wider drift before the remaining Customer work.
 - Integrate Supplier's shared NotificationDetailScreen when its checkpoint is ready. The record parser extraction in this branch is byte-identical to Supplier's checkpoint and will need its identical shared diff reconciled on merge.
