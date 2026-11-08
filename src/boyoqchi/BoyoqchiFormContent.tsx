@@ -5,6 +5,7 @@ import type { Session } from '../auth';
 import { WorkerIconButton } from '../components/WorkerIconButton';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { useWorkerColors } from '../components/useWorkerColors';
+import { useBaseTheme } from '../components/useBaseTheme';
 import { paintOptions } from '../workerOrderLogic';
 import { BoyoqchiImage } from './BoyoqchiImage';
 import { BoyoqchiPaintPalette } from './BoyoqchiPaintPalette';
@@ -21,9 +22,9 @@ const fieldColors: Record<string, string> = {
 
 type Props = { session: Session; draft: ReturnedPaintDraft; close: () => void; onBusyChange: (busy: boolean) => void;
   save: (items: ReturnedPaintItem[]) => Promise<void> };
-function Field({ label, placeholder, initial = '', decimal = false, autoFocus = false, paintField = false, disabled = false, isLocked, onChange }: {
+function Field({ label, placeholder, initial = '', decimal = false, autoFocus = false, paintField = false, disabled = false, outlineColor, isLocked, onChange }: {
   label: string; placeholder?: string; initial?: string; decimal?: boolean; autoFocus?: boolean; paintField?: boolean; disabled?: boolean;
-  isLocked?: () => boolean; onChange: (value: string) => void;
+  outlineColor?: string; isLocked?: () => boolean; onChange: (value: string) => void;
 }) {
   const colors = useWorkerColors(), native = useNativeState(initial), last = useRef(initial), t = useBoyoqchiText();
   const [focused, setFocused] = useState(false);
@@ -31,7 +32,7 @@ function Field({ label, placeholder, initial = '', decimal = false, autoFocus = 
     <Host matchContents={{ vertical: true }} style={styles.host}><TextInput value={native} placeholder={placeholder === undefined ? undefined : t(placeholder)}
       accessibilityLabel={t(label)} autoFocus={autoFocus} editable={!disabled} keyboardType={decimal ? 'decimal-pad' : 'default'} autoCapitalize={decimal ? 'none' : 'words'}
       style={paintField ? { width: '100%', height: 56, borderRadius: 12, borderWidth: focused ? 1.8 : 1.2,
-        borderColor: fieldColors[label] ?? colors.muted, paddingHorizontal: 12 } : undefined}
+        borderColor: fieldColors[label] ?? outlineColor ?? colors.muted, paddingHorizontal: 12 } : undefined}
       onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onChangeText={value => {
         if (isLocked?.() || (decimal && !boyoqchiInputAllowed(value))) { native.set(last.current); return; }
         last.current = value; onChange(value);
@@ -62,7 +63,8 @@ function NamedFieldDialog({ paint, close, add, disabled = false, isLocked }: { p
 }
 
 export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save }: Props) {
-  const colors = useWorkerColors(), t = useBoyoqchiText(), [paint, setPaint] = useState<string | null>(null);
+  const colors = useWorkerColors(), t = useBoyoqchiText(), theme = useBaseTheme(), [paint, setPaint] = useState<string | null>(null);
+  const outlineColor = theme.colors.outlineVariant ?? colors.muted;
   const [dialog, setDialog] = useState<{ paint: string; key: string; base: string[] } | null>(null);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [, redraw] = useState(0);
   const busyRef = useRef(false), mounted = useRef(true), selectedPaint = useRef<string | null>(null);
@@ -127,9 +129,9 @@ export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save 
             selectedPaint.current = value; setPaint(value); setError('');
           }} />
       </BoyoqchiUsageSwipe></View> : <View pointerEvents={busy ? 'none' : 'auto'} style={styles.fields}>
-        {fields.map((label, index) => <Field key={`${optionKey}:${index}:${label}`} label={label} decimal paintField disabled={busy} isLocked={isLocked} initial={values[index]}
+        {fields.map((label, index) => <Field key={`${optionKey}:${index}:${label}`} label={label} decimal paintField disabled={busy} outlineColor={outlineColor} isLocked={isLocked} initial={values[index]}
           onChange={value => update(optionKey, index, value, fields.length)} />)}
-        {mixFields.map((label, index) => <Field key={`${mixKey}:${index}:${label}`} label={label} decimal paintField disabled={busy} isLocked={isLocked} initial={mixValues[index]}
+        {mixFields.map((label, index) => <Field key={`${mixKey}:${index}:${label}`} label={label} decimal paintField disabled={busy} outlineColor={outlineColor} isLocked={isLocked} initial={mixValues[index]}
           onChange={value => update(mixKey, index, value, mixFields.length)} />)}
         {paint === 'Pantone' && <View style={styles.paintField}><WorkerSheetButton label="Pantone+" height={56} disabled={busy} onPress={() => { if (!isLocked()) setDialog({ paint: 'Pantone', key: optionKey, base: [] }); }} /></View>}
         {paint === 'Pantone' && <View style={styles.paintField}><WorkerSheetButton label="Mix+" height={56} disabled={busy} onPress={() => { if (!isLocked()) setDialog({ paint: 'Mix', key: mixKey, base: [] }); }} /></View>}
