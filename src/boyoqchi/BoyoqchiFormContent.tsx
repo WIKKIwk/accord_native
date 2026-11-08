@@ -20,7 +20,7 @@ function Field({ label, placeholder, initial = '', decimal = false, autoFocus = 
 }) {
   const colors = useWorkerColors(), native = useNativeState(initial), last = useRef(initial), t = useBoyoqchiText();
   return <View style={styles.field}><Text style={{ color: colors.muted }}>{t(label)}</Text>
-    <Host matchContents={{ vertical: true }} style={styles.host}><TextInput value={native} placeholder={t(placeholder ?? label)}
+    <Host matchContents={{ vertical: true }} style={styles.host}><TextInput value={native} placeholder={placeholder === undefined ? undefined : t(placeholder)}
       accessibilityLabel={t(label)} autoFocus={autoFocus} keyboardType={decimal ? 'decimal-pad' : 'default'} autoCapitalize={decimal ? 'none' : 'words'}
       onChangeText={value => {
         if (decimal && !boyoqchiInputAllowed(value)) { native.set(last.current); return; }
