@@ -19,8 +19,8 @@ import { localeController } from '../shared/localization/runtime';
 // @v2 _MaterialHistoryDetailsSheet
 function MaterialHistoryDetails({ event, catalog, session, witness }: { event: AdminRawMaterialEvent; catalog: AdminApparatus[]; session: Session; witness: SessionWitness }) {
   useSyncExternalStore(subscribeSessionWitness, sessionWitnessVersion, sessionWitnessVersion);
-  const details = materialHistoryDetails(event, catalog);
   if (!materialHistoryCurrent(session, witness)) return null;
+  const details = materialHistoryDetails(event, catalog);
   return <Host style={{ flex: 1, minHeight: 360 }}><VStack spacing={10}>
     <Text>{materialHistoryTitle(event)}</Text><Text>{materialHistorySubtitle(event, catalog)}</Text>
     <List><Section>{details.map((detail, index) => <VStack key={`${detail.label}:${index}`} alignment="leading">

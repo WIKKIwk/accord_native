@@ -18,8 +18,9 @@ function nodes(node, type) {
   return [...(node.type === type ? [node] : []), ...nodes(node.props?.children, type)];
 }
 for (const platform of ['ios', 'android']) test(`${platform} history sheet closes on witness transition and cannot reopen from stale row`, () => {
-  const session = {}, witness = { session }, listeners = new Set(), calls = []; let valid = true, content;
+  const session = {}, witness = { session }, listeners = new Set(), calls = [], presentationCalls = []; let valid = true, content;
   const sheet = { open: value => { content = value; calls.push('open'); }, close: () => calls.push('close') };
+  const present = (name, value) => { presentationCalls.push(name); if (!valid) throw new Error('Stale event presentation'); return value; };
   const mocks = { 'react/jsx-runtime': jsx, react: { useEffect: fn => { fn(); }, useSyncExternalStore: (_s, get) => get() },
     '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', Text: 'ComposeText', useMaterialColors: () => ({}) },
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', Image: 'Image', List: 'List', ProgressView: 'ProgressView',
@@ -36,10 +37,12 @@ for (const platform of ['ios', 'android']) test(`${platform} history sheet close
     '../shared/localization/runtime': { localeController: { locale: 'uz' } }, './MaterialContext': { useMaterialContext: () => ({ session, witness }) },
     './useMaterialHistory': { useMaterialHistory: () => ({ allowed: true, loading: false, events: [{ event_id: 'one', event_type: 'receipt' }], apparatus: [],
       refresh() {}, reload() {} }) }, './materialHistoryAccess': { materialHistoryCurrent: () => valid },
-    './materialHistoryPresentation': { materialHistoryTitle: () => 'Receipt', materialHistorySubtitle: () => 'Detail', materialHistoryTime: () => 'now', materialHistoryDetails: () => [] },
+    './materialHistoryPresentation': { materialHistoryTitle: () => present('title', 'Receipt'), materialHistorySubtitle: () => present('subtitle', 'Detail'),
+      materialHistoryTime: () => present('time', 'now'), materialHistoryDetails: () => present('details', []) },
     './materialHistorySymbols': { materialHistorySymbol: () => ({ ios: 'tray', android: 'inbox' }) } };
   const screen = compile(platform, mocks)(), row = nodes(screen, platform === 'ios' ? 'Button' : 'WorkerQueueCard')[0]; row.props.onPress();
   assert.equal(calls[0], 'open'); assert.ok(content.type(content.props));
-  valid = false; listeners.forEach(fn => fn()); assert.ok(calls.includes('close')); assert.equal(content.type(content.props), null);
+  valid = false; listeners.forEach(fn => fn()); assert.ok(calls.includes('close')); presentationCalls.length = 0;
+  assert.equal(content.type(content.props), null); assert.deepEqual(presentationCalls, []);
   const count = calls.filter(value => value === 'open').length; row.props.onPress(); assert.equal(calls.filter(value => value === 'open').length, count);
 });

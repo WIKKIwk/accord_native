@@ -23,8 +23,9 @@ import { localeController } from '../shared/localization/runtime';
 // @v2 _MaterialHistoryDetailsSheet
 function MaterialHistoryDetails({ event, catalog, session, witness }: { event: AdminRawMaterialEvent; catalog: AdminApparatus[]; session: Session; witness: SessionWitness }) {
   useSyncExternalStore(subscribeSessionWitness, sessionWitnessVersion, sessionWitnessVersion);
-  const details = materialHistoryDetails(event, catalog), colors = useMaterialColors();
+  const colors = useMaterialColors();
   if (!materialHistoryCurrent(session, witness)) return null;
+  const details = materialHistoryDetails(event, catalog);
   return <View style={{ minHeight: 300, padding: 20 }}><Host matchContents={{ vertical: true }}>
     <Column verticalArrangement={{ spacedBy: 8 }}><ComposeText color={colors.onSurface} style={{ typography: 'titleLarge' }}>
       {materialHistoryTitle(event)}</ComposeText><ComposeText color={colors.onSurfaceVariant}>{materialHistorySubtitle(event, catalog)}</ComposeText>
