@@ -3,11 +3,9 @@ import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
 import { isCanonicalApparatusId } from '../workerControlsApi';
 import { adminApiError } from './adminApiError';
-import { dartJsonString } from './dartJsonString';
+import { dartJsonString, dartTrim } from './dartJsonString';
 
 const path = '/v1/mobile/admin/apparatus-collections';
-// Dart String.trim includes NEXT LINE (U+0085), unlike JavaScript's trim.
-const dartTrim = (value: string) => value.replace(/^[\s\u0085]+|[\s\u0085]+$/gu, '');
 
 /** @v2 AdminApparatusCollection */
 export type AdminApparatusCollection = {

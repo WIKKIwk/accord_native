@@ -7,3 +7,6 @@ export function dartJsonString(value: unknown): string {
     .map(([key, child]) => `${key}: ${dartJsonString(child)}`).join(', ')}}`;
   return String(value);
 }
+
+// Dart String.trim includes NEXT LINE (U+0085), unlike JavaScript's trim.
+export const dartTrim = (value: string): string => value.replace(/^[\s\u0085]+|[\s\u0085]+$/gu, '');

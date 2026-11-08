@@ -23,6 +23,12 @@ The source used for the new work is `f11910bb2c8c7081ce26770e69811b03fd0739ed`. 
 - An independently authored mock HTTP probe, derived from f119 source rather than a pre-existing V2 test, passed 3/3 in the isolated f119 oracle. Its passing 200 and 500 requests were recorded under `tests/contracts/f11910bb/admin_activity_probe_test.json` after that independent run, and both replays pass. The fixture contains placeholder test data and token only; no backend was contacted. Shared parser, AdminStore and activity tests passed 12/12 together; iOS typecheck and lint pass.
 - This reuse preserves existing native notification behavior but is not fully equivalent to V2: status strings with U+0085 or U+0130, validation order for multiple malformed fields and JSON large-number precision remain shared-parser open items. The f119 probe confirmed V2 accepts NEL-trimmed `ACCEPTED` and Dart-lowercased `PARTİAL`; native currently maps both to pending.
 
+## Checkpoint: warehouse summary and deletion
+
+- `warehouseApi.ts` ports the live `adminWarehouseSummaries` and `adminDeleteWarehouse` paths and `AdminWarehouseSummary` parsing. The warehouse list is already available in GScale and is not duplicated. Create and assignment flows still need the shared warehouse parser and V2-compatible role mapping, respectively; all warehouse UI and test-mode behavior remain open.
+- The selected f119 widget test `admin warehouse detailed stock and QR reprint: available` passed independently in the oracle. Its mocked `HttpOverrides` rejects live network and its printer is mocked; no backend or hardware was used. Ten requests were recorded under `tests/contracts/f11910bb/admin_warehouses_screen_test.json`, with only the warehouse-summary GET replayed here. The delete path has source-derived V4 mock tests but no matching f119 HTTP recording in this checkpoint. Eight warehouse/collection Node tests, iOS typecheck and lint passed.
+- As elsewhere, standard JSON parsing loses integer-valued-double token distinctions and very large integer precision; this affects unusual warehouse names/counts supplied as JSON numbers. Dart-style string conversion of nested JSON remains covered by the shared helper's recorded limitations.
+
 ## Checkpoint: apparatus collections
 
 - `apparatusCollection.ts` ports the live list/create/update/delete paths and `AdminApparatusCollection.fromJson`, reusing the existing canonical apparatus-ID validator. It preserves list 404 fallback, member deduplication/sorting, rune-length validation and revision-based mutations; source-derived tests use mocked requests only.
@@ -102,6 +108,7 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 |---|---|
 | `adminItemGroups`, `adminItemGroupTree`, `adminItemUoms`, `adminItems` | Their namesakes read or derive test-mode demo data; this shared mode is deferred and has not been added to the live-path functions. |
 | `adminApparatusCollections`, `adminCreateApparatusCollection`, `adminUpdateApparatusCollection`, `adminDeleteApparatusCollection` | V2 sorts its demo collection list and mutates the in-memory catalog with member, duplicate-name and revision checks; those branches remain unported. |
+| `adminWarehouseSummaries`, `adminDeleteWarehouse` | V2 derives summaries and validates/removes in-memory warehouses in test mode; those branches remain unported. |
 | `adminFactoryLocations`, `adminCreateFactoryLocation`, `adminUpdateFactoryLocation`, `adminReplaceFactoryLocationApparatus` | Their namesakes read or mutate the in-memory factory-location catalog in test mode, including duplicate-name and apparatus membership checks. |
 | `adminServerMonitor`, `adminStartBackup`, `adminServerMonitorLiveEvents` | V2 reads and updates in-memory demo backup data, and completes the live event stream without opening a socket, in test mode. |
 | `adminSettings` | V2 returns demo admin settings in test mode. |
@@ -109,6 +116,7 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 
 ## Needs from the integrator
 
+- Extract the existing warehouse JSON map callback from `src/gscale/gscaleAdminApi.ts` into an exported helper, keeping current GScale behavior exactly unchanged; Admin create needs the same model. Extract the `src/apparatusApi.ts` family/kind literal lookup into reusable exported helpers without changing existing JS normalization or Worker consumers; Admin options can apply its own V2 normalization. Both need regression coverage before integration.
 - Extract only the canonical role set and alias lookup shared by login and Admin. Keep login's existing JS trim/lower, error type and normalized error text byte-for-byte. Add a separate V2-compatible Admin adapter (Dart-style U+0085 trim and U+0130 lowercase, with raw-input error semantics), and compare before/after login outputs over all canonical values, alias, invalid/null/non-string and Unicode cases. A f119 oracle confirmed these examples; exhaustive current Dart/Node scalar checks found U+0085 as the only trim-set difference and U+0130 as the only difference for single-scalar lowercasing to ASCII. No auth/base file was changed here.
 - Do not enable `useChatUnreadCount` for Admin until a no-redirect, no-cookie live transport is verified; preserve existing worker and preparation Chat behavior.
 - Integrate other role branches and shared navigation only after reviewing conflicts and role guards. The Admin home and routes are not wired by this checkpoint.
