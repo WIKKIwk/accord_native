@@ -19,7 +19,11 @@ V2: `features/admin/presentation/widgets/admin_navigation_drawer.dart`, `admin_d
 
 Reuse the existing native `RoleDrawer`; no Admin drawer view is connected yet. The selected destination closes the drawer without navigating. Other selections close the drawer, wait 220 ms, then: direct-push destinations push; otherwise pop to an existing target, replace the current non-home route when home is below it, or push a new route. V2 logout closes the drawer, waits 120 ms, then opens its logout prompt. The existing shared drawer calls its selection callback immediately, so an Admin coordinator must preserve these delays and route-stack rules. Implement the logout prompt and each destination through existing components rather than substituting a new route. The menu header uses `adminDrawerSections`; the logout label uses `logoutTitle`.
 
-The shared create FAB uses the V2 create overlay; its full open/close, back and action contract is still pending. Do not enable Chat unread live from this shell until the verified no-redirect, no-cookie transport exists.
+## Admin dock and default create overlay (partial)
+
+V2: `widgets/admin_dock.dart` and `widgets/admin_create_hub_sheet_models_part_02.dart`. Ordered dock candidates are home, user, primary create and activity, each filtered by `AppRouter.canOpenRoute`; an explicitly supplied primary action keeps create available. The primary action has no selected tab. It is visible only when `showPrimaryFab` is true, the profile overlay does not obscure it, a primary destination exists and its menu is closed. Selecting it opens the create overlay. Selecting the active non-primary tab does nothing, except selecting Home while the current route is not the session home replaces the root with the home route. Other dock selections replace the root.
+
+The default create overlay lists permitted actions in this order: create user (`adminCreateUserTitle`), create item (`adminCreateItemTitle`), progress QR scan (`adminQrScanTitle`), quick orders (`adminQuickOrdersTitle`), open order (`adminOpenOrderTitle`). Visible actions animate with reverse stagger order. `src/admin/adminDockModel.ts` captures these default candidates and dock decisions. Custom action overrides, the overlay's open/close and back behavior, platform animation and the actual shared FAB/dock integration remain open. Do not enable Chat unread live from this shell until the verified no-redirect, no-cookie transport exists.
 
 ## Verification so far
 
