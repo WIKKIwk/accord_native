@@ -26,7 +26,8 @@ export const searchActivityStore = new SearchActivityStore(appPreferences);
 export type SupplierItem = { code: string; name: string; uom: string; warehouse: string; item_group: string;
   requires_dimensions: boolean; order_apparatus_options: Record<string, string>; order_microns: number[]; customer_names: string[] };
 export type GscaleItemsOptions = { query?: string; group?: string; orderId?: string; limit?: number; offset?: number; useBackend?: boolean };
-function supplierItem(value: unknown): SupplierItem {
+/** Existing SupplierItem parser, shared by the GScale and Supplier readers. */
+export function supplierItemFromJson(value: unknown): SupplierItem {
   const row = object(value);
   const options = row.order_apparatus_options == null ? {} : object(row.order_apparatus_options);
   return { code: typedText(row.code), name: typedText(row.name), uom: typedText(row.uom), warehouse: typedText(row.warehouse),
@@ -50,7 +51,7 @@ export async function gscaleItemsPage(session: Session, options: GscaleItemsOpti
   if (response.status !== 200) throw new MobileApiException({ code: 'gscale_items_failed', message: 'GScale items failed', statusCode: response.status });
   const data: unknown = await response.json();
   if (!Array.isArray(data)) throw new TypeError('Invalid item list');
-  return searchActivityStore.sortByItemCode(session, data.map(supplierItem), item => item.code,
+  return searchActivityStore.sortByItemCode(session, data.map(supplierItemFromJson), item => item.code,
     (left, right) => compare(left.name.toLowerCase(), right.name.toLowerCase()) || compare(left.code.toLowerCase(), right.code.toLowerCase()));
 }
 
