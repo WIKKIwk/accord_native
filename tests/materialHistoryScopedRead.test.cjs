@@ -31,8 +31,10 @@ function setup(change) {
   const authorized = compile('authorizedFetch', { './auth': auth });
   const controls = compile('workerControlsApi', { './authorizedFetch': authorized, './sessionReadScope': scope });
   const dart = compile('shared/dartApparatus', { '../workerControlsApi': controls });
+  const mapper = compile('material/materialHistoryErrors', { '../shared/dartApparatus': dart,
+    '../shared/mobileApiException': compile('shared/mobileApiException'), './materialHistoryErrorMessages': compile('material/materialHistoryErrorMessages') });
   const api = compile('material/materialHistoryApi', { '../authorizedFetch': authorized, '../shared/mobileApiException': compile('shared/mobileApiException'),
-    '../shared/dartApparatus': dart, '../workerControlsApi': controls });
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls, './materialHistoryErrors': mapper });
   const oldFetch = global.fetch;
   global.fetch = async () => { count++; return new Response(count === 1 ? '{"error":"expired"}' : '[]',
     { status: count === 1 ? 401 : 200, headers: { 'content-type': 'application/json' } }); };
@@ -58,7 +60,8 @@ test('history default call preserves the previous three-argument authorizedFetch
   const auth = { authorizedFetch: async (...value) => { args = value; return { status: 200, json: async () => [] }; } };
   const controls = compile('workerControlsApi', { './authorizedFetch': auth, './sessionReadScope': {} });
   const api = compile('material/materialHistoryApi', { '../authorizedFetch': auth, '../shared/mobileApiException': compile('shared/mobileApiException'),
-    '../shared/dartApparatus': compile('shared/dartApparatus', { '../workerControlsApi': controls }), '../workerControlsApi': controls });
+    '../shared/dartApparatus': compile('shared/dartApparatus', { '../workerControlsApi': controls }), '../workerControlsApi': controls,
+    './materialHistoryErrors': { materialHistoryResponseError: () => { throw new Error('Unexpected error mapping'); } } });
   await api.adminRawMaterialHistory({}); assert.equal(args.length, 3);
 });
 

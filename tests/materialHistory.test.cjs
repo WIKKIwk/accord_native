@@ -15,8 +15,10 @@ const errors = load('shared/mobileApiException');
 function setup(fetch) {
   const controls = load('workerControlsApi', { './authorizedFetch': { authorizedFetch: fetch }, './sessionReadScope': { sessionReadScope: () => '' } });
   const dart = load('shared/dartApparatus', { '../workerControlsApi': controls });
+  const mapper = load('material/materialHistoryErrors', { '../shared/dartApparatus': dart, '../shared/mobileApiException': errors,
+    './materialHistoryErrorMessages': load('material/materialHistoryErrorMessages') });
   const api = load('material/materialHistoryApi', { '../authorizedFetch': { authorizedFetch: fetch }, '../shared/mobileApiException': errors,
-    '../shared/dartApparatus': dart, '../workerControlsApi': controls });
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls, './materialHistoryErrors': mapper });
   const presentation = load('material/materialHistoryPresentation', { '../shared/mobileApiException': errors,
     '../shared/dartApparatus': dart, '../workerControlsApi': controls });
   return { ...api, ...presentation };

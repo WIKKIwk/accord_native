@@ -2,7 +2,8 @@ import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
 import { dartTrim, isAsciiCanonicalApparatusId } from '../shared/dartApparatus';
-import { productionMapResponseError, WorkerControlException } from '../workerControlsApi';
+import { WorkerControlException } from '../workerControlsApi';
+import { materialHistoryResponseError } from './materialHistoryErrors';
 
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): ObjectValue | null => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -58,7 +59,7 @@ export async function adminRawMaterialHistory(session: Session, options: { wareh
     if (response.status === 404) throw new MobileApiException({ code: 'raw_material_history_not_found', message: 'Serverda tarix endpointi yo‘q', statusCode: 404 });
     if (response.status !== 200) {
       let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, 'raw_material_history');
+      throw materialHistoryResponseError(response, payload);
     }
     const data: unknown = await response.json();
     if (!Array.isArray(data)) throw new TypeError('Invalid raw material history');
