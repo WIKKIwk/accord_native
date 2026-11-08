@@ -39,7 +39,8 @@ test('Closed log titles, states, apparatus and actor follow source branch preced
   assert.equal(model.adminClosedLogTitle(log({ completed_with_issue: true, issue_note: ' damage ' })), 'damage');
   const early = { ...log(), action: 'close_early', issue_note: ' reason ', freeze: { status: 'frozen', target_apparatus: other } };
   assert.equal(model.adminClosedLogTitle(early), 'Order muammo bilan erta yopildi'); assert.equal(model.adminClosedLogApparatus(early, catalog), '');
-  assert.equal(model.adminClosedLogState(early), 'Erta yopilgan'); assert.equal(model.adminClosedLogRow(early, catalog).subtitle, 'Noma’lum ijrochi • Erta yopilgan • Sabab: reason');
+  assert.equal(model.adminClosedLogState(early), 'Erta yopilgan'); assert.equal(model.adminClosedLogRow(early, catalog).icon, 'freeze');
+  assert.equal(model.adminClosedLogRow(early, catalog).subtitle, 'Noma’lum ijrochi • Erta yopilgan • Sabab: reason');
 });
 test('Closed batch matching uses freeze session, transfer ID, then action/apparatus and nearest time', () => {
   const batches = [batch({ batch_id: 'far', session_id: 's', started_at_unix: 40 }), batch({ batch_id: 'near', session_id: 's', started_at_unix: 95 }),
@@ -57,6 +58,7 @@ test('Closed detail sections retain source ordering, selectable identifiers and 
     freeze: { status: 'pending', target_apparatus: machine, target_worker_ref: ' worker ', target_session_id: ' session ', request_id: ' request ', requested_at_unix: 1 },
     transfer: { from_apparatus: machine, to_apparatus: other, reason: ' reason ', transfer_id: ' transfer ', session_id: ' ts ', progress_batch_id: ' b ', material_barcodes: ['A', 'B'] } });
   const result = model.adminClosedLogDetail(order([batch({ batch_id: 'b' })]), entry, catalog, 'en');
+  assert.equal(result.icon, 'transfer');
   assert.deepEqual(result.sections.map(section => section.id), ['event', 'freeze', 'transfer', 'progress']);
   assert.deepEqual(result.sections[0].fields.map(field => field.label), ['production.event', 'label.apparatus', 'production.time', 'production.executor', 'label.status', 'production.event_id', 'production.issue_note']);
   assert.equal(result.sections[0].fields.find(field => field.label === 'production.event_id').selectable, true);

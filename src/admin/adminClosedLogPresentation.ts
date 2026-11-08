@@ -144,5 +144,6 @@ export function adminClosedLogDetail(order: Order, log: Log, catalog: readonly A
   else if (!batches.length) progress.empty = text('production.progress_empty');
   else progress.batches = batches.map(batch => adminClosedBatch(batch, catalog, locale));
   sections.push(progress);
-  return { title: adminClosedLogTitle(log), apparatus, sections };
+  const icon: 'transfer' | 'freeze' | 'history' = log.transfer ? 'transfer' : log.freeze ? 'freeze' : 'history';
+  return { title: adminClosedLogTitle(log), apparatus, icon, sections };
 }
