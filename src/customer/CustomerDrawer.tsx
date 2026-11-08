@@ -17,8 +17,8 @@ export function CustomerDrawer({ children }: { children: ReactNode }) {
     if (id === 'logout') { confirmRoleDrawerLogout(onLogout); return; }
     if (id !== 'home' && id !== 'notifications' && id !== 'profile') return;
     const target = customerDestinationPath(platform, id as CustomerDestination) as Href;
-    if (platform === 'ios' && id !== 'home') router.navigate(target);
-    else router.dismissTo(target);
+    // V2's drawer replaces only the current route, even if the target is in history.
+    router.replace(target);
   };
   return <RoleDrawer {...state} title="Bo‘limlar" active={active} onSelect={onSelect}
     closeAccessibilityLabel={uiText('Menyuni yopish', locale)}

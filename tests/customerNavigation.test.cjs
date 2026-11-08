@@ -149,7 +149,7 @@ test('Customer drawer delegates current-item and logout behavior to the existing
   const calls = [], state = { visible: false, onOpen() {}, onClose() {} };
   const drawer = load('src/customer/CustomerDrawer.tsx', {
     'react/jsx-runtime': jsx, 'react-native': { Platform: { OS: 'android' } },
-    'expo-router': { router: { dismissTo: path => calls.push(['dismiss', path]), navigate: path => calls.push(['navigate', path]) },
+    'expo-router': { router: { replace: path => calls.push(['replace', path]) },
       usePathname: () => '/android-customer' },
     '../shared/localization': { uiText: text => text }, '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => state },
@@ -160,7 +160,7 @@ test('Customer drawer delegates current-item and logout behavior to the existing
   assert.equal(drawer.type, 'RoleDrawer'); assert.equal(drawer.props.active, 'home'); assert.equal(drawer.props.title, 'Bo‘limlar');
   assert.deepEqual(drawer.props.items.map(item => item.id), ['home', 'notifications', 'profile']);
   drawer.props.onSelect('notifications'); drawer.props.onSelect('profile'); drawer.props.onSelect('logout');
-  assert.deepEqual(calls, [['dismiss', '/android-customer/notifications'], ['dismiss', '/android-customer/profile'], 'logout']);
+  assert.deepEqual(calls, [['replace', '/android-customer/notifications'], ['replace', '/android-customer/profile'], 'logout']);
 });
 
 test('iOS Customer native tabs show the shared Chat unread dot and suppress the notification dot while active', () => {
