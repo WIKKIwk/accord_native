@@ -113,3 +113,36 @@ test('an accidentally async or rejected current guard never authorizes an event 
     assert.deepEqual(h.events, []); h.unmount();
   }
 });
+
+test('a guard that reentrantly commits a new generation cannot deliver old native events to its new callbacks', () => {
+  for (const kind of ['detection', 'error', 'ready']) {
+    const h = harness(), calls = []; let committed = false;
+    const old = h.render({ isCurrent: () => {
+      if (!committed) { committed = true; h.render({ sessionKey: '2', isCurrent: () => true,
+        onDetection: value => calls.push(['new-detection', value]), onMountError: value => calls.push(['new-error', value]),
+        onReady: () => calls.push(['new-ready']) }); }
+      return true;
+    } });
+    if (kind === 'detection') old.props.onBarcodeScanned({ data: 'old-queued' });
+    if (kind === 'error') old.props.onMountError({ message: 'old-queued' });
+    if (kind === 'ready') old.props.onCameraReady();
+    assert.deepEqual(calls, [], kind); assert.deepEqual(h.events, [], kind); h.unmount();
+  }
+});
+
+test('reentrant change of callbacks or generation during guard invalidates only the in-flight event', () => {
+  for (const change of ['handler', 'generation', 'unmount']) {
+    const h = harness(), calls = []; let next; let changed = false;
+    const guard = () => { if (!changed) { changed = true;
+      if (change === 'handler') next = h.render({ onDetection: value => calls.push(['new', value]) });
+      else if (change === 'generation') next = h.render({ sessionKey: '2' });
+      else h.unmount();
+    } return true; };
+    const old = h.render({ isCurrent: guard }); old.props.onBarcodeScanned({ data: 'old-queued' });
+    assert.deepEqual(calls, [], change); assert.deepEqual(h.events, [], change);
+    if (next) { next.props.onBarcodeScanned({ data: 'fresh' });
+      if (change === 'handler') assert.deepEqual(calls, [['new', { data: 'fresh' }]]);
+      else assert.deepEqual(h.events, [['detected', { data: 'fresh' }]]);
+      h.unmount(); }
+  }
+});

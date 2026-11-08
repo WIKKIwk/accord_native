@@ -14,7 +14,7 @@ export type CameraSurfaceProps = {
   barcodeTypes: BarcodeType[];
   /** Change to force a new native camera generation when a role retries or its detection policy changes. */
   sessionKey: string;
-  /** Must synchronously check role focus/app/session state and permission controller canUseCamera(). */
+  /** Pure synchronous read of live role focus/app/session state and permission controller canUseCamera(). */
   isCurrent(): boolean;
   style?: StyleProp<ViewStyle>;
   onDetection(event: BarcodeScanningResult): void;
@@ -35,9 +35,16 @@ export function CameraSurface({ active, permission, checking, facing, torch, bar
     return () => gate.deactivate(token);
   }, [enabled, token, gate]);
   if (!enabled) return null;
-  const current = () => isSynchronouslyTrue(callbacks.current.isCurrent);
+  const deliver = <T,>(value: T, receive: (snapshot: typeof callbacks.current, event: T) => void) => {
+    gate.deliver(token, value, event => {
+      const snapshot = callbacks.current;
+      if (!isSynchronouslyTrue(snapshot.isCurrent) || callbacks.current !== snapshot) return;
+      // The guard can reenter React and commit a new generation. Recheck after it returns.
+      gate.deliver(token, event, accepted => receive(snapshot, accepted));
+    });
+  };
   return <CameraView key={configKey} style={style} facing={facing} enableTorch={torch} barcodeScannerSettings={{ barcodeTypes }}
-    onBarcodeScanned={event => gate.deliver(token, event, value => { if (current()) callbacks.current.onDetection(value); })}
-    onMountError={event => gate.deliver(token, event, value => { if (current()) callbacks.current.onMountError(value); })}
-    onCameraReady={() => gate.deliver(token, undefined, () => { if (current()) callbacks.current.onReady?.(); })} />;
+    onBarcodeScanned={event => deliver(event, (snapshot, value) => snapshot.onDetection(value))}
+    onMountError={event => deliver(event, (snapshot, value) => snapshot.onMountError(value))}
+    onCameraReady={() => deliver(undefined, snapshot => snapshot.onReady?.())} />;
 }
