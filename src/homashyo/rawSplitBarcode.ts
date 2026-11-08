@@ -1,9 +1,8 @@
 import { preparationInventoryBarcode } from '../preparation/preparationInventory';
 import { rawMaterialBarcodeFromQr } from '../shared/barcode/rawMaterialBarcode';
 
-/** Reuse the existing native parser only when it agrees with the shared V2 candidate. */
+/** Reuse the existing parser only for opaque ASCII codes where both implementations agree. */
 export function rawSplitBarcode(raw: string): string {
-  const expected = rawMaterialBarcodeFromQr(raw);
-  const existing = preparationInventoryBarcode(raw);
-  return existing === expected ? existing : expected;
+  if (/^[\t\n\v\f\r ]*[A-Za-z0-9 _./-]*[\t\n\v\f\r ]*$/.test(raw)) return preparationInventoryBarcode(raw);
+  return rawMaterialBarcodeFromQr(raw);
 }
