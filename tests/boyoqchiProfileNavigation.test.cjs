@@ -32,7 +32,7 @@ function fixture(initialNames, scheduled = scheduler()) {
   let state = { stale: false, type: 'stack', key: 'boyoqchi-stack', index: initialNames.length - 1, routeNames: names,
     routes: initialNames.map((name, index) => ({ key: `${name}-${index}`, name })) };
   const events = [], hooks = [], slot = { current: null };
-  let hookIndex = 0;
+  let hookIndex = 0, focused = true;
   const react = {
     useRef: value => { const index = hookIndex++; return hooks[index] ?? (hooks[index] = { current: value }); },
     useLayoutEffect: (effect, dependencies) => {
@@ -54,7 +54,8 @@ function fixture(initialNames, scheduled = scheduler()) {
     'react/jsx-runtime': jsx,
     react,
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
-    'expo-router': { router: { navigate() {} }, useNavigation: id => { assert.equal(id, '/android-boyoqchi'); return { dispatch }; } },
+    'expo-router': { router: { navigate() {} }, useIsFocused: () => focused,
+      useNavigation: id => { assert.equal(id, '/android-boyoqchi'); return { dispatch }; } },
     'react-native': { View: 'View' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },
     '../../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
@@ -75,7 +76,8 @@ function fixture(initialNames, scheduled = scheduler()) {
     './BoyoqchiContext': { useBoyoqchiContext: () => context }, './useBoyoqchiText': commonText,
     './boyoqchiDockScheduler': { queueBoyoqchiDockNavigation: scheduled.queue },
   }, 'tsx').BoyoqchiDrawer;
-  return { mount: () => { hookIndex = 0; return Profile(); }, select: id => Drawer({ children: null }).props.onSelect(id), scheduled, slot, events, context,
+  return { mount: () => { hookIndex = 0; return Profile(); }, focus: value => { focused = value; hookIndex = 0; Profile(); },
+    select: id => Drawer({ children: null }).props.onSelect(id), scheduled, slot, events, context,
     unmount: () => { for (const hook of hooks) hook?.cleanup?.(); },
     names: () => state.routes.slice(0, state.index + 1).map(route => route.name), back: () => dispatch({ type: 'POP', payload: { count: 1 } }) };
 }
@@ -131,4 +133,90 @@ test('changing the session invalidates a queued Profile navigation before re-reg
   assert.deepEqual(f.events, []);
   f.select('home'); f.scheduled.frame();
   assert.deepEqual(f.names(), ['index']);
+});
+
+test('blur invalidates a pending Profile dispatch and refocus creates a fresh safe registration', () => {
+  const f = fixture(['index', 'profile']);
+  f.mount(); f.select('astatka');
+  const prior = f.slot.current;
+  f.focus(false);
+  assert.equal(prior.isMounted(), false);
+  assert.equal(f.slot.current, null);
+  f.focus(true);
+  assert.notEqual(f.slot.current, prior);
+  f.scheduled.frame();
+  assert.deepEqual(f.events, []);
+  f.select('home'); f.scheduled.frame();
+  assert.deepEqual(f.names(), ['index']);
+});
+
+test('retained Profile A re-registers on focus after Profile B is popped', () => {
+  const names = ['index', 'astatka', 'profile', 'chat'], options = { routeParamList: {}, routeGetIdList: {} };
+  const reducer = StackRouter({ initialRouteName: 'index' });
+  let state = { stale: false, type: 'stack', key: 'role-stack', routeKeySeq: 0, index: 0, routeNames: names,
+    routes: [{ key: 'index-0', name: 'index' }] };
+  const dispatch = action => {
+    const result = reducer.getStateForAction(state, action, options);
+    assert.ok(result && result.state, `unhandled ${JSON.stringify(action)}`);
+    state = result.state;
+  };
+  const routeNames = () => state.routes.slice(0, state.index + 1).map(route => route.name);
+  const shared = scheduler(), slot = { current: null };
+  const context = { session: { imageCacheScope: 'account-a' }, onLogout() {}, profileNavigation: slot };
+  const commonText = { useBoyoqchiGetter: () => key => key, useBoyoqchiText: () => key => key };
+  const makeScreen = () => {
+    let focused = false, hookIndex = 0;
+    const hooks = [];
+    const react = {
+      useRef: value => { const index = hookIndex++; return hooks[index] ?? (hooks[index] = { current: value }); },
+      useLayoutEffect: (effect, dependencies) => {
+        const index = hookIndex++, previous = hooks[index];
+        if (previous && dependencies.length === previous.dependencies.length && dependencies.every((value, i) => Object.is(value, previous.dependencies[i]))) return;
+        previous?.cleanup?.();
+        hooks[index] = { dependencies, cleanup: effect() };
+      },
+    };
+    const Profile = load('app/android-boyoqchi/profile', {
+      'react/jsx-runtime': jsx, react,
+      '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'white' }) },
+      'expo-router': { router: { navigate() {} }, useNavigation: id => { assert.equal(id, '/android-boyoqchi'); return { dispatch }; },
+        useIsFocused: () => focused },
+      'react-native': { View: 'View' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
+      '../../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' },
+      '../../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
+      '../../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
+      '../../boyoqchi/BoyoqchiDock.android': { BoyoqchiDock: 'BoyoqchiDock' },
+      '../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => context },
+      '../../boyoqchi/boyoqchiProfileNavigation': registration, '../../boyoqchi/useBoyoqchiText': commonText,
+    }, 'tsx').default;
+    return { render: value => { focused = value; hookIndex = 0; Profile(); }, unmount: () => { for (const hook of hooks) hook?.cleanup?.(); } };
+  };
+  const base = '/android-boyoqchi';
+  const Drawer = load('boyoqchi/BoyoqchiDrawer', {
+    'react/jsx-runtime': jsx, 'react-native': { Platform: { OS: 'android' } },
+    'expo-router': { usePathname: () => state.routes[state.index].name === 'index' ? base : `${base}/${state.routes[state.index].name}`,
+      router: { replace: target => dispatch({ type: 'REPLACE', payload: { name: target === base ? 'index' : target.slice(base.length + 1) } }),
+        navigate: () => { throw new Error('unexpected plain navigation'); } } },
+    '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' },
+    '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({ visible: true, onClose() {}, onOpen() {} }) },
+    '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout() {} },
+    './BoyoqchiContext': { useBoyoqchiContext: () => context }, './useBoyoqchiText': commonText,
+    './boyoqchiDockScheduler': { queueBoyoqchiDockNavigation: shared.queue },
+  }, 'tsx').BoyoqchiDrawer;
+  const select = id => Drawer({ children: null }).props.onSelect(id);
+
+  dispatch({ type: 'NAVIGATE', payload: { name: 'profile', pop: true } });
+  const a = makeScreen(); a.render(true);
+  select('astatka'); shared.frame();
+  assert.deepEqual(routeNames(), ['index', 'profile', 'astatka']);
+  a.render(false);
+  select('profile');
+  assert.deepEqual(routeNames(), ['index', 'profile', 'profile']);
+  const b = makeScreen(); b.render(true);
+  dispatch({ type: 'POP', payload: { count: 1 } });
+  b.unmount(); a.render(true);
+  assert.deepEqual(routeNames(), ['index', 'profile']);
+  assert.ok(slot.current?.isMounted(), 'the retained Profile must register again after focus returns');
+  select('home'); shared.frame();
+  assert.deepEqual(routeNames(), ['index']);
 });
