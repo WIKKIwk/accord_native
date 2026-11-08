@@ -12,13 +12,14 @@ function fixture(connection = new DatabaseSync(':memory:')) {
     async execAsync(sql) { connection.exec(sql); },
     async runAsync(sql, ...args) { return connection.prepare(sql).run(...args); },
     async getAllAsync(sql, ...args) { return connection.prepare(sql).all(...args); },
+    async getFirstAsync(sql, ...args) { return connection.prepare(sql).get(...args); },
     async withExclusiveTransactionAsync(action) {
       connection.exec('BEGIN TRANSACTION');
       try { await action(db); connection.exec('COMMIT'); }
       catch (error) { connection.exec('ROLLBACK'); throw error; }
     },
   };
-  const filename = path.resolve(__dirname, '../src/shared/chat/chatConversationCache.ts');
+  const filename = path.resolve(__dirname, '../src/shared/chat/chatLocalStore.ts');
   const loaded = new Module(filename, module);
   loaded.filename = filename;
   loaded.paths = module.paths;
@@ -75,4 +76,52 @@ test('a failed batch rolls back all rows and invalid scopes never open storage',
   const bad = { ...conversation('bad', 2), updatedAt: undefined };
   await assert.rejects(f.saveCachedChatConversations(f.session, [conversation('good', 1), bad]));
   assert.deepEqual(await f.loadCachedChatConversations(f.session), []);
+});
+
+const message = (sequence, overrides = {}) => ({
+  id: `message-${sequence}`, conversationId: 'a', sequence, clientMessageId: '', senderRole: 'customer', senderRef: 'other',
+  body: `Message ${sequence}`, timestamp: sequence, ...overrides,
+});
+
+test('message cache restores the latest 100 in chronological order and reports the stored maximum', async () => {
+  const f = fixture();
+  assert.equal(await f.latestCachedChatMessageSequence(f.session, 'a'), 0);
+  await f.saveCachedChatMessages(f.session, Array.from({ length: 103 }, (_, i) => message(103 - i)));
+  const restored = await f.loadCachedChatMessages(f.session, 'a');
+  assert.equal(restored.length, 100);
+  assert.equal(restored[0].sequence, 4);
+  assert.equal(restored.at(-1).sequence, 103);
+  assert.equal(await f.latestCachedChatMessageSequence(f.session, 'a'), 103);
+  assert.deepEqual(await f.loadCachedChatMessages(f.session, 'other'), []);
+});
+
+test('message upserts replace the same sequence or message ID, scoped to the account', async () => {
+  const f = fixture();
+  const other = { ...f.session, profile: { role: 'customer', ref: 'other' } };
+  await f.saveCachedChatMessages(f.session, [message(1), message(2)]);
+  await f.saveCachedChatMessages(f.session, [message(3, { id: 'message-1', body: 'Updated' })]);
+  await f.saveCachedChatMessages(other, [message(1)]);
+  assert.deepEqual((await f.loadCachedChatMessages(f.session, 'a')).map(item => [item.id, item.sequence]), [['message-2', 2], ['message-1', 3]]);
+  assert.equal((await f.loadCachedChatMessages(other, 'a'))[0].sequence, 1);
+});
+
+test('sync cursors persist per account and server, defaulting to zero', async () => {
+  const f = fixture();
+  const other = { ...f.session, profile: { role: 'customer', ref: 'other' } };
+  assert.equal(await f.loadCachedChatSyncCursor(f.session), 0);
+  await f.saveCachedChatSyncCursor(f.session, 12);
+  await f.saveCachedChatSyncCursor(other, 4);
+  const next = fixture(f.connection);
+  assert.equal(await next.loadCachedChatSyncCursor(f.session), 12);
+  assert.equal(await next.loadCachedChatSyncCursor(other), 4);
+  assert.equal(await next.loadCachedChatSyncCursor({ ...f.session, baseUrl: 'https://another.example' }), 0);
+});
+
+test('concurrent operations are serialized and a read observes the preceding committed writes', async () => {
+  const f = fixture();
+  const first = f.saveCachedChatConversations(f.session, [conversation('first', 1)]);
+  const second = f.saveCachedChatConversations(f.session, [conversation('second', 2)]);
+  const read = f.loadCachedChatConversations(f.session);
+  await Promise.all([first, second]);
+  assert.deepEqual((await read).map(item => item.id), ['second', 'first']);
 });
