@@ -149,23 +149,34 @@ export class AdminWorkMapController {
   async next() { if (!this.state.hasMore || this.state.loading || this.state.error != null) return; return this.load(true); }
   private async load(append: boolean) {
     if (this.disposed || !this.deps.isCurrent() || !this.request) return;
-    const request = this.request, ticket = ++this.generation, previous = append ? [...this.pages] : [], cursor = append ? previous.at(-1)?.next_cursor : null;
+    const request = this.request, ticket = ++this.generation, search = this.state.query, previous = append ? [...this.pages] : [];
+    // V2 force-refreshes the previously requested Audit range before publishing it atomically.
+    const wanted = request.view === 'audit' && !append ? this.pages.reduce((sum, page) => sum + page.length, 0) : 0;
+    let cursor = append ? previous.at(-1)?.next_cursor : null;
     if (append && !cursor) return;
     this.publish({ loading: true, error: null });
     try {
-      const page = await this.deps.read({ ...request, search: this.state.query, ...(cursor ? { cursor } : {}) });
-      if (!this.current(ticket)) return;
-      if (!page) throw new Error(readError);
-      const first = previous[0], expected = previous.reduce((sum, item) => sum + item.length, 0);
-      if (page.offset !== expected || (first && (page.version !== first.version || page.epoch !== first.epoch || page.scope !== first.scope))) throw new Error(readError);
-      const pages = [...previous, page], audit = request.view === 'audit' ? adminWorkMapAuditPages(pages) : null,
+      const pages = [...previous];
+      do {
+        const page = await this.deps.read({ ...request, search, ...(cursor ? { cursor } : {}) });
+        if (!this.current(ticket)) return;
+        if (!page) throw new Error(readError);
+        const first = pages[0], expected = pages.reduce((sum, item) => sum + item.length, 0);
+        if (page.offset !== expected || (first && (page.version !== first.version || page.epoch !== first.epoch || page.scope !== first.scope))) throw new Error(readError);
+        pages.push(page);
+        if (append || request.view !== 'audit' || page.next_cursor == null || expected + page.length >= wanted) break;
+        if (!page.next_cursor || page.length <= 0) throw new Error(readError);
+        cursor = page.next_cursor;
+      } while (true);
+      const last = pages[pages.length - 1], audit = request.view === 'audit' ? adminWorkMapAuditPages(pages) : null,
         closed = request.view === 'closed' ? adminWorkMapClosedPages(pages) : [],
         rows = request.view === 'audit' || request.view === 'closed' ? [] : adminWorkMapRows(pages, request.view);
       this.pages = pages;
-      this.publish({ rows, loading: false, loaded: true, error: null, hasMore: page.next_cursor != null, total: page.total ?? rows.length, audit, closed });
+      this.publish({ rows, loading: false, loaded: true, error: null, hasMore: last.next_cursor != null,
+        total: request.view === 'audit' ? pages[0].total ?? 0 : last.total ?? rows.length, audit, closed });
     } catch (error) {
       if (!this.current(ticket)) return;
-      this.publish({ loading: false, loaded: !append && !previous.length ? false : this.state.loaded,
+      this.publish({ loading: false, loaded: request.view === 'audit' || append ? this.state.loaded : false,
         error: error instanceof Error ? error.message : readError });
     }
   }

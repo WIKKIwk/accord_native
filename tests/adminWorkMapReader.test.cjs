@@ -235,6 +235,34 @@ test('real paged Audit reader keeps complete counts for twenty findings and rech
   }
 });
 
+test('real guarded Audit refresh re-reads its range and suppresses a changed account during either body', async () => {
+  const dart = load('admin/dartJsonString'), audit = load('admin/adminWorkMapAuditModel', { './dartJsonString': dart });
+  const closed = load('admin/adminWorkMapClosedModel', { './dartJsonString': dart });
+  const Controller = load('admin/adminWorkMapController', { './dartJsonString': dart, './adminWorkMapAuditModel': audit, './adminWorkMapClosedModel': closed }).AdminWorkMapController;
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  for (const invalidateAt of [0, 3, 4]) {
+    const f = fixture(), requests = [];
+    const pageApi = loadRoot('productionOrderPageApi', { './authorizedFetch': { authorizedFetch: async (_session, url, _init, guard) => {
+      requests.push(url); const call = requests.length, offset = call % 2 ? 0 : 20, version = call <= 2 ? 'old' : 'new';
+      guard(); return { status: 200, json: async () => {
+        if (call === invalidateAt) f.invalidate();
+        return { version, epoch: 'server', rev: 1, offset, total: 40, next_cursor: offset ? null : 'next-20',
+          workflow_audit: { ok: false, checked_order_count: version === 'old' ? 40 : 41, total_violations: 40,
+            violations: Array.from({ length: 20 }, (_, index) => ({ code: 'unknown_order', order_id: `zakaz-${offset + index}`, subject: version })) } };
+      } };
+    } } });
+    const reader = load('admin/adminWorkMapReader', { ...f.dependencies, '../productionOrderPageApi': pageApi }).adminWorkMapReader(f.session, f.witness);
+    const c = new Controller({ isCurrent: f.witness, request: { view: 'audit' }, read: reader });
+    c.start(); await tick(); await c.next(); const before = c.getSnapshot().audit; assert.equal(before.violations.length, 40);
+    await c.reload();
+    if (invalidateAt) { assert.equal(requests.length, invalidateAt); assert.equal(c.getSnapshot().audit, before); c.invalidate(); assert.equal(c.getSnapshot().audit, null); }
+    else { assert.equal(requests.length, 4); assert.equal(c.getSnapshot().audit.checked_order_count, 41); assert.equal(c.getSnapshot().audit.violations.length, 40); }
+    assert.deepEqual(requests.map(url => Object.fromEntries(new URL(url, f.session.baseUrl).searchParams)),
+      Array.from({ length: requests.length }, (_, index) => ({ view: 'audit', limit: '20', ...(index % 2 ? { cursor: 'next-20' } : {}) })));
+    c.dispose();
+  }
+});
+
 test('real guarded Closed page decodes summary/history metadata without using the unguarded detail endpoint', async () => {
   for (const invalidate of [false, true]) {
     const f = fixture(), requests = [];

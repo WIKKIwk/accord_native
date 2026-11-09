@@ -21,6 +21,7 @@ const localize = { adminText: (key, _locale, values) => values ? `${key}:${value
   uiText: (value, locale) => locale === 'probe' ? `ui:${value}` : value };
 const present = load('admin/adminWorkMapAuditPresentation.ts', { '../shared/localization': localize, './adminWorkMapAuditModel': audit }).adminWorkMapAuditPresentation;
 const tick = () => new Promise(resolve => setImmediate(resolve));
+const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const finding = (index, overrides = {}) => ({ code: 'unknown_order', order_id: `zakaz-${index}`, subject: 'queue', detail: 'Not displayed', ...overrides });
 const report = (violations, overrides = {}) => ({ ok: false, checked_order_count: 1000, checked_batch_count: 2000, checked_session_count: 3000,
   total_violations: 45, violations, ...overrides });
@@ -67,7 +68,67 @@ test('failed append/refresh keeps the prior report and cannot replace it with a 
   } });
   c.start(); await tick(); const before = c.getSnapshot().audit; await c.next(); assert.equal(c.getSnapshot().audit, before); assert.ok(c.getSnapshot().error);
   await c.next(); assert.equal(calls, 2);
-  await c.reload(); assert.equal(c.getSnapshot().audit, before); assert.equal(c.getSnapshot().error, 'server error'); c.dispose();
+  await c.reload(); assert.equal(c.getSnapshot().audit, before); assert.equal(c.getSnapshot().error, 'server error'); assert.equal(c.getSnapshot().loaded, true); c.dispose();
+});
+test('Audit refresh stages the previously loaded range and replaces it atomically under first-page authority', async () => {
+  const requests = [], pending = [], c = new Controller({ isCurrent: () => true, request: { view: 'audit' }, read: request => {
+    requests.push(request); const item = deferred(); pending.push(item); return item.promise;
+  } });
+  c.start(); pending[0].resolve(page()); await tick(); const more = c.next(); pending[1].resolve(page(20)); await more;
+  const before = c.getSnapshot().audit, refresh = c.reload(); assert.equal(c.getSnapshot().loading, true);
+  const first = page(0, { version: 'new', workflow_audit: report(Array.from({ length: 20 }, (_, i) => finding(i, { subject: 'new' })), { checked_order_count: 7 }) });
+  pending[2].resolve(first); await tick(); assert.equal(c.getSnapshot().audit, before); assert.equal(c.getSnapshot().loading, true);
+  assert.deepEqual(requests.slice(2), [{ view: 'audit', search: '' }, { view: 'audit', search: '', cursor: 'next-20' }]);
+  pending[3].resolve(page(20, { version: 'new', total: 999, workflow_audit: report(Array.from({ length: 20 }, (_, i) => finding(20 + i, { subject: 'new' })), { checked_order_count: 99 }) }));
+  await refresh; assert.notEqual(c.getSnapshot().audit, before); assert.equal(c.getSnapshot().audit.violations.length, 40);
+  assert.equal(c.getSnapshot().audit.checked_order_count, 7); assert.equal(c.getSnapshot().total, 45); assert.equal(c.getSnapshot().hasMore, true); assert.equal(c.getSnapshot().loaded, true); c.dispose();
+});
+test('Audit refresh stops at a shorter new end rather than inventing old findings', async () => {
+  const requests = []; let calls = 0; const c = new Controller({ isCurrent: () => true, request: { view: 'audit' }, read: async request => {
+    requests.push(request); calls++; return calls === 1 ? page(0) : calls === 2 ? page(20) : page(0, { version: 'short', length: 5, total: 5, next_cursor: null,
+      workflow_audit: report(Array.from({ length: 5 }, (_, i) => finding(i)), { total_violations: 5 }) });
+  } });
+  c.start(); await tick(); await c.next(); await c.reload(); assert.equal(requests.length, 3); assert.equal(c.getSnapshot().audit.violations.length, 5);
+  assert.equal(c.getSnapshot().total, 5); assert.equal(c.getSnapshot().hasMore, false); c.dispose();
+});
+test('a failed or mismatched later refresh page preserves the complete old Audit and loaded state', async () => {
+  for (const failure of ['network', 'version', 'epoch', 'scope', 'offset', 'nonprogress']) {
+    let calls = 0; const c = new Controller({ isCurrent: () => true, request: { view: 'audit' }, read: async () => {
+      calls++; if (calls === 1) return page(0); if (calls === 2) return page(20); if (calls === 3) return page(40);
+      if (calls === 4) return page(0, { version: 'new' });
+      if (failure === 'network') throw new Error('network');
+      const changes = failure === 'version' ? { version: 'other' } : failure === 'epoch' ? { epoch: 'other' }
+        : failure === 'scope' ? { scope: 'other' } : failure === 'offset' ? { offset: 0 } : { length: 0, next_cursor: 'next-40' };
+      return page(20, { version: 'new', ...changes });
+    } });
+    c.start(); await tick(); await c.next(); await c.next(); const before = c.getSnapshot().audit;
+    await c.reload(); assert.equal(calls, 5, failure); assert.equal(c.getSnapshot().audit, before, failure); assert.equal(c.getSnapshot().loaded, true, failure);
+    assert.equal(c.getSnapshot().loading, false, failure); assert.ok(c.getSnapshot().error, failure); c.dispose();
+  }
+});
+test('an opaque repeated cursor is accepted when its pages make valid offset progress', async () => {
+  const requests = []; let calls = 0; const c = new Controller({ isCurrent: () => true, request: { view: 'audit' }, read: async request => {
+    requests.push(request); calls++;
+    if (calls <= 3) return page((calls - 1) * 20);
+    const offset = (calls - 4) * 20;
+    return page(offset, { version: 'new', next_cursor: offset === 40 ? null : 'same' });
+  } });
+  c.start(); await tick(); await c.next(); await c.next(); await c.reload();
+  assert.equal(c.getSnapshot().error, null); assert.equal(c.getSnapshot().audit.violations.length, 45);
+  assert.deepEqual(requests.slice(3).map(request => request.cursor ?? null), [null, 'same', 'same']); c.dispose();
+});
+test('account, search or module changes retire an Audit refresh before any late range page can publish', async () => {
+  for (const transition of ['account', 'search', 'module']) {
+    let current = true; const requests = [], pending = [], c = new Controller({ isCurrent: () => current, request: { view: 'audit' }, read: request => {
+      requests.push(request); const item = deferred(); pending.push(item); return item.promise;
+    } });
+    c.start(); pending[0].resolve(page()); await tick(); const more = c.next(); pending[1].resolve(page(20)); await more;
+    const refresh = c.reload(); pending[2].resolve(page(0, { version: 'new' })); await tick(); assert.equal(requests.length, 4);
+    if (transition === 'account') { current = false; c.invalidate(); }
+    else if (transition === 'search') c.setQuery('new search'); else c.configure(null);
+    pending[3].resolve(page(20, { version: 'new' })); await refresh;
+    assert.equal(c.getSnapshot().audit, null, transition); assert.equal(c.getSnapshot().loaded, false, transition); c.dispose();
+  }
 });
 test('switching away or account invalidation discards late audit findings and clears report authority', async () => {
   let resolve, current = true; const c = new Controller({ isCurrent: () => current, request: { view: 'audit' }, read: async () => new Promise(yes => { resolve = yes; }) });
