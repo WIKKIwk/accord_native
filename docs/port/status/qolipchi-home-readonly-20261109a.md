@@ -40,3 +40,9 @@ No phone, simulator, native build, real backend, real credential, Flutter/Dart c
 - Combined suite: 2,170 / 2,176 pass. The same six pre-existing Preparation Android tests fail because Node cannot resolve Expo UI's extensionless `createModifier` import.
 - iOS typecheck and uncached Expo lint pass. Android typecheck reports the same nine existing protected Worker diagnostics, with none in Qolipchi.
 - Ledger check resolves 648 `@v2` and 65 `@v2-test` tags. Nine other-domain endpoint warnings remain. V2 drift is zero. The broad role text gate remains open: iOS 137 missing / 41 extra, Android 137 / 50; 163 surfaces inventoried, no exceptions added. This candidate branch intentionally has less of the role than `port/qolipchi`.
+
+## 2026-11-09 reconciliation
+
+This is a historical checkpoint. Its transport and Home work is already covered by the later main guarded-read candidate and retry/session fixes. Main `5e0b23c` also integrates the original full role while preserving the narrow candidate under explicit ReadOnly module names. The old branch has been reconciled against that main tree; newer `expo/fetch`, active-session-only read-only bootstrap, retry behavior and both dependency closures are retained. No role route or action is exposed. Current evidence is in `qolipchi.md`, `qolipchi-home-readonly-20261109b.md` and `PORT_ISSUES.md`.
+
+Focused reconciliation checks: 63/63 read-only Home, active-session bootstrap and guarded transport/coalescing tests passed. The code tree equals the already typechecked and bundled main candidate; only historical and central status documentation differs.

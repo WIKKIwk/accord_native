@@ -1,0 +1,204 @@
+{
+ "source": "test/qolip_archive_legacy_compatibility_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "old server flattens pallet snapshots across paginated archive entries",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&view=molds&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-30&q&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 400,
+   "responseHeaders": {
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "Failed to deserialize query string: view: unknown field `view`, expected one of `q`, `status`"
+   }
+  },
+  {
+   "test": "old server flattens pallet snapshots across paginated archive entries",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-30&q&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"entries\":[{\"id\":\"pallet-entry\",\"kind\":\"paddon\",\"code\":\"QP-00001\",\"warehouse\":\"Qolip ombori\",\"archived_at\":\"2026-10-29T10:00:00Z\",\"restored_at\":\"2026-10-30T10:00:00Z\",\"snapshot\":{\"items\":[{\"qolip_code\":\"Q-100\",\"item_name\":\"Only target\"},{\"qolip_code\":\"Q-099\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-098\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-097\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-096\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-095\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-094\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-093\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-092\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-091\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-090\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-089\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-088\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-087\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-086\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-085\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-084\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-083\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-082\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-081\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-080\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-079\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-078\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-077\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-076\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-075\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-074\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-073\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-072\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-071\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-070\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-069\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-068\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-067\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-066\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-065\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-064\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-063\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-062\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-061\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-060\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-059\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-058\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-057\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-056\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-055\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-054\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-053\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-052\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-051\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-050\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-049\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-048\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-047\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-046\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-045\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-044\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-043\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-042\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-041\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-040\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-039\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-038\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-037\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-036\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-035\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-034\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-033\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-032\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-031\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-030\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-029\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-028\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-027\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-026\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-025\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-024\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-023\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-022\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-021\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-020\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-019\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-018\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-017\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-016\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-015\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-014\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-013\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-012\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-011\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-010\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-009\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-008\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-007\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-006\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-005\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-004\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-003\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-002\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-001\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-000\",\"item_name\":\"Product\"}]}}],\"has_more\":true,\"next_offset\":100}"
+   }
+  },
+  {
+   "test": "old server flattens pallet snapshots across paginated archive entries",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&view=molds&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-30&q&limit=100&offset=100",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 400,
+   "responseHeaders": {
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "Failed to deserialize query string: view: unknown field `view`, expected one of `q`, `status`"
+   }
+  },
+  {
+   "test": "old server flattens pallet snapshots across paginated archive entries",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-30&q&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"entries\":[{\"id\":\"pallet-entry\",\"kind\":\"paddon\",\"code\":\"QP-00001\",\"warehouse\":\"Qolip ombori\",\"archived_at\":\"2026-10-29T10:00:00Z\",\"restored_at\":\"2026-10-30T10:00:00Z\",\"snapshot\":{\"items\":[{\"qolip_code\":\"Q-100\",\"item_name\":\"Only target\"},{\"qolip_code\":\"Q-099\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-098\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-097\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-096\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-095\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-094\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-093\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-092\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-091\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-090\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-089\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-088\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-087\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-086\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-085\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-084\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-083\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-082\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-081\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-080\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-079\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-078\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-077\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-076\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-075\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-074\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-073\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-072\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-071\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-070\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-069\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-068\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-067\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-066\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-065\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-064\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-063\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-062\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-061\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-060\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-059\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-058\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-057\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-056\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-055\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-054\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-053\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-052\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-051\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-050\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-049\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-048\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-047\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-046\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-045\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-044\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-043\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-042\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-041\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-040\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-039\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-038\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-037\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-036\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-035\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-034\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-033\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-032\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-031\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-030\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-029\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-028\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-027\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-026\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-025\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-024\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-023\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-022\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-021\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-020\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-019\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-018\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-017\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-016\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-015\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-014\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-013\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-012\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-011\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-010\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-009\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-008\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-007\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-006\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-005\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-004\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-003\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-002\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-001\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-000\",\"item_name\":\"Product\"}]}}],\"has_more\":true,\"next_offset\":100}"
+   }
+  },
+  {
+   "test": "old server flattens pallet snapshots across paginated archive entries",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-30&q&limit=100&offset=100",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"entries\":[{\"id\":\"direct-entry\",\"kind\":\"qolip\",\"code\":\"Q-DIRECT\",\"warehouse\":\"Qolip ombori\",\"archived_at\":\"2026-10-29T10:00:00Z\",\"restored_at\":\"2026-10-30T10:00:00Z\",\"snapshot\":{\"qolip_code\":\"Q-DIRECT\"}}],\"has_more\":false}"
+   }
+  },
+  {
+   "test": "old server flattens pallet snapshots across paginated archive entries",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&view=molds&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-30&q=only+target&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 400,
+   "responseHeaders": {
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "Failed to deserialize query string: view: unknown field `view`, expected one of `q`, `status`"
+   }
+  },
+  {
+   "test": "old server flattens pallet snapshots across paginated archive entries",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-30&q=only+target&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"entries\":[{\"id\":\"pallet-entry\",\"kind\":\"paddon\",\"code\":\"QP-00001\",\"warehouse\":\"Qolip ombori\",\"archived_at\":\"2026-10-29T10:00:00Z\",\"restored_at\":\"2026-10-30T10:00:00Z\",\"snapshot\":{\"items\":[{\"qolip_code\":\"Q-100\",\"item_name\":\"Only target\"},{\"qolip_code\":\"Q-099\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-098\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-097\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-096\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-095\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-094\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-093\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-092\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-091\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-090\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-089\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-088\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-087\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-086\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-085\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-084\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-083\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-082\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-081\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-080\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-079\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-078\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-077\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-076\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-075\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-074\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-073\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-072\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-071\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-070\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-069\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-068\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-067\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-066\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-065\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-064\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-063\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-062\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-061\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-060\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-059\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-058\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-057\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-056\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-055\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-054\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-053\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-052\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-051\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-050\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-049\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-048\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-047\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-046\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-045\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-044\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-043\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-042\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-041\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-040\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-039\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-038\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-037\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-036\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-035\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-034\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-033\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-032\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-031\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-030\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-029\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-028\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-027\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-026\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-025\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-024\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-023\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-022\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-021\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-020\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-019\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-018\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-017\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-016\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-015\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-014\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-013\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-012\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-011\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-010\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-009\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-008\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-007\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-006\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-005\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-004\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-003\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-002\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-001\",\"item_name\":\"Product\"},{\"qolip_code\":\"Q-000\",\"item_name\":\"Product\"}]}}],\"has_more\":true,\"next_offset\":100}"
+   }
+  },
+  {
+   "test": "old server flattens pallet snapshots across paginated archive entries",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-30&q=only+target&limit=100&offset=100",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"entries\":[{\"id\":\"direct-entry\",\"kind\":\"qolip\",\"code\":\"Q-DIRECT\",\"warehouse\":\"Qolip ombori\",\"archived_at\":\"2026-10-29T10:00:00Z\",\"restored_at\":\"2026-10-30T10:00:00Z\",\"snapshot\":{\"qolip_code\":\"Q-DIRECT\"}}],\"has_more\":false}"
+   }
+  },
+  {
+   "test": "other errors never use the compatibility fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=open&view=molds&q&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":false,\"error\":\"forbidden\"}"
+   }
+  },
+  {
+   "test": "other errors never use the compatibility fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=open&view=molds&q&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 400,
+   "responseHeaders": {
+    "content-type": "text/plain"
+   },
+   "responseBody": {
+    "text": "Failed to deserialize query string: unknown field `status`"
+   }
+  },
+  {
+   "test": "other errors never use the compatibility fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=open&view=molds&q&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer legacy-archive-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {
+    "content-type": "text/plain"
+   },
+   "responseBody": {
+    "text": "Failed to deserialize query string: view: unknown field `view`, expected one of `q`, `status`"
+   }
+  }
+ ]
+}

@@ -1,20 +1,27 @@
-import { captureSessionWitness, isSessionWitnessCurrent, loadSession, sessionWitnessTransitioning, sessionWitnessVersion,
-  subscribeSessionWitness, type Session, type SessionWitness } from '../auth';
+import * as auth from '../auth';
+import type { Session } from '../auth';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import { qolipHomeWitnessBoundary } from './qolipHomeWitnessBoundary';
 
-type SharedWitness = SessionWitness;
+// These are the existing shared exports on main, not a second authentication source.
+// This older role branch has no witness exports yet, so their absence closes the shell.
+type SharedWitness = Readonly<{ session: Session; scope: string }>;
 type SharedBindings = {
-  loadSession: typeof loadSession;
-  captureSessionWitness: typeof captureSessionWitness;
-  isSessionWitnessCurrent: typeof isSessionWitnessCurrent;
-  subscribeSessionWitness: typeof subscribeSessionWitness;
-  sessionWitnessVersion: typeof sessionWitnessVersion;
-  sessionWitnessTransitioning: typeof sessionWitnessTransitioning;
+  loadSession: () => Promise<Session | null>;
+  captureSessionWitness: (session: Session) => SharedWitness | null;
+  isSessionWitnessCurrent: (witness: SharedWitness) => boolean;
+  subscribeSessionWitness: (listener: () => void) => () => void;
+  sessionWitnessVersion: () => number;
+  sessionWitnessTransitioning: () => boolean;
 };
-function sharedBindings(): SharedBindings {
-  return { loadSession, captureSessionWitness, isSessionWitnessCurrent, subscribeSessionWitness,
-    sessionWitnessVersion, sessionWitnessTransitioning };
+function sharedBindings(): SharedBindings | null {
+  const shared = auth as unknown as Partial<SharedBindings>;
+  if (typeof shared.loadSession !== 'function' || typeof shared.captureSessionWitness !== 'function' ||
+      typeof shared.isSessionWitnessCurrent !== 'function' || typeof shared.subscribeSessionWitness !== 'function' ||
+      typeof shared.sessionWitnessVersion !== 'function' || typeof shared.sessionWitnessTransitioning !== 'function') return null;
+  return { loadSession: shared.loadSession, captureSessionWitness: shared.captureSessionWitness,
+    isSessionWitnessCurrent: shared.isSessionWitnessCurrent, subscribeSessionWitness: shared.subscribeSessionWitness,
+    sessionWitnessVersion: shared.sessionWitnessVersion, sessionWitnessTransitioning: shared.sessionWitnessTransitioning };
 }
 
 export type QolipSettledHomeSession =

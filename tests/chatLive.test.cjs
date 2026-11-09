@@ -40,7 +40,8 @@ function fixture(fetchTicket) {
   const session = { baseUrl: 'https://erp.example', token: 'private-session-token' };
   const { subscribeChatLive } = loadTs('chatLive.ts', {
     'react-native': { AppState: appState },
-    './auth': { activeSessionToken: () => active ? session.token : null },
+    './auth': { activeSessionToken: () => active ? session.token : null, registerSessionResetHook: () => () => {} },
+    './shared/chat/chatSecureSocket': { secureChatSocket: (_session, uri) => new Socket(uri) },
     './authorizedFetch': { authorizedFetch: async (...args) => {
       calls.push(args);
       return fetchTicket ? fetchTicket(...args) : { ok: true, json: async () => ({ ticket: `ticket-${calls.length}` }) };
@@ -105,7 +106,7 @@ test('backgrounding cancels a pending ticket and resume requests a fresh one', a
   } finally { stop(); f.restore(); }
 });
 
-test('an open chat sends a heartbeat before the server idle timeout', async t => {
+test('an established quiet socket uses native protocol pings rather than JSON heartbeat messages', async t => {
   t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
   const f = fixture();
   const stop = f.subscribeChatLive(f.session, () => {});
@@ -113,9 +114,11 @@ test('an open chat sends a heartbeat before the server idle timeout', async t =>
     await new Promise(resolve => setImmediate(resolve));
     const socket = f.sockets[0];
     socket.onopen();
-    socket.onmessage({ data: JSON.stringify({ event: 'chat.ready' }) });
     t.mock.timers.tick(25000);
-    assert.equal(socket.sent, '{"type":"ping"}');
+    assert.equal(socket.sent, undefined);
+    assert.equal(socket.readyState, 1);
+    assert.equal(f.sockets.length, 1);
+    assert.equal(f.calls.length, 1);
   } finally { stop(); f.restore(); }
 });
 
@@ -128,6 +131,19 @@ test('closing or malformed live data reconnects with a fresh ticket', async () =
     await sleep(1100);
     assert.equal(f.sockets.length, 2);
     assert.equal(new URL(f.sockets[1].uri).searchParams.get('ticket'), 'ticket-2');
+  } finally { stop(); f.restore(); }
+});
+
+test('binary messages are ignored while later JSON text still reaches Chat', async () => {
+  const f = fixture(), events = [];
+  const stop = f.subscribeChatLive(f.session, () => {}, event => events.push(event));
+  try {
+    await sleep(0);
+    const socket = f.sockets[0]; socket.onopen();
+    socket.onmessage({ data: new Uint8Array([1, 2, 3]) });
+    assert.equal(socket.readyState, 1); assert.deepEqual(events, []);
+    socket.onmessage({ data: '{"event":"chat.ready"}' });
+    assert.deepEqual(events, [{ event: 'chat.ready' }]);
   } finally { stop(); f.restore(); }
 });
 

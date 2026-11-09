@@ -1,0 +1,66 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "source": "Locally authored f119 oracle probe, not an upstream V2 test; Material tooltips use installed Flutter 3.47.8.",
+  "locales": {
+    "uz": {
+      "text": {
+        "factory.state_create": "State ochish",
+        "factory.state_edit": "State tahriri",
+        "factory.state_name": "State nomi",
+        "factory.state_id_note": "Apparat biriktirish ID va nomni o‘zgartirmaydi: {id}",
+        "factory.attach_title": "Aparat ulash",
+        "factory.no_equipment_linked": "Aparat ulanmagan — oddiy state",
+        "factory.enter_state_name": "State nomini kiriting",
+        "action.save": "Saqlash",
+        "action.cancel": "Bekor qilish"
+      },
+      "idNote": "Apparat biriktirish ID va nomni o‘zgartirmaydi: state:example",
+      "deleteTooltip": "Olib tashlash"
+    },
+    "en": {
+      "text": {
+        "factory.state_create": "Create factory state",
+        "factory.state_edit": "Edit factory state",
+        "factory.state_name": "Factory state name",
+        "factory.state_id_note": "Linking equipment does not change the ID or name: {id}",
+        "factory.attach_title": "Attach equipment",
+        "factory.no_equipment_linked": "No equipment linked — standard state",
+        "factory.enter_state_name": "Enter a factory state name",
+        "action.save": "Save",
+        "action.cancel": "Cancel"
+      },
+      "idNote": "Linking equipment does not change the ID or name: state:example",
+      "deleteTooltip": "Delete"
+    },
+    "ru": {
+      "text": {
+        "factory.state_create": "Создать производственную зону",
+        "factory.state_edit": "Изменить производственную зону",
+        "factory.state_name": "Название производственной зоны",
+        "factory.state_id_note": "Подключение оборудования не меняет ID и название: {id}",
+        "factory.attach_title": "Подключить оборудование",
+        "factory.no_equipment_linked": "Оборудование не подключено — обычная зона",
+        "factory.enter_state_name": "Введите название производственной зоны",
+        "action.save": "Сохранить",
+        "action.cancel": "Отмена"
+      },
+      "idNote": "Подключение оборудования не меняет ID и название: state:example",
+      "deleteTooltip": "Удалить"
+    },
+    "ur": {
+      "text": {
+        "factory.state_create": "فیکٹری کی حالت بنائیں",
+        "factory.state_edit": "فیکٹری کی حالت میں ترمیم کریں",
+        "factory.state_name": "فیکٹری کی حالت کا نام",
+        "factory.state_id_note": "آلہ منسلک کرنے سے شناختی نمبر یا نام تبدیل نہیں ہوتا: {id}",
+        "factory.attach_title": "آلہ منسلک کریں",
+        "factory.no_equipment_linked": "کوئی آلہ منسلک نہیں — معیاری حالت",
+        "factory.enter_state_name": "فیکٹری کی حالت کا نام درج کریں",
+        "action.save": "محفوظ کریں",
+        "action.cancel": "منسوخ کریں"
+      },
+      "idNote": "آلہ منسلک کرنے سے شناختی نمبر یا نام تبدیل نہیں ہوتا: state:example",
+      "deleteTooltip": "حذف کریں"
+    }
+  }
+}

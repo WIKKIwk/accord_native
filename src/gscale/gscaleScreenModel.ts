@@ -138,7 +138,7 @@ export function gscaleDashboardSections(screen: Screen, section: 'control' | 'hi
     button(`${active.prints.length} ta QR`, () => actions.archive(archiveSessionFromBatch(active))),
   ] });
   if (control.showPrinterSettings) sections.push({ title: 'Printer sozlamalari', rows: [
-    button('Printer', () => actions.pick({ title: 'Printer', hint: 'Qidirish', pageSize: 50, load: async () => ['zebra', 'godex']
+    button('Printer', () => actions.pick({ title: 'Printer', hint: 'Qidirish', pageSize: 50, load: async () => (operator.isPrinterRestricted?.() ? ['zebra'] : ['zebra', 'godex'])
       .map(value => ({ key: value, title: value === 'zebra' ? 'Zebra' : 'GoDEX', select: () => operator.editDraft({ printer: value,
         ...(value === 'godex' ? { print_mode: 'label' } : {}) }) })) }), control.printerLocked, control.selectedPrinter),
     button('Chop etish turi', () => actions.pick({ title: 'Chop etish turi', hint: 'Qidirish', pageSize: 50,

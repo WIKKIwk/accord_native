@@ -3,13 +3,13 @@ import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBaseTheme } from '../components/useBaseTheme';
-import { localizedGetter } from '../shared/localization';
 import { QolipReadOnlyHomeGrid } from './QolipReadOnlyHomeGrid';
-import type { QolipOwnedHomeBlock } from './qolipHomeOwnerState';
+import { QolipReadOnlyRetry } from './QolipReadOnlyRetry';
+import type { QolipOwnedHomeBlock } from './qolipReadOnlyHomeOwnerState';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import { useQolipHomeBlockRead } from './useQolipHomeBlockRead';
 import { useReadOnlyQolipHome } from './useReadOnlyQolipHome';
-import { useQolipSettledHomeSession } from './useQolipSettledHomeSession';
+import { useReadOnlyQolipSettledHomeSession } from './useReadOnlyQolipSettledHomeSession';
 import { useQolipText } from './useQolipText';
 import type { Session } from '../auth';
 
@@ -20,22 +20,22 @@ function Search({ value, change }: { value: string; change: (text: string) => vo
     autoCapitalize="none" autoCorrect={false} returnKeyType="search" textStyle={{ color: theme.colors.onSurface, fontSize: 15 }}
     style={{ width: '100%', paddingHorizontal: 16 }} /></Host>;
 }
-function BlockBody({ block, boundary, counts }: { block: QolipOwnedHomeBlock; boundary: QolipHomeReadBoundary;
-  counts: Readonly<Record<string, number>> }) {
+function BlockBody({ block, boundary, counts, retry }: { block: QolipOwnedHomeBlock; boundary: QolipHomeReadBoundary;
+  counts: Readonly<Record<string, number>>; retry: (blockName: string) => void }) {
   const state = useQolipHomeBlockRead(block.key, block.future, block.initialLocations, boundary);
   if (state.invalid) return null;
   return <QolipReadOnlyHomeGrid locations={state.locations} loading={state.loading} error={state.error}
-    refreshUnavailable={state.refreshUnavailable} searchCounts={counts} />;
+    refreshUnavailable={state.refreshUnavailable} searchCounts={counts} onRetry={() => retry(block.block.name)} />;
 }
 function ReadOnlyHome({ session, boundary }: { session: Session; boundary: QolipHomeReadBoundary }) {
-  const state = useReadOnlyQolipHome(session, boundary), { text, locale } = useQolipText(), theme = useBaseTheme(), insets = useSafeAreaInsets();
+  const state = useReadOnlyQolipHome(session, boundary), { text } = useQolipText(), theme = useBaseTheme(), insets = useSafeAreaInsets();
   const actions = state.actions, home = state.home;
   if (home.kind === 'invalid' || !actions || !state.boundary) return null;
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: theme.colors.surface }]}>
     <Search value={state.search} change={actions.setSearch} />
     {home.kind === 'loading' ? <View style={styles.center}><ActivityIndicator /></View>
-      : home.kind === 'refresh-unavailable' ? <View style={styles.center}><Text style={{ color: theme.colors.onSurfaceVariant }}>{text('home.load_failed')}</Text></View>
-      : home.kind === 'retry' ? <View style={styles.center}><Text style={{ color: theme.colors.onSurfaceVariant }}>{localizedGetter('serverDisconnectedRetry', locale)}</Text></View>
+      : home.kind === 'refresh-unavailable' || home.kind === 'retry' ? <QolipReadOnlyRetry
+        refreshUnavailable={home.kind === 'refresh-unavailable'} onRetry={actions.retryBlocks} />
         : home.kind === 'unattached' || home.kind === 'no-blocks' ? <View style={styles.center}><Text style={{ color: theme.colors.onSurface }}>
           {text(home.kind === 'unattached' ? 'home.no_blocks_attached' : 'home.no_blocks_added')}</Text></View>
           : home.kind === 'blocks' ? <View style={styles.root}>
@@ -53,16 +53,16 @@ function ReadOnlyHome({ session, boundary }: { session: Session; boundary: Qolip
               const selected = block.key === home.selected.key;
               return <View key={block.key} style={selected ? styles.root : styles.hidden} pointerEvents={selected ? 'auto' : 'none'}
                 accessibilityElementsHidden={!selected} importantForAccessibility={selected ? 'auto' : 'no-hide-descendants'}>
-                <BlockBody block={block} boundary={state.boundary!} counts={home.cellCounts[block.key] ?? {}} />
+                <BlockBody block={block} boundary={state.boundary!} counts={home.cellCounts[block.key] ?? {}} retry={actions.retryBlock} />
               </View>;
             })}</View>
           </View> : null}
   </View>;
 }
 
-/** Unrouted integration candidate. It captures one reviewed shared witness and exposes only reads, search and tabs. */
+/** Unrouted candidate: one reviewed shared witness, reads, search, tabs and explicit failed-read retry. */
 export function QolipReadOnlyHomeShell() {
-  const entry = useQolipSettledHomeSession();
+  const entry = useReadOnlyQolipSettledHomeSession();
   return entry.kind === 'ready' ? <ReadOnlyHome session={entry.session} boundary={entry.boundary} /> : null;
 }
 const styles = StyleSheet.create({

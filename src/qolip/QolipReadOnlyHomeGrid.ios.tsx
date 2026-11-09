@@ -2,11 +2,12 @@ import { Host, HStack, Image, ProgressView, Spacer, Text, VStack } from '@expo/u
 import { accessibilityIdentifier, accessibilityLabel, background, frame, lineLimit, shapes } from '@expo/ui/swift-ui/modifiers';
 import { PlatformColor, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { localizedGetter, localizedMethod } from '../shared/localization';
+import { localizedMethod } from '../shared/localization';
 import { qolipGridCells, qolipGridLetters, qolipGridRowCount, type QolipGridCell } from './qolipGridLogic';
-import type { QolipLocationEntry } from './qolipLocationsApi';
+import type { QolipLocationEntry } from './qolipReadOnlyLocationsApi';
 import { useQolipGridScroll } from './useQolipGridScroll';
 import { useQolipText } from './useQolipText';
+import { QolipReadOnlyRetry } from './QolipReadOnlyRetry';
 
 const tableHeight = 36 + 4 + qolipGridRowCount * 68, tableWidth = qolipGridLetters.length * 80 - 4;
 function Cell({ cell, locale }: { cell: QolipGridCell; locale: string }) {
@@ -38,11 +39,10 @@ function GridTable({ rows, locale }: { rows: QolipGridCell[][]; locale: string }
   </View>;
 }
 export function QolipReadOnlyHomeGrid(props: { locations: readonly QolipLocationEntry[] | null; loading: boolean; error: boolean;
-  refreshUnavailable?: boolean; searchCounts: Readonly<Record<string, number>> }) {
+  refreshUnavailable?: boolean; searchCounts: Readonly<Record<string, number>>; onRetry: () => void }) {
   const { text, locale } = useQolipText(), insets = useSafeAreaInsets();
   if (props.locations === null && props.loading) return <Host style={{ flex: 1 }}><ProgressView /></Host>;
-  if (props.locations === null && props.error) return <Host style={{ flex: 1 }}><Text>{props.refreshUnavailable
-    ? text('home.load_failed') : localizedGetter('serverDisconnectedRetry', locale)}</Text></Host>;
+  if (props.locations === null && props.error) return <QolipReadOnlyRetry refreshUnavailable={props.refreshUnavailable} onRetry={props.onRetry} />;
   const grid = qolipGridCells(props.locations ?? [], props.searchCounts);
   return <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
     <Host matchContents={{ vertical: true }}><HStack spacing={8}><Text>{text('home.occupied_count', { count: grid.occupiedCells })}</Text>

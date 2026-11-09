@@ -1,0 +1,272 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const Module = require('node:module');
+const path = require('node:path');
+const test = require('node:test');
+const ts = require('typescript');
+function load(name, mocks = {}) {
+  const filename = path.resolve(__dirname, `../src/${name}.ts`), loaded = new Module(filename, module);
+  loaded.filename = filename; loaded.paths = module.paths;
+  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+  return loaded.exports;
+}
+const errors = load('shared/mobileApiException');
+function setup(fetch) {
+  const controls = load('workerControlsApi', { './authorizedFetch': { authorizedFetch: fetch }, './sessionReadScope': { sessionReadScope: () => '' } });
+  const dart = load('shared/dartApparatus', { '../workerControlsApi': controls });
+  const values = load('material/materialHistoryValueText');
+  const mapper = load('material/materialHistoryErrors', { '../shared/dartApparatus': dart, '../shared/mobileApiException': errors,
+    './materialHistoryErrorMessages': load('material/materialHistoryErrorMessages'), './materialHistoryValueText': values });
+  const api = load('material/materialHistoryApi', { '../authorizedFetch': { authorizedFetch: fetch }, '../shared/mobileApiException': errors,
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls, './materialHistoryErrors': mapper, './materialHistoryValueText': values });
+  const presentation = load('material/materialHistoryPresentation', { '../shared/mobileApiException': errors,
+    '../shared/dartApparatus': dart, '../workerControlsApi': controls, './materialHistoryValueText': values });
+  return { ...api, ...presentation };
+}
+const station = 'apparatus:default:bosma_7';
+
+test('history requests the V2 limit and filters, parses typed fields and rejects bad apparatus and quantities', async () => {
+  const calls = [], api = setup(async (_session, url, init) => { calls.push({ url, init }); return { status: 200, json: async () => [{
+    event_type: 'receipt_posted', apparatus: ` ${station} `, qty_delta: 12.5, occurred_at_unix: 10.9, payload_json: { a: 1 },
+  }] }; });
+  const rows = await api.adminRawMaterialHistory({}, { warehouse: ' A B ', eventType: ' receipt_posted ', limit: 100 });
+  assert.deepEqual(Object.fromEntries(new URL(calls[0].url, 'https://example.test').searchParams), { warehouse: 'A B', event_type: 'receipt_posted', limit: '100' });
+  assert.equal(calls[0].init.method, undefined); assert.equal(rows[0].apparatus, station); assert.equal(rows[0].occurred_at_unix, 10);
+  assert.equal(rows[0].item_code, ''); assert.deepEqual(rows[0].payload_json, { a: 1 });
+  assert.throws(() => api.rawMaterialEvent({ apparatus: 'Bosma' }), error => error.code === 'apparatus_id_invalid');
+  assert.throws(() => api.rawMaterialEvent({ qty_delta: '12.5' }), TypeError);
+  await api.adminRawMaterialHistory({}, { limit: 0 });
+  assert.equal(new URL(calls[1].url, 'https://example.test').search, '');
+});
+
+test('history preserves the source-specific 404 and generic network messages', async () => {
+  const api = setup(async () => ({ status: 404 }));
+  await assert.rejects(api.adminRawMaterialHistory({}), error => {
+    assert.equal(error.code, 'raw_material_history_not_found'); assert.equal(error.statusCode, 404);
+    assert.equal(api.materialHistoryErrorMessage(error), 'Backend hali yangi history endpoint bilan ko‘tarilmagan (404)'); return true;
+  });
+  assert.equal(api.materialHistoryErrorMessage(new Error('network')), 'Serverdan ma’lumot olinmadi');
+});
+
+// @v2-test test/admin_production_map_material_delivery_test_part.dart
+// The source test is a part of admin_production_map_test_screen_test.dart.
+test('material delivery retains deliverer, receiving operator and safe apparatus display', () => {
+  const api = setup(() => {}), event = api.rawMaterialEvent({ event_type: 'delivery_received', item_name: ' Rulon ',
+    apparatus: station, actor_display_name: 'Qabul qilgan operator', payload_json: {
+      delivered_by: { ref: 'mover-1', name: 'Olib kelgan Ali' }, received_by: { ref: 'worker-1', name: 'Qabul qilgan operator' },
+    } });
+  assert.equal(event.payload_json.received_by.ref, 'worker-1');
+  assert.equal(api.materialHistoryTitle(event), 'Rulon apparat oldiga yetkazildi');
+  assert.equal(api.materialHistorySubtitle(event, []), '');
+  const details = api.materialHistoryDetails(event, [{ id: station, name: ' Bosma ' }]);
+  assert.deepEqual(details, [
+    { label: 'Harakat turi', value: 'Apparat oldiga yetkazildi va qabul qilindi' }, { label: 'Mahsulot', value: 'Rulon' },
+    { label: 'Apparat', value: 'Bosma' }, { label: 'Olib kelgan', value: 'Olib kelgan Ali' },
+    { label: 'Qabul qilgan', value: 'Qabul qilgan operator' },
+  ]);
+});
+
+test('history renders signed quantity, status transitions, unknown labels, timestamps and concealed refs', () => {
+  const api = setup(() => {}), e = api.rawMaterialEvent({ event_type: 'receipt_posted', item_code: 'RM', qty_delta: -12.5, uom: ' kg ',
+    stock_status_before: 'available', stock_status_after: 'reserved', actor_display_name: 'worker:id', actor_ref: 'worker:id',
+    owner_ref: 'Short', owner_role: 'OTHER', warehouse: ' Ombor ', order_id: ' 10 ', barcode: ' QR ' });
+  assert.equal(api.materialHistoryTitle(e), 'RM kirim 12.500  kg ');
+  assert.equal(api.materialHistorySubtitle(e, []), 'Ombor • Zakaz 10 • QR');
+  const details = api.materialHistoryDetails(e, []);
+  assert.ok(details.some(x => x.label === 'Miqdor' && x.value === '-12.500 kg'));
+  assert.ok(details.some(x => x.label === 'Holati' && x.value === 'Mavjud → Band qilingan'));
+  assert.ok(!details.some(x => x.label === 'Bajargan'));
+  assert.ok(details.some(x => x.label === 'Egasi' && x.value === 'Short'));
+  assert.ok(details.some(x => x.label === 'Egasi roli' && x.value === 'other'));
+  const date = new Date(2026, 10, 8, 9, 4), seconds = Math.floor(date.getTime() / 1000);
+  assert.equal(api.materialHistoryTime(seconds, date), '09:04');
+  assert.equal(api.materialHistoryTime(seconds, new Date(2026, 10, 9)), '08.11 09:04');
+  assert.equal(api.materialHistoryDateTime(seconds), '08.11.2026 09:04');
+});
+
+test('history filters, safe labels and detail rows use Dart whitespace at both edges', async () => {
+  const calls = [], api = setup(async (_session, url) => { calls.push(url); return { status: 200, json: async () => [] }; });
+  const whitespace = require('./contracts/f11910bb/material_unicode_trim.json').trim;
+  for (const point of whitespace) {
+    const w = String.fromCodePoint(point), wrapped = value => `${w}${value}${w}`;
+    const event = api.rawMaterialEvent({ event_type: 'receipt_posted', item_name: wrapped('Rulon'), warehouse: wrapped('Ombor'),
+      order_id: wrapped('42'), barcode: wrapped('QR'), apparatus: wrapped(station), actor_display_name: wrapped('Ali'),
+      stock_status_before: wrapped('available'), stock_status_after: wrapped('reserved') });
+    assert.equal(event.apparatus, station); assert.equal(api.materialHistoryTitle(event), 'Rulon kirim');
+    assert.equal(api.materialHistorySubtitle(event, [{ id: wrapped(station), name: wrapped('Bosma') }]), 'Ombor • Zakaz 42 • Bosma • QR');
+    const details = api.materialHistoryDetails(event, []);
+    assert.ok(details.some(item => item.label === 'Bajargan' && item.value === 'Ali'));
+    assert.ok(details.some(item => item.label === 'Holati' && item.value === 'Mavjud → Band qilingan'));
+  }
+  await api.adminRawMaterialHistory({}, { warehouse: '\u0085Ombor\u0085', eventType: '\u0085receipt_posted\u0085' });
+  assert.deepEqual(Object.fromEntries(new URL(calls[0], 'https://example.test').searchParams),
+    { warehouse: 'Ombor', event_type: 'receipt_posted', limit: '50' });
+});
+
+test('unverified non-ASCII history apparatus IDs fail closed rather than using JS-only canonical rules', () => {
+  const api = setup(() => {});
+  assert.throws(() => api.rawMaterialEvent({ apparatus: 'apparatus:default:\u037f' }), error => error.code === 'apparatus_id_invalid');
+});
+
+// Source-derived cases: AdminRawMaterialEvent.fromJson uses ?.toString() for each text field.
+// These are not Flutter oracle results; decoded number spelling and numeric map-key order remain open.
+test('event text fields retain Dart list/map delimiters and nested null/boolean values', () => {
+  const api = setup(() => {}), fields = ['event_id', 'event_type', 'warehouse', 'barcode', 'item_code', 'item_name', 'uom',
+    'stock_status_before', 'stock_status_after', 'order_id', 'actor_role', 'actor_ref', 'actor_display_name',
+    'owner_role', 'owner_ref', 'owner_display_name', 'source_type', 'source_id'];
+  for (const field of fields) {
+    assert.equal(api.rawMaterialEvent({ [field]: ['Ali', true, null, { short: 'code', active: false }] })[field],
+      '[Ali, true, null, {short: code, active: false}]');
+    assert.equal(api.rawMaterialEvent({ [field]: { first: ['A', 'B'], second: null } })[field], '{first: [A, B], second: null}');
+    assert.equal(api.rawMaterialEvent({ [field]: null })[field], ''); assert.equal(api.rawMaterialEvent({})[field], '');
+    assert.equal(api.rawMaterialEvent({ [field]: false })[field], 'false'); assert.equal(api.rawMaterialEvent({ [field]: 2.5 })[field], '2.5');
+    assert.equal(api.rawMaterialEvent({ [field]: '\u0085 untrimmed \u0085' })[field], '\u0085 untrimmed \u0085');
+  }
+  assert.equal(api.rawMaterialEvent({ item_name: JSON.parse('{"toString":"literal","__proto__":"data"}') }).item_name,
+    '{toString: literal, __proto__: data}');
+});
+
+test('source-style container text preserves person-ref concealment and list titles', () => {
+  const api = setup(() => {}), event = api.rawMaterialEvent({ event_type: 'receipt_posted', item_name: ['Rulon', 'Qog‘oz'],
+    actor_display_name: { name: 'Ali' }, actor_ref: 'worker:1', owner_display_name: { name: 'Vali' }, owner_ref: { ref: 'worker:2' } });
+  assert.equal(api.materialHistoryTitle(event), '[Rulon, Qog‘oz] kirim');
+  const details = api.materialHistoryDetails(event, []);
+  assert.ok(!details.some(row => row.label === 'Bajargan' || row.label === 'Egasi'));
+  assert.ok(!details.some(row => row.value.includes('[object Object]')));
+  const short = api.materialHistoryDetails(api.rawMaterialEvent({ actor_ref: ['Ali', 'Vali'], owner_ref: [null, 7, true] }), []);
+  assert.ok(short.some(row => row.label === 'Bajargan' && row.value === '[Ali, Vali]'));
+  assert.ok(short.some(row => row.label === 'Egasi' && row.value === '[null, 7, true]'));
+});
+
+test('delivery name uses the same source-style nullable container string conversion', () => {
+  const api = setup(() => {});
+  const details = api.materialHistoryDetails(api.rawMaterialEvent({ event_type: 'delivery_received',
+    payload_json: { delivered_by: { name: ['Ali', { department: 'Supply' }, false, null] } } }), []);
+  assert.ok(details.some(row => row.label === 'Olib kelgan' && row.value === '[Ali, {department: Supply}, false, null]'));
+  const absent = api.materialHistoryDetails(api.rawMaterialEvent({ event_type: 'delivery_received', payload_json: { delivered_by: { name: null } } }), []);
+  assert.ok(!absent.some(row => row.label === 'Olib kelgan'));
+});
+
+test('event payload decoder makes the same shallow map copy as f119 _jsonObject', () => {
+  const api = setup(() => {}), raw = { delivered_by: { name: 'Ali' } }, event = api.rawMaterialEvent({ payload_json: raw });
+  assert.notEqual(event.payload_json, raw); assert.equal(event.payload_json.delivered_by, raw.delivered_by);
+  raw.other = 'later'; assert.equal(Object.hasOwn(event.payload_json, 'other'), false);
+  for (const value of [null, [], 'not a map', 7, false]) assert.deepEqual(api.rawMaterialEvent({ payload_json: value }).payload_json, {});
+});
+
+// Source-derived, not an executed Flutter oracle: f119 declarations_part_03.dart:155-239.
+// The label switches normalize ASCII names, but the title switch matches the original event type.
+test('unknown History label names cannot resolve JavaScript prototype members', () => {
+  const api = setup(() => {}), cases = [
+    ['constructor', 'constructor'], [' CONSTRUCTOR ', 'constructor'], ['__proto__', '__proto__'],
+    [' __PROTO__ ', '__proto__'], ['toString', 'tostring'], ['hasOwnProperty', 'hasownproperty'],
+    ['valueOf', 'valueof'], ['__defineGetter__', '__definegetter__'],
+  ];
+  for (const [raw, expected] of cases) {
+    const event = api.rawMaterialEvent({ event_type: raw, stock_status_before: raw, stock_status_after: raw,
+      actor_role: raw, owner_role: raw, source_type: raw });
+    assert.deepEqual(api.materialHistoryDetails(event, []), [
+      { label: 'Harakat turi', value: expected }, { label: 'Holati', value: expected },
+      { label: 'Rol', value: expected }, { label: 'Egasi roli', value: expected }, { label: 'Manba', value: expected },
+    ], raw);
+  }
+  const transition = api.materialHistoryDetails(api.rawMaterialEvent({ stock_status_before: '__proto__', stock_status_after: 'constructor' }), []);
+  assert.deepEqual(transition, [{ label: 'Holati', value: '__proto__ → constructor' }]);
+});
+
+test('unknown and unnormalized History title names always return the source item fallback', () => {
+  const api = setup(() => {});
+  for (const event_type of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', '__defineGetter__',
+    '', 'unknown', 'RECEIPT_POSTED', ' receipt_posted ']) {
+    assert.equal(api.materialHistoryTitle(api.rawMaterialEvent({ event_type, item_name: ' Rulon ', item_code: 'CODE' })), 'Rulon', event_type);
+    assert.equal(api.materialHistoryTitle(api.rawMaterialEvent({ event_type, item_name: ' ', item_code: ' CODE ' })), 'CODE', event_type);
+    assert.equal(api.materialHistoryTitle(api.rawMaterialEvent({ event_type })), '', event_type);
+  }
+});
+
+test('History known switches retain source labels and exact event-title matching', () => {
+  const api = setup(() => {}), events = [
+    ['receipt_posted', 'Omborga kirim qilindi', 'Rulon kirim'],
+    ['order_reserved', 'Zakaz uchun band qilindi', 'Rulon berildi'],
+    ['order_unreserved', 'Zakaz bandi yechildi', 'Rulon yechildi'],
+    ['usage_started', 'Ishlatishga o‘tkazildi', 'Rulon ishlatishga o‘tdi'],
+    ['usage_cancelled', 'Boshlash bekor qilindi', 'Rulon ishlatishga o‘tkazish bekor qilindi'],
+    ['delivery_received', 'Apparat oldiga yetkazildi va qabul qilindi', 'Rulon apparat oldiga yetkazildi'],
+    ['consumption_posted', 'Material sarflandi', 'Rulon sarflandi'],
+    ['consumption_reversed', 'Material sarfi bekor qilindi', 'Rulon sarfi bekor qilindi'],
+    ['adjustment_increase', 'Miqdor oshirildi', 'Rulon tuzatildi'],
+    ['adjustment_decrease', 'Miqdor kamaytirildi', 'Rulon kamaytirildi'],
+    ['transfer_in', 'Omborga transfer qilindi', 'Rulon transfer kirim'],
+    ['transfer_out', 'Ombordan transfer qilindi', 'Rulon transfer chiqim'],
+  ];
+  for (const [event_type, value, title] of events) {
+    assert.equal(api.materialHistoryTitle(api.rawMaterialEvent({ event_type, item_name: 'Rulon' })), title, event_type);
+    const details = api.materialHistoryDetails(api.rawMaterialEvent({ event_type: ` ${event_type.toUpperCase()} ` }), []);
+    assert.deepEqual(details, [{ label: 'Harakat turi', value }], event_type);
+  }
+  const labels = [
+    ['stock_status_after', 'Holati', [['available', 'Mavjud'], ['reserved', 'Band qilingan'], ['in_use', 'Ishlatilmoqda'], ['consumed', 'Sarflangan']]],
+    ['actor_role', 'Rol', [['material_taminotchi', 'Material ta’minotchisi'], ['admin', 'Administrator'], ['werka', 'Werka'], ['supplier', 'Ta’minotchi']]],
+    ['source_type', 'Manba', [['gscale_receipt', 'Tarozi kirimi'], ['order_assignment', 'Zakaz biriktirishi'], ['consumption', 'Sarflanish'],
+      ['manual_adjustment', 'Qo‘lda tuzatish'], ['warehouse_transfer', 'Omborlararo transfer'], ['material_delivery', 'Apparat oldiga yetkazish'], ['system', 'Tizim']]],
+  ];
+  for (const [field, label, cases] of labels) for (const [name, value] of cases) {
+    assert.deepEqual(api.materialHistoryDetails(api.rawMaterialEvent({ [field]: ` ${name.toUpperCase()} ` }), []), [{ label, value }], `${field}: ${name}`);
+  }
+});
+
+// f119 declarations_part_03.dart:258-290 calls DateTime.fromMillisecondsSinceEpoch.
+// Read-only SDK evidence: core/date_time.dart:398,450-457 and
+// _internal/vm_shared/lib/date_patch.dart:49-56,92-98 validate the inclusive range.
+// These are source-derived range checks, not a Flutter oracle or a time-zone-table comparison.
+test('History dates keep the nonpositive shortcut and accept the inclusive positive date limit', () => {
+  const api = setup(() => {}), maximumSeconds = 8_640_000_000_000;
+  for (const seconds of [0, -1, -maximumSeconds - 1]) {
+    assert.equal(api.materialHistoryTime(seconds), ''); assert.equal(api.materialHistoryDateTime(seconds), '');
+  }
+  for (const seconds of [1, maximumSeconds - 1, maximumSeconds]) {
+    assert.ok(Number.isSafeInteger(seconds * 1000));
+    for (const formatted of [api.materialHistoryTime(seconds), api.materialHistoryDateTime(seconds)]) {
+      assert.ok(formatted.length > 0); assert.ok(!formatted.includes('NaN'));
+    }
+  }
+});
+
+test('History rejects positive dates outside the source constructor range instead of rendering NaN', () => {
+  const api = setup(() => {});
+  for (const seconds of [8_640_000_000_001, 8_640_000_000_123]) {
+    assert.ok(Number.isSafeInteger(seconds * 1000)); // No lost JSON integer or multiply-overflow inference.
+    const occurred = api.rawMaterialEvent({ occurred_at_unix: seconds });
+    assert.equal(occurred.occurred_at_unix, seconds);
+    assert.throws(() => api.materialHistoryTime(occurred.occurred_at_unix), RangeError);
+    assert.throws(() => api.materialHistoryDateTime(occurred.occurred_at_unix), RangeError);
+    assert.throws(() => api.materialHistoryDetails(occurred, []), RangeError);
+    assert.throws(() => api.materialHistoryDetails(api.rawMaterialEvent({ recorded_at_unix: seconds }), []), RangeError);
+  }
+});
+
+// f119 AdminRawMaterialEvent.fromJson: qty_delta uses num?.toDouble(), but the two timestamps use num?.toInt().
+// Read-only Dart SDK 3.13.7 evidence: vm/lib/convert_patch.dart:1406-1423 emits signed infinity for exponent >400;
+// vm/lib/double.dart:237-239 keeps the double, and :263-284 returns nonfinite fixed text (core/double.dart documents spelling).
+// These are source-derived expectations, not executed Flutter results or general raw-token/Hermes equivalence.
+test('History accepts source numeric overflow quantities and preserves signed nonfinite display', async () => {
+  const body = '[{"event_type":"receipt_posted","item_name":"Rulon","qty_delta":1e401,"uom":" kg "},' +
+    '{"event_type":"consumption_posted","item_name":"Rulon","qty_delta":-1e401,"uom":"kg"}]';
+  const api = setup(async () => new Response(body, { status: 200 })), rows = await api.adminRawMaterialHistory({});
+  assert.equal(rows[0].qty_delta, Infinity); assert.equal(rows[1].qty_delta, -Infinity);
+  assert.equal(api.materialHistoryTitle(rows[0]), 'Rulon kirim Infinity  kg ');
+  assert.equal(api.materialHistoryTitle(rows[1]), 'Rulon sarflandi Infinity kg');
+  assert.ok(api.materialHistoryDetails(rows[0], []).some(row => row.label === 'Miqdor' && row.value === '+Infinity kg'));
+  assert.ok(api.materialHistoryDetails(rows[1], []).some(row => row.label === 'Miqdor' && row.value === '-Infinity kg'));
+});
+
+test('History nullable numeric conversions distinguish quantity doubles from integer timestamps', () => {
+  const api = setup(() => {});
+  assert.equal(api.rawMaterialEvent({ qty_delta: null }).qty_delta, 0);
+  assert.ok(Number.isNaN(api.rawMaterialEvent({ qty_delta: NaN }).qty_delta)); // A direct fromJson num, not a valid JSON NaN token.
+  for (const field of ['occurred_at_unix', 'recorded_at_unix']) for (const value of [NaN, Infinity, -Infinity]) {
+    assert.throws(() => api.rawMaterialEvent({ [field]: value }), TypeError);
+  }
+  for (const value of ['1e401', 'Infinity', true, [], {}]) assert.throws(() => api.rawMaterialEvent({ qty_delta: value }), TypeError);
+});

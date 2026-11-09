@@ -15,7 +15,7 @@ export function rawSplitDrawerItems(t: Translate): RoleDrawerItem[] {
   ];
 }
 
-/** Only the non-Chat prefix of the V2 dock; the Chat entry remains on security hold. */
+/** V2 role destinations before the shared dock appends Chat. */
 export function rawSplitNonChatDockItems(t: Translate): RawSplitDockItem[] {
   return [
     { id: 'home', label: t('Rezka'), android: 'content_cut', ios: { default: 'scissors', selected: 'scissors' } },

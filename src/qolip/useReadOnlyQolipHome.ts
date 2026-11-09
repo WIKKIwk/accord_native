@@ -1,9 +1,9 @@
 import { useLayoutEffect, useMemo, useSyncExternalStore } from 'react';
 import type { Session } from '../auth';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
-import { createQolipHomeOwner } from './qolipHomeOwnerRuntime';
+import { createQolipHomeOwner } from './qolipReadOnlyHomeOwnerRuntime';
 
-/** Initial reads and search only. No route/resume refresh, retry or mutation is exposed. */
+/** Read-only initial loads, search and explicit failed-read retry; no lifecycle refresh or mutation. */
 export function useReadOnlyQolipHome(session: Session, boundary: QolipHomeReadBoundary) {
   const owner = useMemo(() => createQolipHomeOwner(session, boundary), [session, boundary]);
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot, owner.getSnapshot);
