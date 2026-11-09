@@ -115,3 +115,54 @@ test('sending keeps the native input enabled and preserves text typed for the ne
   assert.notEqual(x.input(tree).props.enabled, false);
   assert.equal(x.button(tree).props.enabled, true);
 });
+
+const scrollEvent = (offset, contentHeight = 1000, viewportHeight = 300) => ({ nativeEvent: {
+  contentOffset: { y: offset }, contentSize: { height: contentHeight }, layoutMeasurement: { height: viewportHeight },
+} });
+function scrollFixture() {
+  const x = fixture(), tree = x.render(), list = nodes(tree, node => node.type === 'FlatList')[0], offsets = [];
+  list.props.ref.current = { scrollToOffset: options => offsets.push(options.offset) };
+  list.props.onLayout({ nativeEvent: { layout: { height: 400 } } });
+  list.props.onContentSizeChange(360, 900); offsets.length = 0;
+  return { ...x, tree, list, offsets };
+}
+
+test('new messages and keyboard resizing follow the measured bottom without scroll events disabling it', () => {
+  const x = scrollFixture();
+  // Native resize/content events can report the old offset before JS scrolls.
+  x.list.props.onScroll(scrollEvent(500, 1200, 300));
+  x.list.props.onLayout({ nativeEvent: { layout: { height: 300 } } });
+  x.list.props.onContentSizeChange(360, 1200);
+  assert.equal(x.offsets.at(-1), 900);
+  x.list.props.onContentSizeChange(360, 1380);
+  assert.equal(x.offsets.at(-1), 1080);
+});
+
+test('manual history scrolling keeps its position, then resumes following when the user reaches the bottom', () => {
+  const x = scrollFixture();
+  x.list.props.onScrollBeginDrag(scrollEvent(200));
+  x.list.props.onScroll(scrollEvent(100));
+  x.list.props.onScrollEndDrag(scrollEvent(100));
+  x.list.props.onMomentumScrollBegin();
+  x.list.props.onScroll(scrollEvent(50));
+  x.list.props.onMomentumScrollEnd(scrollEvent(50));
+  x.list.props.onContentSizeChange(360, 1200);
+  x.list.props.onLayout({ nativeEvent: { layout: { height: 300 } } });
+  assert.deepEqual(x.offsets, []);
+  x.list.props.onScrollBeginDrag(scrollEvent(900, 1200));
+  x.list.props.onScrollEndDrag(scrollEvent(900, 1200));
+  x.list.props.onContentSizeChange(360, 1300);
+  assert.equal(x.offsets.at(-1), 1000);
+});
+
+test('sending from older messages follows the newly appended message', async () => {
+  const x = scrollFixture();
+  x.list.props.onScrollBeginDrag(scrollEvent(100));
+  x.list.props.onScrollEndDrag(scrollEvent(100));
+  x.list.props.onMomentumScrollBegin();
+  x.input(x.tree).props.onValueChange('Yangi xabar');
+  x.button(x.render()).props.onClick();
+  x.list.props.onContentSizeChange(360, 1100);
+  assert.equal(x.offsets.at(-1), 700);
+  await tick();
+});

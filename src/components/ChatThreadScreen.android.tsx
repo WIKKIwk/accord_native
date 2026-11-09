@@ -4,7 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { draftAfterSending } from '../chatComposer';
 import { discardChatMedia, prepareChatDocument, prepareChatMedia, type ChatMediaDraft } from '../chatMedia';
@@ -18,6 +18,17 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
   const [draft, setDraft] = useState(''), [media, setMedia] = useState<ChatMediaDraft[]>([]), [selecting, setSelecting] = useState(false), [batchSending, setBatchSending] = useState(false);
   const input = useNativeState(''), mounted = useRef(true), sending = useRef(false), selection = useRef<ChatMediaDraft[]>([]);
   const followLatest = useRef(true), list = useRef<FlatList>(null);
+  const messageLayout = useRef({ contentHeight: 0, viewportHeight: 0 }), userScrolling = useRef(false);
+  const scrollToLatest = () => {
+    const { contentHeight, viewportHeight } = messageLayout.current;
+    if (followLatest.current && !userScrolling.current && viewportHeight > 0) {
+      list.current?.scrollToOffset({ offset: Math.max(0, contentHeight - viewportHeight), animated: false });
+    }
+  };
+  const rememberScrollPosition = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    followLatest.current = contentSize.height - layoutMeasurement.height - contentOffset.y < 80;
+  };
   useEffect(() => { input.set(draft); }, [draft, input]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; selection.current.forEach(discardChatMedia); }; }, []);
   const updateMedia = (next: ChatMediaDraft[]) => { selection.current = next; setMedia(next); };
@@ -52,7 +63,7 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
   ], { cancelable: true });
   const send = async () => {
     if (sending.current || busy || !thread.storageReady || (!draft.trim() && !media.length)) return;
-    sending.current = true; setBatchSending(true); followLatest.current = true;
+    sending.current = true; setBatchSending(true); followLatest.current = true; userScrolling.current = false;
     const sent = draft, batch = [...selection.current];
     try {
       if (!batch.length) {
@@ -72,9 +83,13 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
     <Stack.Screen options={{ title: title || 'Suhbat' }} />
     <FlatList ref={list} style={styles.messages} data={rows} keyExtractor={item => item.key} keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ flexGrow: 1, padding: 12 }} maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-      onScroll={event => { const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent; followLatest.current = contentSize.height - layoutMeasurement.height - contentOffset.y < 80; }}
-      onContentSizeChange={() => { if (followLatest.current) list.current?.scrollToEnd({ animated: false }); }}
-      onLayout={() => { if (followLatest.current) list.current?.scrollToEnd({ animated: false }); }}
+      onScrollBeginDrag={event => { userScrolling.current = true; rememberScrollPosition(event); }}
+      onScroll={event => { if (userScrolling.current) rememberScrollPosition(event); }}
+      onScrollEndDrag={event => { rememberScrollPosition(event); userScrolling.current = false; }}
+      onMomentumScrollBegin={() => { userScrolling.current = true; }}
+      onMomentumScrollEnd={event => { rememberScrollPosition(event); userScrolling.current = false; }}
+      onContentSizeChange={(_, height) => { messageLayout.current.contentHeight = height; scrollToLatest(); }}
+      onLayout={event => { messageLayout.current.viewportHeight = event.nativeEvent.layout.height; scrollToLatest(); }}
       refreshControl={<RefreshControl refreshing={thread.messages === null && !thread.error} onRefresh={() => void thread.refresh()} />}
       ListHeaderComponent={<View style={{ gap: 8 }}>
         {thread.hasMore && <Pressable disabled={thread.loadingMore} onPress={() => { followLatest.current = false; void thread.loadOlder(); }} style={{ padding: 12 }}><Text style={{ color: colors.primary }}>Avvalgi xabarlar</Text></Pressable>}
