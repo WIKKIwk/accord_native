@@ -8,6 +8,10 @@ test('write and print hold notice covers Uzbek, English, Russian and Urdu', () =
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
   const messages = []; for (locale of ['uz', 'en', 'ru', 'ur']) messages.push(mod.exports.useRawSplitWriteHoldText());
-  assert.match(messages[0], /saqlash.*chop etish/); assert.match(messages[1], /Saving.*printing/);
-  assert.match(messages[2], /Сохранение.*печать/); assert.match(messages[3], /پرنٹ/); assert.equal(new Set(messages).size, 4);
+  assert.deepEqual(messages, [
+    'Xavfsizlik tekshiruvi tugaguncha saqlash, muammoni qayd etish, printer tanlash va chop etish vaqtincha to‘xtatilgan.',
+    'Saving, issue reporting, printer selection and printing are temporarily paused pending a safety check.',
+    'Сохранение, регистрация проблемы, выбор принтера и печать временно приостановлены до завершения проверки безопасности.',
+    'حفاظتی جانچ مکمل ہونے تک محفوظ کرنا، مسئلہ درج کرنا، پرنٹر منتخب کرنا اور پرنٹ کرنا عارضی طور پر بند ہے۔',
+  ]);
 });
