@@ -1,6 +1,6 @@
-import { Button, Column, Host, Icon, IconButton, OutlinedButton, OutlinedTextField, Row, Shape, Switch, Text, TextButton,
+import { Button, Column, Host, Icon, IconButton, OutlinedButton, OutlinedTextField, RNHostView, Row, Shape, Switch, Text, TextButton,
   useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
-import { defaultMinSize, fillMaxWidth, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { background, cornerRadius, defaultMinSize, fillMaxWidth, padding, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
@@ -32,13 +32,11 @@ const actionIcons: Record<string, number> = { 'gscale-save': icons.save, 'gscale
 function ReceiptLabel({ text, title = false }: { text: string; title?: boolean }) {
   const colors = useMaterialColors(), t = useGScaleText();
   const scale = text.startsWith('Joriy kg:');
-  return <Host matchContents={{ vertical: true }} style={styles.full}>
-    <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
+  return <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
       {scale ? <Icon source={icons.scale} size={24} tint={colors.primary} /> : null}
       <Text color={title || scale ? colors.onSurface : colors.onSurfaceVariant} style={{ typography: title || scale ? 'titleMedium' : 'bodyMedium' }}
         modifiers={[weight(1)]}>{t(text)}</Text>
-    </Row>
-  </Host>;
+    </Row>;
 }
 
 export function ReceiptAction({ row, grow = false }: { row: Action; grow?: boolean }) {
@@ -59,8 +57,7 @@ export function ReceiptAction({ row, grow = false }: { row: Action; grow?: boole
 export function ReceiptPicker({ row }: { row: Action }) {
   const colors = useMaterialColors(), t = useGScaleText();
   const label = row.id === 'gscale-order' ? 'Order' : row.label;
-  return <Host matchContents={{ vertical: true }} style={styles.full}>
-    <OutlinedButton enabled={!row.disabled} onClick={row.press} shape={rounded}
+  return <OutlinedButton enabled={!row.disabled} onClick={row.press} shape={rounded}
       colors={{ containerColor: colors.surface, contentColor: colors.onSurface }} contentPadding={{ start: 16, end: 16, top: 10, bottom: 10 }}
       modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 64 }), testID(row.id!)]}>
       <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth()]}>
@@ -71,8 +68,7 @@ export function ReceiptPicker({ row }: { row: Action }) {
         </Column>
         <Icon source={icons.expand} size={24} tint={colors.onSurfaceVariant} />
       </Row>
-    </OutlinedButton>
-  </Host>;
+    </OutlinedButton>;
 }
 
 export function ReceiptField({ row, grow = false }: { row: Field; grow?: boolean }) {
@@ -92,43 +88,74 @@ export function ReceiptField({ row, grow = false }: { row: Field; grow?: boolean
 
 function ReceiptToggle({ row }: { row: Extract<GScaleRow, { kind: 'toggle' }> }) {
   const colors = useMaterialColors(), t = useGScaleText(), babina = row.label === 'Babina';
-  return <Host matchContents={{ vertical: true }} style={styles.full}>
-    <Row verticalAlignment="center" modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 })]}>
+  return <Row verticalAlignment="center" modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 })]}>
       <Column modifiers={[weight(1)]}>
         <Text color={colors.onSurface} style={{ typography: 'titleMedium' }}>{t(babina ? 'Babina' : 'Miqdor (kg)')}</Text>
         <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t(babina ? row.value ? 'Bor' : 'Yo‘q' : row.label)}</Text>
       </Column>
       <Switch value={row.value} enabled={!row.disabled} onCheckedChange={row.change}
         modifiers={[semantics({ contentDescription: t(babina ? 'Babina' : 'Miqdor (kg)') })]} />
-    </Row>
-  </Host>;
+    </Row>;
 }
 
 export function ReceiptRows({ rows }: { rows: readonly GScaleRow[] }) {
-  const colors = useMaterialColors(), t = useGScaleText(), { width, fontScale } = useWindowDimensions();
-  const stacked = width < 360 || fontScale > 1.2;
+  const { width, fontScale } = useWindowDimensions();
+  return <Host matchContents={{ vertical: true }} style={styles.full}>
+    <Column verticalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth()]}>
+      <ReceiptRowGroups rows={rows} stacked={width < 360 || fontScale > 1.2} />
+    </Column>
+  </Host>;
+}
+
+function ReceiptRowGroups({ rows, stacked }: { rows: readonly GScaleRow[]; stacked: boolean }) {
+  const colors = useMaterialColors(), t = useGScaleText();
   return <>{gscaleReceiptGroups(rows).map((group, index) => {
-    if (group.kind === 'summary') return <View key="summary" style={[styles.summary, { backgroundColor: colors.surface }]}>
-      <View style={{ flex: 1, gap: 4 }}><ReceiptRows rows={group.rows.filter(row => row.kind !== 'action')} /></View>
-      <Host style={{ width: 48, height: 48 }}><IconButton enabled={!(group.rows.at(-1) as Action).disabled}
-        onClick={(group.rows.at(-1) as Action).press} modifiers={[testID('gscale-context-edit'), semantics({ contentDescription: t('Batch ma’lumotini tahrirlash') })]}>
+    if (group.kind === 'summary') return <Row key="summary" verticalAlignment="top" horizontalArrangement={{ spacedBy: 8 }}
+      modifiers={[fillMaxWidth(), cornerRadius(20), background(colors.surface), padding(12, 12, 12, 12)]}>
+      <Column verticalArrangement={{ spacedBy: 4 }} modifiers={[weight(1)]}>
+        <ReceiptRowGroups rows={group.rows.filter(row => row.kind !== 'action')} stacked={stacked} />
+      </Column>
+      <IconButton enabled={!(group.rows.at(-1) as Action).disabled}
+        onClick={(group.rows.at(-1) as Action).press} modifiers={[defaultMinSize({ minWidth: 48, minHeight: 48 }), testID('gscale-context-edit'), semantics({ contentDescription: t('Batch ma’lumotini tahrirlash') })]}>
         <Icon source={icons.edit} size={22} tint={colors.onSurfaceVariant} />
-      </IconButton></Host>
-    </View>;
-    if (group.kind === 'fields' || group.kind === 'actions') return <Host key={`${group.kind}:${group.rows[0].kind === 'field' ? group.rows[0].key : index}`}
-      matchContents={{ vertical: true }} style={styles.full}>
+      </IconButton>
+    </Row>;
+    if (group.kind === 'fields' || group.kind === 'actions') return <Column key={`${group.kind}:${group.rows[0].kind === 'field' ? group.rows[0].key : index}`} modifiers={[fillMaxWidth()]}>
       {stacked ? <Column verticalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth()]}>{group.rows.map((row, i) => row.kind === 'field'
         ? <ReceiptField key={i} row={row} /> : <ReceiptAction key={i} row={row as Action} />)}</Column>
         : <Row horizontalArrangement={{ spacedBy: 10 }} verticalAlignment="center" modifiers={[fillMaxWidth()]}>{group.rows.map((row, i) => row.kind === 'field'
           ? <ReceiptField key={i} row={row} grow /> : <ReceiptAction key={i} row={row as Action} grow />)}</Row>}
-    </Host>;
+    </Column>;
     const row = group.rows[0], key = row.kind === 'field' ? row.key : row.kind === 'action' ? row.id ?? row.label : `${row.kind}:${index}`;
-    if (row.kind === 'field') return <Host key={key} matchContents={{ vertical: true }} style={styles.full}><ReceiptField row={row} /></Host>;
+    if (row.kind === 'field') return <ReceiptField key={key} row={row} />;
     if (row.kind === 'toggle') return <ReceiptToggle key={key} row={row} />;
     if (row.kind === 'text') return <ReceiptLabel key={key} text={row.text} />;
     if (['gscale-order', 'gscale-warehouse', 'gscale-item'].includes(row.id ?? '')) return <ReceiptPicker key={key} row={row} />;
-    return <Host key={key} matchContents={{ vertical: true }} style={styles.full}><ReceiptAction row={row} /></Host>;
+    return <ReceiptAction key={key} row={row} />;
   })}</>;
+}
+
+function ReceiptControl({ control, connected }: { control: GScaleSection[]; connected: boolean }) {
+  const colors = useMaterialColors(), t = useGScaleText(), { width, fontScale } = useWindowDimensions();
+  const stacked = width < 360 || fontScale > 1.2;
+  const order = control.find(group => group.title === 'Order'), device = control[0]?.rows[0];
+  const status = control[0]?.rows.slice(1) ?? [];
+  return <Column verticalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth()]}>
+    {order ? <ReceiptRowGroups rows={order.rows} stacked={stacked} /> : null}
+    {connected && device?.kind === 'action' ? <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 12 }}
+      modifiers={[fillMaxWidth(), padding(0, 4, 0, 4)]}>
+      <Icon source={icons.connected} size={18} tint={colors.primary} />
+      <Text color={colors.onSurfaceVariant} style={{ typography: 'bodyMedium' }} modifiers={[weight(1)]}>{device.label}</Text>
+      <RNHostView matchContents><Pressable accessibilityRole="button" onPress={device.press}>
+        <NativeText style={{ color: colors.primary }}>{t('Almashtirish')}</NativeText>
+      </Pressable></RNHostView>
+    </Row> : null}
+    {device?.kind === 'action' && device.detail ? <ReceiptLabel text={device.detail} /> : null}
+    <ReceiptRowGroups rows={status} stacked={stacked} />
+    {control.slice(1).filter(group => group !== order).map((group, index) => <Column key={index} verticalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth()]}>
+      {group.title ? <ReceiptLabel title text={group.title} /> : null}<ReceiptRowGroups rows={group.rows} stacked={stacked} />
+    </Column>)}
+  </Column>;
 }
 
 function ReceiptHistory({ sections }: { sections: GScaleSection[] }) {
@@ -156,8 +183,6 @@ type Props = { session: Session; title: string; section: 'control' | 'history'; 
 
 export function GScaleReceipt({ session, title, section, onSelect, control, history, connected, attention, refreshing, onRefresh, onDevices, onBack }: Props) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = useGScaleText();
-  const order = control.find(group => group.title === 'Order'), device = control[0]?.rows[0];
-  const status = control[0]?.rows.slice(1) ?? [];
   return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}>
     <View style={styles.header}>
       <RoleHeaderButton icon="back" label={t('Orqaga')} tintColor={colors.onSurfaceVariant} onPress={onBack} />
@@ -171,19 +196,9 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
     <OrdersWorkspace session={session} tabs={[{ id: 'control', name: t('Print') }, { id: 'history', name: t('Print tarixi') }]}
       selected={section} onSelect={id => { if (id === 'control' || id === 'history') onSelect(id); }}>
       {(id, pagerGesture) => <ReceiptScroll pagerGesture={pagerGesture} refreshing={refreshing} onRefresh={id === 'history' ? onRefresh : undefined}>
-        {id === 'control' ? <>
-          {order ? <ReceiptRows rows={order.rows} /> : null}
-          {connected && device?.kind === 'action' ? <View style={styles.deviceStatus}>
-            <Host style={{ width: 18, height: 18 }}><Icon source={icons.connected} size={18} tint={colors.primary} /></Host>
-            <NativeText style={{ flex: 1, color: colors.onSurfaceVariant }}>{device.label}</NativeText>
-            <Pressable accessibilityRole="button" onPress={device.press}><NativeText style={{ color: colors.primary }}>{t('Almashtirish')}</NativeText></Pressable>
-          </View> : null}
-          {device?.kind === 'action' && device.detail ? <ReceiptLabel text={device.detail} /> : null}
-          <ReceiptRows rows={status} />
-          {control.slice(1).filter(group => group !== order).map((group, index) => <View key={index} style={styles.group}>
-            {group.title ? <ReceiptLabel title text={group.title} /> : null}<ReceiptRows rows={group.rows} />
-          </View>)}
-        </> : <ReceiptHistory sections={history} />}
+        {id === 'control' ? <Host matchContents={{ vertical: true }} style={styles.full}>
+          <ReceiptControl control={control} connected={connected} />
+        </Host> : <ReceiptHistory sections={history} />}
       </ReceiptScroll>}
     </OrdersWorkspace>
     <PreparationDock />
@@ -193,7 +208,5 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
 const styles = StyleSheet.create({
   root: { flex: 1 }, full: { width: '100%' }, header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 64, paddingHorizontal: 10 },
   content: { paddingTop: 60, paddingHorizontal: 14, paddingBottom: 24, gap: 10, flexGrow: 1 },
-  group: { gap: 10 }, summary: { padding: 12, borderRadius: 20, gap: 8, flexDirection: 'row', alignItems: 'center' },
-  deviceStatus: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 4 },
   historyText: { flex: 1, padding: 10, gap: 4 }, historyTitle: { fontSize: 16, fontWeight: '500' },
 });
