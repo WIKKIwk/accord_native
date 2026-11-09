@@ -151,3 +151,13 @@ test('Android dock should pop an existing destination without duplicating it', (
   nav.selectDock('home');
   assert.deepEqual(nav.state.routes.map(route => route.name), ['entry', 'index']);
 });
+
+test('Chat is reachable from both drawers and returns through the existing role navigator', () => {
+  for (const platform of ['android', 'ios']) {
+    const nav = harness(platform);
+    nav.select('chat');
+    assert.equal(nav.state.routes[nav.state.index].name, 'chat');
+    nav.select('home');
+    assert.equal(nav.state.routes[nav.state.index].name, platform === 'ios' ? '(home)' : 'index');
+  }
+});
