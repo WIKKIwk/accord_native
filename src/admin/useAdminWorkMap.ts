@@ -6,8 +6,12 @@ import { adminWorkMapCatalogReader, adminWorkMapReader } from './adminWorkMapRea
 
 export function useAdminWorkMap(session: Session, isCurrent: () => boolean) {
   const group = useMemo(() => {
-    const controller = new AdminWorkMapWorkspace({ isCurrent, read: adminWorkMapReader(session, isCurrent),
-      readCatalog: adminWorkMapCatalogReader(session, isCurrent),
+    const originalWitness = (operation: () => boolean) => () => {
+      const account = isCurrent();
+      return account === true ? operation() : account;
+    };
+    const controller = new AdminWorkMapWorkspace({ isCurrent, read: (request, operation) => adminWorkMapReader(session, originalWitness(operation))(request),
+      readCatalog: operation => adminWorkMapCatalogReader(session, originalWitness(operation))(),
       selection: new AdminSequenceApparatusStore(undefined, () => String(session.profile.ref ?? '')) });
     let mounts = 0;
     return { controller, mount() { mounts++; controller.start(); return () => { mounts--; queueMicrotask(() => { if (!mounts) controller.dispose(); }); }; } };

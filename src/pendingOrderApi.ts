@@ -14,11 +14,13 @@ export function pendingOrderFromJson(value: unknown) {
   return { id: row.id, template: calculateOrderTemplateFromJson(row.template), manager_name: row.manager_name ?? '', completed: row.completion != null };
 }
 /** @v2 pendingOrderDetail */
-export async function pendingOrderDetail(session: Session, orderId: string, beforeSend?: () => void) {
+export async function pendingOrderDetail(session: Session, orderId: string, beforeSend?: () => void, readWitness?: () => boolean) {
   const id = orderId.trim(); if (!id) throw invalid();
   const query = new URLSearchParams({ id });
   const path = `/v1/mobile/admin/pending-orders?${query}`;
-  const response = beforeSend ? await authorizedFetch(session, path, undefined, beforeSend) : await authorizedFetch(session, path);
+  if (readWitness !== undefined && (typeof readWitness !== 'function' || typeof beforeSend !== 'function')) throw new TypeError('Scoped read requires a guard and witness');
+  const response = readWitness ? await authorizedFetch(session, path, undefined, beforeSend, 10_000, { readWitness })
+    : beforeSend ? await authorizedFetch(session, path, undefined, beforeSend) : await authorizedFetch(session, path);
   beforeSend?.();
   if (response.status !== 200) {
     let data: unknown; try { data = await response.json(); } catch { beforeSend?.(); data = null; }

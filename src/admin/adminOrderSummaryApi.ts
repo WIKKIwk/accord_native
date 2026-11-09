@@ -8,12 +8,12 @@ const object = (value: unknown): Obj | null => value !== null && typeof value ==
 export type AdminOrderSummary = ReturnType<typeof calculateOrderTemplateFromJson>;
 
 /** Source live read only. The caller must bind the guard to its original hydrated detail ticket. */
-export async function adminProductionMapOrderSummary(session: Session, orderId: string, guard: AdminRequestGuard): Promise<AdminOrderSummary> {
+export async function adminProductionMapOrderSummary(session: Session, orderId: string, guard: AdminRequestGuard, readWitness?: () => boolean): Promise<AdminOrderSummary> {
   const check = checkedAdminGuard(guard);
   if (!check) throw new TypeError('Admin order summary guard required');
   check();
   const id = dartTrim(orderId), query = new URLSearchParams({ id });
-  const payload = object(await adminProductionRequest(session, `/v1/mobile/admin/production-maps/order-summary?${query}`, undefined, 'order_summary', check));
+  const payload = object(await adminProductionRequest(session, `/v1/mobile/admin/production-maps/order-summary?${query}`, undefined, 'order_summary', check, readWitness));
   check();
   const raw = object(payload?.template);
   if (!raw) throw new TypeError('Invalid order summary');

@@ -7,7 +7,7 @@ import { adminProductionReadIdentityCompression } from './productionReadSettings
 const invalid = () => new WorkerControlException('order_page_invalid', 'Buyurtmalar sahifasi noto‘g‘ri. Qayta yuklang.');
 
 /** @v2 adminProductionOrderDetail */
-export async function adminProductionOrderDetail(session: Session, input: { apparatus: string; order_id: string }, beforeSend?: () => void) {
+export async function adminProductionOrderDetail(session: Session, input: { apparatus: string; order_id: string }, beforeSend?: () => void, readWitness?: () => boolean) {
   const apparatus = input.apparatus.trim(), id = input.order_id.trim();
   if (apparatus && !isCanonicalApparatusId(apparatus)) throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
   if (!id) throw invalid();
@@ -16,7 +16,9 @@ export async function adminProductionOrderDetail(session: Session, input: { appa
   query.set('order_id', id); query.set('detail', 'true');
   if (adminProductionReadIdentityCompression) query.set('compression', 'identity');
   const path = `/v1/mobile/admin/production-maps/sequence?${query}`;
-  const response = beforeSend ? await authorizedFetch(session, path, undefined, beforeSend) : await authorizedFetch(session, path);
+  if (readWitness !== undefined && (typeof readWitness !== 'function' || typeof beforeSend !== 'function')) throw new TypeError('Scoped read requires a guard and witness');
+  const response = readWitness ? await authorizedFetch(session, path, undefined, beforeSend, 10_000, { readWitness })
+    : beforeSend ? await authorizedFetch(session, path, undefined, beforeSend) : await authorizedFetch(session, path);
   beforeSend?.();
   if (response.status !== 200) {
     let payload: unknown;

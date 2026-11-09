@@ -8,7 +8,7 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsx
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id === './adminWorkMapCurrent' ? load('admin/adminWorkMapCurrent.ts') : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename,
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   return mod.exports;
@@ -262,4 +262,10 @@ for (const platform of ['ios', 'android']) test(`${platform} Move picker renders
   assert.deepEqual(tree.filter(node => node.type === 'ListItem').map(node => node.props.children), ['Tanlanmagan', 'Pechat A']);
   const selected = tree.find(node => node.props.testID === 'admin-move-picker-apparatus:a'); selected.props.onPress();
   assert.deepEqual(calls, [a]); assert.ok(platform === 'ios' ? selected.props.modifiers.some(x => x.background === 'selected') : selected.props.colors.containerColor === 'selected');
+});
+test('disposing active Move cannot trigger another window read through a subscriber', async () => {
+  let sends = 0, attempted = false; const move = new Move({ isCurrent: () => true, read: async () => { sends++; return page(); } });
+  move.start(); move.setCatalog([a, b]); move.setActive(true); await tick(); const before = sends;
+  move.subscribe(() => { if (!attempted) { attempted = true; void move.reload(); } }); move.dispose(); await tick();
+  assert.equal(attempted, true); assert.equal(sends, before);
 });

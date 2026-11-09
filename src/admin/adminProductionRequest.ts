@@ -46,10 +46,12 @@ export function checkedAdminGuard(guard?: AdminRequestGuard): (() => void) | und
 }
 /** Opt-in guard around the existing transport; not a replacement for session lifecycle or redirect safety. */
 export async function adminProductionRequest(session: Session, url: string, init: RequestInit | undefined, fallback: string,
-  guard?: AdminRequestGuard): Promise<unknown> {
+  guard?: AdminRequestGuard, readWitness?: () => boolean): Promise<unknown> {
   const check = checkedAdminGuard(guard);
+  if (readWitness !== undefined && (typeof readWitness !== 'function' || !check)) throw new TypeError('Scoped read requires a guard and witness');
   let response: Response;
-  try { response = await authorizedFetch(session, url, init, check); }
+  try { response = readWitness ? await authorizedFetch(session, url, init, check, 10_000, { readWitness })
+    : await authorizedFetch(session, url, init, check); }
   catch (error) { check?.(); throw error; }
   check?.();
   let value: unknown;

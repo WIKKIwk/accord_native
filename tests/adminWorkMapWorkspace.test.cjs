@@ -7,7 +7,7 @@ const ts = require('typescript');
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file + '.ts'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id === './adminWorkMapCurrent' ? load('admin/adminWorkMapCurrent') : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
@@ -122,4 +122,25 @@ test('Move waits for catalog, opens opposite scopes only, propagates search and 
   f.reads[2].response.resolve(full('new-top')); f.reads[3].response.resolve(full('new-bottom')); await refresh;
   f.workspace.selectModule('orders'); assert.equal(f.workspace.getSnapshot().move.topWindow.rows.length, 0); assert.equal(f.workspace.getSnapshot().move.bottomWindow.rows.length, 0);
   const before = f.reads.length; await f.workspace.move.topWindow.reload(); assert.equal(f.reads.length, before); f.workspace.dispose();
+});
+test('catalog read receives the original workspace generation witness and retires on disposal', async () => {
+  let witness; const workspace = new Workspace({ isCurrent: () => true, read: async () => null,
+    readCatalog: value => { witness = value; return new Promise(() => {}); },
+    selection: { loadSavedApparatusId: async () => {}, resolveApparatus: () => null } });
+  workspace.start(); await tick(); assert.equal(typeof witness, 'function'); assert.equal(witness(), true);
+  workspace.dispose(); assert.equal(witness(), false);
+});
+test('disposing workspace cannot synchronously start selection or catalog reads', async () => {
+  let selections = 0, catalogs = 0, attempted = false;
+  const workspace = new Workspace({ isCurrent: () => true, read: async () => null,
+    readCatalog: async () => { catalogs++; return []; }, selection: { loadSavedApparatusId: async () => { selections++; }, resolveApparatus: () => null } });
+  workspace.subscribe(() => { if (!attempted) { attempted = true; void workspace.reload(); } }); workspace.dispose(); await tick();
+  assert.equal(attempted, true); assert.equal(selections, 0); assert.equal(catalogs, 0);
+});
+test('catalog loading publication cannot begin a selection read after invalidation', async () => {
+  let selections = 0, reads = 0, attempted = false;
+  const workspace = new Workspace({ isCurrent: () => true, read: async () => null, readCatalog: async () => { reads++; return []; },
+    selection: { loadSavedApparatusId: async () => { selections++; }, resolveApparatus: () => null } });
+  workspace.subscribe(() => { if (!attempted && workspace.getSnapshot().catalogLoading) { attempted = true; workspace.invalidate(); } });
+  workspace.start(); await tick(); assert.equal(attempted, true); assert.equal(selections, 0); assert.equal(reads, 0); workspace.dispose();
 });

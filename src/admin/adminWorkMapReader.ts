@@ -18,52 +18,63 @@ import { adminClosedOrderDetail } from './adminClosedOrderDetailApi';
 /** Capture one witness and one read scope for this screen; never recapture a stale operation. */
 function adminWorkMapGuard(session: Session, isWitnessCurrent: () => boolean) {
   const scope = sessionReadScope(session);
+  let retired = false;
+  const readWitness = () => {
+    if (retired) return false;
+    try {
+      if (!activeSessionToken(session)) { retired = true; return false; }
+      const current = isWitnessCurrent();
+      // Pass malformed/async values to the outer validator and never revive an observed loss.
+      if (current !== true) { retired = true; return current; }
+      if (sessionReadScope(session) !== scope || !canOpenRoute(session, appRoutes.adminProductionMapOrders)) { retired = true; return false; }
+      return true;
+    } catch (error) { retired = true; throw error; }
+  };
   const guard = checkedAdminGuard(() => {
-    if (!activeSessionToken(session) || !isProfileSessionCurrent(isWitnessCurrent) || sessionReadScope(session) !== scope ||
-        !canOpenRoute(session, appRoutes.adminProductionMapOrders)) throw new Error('Admin work map session changed');
+    if (!isProfileSessionCurrent(readWitness)) throw new Error('Admin work map session changed');
   })!;
-  return guard;
+  return { guard, readWitness };
 }
 export function adminWorkMapReader(session: Session, isWitnessCurrent: () => boolean) {
-  const guard = adminWorkMapGuard(session, isWitnessCurrent);
+  const { guard, readWitness } = adminWorkMapGuard(session, isWitnessCurrent);
   return async (request: ProductionOrderPageRequest): Promise<AdminWorkMapPage | null> => {
-    guard(); const page = await adminProductionOrderPage(session, request, guard); guard();
+    guard(); const page = await adminProductionOrderPage(session, request, guard, readWitness); guard();
     return page as AdminWorkMapPage | null;
   };
 }
 
 /** V2 bootstraps the ordinary Admin catalog with limit 200 and no transient retry. */
 export function adminWorkMapCatalogReader(session: Session, isWitnessCurrent: () => boolean) {
-  const guard = adminWorkMapGuard(session, isWitnessCurrent);
-  return async () => { guard(); const rows = await adminApparatus(session, { limit: 200, beforeSend: guard }); guard(); return rows; };
+  const { guard, readWitness } = adminWorkMapGuard(session, isWitnessCurrent);
+  return async () => { guard(); const rows = await adminApparatus(session, { limit: 200, beforeSend: guard, readWitness }); guard(); return rows; };
 }
 
 /** A saved calculation read belongs to the same hydrated detail ticket, not a list summary. */
 export function adminWorkMapSummaryReader(session: Session, isWitnessCurrent: () => boolean) {
-  const guard = adminWorkMapGuard(session, isWitnessCurrent);
-  return async (id: string) => { guard(); const value = await adminProductionMapOrderSummary(session, id, guard); guard(); return value; };
+  const { guard, readWitness } = adminWorkMapGuard(session, isWitnessCurrent);
+  return async (id: string) => { guard(); const value = await adminProductionMapOrderSummary(session, id, guard, readWitness); guard(); return value; };
 }
 
-/** Closed history remains unconnected until a version-bound row lifecycle and complete log surfaces exist. */
+/** Closed history remains unconnected until its route and transport boundaries are reviewed. */
 export function adminWorkMapClosedDetailReader(session: Session, isWitnessCurrent: () => boolean) {
-  const guard = adminWorkMapGuard(session, isWitnessCurrent);
-  return async (id: string) => { guard(); const detail = await adminClosedOrderDetail(session, id, guard); guard(); return detail; };
+  const { guard, readWitness } = adminWorkMapGuard(session, isWitnessCurrent);
+  return async (id: string) => { guard(); const detail = await adminClosedOrderDetail(session, id, guard, readWitness); guard(); return detail; };
 }
 
 /** A list summary never authorizes an editor: hydrate and validate the full response first. */
 export function adminWorkMapDetailReader(session: Session, isWitnessCurrent: () => boolean) {
-  const guard = adminWorkMapGuard(session, isWitnessCurrent);
+  const { guard, readWitness } = adminWorkMapGuard(session, isWitnessCurrent);
   return async (ticket: AdminWorkMapDetailTicket) => {
     guard();
     if (ticket.kind === 'pending') {
-      const detail = await pendingOrderDetail(session, ticket.id, guard); guard();
+      const detail = await pendingOrderDetail(session, ticket.id, guard, readWitness); guard();
       return { kind: 'pending' as const, template: detail.template, managerName: detail.manager_name };
     }
     // V2 retries a stale detail once, not a failed HTTP request. Every retry
     // still belongs to the original list ticket and session witness.
     for (let attempt = 0; attempt < 2; attempt++) {
       guard();
-      const snapshot = await adminProductionOrderDetail(session, { apparatus: ticket.apparatus ?? '', order_id: ticket.id }, guard);
+      const snapshot = await adminProductionOrderDetail(session, { apparatus: ticket.apparatus ?? '', order_id: ticket.id }, guard, readWitness);
       guard();
       if (snapshot.epoch === ticket.epoch && snapshot.revision != null && ticket.revision != null && snapshot.revision >= ticket.revision &&
           snapshot.scope && snapshot.maps.length === 1 && snapshot.maps[0].map.id === ticket.id) {

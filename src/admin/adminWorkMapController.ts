@@ -1,6 +1,7 @@
 import { adminWorkMapAuditPages, type AdminWorkMapAuditReport } from './adminWorkMapAuditModel';
 import { adminWorkMapClosedPages, type AdminWorkMapClosedOrder } from './adminWorkMapClosedModel';
 import { dartTrim } from './dartJsonString';
+import { adminWorkMapCurrent } from './adminWorkMapCurrent';
 import type { AdminClosedHistoryTicket } from './adminClosedHistoryController';
 
 export type AdminWorkMapModule = 'sequence' | 'orders' | 'move' | 'closed' | 'audit';
@@ -16,7 +17,7 @@ export type AdminWorkMapDetailTicket = { generation: number; id: string; kind: '
   apparatus?: string; ordersSummary?: true };
 export type AdminWorkMapState = { query: string; rows: readonly AdminWorkMapRow[]; loading: boolean; loaded: boolean; error: string | null; hasMore: boolean; total: number; audit: AdminWorkMapAuditReport | null; closed: readonly AdminWorkMapClosedOrder[] };
 type Dependencies = { isCurrent: () => boolean; request?: AdminWorkMapRequest | null;
-  read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }) => Promise<AdminWorkMapPage | null> };
+  read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }, witness: () => boolean) => Promise<AdminWorkMapPage | null> };
 const readError = 'Buyurtmalar sahifasi noto‘g‘ri. Qayta yuklang.';
 const emptyState = (): AdminWorkMapState => ({ query: '', rows: [], loading: false, loaded: false, error: null, hasMore: false, total: 0, audit: null, closed: [] });
 const text = (value: unknown): string => typeof value === 'string' ? value : '';
@@ -92,73 +93,92 @@ export class AdminWorkMapController {
   private state = emptyState();
   private pages: AdminWorkMapPage[] = [];
   private listeners = new Set<() => void>();
+  private detailTickets = new WeakSet<object>();
   private generation = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
+  private invalidating = false;
   private started = false;
   private request: AdminWorkMapRequest | null;
-  constructor(private readonly deps: Dependencies) { this.request = deps.request === undefined ? { view: 'orders' } : deps.request; }
+  constructor(private readonly deps: Dependencies) { this.request = deps.request === undefined ? { view: 'orders' } : deps.request ? { ...deps.request } : null; }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private publish(patch: Partial<AdminWorkMapState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()); }
-  private current(ticket: number) { return !this.disposed && ticket === this.generation && this.deps.isCurrent(); }
+  private localCurrent(ticket: number) { return !this.disposed && !this.invalidating && ticket === this.generation; }
+  private current(ticket: number) { return this.localCurrent(ticket) && adminWorkMapCurrent(this.deps.isCurrent) && this.localCurrent(ticket); }
   detailTicket(row: AdminWorkMapRow): AdminWorkMapDetailTicket | null {
-    if (this.request?.view === 'move' || !this.deps.isCurrent() || !this.state.rows.some(item => item.id === row.id && item.kind === row.kind)) return null;
+    if (this.request?.view === 'move' || !this.current(this.generation) || !this.state.rows.includes(row)) return null;
     const first = this.pages[0];
     const source = this.pages.find(page => row.kind === 'order' && page.order_ids.includes(row.id));
-    return first ? { generation: this.generation, id: row.id, kind: row.kind, epoch: first.epoch, revision: first.revision,
+    if (!first) return null;
+    const ticket = Object.freeze({ generation: this.generation, id: row.id, kind: row.kind, epoch: first.epoch, revision: first.revision,
       ...(this.request?.view === 'orders' && source?.projection === 'orders_list_v1' ? { ordersSummary: true as const } : {}),
-      ...(this.request?.view === 'sequence' ? { apparatus: this.request.apparatus } : {}) } : null;
+      ...(this.request?.view === 'sequence' ? { apparatus: this.request.apparatus } : {}) });
+    this.detailTickets.add(ticket);
+    return ticket;
   }
   detailIsCurrent(ticket: AdminWorkMapDetailTicket): boolean {
-    return this.current(ticket.generation) && this.state.rows.some(item => item.id === ticket.id && item.kind === ticket.kind);
+    return !!ticket && this.detailTickets.has(ticket) && this.current(ticket.generation) &&
+      this.state.rows.some(item => item.id === ticket.id && item.kind === ticket.kind);
   }
   /** Membership authority only; the history owner must separately supply the original raw account witness. */
   closedHistoryTicket(order: Pick<AdminWorkMapClosedOrder, 'order_id' | 'history_version'>): AdminClosedHistoryTicket | null {
-    if (this.disposed || this.request?.view !== 'closed' || this.state.loading || !this.state.closed.some(row => row.order_id === order.order_id && row.history_version === order.history_version)) return null;
+    if (this.disposed || this.invalidating || this.request?.view !== 'closed' || this.state.loading || !this.state.closed.some(row => row.order_id === order.order_id && row.history_version === order.history_version)) return null;
     return { id: order.order_id, historyVersion: order.history_version, windowGeneration: this.generation };
   }
   closedHistoryIsCurrent(ticket: AdminClosedHistoryTicket): boolean {
-    return !this.disposed && this.request?.view === 'closed' && !this.state.loading && ticket.windowGeneration === this.generation &&
+    return !this.disposed && !this.invalidating && this.request?.view === 'closed' && !this.state.loading && ticket.windowGeneration === this.generation &&
       this.state.closed.some(row => row.order_id === ticket.id && row.history_version === ticket.historyVersion);
   }
   configure(request: AdminWorkMapRequest | null) {
-    if (this.disposed || !this.deps.isCurrent()) return;
+    if (!this.current(this.generation)) return;
     if (this.request?.view === request?.view && this.request?.apparatus === request?.apparatus && this.request?.target === request?.target) return;
-    this.request = request;
-    this.generation++; this.pages = [];
+    const next = request ? { ...request } : null;
+    this.request = next;
+    const generation = ++this.generation; this.pages = [];
     if (this.timer) clearTimeout(this.timer); this.timer = null;
-    this.publish({ ...emptyState(), query: this.state.query, loading: request != null });
-    if (this.started && request) void this.reload();
+    this.publish({ ...emptyState(), query: this.state.query, loading: next != null });
+    if (this.started && next && this.request === next && this.current(generation)) void this.reload();
   }
   start() { if (!this.started && !this.disposed) { this.started = true; void this.reload(); } }
-  invalidate() { if (this.disposed) return; this.generation++; if (this.timer) clearTimeout(this.timer); this.timer = null;
-    this.pages = []; this.publish({ ...emptyState() }); }
-  dispose() { this.invalidate(); this.disposed = true; this.listeners.clear(); }
+  invalidate() {
+    if (this.disposed || this.invalidating) return;
+    this.invalidating = true;
+    try { this.generation++; if (this.timer) clearTimeout(this.timer); this.timer = null; this.pages = []; this.publish({ ...emptyState() }); }
+    finally { this.invalidating = false; }
+  }
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = true; this.generation++; if (this.timer) clearTimeout(this.timer); this.timer = null; this.pages = [];
+    try { this.publish({ ...emptyState() }); } finally { this.listeners.clear(); }
+  }
   setQuery(value: string) {
-    if (this.disposed || !this.deps.isCurrent()) return;
+    if (!this.current(this.generation)) return;
     const next = adminWorkMapSearch(value);
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     if (next === this.state.query && this.state.loaded) return;
-    this.generation++; this.pages = [];
+    const generation = ++this.generation; this.pages = [];
     this.publish({ query: next, rows: [], loading: this.request != null, loaded: false, error: null, hasMore: false, total: 0, audit: null, closed: [] });
+    if (!this.current(generation)) return;
     this.timer = setTimeout(() => { this.timer = null; void this.reload(); }, 350);
   }
   async reload() { if (this.timer) clearTimeout(this.timer); this.timer = null; return this.load(false); }
   async next() { if (!this.state.hasMore || this.state.loading || this.state.error != null) return; return this.load(true); }
   private async load(append: boolean) {
-    if (this.disposed || !this.deps.isCurrent() || !this.request) return;
+    if (!this.current(this.generation) || !this.request) return;
     const request = this.request, ticket = ++this.generation, search = this.state.query, previous = append ? [...this.pages] : [];
     // V2 force-refreshes the previously requested Audit range before publishing it atomically.
     const wanted = request.view === 'audit' && !append ? this.pages.reduce((sum, page) => sum + page.length, 0) : 0;
     let cursor = append ? previous.at(-1)?.next_cursor : null;
     if (append && !cursor) return;
     this.publish({ loading: true, error: null });
+    const witness = () => this.localCurrent(ticket) && this.request === request && this.state.query === search;
     try {
       const pages = [...previous];
       do {
-        const page = await this.deps.read({ ...request, search, ...(cursor ? { cursor } : {}) });
+        if (!this.current(ticket) || !witness()) return;
+        const page = await this.deps.read({ ...request, search, ...(cursor ? { cursor } : {}) }, witness);
         if (!this.current(ticket)) return;
         if (!page) throw new Error(readError);
         const first = pages[0], expected = pages.reduce((sum, item) => sum + item.length, 0);

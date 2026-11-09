@@ -117,7 +117,7 @@ export function productionOrderPageFromJson(value: unknown, session?: Session): 
 export interface ProductionOrderPageRequest { view: string; apparatus?: string; target?: string; search?: string; cursor?: string | null; ifVersion?: string | null }
 
 /** @v2 adminProductionOrderPage */
-export async function adminProductionOrderPage(session: Session, request: ProductionOrderPageRequest, beforeSend?: () => void) {
+export async function adminProductionOrderPage(session: Session, request: ProductionOrderPageRequest, beforeSend?: () => void, readWitness?: () => boolean) {
   const query = new URLSearchParams({ view: request.view, limit: '20' });
   if (request.view === 'sequence') query.set('projection', sequenceProjection);
   if (request.view === 'orders') query.set('projection', ordersProjection);
@@ -126,7 +126,9 @@ export async function adminProductionOrderPage(session: Session, request: Produc
   if (request.cursor != null) query.set('cursor', request.cursor);
   if (request.ifVersion != null) query.set('if_version', request.ifVersion);
   const path = `/v1/mobile/admin/production-maps/order-page?${query}`;
-  const response = beforeSend ? await authorizedFetch(session, path, undefined, beforeSend) : await authorizedFetch(session, path);
+  if (readWitness !== undefined && (typeof readWitness !== 'function' || typeof beforeSend !== 'function')) throw new TypeError('Scoped read requires a guard and witness');
+  const response = readWitness ? await authorizedFetch(session, path, undefined, beforeSend, 10_000, { readWitness })
+    : beforeSend ? await authorizedFetch(session, path, undefined, beforeSend) : await authorizedFetch(session, path);
   beforeSend?.();
   if (response.status === 304 && request.ifVersion != null) return null;
   if (response.status !== 200) {

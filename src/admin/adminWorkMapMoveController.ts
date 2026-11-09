@@ -1,11 +1,12 @@
 import type { AdminApparatus } from '../apparatusApi';
+import { adminWorkMapCurrent } from './adminWorkMapCurrent';
 import { AdminWorkMapController, type AdminWorkMapPage, type AdminWorkMapRequest, type AdminWorkMapState } from './adminWorkMapController';
 import { adminWorkMapMoveDefaults, adminWorkMapMovePickerOptions, adminWorkMapMoveSame, adminWorkMapMoveScope,
   type AdminWorkMapMoveSelection } from './adminWorkMapMoveModel';
 
 export type AdminWorkMapMoveState = { top: AdminWorkMapMoveSelection | null; bottom: AdminWorkMapMoveSelection | null;
   topWindow: AdminWorkMapState; bottomWindow: AdminWorkMapState };
-type Dependencies = { isCurrent: () => boolean; read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }) => Promise<AdminWorkMapPage | null> };
+type Dependencies = { isCurrent: () => boolean; read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }, witness: () => boolean) => Promise<AdminWorkMapPage | null> };
 type Side = 'top' | 'bottom';
 export type AdminWorkMapMovePicker = { generation: number; side: Side; selected: AdminWorkMapMoveSelection; options: readonly AdminWorkMapMoveSelection[] };
 /** Read-only opposite windows. No order selection, drag, command, transfer or acknowledgement API exists here. */
@@ -18,6 +19,7 @@ export class AdminWorkMapMoveController {
   private listeners = new Set<() => void>();
   private active = false;
   private disposed = false;
+  private invalidating = false;
   private batching = false;
   private stop: (() => void)[];
   constructor(private readonly deps: Dependencies) {
@@ -29,7 +31,7 @@ export class AdminWorkMapMoveController {
   }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
-  private current() { return !this.disposed && this.deps.isCurrent(); }
+  private current() { return !this.disposed && !this.invalidating && adminWorkMapCurrent(this.deps.isCurrent) && !this.disposed && !this.invalidating; }
   private publish(patch: Partial<AdminWorkMapMoveState>) {
     this.state = { ...this.state, ...patch }; if (!this.batching) this.listeners.forEach(listener => listener());
   }
@@ -67,10 +69,15 @@ export class AdminWorkMapMoveController {
   setQuery(value: string) { if (this.current()) { this.topWindow.setQuery(value); this.bottomWindow.setQuery(value); } }
   async reload() { if (this.current() && this.active) await Promise.all([this.topWindow.reload(), this.bottomWindow.reload()]); }
   invalidate() {
-    if (this.disposed) return;
-    this.pickerGeneration++; this.catalog = []; this.batching = true;
+    if (this.disposed || this.invalidating) return;
+    this.invalidating = true; this.pickerGeneration++; this.catalog = []; this.batching = true;
     try { this.topWindow.invalidate(); this.bottomWindow.invalidate(); this.state = { ...this.state, top: null, bottom: null }; }
-    finally { this.batching = false; this.publish({}); }
+    finally { this.batching = false; try { this.publish({}); } finally { this.invalidating = false; } }
   }
-  dispose() { this.invalidate(); this.disposed = true; this.stop.forEach(stop => stop()); this.topWindow.dispose(); this.bottomWindow.dispose(); this.listeners.clear(); }
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = true; this.pickerGeneration++; this.catalog = []; this.batching = true;
+    try { this.topWindow.dispose(); this.bottomWindow.dispose(); this.state = { ...this.state, top: null, bottom: null }; }
+    finally { this.batching = false; try { this.publish({}); } finally { this.stop.forEach(stop => stop()); this.listeners.clear(); } }
+  }
 }

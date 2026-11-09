@@ -1,10 +1,11 @@
 import type { AdminApparatus } from '../apparatusApi';
+import { adminWorkMapCurrent } from './adminWorkMapCurrent';
 import type { AdminSequenceApparatusStore } from '../shared/adminSequenceApparatusStore';
 import { AdminWorkMapMoveController, type AdminWorkMapMoveState } from './adminWorkMapMoveController';
 import { AdminWorkMapController, type AdminWorkMapModule, type AdminWorkMapPage, type AdminWorkMapRequest, type AdminWorkMapState } from './adminWorkMapController';
 
-type Dependencies = { isCurrent: () => boolean; readCatalog: () => Promise<AdminApparatus[]>;
-  read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }) => Promise<AdminWorkMapPage | null>;
+type Dependencies = { isCurrent: () => boolean; readCatalog: (witness: () => boolean) => Promise<AdminApparatus[]>;
+  read: (request: AdminWorkMapRequest & { search: string; cursor?: string | null }, witness: () => boolean) => Promise<AdminWorkMapPage | null>;
   selection: Pick<AdminSequenceApparatusStore, 'loadSavedApparatusId' | 'resolveApparatus'> };
 export type AdminWorkMapWorkspaceState = { module: AdminWorkMapModule; catalog: readonly AdminApparatus[]; selected: AdminApparatus | null;
   catalogLoading: boolean; catalogLoaded: boolean; catalogError: string | null; list: AdminWorkMapState; move: AdminWorkMapMoveState };
@@ -17,6 +18,7 @@ export class AdminWorkMapWorkspace {
   private listeners = new Set<() => void>();
   private started = false;
   private disposed = false;
+  private invalidating = false;
   private catalogGeneration = 0;
   private stopWindow: () => void;
   constructor(private readonly deps: Dependencies) {
@@ -31,7 +33,8 @@ export class AdminWorkMapWorkspace {
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private publish(patch: Partial<AdminWorkMapWorkspaceState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()); }
-  private current(generation?: number) { return !this.disposed && this.deps.isCurrent() && (generation == null || generation === this.catalogGeneration); }
+  private localCurrent(generation?: number) { return !this.disposed && !this.invalidating && (generation == null || generation === this.catalogGeneration); }
+  private current(generation?: number) { return this.localCurrent(generation) && adminWorkMapCurrent(this.deps.isCurrent) && this.localCurrent(generation); }
   start() { if (!this.started && !this.disposed) { this.started = true; this.window.start(); this.move.start(); void this.loadCatalog(); } }
   private configure() {
     this.move.setActive(this.state.module === 'move');
@@ -59,10 +62,12 @@ export class AdminWorkMapWorkspace {
     if (!this.current() || this.state.catalogLoading) return;
     const generation = ++this.catalogGeneration;
     this.publish({ catalogLoading: true, catalogError: null });
+    const witness = () => this.localCurrent(generation);
     try {
+      if (!this.current(generation)) return;
       await this.deps.selection.loadSavedApparatusId();
       if (!this.current(generation)) return;
-      const catalog = await this.deps.readCatalog();
+      const catalog = await this.deps.readCatalog(witness);
       if (!this.current(generation)) return;
       const old = this.state.selected;
       const selected = (old ? this.deps.selection.resolveApparatus(catalog, old.id, old.name) : null)
@@ -74,9 +79,16 @@ export class AdminWorkMapWorkspace {
     }
   }
   invalidate() {
-    if (this.disposed) return;
-    this.catalogGeneration++; this.window.invalidate(); this.move.invalidate();
-    this.publish({ catalog: [], selected: null, catalogLoading: false, catalogLoaded: false, catalogError: null });
+    if (this.disposed || this.invalidating) return;
+    this.invalidating = true;
+    try { this.catalogGeneration++; this.window.invalidate(); this.move.invalidate();
+      this.publish({ catalog: [], selected: null, catalogLoading: false, catalogLoaded: false, catalogError: null }); }
+    finally { this.invalidating = false; }
   }
-  dispose() { this.invalidate(); this.disposed = true; this.stopWindow(); this.window.dispose(); this.move.dispose(); this.listeners.clear(); }
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = true; this.catalogGeneration++;
+    try { this.window.dispose(); this.move.dispose(); this.publish({ catalog: [], selected: null, catalogLoading: false, catalogLoaded: false, catalogError: null }); }
+    finally { this.stopWindow(); this.listeners.clear(); }
+  }
 }

@@ -7,7 +7,7 @@ const ts = require('typescript');
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file + '.ts'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id === './adminWorkMapCurrent' ? load('admin/adminWorkMapCurrent') : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
@@ -179,4 +179,56 @@ test('configuring another module/apparatus invalidates rows, old reads and old d
   c.configure({ view: 'orders' }); pending[1].resolve(summary()); await tick(); assert.equal(c.getSnapshot().rows.length, 0);
   pending[2].resolve(summary()); await tick(); assert.equal(c.getSnapshot().rows.length, 2);
   c.configure(null); await c.reload(); assert.equal(calls.length, 3); assert.equal(c.getSnapshot().rows.length, 0); c.dispose();
+});
+test('window hands its original generation witness to each read and retires it on module change', () => {
+  const reads = [], c = new Controller({ isCurrent: () => true, request: { view: 'orders' }, read: (_request, witness) => {
+    reads.push(witness); return new Promise(() => {});
+  } });
+  c.start(); assert.equal(typeof reads[0], 'function'); assert.equal(reads[0](), true);
+  c.configure({ view: 'audit' }); assert.equal(reads[0](), false); assert.equal(typeof reads[1], 'function'); assert.equal(reads[1](), true);
+  c.dispose(); assert.equal(reads[1](), false);
+});
+test('disposing a window cannot synchronously start another read through a subscriber', () => {
+  let sends = 0, attempted = false;
+  const c = new Controller({ isCurrent: () => true, request: { view: 'orders' }, read: () => { sends++; return new Promise(() => {}); } });
+  c.subscribe(() => { if (!attempted) { attempted = true; void c.reload(); } }); c.dispose();
+  assert.equal(attempted, true); assert.equal(sends, 0);
+});
+test('invalidating a window blocks synchronous reload and permits an explicit later reload', () => {
+  let sends = 0, attempted = false;
+  const c = new Controller({ isCurrent: () => true, request: { view: 'orders' }, read: () => { sends++; return new Promise(() => {}); } });
+  c.subscribe(() => { if (!attempted) { attempted = true; void c.reload(); } }); c.invalidate();
+  assert.equal(attempted, true); assert.equal(sends, 0); void c.reload(); assert.equal(sends, 1); c.dispose();
+});
+test('window loading notification cannot start a read after synchronous invalidation', () => {
+  let sends = 0, attempted = false;
+  const c = new Controller({ isCurrent: () => true, request: { view: 'orders' }, read: () => { sends++; return new Promise(() => {}); } });
+  c.subscribe(() => { if (!attempted && c.getSnapshot().loading) { attempted = true; c.invalidate(); } }); c.start();
+  assert.equal(attempted, true); assert.equal(sends, 0); c.dispose();
+});
+test('malformed or asynchronously rejected account witnesses do not authorize a window read', async () => {
+  for (const witness of [() => Promise.resolve(true), () => Promise.reject(Error('bad')), () => { throw Error('bad'); }, () => 1]) {
+    let sends = 0; const c = new Controller({ isCurrent: witness, request: { view: 'orders' }, read: () => { sends++; return new Promise(() => {}); } });
+    c.start(); assert.equal(sends, 0); c.dispose();
+  }
+  await tick();
+});
+test('a reentrant account witness cannot start either inner or outer window read', () => {
+  let c, sends = 0, attempted = false;
+  c = new Controller({ isCurrent: () => { if (!attempted) { attempted = true; void c.reload(); } return true; },
+    request: { view: 'orders' }, read: () => { sends++; return new Promise(() => {}); } });
+  c.start(); assert.equal(attempted, true); assert.equal(sends, 0); c.dispose();
+});
+for (const source of ['constructor', 'configure']) test(`mutating a caller-owned ${source} request cannot preserve a stale window witness`, () => {
+  const request = { view: 'orders' }, reads = [], c = new Controller({ isCurrent: () => true,
+    request: source === 'constructor' ? request : null, read: (value, witness) => { reads.push({ value, witness }); return new Promise(() => {}); } });
+  c.start(); if (source === 'configure') c.configure(request); assert.equal(reads.length, 1); assert.equal(reads[0].value.view, 'orders');
+  request.view = 'audit'; c.configure(request); assert.equal(reads[0].witness(), false);
+  assert.equal(reads.length, 2); assert.equal(reads[1].value.view, 'audit'); c.dispose();
+});
+test('detail authority is issued only for the exact current row and an immutable issued ticket', async () => {
+  const c = new Controller({ isCurrent: () => true, request: { view: 'orders' }, read: async () => summary() }); c.start(); await tick();
+  const row = c.getSnapshot().rows[0]; assert.equal(c.detailTicket({ ...row }), null);
+  const ticket = c.detailTicket(row); assert.ok(ticket); assert.equal(Object.isFrozen(ticket), true);
+  assert.equal(c.detailIsCurrent({ ...ticket }), false); assert.equal(c.detailIsCurrent(ticket), true); c.dispose();
 });
