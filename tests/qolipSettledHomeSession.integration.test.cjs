@@ -27,10 +27,11 @@ const session = (patch = {}) => ({ token: 'local-token', baseUrl: 'https://examp
 
 function harness(options = {}) {
   const account = options.session ?? session(), listeners = new Set(), issued = new WeakSet(), events = [], witnesses = [];
-  let active = account, transitioning = false, version = 1, loadCount = 0, captures = 0;
+  let active = account, transitioning = false, version = 1, readCount = 0, loadCount = 0, captures = 0;
   const auth = {
     activeSessionToken: value => value === active ? value.token : null,
-    loadSession: () => { loadCount++; events.push('load'); return options.load ? options.load(loadCount, active) : Promise.resolve(active); },
+    currentSession: () => { readCount++; events.push('current'); return options.current ? options.current(readCount, active, { begin, end }) : active; },
+    loadSession: () => { loadCount++; events.push('load'); return Promise.resolve(active); },
     captureSessionWitness: value => {
       captures++; events.push('capture');
       if (options.capture) return options.capture(value, { begin, end });
@@ -59,7 +60,7 @@ function harness(options = {}) {
   function notify() { for (const listener of [...listeners]) listener(); }
   function begin() { transitioning = true; version++; notify(); }
   function end(value = active) { active = value; transitioning = false; version++; notify(); }
-  return { auth, owner, account, events, witnesses, listeners, begin, end, get loads() { return loadCount; }, get captures() { return captures; } };
+  return { auth, owner, account, events, witnesses, listeners, begin, end, get reads() { return readCount; }, get loads() { return loadCount; }, get captures() { return captures; } };
 }
 
 test('older auth without shared witness exports fails closed before loading a session', () => {
@@ -72,24 +73,27 @@ test('older auth without shared witness exports fails closed before loading a se
 
 test('settled shell subscribes first, captures the exact shared witness once and retains a single boundary', async () => {
   const h = harness(), seen = []; h.owner.subscribe(() => seen.push(h.owner.getSnapshot().kind));
-  const stop = h.owner.activate(); assert.deepEqual(h.events.slice(0, 2), ['subscribe', 'load']);
-  await tick(); const ready = h.owner.getSnapshot(); assert.equal(ready.kind, 'ready'); assert.equal(ready.session, h.account);
-  assert.equal(h.loads, 1); assert.equal(h.captures, 1); assert.equal(ready.boundary.current(), true);
+  const stop = h.owner.activate(); assert.deepEqual(h.events, ['subscribe']);
+  await tick(); assert.deepEqual(h.events.slice(0, 3), ['subscribe', 'current', 'capture']); const ready = h.owner.getSnapshot(); assert.equal(ready.kind, 'ready'); assert.equal(ready.session, h.account);
+  assert.equal(h.reads, 1); assert.equal(h.loads, 0); assert.equal(h.captures, 1); assert.equal(ready.boundary.current(), true);
   assert.ok(h.events.some(value => Array.isArray(value) && value[1] === h.witnesses[0]));
   assert.equal(h.owner.getSnapshot().boundary, ready.boundary); assert.deepEqual(seen, ['ready']); stop();
 });
 
 test('an already-running tracked transition blocks loading and capture until its completion', async () => {
   const h = harness(); h.begin(); const stop = h.owner.activate(); await tick();
-  assert.equal(h.loads, 0); assert.equal(h.captures, 0); assert.equal(h.owner.getSnapshot().kind, 'loading');
-  h.end(); await tick(); assert.equal(h.owner.getSnapshot().kind, 'ready'); assert.equal(h.loads, 1); assert.equal(h.captures, 1); stop();
+  assert.equal(h.reads, 0); assert.equal(h.loads, 0); assert.equal(h.captures, 0); assert.equal(h.owner.getSnapshot().kind, 'loading');
+  h.end(); await tick(); assert.equal(h.owner.getSnapshot().kind, 'ready'); assert.equal(h.reads, 1); assert.equal(h.loads, 0); assert.equal(h.captures, 1); stop();
 });
 
-test('a load crossing A to B to A is discarded and retried only before the first capture', async () => {
-  const pending = deferred(), h = harness({ load: (count, active) => count === 1 ? pending.promise : Promise.resolve(active) });
-  const stop = h.owner.activate(); const b = session({ profile: { role: 'qolipchi', ref: 'B' } });
-  h.begin(); h.end(b); h.begin(); h.end(h.account); pending.resolve(h.account); await tick();
-  assert.equal(h.loads, 2); assert.equal(h.captures, 1); assert.equal(h.owner.getSnapshot().kind, 'ready'); stop();
+test('a reentrant A to B to A snapshot is discarded and observed again before the first capture', async () => {
+  let switched = false; const b = session({ profile: { role: 'qolipchi', ref: 'B' } });
+  const h = harness({ current: (_count, active, actions) => {
+    if (!switched) { switched = true; actions.begin(); actions.end(b); actions.begin(); actions.end(active); }
+    return active;
+  } });
+  const stop = h.owner.activate(); await tick();
+  assert.equal(h.reads, 2); assert.equal(h.loads, 0); assert.equal(h.captures, 1); assert.equal(h.owner.getSnapshot().kind, 'ready'); stop();
 });
 
 test('invalidation removes a ready entry and cannot recapture after rollback or same-account ABA', async () => {
@@ -97,7 +101,7 @@ test('invalidation removes a ready entry and cannot recapture after rollback or 
   const stop = h.owner.activate(); await tick(); const ready = h.owner.getSnapshot(); h.begin();
   assert.equal(h.owner.getSnapshot().kind, 'invalid'); assert.equal(ready.boundary.current(), false);
   h.end(); h.begin(); h.end(h.account); await tick();
-  assert.equal(h.owner.getSnapshot().kind, 'invalid'); assert.equal(h.loads, 1); assert.equal(h.captures, 1);
+  assert.equal(h.owner.getSnapshot().kind, 'invalid'); assert.equal(h.reads, 1); assert.equal(h.loads, 0); assert.equal(h.captures, 1);
   assert.deepEqual(snapshots, ['ready', 'invalid']); assert.equal(h.listeners.size, 0); stop();
 });
 
@@ -111,15 +115,14 @@ test('an earlier shared listener reading the invalid snapshot cannot suppress th
   h.end(); assert.equal(h.captures, 1); stop(); stopEarlier();
 });
 
-test('effect cleanup discards a pending load, serializes the replacement and preserves a settled witness on replay', async () => {
-  const pending = deferred(), h = harness({ load: (count, active) => count === 1 ? pending.promise : Promise.resolve(active) });
-  const stopOld = h.owner.activate(); stopOld(); const stopCurrent = h.owner.activate();
-  assert.equal(h.loads, 1); pending.resolve(h.account); await tick();
-  assert.equal(h.loads, 2); assert.equal(h.captures, 1); const ready = h.owner.getSnapshot(); assert.equal(ready.kind, 'ready');
+test('effect cleanup discards the queued observation and preserves one settled witness on replay', async () => {
+  const h = harness(), stopOld = h.owner.activate(); stopOld(); const stopCurrent = h.owner.activate();
+  assert.equal(h.reads, 0); await tick(); assert.equal(h.reads, 1); assert.equal(h.loads, 0); assert.equal(h.captures, 1);
+  const ready = h.owner.getSnapshot(); assert.equal(ready.kind, 'ready');
   stopOld(); assert.equal(h.owner.getSnapshot(), ready, 'a late cleanup cannot stop the new run');
   stopCurrent(); assert.equal(h.owner.getSnapshot().kind, 'loading'); const stopReplay = h.owner.activate();
   assert.equal(h.owner.getSnapshot(), ready); assert.equal(h.owner.getSnapshot().boundary, ready.boundary);
-  assert.equal(h.loads, 2); assert.equal(h.captures, 1); stopReplay();
+  assert.equal(h.reads, 1); assert.equal(h.loads, 0); assert.equal(h.captures, 1); stopReplay();
 });
 
 test('a transition while effects are suspended invalidates the original witness on reactivation', async () => {
@@ -136,7 +139,7 @@ test('capture null, throw or a reentrant transition is terminal, never an invita
       return null;
     } });
     const stop = h.owner.activate(); await tick(); assert.equal(h.owner.getSnapshot().kind, 'invalid', result);
-    h.begin(); h.end(); await tick(); assert.equal(h.loads, 1); assert.equal(h.captures, 1); stop();
+    h.begin(); h.end(); await tick(); assert.equal(h.reads, 1); assert.equal(h.loads, 0); assert.equal(h.captures, 1); stop();
   }
 });
 
@@ -200,4 +203,20 @@ test('a rejected async capture is consumed even if capture synchronously closes 
   const h = harness({ capture: () => { stop(); return Promise.reject(new Error('async capture')); } });
   stop = h.owner.activate(); await tick(); assert.equal(h.owner.getSnapshot().kind, 'invalid');
   const replay = h.owner.activate(); await tick(); assert.equal(h.captures, 1); assert.equal(h.owner.getSnapshot().kind, 'invalid'); replay();
+});
+
+test('missing, async, throwing or foreign active-session snapshots never restore from storage', async () => {
+  const cases = [
+    ['missing', () => null, 0], ['throwing', () => { throw new Error('unavailable'); }, 0],
+    ['async', async () => null, 0], ['rejected', () => Promise.reject(new Error('async invalid')), 0],
+    ['foreign', () => session({ profile: { role: 'qolipchi', ref: 'other' } }), 1],
+  ];
+  for (const [name, currentSession, expectedCaptures] of cases) {
+    const h = harness(), auth = { ...h.auth, currentSession }; let loads = 0, captures = 0;
+    const originalLoad = auth.loadSession, originalCapture = auth.captureSessionWitness;
+    auth.loadSession = () => { loads++; return originalLoad(); }; auth.captureSessionWitness = value => { captures++; return originalCapture(value); };
+    const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)();
+    const stop = owner.activate(); await tick(); assert.equal(owner.getSnapshot().kind, 'invalid', name);
+    assert.equal(captures, expectedCaptures, name); assert.equal(loads, 0, name); stop();
+  }
 });

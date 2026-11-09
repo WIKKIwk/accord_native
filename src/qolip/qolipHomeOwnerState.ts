@@ -15,6 +15,8 @@ export type QolipHomeOwnerActions = {
   current: () => boolean;
   setSearch: (value: string) => void;
   select: (index: number) => void;
+  retryBlocks: () => void;
+  retryBlock: (blockName: string) => void;
 };
 export type QolipHomeOwnerSnapshot = {
   home: QolipHomePresentation;
@@ -95,6 +97,8 @@ export class QolipHomeOwnerState {
         if (current()) run.controller.setQuery(search);
       },
       select: (index: number) => { if (current()) run.controller.select(index); },
+      retryBlocks: () => { if (current()) run.controller.retryBlocks(); },
+      retryBlock: (blockName: string) => { if (current()) run.controller.retryBlock(blockName); },
     });
     return run;
   }

@@ -1,11 +1,11 @@
-import { captureSessionWitness, isSessionWitnessCurrent, loadSession, sessionWitnessTransitioning, sessionWitnessVersion,
+import { captureSessionWitness, currentSession, isSessionWitnessCurrent, sessionWitnessTransitioning, sessionWitnessVersion,
   subscribeSessionWitness, type Session, type SessionWitness } from '../auth';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import { qolipHomeWitnessBoundary } from './qolipHomeWitnessBoundary';
 
 type SharedWitness = SessionWitness;
 type SharedBindings = {
-  loadSession: typeof loadSession;
+  currentSession: typeof currentSession;
   captureSessionWitness: typeof captureSessionWitness;
   isSessionWitnessCurrent: typeof isSessionWitnessCurrent;
   subscribeSessionWitness: typeof subscribeSessionWitness;
@@ -13,7 +13,7 @@ type SharedBindings = {
   sessionWitnessTransitioning: typeof sessionWitnessTransitioning;
 };
 function sharedBindings(): SharedBindings {
-  return { loadSession, captureSessionWitness, isSessionWitnessCurrent, subscribeSessionWitness,
+  return { currentSession, captureSessionWitness, isSessionWitnessCurrent, subscribeSessionWitness,
     sessionWitnessVersion, sessionWitnessTransitioning };
 }
 
@@ -101,12 +101,22 @@ export class QolipSettledHomeSessionOwner {
   }
   private async load(run: Run, version: number) {
     try {
-      const session = await this.shared!.loadSession();
+      // The app entry owns cold restoration. Never initialize account stores or
+      // restore/write session metadata merely because this read-only shell mounts.
+      await Promise.resolve();
+      if (!this.current(run) || this.settled) return;
+      const beforeChanged = this.changed(run, version);
+      if (beforeChanged === null) { this.finish(invalid); return; }
+      if (beforeChanged) { run.dirty = true; return; }
+      const current: unknown = this.shared!.currentSession();
+      absorbThenable(current);
       if (!this.current(run) || this.settled) return;
       const changed = this.changed(run, version);
       if (changed === null) { this.finish(invalid); return; }
       if (changed) { run.dirty = true; return; }
-      if (!session) { this.finish(invalid); return; }
+      if (!current || typeof current !== 'object' || Array.isArray(current) ||
+          typeof (current as { then?: unknown }).then === 'function') { this.finish(invalid); return; }
+      const session = current as Session;
 
       // A capture attempt ends bootstrap, even if it returns null, throws or races a transition.
       this.captured = true;

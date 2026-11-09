@@ -17,7 +17,7 @@ function notifySafely(listener: () => unknown) {
     typeof (value as { then?: unknown }).then === 'function') void Promise.resolve(value).catch(() => {}); } catch {}
 }
 
-/** Initial Home data, search and tab selection only. No mutation, retry or refresh exists. */
+/** Initial Home data, search, tab selection and explicit failed-read retry; no writes. */
 export class QolipHomeState {
   private value: HomeState = { snapshot: null, orderedBlocks: [], selectedIndex: 0, loading: true, error: false,
     invalid: false, query: '', blockCounts: {}, cellCounts: {} };
@@ -27,6 +27,9 @@ export class QolipHomeState {
   private searchQuery = '';
   private timer: ReturnType<typeof setTimeout> | null = null;
   private ordered: QolipBlock[] = [];
+  private locationSerial = 0;
+  private readonly locationGenerations = new Map<string, number>();
+  private readonly failedLocations = new Set<string>();
   private readonly locationReads = new Map<string, Promise<readonly QolipLocationEntry[]>>();
   private readonly resolvedLocations = new Map<string, readonly QolipLocationEntry[]>();
   private readonly listeners = new Set<() => void>();
@@ -42,6 +45,9 @@ export class QolipHomeState {
   async start(): Promise<void> {
     if (!this.current() || this.started) return;
     this.started = true;
+    await this.loadBlocks();
+  }
+  private async loadBlocks(): Promise<void> {
     try {
       const data = await this.deps.blocks(); if (!this.current()) return;
       const order = await this.deps.readOrder(); if (!this.current()) return;
@@ -57,6 +63,16 @@ export class QolipHomeState {
       throw error;
     }
   }
+  /** V2's retry button reloads blocks; only a failed, current read is eligible. */
+  retryBlocks(): void {
+    if (!this.current() || !this.value.error || this.value.loading) return;
+    this.searchGeneration++; if (this.timer !== null) clearTimeout(this.timer); this.timer = null;
+    this.locationGenerations.clear(); this.locationReads.clear(); this.resolvedLocations.clear(); this.failedLocations.clear();
+    this.ordered = [];
+    this.publish({ snapshot: null, selectedIndex: 0, loading: true, error: false, refreshUnavailable: false,
+      blockCounts: {}, cellCounts: {} });
+    if (this.current()) void this.loadBlocks().catch(() => {});
+  }
   select(index: number) {
     if (this.current() && index >= 0 && index < this.ordered.length) this.publish({ selectedIndex: index });
   }
@@ -64,12 +80,33 @@ export class QolipHomeState {
     if (!this.current()) return Promise.reject(new Error('qolip_read_expired'));
     const key = trimDart(blockName).toLowerCase(), existing = this.locationReads.get(key);
     if (existing) return existing;
-    const pending = this.deps.locations(blockName).then(rows => {
+    return this.startLocations(blockName, key);
+  }
+  private startLocations(blockName: string, key: string): Promise<readonly QolipLocationEntry[]> {
+    const generation = ++this.locationSerial; this.locationGenerations.set(key, generation); this.failedLocations.delete(key);
+    const pending = Promise.resolve().then(() => {
+      if (!this.current()) throw new Error('qolip_read_expired');
+      return this.deps.locations(blockName);
+    }).then(rows => {
       if (!this.current()) throw new Error('qolip_read_expired');
       const result = [...rows]; if (!this.current()) throw new Error('qolip_read_expired');
-      this.resolvedLocations.set(key, result); return result;
+      if (this.locationGenerations.get(key) === generation) this.resolvedLocations.set(key, result);
+      return result;
+    }).catch(error => {
+      if (this.current() && this.locationGenerations.get(key) === generation) this.failedLocations.add(key);
+      throw error;
     });
     this.locationReads.set(key, pending); return pending;
+  }
+  /** Replace a settled failed block future, retaining the V2 cached initial data. */
+  retryBlock(blockName: string): void {
+    const key = trimDart(blockName).toLowerCase();
+    if (!this.current() || !this.failedLocations.has(key) || !this.ordered.some(block => trimDart(block.name).toLowerCase() === key)) return;
+    const pending = this.startLocations(blockName, key);
+    this.publish();
+    void pending.then(() => {
+      if (this.current() && this.locationReads.get(key) === pending) this.refreshSearch();
+    }, () => {});
   }
   resolvedFor(blockName: string): readonly QolipLocationEntry[] | null {
     return this.current() ? this.resolvedLocations.get(trimDart(blockName).toLowerCase()) ?? null : null;
@@ -94,11 +131,12 @@ export class QolipHomeState {
   invalidateSession() {
     if (!this.active) return;
     this.searchGeneration++; if (this.timer !== null) clearTimeout(this.timer); this.timer = null;
-    this.ordered = []; this.locationReads.clear(); this.resolvedLocations.clear(); this.searchQuery = '';
+    this.ordered = []; this.locationGenerations.clear(); this.locationReads.clear(); this.resolvedLocations.clear();
+    this.failedLocations.clear(); this.searchQuery = '';
     this.value = { snapshot: null, orderedBlocks: [], selectedIndex: 0, loading: false, error: false, invalid: true,
       query: '', blockCounts: {}, cellCounts: {} };
     for (const listener of [...this.listeners]) notifySafely(listener);
   }
   dispose() { this.active = false; this.searchGeneration++; if (this.timer !== null) clearTimeout(this.timer); this.timer = null;
-    this.locationReads.clear(); this.resolvedLocations.clear(); this.listeners.clear(); }
+    this.locationGenerations.clear(); this.locationReads.clear(); this.resolvedLocations.clear(); this.failedLocations.clear(); this.listeners.clear(); }
 }
