@@ -1,7 +1,7 @@
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { rawSplitScope, rawSplitSessionIsCurrent, rawSplitSnapshot, type RawSplitSessionTicket } from './rawSplitApi';
-import type { RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitModel';
+import { rawSplitErrorText, type RawSplitResult, type RawSplitRoll, type RawSplitSnapshot } from './rawSplitModel';
 import { rawSplitWriteDispatchAllowed } from './rawSplitWritePolicy';
 
 type Device = PreparationDeviceSelection;
@@ -12,7 +12,7 @@ export type RawSplitHistoryOptions = { ticket: RawSplitSessionTicket; canMutate:
   printOne: (result: RawSplitResult, output: RawSplitRoll, printer: Device, wifiPrinter: string, guard: () => void) => Promise<void>;
   onMessage: (message: string) => void; printerSupported: (printer: Device, wifiPrinter: string) => boolean;
   onUnsupportedPrinter: (printer: Device, wifiPrinter: string) => void; snapshot?: typeof rawSplitSnapshot; scope?: () => string };
-const message = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
+const message = rawSplitErrorText;
 
 /** State transitions from V2 _RawMaterialSplitHistoryScreenState. */
 export class RawSplitHistoryController {

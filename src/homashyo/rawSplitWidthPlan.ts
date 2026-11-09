@@ -1,4 +1,4 @@
-import { rawSplitQuantity } from './rawSplitModel';
+import { RawSplitFormatException, rawSplitQuantity } from './rawSplitModel';
 /** @v2 rawSplitMinimumWidth */
 export const rawSplitMinimumWidth = 355000000n;
 /** @v2 RawSplitWidthPlan */
@@ -25,8 +25,8 @@ export class RawSplitWidthPlan {
   get canAdd(): boolean { return this.complete && this.remaining >= rawSplitMinimumWidth && this.widths.length < 100; }
   get maxRolls(): number { const count = this.source / rawSplitMinimumWidth; return Number(count > 100n ? 100n : count); }
   validateForSave(): void {
-    for (const error of this.errors) if (error !== null) throw new Error(error);
-    if (!this.complete) throw new Error('Har bir rulon enini kiriting');
-    if (this.remaining >= rawSplitMinimumWidth) throw new Error('Qolgan yaroqli en uchun ham rulon kiriting');
+    for (const error of this.errors) if (error !== null) throw new RawSplitFormatException(error);
+    if (!this.complete) throw new RawSplitFormatException('Har bir rulon enini kiriting');
+    if (this.remaining >= rawSplitMinimumWidth) throw new RawSplitFormatException('Qolgan yaroqli en uchun ham rulon kiriting');
   }
 }

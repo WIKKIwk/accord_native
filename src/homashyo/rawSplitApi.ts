@@ -4,7 +4,7 @@ import { currentSession } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
-import { RawSplitIssue, RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitModel';
+import { RawSplitFormatException, RawSplitIssue, RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitModel';
 import { assertRawSplitResultMatchesPending } from './rawSplitResultMatch';
 import { rawSplitWriteDispatchAllowed } from './rawSplitWritePolicy';
 
@@ -101,7 +101,7 @@ export async function rawSplitSnapshot(ticket: RawSplitSessionTicket): Promise<R
 /** @v2 rawSplitSource */
 export async function rawSplitSource(ticket: RawSplitSessionTicket, barcode: string): Promise<RawSplitRoll> {
   const result = new RawSplitRoll(await read(ticket, 'source', new URLSearchParams({ barcode: barcode.trim() })));
-  if (result.revision === null || !result.revision) throw new Error('Rulon versiyasi olinmadi');
+  if (result.revision === null || !result.revision) throw new RawSplitFormatException('Rulon versiyasi olinmadi');
   return result;
 }
 const definitiveErrors = new Set(['raw_split_invalid', 'raw_split_conflict', 'raw_split_scope']);

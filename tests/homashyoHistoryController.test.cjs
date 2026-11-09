@@ -5,7 +5,7 @@ function load(name, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
 const syncGuard = load('../shared/camera/synchronousGuard');
-const model = load('rawSplitModel'), { RawSplitHistoryController } = load('rawSplitHistoryController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, './rawSplitApi': { rawSplitSessionIsCurrent: ticket => { try { ticket.check(); return true; } catch { return false; } } } });
+const model = load('rawSplitModel'), { RawSplitHistoryController } = load('rawSplitHistoryController', { './rawSplitModel': model, '../shared/camera/synchronousGuard': syncGuard, './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, './rawSplitApi': { rawSplitSessionIsCurrent: ticket => { try { ticket.check(); return true; } catch { return false; } } } });
 const source = { revision: '1', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM', item_name: 'Film', kg: '100', width_mm: '1000', micron: '20' };
 const result = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2', outputs: [
   { ...source, stock_id: 'c1', barcode: 'c1', kg: '39', gross_kg: '40', bobina_kg: '1', width_mm: '400' },
@@ -21,6 +21,12 @@ test('history loads snapshot and surfaces errors without manufacturing data', as
   const h = setup(); await h.c.reload(); assert.deepEqual(h.c.getSnapshot().snapshot.warehouses, ['Raw W']);
   h.options.snapshot = async () => { throw new Error('offline'); }; await h.c.reload();
   assert.equal(h.c.getSnapshot().error, 'offline'); assert.equal(h.c.getSnapshot().busy, false);
+});
+test('history displays malformed response FormatException text as V2 does', async () => {
+  const h = setup();
+  h.options.snapshot = async () => { throw new model.RawSplitFormatException('Noto‘g‘ri javob: id'); };
+  await h.c.reload();
+  assert.equal(h.c.getSnapshot().error, 'FormatException: Noto‘g‘ri javob: id');
 });
 test('cancelling printer selection has no print or success message', async () => {
   const h = setup(); h.setSelection(null); await h.c.reprint(result); assert.deepEqual(h.calls, []); assert.deepEqual(h.notices, []);
@@ -116,7 +122,7 @@ test('write witness revoked during a print prevents later output and success not
   assert.match(h.c.getSnapshot().error, /Sessiya xavfsizligi/);
 });
 test('production hold blocks direct History printer selection and reprints even after verified pending reads', async () => {
-  const Held = load('rawSplitHistoryController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => false },
+  const Held = load('rawSplitHistoryController', { './rawSplitModel': model, '../shared/camera/synchronousGuard': syncGuard, './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => false },
     './rawSplitApi': { rawSplitSessionIsCurrent: () => true } }).RawSplitHistoryController;
   const h = setup(); let picks = 0, prints = 0; h.options.selectPrinter = async () => { picks++; return { transport: 'bluetooth', printer: {} }; };
   h.options.printOne = async () => { prints++; }; const c = new Held(h.options);

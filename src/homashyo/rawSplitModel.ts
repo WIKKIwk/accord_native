@@ -1,3 +1,16 @@
+/** Dart exception text differs between the Home and issue-save handlers. */
+export class RawSplitFormatException extends Error {
+  constructor(message: string) { super(message); this.name = 'FormatException'; }
+}
+export class RawSplitStateError extends Error {
+  constructor(message: string) { super(message); this.name = 'StateError'; }
+}
+export function rawSplitErrorText(reason: unknown, formatMessageOnly = false): string {
+  if (reason instanceof RawSplitFormatException) return formatMessageOnly ? reason.message : `FormatException: ${reason.message}`;
+  if (reason instanceof RawSplitStateError) return `Bad state: ${reason.message}`;
+  return reason instanceof Error ? reason.message : String(reason);
+}
+
 /** Dart DateTime.parse's ISO subset and microsecond truncation, for V2 issue/history dates. */
 export function rawSplitParseDateTime(raw: string): { date: Date; microsecond: number } {
   const match = /^([+-]?\d{4,6})-?(\d\d)-?(\d\d)(?:[ T](\d\d)(?::?(\d\d)(?::?(\d\d)(?:[.,](\d+))?)?)?( ?[zZ]| ?([-+])(\d\d)(?::?(\d\d))?)?)?$/.exec(raw);
@@ -39,7 +52,7 @@ function list(value: unknown): unknown[] {
 }
 function required(row: Json, key: string): string {
   const value = row[key];
-  if (typeof value !== 'string' || !value.trim()) throw new Error(`Noto‘g‘ri javob: ${key}`);
+  if (typeof value !== 'string' || !value.trim()) throw new RawSplitFormatException(`Noto‘g‘ri javob: ${key}`);
   return value;
 }
 function optionalString(value: unknown): string | null {
@@ -51,10 +64,10 @@ function optionalString(value: unknown): string | null {
 /** @v2 rawSplitQuantity */
 export function rawSplitQuantity(raw: string, allowZero = false): bigint {
   const value = raw.trim().replace(/,/g, '.');
-  if (!/^\d+(\.\d{1,6})?$/.test(value)) throw new Error('Son kiriting (ko‘pi bilan 6 kasr xona)');
+  if (!/^\d+(\.\d{1,6})?$/.test(value)) throw new RawSplitFormatException('Son kiriting (ko‘pi bilan 6 kasr xona)');
   const [whole, fraction = ''] = value.split('.');
   const units = BigInt(whole) * SCALE + BigInt(fraction.padEnd(6, '0'));
-  if (units > MAXIMUM || (!allowZero && units === 0n)) throw new Error('Miqdor ruxsat etilgan chegaradan tashqarida');
+  if (units > MAXIMUM || (!allowZero && units === 0n)) throw new RawSplitFormatException('Miqdor ruxsat etilgan chegaradan tashqarida');
   return units;
 }
 /** @v2 rawSplitDecimal */
@@ -64,10 +77,10 @@ export function rawSplitDecimal(units: bigint): string {
 }
 /** @v2 rawSplitDifference */
 export function rawSplitDifference(raw: string): bigint {
-  if (!/^-?\d+(\.\d{1,6})?$/.test(raw)) throw new Error('Farq miqdori noto‘g‘ri');
+  if (!/^-?\d+(\.\d{1,6})?$/.test(raw)) throw new RawSplitFormatException('Farq miqdori noto‘g‘ri');
   const [whole, fraction = ''] = raw.replace('-', '').split('.');
   const absolute = BigInt(whole) * SCALE + BigInt(fraction.padEnd(6, '0'));
-  if (absolute > MAXIMUM * 2n) throw new Error('Farq chegaradan tashqarida');
+  if (absolute > MAXIMUM * 2n) throw new RawSplitFormatException('Farq chegaradan tashqarida');
   return raw.startsWith('-') ? -absolute : absolute;
 }
 /** @v2 rawSplitDisplay */
@@ -91,7 +104,7 @@ export class RawSplitRoll {
     if (this.lengthM !== null && this.lengthM.trim()) rawSplitQuantity(this.lengthM);
     if ((this.grossKg === null) !== (this.bobinaKg === null) || (this.grossKg !== null &&
       rawSplitQuantity(this.grossKg) - rawSplitQuantity(this.bobinaKg!, true) !== rawSplitQuantity(this.kg))) {
-      throw new Error('Brutto, babina va netto hisobi noto‘g‘ri');
+      throw new RawSplitFormatException('Brutto, babina va netto hisobi noto‘g‘ri');
     }
   }
   get labelName(): string {
@@ -119,7 +132,7 @@ export class RawSplitResult {
       (this.issueId === null && difference !== 0n) || (this.issueId !== null && (!this.issueId || this.issueNote === null || !this.issueNote.trim())) ||
       this.outputs.some(o => o.stockId === this.source.stockId || o.barcode === this.source.barcode || o.itemCode !== this.source.itemCode ||
         o.warehouse !== this.source.warehouse || rawSplitQuantity(o.widthMm) > rawSplitQuantity(this.source.widthMm) ||
-        rawSplitQuantity(o.micron) !== rawSplitQuantity(this.source.micron))) throw new Error('Bo‘lish natijasining hisobi noto‘g‘ri');
+        rawSplitQuantity(o.micron) !== rawSplitQuantity(this.source.micron))) throw new RawSplitFormatException('Bo‘lish natijasining hisobi noto‘g‘ri');
   }
   get differenceLabel(): string {
     const diff = rawSplitDifference(this.differenceKg), kg = rawSplitDecimal(diff < 0n ? -diff : diff).replace(/\.?0+$/, '');
@@ -165,7 +178,7 @@ export class RawSplitIssue {
     for (const output of this.outputs) {
       const net = rawSplitQuantity(required(output, 'kg'));
       if (rawSplitQuantity(required(output, 'gross_kg')) - rawSplitQuantity(required(output, 'bobina_kg'), true) !== net)
-        throw new Error('Muammodagi netto hisobi noto‘g‘ri');
+        throw new RawSplitFormatException('Muammodagi netto hisobi noto‘g‘ri');
       rawSplitQuantity(required(output, 'width_mm')); sum += net;
     }
     this.check = new RawSplitWasteCheck(rawSplitQuantity(this.source.kg), sum, this.enteredWaste);
@@ -173,7 +186,7 @@ export class RawSplitIssue {
     if (!this.outputs.length || this.outputs.length > 100 || this.check.kind === null || row.kind !== this.check.kind ||
       rawSplitQuantity(required(row, 'source_kg')) !== this.check.source || row.output_kg !== rawSplitDecimal(sum) ||
       (row.difference_kg ?? null) !== expected || (row.waste_kg ?? null) !== (this.check.waste === null ? null : rawSplitDecimal(this.check.waste))) {
-      throw new Error('Muammo hisobining javobi noto‘g‘ri');
+      throw new RawSplitFormatException('Muammo hisobining javobi noto‘g‘ri');
     }
   }
 }

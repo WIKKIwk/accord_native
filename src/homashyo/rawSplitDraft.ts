@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { nativeEpochMicroseconds } from '../../modules/accord-native-clock/src/AccordNativeClockModule';
-import { RawSplitRoll, RawSplitWasteCheck, rawSplitDecimal, rawSplitQuantity } from './rawSplitModel';
+import { RawSplitFormatException, RawSplitRoll, RawSplitStateError, RawSplitWasteCheck, rawSplitDecimal, rawSplitQuantity } from './rawSplitModel';
 import { RawSplitWidthPlan, rawSplitMinimumWidth } from './rawSplitWidthPlan';
 
 export type RawSplitOutputField = 'width' | 'gross' | 'bobina' | 'length';
@@ -15,7 +15,7 @@ export async function newRawSplitRequestId(): Promise<string> {
 /** @v2 _OutputDraft.net */
 export function rawSplitOutputNet(output: RawSplitOutputDraft): bigint {
   const net = rawSplitQuantity(output.gross) - rawSplitQuantity(output.bobina, true);
-  if (net <= 0n) throw new Error('Rulon og‘irligi babina kg dan katta bo‘lsin');
+  if (net <= 0n) throw new RawSplitFormatException('Rulon og‘irligi babina kg dan katta bo‘lsin');
   return net;
 }
 /** @v2 _RawMaterialSplitScreenState._confirmWidth */
@@ -40,10 +40,10 @@ export function buildRawSplitCommand(input: RawSplitPayloadInput): Record<string
   new RawSplitWidthPlan(source.widthMm, outputs.map(output => output.width)).validateForSave();
   let sum = 0n;
   const rows = outputs.map(output => {
-    if (!output.gross.trim() || !output.bobina.trim()) throw new Error('Har bir rulonning og‘irligi va babina kg ini kiriting');
-    if (!output.length.trim()) throw new Error('Har bir rulonning metrajini kiriting');
+    if (!output.gross.trim() || !output.bobina.trim()) throw new RawSplitFormatException('Har bir rulonning og‘irligi va babina kg ini kiriting');
+    if (!output.length.trim()) throw new RawSplitFormatException('Har bir rulonning metrajini kiriting');
     const kg = rawSplitOutputNet(output), width = rawSplitQuantity(output.width), length = rawSplitQuantity(output.length);
-    if (width > rawSplitQuantity(source.widthMm)) throw new Error('Chiqish eni asl rulondan katta');
+    if (width > rawSplitQuantity(source.widthMm)) throw new RawSplitFormatException('Chiqish eni asl rulondan katta');
     sum += kg;
     return { kg: rawSplitDecimal(kg), width_mm: rawSplitDecimal(width), gross_kg: rawSplitDecimal(rawSplitQuantity(output.gross)),
       bobina_kg: rawSplitDecimal(rawSplitQuantity(output.bobina, true)), length_m: rawSplitDecimal(length) };
@@ -51,7 +51,7 @@ export function buildRawSplitCommand(input: RawSplitPayloadInput): Record<string
   const check = new RawSplitWasteCheck(rawSplitQuantity(source.kg), sum, waste);
   const useIssue = !input.issue && check.kind !== null && input.issueSaved && input.savedIssueId !== null;
   if (!input.issue && check.kind !== null && (!useIssue || check.waste === null)) throw new RawSplitWasteInputError();
-  if (input.issue && check.kind === null) throw new Error('Hisob teng, vazn xatosi yo‘q');
+  if (input.issue && check.kind === null) throw new RawSplitStateError('Hisob teng, vazn xatosi yo‘q');
   return { ...(useIssue ? { issue_id: input.savedIssueId } : {}), source_barcode: source.barcode,
     expected_revision: source.revision, expected_kg: source.kg, expected_width_mm: source.widthMm, expected_micron: source.micron,
     waste_kg: input.issue ? waste.trim() : rawSplitDecimal(check.waste!), outputs: rows };

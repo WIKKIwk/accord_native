@@ -4,7 +4,7 @@ import type { PreparationDeviceSelection } from '../preparation/preparationPrint
 import * as api from './rawSplitApi';
 import { buildRawSplitCommand, newRawSplitRequestId, rawSplitConfirmWidth, rawSplitOutputNet, RawSplitWasteInputError,
   type RawSplitOutputDraft, type RawSplitOutputField } from './rawSplitDraft';
-import { RawSplitRoll, RawSplitResult, RawSplitSnapshot, RawSplitWasteCheck, rawSplitQuantity } from './rawSplitModel';
+import { RawSplitFormatException, RawSplitRoll, RawSplitResult, RawSplitSnapshot, RawSplitWasteCheck, rawSplitErrorText, rawSplitQuantity } from './rawSplitModel';
 import { RawSplitWidthPlan } from './rawSplitWidthPlan';
 import { rawSplitWriteDispatchAllowed } from './rawSplitWritePolicy';
 
@@ -28,7 +28,7 @@ export type RawSplitControllerOptions = {
 };
 let nextOutputKey = 0;
 const emptyOutput = (): RawSplitOutputDraft => ({ id: String(++nextOutputKey), width: '', gross: '', bobina: '', length: '' });
-const message = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
+const message = rawSplitErrorText;
 const pendingChanged = (reason: unknown) => reason instanceof Error && (reason as Error & { code?: string }).code === 'raw_split_pending_changed';
 
 /** Shared state transitions from V2 _RawMaterialSplitScreenState. */
@@ -198,7 +198,7 @@ export class RawSplitController {
     this.update({ busy: true, issueError: null, error: null });
     let retryFailure: string | null = null;
     try {
-      if (!retry && !this.state.issueNote.trim()) throw new Error('Farq sababini yozing');
+      if (!retry && !this.state.issueNote.trim()) throw new RawSplitFormatException('Farq sababini yozing');
       const payload = retry ? this.state.pendingIssue : { command: await this.payload(true), note: this.state.issueNote.trim() };
       if (!payload) return;
       guard();
@@ -206,7 +206,7 @@ export class RawSplitController {
       this.checkPendingLease(generation);
       this.update({ pendingIssue: null, issueSaved: true, savedIssueId: issue.id });
       if (!this.state.source && this.isCurrent()) this.options.onMessage('Muammo saqlandi');
-    } catch (reason) { if (pendingChanged(reason)) retryFailure = message(reason); else this.update({ issueError: message(reason) }); }
+    } catch (reason) { if (pendingChanged(reason)) retryFailure = message(reason); else this.update({ issueError: message(reason, true) }); }
     finally { if (this.isCurrent()) {
       this.pendingGeneration++;
       if (retryFailure !== null) this.update({ busy: false, pendingCheck: 'failed', pendingCheckError: retryFailure });

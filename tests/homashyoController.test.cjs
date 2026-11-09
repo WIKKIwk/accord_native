@@ -89,6 +89,23 @@ test('validation happens before requesting a new ID for stock or issue commands'
   h.controller.setOutput(0, 'length', '1000'); await h.controller.saveIssue();
   assert.equal(ids, 1); assert.equal(h.controller.getSnapshot().issueError, 'clock unavailable'); assert.deepEqual(h.issueCalls, []);
 });
+test('Home and issue form render Dart validation exceptions using their V2 handlers', async () => {
+  const h = setup(); await h.controller.reload(); await h.controller.lookup('parent');
+  await h.controller.save();
+  assert.equal(h.controller.getSnapshot().error, 'FormatException: Har bir rulon enini kiriting');
+  await fill(h.controller); h.controller.setIssueNote('cause'); await h.controller.saveIssue();
+  assert.equal(h.controller.getSnapshot().issueError, 'Bad state: Hisob teng, vazn xatosi yo‘q');
+  h.controller.setIssueNote(''); await h.controller.saveIssue();
+  assert.equal(h.controller.getSnapshot().issueError, 'Farq sababini yozing');
+  h.controller.setIssueNote('cause'); h.controller.setOutput(0, 'length', ''); await h.controller.saveIssue();
+  assert.equal(h.controller.getSnapshot().issueError, 'Har bir rulonning metrajini kiriting');
+  assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.issueCalls, []);
+});
+test('Home shows the V2 FormatException text for a source without a revision', async () => {
+  const h = setup({ rawSplitSource: async () => { throw new model.RawSplitFormatException('Rulon versiyasi olinmadi'); } });
+  await h.controller.reload(); await h.controller.lookup('parent');
+  assert.equal(h.controller.getSnapshot().error, 'FormatException: Rulon versiyasi olinmadi');
+});
 test('after committed stock, print failure reports reprint context and never resubmits stock', async () => {
   const h = setup(); h.options.print = async () => { throw new Error('printer offline'); };
   // The controller retains the same options object, so the simulated printer can fail after save.
@@ -289,7 +306,7 @@ test('an explicitly selected pending issue retry uses the original command after
   await h.controller.saveIssue(true); assert.deepEqual(h.issueCalls, [old]); assert.equal(h.controller.getSnapshot().pendingIssue, null);
 });
 function sharedHistory(h, selectPrinter = h.options.selectPrinter, printOne = async () => {}) {
-  const { RawSplitHistoryController } = load('homashyo/rawSplitHistoryController', { '../shared/camera/synchronousGuard': syncGuard,
+  const { RawSplitHistoryController } = load('homashyo/rawSplitHistoryController', { './rawSplitModel': model, '../shared/camera/synchronousGuard': syncGuard,
     './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, './rawSplitApi': { rawSplitSessionIsCurrent: () => true } });
   const options = { ticket: h.options.ticket, scope: () => h.ops.rawSplitScope(), capturePrintLease: h.controller.captureClearLease,
     canMutate: () => true, selectPrinter, printOne, onMessage: value => h.notices.push(value), printerSupported: () => true, onUnsupportedPrinter: () => {} };

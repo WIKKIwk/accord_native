@@ -30,6 +30,12 @@ function setup(writeAllowed = true) {
     setResponse: fn => { respond = fn; }, retryGuard: () => beforeSend() };
 }
 const fakeResponse = body => ({ status: 200, json: async () => body });
+test('source without revision raises the V2 FormatException', async () => {
+  const h = setup(), response = JSON.parse(sourceRecord.responseBody.text); response.revision = null;
+  h.setResponse(async () => fakeResponse(response));
+  await assert.rejects(h.api.rawSplitSource(h.ticket, 'parent'), error =>
+    error.name === 'FormatException' && error.message === 'Rulon versiyasi olinmadi');
+});
 for (const kind of ['stock', 'issue']) test(`same-account new login during ${kind} pending storage read cannot return old data`, async () => {
   const h = setup(), gate = deferred(), reached = deferred();
   h.store.getItemAsync = async () => { reached.resolve(); await gate.promise; return JSON.stringify({ secret: 'old' }); };
