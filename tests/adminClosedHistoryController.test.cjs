@@ -133,6 +133,33 @@ test('dispose and malformed or asynchronous witnesses cannot publish or start hi
   }
   await tick();
 });
+for (const method of ['invalidate', 'dispose']) test(`${method} blocks synchronous subscriber reentry before publishing retirement`, () => {
+  let sends = 0, attempted = false;
+  const c = new Controller({ id: 'o', historyVersion: 'v1', windowGeneration: 1 }, { isCurrent: () => true, rowIsCurrent: () => true,
+    read: () => { sends++; return new Promise(() => {}); } });
+  c.subscribe(() => { if (!attempted) { attempted = true; c.toggle(); } });
+  c[method](); assert.equal(attempted, true); assert.equal(sends, 0); assert.equal(c.getSnapshot().expanded, false);
+  if (method === 'invalidate') { c.toggle(); assert.equal(sends, 1, 'an explicit later reopening is still allowed'); c.dispose(); }
+  else { c.toggle(); assert.equal(sends, 0); c.dispose(); }
+});
+for (const change of ['invalidate', 'dispose', 'collapse']) test(`no history read starts if a subscriber ${change}s during loading publication`, () => {
+  let sends = 0, loadingNotifications = 0, changed = false;
+  const c = new Controller({ id: 'o', historyVersion: 'v1', windowGeneration: 1 }, { isCurrent: () => true, rowIsCurrent: () => true,
+    read: () => { sends++; return new Promise(() => {}); } });
+  c.subscribe(() => { const state = c.getSnapshot(); if (state.expanded && state.loading && ++loadingNotifications === 2 && !changed) {
+    changed = true; if (change === 'collapse') c.toggle(); else c[change]();
+  } });
+  c.toggle(); assert.equal(changed, true); assert.equal(sends, 0); c.dispose();
+});
+test('a new row version arriving during loading publication sends only the new valid witness', () => {
+  let row = { id: 'o', historyVersion: 'v1', windowGeneration: 1 }, loadingNotifications = 0, changed = false; const sends = [];
+  const c = new Controller(row, { isCurrent: () => true, rowIsCurrent: ticket => ticket.id === row.id && ticket.historyVersion === row.historyVersion && ticket.windowGeneration === row.windowGeneration,
+    read: (_id, witness) => { sends.push(profile.isProfileSessionCurrent(witness)); return new Promise(() => {}); } });
+  c.subscribe(() => { const state = c.getSnapshot(); if (state.expanded && state.loading && ++loadingNotifications === 2 && !changed) {
+    changed = true; row = { ...row, historyVersion: 'v2' }; c.configure(row);
+  } });
+  c.toggle(); assert.equal(changed, true); assert.deepEqual(sends, [true]); assert.equal(c.getSnapshot().ticket.historyVersion, 'v2'); c.dispose();
+});
 test('real Closed reader accepts the composed non-reentrant witness and rejects a late account change', async () => {
   for (const change of [false, true]) {
     const bodies = [], sent = [], transport = { authorizedFetch: async (_session, url, _init, guard) => {
@@ -152,4 +179,11 @@ test('real Closed reader accepts the composed non-reentrant witness and rejects 
     c.toggle(); await tick(); assert.equal(sent.length, 1); if (change) current = false; bodies[0].resolve(detail('o')); await tick();
     if (change) assert.equal(c.getSnapshot().detail, null); else assert.equal(c.getSnapshot().detail.order_id, 'o'); c.dispose();
   }
+});
+test('a row witness that retires its own controller cannot validate a captured log', async () => {
+  let retire = false, c; const value = { ...detail('o'), logs: [{ event_id: 'e', created_at_unix: 0 }] };
+  c = new Controller({ id: 'o', historyVersion: 'v1', windowGeneration: 1 }, { isCurrent: () => true,
+    rowIsCurrent: () => { if (retire) c.dispose(); return true; }, read: async () => value });
+  c.toggle(); await tick(); const selection = c.captureLog(value, value.logs[0]); assert.ok(selection);
+  retire = true; assert.equal(profile.isProfileSessionCurrent(selection.isCurrent), false);
 });

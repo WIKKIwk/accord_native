@@ -77,8 +77,10 @@ function hooks() {
   const react = {
     useMemo(factory, deps) { const slot = next('memo'); if (!same(slot.deps, deps)) { slot.value = factory(); slot.deps = deps; } return slot.value; },
     useRef(initial) { const slot = next('ref'); return slot.value ??= { current: initial }; },
+    useContext() { next('context'); return {}; },
     useSyncExternalStore(_subscribe, snapshot) { next('store'); return snapshot(); },
     useEffect(effect, deps) { const slot = next('effect'); if (!same(slot.deps, deps)) scheduled.push(() => { slot.cleanup?.(); slot.deps = deps; slot.create = effect; slot.cleanup = effect(); }); },
+    useLayoutEffect(effect, deps) { const slot = next('layout'); if (!same(slot.deps, deps)) scheduled.push(() => { slot.cleanup?.(); slot.deps = deps; slot.cleanup = effect(); }); },
   };
   return { react, render(id, component, props) { active = instances.get(id) ?? []; instances.set(id, active); cursor = 0; const result = component(props);
     scheduled.splice(0).forEach(run => run()); return result; }, reattach(id) { for (const slot of instances.get(id) ?? []) if (slot.kind === 'effect') { slot.cleanup?.(); slot.cleanup = slot.create(); } },
@@ -92,6 +94,8 @@ test('prepared owner admits only the exact current summary, opens hydrated logs 
     close() { if (!showing) return; showing = false; closedCount++; currentEntry.options?.onDismiss?.(); },
     dismiss() { if (!showing) return; showing = false; currentEntry.options?.onDismiss?.(); } };
   const auth = { activeSessionToken: candidate => candidate === value ? candidate.token : null, subscribeSessionWitness: () => () => {}, sessionWitnessVersion: () => 1 };
+  const logSheet = load('admin/AdminClosedLogSheetOwner.tsx', { react: h.react, '../nativeSheet': {}, '../shared/profileSessionGuard': guard,
+    './AdminClosedLogBoundary': { AdminClosedLogBoundary: 'Boundary' } }).createAdminClosedLogSheetOwner(sheet);
   const accountWitness = accountFactory(auth);
   const Owner = load('admin/AdminClosedHistoryOwner.tsx', { react: h.react, '../auth': auth, '../nativeSheet': { useNativeSheet: () => sheet },
     '../shared/profileSessionGuard': guard, './AdminClosedHistoryContent': { AdminClosedHistoryContent: 'Content' }, './AdminClosedLogBoundary': { AdminClosedLogBoundary: 'Boundary' },
@@ -101,7 +105,7 @@ test('prepared owner admits only the exact current summary, opens hydrated logs 
       const item = deferred(); reads.push({ id, witness, ...item }); return item.promise;
     } },
   }).AdminClosedHistoryOwner;
-  const props = { session: value, isCurrent, window, summary: original, catalog: [{ id: 'a', name: 'A' }] };
+  const props = { session: value, isCurrent, window, summary: original, catalog: [{ id: 'a', name: 'A' }], logSheet };
   const render = () => { const outer = h.render('outer', Owner, props); return outer && h.render('bound', outer.type, outer.props); };
   let content = render(); assert.equal(content.type, 'Content'); assert.equal(content.props.state.expanded, false); assert.equal(reads.length, 0);
   h.reattach('bound'); await tick(); // StrictMode effect cleanup/re-attach must not dispose the live owner.
@@ -109,6 +113,7 @@ test('prepared owner admits only the exact current summary, opens hydrated logs 
   const log = { event_id: 'e', created_at_unix: 0 }, detail = { ...original, logs: [log] }; reads[0].resolve(detail); await tick(); content = render();
   content.props.onLog(detail, { ...log }); assert.equal(entries.length, 0); content.props.onLog(detail, log); assert.equal(entries.length, 1);
   const oldClose = entries[0].content.props.close; assert.equal(entries[0].content.type, 'Boundary'); assert.equal(entries[0].content.props.selection.log, log);
+  assert.equal(entries[0].options.dismissible, true, 'the source history sheet permits outside/back/drag dismissal');
   sheet.dismiss(); content.props.onLog(detail, log); assert.equal(entries.length, 2); oldClose(); assert.equal(sheet.isOpen(), true); assert.equal(closedCount, 0);
   const selection = entries[1].content.props.selection; content.props.onToggle(); assert.equal(guard.isProfileSessionCurrent(selection.isCurrent), false);
   entries[1].content.props.close(); assert.equal(sheet.isOpen(), false); assert.equal(closedCount, 1);
@@ -130,7 +135,7 @@ test('prepared owner rejects an observed same-object scope ABA before creating a
     './adminClosedHistoryAccountWitness': { adminClosedHistoryAccountWitness: accountFactory(auth) }, './adminClosedHistoryController': { AdminClosedHistoryController: History },
     './adminWorkMapClosedModel': closed, './adminWorkMapReader': { adminWorkMapClosedDetailReader: () => () => { reads++; return Promise.resolve(original); } },
   }).AdminClosedHistoryOwner;
-  const props = { session: value, isCurrent, window, summary: original, catalog: [] };
+  const props = { session: value, isCurrent, window, summary: original, catalog: [], logSheet: { open() {} } };
   assert.ok(h.render('outer', Owner, props)); value.profile.ref = 'other'; assert.equal(h.render('outer', Owner, props), null);
   value.profile.ref = 'me'; assert.equal(h.render('outer', Owner, props), null); assert.equal(reads, 0); window.dispose();
 });
@@ -144,7 +149,7 @@ test('prepared owner derives only its own displayed row and preserves its positi
     './adminWorkMapClosedModel': { ...closed, adminWorkMapClosedRows: rows => { sizes.push(rows.length); return closed.adminWorkMapClosedRows(rows); } },
     './adminWorkMapReader': { adminWorkMapClosedDetailReader: () => () => { throw Error('unexpected read'); } },
   }).AdminClosedHistoryOwner;
-  const outer = h.render('outer', Owner, { session: value, isCurrent, window, summary: second, catalog: [] });
+  const outer = h.render('outer', Owner, { session: value, isCurrent, window, summary: second, catalog: [], logSheet: { open() {} } });
   const content = h.render('bound', outer.type, outer.props); assert.equal(content.props.row.position, '2'); assert.equal(content.props.row.id, 'o2'); assert.deepEqual(sizes, [1]);
   h.unmount('bound'); await tick(); window.dispose();
 });
@@ -172,4 +177,36 @@ test('actual guarded Closed reader accepts the owner account/row composition and
     if (change === 'window') { window.configure({ view: 'closed' }); await tick(); assert.equal(history.getSnapshot().detail, null); }
     history.dispose(); window.dispose();
   }
+});
+
+test('two actual Closed row owners share one native route and an old retirement cannot pop the newer row', async () => {
+  const h = hooks(), value = session(), first = summary(), second = { ...summary(), order_id: 'o2', order_number: '18' }, isCurrent = () => true;
+  const window = new Window({ isCurrent, request: { view: 'closed' }, read: async () => ({ ...page(first), length: 2, total: 2, closed_orders: [first, second] }) });
+  window.start(); await tick();
+  const queued = [], stack = [], popped = [], unmount = new Map();
+  const native = load('nativeSheet.tsx', { react: h.react, 'expo-router': { router: { push: route => queued.push(route.params.id) } },
+    './components/WorkerSecurity': { SecurityContext: {} } });
+  const sheet = h.render('screen', native.useNativeSheet);
+  const logSheet = load('admin/AdminClosedLogSheetOwner.tsx', { react: h.react, '../nativeSheet': { useNativeSheet: () => sheet },
+    '../shared/profileSessionGuard': guard, './AdminClosedLogBoundary': { AdminClosedLogBoundary: 'Boundary' } }).createAdminClosedLogSheetOwner(sheet);
+  const auth = { activeSessionToken: candidate => candidate.token, subscribeSessionWitness: () => () => {}, sessionWitnessVersion: () => 1 };
+  const logs = { o: { event_id: 'a', created_at_unix: 0 }, o2: { event_id: 'b', created_at_unix: 0 } };
+  const details = { o: { ...first, logs: [logs.o] }, o2: { ...second, logs: [logs.o2] } };
+  const Owner = load('admin/AdminClosedHistoryOwner.tsx', { react: h.react, '../auth': auth, '../shared/profileSessionGuard': guard,
+    './AdminClosedHistoryContent': { AdminClosedHistoryContent: 'Content' }, './adminClosedHistoryAccountWitness': { adminClosedHistoryAccountWitness: accountFactory(auth) },
+    './adminClosedHistoryController': { AdminClosedHistoryController: History }, './adminWorkMapClosedModel': closed,
+    './adminWorkMapReader': { adminWorkMapClosedDetailReader: () => async id => details[id] } }).AdminClosedHistoryOwner;
+  const render = (id, item) => { const outer = h.render('outer-' + id, Owner, { session: value, isCurrent, window, summary: item, catalog: [], logSheet });
+    return h.render('bound-' + id, outer.type, outer.props); };
+  const mount = () => { const id = queued.shift(); stack.push(id); unmount.set(id, native.mountNativeSheet(id, () => {
+    const top = stack.pop(); popped.push([id, top]); unmount.get(top)?.(); unmount.delete(top);
+  })); return id; };
+  let rowA = render('A', first), rowB = render('B', second); rowA.props.onToggle(); rowB.props.onToggle(); await tick();
+  rowA = render('A', first); rowB = render('B', second);
+  rowA.props.onLog(details.o, logs.o); rowB.props.onLog(details.o2, logs.o2); assert.equal(queued.length, 1);
+  const a = mount(), oldClose = native.getNativeSheet(a).content.props.close;
+  native.closeNativeSheet(a); await tick(); rowB.props.onLog(details.o2, logs.o2); assert.equal(queued.length, 1);
+  const b = mount(); rowA.props.onToggle(); oldClose(); assert.deepEqual(stack, [b]); assert.equal(native.getNativeSheet(b).closing, false);
+  native.closeNativeSheet(b); await tick(); assert.deepEqual(popped, [[a, a], [b, b]]);
+  h.unmount('bound-A'); h.unmount('bound-B'); h.unmount('screen'); window.dispose(); await tick();
 });

@@ -19,6 +19,7 @@ export class AdminClosedHistoryController {
   private visibilityGeneration = 0;
   private flight: object | null = null;
   private disposed = false;
+  private invalidating = false;
   private listeners = new Set<() => void>();
   constructor(ticket: AdminClosedHistoryTicket, private readonly deps: Dependencies) {
     this.state = { ticket: { ...ticket }, expanded: false, loading: false, detail: null, error: null };
@@ -26,11 +27,14 @@ export class AdminClosedHistoryController {
   }
   private witness(generation: number, ticket: AdminClosedHistoryTicket) {
     return () => {
+      if (this.disposed || this.invalidating) return false;
       const account = this.deps.isCurrent();
       // Preserve malformed/async results so the outer strict validator rejects and observes them.
       if (account !== true) return account;
-      if (this.disposed || generation !== this.generation || ticket !== this.state.ticket) return false;
-      return this.deps.rowIsCurrent(ticket);
+      if (this.disposed || this.invalidating || generation !== this.generation || ticket !== this.state.ticket) return false;
+      const row = this.deps.rowIsCurrent(ticket);
+      if (row !== true) return row;
+      return !this.disposed && !this.invalidating && generation === this.generation && ticket === this.state.ticket;
     };
   }
   private current(generation = this.generation, ticket = this.state.ticket) {
@@ -42,7 +46,7 @@ export class AdminClosedHistoryController {
     this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener());
   }
   configure(ticket: AdminClosedHistoryTicket) {
-    if (this.disposed) return;
+    if (this.disposed || this.invalidating) return;
     if (ticket.id === this.state.ticket.id && ticket.historyVersion === this.state.ticket.historyVersion && ticket.windowGeneration === this.state.ticket.windowGeneration) {
       if (this.state.expanded && !this.state.error) this.load();
       return;
@@ -68,17 +72,19 @@ export class AdminClosedHistoryController {
     const ticket = this.state.ticket, generation = this.generation, visibility = this.visibilityGeneration;
     let retired = false;
     const isCurrent = () => {
-      if (retired) return false;
+      if (retired || this.disposed || this.invalidating) { retired = true; return false; }
       let account: boolean;
       try { account = this.deps.isCurrent(); } catch (error) { retired = true; throw error; }
       // Forward malformed/async results unchanged to the outer strict validator, which observes rejections.
       if (account !== true) { retired = true; return account; }
-      if (this.disposed || generation !== this.generation || visibility !== this.visibilityGeneration || ticket !== this.state.ticket ||
+      if (this.disposed || this.invalidating || generation !== this.generation || visibility !== this.visibilityGeneration || ticket !== this.state.ticket ||
           !this.state.expanded || this.state.detail !== detail || !detail.logs.includes(log)) { retired = true; return false; }
       let row: boolean;
       try { row = this.deps.rowIsCurrent(ticket); } catch (error) { retired = true; throw error; }
-      if (row !== true) retired = true;
-      return row;
+      if (row !== true) { retired = true; return row; }
+      if (this.disposed || this.invalidating || generation !== this.generation || visibility !== this.visibilityGeneration || ticket !== this.state.ticket ||
+          !this.state.expanded || this.state.detail !== detail || !detail.logs.includes(log)) { retired = true; return false; }
+      return true;
     };
     return Object.freeze({ detail, log, isCurrent });
   }
@@ -86,6 +92,13 @@ export class AdminClosedHistoryController {
     if (!this.state.expanded || this.state.detail || this.flight || !this.current()) return;
     const ticket = this.state.ticket, generation = this.generation, flight = {};
     this.flight = flight; this.publish({ loading: true, error: null });
+    // A synchronous subscriber can collapse, invalidate, dispose or replace the row while observing loading.
+    if (!this.state.expanded || !this.current(generation, ticket)) {
+      if (this.flight === flight) this.flight = null;
+      if (!this.disposed && this.state.expanded && this.current()) this.load();
+      else if (!this.disposed && this.state.loading) this.publish({ loading: false });
+      return;
+    }
     const witness = this.witness(generation, ticket);
     let request: Promise<Detail>;
     try { request = Promise.resolve(this.deps.read(ticket.id, witness)); }
@@ -114,8 +127,16 @@ export class AdminClosedHistoryController {
     });
   }
   invalidate() {
-    if (this.disposed) return;
-    this.generation++; this.publish({ expanded: false, loading: false, detail: null, error: null });
+    if (this.disposed || this.invalidating) return;
+    this.invalidating = true;
+    try { this.generation++; this.publish({ expanded: false, loading: false, detail: null, error: null }); }
+    finally { this.invalidating = false; }
   }
-  dispose() { this.invalidate(); this.disposed = true; this.listeners.clear(); }
+  dispose() {
+    if (this.disposed) return;
+    // Retire first: synchronous listeners may attempt to reopen during publication.
+    this.disposed = true; this.generation++;
+    try { this.publish({ expanded: false, loading: false, detail: null, error: null }); }
+    finally { this.listeners.clear(); }
+  }
 }
