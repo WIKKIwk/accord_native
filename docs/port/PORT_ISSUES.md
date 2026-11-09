@@ -48,3 +48,5 @@ Quyidagilar Chat manba auditi vaqtida qayd etilgan V2 xulqlari. Ular yangi V4 re
 PORT-009, Boyoqchi qismi: `503ecad` (main merge `ee19c78`) — ikki platformada real Chat route’lari, V2 drawer/dock tartibi va unread dot ulandi. Qolgan rollar va umumiy Chat auditi ushbu qatorni ochiq qoldiradi.
 
 PORT-009, Homashyo qismi: `c6ddfd4` — V2’dagi Rezka/Profil/Chat dock tartibi, haqiqiy unread dot va ikkala platformaning shared Chat route’lari ulandi. Save/issue/print hold bundan mustaqil qoladi.
+
+PORT-012 integratsiya: original `port/qolipchi` `f02051e` orqali (main merge `5e0b23c`) qabul qilindi. `port/qolipchi-home-readonly-20261109a` dagi eski transport/Home checkpoint’i ham keyingi main varianti bilan tekshirildi; yangi main xulqi saqlandi. To‘liq Qolip roli hali yopilmagan.
