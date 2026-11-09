@@ -114,6 +114,16 @@ test('delivery treats every non-null failure as retry even with prior detail', (
   }
 });
 
+test('both delivery views pass the current notice identity and dismissal callback through', () => {
+  for (const platform of ['ios', 'android']) {
+    const snapshot = state([], { message: 'same failure', messageId: 7 });
+    const screen = fixture(platform, snapshot).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
+    const notice = nodes(screen, n => n.type === 'CustomerSnackbar')[0];
+    assert.equal(notice.props.message, 'same failure'); assert.equal(notice.props.messageId, 7);
+    assert.equal(notice.props.onDismiss, snapshot.clearMessage);
+  }
+});
+
 // Source-derived: customer_delivery_detail_screen.dart and _DetailLine in widgets_part_01.dart.
 test('read-only delivery rows preserve field order, quantity precision and accepted quantity visibility', () => {
   const text = key => `localized:${key}`;

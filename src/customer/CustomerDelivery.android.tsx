@@ -87,6 +87,6 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
     <WorkerAlert alert={confirm ? { title: text('confirmTitle'), message: text('confirmQuestion'), cancelLabel: text('no'),
       confirmLabel: text('yes'), onConfirm: () => { void state.send(customerApproveAll(deliveryNoteID)); } } : null} onDismiss={() => setConfirm(false)} />
     <CustomerReturnDialog kind={dialog} sentQty={record.sent_qty} uom={record.uom} onCancel={() => setDialog(null)} onConfirm={onReturn} />
-    <CustomerSnackbar message={state.message} onDismiss={state.clearMessage} />
+    <CustomerSnackbar message={state.message} messageId={state.messageId} onDismiss={state.clearMessage} />
   </>;
 }

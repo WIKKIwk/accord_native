@@ -52,8 +52,8 @@ export function useCustomerDelivery(deliveryNoteID: string, onChanged: () => voi
   const { method } = useCustomerText();
   const [detail, setDetail] = useState<CustomerDeliveryDetail | null>(null);
   const [loading, setLoading] = useState(true), [error, setError] = useState<unknown>(null);
-  const [submitting, setSubmitting] = useState(false), [message, setMessage] = useState('');
-  const generation = useRef(0), mounted = useRef(false), submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false), [messages, setMessages] = useState<{ id: number; text: string }[]>([]);
+  const generation = useRef(0), mounted = useRef(false), submittingRef = useRef(false), nextMessageId = useRef(0);
   const reload = useCallback(async () => {
     const request = ++generation.current;
     setLoading(true); setError(null);
@@ -81,9 +81,15 @@ export function useCustomerDelivery(deliveryNoteID: string, onChanged: () => voi
       requestAnimationFrame(() => refreshHub.emit('customer'));
       onChanged();
     } catch (failure) {
-      if (mounted.current) setMessage(method('responseSendFailed', { error: String(failure) }));
+      if (mounted.current) {
+        const notice = { id: ++nextMessageId.current, text: method('responseSendFailed', { error: String(failure) }) };
+        setMessages(current => [...current, notice]);
+      }
     } finally { submittingRef.current = false; if (mounted.current) setSubmitting(false); }
   };
-  const clearMessage = useCallback(() => setMessage(''), []);
-  return { detail, loading, error, submitting, message, clearMessage, reload, send };
+  const messageId = messages[0]?.id ?? null;
+  const clearMessage = useCallback(() => {
+    if (messageId != null) setMessages(current => current[0]?.id === messageId ? current.slice(1) : current);
+  }, [messageId]);
+  return { detail, loading, error, submitting, message: messages[0]?.text ?? '', messageId, clearMessage, reload, send };
 }
