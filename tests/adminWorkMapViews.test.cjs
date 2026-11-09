@@ -116,7 +116,7 @@ test('Move headers open the source picker and bind a ticket to each choice', () 
   const a = { id: 'a', name: ' A ' }, b = { id: 'b', name: 'B' }, ticket = { side: 'top', generation: 8, selected: a,
     options: [model.adminWorkMapMoveUnassigned, a] }, opened = [], chosen = []; let current = true, closes = 0;
   const shell = { session: {}, isCurrent: () => current, destination: () => '/ios-admin/work-map' };
-  const window = { rows: [], loading: false, loaded: true, error: null, hasMore: false };
+  const window = { rows: [{ id: 'o', kind: 'order', code: ' 17 ', title: '', customer: ' Ana ' }], loading: false, loaded: true, error: null, hasMore: false };
   const move = { picker: side => side === 'top' ? ticket : null, choose: (issued, selection) => { chosen.push([issued, selection]); return true; },
     topWindow: { reload() {}, next() {} }, bottomWindow: { reload() {}, next() {} } };
   const workspace = { move, reload() {}, setQuery() {}, selectModule() {}, selectApparatus() {} };
@@ -134,6 +134,7 @@ test('Move headers open the source picker and bind a ticket to each choice', () 
       workspaceState: { module: 'move', catalog: [a, b], selected: null, catalogLoaded: true, catalogLoading: false,
         move: { top: a, bottom: b, topWindow: window, bottomWindow: window } } }) } };
   const view = load('admin/useAdminWorkMapView.tsx', mocks).useAdminWorkMapView();
+  assert.deepEqual(view.move.panes[0].rows[0], { id: 'o', position: '1', code: '17', title: 'worker.order.fallback', supporting: 'Ana' });
   current = false; view.move.panes[0].onPick(); assert.equal(opened.length, 0); current = true;
   view.move.panes[0].onPick(); assert.equal(opened.length, 1); assert.deepEqual(opened[0].options, { compact: true, dismissible: true });
   assert.equal(opened[0].value.props.title, 'worker.queue.select_apparatus');

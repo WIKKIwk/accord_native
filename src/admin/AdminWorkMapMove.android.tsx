@@ -1,22 +1,29 @@
 import { ListItem } from '@expo/ui';
-import { Text } from '@expo/ui/jetpack-compose';
+import { IconButton, RNHostView, Text } from '@expo/ui/jetpack-compose';
+import { semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
+import { SymbolView } from 'expo-symbols';
+import { isValidElement } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { BaseHost } from '../components/BaseHost';
 import { OrdersList } from '../shared/orders/OrdersList';
-import { AdminWorkMapClosedRow as ReadOnlyRow } from './AdminWorkMapClosedRow';
+import { AdminWorkMapMoveEmpty } from './AdminWorkMapMoveEmpty';
 import { AdminWorkMapMoveHeader } from './AdminWorkMapMoveHeader';
+import { AdminWorkMapMoveRow } from './AdminWorkMapMoveRow';
 import { AdminWorkMapMoveSplit } from './AdminWorkMapMoveSplit';
 import type { AdminWorkMapMovePane, AdminWorkMapMoveProps } from './adminWorkMapMoveTypes';
 function MovePane({ pane }: { pane: AdminWorkMapMovePane }) {
   const offset = useSharedValue(0), height = useSharedValue(0);
   return <View style={{ flex: 1 }}>
-    <OrdersList active headerOffset={offset} headerHeight={height} topInset={0} onRefresh={pane.onRefresh}>
-      {!!pane.error && <ListItem supportingText={pane.error} onPress={() => { void pane.onRefresh(); }}>{pane.retryLabel}</ListItem>}
-      {pane.loaded && !pane.loading && !pane.rows.length && <Text>{pane.empty}</Text>}
-      {pane.rows.map(row => <ReadOnlyRow key={row.id} row={row} />)}
-      {pane.hasMore && !pane.error && <ListItem onPress={() => { void pane.onMore(); }}>{pane.moreLabel}</ListItem>}
-    </OrdersList>
+    {!pane.loaded ? <View style={{ flex: 1 }} /> : !pane.rows.length ? <AdminWorkMapMoveEmpty text={pane.empty} />
+      : <OrdersList active headerOffset={offset} headerHeight={height} topInset={0} onRefresh={pane.onRefresh}
+        passthrough={element => isValidElement(element) && element.type === AdminWorkMapMoveRow}>
+        {pane.rows.map((row, index) => <AdminWorkMapMoveRow key={row.id} row={row} first={index === 0} last={index === pane.rows.length - 1} />)}
+        {pane.hasMore && pane.error == null && <ListItem onPress={() => { void pane.onMore(); }}>{pane.moreLabel}</ListItem>}
+      </OrdersList>}
+    {pane.error != null && <BaseHost matchContents={{ vertical: true }}><ListItem trailing={<IconButton onClick={() => { void pane.onRefresh(); }}
+      modifiers={[testID(`admin-move-${pane.id}-retry`), semantics({ contentDescription: pane.retryLabel })]}><RNHostView matchContents>
+      <SymbolView name={{ android: 'refresh' }} size={24} importantForAccessibility="no" /></RNHostView></IconButton>}><Text>{pane.error}</Text></ListItem></BaseHost>}
   </View>;
 }
 export function AdminWorkMapMove(props: AdminWorkMapMoveProps) {

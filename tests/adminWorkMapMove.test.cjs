@@ -97,6 +97,12 @@ test('Move summaries retain source display-code, end-product and subtitle preced
     { id: 'z', code: '8', title: 'Film', customer: 'Buyer', position: 4 },
   ]);
 });
+test('Move row projection keeps source code/title parts, one-based rank and localized fallback', () => {
+  const row = { id: 'o', code: '\u0085 17 \u0085', title: '\u0085 Film \u0085', customer: '\u0085 Ana \u0085' };
+  assert.deepEqual(model.adminWorkMapMoveRow(row, 2, 'Order'), { id: 'o', position: '3', code: '17', title: 'Film', supporting: 'Ana' });
+  assert.deepEqual(model.adminWorkMapMoveRow({ ...row, code: '', title: '', customer: '' }, 0, 'Buyurtma'),
+    { id: 'o', position: '1', code: '', title: 'Buyurtma', supporting: '' });
+});
 test('Move makes no reads offscreen or without both real apparatus, then reads exact opposite scopes', async () => {
   const requests = [], move = new Move({ isCurrent: () => true, read: async request => { requests.push(request); return page(); } });
   move.start(); move.setCatalog([a, b]); await tick(); assert.equal(requests.length, 0);
@@ -129,7 +135,8 @@ test('opposite windows retain independent paging/errors and search, with no mixe
   move.start(); move.setCatalog([a, b]); move.setActive(true); await tick();
   await move.topWindow.next(); assert.equal(move.getSnapshot().topWindow.rows.length, 2); assert.equal(move.getSnapshot().bottomWindow.rows.length, 1);
   assert.equal(requests.at(-1).cursor, 'next'); await move.reload();
-  assert.equal(move.getSnapshot().topWindow.error, 'top failed'); assert.equal(move.getSnapshot().bottomWindow.error, null);
+  assert.equal(move.getSnapshot().topWindow.error, 'top failed'); assert.equal(move.getSnapshot().topWindow.loaded, true); assert.equal(move.getSnapshot().topWindow.rows.length, 2);
+  assert.equal(move.getSnapshot().bottomWindow.error, null);
   move.setQuery(' Film '); await Promise.all([move.topWindow.reload(), move.bottomWindow.reload()]); assert.equal(requests.at(-1).search, 'Film'); move.dispose();
 });
 test('changing only Move target invalidates old membership rather than reusing the old request', async () => {
@@ -181,14 +188,16 @@ test('Move picker headers retain source apparatus icon, text, accessibility and 
   assert.equal(tree.find(row => row.type === 'Text').props.numberOfLines, 1); button.props.onPress(); assert.equal(picked, 1);
 });
 for (const platform of ['ios', 'android']) test(`${platform} passive Move panes reuse native lists/summary rows with read-only refresh and pagination`, async () => {
-  const calls = [], native = { Button: 'Button', Text: 'NativeText', Image: 'Image', RNHostView: 'RNHostView' };
+  const calls = [], native = { Button: 'Button', HStack: 'HStack', Spacer: 'Spacer', Text: 'NativeText', IconButton: 'IconButton', RNHostView: 'RNHostView' },
+    modifiers = new Proxy({}, { get: (_target, key) => value => ({ key, value }) });
   const component = load(`admin/AdminWorkMapMove.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
     [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
-    '@expo/ui/swift-ui/modifiers': { font: x => x, accessibilityHidden: () => ({}) }, 'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ActivityIndicator: 'ActivityIndicator', View: 'View' },
+    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}/modifiers`]: modifiers, 'expo-symbols': { SymbolView: 'SymbolView' },
+    react: { isValidElement: value => !!value && typeof value === 'object' && !!value.type }, 'react-native': { ActivityIndicator: 'ActivityIndicator', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) }, '../components/BaseHost': { BaseHost: 'BaseHost' },
-    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'ReadOnlyRow' },
+    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, './AdminWorkMapMoveRow': { AdminWorkMapMoveRow: 'MoveRow' }, './AdminWorkMapMoveEmpty': { AdminWorkMapMoveEmpty: 'MoveEmpty' },
     './AdminWorkMapMoveSplit': { AdminWorkMapMoveSplit: 'Split' }, './AdminWorkMapMoveHeader': { AdminWorkMapMoveHeader: 'Header' } }).AdminWorkMapMove;
-  const pane = { id: 'top', name: 'Pechat A', rows: [{ id: 'o', position: '1', headline: '1 • Film', supporting: 'P' }],
+  const pane = { id: 'top', name: 'Pechat A', rows: [{ id: 'o', position: '1', code: '1', title: 'Film', supporting: 'P' }],
     loading: false, loaded: true, error: null, hasMore: true, empty: 'empty', retryLabel: 'retry', moreLabel: 'more',
     onRefresh: async () => calls.push('refresh'), onMore: async () => calls.push('more'), onPick: () => calls.push('pick') };
   const bottom = { ...pane, id: 'bottom', name: 'Pechat B' }, tree = component({ loading: false, error: null, empty: '', retryLabel: 'retry', onRetry() {}, panes: [pane, bottom] });
@@ -196,11 +205,48 @@ for (const platform of ['ios', 'android']) test(`${platform} passive Move panes 
   const split = nodes(tree).find(row => row.type === 'Split'); assert.equal(split.props.topHeader.props.pane, pane); assert.equal(split.props.bottomHeader.props.pane, bottom);
   const wrapped = split.props.topBody, rendered = wrapped.type(wrapped.props), all = nodes(rendered);
   const list = all.find(row => row.type === 'OrdersList'); await list.props.onRefresh();
-  assert.equal(all.find(row => row.type === 'ReadOnlyRow').props.row, pane.rows[0]);
-  assert.equal(all.find(row => row.type === 'ReadOnlyRow').props.onPress, undefined);
+  assert.equal(all.find(row => row.type === 'MoveRow').props.row, pane.rows[0]); assert.equal(all.find(row => row.type === 'MoveRow').props.onPress, undefined);
+  if (platform === 'android') { assert.equal(list.props.passthrough({ type: 'MoveRow' }), true); assert.equal(list.props.passthrough({ type: 'Other' }), false); }
   split.props.topHeader.props.pane.onPick();
   all.find(row => row.type === (platform === 'ios' ? 'Button' : 'ListItem') && (platform === 'ios' ? row.props.label === 'more' : row.props.children === 'more')).props.onPress(); await tick();
   assert.deepEqual(calls, ['refresh', 'pick', 'more']); assert.equal(all.some(row => row.props.onLongPress || row.props.onMove || row.props.onToggleSelect), false);
+  const emptyPane = { ...pane, rows: [], loaded: true, loading: true, error: 'failed', hasMore: false }, emptyBody = wrapped.type({ pane: emptyPane }), emptyTree = nodes(emptyBody);
+  assert.equal(emptyTree.find(row => row.type === 'MoveEmpty').props.text, 'empty'); assert.equal(emptyTree.some(row => row.type === 'OrdersList'), false);
+  const error = emptyTree.find(row => row.type === (platform === 'ios' ? 'HStack' : 'ListItem'));
+  if (platform === 'ios') assert.ok(error.props.children.some(value => value?.type === 'NativeText' && value.props.children === 'failed'));
+  else assert.equal(error.props.children.props.children, 'failed');
+  assert.equal(error.props.onPress, undefined);
+  const retry = platform === 'ios' ? error.props.children.find(value => value?.type === 'Button') : error.props.trailing; if (platform === 'ios') { assert.equal(retry.type, 'Button'); retry.props.onPress(); }
+  else { assert.equal(retry.type, 'IconButton'); assert.ok(retry.props.modifiers.some(value => value.key === 'semantics' && value.value.contentDescription === 'retry')); retry.props.onClick(); }
+  await tick(); assert.deepEqual(calls, ['refresh', 'pick', 'more', 'refresh']);
+  const retained = nodes(wrapped.type({ pane: { ...pane, error: 'failed', loaded: true, loading: false } }));
+  assert.ok(retained.some(row => row.type === 'OrdersList')); assert.ok(retained.some(row => row.type === 'MoveRow'));
+  assert.equal(retained.some(row => row.type === (platform === 'ios' ? 'Button' : 'ListItem') && (platform === 'ios' ? row.props.label === 'more' : row.props.children === 'more')), false);
+  const unloaded = nodes(wrapped.type({ pane: { ...pane, rows: [], loaded: false, loading: true } }));
+  assert.equal(unloaded.some(row => row.type === 'MoveEmpty' || row.type === 'OrdersList'), false);
+});
+
+for (const platform of ['ios', 'android']) test(`${platform} Move row shows the source rank and distinct code/title without action affordances`, () => {
+  const modifiers = new Proxy({}, { get: (_target, key) => value => ({ key, value }) });
+  const View = load(`admin/AdminWorkMapMoveRow.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' }, '@expo/ui/swift-ui': { HStack: 'HStack', VStack: 'VStack', Spacer: 'Spacer', RNHostView: 'RNHostView', Text: 'NativeText' },
+    '@expo/ui/swift-ui/modifiers': modifiers, 'react-native': { PlatformColor: value => value, View: 'View', Text: 'NativeText', StyleSheet: { create: value => value } },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerLowest: 'surface', onSurface: 'text', onSurfaceVariant: 'muted' } }) },
+    '../components/WorkerQueueCard.android': { WorkerQueueCard: 'Card' }, './AdminClosedHistoryAccessories': { AdminClosedRank: 'Rank' },
+  }).AdminWorkMapMoveRow;
+  const row = { id: 'o', position: '3', code: '17', title: 'Film', supporting: 'Ana' }, tree = View({ row, first: true, last: false }), all = nodes(tree);
+  const badge = all.find(value => value.type === 'Rank'); assert.equal(badge.props.position, '3');
+  if (platform === 'ios') assert.equal(tree.type, 'HStack');
+  assert.equal(tree.props.onPress, undefined); assert.equal(tree.props.onLongPress, undefined); assert.equal(tree.props.onMove, undefined);
+  assert.ok(all.some(value => value.type === 'NativeText' && value.props.children === '17 • '));
+  assert.ok(all.some(value => value.type === 'NativeText' && (value.props.children === 'Film' || Array.isArray(value.props.children) && value.props.children.includes('Film'))));
+  if (platform === 'android') { assert.equal(tree.type, 'Card'); assert.equal(tree.props.first, true); assert.equal(tree.props.last, false); }
+  const noCode = nodes(View({ row: { ...row, code: '', supporting: '' } })); assert.equal(noCode.some(value => value.type === 'NativeText' && value.props.children === '17 • '), false);
+});
+test('Move empty state centers the exact existing source text without a fake action', () => {
+  const View = load('admin/AdminWorkMapMoveEmpty.tsx', { 'react-native': { View: 'View', Text: 'Text', StyleSheet: { create: value => value } },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { onSurfaceVariant: 'muted' } }) } }).AdminWorkMapMoveEmpty;
+  const tree = View({ text: 'Tanlanmagan zakaz yo‘q' }); assert.equal(tree.props.style.alignItems, 'center'); assert.equal(tree.props.style.justifyContent, 'center');
+  assert.equal(tree.props.children.props.children, 'Tanlanmagan zakaz yo‘q'); assert.equal(tree.props.onPress, undefined);
 });
 
 for (const platform of ['ios', 'android']) test(`${platform} Move picker renders source order, selected state and exact choice callbacks`, () => {

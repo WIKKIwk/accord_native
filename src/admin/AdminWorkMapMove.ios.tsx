@@ -1,22 +1,26 @@
 import { ListItem } from '@expo/ui';
-import { Button, Text } from '@expo/ui/swift-ui';
+import { Button, HStack, Spacer, Text } from '@expo/ui/swift-ui';
+import { accessibilityLabel, labelStyle } from '@expo/ui/swift-ui/modifiers';
 import { ActivityIndicator, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { BaseHost } from '../components/BaseHost';
 import { OrdersList } from '../shared/orders/OrdersList';
-import { AdminWorkMapClosedRow as ReadOnlyRow } from './AdminWorkMapClosedRow';
+import { AdminWorkMapMoveEmpty } from './AdminWorkMapMoveEmpty';
 import { AdminWorkMapMoveHeader } from './AdminWorkMapMoveHeader';
+import { AdminWorkMapMoveRow } from './AdminWorkMapMoveRow';
 import { AdminWorkMapMoveSplit } from './AdminWorkMapMoveSplit';
 import type { AdminWorkMapMovePane, AdminWorkMapMoveProps } from './adminWorkMapMoveTypes';
 function MovePane({ pane }: { pane: AdminWorkMapMovePane }) {
   const offset = useSharedValue(0), height = useSharedValue(0);
   return <View style={{ flex: 1 }}>
-    <BaseHost style={{ flex: 1 }}><OrdersList active headerOffset={offset} headerHeight={height} topInset={0} onRefresh={pane.onRefresh}>
-      {!!pane.error && <ListItem supportingText={pane.error} onPress={() => { void pane.onRefresh(); }}>{pane.retryLabel}</ListItem>}
-      {pane.loaded && !pane.loading && !pane.rows.length && <Text>{pane.empty}</Text>}
-      {pane.rows.map(row => <ReadOnlyRow key={row.id} row={row} />)}
-      {pane.hasMore && !pane.error && <Button label={pane.moreLabel} onPress={() => { void pane.onMore(); }} />}
-    </OrdersList></BaseHost>
+    {!pane.loaded ? <View style={{ flex: 1 }} /> : !pane.rows.length ? <AdminWorkMapMoveEmpty text={pane.empty} />
+      : <BaseHost style={{ flex: 1 }}><OrdersList active headerOffset={offset} headerHeight={height} topInset={0} onRefresh={pane.onRefresh}>
+        {pane.rows.map((row, index) => <AdminWorkMapMoveRow key={row.id} row={row} first={index === 0} last={index === pane.rows.length - 1} />)}
+        {pane.hasMore && pane.error == null && <Button label={pane.moreLabel} onPress={() => { void pane.onMore(); }} />}
+      </OrdersList></BaseHost>}
+    {pane.error != null && <BaseHost matchContents={{ vertical: true }}><HStack spacing={8}><Text>{pane.error}</Text><Spacer />
+      <Button label={pane.retryLabel} systemImage="arrow.clockwise" onPress={() => { void pane.onRefresh(); }}
+        modifiers={[labelStyle('iconOnly'), accessibilityLabel(pane.retryLabel)]} /></HStack></BaseHost>}
   </View>;
 }
 /** Read-only panes; order selection, drag and transfer authority are intentionally absent. */

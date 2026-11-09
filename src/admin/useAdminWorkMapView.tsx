@@ -7,9 +7,8 @@ import { adminText, localizedGetter, productionText } from '../shared/localizati
 import { localeController } from '../shared/localization/runtime';
 import { AdminWorkMapDetail } from './AdminWorkMapDetail';
 import { AdminWorkMapMovePicker } from './AdminWorkMapMovePicker';
-import { adminWorkMapMoveIsUnassigned, adminWorkMapMoveName, adminWorkMapMoveSame } from './adminWorkMapMoveModel';
+import { adminWorkMapMoveIsUnassigned, adminWorkMapMoveName, adminWorkMapMoveRow, adminWorkMapMoveSame } from './adminWorkMapMoveModel';
 import { dartTrim } from './dartJsonString';
-import { adminWorkMapPresentation } from './adminWorkMapPresentation';
 import { adminWorkMapText } from './adminWorkMapText';
 import type { AdminWorkMapMoveProps } from './adminWorkMapMoveTypes';
 import { adminWorkMapClosedRows } from './adminWorkMapClosedModel';
@@ -66,8 +65,7 @@ export function useAdminWorkMapView() {
       const apparatus = id === 'top' ? pair.top! : pair.bottom!, pane = id === 'top' ? pair.topWindow : pair.bottomWindow,
         controller = id === 'top' ? workspace.move.topWindow : workspace.move.bottomWindow;
       return { id, name: adminWorkMapMoveName(apparatus), loading: pane.loading, loaded: pane.loaded, error: pane.error, hasMore: pane.hasMore,
-        rows: pane.rows.map((row, index) => { const display = adminWorkMapPresentation({ ...row, position: undefined }, locale);
-          return { id: row.id, position: String(index + 1), headline: display.headline, supporting: display.supporting }; }),
+        rows: pane.rows.map((row, index) => adminWorkMapMoveRow(row, index, productionText('worker.order.fallback', locale))),
         empty: adminWorkMapMoveIsUnassigned(apparatus) ? 'Tanlanmagan zakaz yo‘q' : `${apparatus.name} uchun zakaz yo‘q`, moreLabel: label.more, retryLabel,
         onRefresh: () => controller.reload(), onMore: () => controller.next(), onPick: () => openMovePicker(id) };
     }) };

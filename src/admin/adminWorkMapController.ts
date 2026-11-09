@@ -176,8 +176,8 @@ export class AdminWorkMapController {
         total: request.view === 'audit' ? pages[0].total ?? 0 : last.total ?? rows.length, audit, closed });
     } catch (error) {
       if (!this.current(ticket)) return;
-      this.publish({ loading: false, loaded: request.view === 'audit' || append ? this.state.loaded : false,
-        error: error instanceof Error ? error.message : readError });
+      // A failed refresh keeps the previously loaded page window, including an empty one.
+      this.publish({ loading: false, loaded: this.state.loaded, error: error instanceof Error ? error.message : readError });
     }
   }
 }

@@ -1,5 +1,6 @@
 import type { AdminApparatus } from '../apparatusApi';
 import { dartTrim } from './dartJsonString';
+import type { AdminWorkMapRow } from './adminWorkMapController';
 
 /** The picker has one non-apparatus option; it is not a fabricated catalog item. */
 export const adminWorkMapMoveUnassigned = Object.freeze({ moveUnassigned: true as const });
@@ -30,4 +31,10 @@ export function adminWorkMapMoveDefaults(source: readonly AdminApparatus[], curr
 export function adminWorkMapMovePickerOptions(source: readonly AdminApparatus[], opposite: AdminWorkMapMoveSelection | null): AdminWorkMapMoveSelection[] {
   const real = opposite && !adminWorkMapMoveIsUnassigned(opposite) ? source.filter(item => item.id !== opposite.id) : [...source];
   return opposite && !adminWorkMapMoveIsUnassigned(opposite) ? [adminWorkMapMoveUnassigned, ...real] : real;
+}
+
+/** Passive TransferListRow text from the already decoded Move window. */
+export function adminWorkMapMoveRow(row: AdminWorkMapRow, index: number, fallback: string) {
+  const code = dartTrim(row.code), title = dartTrim(row.title) || fallback;
+  return { id: row.id, position: String(index + 1), code, title, supporting: dartTrim(row.customer) };
 }

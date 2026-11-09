@@ -92,13 +92,23 @@ test('stale responses, changed page versions and malformed dates cannot replace 
   let resolve, current = true; const pending = new Controller({ isCurrent: () => current, request: { view: 'closed' }, read: () => new Promise(yes => { resolve = yes; }) });
   pending.start(); current = false; pending.invalidate(); resolve(page()); await tick(); assert.equal(pending.getSnapshot().closed.length, 0); pending.dispose();
 });
+test('an empty Closed page remains loaded when a later refresh fails', async () => {
+  let calls = 0; const c = new Controller({ isCurrent: () => true, request: { view: 'closed' }, read: async () => {
+    if (++calls === 1) return page(0, { length: 0, total: 0, next_cursor: null, closed_orders: [] }); throw Error('failed');
+  } });
+  c.start(); await tick(); assert.equal(c.getSnapshot().loaded, true); await c.reload();
+  assert.equal(c.getSnapshot().loaded, true); assert.deepEqual(c.getSnapshot().closed, []); assert.equal(c.getSnapshot().error, 'failed'); c.dispose();
+});
 const nodes = tree => tree && typeof tree === 'object' ? [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)] : [];
 for (const platform of ['ios', 'android']) test(`${platform} native Closed row preserves summary/rank and has no history, image or action callback`, () => {
   const modifiers = new Proxy({}, { get: (_target, key) => value => ({ key, value }) });
   const View = load(`admin/AdminWorkMapClosedRow.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
-    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: { Text: 'NativeText' },
-    '@expo/ui/swift-ui/modifiers': modifiers, 'react-native': { PlatformColor: value => value } }).AdminWorkMapClosedRow;
-  const row = closed.adminWorkMapClosedRows([order()])[0], tree = View({ row }); assert.equal(tree.type, 'ListItem');
-  assert.equal(tree.props.supportingText, 'C • Yopdi: Ana'); assert.equal(tree.props.onPress, undefined); assert.equal(tree.props.onLongPress, undefined);
-  assert.equal(tree.props.leading.props.children, '1'); assert.equal(nodes(tree).find(value => value.type === 'NativeText').props.children, '42 • Film');
+    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: { HStack: 'HStack', VStack: 'VStack', Spacer: 'Spacer', Text: 'NativeText', RNHostView: 'RNHostView' },
+    '@expo/ui/swift-ui/modifiers': modifiers, 'react-native': { PlatformColor: value => value }, './AdminClosedHistoryAccessories': { AdminClosedRank: 'Rank' } }).AdminWorkMapClosedRow;
+  const row = closed.adminWorkMapClosedRows([order()])[0], tree = View({ row }); assert.equal(tree.type, platform === 'ios' ? 'HStack' : 'ListItem');
+  if (platform === 'android') assert.equal(tree.props.supportingText, 'C • Yopdi: Ana'); else assert.ok(nodes(tree).some(value => value.type === 'NativeText' && value.props.children === 'C • Yopdi: Ana'));
+  assert.equal(tree.props.onPress, undefined); assert.equal(tree.props.onLongPress, undefined);
+  const badge = platform === 'ios' ? nodes(tree).find(value => value.type === 'Rank') : tree.props.leading.props.children;
+  assert.equal(badge.type, 'Rank'); assert.equal(badge.props.position, '1'); assert.equal(badge.props.onPress, undefined);
+  assert.equal(nodes(tree).find(value => value.type === 'NativeText').props.children, '42 • Film');
 });

@@ -66,6 +66,13 @@ test('append detects changed version, epoch, scope and duplicate IDs; existing r
     c.start(); await tick(); await c.next(); assert.equal(c.getSnapshot().rows.length, 2); assert.ok(c.getSnapshot().error); c.dispose();
   }
 });
+test('failed refresh retains a previously loaded window; an initial failure remains unloaded', async () => {
+  let calls = 0; const c = new Controller({ isCurrent: () => true, read: async () => { if (++calls === 1) return summary(); throw Error('failed'); } });
+  c.start(); await tick(); const rows = c.getSnapshot().rows; await c.reload();
+  assert.equal(c.getSnapshot().loaded, true); assert.equal(c.getSnapshot().rows, rows); assert.equal(c.getSnapshot().error, 'failed'); c.dispose();
+  const initial = new Controller({ isCurrent: () => true, read: async () => { throw Error('initial'); } }); initial.start(); await tick();
+  assert.equal(initial.getSnapshot().loaded, false); assert.equal(initial.getSnapshot().error, 'initial'); initial.dispose();
+});
 test('detail tickets bind a visible row to the current page generation', async () => {
   let current = true; const c = new Controller({ isCurrent: () => current, read: async () => summary() });
   c.start(); await tick(); const row = c.getSnapshot().rows[0], ticket = c.detailTicket(row);

@@ -1,5 +1,6 @@
 import type { AdminWorkMapMoveSelection } from './adminWorkMapMoveModel';
-export type AdminWorkMapMovePane = { id: 'top' | 'bottom'; name: string; rows: readonly { id: string; position: string; headline: string; supporting: string }[];
+export type AdminWorkMapMoveRow = { id: string; position: string; code: string; title: string; supporting: string };
+export type AdminWorkMapMovePane = { id: 'top' | 'bottom'; name: string; rows: readonly AdminWorkMapMoveRow[];
   loading: boolean; loaded: boolean; error: string | null; empty: string; moreLabel: string; retryLabel: string; hasMore: boolean;
   onRefresh: () => Promise<void>; onMore: () => Promise<void>; onPick: () => void };
 export type AdminWorkMapMoveProps = { loading: boolean; error: string | null; empty: string; retryLabel: string;
