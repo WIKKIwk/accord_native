@@ -29,3 +29,20 @@ test('explicit offset or Z retains Dart UTC calendar fields under a non-UTC loca
     {year:2026,month:1,day:1},{year:2025,month:12,day:31},{year:2026,month:1,day:1},
     {year:2026,month:3,day:2},{year:2025,month:12,day:31},null]);
 });
+test('archive marker fields replay standalone Dart source samples across four time zones',()=>{
+  const fixture=require('./contracts/f11910bb/werka_archive_timestamp_oracle.json');assert.equal(fixture.labels.length,479);
+  const source=`const fs=require('node:fs'),ts=require('typescript'),Module=require('node:module'),path=require('node:path');\n`+
+    `function load(f,c=new Map()){f=path.resolve(f.endsWith('.ts')?f:f+'.ts');if(c.has(f))return c.get(f);const m=new Module(f);m.filename=f;m.paths=module.paths;c.set(f,m.exports);m.require=n=>n.startsWith('.')?load(path.resolve(path.dirname(f),n),c):require(n);m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,f);c.set(f,m.exports);return m.exports;}\n`+
+    `const a=load('./src/werka/werkaArchiveCalendar.ts'),f=require('./tests/contracts/f11910bb/werka_archive_timestamp_oracle.json');console.log(JSON.stringify(f.labels.map(a.werkaArchiveCalendarFields)));`;
+  for(const [zone,expected] of Object.entries(fixture.zones)){
+    const result=spawnSync(process.execPath,['-e',source],{cwd:path.resolve(__dirname,'..'),env:{...process.env,TZ:zone},encoding:'utf8'});
+    assert.equal(result.status,0,result.stderr);const actual=JSON.parse(result.stdout);assert.equal(actual.length,expected.length);
+    for(let index=0;index<actual.length;index++)assert.deepEqual(actual[index],expected[index],`${zone}: ${JSON.stringify(fixture.labels[index])}`);
+  }
+});
+test('Dart-trimmed labels participate in day, month and year marker sets',()=>{
+  const labels=['\u00852026-03-02\u0085','\u0085 2026-01-01T00:30:00+05:00 \u0085','\u0085not date\u0085'];
+  assert.deepEqual([...api.werkaArchiveActiveDays(labels,2026,3)],[2]);
+  assert.deepEqual([...api.werkaArchiveActiveMonths(labels,2025)],[12]);
+  assert.deepEqual([...api.werkaArchiveActiveYears(labels,2024)],[2026,2025]);
+});

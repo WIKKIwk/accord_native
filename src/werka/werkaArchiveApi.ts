@@ -2,6 +2,7 @@ import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { parseCreatedLabelTimestamp } from '../shared/dispatchRuntimeStores';
 import { dispatchRecordFromJson } from '../shared/notificationApi';
+import { werkaDartTrim } from './werkaBatchTrim';
 import { werkaReadScope } from './werkaReadScope';
 
 type Obj = Record<string, unknown>;
@@ -30,12 +31,12 @@ const list = (value: unknown): unknown[] => {
 
 /** @v2 parseWerkaArchiveKind */
 export function parseWerkaArchiveKind(value: string): WerkaArchiveKind {
-  const normalized = value.trim().toLowerCase();
+  const normalized = werkaDartTrim(value).toLowerCase();
   return normalized === 'received' || normalized === 'returned' ? normalized : 'sent';
 }
 /** @v2 parseWerkaArchivePeriod */
 export function parseWerkaArchivePeriod(value: string): WerkaArchivePeriod {
-  const normalized = value.trim().toLowerCase();
+  const normalized = werkaDartTrim(value).toLowerCase();
   return normalized === 'daily' || normalized === 'monthly' || normalized === 'custom' ? normalized : 'yearly';
 }
 
@@ -53,6 +54,8 @@ export function werkaArchiveSummaryFromJson(value: unknown) {
 export function werkaArchiveResponseFromJson(value: unknown) {
   const row = object(value), from = string(row.from), to = string(row.to);
   const parseDate = (date: string): Date | null => {
+    // Unlike created-label parsing, DateTime.tryParse receives this raw value.
+    if (date !== werkaDartTrim(date)) return null;
     const time = parseCreatedLabelTimestamp(date);
     return time == null ? null : new Date(time);
   };

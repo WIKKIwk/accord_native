@@ -19,6 +19,7 @@ function compile(file, mocks = {}) {
 const localization = compile('shared/localization/index.ts', { './catalog.json': catalog });
 const dates = compile('werka/werkaArchiveCalendar.ts', {
   '../shared/dispatchRuntimeStores': compile('shared/dispatchRuntimeStores.ts'),
+  './werkaBatchTrim': compile('werka/werkaBatchTrim.ts'),
 });
 const model = compile('werka/werkaArchivePeriodPresentation.ts', {
   '../shared/localization': localization, './werkaArchiveCalendar': dates,

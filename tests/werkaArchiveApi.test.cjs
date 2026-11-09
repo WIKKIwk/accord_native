@@ -1,5 +1,6 @@
 // V2 has no direct HTTP recordings for these methods; assertions follow the f119 source.
 const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const Module = require('node:module');
 const path = require('node:path');
@@ -37,6 +38,32 @@ test('archive fallback values and malformed types follow source', () => {
   assert.equal(data.kind, 'sent'); assert.equal(data.period, 'yearly'); assert.equal(data.from, null);
   assert.deepEqual(data.summary, { recordCount: 0, totalsByUOM: [] });
   assert.throws(() => api.werkaArchiveResponseFromJson({ items: 'bad' }), /Invalid archive list/);
+});
+test('archive enums use Dart trim while raw response dates do not', () => {
+  const { api } = setup(() => new Response('{}'));
+  assert.equal(api.parseWerkaArchiveKind('\u0085RECEIVED\u0085'), 'received');
+  assert.equal(api.parseWerkaArchiveKind('\u0085RETURNED\u0085'), 'returned');
+  assert.equal(api.parseWerkaArchivePeriod('\u0085MONTHLY\u0085'), 'monthly');
+  assert.equal(api.parseWerkaArchivePeriod('\u0085CUSTOM\u0085'), 'custom');
+  for (const value of [' 2026-05-01', '2026-05-01 ', '\u00852026-05-01\u0085', '\ufeff2026-05-01\ufeff']) {
+    assert.equal(api.werkaArchiveResponseFromJson({ from: value, to: value }).from, null, JSON.stringify(value));
+    assert.equal(api.werkaArchiveResponseFromJson({ from: value, to: value }).to, null, JSON.stringify(value));
+  }
+  assert.notEqual(api.werkaArchiveResponseFromJson({ from: '2026-01-01T01:00:00 Z' }).from, null);
+});
+test('archive response date parsing replays standalone Dart samples across four time zones', () => {
+  const fixture = require('./contracts/f11910bb/werka_archive_timestamp_oracle.json');
+  assert.equal(fixture.rawLabels.length, 21);
+  const source = `const fs=require('node:fs'),ts=require('typescript'),Module=require('node:module'),path=require('node:path');\n` +
+    `function load(f,c=new Map()){f=path.resolve(f.endsWith('.ts')?f:f+'.ts');if(c.has(f))return c.get(f);const m=new Module(f);m.filename=f;m.paths=module.paths;c.set(f,m.exports);m.require=n=>n.endsWith('/authorizedFetch')?{authorizedFetch:()=>{}}:n==='./werkaReadScope'?{werkaReadScope:()=>()=>{}}:n.startsWith('.')?load(path.resolve(path.dirname(f),n),c):require(n);m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,f);c.set(f,m.exports);return m.exports;}\n` +
+    `const a=load('./src/werka/werkaArchiveApi.ts'),f=require('./tests/contracts/f11910bb/werka_archive_timestamp_oracle.json');console.log(JSON.stringify(f.rawLabels.map(s=>a.werkaArchiveResponseFromJson({from:s}).from?.getTime()??null)));`;
+  for (const [zone, expected] of Object.entries(fixture.rawZones)) {
+    const result = spawnSync(process.execPath, ['-e', source], { cwd: path.resolve(__dirname, '..'), env: { ...process.env, TZ: zone }, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    const actual = JSON.parse(result.stdout);
+    assert.equal(actual.length, expected.length);
+    for (let index = 0; index < actual.length; index++) assert.equal(actual[index], expected[index], `${zone}: ${JSON.stringify(fixture.rawLabels[index])}`);
+  }
 });
 test('PDF returns original bytes and server disposition with fallbacks', async () => {
   const first = setup(() => new Response(new Uint8Array([37, 80, 68, 70]), { status: 200,

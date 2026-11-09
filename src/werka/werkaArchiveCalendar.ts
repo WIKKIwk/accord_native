@@ -1,13 +1,14 @@
 import { parseCreatedLabelTimestamp } from '../shared/dispatchRuntimeStores';
+import { werkaDartTrim } from './werkaBatchTrim';
 
 type CalendarFields = { year: number; month: number; day: number };
 // Dart DateTime.tryParse returns a UTC DateTime when a zone is present, even
 // for an offset; its year/month/day getters then use the normalized UTC date.
 const explicitZone = /[ T]\d\d(?::?\d\d(?::?\d\d(?:[.,]\d+)?)?)?(?: ?[zZ]| ?[-+]\d\d(?::?\d\d)?)$/;
 export function werkaArchiveCalendarFields(value: string): CalendarFields | null {
-  const time = parseCreatedLabelTimestamp(value);
+  const trimmed = werkaDartTrim(value), time = parseCreatedLabelTimestamp(trimmed);
   if (time === null) return null;
-  const date = new Date(time), utc = explicitZone.test(value.trim());
+  const date = new Date(time), utc = explicitZone.test(trimmed);
   return { year: utc ? date.getUTCFullYear() : date.getFullYear(), month: (utc ? date.getUTCMonth() : date.getMonth()) + 1,
     day: utc ? date.getUTCDate() : date.getDate() };
 }
