@@ -42,6 +42,8 @@ Bu qatorlar mavjud holat fayllaridagi ochiq ishlarni bir joydan kuzatish uchun k
 
 | PORT-022 | Qolip storage/archive | Paddon/arxiv read/filter/pagination owner’i va original-run GET guard’lari port qilindi. Native list shell/caller, detail/action oqimlari va telefon scroll/date/filter sinovi hali ochiq. Guarded GET mustaqil boshlangan refresh’ga qo‘shilishi mumkin, lekin V2 kabi refresh’ni o‘zi boshlamaydi. Paddons search debounce ichida oldingi read natijasini qabul qilish V2 xulqi sifatida saqlandi; akkaunt almashsa data darhol yopiladi. | `qolipStorageReadState.ts`, `qolipStorageReadRuntime.ts`, `qolipStorageReadApi.test.cjs` | Read owner tayyor; qolgan storage ishlari ochiq |
 
+| PORT-023 | Qolip storage native dialoglar | Paddon create va inventarizatsiya dialoglari ikki platformada port qilindi. Real parent create/inspection POST caller’i, retry draft va sent-write settlement hali ulanmagan. Inventarizatsiya uchun manual entry bor V2 raw-material scanner opener’i kerak; avvalgi raw Qolip scanner uning o‘rnini bosa olmaydi. Native dialog o‘lchami, scroll, dropdown, RTL/accessibility va URI/Unicode/Hermes telefon sinovi ochiq. Source scanner future xatosidan keyingi scanning lock saqlandi. | `QolipPaddonCreateDialog.*`, `QolipInspectionDialog.*`, `qolipStorageFormsState.ts`; 29 focused case | Native dialoglar tayyor; caller va telefon tekshiruvi ochiq |
+
 ## V2’dan meros bo‘lgan va alohida tuzatiladigan holatlar
 
 Quyidagilar Chat manba auditi vaqtida qayd etilgan V2 xulqlari. Ular yangi V4 regressiyasi deb belgilanmagan; tuzatishdan oldin tegishli holat takrorlanadi va alohida o‘zgarish qilinadi.

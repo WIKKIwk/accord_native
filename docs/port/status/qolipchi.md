@@ -501,3 +501,16 @@ The existing storage GETs have an optional original-run read guard, including de
 | Paddons old-read during search debounce; storage screen:319–334 | Same read owner | retained | retained | Source quirk remains within a valid original boundary; role reset always blanks data. |
 
 Focused verification: 15 read-state cases, 12 actual transport/runtime cases and the existing 17 storage API cases passed. These are host assertions against source-derived data, not a phone or live server run. Full-role storage actions, native controls, real navigation and sent-write settlement remain open in PORT-012/021/022.
+
+## Storage native dialog checkpoint
+
+Both platforms now have actual `QolipPaddonCreateDialog` and `QolipInspectionDialog` views and shared source-derived state/hooks. The create dialog retains the user's warehouse through ordinary parent rebuilds, applies its initial draft only once and returns only warehouse plus empty location/note. Create precedes cancel as in V2. Inspection preserves the source case-insensitive insertion/update rules, expected spelling and ordering, empty/incomplete save, chip deletion during a scan and ordinary back/outside dismissal while scan/cancel/save buttons are locked. The existing shared barcode parser is reused after comparing its source branch and running its host tests; no second parser was created. Expired/replaced original boundaries blank data and seal captured actions, including pending scan completion and duplicate close events.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Create dialog; storage screen:945–1059 | `QolipPaddonCreateDialog.*`, `qolipStorageFormsState`, `useQolipStorageForms` | native SwiftUI menu/buttons in modal dialog | native Compose dropdown/dialog/buttons | Parent create/draft/action owner is not wired; native dimensions, dropdown and access/RTL need phones. |
+| Inspection dialog; storage picker:654–731 | `QolipInspectionDialog.*`, same state/hooks | native controls in scrollable modal dialog | native Compose dialog/scroll/chips | Caller must supply the real full-screen raw-material scanner with manual entry, not substitute the raw Qolip scanner. Paddon inspection POST/action owner remains unwired. |
+| Case-insensitive parser and ordered found/missing/unexpected/chips | `QolipInspectionState`, existing shared barcode parser | shared rules | shared rules | Host cases pass; complete URI/Unicode/Hermes and native scan geometry are not phone-certified. |
+| Dialog buttons, dismissal and source exceptional scan path | Both native dialogs and shared hook | source flow | source flow | A rejected scan-dialog future leaves source scanning locked until ordinary dismissal; no invented error text or retry is added. Native bridge reporting differs from Flutter error logging. |
+
+Focused checks: 15 state, 10 native-view host and 4 hook-lifecycle cases pass; shared barcode parser host cases also pass. Source annotations mark the real dialog surfaces, not a full StorageScreen. The hook keeps the original scanner opener for one dialog lifetime and updates expected/warehouse lists without resetting selected/scanned values. An actual phone and the complete role/storage caller remain open. PORT-023 records these remaining dependencies centrally.
