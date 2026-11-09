@@ -709,6 +709,7 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
   [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
   [appRoutes.adminHome]: { ios: '/ios-admin' as Href, android: '/android-admin' as Href },
+  [appRoutes.customerHome]: { ios: '/ios-customer' as Href, android: '/android-customer' as Href },
   [appRoutes.boyoqchiHome]: { ios: '/ios-boyoqchi' as Href, android: '/android-boyoqchi' as Href },
   [appRoutes.materialHome]: { ios: '/ios-material' as Href, android: '/android-material' as Href },
   [appRoutes.rawMaterialSplit]: { ios: '/ios-homashyo' as Href, android: '/android-homashyo' as Href },
