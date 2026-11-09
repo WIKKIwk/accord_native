@@ -6,7 +6,8 @@ function compile(file,mocks={}){const filename=path.resolve(__dirname,'../src',f
   m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,filename);return m.exports;}
 const localization=compile('shared/localization/index.ts',{'./catalog.json':catalog});
 const delivery=compile('werka/werkaDeliveryPresentation.ts',{'../shared/localization':localization});
-const model=compile('werka/werkaArchiveListPresentation.ts',{'../shared/localization':localization,'./werkaDeliveryPresentation':delivery});
+const trim=compile('werka/werkaBatchTrim.ts');
+const model=compile('werka/werkaArchiveListPresentation.ts',{'../shared/localization':localization,'./werkaDeliveryPresentation':delivery,'./werkaBatchTrim':trim});
 const jsx={Fragment:'Fragment',jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
 function nodes(node,type){if(!node||typeof node!=='object')return[];if(Array.isArray(node))return node.flatMap(x=>nodes(x,type));
   return [...(node.type===type?[node]:[]),...nodes(node.props?.children,type)];}
@@ -27,6 +28,17 @@ test('grouping preserves first-seen order, duplicate single IDs and source quant
   assert.equal(model.werkaArchiveGroups([item('a')],'sent')[0].trailing,'5 kg');
   assert.equal(model.werkaArchiveGroups([item('a',{accepted_qty:7})],'returned')[0].trailing,'0 kg');
   assert.equal(model.werkaArchiveGroups([item('a',{accepted_qty:0})],'received')[0].trailing,'5 kg');
+});
+test('archive grouping replays source-equivalent Dart whitespace, ordering and metric cases',()=>{
+  const fixture=require('./contracts/f11910bb/werka_archive_groups_oracle.json');
+  const number=value=>value==='nan'?NaN:value==='inf'?Infinity:value==='-inf'?-Infinity:value==='-0'?-0:Number(value);
+  for(const sample of fixture.cases){
+    const records=sample.rows.map(row=>({...row,sent_qty:number(row.sent_qty),accepted_qty:number(row.accepted_qty)}));
+    for(const kind of ['received','sent','returned']){
+      assert.deepEqual(model.werkaArchiveGroups(records,kind),sample.expected[kind],`${sample.name}: ${kind}`);
+      records.forEach((record,index)=>assert.deepEqual(model.werkaArchiveGroups([record],kind)[0],sample.singles[kind][index],`${sample.name}: ${kind} row ${index}`));
+    }
+  }
 });
 test('summary reuses localized count and source numeric formatter',()=>{
   const data={summary:{recordCount:2,totalsByUOM:[{qty:1.5,uom:'kg'},{qty:-0,uom:'m'}]},items:[]};

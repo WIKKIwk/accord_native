@@ -22,4 +22,5 @@ test('all Unicode scalar edge characters match the standalone Dart 3.13.7 trim p
   assert.equal(werkaBatchTrim('\u0085 \u0085x\u0085 \u0085'), 'x');
   assert.equal(werkaBatchTrim('x\u0085x'), 'x\u0085x');
   assert.equal(werkaBatchTrim('\ud800x\udfff'), '\ud800x\udfff');
+  assert.equal(loaded.exports.werkaDartTrim, werkaBatchTrim);
 });
