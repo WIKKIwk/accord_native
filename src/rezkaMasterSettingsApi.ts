@@ -7,9 +7,10 @@ const messages: Record<string, string> = { warehouse_assignee_not_allowed: 'Bu r
   'worker phone already exists': 'Bu telefon raqami boshqa ishchiga biriktirilgan', 'worker not found': 'Ishchi topilmadi',
   'worker store failed': 'Ishchi telefoni bazaga saqlanmadi' };
 /** @v2 rezkaMasterSavePrintSide */
-export async function rezkaMasterSavePrintSide(session: Session, orderId: string, standard: boolean, previous: boolean): Promise<void> {
+export async function rezkaMasterSavePrintSide(session: Session, orderId: string, standard: boolean, previous: boolean,
+  beforeSend?: () => void): Promise<void> {
   const response = await authorizedFetch(session, '/v1/mobile/rezka-master/print-side', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ order_id: orderId, standard_print_side: standard, previous_standard_print_side: previous }) });
+    body: JSON.stringify({ order_id: orderId, standard_print_side: standard, previous_standard_print_side: previous }) }, beforeSend);
   if (response.status === 200) return;
   let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
   const error = payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as { error?: unknown }).error : null;
