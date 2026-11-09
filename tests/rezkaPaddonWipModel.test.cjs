@@ -34,7 +34,7 @@ test('selected source example retains order, measured gross/net, producer, machi
   assert.equal(row(content, 'worker.wip.info.produced_by'), 'Akmal Rahimov');
   assert.equal(row(content, 'worker.wip.info.source'), 'Rezka');
   assert.equal(row(content, 'worker.wip.info.epc'), '4000 0000 0000 0000 0000 0001');
-  assert.equal(content.rows.at(-1).selectable, true);
+  assert.equal(content.rows.at(-1).isEpc, true);
   assert.ok(!JSON.stringify(content).includes('workerispdaduio0242304203480239'));
 });
 test('the existing Paddon snapshot and batch decoders feed the passive projection without mutation', () => {

@@ -4,7 +4,7 @@ import { rezkaPaddonOrderSummary } from './rezkaPaddonDisplay';
 
 type Obj = Record<string, unknown>;
 type Text = (key: string) => string;
-export type RezkaPaddonWipRow = { key: string; label: string; value: string; selectable?: boolean };
+export type RezkaPaddonWipRow = { key: string; label: string; value: string; isEpc?: boolean };
 const text = (value: unknown) => value == null ? '' : String(value);
 const number = (value: unknown): number | null => typeof value === 'number' ? value : null;
 const object = (value: unknown): Obj => value && typeof value === 'object' && !Array.isArray(value) ? value as Obj : {};
@@ -82,7 +82,7 @@ export function rezkaPaddonWipContent(batch: Obj, catalog: readonly AdminApparat
   const length = number(batch.finished_goods_meter), hasQuantity = Number.isFinite(produced) && produced > 0 && !!uom.trim();
   const hasLength = length != null && Number.isFinite(length) && length > 0;
   const rows: RezkaPaddonWipRow[] = [];
-  const add = (key: string, value: string, selectable = false) => rows.push({ key, label: t(key), value, ...(selectable ? { selectable: true } : {}) });
+  const add = (key: string, value: string, isEpc = false) => rows.push({ key, label: t(key), value, ...(isEpc ? { isEpc: true } : {}) });
   add('worker.wip.info.quantity', hasQuantity ? quantity(produced, uom) : hasLength ? quantity(length, 'm') : missing);
   if (hasLength && hasQuantity && (uom.trim().toLowerCase() !== 'm' || length !== produced)) add('worker.daily.field.length', quantity(length, 'm'));
   add('worker.wip.info.gross_weight', weight(gross != null && gross > 0 ? gross : null));

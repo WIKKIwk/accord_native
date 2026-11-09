@@ -19,7 +19,7 @@ export function RezkaPaddonWipReadOnly({ snapshot, binding }: RezkaPaddonWipRead
     {content.peremotka ? <Text>{content.peremotka}</Text> : null}
     {content.rows.map(row => <VStack key={row.key} alignment="leading" spacing={3}>
       <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('secondary')]}>{row.label}</Text>
-      {row.selectable ? <RNHostView matchContents={{ vertical: true }}><NativeText selectable
+      {row.isEpc ? <RNHostView matchContents={{ vertical: true }}><NativeText
         style={{ color: PlatformColor('label'), fontFamily: 'monospace', fontSize: 13, writingDirection: 'ltr', textAlign: 'left' }}>{row.value}</NativeText></RNHostView>
         : <Text modifiers={[fixedSize({ horizontal: false, vertical: true })]}>{row.value}</Text>}
     </VStack>)}

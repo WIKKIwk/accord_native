@@ -13,12 +13,12 @@ function nodes(node, predicate) {
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
 for (const platform of ['ios', 'android']) {
-  test(`${platform}: passive WIP card uses only bound data and has selectable EPC without actions`, () => {
+  test(`${platform}: passive WIP card uses only bound data and has noninteractive EPC`, () => {
     const snapshot = { session: { profile: { ref: 'mine' } } }, batch = {}, catalog = [], binding = { owner: snapshot, batch, catalog }, calls = [];
     let allowed = true, overflow = false;
     const content = { order: 'Buyurtma: 0038 - Bosma', peremotka: 'Peremotka', rows: [
       { key: 'quantity', label: 'Miqdor', value: '1 450 m' }, { key: 'gross', label: 'Brutto', value: '12.5 kg' },
-      { key: 'epc', label: 'EPC kodi', value: '4001 1234 5678 90AB CDEF 0001', selectable: true }] };
+      { key: 'epc', label: 'EPC kodi', value: '4001 1234 5678 90AB CDEF 0001', isEpc: true }] };
     const components = new Proxy({ useMaterialColors: () => ({}) }, { get: (obj, key) => obj[key] ?? key });
     const modifiers = new Proxy({}, { get: (_obj, key) => (...args) => ({ name: key, args }) });
     const { RezkaPaddonWipReadOnly } = load(`rezka/RezkaPaddonWipReadOnly.${platform}.tsx`, {
@@ -33,7 +33,7 @@ for (const platform of ['ios', 'android']) {
     const view = render(); assert.deepEqual(calls[0], [batch, catalog, snapshot.session.profile, 'uz:key']);
     assert.deepEqual(nodes(view, n => n.type === 'Text').map(n => n.props.children), ['Buyurtma: 0038 - Bosma', 'Peremotka', 'Miqdor', '1 450 m', 'Brutto', '12.5 kg', 'EPC kodi']);
     const epc = nodes(view, n => n.type === 'NativeText')[0]; assert.equal(epc.props.children, content.rows[2].value);
-    assert.equal(epc.props.selectable, true); assert.equal(epc.props.style.writingDirection, 'ltr');
+    assert.notEqual(epc.props.selectable, true); assert.equal(epc.props.style.writingDirection, 'ltr');
     assert.equal(nodes(view, n => ['Button', 'IconButton', 'Pressable'].includes(n.type)).length, 0);
     if (platform === 'android') { const card = nodes(view, n => n.type === 'Card')[0]; assert.equal(card.props.onPress, undefined); assert.equal(card.props.onLongPress, undefined); }
     const before = calls.length; binding.owner = { session: {} }; assert.equal(render(), null); assert.equal(calls.length, before);
