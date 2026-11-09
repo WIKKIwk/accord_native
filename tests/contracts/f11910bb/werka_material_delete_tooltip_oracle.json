@@ -1,0 +1,13 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "flutterRevision": "737ba8f885dc774b53b442759999a312c9461e4e",
+  "flutterVersion": "3.47.8",
+  "materialStringsSha256": "dfe987456b1757657ce10123f1c7488eabcf43495983ea5b6241e62f168522a6",
+  "kind": "declared SDK generated source data, not Flutter or device",
+  "values": {
+    "uz": "Olib tashlash",
+    "en": "Delete",
+    "ru": "Удалить",
+    "ur-PK": "حذف کریں"
+  }
+}
