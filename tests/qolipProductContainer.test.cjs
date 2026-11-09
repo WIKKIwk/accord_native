@@ -105,3 +105,16 @@ test('duplicate catalog IDs use the last resolved metadata, matching the source 
   assert.equal(result.containers[0], result.containers[1]); assert.equal(result.containers[0].name, 'Last');
   assert.equal(result.containers[0].imageOrderId, 'last'); assert.equal(result.products.length, 2);
 });
+
+test('catalog-product projection uses the first child, source defaults and selected cover without sending', () => {
+  const first = row('ignored', 'ignored', ' Q-A ', { warehouse: ' W ', first_qolip_code: '  ', customer_names: ['One', 'Two'] });
+  const second = row('ignored', 'ignored', 'Q-B', { order_image_order_id: ' map-2 ' });
+  const source = container([first, second], { code: ' İ𐐀 ', name: 'Display', itemGroup: 'Group', imageOrderId: 'fallback' });
+  const projected = api.qolipContainerCatalogProduct(source);
+  assert.deepEqual(projected, { is_extension: false, qolip_set_id: '', set_id: 'legacy:2:i𐐨:w', warehouse: ' W ',
+    code: ' İ𐐀 ', name: 'Display', item_group: 'Group', customer_names: ['One', 'Two'], qolip_code: '', first_qolip_code: ' Q-A ',
+    size: 0, color: '', has_qolip_spec: false, is_in_use: false, is_in_rework: false, order_image_order_id: 'map-2' });
+  assert.equal(projected.customer_names, first.customer_names); first.first_qolip_code = ' Existing ';
+  assert.equal(api.qolipContainerCatalogProduct(source).first_qolip_code, ' Existing ');
+  assert.throws(() => api.qolipContainerCatalogProduct(container([])), RangeError);
+});

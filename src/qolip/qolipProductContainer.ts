@@ -83,3 +83,15 @@ export function qolipAdoptCatalogWindow(items: readonly { id: string; name: stri
     { catalogId: item.id, code: '', name: item.name, itemGroup: '', imageOrderId: item.order_image_order_id, children: [] });
   return { containers, products: containers.flatMap(value => value.children) };
 }
+
+/** Source catalog product projection only. It does not authorize or dispatch a product mutation. */
+export function qolipContainerCatalogProduct(container: QolipProductContainer): Product {
+  const first = container.children[0];
+  if (!first) throw new RangeError();
+  const item = normalized(container.code), warehouse = normalized(first.warehouse);
+  return { is_extension: false, qolip_set_id: '', set_id: `legacy:${[...item].length}:${item}:${warehouse}`,
+    warehouse: first.warehouse, code: container.code, name: container.name, item_group: container.itemGroup,
+    customer_names: first.customer_names, qolip_code: '', first_qolip_code: trimDart(first.first_qolip_code) ? first.first_qolip_code : first.qolip_code,
+    size: 0, color: '', has_qolip_spec: false, is_in_use: false, is_in_rework: false,
+    order_image_order_id: qolipContainerOrderImageId(container) };
+}
