@@ -1,0 +1,40 @@
+{
+ "source": "test/admin_activity_probe_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "admin activity reads dispatch records",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/activity",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-activity-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"id\":\"A\",\"supplier_name\":\"Test supplier\",\"sent_qty\":12.5,\"accepted_qty\":3,\"uom\":\"kg\",\"status\":\" ACCEPTED \"},{\"id\":\"B\",\"status\":\"unexpected\"}]"
+   }
+  },
+  {
+   "test": "admin activity reports a failed response",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/activity",
+   "requestHeaders": {
+    "Authorization": "Bearer admin-activity-test-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 500,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{}"
+   }
+  }
+ ]
+}
