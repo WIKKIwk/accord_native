@@ -34,7 +34,7 @@ function environment(platform) {
     'react-native': { ScrollView: 'ScrollView', Text: 'Text', View: 'View', PlatformColor: name => `native(${name})` }, 'expo-symbols': { SymbolView: 'Symbol' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'Button' }, '../preparation/PreparationUI': { usePreparationText: () => s => s },
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => s => s },
-    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'Dropdown' }, './rawSplitHomePresentation': new Proxy({}, { get: () => () => '' }) };
+    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'Dropdown' }, './rawSplitHomePresentation': new Proxy({}, { get: () => () => '' }), './useRawSplitWriteHoldText': { useRawSplitWriteHoldText: () => 'hold' } };
   const component = load(`RawSplitHome.${platform}.tsx`, mocks).RawSplitHome;
   return { state, render: issueRevision => h.render(() => component({ controller, issueRevision, onScan() {} })), unmount: h.unmount };
 }

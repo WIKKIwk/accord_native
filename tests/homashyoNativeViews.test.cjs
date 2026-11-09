@@ -132,9 +132,9 @@ function home(platform, translate = value => value) {
   const calls = [], layoutEffects = [], output1 = { id: '1', width: '400', gross: '40', bobina: '1', length: '1000' };
   const output2 = { id: '2', width: '600', gross: '60', bobina: '1', length: '1500' };
   const state = { snapshot: { warehouses: ['Raw W'] }, barcode: 'parent', source: new model.RawSplitRoll(source), outputs: [output1, output2],
-    waste: '2', issueNote: '', issueError: null, error: null, pending: null, pendingIssue: null, printer: null,
-    wifiPrinter: 'godex', showIssue: false, issueSaved: false, savedIssueId: null, busy: false };
-  const controller = { getSnapshot: () => state, subscribe: () => () => {}, reload: async () => calls.push('reload'), locked: false,
+    waste: '2', issueNote: '', issueError: null, error: null, snapshotError: null, pending: null, pendingIssue: null, printer: null,
+    wifiPrinter: 'godex', showIssue: false, issueSaved: false, savedIssueId: null, busy: false, pendingCheck: 'ready', pendingCheckError: null };
+  const controller = { getSnapshot: () => state, subscribe: () => () => {}, reload: async () => calls.push('reload'), recheckPending: async () => calls.push('recheck'), locked: false, writesHeld: false,
     get widthPlan() { return new width.RawSplitWidthPlan(state.source.widthMm, state.outputs.map(o => o.width)); },
     get wasteCheck() { return new model.RawSplitWasteCheck(model.rawSplitQuantity('100'), model.rawSplitQuantity('98'), state.waste); },
     setBarcode: value => calls.push(['barcode', value]), lookup: async () => calls.push('lookup'), setOutput: (...args) => calls.push(['output', ...args]),
@@ -152,14 +152,15 @@ function home(platform, translate = value => value) {
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View', PlatformColor: name => `native(${name})` },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => translate },
     '../preparation/PreparationUI': { usePreparationText: () => translate },
-    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitHomePresentation': homePresentation };
+    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitHomePresentation': homePresentation,
+    './useRawSplitWriteHoldText': { useRawSplitWriteHoldText: () => 'saving paused' } };
   const component = load(`RawSplitHome.${platform}.tsx`, mocks, true).RawSplitHome;
   return { state, controller, calls, render: () => { layoutEffects.length = 0; return component({ controller, onScan: () => calls.push('scan') }); },
     runLayoutEffects: () => { while (layoutEffects.length) layoutEffects.shift()(); } };
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform} home starts its initial reload in the layout phase`, () => {
-    const h = home(platform); h.state.snapshot = null; h.render();
+    const h = home(platform); h.state.snapshot = null; h.state.pendingCheck = 'unread'; h.render();
     assert.deepEqual(h.calls, []); h.runLayoutEffects(); assert.deepEqual(h.calls, ['reload']);
   });
   test(`${platform} home exposes measured fields, source, balance and real actions`, () => {
@@ -461,8 +462,8 @@ for (const platform of ['ios', 'android']) {
     assert.deepEqual(h.calls, []); assert.equal(hooks.writes.some(write => write.afterUnmount), false);
   });
   test(`${platform} a closed sheet still lets the current history owner report a print failure`, async () => {
-    const { RawSplitHistoryController } = load('rawSplitHistoryController.ts', { '../shared/camera/synchronousGuard': load('../shared/camera/synchronousGuard.ts'), './rawSplitApi': { rawSplitSessionIsCurrent: () => true } });
-    let reject; const options = { ticket: {}, canMutate: () => true, scope: () => 'account', selectPrinter: async () => ({ transport: 'bluetooth', printer: {} }),
+    const { RawSplitHistoryController } = load('rawSplitHistoryController.ts', { '../shared/camera/synchronousGuard': load('../shared/camera/synchronousGuard.ts'), './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, './rawSplitApi': { rawSplitSessionIsCurrent: () => true } });
+    let reject; const options = { ticket: {}, canMutate: () => true, capturePrintLease: () => () => true, scope: () => 'account', selectPrinter: async () => ({ transport: 'bluetooth', printer: {} }),
       printerSupported: () => true, onUnsupportedPrinter: () => {}, onMessage: () => {},
       printOne: () => new Promise((_resolve, fail) => { reject = fail; }) };
     const controller = new RawSplitHistoryController(options), hooks = mountedHooks(), h = details(platform, null, value => value, issue, hooks.react);
@@ -548,4 +549,42 @@ for (const platform of ['ios', 'android']) test(`${platform} role scanner reject
     const h = scanner(platform, true, true, guard), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
     assert.equal(camera.props.isCurrent(), false); await new Promise(resolve => setImmediate(resolve));
   }
+});
+
+for (const platform of ['ios', 'android']) {
+  test(`${platform} Home starts locked and offers a localized status-only retry after a pending read failure`, () => {
+    const h = home(platform, value => `t(${value})`), type = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
+    h.state.pendingCheck = 'unread'; h.controller.locked = true; let tree = h.render();
+    assert.equal(find(tree, n => n.props?.label === 'Rulon QR / shtrix-kodi')[0].props.enabled, false);
+    assert.equal(find(tree, n => n.props?.label === 't(Qayta urinish)').length, 0);
+    h.state.pendingCheck = 'failed'; h.state.pendingCheckError = 'storage error'; h.state.pending = { request_id: 'old' }; tree = h.render();
+    assert.match(text(tree), /t\(Xatolik yuz berdi\)/); assert.match(text(tree), /storage error/);
+    assert.equal(find(tree, n => n.props?.label === 't(Tekshirish va chop etish)').length, 0);
+    const retry = find(tree, n => n.type === type && n.props.label === 't(Qayta urinish)')[0]; assert.ok(retry); retry.props.onPress();
+    assert.deepEqual(h.calls, ['recheck']);
+  });
+  test(`${platform} detail controls disable while the shared pending gate is blocked`, async () => {
+    const h = details(platform); h.props.printBlocked = true; const tree = h.resultTree(), buttons = reprintButtons(tree, platform);
+    assert.equal(buttons.isDisabled(buttons.one), true); assert.equal(buttons.isDisabled(buttons.all), true);
+    buttons.clickOne(); buttons.clickAll(); const type = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
+    const picker = find(tree, n => n.type === type && n.props.label === 'Printer tanlash')[0];
+    assert.ok(picker); picker.props.onPress(); await new Promise(done => setImmediate(done)); assert.deepEqual(h.calls, []);
+  });
+}
+for (const platform of ['ios', 'android']) test(`${platform} Home remount does not automatically retry a failed pending check`, () => {
+  const h = home(platform); h.state.pendingCheck = 'failed'; h.state.pendingCheckError = 'storage'; h.controller.locked = true;
+  h.render(); h.runLayoutEffects(); assert.deepEqual(h.calls, []);
+});
+for (const platform of ['ios', 'android']) test(`${platform} production write hold explains and disables stock, issue and pending retry actions`, () => {
+  const h = home(platform), type = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
+  h.controller.writesHeld = true; h.state.pending = { request_id: 'old' }; h.state.pendingIssue = { command: { request_id: 'old-issue' }, note: 'x' };
+  h.state.showIssue = true; h.state.waste = '1'; const tree = h.render(); assert.match(text(tree), /saving paused/);
+  const isDisabled = button => platform === 'ios' ? button.props.modifiers.some(m => m.modifier === 'disabled' && m.args[0] === true) : button.props.disabled;
+  for (const label of ['Tekshirish va chop etish', 'Muammo qaydini tekshirish', 'Muammoni saqlash', 'Saqlash va chop etish'])
+    assert.equal(isDisabled(find(tree, n => n.type === type && n.props.label === label)[0]), true, label);
+  find(tree, n => n.type === type && n.props.label === 'Tekshirish')[0].props.onPress(); assert.deepEqual(h.calls, ['recheck']);
+});
+for (const platform of ['ios', 'android']) test(`${platform} keeps committed-stock print failure and snapshot failure visible separately`, () => {
+  const h = home(platform); h.state.error = 'Omborga saqlandi. Chop etish: printer failed'; h.state.snapshotError = 'old snapshot failed';
+  const output = text(h.render()); assert.match(output, /Omborga saqlandi\. Chop etish: printer failed/); assert.match(output, /old snapshot failed/);
 });

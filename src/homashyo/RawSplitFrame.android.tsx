@@ -10,8 +10,8 @@ import { usePreparationText } from '../preparation/PreparationUI.android';
 import { RawSplitBusy } from './RawSplitBusy';
 import { RawSplitDock } from './RawSplitDock.android';
 
-export function RawSplitFrame({ title, page, busy = false, onPrinter, children }: { title: string; page: 'home' | 'history' | 'profile';
-  busy?: boolean; onPrinter?: () => void; children: ReactNode }) {
+export function RawSplitFrame({ title, page, busy = false, printerDisabled = false, onPrinter, children }: { title: string; page: 'home' | 'history' | 'profile';
+  busy?: boolean; printerDisabled?: boolean; onPrinter?: () => void; children: ReactNode }) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), drawer = useRoleDrawer(), t = usePreparationText();
   const back = () => { if (router.canGoBack()) router.back(); else router.replace('/android-homashyo' as Href); };
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}><View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -19,7 +19,7 @@ export function RawSplitFrame({ title, page, busy = false, onPrinter, children }
       onPress: page === 'home' ? drawer.open : back }} /></View>
     {page === 'home' && <Pressable accessibilityRole="button" accessibilityLabel={t('Rezka tarixi')} disabled={busy}
       onPress={() => router.push('/android-homashyo/history' as Href)} style={{ padding: 12 }}><SymbolView name={{ android: 'history' }} size={24} tintColor={colors.onSurfaceVariant} /></Pressable>}
-    {onPrinter && <Pressable accessibilityRole="button" accessibilityLabel={t('Printer tanlash')} disabled={busy} onPress={onPrinter} style={{ padding: 12 }}>
+    {onPrinter && <Pressable accessibilityRole="button" accessibilityLabel={t('Printer tanlash')} disabled={busy || printerDisabled} onPress={onPrinter} style={{ padding: 12 }}>
       <SymbolView name={{ android: 'print' }} size={24} tintColor={colors.onSurfaceVariant} /></Pressable>}</View>
     {busy && <RawSplitBusy />}
     <View style={{ flex: 1 }}>{children}</View><RawSplitDock profile={page === 'profile'} />

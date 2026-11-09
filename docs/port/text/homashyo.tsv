@@ -54,7 +54,14 @@ both	Printer qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.	RawSp
 both	GoDEX qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.	PORT.md D13 excludes GoDEX; the role explains this before committing stock.
 both	iOS Bluetooth printerini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.	The iOS native send path does not recheck the connected peripheral UUID against the selected job, so the role blocks this path before stock save or reprint.
 both	GoDEX qo‘llab-quvvatlanmaydi. Wi-Fi Zebra tanlang.	PORT.md D13 excludes GoDEX; the remaining safe role printer choice is explained before a stock write.
-both	USB printer qurilmasini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.	The iOS role blocks USB and Bluetooth until exact printer identity is checked, leaving Wi-Fi Zebra as the available choice.
+both	USB printer qurilmasini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.	The iOS role independently blocks USB and Bluetooth until exact printer identity is checked; the broader current hold also blocks Wi-Fi printing.
 both	Boshqa bo‘lish natijasi olindi. Natijani qayta tekshiring.	RawSplitResultMatch.ts rejects a response that does not match the saved stock command and keeps its pending key to prevent printing the wrong roll.
 both	Chiqib bo‘lmadi	RawSplitSessionGate.tsx reports a failed explicit logout without redirecting or claiming success.
 both	Profil sozlamalari hozircha mavjud emas.	The role opts into the shared Profile guard while Settings/PIN remains unavailable until those security-sensitive actions have their own session guard.
+both	Saqlash xavfsizlik tekshiruvi tugaguncha to‘xtatilgan	rawSplitApi.ts and rawSplitWritePolicy.ts stop direct stock dispatch under the unresolved durable-acknowledgment and same-scope hold.
+both	Muammo qaydi xavfsizlik tekshiruvi tugaguncha to‘xtatilgan	rawSplitApi.ts and rawSplitWritePolicy.ts stop direct issue dispatch under the unresolved durable-acknowledgment and same-scope hold.
+both	Chop etish xavfsizlik tekshiruvi tugaguncha to‘xtatilgan	rawSplitApi.ts and rawSplitPrintRuntime.ts stop Wi-Fi and native printing under the same unresolved hold.
+both	حفاظتی جانچ مکمل ہونے تک محفوظ کرنا، مسئلہ درج کرنا اور پرنٹ کرنا عارضی طور پر بند ہے۔	useRawSplitWriteHoldText.ts states the intentional production write and print hold in Urdu.
+both	Сохранение, регистрация проблемы и печать временно приостановлены до завершения проверки безопасности.	useRawSplitWriteHoldText.ts states the intentional production write and print hold in Russian.
+both	Saving, issue reporting and printing are temporarily paused pending a safety check.	useRawSplitWriteHoldText.ts states the intentional production write and print hold in English.
+both	Xavfsizlik tekshiruvi tugaguncha saqlash, muammoni qayd etish va chop etish vaqtincha to‘xtatilgan.	useRawSplitWriteHoldText.ts states the intentional production write and print hold in Uzbek.

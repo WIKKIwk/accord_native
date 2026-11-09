@@ -11,7 +11,7 @@ function setup() {
   const storage = { getItemAsync: async key => state.get(key) ?? null,
     setItemAsync: async (key, value) => state.set(key, typeof value === 'function' ? value(state.get(key) ?? null) : value),
     removeItemAsync: async key => state.delete(key) };
-  const api = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: storage, __esModule: true }, '../auth': auth,
+  const api = load('homashyo/rawSplitApi', { './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, 'expo-sqlite/kv-store': { default: storage, __esModule: true }, '../auth': auth,
     '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard'), '../authorizedFetch': { authorizedFetch: async (_s, _p, _i, guard) => { guard(); calls++; throw new Error('unexpected request'); } },
     '../shared/mobileApiException': load('shared/mobileApiException'), './rawSplitModel': load('homashyo/rawSplitModel'), './rawSplitResultMatch': load('homashyo/rawSplitResultMatch', { './rawSplitModel': load('homashyo/rawSplitModel') }) });
   const session = { baseUrl: 'https://example.invalid', token: 'not-a-credential', profile: { role: 'homashyo_rezkachi', ref: 'same' },

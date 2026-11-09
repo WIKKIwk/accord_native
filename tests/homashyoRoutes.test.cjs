@@ -13,6 +13,7 @@ function hooks() { const slots = [], pending = []; let cursor = 0, alive = true;
     useEffect: (effect, deps) => { const i = cursor++, previous = slots[i];
       if (!previous || !deps || deps.some((v, j) => v !== previous.deps[j])) pending.push(() => { previous?.cleanup?.(); slots[i] = { deps, cleanup: effect() }; }); },
     useCallback: fn => { cursor++; return fn; }, useSyncExternalStore: (_subscribe, get) => { cursor++; return get(); } };
+  react.useLayoutEffect = react.useEffect;
   return { react, render: fn => { cursor = 0; const result = fn(); while (pending.length) pending.shift()(); return result; },
     unmount: () => { alive = false; slots.forEach(value => value?.cleanup?.()); }, fresh: () => { slots.length = 0; pending.length = 0; alive = true; } };
 }
@@ -94,8 +95,8 @@ test('picker overlay StrictMode temporary effect cleanup does not settle the liv
   secondCleanup(); await flush(); assert.deepEqual(removed, [request]);
 });
 function scannerHarness() {
-  const h = hooks(); let valid = true, appListener, alert, values = [], lookups = [];
-  const home = { locked: false, setBarcode: value => values.push(value), lookup: async value => lookups.push(value) };
+  const h = hooks(); let valid = true, appListener, alert, values = [], lookups = [], gate = 0, ready = true, listener;
+  const home = { locked: false, subscribe: fn => { listener = fn; return () => {}; }, captureClearLease: () => { const captured = gate; return ready ? () => ready && captured === gate : null; }, setBarcode: value => values.push(value), lookup: async value => lookups.push(value) };
   const ctx = { ticket: {}, runtime: { home } };
   const mocks = { react: h.react, 'expo-router': { useFocusEffect: fn => h.react.useEffect(fn, []) },
     'react-native': { Alert: { alert: (...args) => { alert = args; } }, AppState: { currentState: 'active',
@@ -103,7 +104,7 @@ function scannerHarness() {
     './rawSplitApi': { rawSplitSessionIsCurrent: () => valid }, './RawSplitContext': { useRawSplitContext: () => ctx } };
   const { useRawSplitHomeScreen } = load('homashyo/useRawSplitHomeScreen.ts', mocks);
   return { render: () => h.render(() => useRawSplitHomeScreen()), values, lookups, alert: () => alert,
-    invalidate: () => { valid = false; }, app: value => appListener(value), unmount: h.unmount };
+    invalidate: () => { valid = false; }, setGate: value => { gate++; ready = value; listener?.(); }, app: value => appListener(value), unmount: h.unmount };
 }
 test('scanner displays detected code and requires confirmation before source lookup', async () => {
   const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render();
@@ -118,7 +119,7 @@ test('scanner rejects background, lost session, and confirmation after the sessi
 });
 test('history detail reuses native sheet and defers printer picker until sheet dismissal', async () => {
   let current = true, opened, options, closes = 0, selections = 0, reprints = 0;
-  const controller = { selectPrinter: async () => { selections++; }, getSnapshot: () => ({ printer: null }), reprint: async () => { reprints++; } }, sheet = { isOpen: () => false,
+  const controller = { capturePrinterLease: () => () => true, selectPrinter: async () => { selections++; }, getSnapshot: () => ({ printer: null }), reprint: async () => { reprints++; } }, sheet = { isOpen: () => false,
     open: (node, nextOptions) => { opened = node; options = nextOptions; }, close: () => { closes++; } };
   const ctx = { ticket: {}, runtime: { history: controller } };
   const mocks = { 'react/jsx-runtime': jsx, 'react-native': { Alert: { alert() {} } }, '../nativeSheet': { useNativeSheet: () => sheet },
@@ -160,7 +161,7 @@ test('provider composes the real picker owner, enables only a current witness, a
       renderedRequest = createTransientDevicePicker({ isCurrent, scan: async () => ({ servers: [], candidateCount: 0 }), probe: async () => null }); return renderedRequest; } },
     './rawSplitApi': { rawSplitSessionIsCurrent: () => current }, './rawSplitDeviceSelection': { rawSplitDeviceSelection: value => value, validateRawSplitDeviceSelection() {} },
     './RawSplitPickerOverlay': { RawSplitPickerOverlay: 'Overlay' }, './rawSplitPickerCoordinator': { RawSplitPickerCoordinator },
-    './rawSplitPrintRuntime': { rawSplitUnsupportedReason: () => 'blocked' }, './rawSplitRuntime': { createRawSplitRuntime: options => { runtimeOptions = options; return { dispose() { disposals++; } }; } } };
+    './rawSplitPrintRuntime': { rawSplitUnsupportedReason: () => 'blocked' }, './rawSplitRuntime': { createRawSplitRuntime: options => { runtimeOptions = options; return { home: { reload: async () => {}, subscribe: () => () => {} }, dispose() { disposals++; } }; } } };
   const { RawSplitProvider } = load('homashyo/RawSplitContext.tsx', mocks, true), props = { session: { token: 'real-session-placeholder' }, ticket: {}, onLogout() {}, children: 'screen',
     subscribeWitness: listener => { witnessListener = listener; return () => {}; }, witnessVersion: () => 0 };
   const render = () => h.render(() => RawSplitProvider(props)); render(); assert.equal(runtimeOptions.canMutate(), true);
@@ -213,14 +214,14 @@ test('a shell that cannot capture a witness stays on the explanation instead of 
 
 test('provider subscribes then rechecks a witness invalidated before subscription completed', () => {
   const h = hooks(); h.react.createContext = () => ({ Provider: 'ContextProvider' }); let current = true, disposals = 0, subscribeCalls = 0;
-  class Picker { dispose() {} }
+  class Picker { dispose() {} invalidateIfStale() {} }
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
     'expo-router': { router: { replace() {} } }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' },
     '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
     '../shared/printing/transientDevicePickerRuntime': {}, './rawSplitApi': { rawSplitSessionIsCurrent: () => current },
     './rawSplitDeviceSelection': {}, './RawSplitPickerOverlay': { RawSplitPickerOverlay: 'Overlay' }, './rawSplitPickerCoordinator': { RawSplitPickerCoordinator: Picker },
-    './rawSplitPrintRuntime': { rawSplitUnsupportedReason: () => 'blocked' }, './rawSplitRuntime': { createRawSplitRuntime: () => ({ dispose() { disposals++; } }) } };
+    './rawSplitPrintRuntime': { rawSplitUnsupportedReason: () => 'blocked' }, './rawSplitRuntime': { createRawSplitRuntime: () => ({ home: { reload: async () => {}, subscribe: () => () => {} }, dispose() { disposals++; } }) } };
   const { RawSplitProvider } = load('homashyo/RawSplitContext.tsx', mocks, true);
   const props = { session: { token: 'real-placeholder' }, ticket: {}, onLogout() {}, children: 'screen', witnessVersion: () => 0,
     subscribeWitness: () => { subscribeCalls++; current = false; return () => {}; } };
@@ -250,4 +251,41 @@ test('ordinary logout completion redirects when no other session or login exists
   const h = gateHarness(session('homashyo_rezkachi', ['raw_material.split'])); h.render(); await flush();
   const renderAuthorized = h.activate(h.render()), tree = renderAuthorized(); tree.props.onLogout(); await flush();
   assert.equal(h.logoutCalls(), 1); assert.equal(h.redirects(), 1); h.unmount();
+});
+
+test('scanner closes on a gate change and an old alert confirmation stays invalid after a successful recheck', async () => {
+  const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); assert.equal(flow.visible, true);
+  h.setGate(false); flow = h.render(); assert.equal(flow.visible, false); assert.equal(flow.isScannerCurrent(), false);
+  h.setGate(true); flow = h.render(); flow.scan(); flow = h.render(); flow.complete('OLD'); const confirm = h.alert()[2][1].onPress;
+  h.setGate(false); h.setGate(true); confirm(); await flush(); assert.deepEqual(h.lookups, []); h.unmount();
+});
+test('History dismiss-time picker and reprint cannot revive after a completed gate recheck', async () => {
+  let generation = 0, opened, options, picks = 0, prints = 0, closes = 0;
+  const controller = { capturePrinterLease: () => { const captured = generation; return () => generation === captured; },
+    selectPrinter: async () => { picks++; }, reprint: async () => { prints++; }, getSnapshot: () => ({ printer: null }) };
+  const sheet = { isOpen: () => false, open: (node, settings) => { opened = node; options = settings; }, close: () => { closes++; } };
+  const mocks = { 'react/jsx-runtime': jsx, 'react-native': { Alert: { alert() {} } }, '../nativeSheet': { useNativeSheet: () => sheet },
+    './rawSplitApi': { rawSplitSessionIsCurrent: () => true }, './RawSplitContext': { useRawSplitContext: () => ({ ticket: {}, runtime: { home: {}, history: controller } }) },
+    './RawSplitDetails': { RawSplitIssueDetails: 'IssueDetails' }, './RawSplitResultBinding': { RawSplitResultBinding: 'ResultBinding' } };
+  const flow = load('homashyo/useRawSplitHistoryActions.tsx', mocks, true).useRawSplitHistoryActions();
+  flow.onResult({ id: 'x' }); opened.props.onSelectPrinterAfterDismiss(); generation++; options.onDismiss(); await flush(); assert.equal(picks, 0);
+  flow.onResult({ id: 'y' }); await opened.props.onReprintRequest(); generation++; options.onDismiss(); await flush();
+  assert.equal(prints, 0); assert.equal(closes, 2);
+});
+test('provider rechecks a picker after subscribing, including a transition before subscription completes', () => {
+  const h = hooks(); h.react.createContext = () => ({ Provider: 'ContextProvider' }); let stale = false, checks = 0, invalidations = 0;
+  class Picker { invalidateIfStale() { checks++; if (stale) invalidations++; } dispose() {} }
+  const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
+    'expo-router': { router: {} }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
+    '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' },
+    '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
+    '../shared/printing/transientDevicePickerRuntime': {}, './rawSplitApi': { rawSplitSessionIsCurrent: () => true }, './rawSplitDeviceSelection': {},
+    './RawSplitPickerOverlay': { RawSplitPickerOverlay: 'Overlay' }, './rawSplitPickerCoordinator': { RawSplitPickerCoordinator: Picker },
+    './rawSplitPrintRuntime': { rawSplitUnsupportedReason: () => '' }, './rawSplitRuntime': { createRawSplitRuntime: () => ({
+      home: { subscribe: () => { stale = true; return () => {}; } }, dispose() {} }) } };
+  const Provider = load('homashyo/RawSplitContext.tsx', mocks, true).RawSplitProvider;
+  h.render(() => Provider({ session: { token: 'real' }, ticket: {}, onLogout() {}, children: 'screen', subscribeWitness: () => () => {}, witnessVersion: () => 0 }));
+  assert.equal(checks, 1); assert.equal(invalidations, 1); h.unmount();
+  h.fresh(); stale = false; h.render(() => Provider({ session: { token: 'real' }, ticket: {}, onLogout() {}, children: 'screen', subscribeWitness: () => () => {}, witnessVersion: () => 0 }));
+  assert.equal(checks, 2); assert.equal(invalidations, 2); h.unmount();
 });

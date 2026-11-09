@@ -5,14 +5,14 @@ function load(name, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
 const syncGuard = load('../shared/camera/synchronousGuard');
-const model = load('rawSplitModel'), { RawSplitHistoryController } = load('rawSplitHistoryController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitApi': { rawSplitSessionIsCurrent: ticket => { try { ticket.check(); return true; } catch { return false; } } } });
+const model = load('rawSplitModel'), { RawSplitHistoryController } = load('rawSplitHistoryController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, './rawSplitApi': { rawSplitSessionIsCurrent: ticket => { try { ticket.check(); return true; } catch { return false; } } } });
 const source = { revision: '1', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM', item_name: 'Film', kg: '100', width_mm: '1000', micron: '20' };
 const result = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2', outputs: [
   { ...source, stock_id: 'c1', barcode: 'c1', kg: '39', gross_kg: '40', bobina_kg: '1', width_mm: '400' },
   { ...source, stock_id: 'c2', barcode: 'c2', kg: '59', gross_kg: '60', bobina_kg: '1', width_mm: '600' }] });
 function setup() {
   let selection = { transport: 'bluetooth', printer: {} }, calls = [], notices = [];
-  const options = { ticket: { session: {}, check() {} }, canMutate: () => true, snapshot: async () => new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] }),
+  const options = { ticket: { session: {}, check() {} }, canMutate: () => true, capturePrintLease: () => () => true, snapshot: async () => new model.RawSplitSnapshot({ warehouses: ['Raw W'], history: [], issues: [] }),
     scope: () => 'account-1', selectPrinter: async () => selection, printOne: async (_result, output) => { calls.push(output.barcode); }, onMessage: message => notices.push(message),
     printerSupported: () => true, onUnsupportedPrinter: () => notices.push('unsupported-printer') };
   return { c: new RawSplitHistoryController(options), options, calls, notices, setSelection: value => { selection = value; } };
@@ -114,4 +114,11 @@ test('write witness revoked during a print prevents later output and success not
   h.options.printOne = async (_result, output, _printer, _kind, guard) => { guard(); h.calls.push(output.barcode); allowed = false; guard(); };
   await h.c.reprint(result); assert.deepEqual(h.calls, ['c1']); assert.deepEqual(h.notices, []);
   assert.match(h.c.getSnapshot().error, /Sessiya xavfsizligi/);
+});
+test('production hold blocks direct History printer selection and reprints even after verified pending reads', async () => {
+  const Held = load('rawSplitHistoryController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => false },
+    './rawSplitApi': { rawSplitSessionIsCurrent: () => true } }).RawSplitHistoryController;
+  const h = setup(); let picks = 0, prints = 0; h.options.selectPrinter = async () => { picks++; return { transport: 'bluetooth', printer: {} }; };
+  h.options.printOne = async () => { prints++; }; const c = new Held(h.options);
+  assert.equal(c.capturePrinterLease(), null); await c.selectPrinter(); await c.reprint(result); assert.deepEqual([picks, prints], [0, 0]); c.dispose();
 });

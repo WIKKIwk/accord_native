@@ -15,11 +15,11 @@ function RawSplitDetailLine({ label, value }: RawSplitDetailRow) {
 }
 
 export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPrinter, onSelectPrinter, onWifiChanged,
-  onReprint, onReprintAll, onError }: RawSplitDetailsProps) {
+  onReprint, onReprintAll, onError, printBlocked = false }: RawSplitDetailsProps) {
   const [printing, setPrinting] = useState(false), inFlight = useRef(false), mounted = useRef(true), t = usePreparationText();
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const run = async (action: () => Promise<void>) => {
-    if (inFlight.current) return;
+    if (inFlight.current || printBlocked) return;
     inFlight.current = true; setPrinting(true);
     try { await action(); } catch (error) { if (mounted.current) onError(error); } finally { inFlight.current = false; if (mounted.current) setPrinting(false); }
   };
@@ -33,13 +33,13 @@ export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPr
         {output.lengthM !== null && !!output.lengthM && <Text>{t(`Metri: ${rawSplitDisplay(output.lengthM)} m`)}</Text>}
         <Text modifiers={[textSelection(true)]}>{output.barcode}</Text></VStack>
       <Button label="Shu rulonni qayta chop etish" systemImage="printer" modifiers={[labelStyle('iconOnly'),
-        accessibilityLabel('Shu rulonni qayta chop etish'), disabled(printing)]} onPress={() => { void run(() => onReprint(output)); }} />
+        accessibilityLabel('Shu rulonni qayta chop etish'), disabled(printing || printBlocked)]} onPress={() => { void run(() => onReprint(output)); }} />
     </HStack>)}
-    {printerLabel === null ? <Button label={t('Printer tanlash')} systemImage="printer" modifiers={[disabled(printing), buttonStyle('bordered')]}
-      onPress={onSelectPrinter} /> : <HStack spacing={8}><Image systemName="printer" size={20} /><Text>{t(`Printer: ${printerLabel}`)}</Text>{showWifiSelector &&
-        <Menu label={t(wifiPrinter === 'godex' ? 'GoDEX' : 'Zebra')}><Button label={t('GoDEX')} modifiers={[disabled(printing)]} onPress={() => onWifiChanged('godex')} />
-          <Button label={t('Zebra')} modifiers={[disabled(printing)]} onPress={() => onWifiChanged('zebra')} /></Menu>}</HStack>}
-    <Button label={t('Barchasini qayta chop etish')} systemImage="printer" modifiers={[disabled(printing), buttonStyle('borderedProminent')]}
+    {printerLabel === null ? <Button label={t('Printer tanlash')} systemImage="printer" modifiers={[disabled(printing || printBlocked), buttonStyle('bordered')]}
+      onPress={() => { if (!printBlocked) onSelectPrinter(); }} /> : <HStack spacing={8}><Image systemName="printer" size={20} /><Text>{t(`Printer: ${printerLabel}`)}</Text>{showWifiSelector &&
+        <Menu label={t(wifiPrinter === 'godex' ? 'GoDEX' : 'Zebra')}><Button label={t('GoDEX')} modifiers={[disabled(printing || printBlocked)]} onPress={() => { if (!printBlocked) onWifiChanged('godex'); }} />
+          <Button label={t('Zebra')} modifiers={[disabled(printing || printBlocked)]} onPress={() => { if (!printBlocked) onWifiChanged('zebra'); }} /></Menu>}</HStack>}
+    <Button label={t('Barchasini qayta chop etish')} systemImage="printer" modifiers={[disabled(printing || printBlocked), buttonStyle('borderedProminent')]}
       onPress={() => { void run(onReprintAll); }} />
   </VStack></ScrollView></Host>;
 }

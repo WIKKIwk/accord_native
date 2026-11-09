@@ -200,3 +200,19 @@ test('main default false result never closes Wi-Fi, Bluetooth or USB selection',
   const picker = useDevicePicker(operator, () => closed++); await picker.selectServer({}); await picker.selectBluetooth({}); await picker.selectUsb();
   assert.equal(selections, 3); assert.equal(closed, 0);
 });
+
+test('safe queued USB action does not start native detection after its lease expires', async () => {
+  let detections = 0; const h = guardedHook({ detectOfflinePrinter: async () => { detections++; return { kind: 'zebra' }; } });
+  h.invalidate(); const before = h.calls.length; await h.picker.selectUsb(); assert.equal(detections, 0); assert.equal(h.calls.length, before); assert.equal(h.closed(), 0);
+});
+test('safe queued Bluetooth selection and discovery effect do not start after their lease expires', async () => {
+  let valid = true, watches = 0, selections = 0; const effects = [], changes = [];
+  const operator = { subscribe: () => () => {}, getSnapshot: () => ({ device: { connection: 'bluetooth' } }), selectConnection() {},
+    selectionToken: () => 1, isSelectionCurrent: () => valid, selectDevice: async () => { selections++; return true; } };
+  const react = { useSyncExternalStore: (_sub, get) => get(), useEffect: fn => effects.push(fn), useState: value => [value, next => changes.push(next)] };
+  const { useDevicePicker } = compile('shared/printing/useDevicePicker.ts', { react, 'react-native': { Platform: { OS: 'android' } },
+    '../../gscale/gscaleBluetoothDevices': { watchGScaleBluetoothDevices: async () => { watches++; return () => {}; } },
+    '../../printing/nativePrinter': { NativeBluetoothPrinter: {} }, '../../printing/printService': { PrintService: {} } });
+  const picker = useDevicePicker(operator, () => {}, true); valid = false; effects[1](); picker.choose('bluetooth'); picker.rescanBluetooth();
+  assert.equal(watches, 0); assert.deepEqual(changes, []); await picker.selectBluetooth({ address: 'AA' }); assert.equal(selections, 0);
+});
