@@ -514,3 +514,14 @@ Both platforms now have actual `QolipPaddonCreateDialog` and `QolipInspectionDia
 | Dialog buttons, dismissal and source exceptional scan path | Both native dialogs and shared hook | source flow | source flow | A rejected scan-dialog future leaves source scanning locked until ordinary dismissal; no invented error text or retry is added. Native bridge reporting differs from Flutter error logging. |
 
 Focused checks: 15 state, 10 native-view host and 4 hook-lifecycle cases pass; shared barcode parser host cases also pass. Source annotations mark the real dialog surfaces, not a full StorageScreen. The hook keeps the original scanner opener for one dialog lifetime and updates expected/warehouse lists without resetting selected/scanned values. An actual phone and the complete role/storage caller remain open. PORT-023 records these remaining dependencies centrally.
+
+## Storage product/archive projection checkpoint
+
+Ported source product grouping/membership, archive snapshot-to-mold identity projection, pallet count/location, mold/pallet status precedence and storage-specific exception localization keys. Nine focused source-derived cases pass. Duplicate normalized product links retain repeated occurrences and first metadata; archive entries with the same code remain separate objects, matching the source identity map. No API/cache/action is invoked by these projections. Existing shared product/parser edge notes and phone Unicode-table checks remain applicable.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Group/membership; picker products:3–59 | `qolipStoragePresentation.ts` | shared rule | shared rule | Grouped native cards, image resolver, detail/selection callers remain open. |
+| Archive mold snapshots; archive mold list:23–41 | Same projection file | shared rule | shared rule | Source object identity retained; no claim that the archive view is implemented. |
+| Pallet count/location; storage screen:239–250 | Same projection file | shared rule | shared rule | Unknown count stays unknown rather than inferred zero. |
+| Status/error precedence; storage screen:95–146 | Same projection file | shared rule | shared rule | Actual notice/action callers remain to be wired; no new user-facing text added. |
