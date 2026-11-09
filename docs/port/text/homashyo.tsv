@@ -53,7 +53,7 @@ both	USB printer qurilmasini aniq tekshirib bo‘lmaydi. Bluetooth yoki Wi-Fi Ze
 both	Printer qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.	RawSplitDeviceSelection.ts rejects unrecognized printer choices before they can reach a stock operation.
 both	GoDEX qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.	PORT.md D13 excludes GoDEX; the role explains this before committing stock.
 both	iOS Bluetooth printerini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.	The iOS native send path does not recheck the connected peripheral UUID against the selected job, so the role blocks this path before stock save or reprint.
-both	GoDEX qo‘llab-quvvatlanmaydi. Wi-Fi Zebra tanlang.	PORT.md D13 excludes GoDEX; the remaining safe role printer choice is explained before a stock write.
+both	GoDEX qo‘llab-quvvatlanmaydi. Wi-Fi Zebra tanlang.	PORT.md D13 excludes GoDEX; the Wi-Fi Zebra message describes a future preflight choice only. All printer selection and printing are currently held by rawSplitWritePolicy.ts.
 both	USB printer qurilmasini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.	The iOS role independently blocks USB and Bluetooth until exact printer identity is checked; the broader current hold also blocks Wi-Fi printing.
 both	Boshqa bo‘lish natijasi olindi. Natijani qayta tekshiring.	RawSplitResultMatch.ts rejects a response that does not match the saved stock command and keeps its pending key to prevent printing the wrong roll.
 both	Chiqib bo‘lmadi	RawSplitSessionGate.tsx reports a failed explicit logout without redirecting or claiming success.
