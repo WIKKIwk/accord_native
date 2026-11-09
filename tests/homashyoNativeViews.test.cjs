@@ -502,7 +502,9 @@ for (const platform of ['ios', 'android']) {
     const h = scanner(platform, true), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
     assert.ok(camera); assert.deepEqual(camera.props.barcodeTypes, ['qr', 'datamatrix']);
     camera.props.onDetection({ raw: 'raw-code', data: 'display-code' });
-    find(h.tree, n => n.type === 'WorkerSheetButton' && n.props.label === 'OK')[0].props.onPress();
+    const manualButton = find(h.tree, n => n.type === 'WorkerSheetButton' && n.props.label === 'OK')[0];
+    assert.deepEqual(manualButton.props.icon, { ios: 'checkmark', android: 'check' });
+    manualButton.props.onPress();
     find(h.tree, n => n.type === 'Modal')[0].props.onRequestClose();
     assert.deepEqual(h.calls, [['complete', 'raw-code'], ['complete', 'manual-code'], 'close']);
   });

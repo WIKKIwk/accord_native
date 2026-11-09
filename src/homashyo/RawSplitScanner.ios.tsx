@@ -33,7 +33,7 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
       <View style={[styles.manual, { paddingBottom: Math.max(insets.bottom, 16) }]}><Host matchContents={{ vertical: true }} style={{ flex: 1 }}>
         <TextField text={input} placeholder={scan.manualLabel} onTextChange={scan.setManual}
           modifiers={[textFieldStyle('roundedBorder'), frame({ maxWidth: Infinity }), submitLabel('done'), onSubmit(() => scan.complete(scan.manual))]} />
-      </Host><View style={{ width: 92 }}><WorkerSheetButton label="OK" variant="filled" onPress={() => scan.complete(scan.manual)} /></View></View>
+      </Host><View style={{ width: 92 }}><WorkerSheetButton label="OK" icon={{ ios: 'checkmark', android: 'check' }} variant="filled" onPress={() => scan.complete(scan.manual)} /></View></View>
     </View>
   </Modal>;
 }

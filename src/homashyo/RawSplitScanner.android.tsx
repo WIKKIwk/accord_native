@@ -33,7 +33,7 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
         <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={input} singleLine onValueChange={scan.setManual}
           keyboardOptions={{ imeAction: 'done' }} keyboardActions={{ onDone: () => scan.complete(scan.manual) }} modifiers={[fillMaxWidth()]}>
           <OutlinedTextField.Label><ComposeText>{scan.manualLabel}</ComposeText></OutlinedTextField.Label>
-        </OutlinedTextField></Host></View><View style={{ width: 92 }}><WorkerSheetButton label="OK" variant="filled" onPress={() => scan.complete(scan.manual)} /></View></View>
+        </OutlinedTextField></Host></View><View style={{ width: 92 }}><WorkerSheetButton label="OK" icon={{ ios: 'checkmark', android: 'check' }} variant="filled" onPress={() => scan.complete(scan.manual)} /></View></View>
     </View>
   </Modal>;
 }
