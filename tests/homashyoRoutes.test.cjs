@@ -68,7 +68,7 @@ test('missing epoch reader is fail-closed and an old load cannot restore access 
   old.render(); await old.reset(); resolve(session('homashyo_rezkachi', ['raw_material.split'])); await flush();
   assert.equal(old.render().type, 'View'); old.unmount();
 });
-test('both platform layouts guard index, history and profile; no Homashyo Chat route exists', () => {
+test('both platform layouts guard index, history, profile and shared Chat routes', () => {
   for (const platform of ['ios', 'android']) {
     const root = path.resolve(__dirname, `../src/app/${platform}-homashyo`);
     assert.match(fs.readFileSync(path.join(root, '_layout.tsx'), 'utf8'), new RegExp(`RawSplitSessionGate platform="${platform}"`));
