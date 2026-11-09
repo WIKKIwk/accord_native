@@ -1,0 +1,6 @@
+<!-- Google Material Icons: send. Apache-2.0; see navigation/LICENSE. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+  android:width="24dp" android:height="24dp"
+  android:viewportWidth="24" android:viewportHeight="24">
+  <path android:fillColor="#FFFFFFFF" android:pathData="M2.01,21L23,12L2.01,3L2,10L17,12L2,14Z" />
+</vector>

@@ -1,11 +1,10 @@
-import { Host, OutlinedTextField, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
+import { CircularProgressIndicator, FilledIconButton, Host, Icon, IconButton, OutlinedTextField, Row, Shape, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
+import { background, fillMaxWidth, padding, paddingAll, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { draftAfterSending } from '../chatComposer';
 import { discardChatMedia, prepareChatDocument, prepareChatMedia, type ChatMediaDraft } from '../chatMedia';
@@ -65,12 +64,16 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
     } finally { sending.current = false; if (mounted.current) setBatchSending(false); }
   };
   const rows = chatTimeline(session, thread.messages ?? [], thread.pending);
-  return <KeyboardAvoidingView behavior="height" style={{ flex: 1, backgroundColor: colors.surface }}>
+  // Android's adjustResize already gives this screen the area above the IME.
+  // A second KeyboardAvoidingView height calculation used screen coordinates
+  // below the native header and left the composer behind the keyboard.
+  return <View testID="chat-thread" style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}>
     <Stack.Screen options={{ title: title || 'Suhbat' }} />
-    <FlatList ref={list} data={rows} keyExtractor={item => item.key} keyboardShouldPersistTaps="handled"
+    <FlatList ref={list} style={styles.messages} data={rows} keyExtractor={item => item.key} keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ flexGrow: 1, padding: 12 }} maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
       onScroll={event => { const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent; followLatest.current = contentSize.height - layoutMeasurement.height - contentOffset.y < 80; }}
       onContentSizeChange={() => { if (followLatest.current) list.current?.scrollToEnd({ animated: false }); }}
+      onLayout={() => { if (followLatest.current) list.current?.scrollToEnd({ animated: false }); }}
       refreshControl={<RefreshControl refreshing={thread.messages === null && !thread.error} onRefresh={() => void thread.refresh()} />}
       ListHeaderComponent={<View style={{ gap: 8 }}>
         {thread.hasMore && <Pressable disabled={thread.loadingMore} onPress={() => { followLatest.current = false; void thread.loadOlder(); }} style={{ padding: 12 }}><Text style={{ color: colors.primary }}>Avvalgi xabarlar</Text></Pressable>}
@@ -90,15 +93,34 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
     {!!media.length && <ScrollView horizontal style={{ maxHeight: 124 }} contentContainerStyle={{ padding: 8, gap: 8 }}>{media.map(item => <View key={item.clientMessageId}>
       <SelectedChatMediaPreview draft={item} /><Pressable disabled={busy} accessibilityLabel="Olib tashlash" onPress={() => remove(item)}><Text style={{ color: colors.primary }}>Olib tashlash</Text></Pressable>
     </View>)}</ScrollView>}
-    <View style={{ flexDirection: 'row', alignItems: 'center', padding: 8, paddingBottom: Math.max(8, insets.bottom), gap: 8 }}>
-      <Pressable disabled={busy || !thread.storageReady} accessibilityRole="button" accessibilityLabel="Biriktirish" onPress={attachments} style={{ padding: 8 }}>
-        <SymbolView name={{ android: 'add' }} size={26} tintColor={colors.primary} /></Pressable>
-      <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><OutlinedTextField value={input} onValueChange={setDraft} enabled={!busy} modifiers={[fillMaxWidth()]}>
-        <OutlinedTextField.Placeholder><ComposeText>Xabar yozing</ComposeText></OutlinedTextField.Placeholder>
-      </OutlinedTextField></Host>
-      <Pressable disabled={busy || !thread.storageReady || (!draft.trim() && !media.length)} accessibilityRole="button" accessibilityLabel="Yuborish" onPress={() => void send()} style={{ padding: 8 }}>
-        {busy ? <ActivityIndicator /> : <SymbolView name={{ android: 'send' }} size={26} tintColor={colors.primary} />}
-      </Pressable>
-    </View>
-  </KeyboardAvoidingView>;
+    <Host matchContents={{ vertical: true }} style={styles.composer}>
+      <Row verticalAlignment="bottom" horizontalArrangement={{ spacedBy: 4 }} modifiers={[
+        fillMaxWidth(), background(colors.surfaceContainerLow), padding(4, 8, 4, Math.max(8, insets.bottom)), testID('chat-composer'),
+      ]}>
+        <IconButton enabled={!busy && thread.storageReady} onClick={attachments}
+          modifiers={[size(56, 56), paddingAll(4), semantics({ contentDescription: 'Biriktirish' }), testID('chat-attach')]}>
+          <Icon source={require('../../assets/icons/fab-add.xml')} size={24} />
+        </IconButton>
+        <OutlinedTextField value={input} onValueChange={setDraft} enabled={!busy} minLines={1} maxLines={4}
+          shape={Shape.RoundedCorner({ cornerRadii: { topStart: 28, topEnd: 28, bottomStart: 28, bottomEnd: 28 } })}
+          colors={{ focusedContainerColor: colors.surface, unfocusedContainerColor: colors.surface }}
+          textStyle={{ textAlign: 'left', fontSize: 16 }}
+          modifiers={[weight(1), semantics({ contentDescription: 'Xabar yozing' }), testID('chat-message-input')]}>
+          <OutlinedTextField.Placeholder><ComposeText>Xabar yozing</ComposeText></OutlinedTextField.Placeholder>
+        </OutlinedTextField>
+        <FilledIconButton enabled={!busy && thread.storageReady && (!!draft.trim() || !!media.length)} onClick={() => void send()}
+          colors={{ containerColor: colors.primary, contentColor: colors.onPrimary }} shape={Shape.Circle({})}
+          modifiers={[size(56, 56), paddingAll(4), semantics({ contentDescription: 'Yuborish' }), testID('chat-send')]}>
+          {busy ? <CircularProgressIndicator color={colors.onSurfaceVariant} modifiers={[size(24, 24)]} />
+            : <Icon source={require('../../assets/icons/chat-send.xml')} size={24} />}
+        </FilledIconButton>
+      </Row>
+    </Host>
+  </View>;
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  messages: { flex: 1, minHeight: 0 },
+  composer: { width: '100%', flexShrink: 0 },
+});
