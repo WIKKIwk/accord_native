@@ -102,3 +102,9 @@ Bu paket avvalgi `c07156e` holatidan davom etdi. Quyidagi 10 branch bittalab jor
 - Clock moduli iOS `iphoneos` uchun unsigned build va Android debug AAR assembly’dan o‘tdi; Android tekshiruvi command-only SDK 36 / NDK 28.2 bilan bo‘ldi. C va Swift clock core’lari host’da kompilyatsiya qilinib tekshirildi. Bu butun app yoki telefon sinovi emas.
 - Ledger: 1,038 source / 88 test tag resolve, avvalgi 11 endpoint warning, V2 drift 0. Text gate hali ochiq: iOS 80 missing / 55 extra; Android 80 / 64, global-only scope mosliklari 376 / 381. Yangi matn istisnosi yo‘q.
 - Native development binary qayta build qilinishi va telefon sinovi kerak. V2 checkout o‘zgarmadi; Flutter/Dart, live backend, simulator yoki printer ishlatilmadi. Push qilinmaydi.
+
+## Qolip storage davomiy paketi
+
+`9020735` main’dan keyin storage retry intent (`1c9cf3b`), guarded paddon/arxiv read/filter/pagination (`5237c84`), ikki platformada native create/inspection dialoglari (`5a922dd`) va storage/archive grouping/snapshot/status/error qoidalari (`70533b0`) port qilindi. Qolipchi roli hali to‘liq emas va route’larga ochilmadi. Qolgan source caller/surface ishlari PORT-012/021–023’da; kamera/native telefon ishlari PORT-019/020’da.
+
+Tekshiruv: Qolip/shared-camera 823/823; to‘liq Node 5,107 test — 5,089 pass, avvalgi 6 Preparation host-import fail, 12 TODO. iOS types/lint hamda iOS/Android Hermes eksporti o‘tdi. Android’da aynan avvalgi 9 Worker diagnostikasi va lint’da avvalgi bitta Admin warning bor. Ledger 1,049 source / 88 test tag’ni tasdiqladi; 11 avvalgi endpoint warning saqlandi. V2 HEAD/baseline f119, drift 0. Yangi ichki count-error matni text review’da olib tashlandi; yangi matn istisnosi yo‘q. Native dialoglar telefonda ishlatilgani yoki butun rol tugagani da’vo qilinmaydi. Push qilinmaydi.

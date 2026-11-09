@@ -52,7 +52,7 @@ export function qolipArchivePaddonMoldCount(entry: QolipArchiveEntry): number | 
   if (Array.isArray(entry.snapshot.items)) return entry.snapshot.items.length;
   const count = jsonObject(entry.snapshot.paddon)?.item_count;
   if (typeof count !== 'number' || count < 0 || Number.isNaN(count)) return null;
-  if (!Number.isFinite(count)) throw new RangeError('Nonfinite mold count');
+  if (!Number.isFinite(count)) throw new RangeError();
   return Math.trunc(count) || 0;
 }
 
