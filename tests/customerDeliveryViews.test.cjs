@@ -19,10 +19,10 @@ function load(file, mocks = {}) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   return mod.exports;
 }
-const logic = load('customerLogic.ts'), view = load('customerDeliveryView.ts');
+const logic = load('customerLogic.ts'), view = load('customerDeliveryView.ts'), presentation = load('customerPresentation.ts', { './customerLogic': logic });
 const record = { id: 'dn', supplier_name: 'Customer', item_code: 'P1', item_name: 'Product', sent_qty: 10, accepted_qty: 3,
   uom: 'kg', note: ' a note ', status: 'partial' };
-function fixture(platform, state, stateValues = [false, null], text = key => key) {
+function fixture(platform, state, stateValues = [false, null], text = key => key, locale = 'uz') {
   let index = 0; const updates = [], focus = [];
   const mocks = { 'react/jsx-runtime': jsx, react: { useCallback: fn => fn, useRef: value => ({ current: value }),
     useState: () => { const i = index++; return [stateValues[i], value => updates.push([i, value])]; } },
@@ -35,12 +35,12 @@ function fixture(platform, state, stateValues = [false, null], text = key => key
     '@expo/ui/jetpack-compose': { Button: 'Button', FilledTonalButton: 'FilledTonalButton', Host: 'Host', OutlinedButton: 'OutlinedButton', Text: 'Text',
       Shape: { RoundedCorner: props => ({ type: 'NativeShape', props }) },
       useMaterialColors: () => ({ primary: 'primary', onPrimary: 'on-primary', onSurface: 'fg', onSurfaceVariant: 'muted', surfaceContainerLow: 'bg',
-      secondaryContainer: 'status-bg', onSecondaryContainer: 'status-fg' }) },
+      surfaceContainerHigh: 'header', outlineVariant: 'outline', secondaryContainer: 'status-bg', onSecondaryContainer: 'status-fg' }) },
     '@expo/ui/jetpack-compose/modifiers': { defaultMinSize: value => ['defaultMinSize', value], fillMaxWidth: () => ['fillMaxWidth'], testID: value => ['testID', value] },
     'react-native': { ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', Text: 'Text', View: 'View', PlatformColor: value => value },
     '../components/WorkerAlert': { WorkerAlert: 'WorkerAlert' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
-    './CustomerContext': { useCustomerText: () => ({ text }) }, './CustomerStates': loadCustomerStates(platform, { text }),
-    './customerLogic': logic, './customerDeliveryView': view,
+    './CustomerContext': { useCustomerText: () => ({ locale, text }) }, './CustomerStates': loadCustomerStates(platform, { text }),
+    './customerLogic': logic, './customerDeliveryView': view, './customerPresentation': presentation,
     './CustomerReturnDialog': { CustomerReturnDialog: 'CustomerReturnDialog' }, './CustomerSnackbar': { CustomerSnackbar: 'CustomerSnackbar' },
     './useCustomerScreens': { useCustomerDelivery: () => state } };
   return { ...load(`CustomerDelivery.${platform}.tsx`, mocks), updates, focus };
@@ -155,7 +155,7 @@ test('both platforms render full shipment facts as read-only stacked text, with 
     const snapshot = state([], { detail: { record: longRecord, canApprove: false, canReject: false, canPartiallyAccept: false, canReportClaim: false } });
     const screen = fixture(platform, snapshot, [false, null], text).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
     const info = platform === 'ios' ? nodes(screen, n => n.type === 'Section' && n.props.title === labels.shipmentInfoTitle)[0]
-      : nodes(screen, n => n.type === 'WorkerQueueCard')[0];
+      : nodes(screen, n => n.props.testID === 'customer-delivery-panel')[0];
     assert.equal(nodes(info, n => ['ListItem', 'Button', 'FilledTonalButton', 'OutlinedButton', 'Pressable', 'TextButton'].includes(n.type) || n.props?.onPress).length, 0,
       `${platform} shipment facts must not create no-op action targets`);
     const texts = nodes(info, n => n.type === 'Text');
@@ -184,6 +184,45 @@ test('a translated non-Status label keeps the plain V2 detail value on both plat
     if (platform === 'ios') assert.equal(status.props.modifiers.some(m => m[0] === 'background'), false);
     else assert.equal(status.props.style.color, 'fg');
   }
+});
+
+test('Android delivery facts use source card, section and field geometry without adding actions', async () => {
+  const calls = [], snapshot = state(calls), screen = fixture('android', snapshot, [false, null], key => key, 'ur-PK')
+    .CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
+  const scroll = nodes(screen, n => n.type === 'ScrollView')[0];
+  scroll.props.refreshControl.props.onRefresh(); await Promise.resolve(); assert.deepEqual(calls, ['reload']);
+  const panel = nodes(screen, n => n.props.testID === 'customer-delivery-panel')[0];
+  assert.equal(panel.props.style.backgroundColor, 'bg'); assert.equal(panel.props.style.borderRadius, 24);
+  assert.equal(panel.props.style.marginStart, 4); assert.equal(panel.props.style.marginEnd, 6); assert.equal(panel.props.style.direction, 'rtl');
+  const headers = nodes(panel, n => n.props.testID === 'customer-delivery-header');
+  assert.deepEqual(headers.map(n => n.props.children.props.children), ['shipmentInfoTitle', 'noteTitle', 'responseTitle']);
+  for (const [index, header] of headers.entries()) {
+    assert.equal(header.props.style.backgroundColor, 'header'); assert.equal(header.props.style.paddingHorizontal, 18);
+    assert.equal(header.props.style.paddingVertical, 14); assert.equal(header.props.style.borderTopLeftRadius, index === 0 ? 20 : 0);
+    assert.equal(header.props.style.borderTopRightRadius, index === 0 ? 20 : 0);
+    assert.deepEqual(header.props.children.props.style, { color: 'muted', fontSize: 16, fontWeight: '700' });
+  }
+  const facts = nodes(panel, n => n.props.testID === 'customer-delivery-facts')[0];
+  assert.equal(facts.props.style.padding, 18); assert.equal(facts.props.style.gap, 12);
+  assert.equal(facts.props.children.length, 5); assert.ok(facts.props.children.every(line => line.props.style.gap === 6));
+  assert.equal(nodes(facts, n => ['Button', 'FilledTonalButton', 'OutlinedButton', 'Pressable', 'TextButton'].includes(n.type) || n.props.onPress).length, 0);
+  const note = nodes(panel, n => n.props.testID === 'customer-delivery-note')[0];
+  assert.equal(note.props.style.padding, 18); assert.equal(note.props.children.props.children, record.note);
+  const dividers = nodes(panel, n => n.props.testID === 'customer-delivery-divider'); assert.equal(dividers.length, 2);
+  for (const item of dividers) assert.deepEqual(item.props.style, { height: 1, marginHorizontal: 18, backgroundColor: 'outline', opacity: 0.55 });
+  assert.equal(nodes(panel, n => n.type === 'Text' && n.props.children === 'commentsTitle').length, 0);
+  assert.equal(deliveryButtons(screen).some(button => button.props.label === 'openDiscussionAction'), false);
+  assert.deepEqual(calls, ['reload']);
+});
+
+test('Android read-only delivery panel omits note and response sections when V2 conditions are false', () => {
+  const detail = { record: { ...record, note: ' \u0085 ' }, canApprove: false, canReject: false, canPartiallyAccept: false, canReportClaim: false };
+  const screen = fixture('android', state([], { detail })).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
+  const panel = nodes(screen, n => n.props.testID === 'customer-delivery-panel')[0];
+  assert.deepEqual(nodes(panel, n => n.props.testID === 'customer-delivery-header').map(n => n.props.children.props.children), ['shipmentInfoTitle']);
+  assert.equal(nodes(panel, n => n.props.testID === 'customer-delivery-divider').length, 0);
+  assert.equal(nodes(panel, n => n.props.testID === 'customer-delivery-note').length, 0);
+  assert.equal(deliveryButtons(screen).length, 0);
 });
 
 // Source-derived: CustomerDeliveryDetailScreen's existing outlined discussion and filled/tonal response buttons.

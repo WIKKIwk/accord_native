@@ -4,7 +4,6 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { WorkerAlert } from '../components/WorkerAlert';
-import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { useCustomerText } from './CustomerContext';
 import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerReportClaim, trimCustomerInput, type CustomerReturnInput } from './customerLogic';
 import { customerDeliveryInfoRows, customerDeliveryResponseActions, customerDiscussionEventId, type CustomerDeliveryInfoRow,
@@ -12,13 +11,14 @@ import { customerDeliveryInfoRows, customerDeliveryResponseActions, customerDisc
 import { CustomerReturnDialog } from './CustomerReturnDialog';
 import { CustomerSnackbar } from './CustomerSnackbar';
 import { CustomerLoadingState, CustomerRetryState } from './CustomerStates';
+import { customerLayoutDirection } from './customerPresentation';
 import { useCustomerDelivery } from './useCustomerScreens';
 
 type Props = { deliveryNoteID: string; onChanged: () => void; onOpenDiscussion?: (receiptId: string) => void };
 
 // @v2 CustomerDeliveryDetailScreen
 export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpenDiscussion }: Props) {
-  const state = useCustomerDelivery(deliveryNoteID, onChanged), colors = useMaterialColors(), { text } = useCustomerText();
+  const state = useCustomerDelivery(deliveryNoteID, onChanged), colors = useMaterialColors(), { locale, text } = useCustomerText();
   const [confirm, setConfirm] = useState(false), [dialog, setDialog] = useState<CustomerReturnKind | null>(null);
   const returningFromDiscussion = useRef(false), reload = state.reload;
   const openDiscussion = useCallback(() => {
@@ -37,13 +37,20 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
     else if (current === 'partial') void state.send(customerAcceptPartial(deliveryNoteID, record.sent_qty, input));
     else if (current === 'claim') void state.send(customerReportClaim(deliveryNoteID, input));
   };
-  const line = (row: CustomerDeliveryInfoRow) => <View key={row.labelKey} style={{ paddingHorizontal: 16, paddingVertical: 7, gap: 6 }}>
+  const line = (row: CustomerDeliveryInfoRow) => <View key={row.labelKey} style={{ gap: 6 }}>
     <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, fontWeight: '600' }}>{row.label}</Text>
     <View style={row.highlighted ? { alignSelf: 'flex-start', backgroundColor: colors.secondaryContainer, borderRadius: 14,
       paddingHorizontal: 12, paddingVertical: 8 } : undefined}>
       <Text style={{ color: row.highlighted ? colors.onSecondaryContainer : colors.onSurface, fontSize: row.highlighted ? 16 : 20,
         fontWeight: row.highlighted ? '700' : '600' }}>{row.value}</Text>
     </View></View>;
+  const sectionHeader = (label: string, topRounded = false) => <View testID="customer-delivery-header"
+    style={{ backgroundColor: colors.surfaceContainerHigh, paddingHorizontal: 18, paddingVertical: 14,
+      borderTopLeftRadius: topRounded ? 20 : 0, borderTopRightRadius: topRounded ? 20 : 0 }}>
+    <Text style={{ color: colors.onSurfaceVariant, fontSize: 16, fontWeight: '700' }}>{text(label)}</Text>
+  </View>;
+  const divider = () => <View testID="customer-delivery-divider" style={{ height: 1, marginHorizontal: 18,
+    backgroundColor: colors.outlineVariant, opacity: 0.55 }} />;
   const action = (key: string, label: string, appearance: CustomerDeliveryResponseAction['appearance'], onPress: () => void,
     blocked = false, spacingBefore = 0) => {
     const NativeButton = appearance === 'tonal' ? FilledTonalButton : appearance === 'outlined' ? OutlinedButton : Button;
@@ -57,25 +64,25 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
     </Host>;
   };
   return <>
-    <ScrollView contentContainerStyle={{ paddingVertical: 8, paddingBottom: 24, gap: 12 }}
+    <ScrollView contentContainerStyle={{ paddingBottom: 24 }}
       refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.reload(); }} />}>
-      <WorkerQueueCard backgroundColor={colors.surfaceContainerLow} first last><View style={{ flex: 1, gap: 6, paddingVertical: 12 }}>
-        <Text style={{ color: colors.onSurface, fontSize: 20, paddingHorizontal: 16 }}>{text('shipmentInfoTitle')}</Text>
-        {customerDeliveryInfoRows(record, text).map(line)}
-        {trimCustomerInput(record.note) ? <View style={{ paddingHorizontal: 16, gap: 6 }}><Text style={{ color: colors.onSurface }}>{text('noteTitle')}</Text>
-          <Text style={{ color: colors.onSurface }}>{record.note}</Text></View> : null}
-        {hasDiscussion && onOpenDiscussion ? <View style={{ paddingHorizontal: 16, gap: 8 }}><Text style={{ color: colors.onSurface }}>{text('commentsTitle')}</Text>
-          <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+      <View testID="customer-delivery-panel" style={{ marginStart: 4, marginEnd: 6, borderRadius: 24, overflow: 'hidden',
+        backgroundColor: colors.surfaceContainerLow, direction: customerLayoutDirection(locale) === 'rightToLeft' ? 'rtl' : 'ltr' }}>
+        {sectionHeader('shipmentInfoTitle', true)}
+        <View testID="customer-delivery-facts" style={{ padding: 18, gap: 12 }}>{customerDeliveryInfoRows(record, text).map(line)}</View>
+        {trimCustomerInput(record.note) ? <>{divider()}{sectionHeader('noteTitle')}
+          <View testID="customer-delivery-note" style={{ padding: 18 }}><Text style={{ color: colors.onSurface, fontSize: 14 }}>{record.note}</Text></View></> : null}
+        {hasDiscussion && onOpenDiscussion ? <>{divider()}{sectionHeader('commentsTitle')}
+          <View style={{ paddingHorizontal: 18, paddingTop: 18 }}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
             <OutlinedButton enabled onClick={openDiscussion} modifiers={[fillMaxWidth(), testID('customer-discussion')]}>
               <NativeText>{text('openDiscussionAction')}</NativeText>
             </OutlinedButton>
-          </Host></View> : null}
-        {actions.length ? <View style={{ paddingHorizontal: 16, gap: 12 }}>
-          <Text style={{ color: colors.onSurface }}>{text('responseTitle')}</Text>
-          <View>{actions.map(item => action(item.kind, item.labelKey, item.appearance,
+          </Host></View></> : null}
+        {actions.length ? <>{divider()}{sectionHeader('responseTitle')}
+          <View style={{ padding: 18 }}>{actions.map(item => action(item.kind, item.labelKey, item.appearance,
             () => { if (item.kind === 'approve') setConfirm(true); else setDialog(item.kind); }, state.submitting, item.spacingBefore))}</View>
-        </View> : null}
-      </View></WorkerQueueCard>
+        </> : null}
+      </View>
     </ScrollView>
     <WorkerAlert alert={confirm ? { title: text('confirmTitle'), message: text('confirmQuestion'), cancelLabel: text('no'),
       confirmLabel: text('yes'), onConfirm: () => { void state.send(customerApproveAll(deliveryNoteID)); } } : null} onDismiss={() => setConfirm(false)} />
