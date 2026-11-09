@@ -112,7 +112,8 @@ function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType
     sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />, { onDismiss: () => resolve(null) });
   });
   const actions = {
-    pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} useText={useGScaleText} Label={Label} Action={Action} />),
+    pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} useText={useGScaleText} Label={Label} Action={Action} />,
+      { fitContent: true, dismissible: true }),
     archive: (batch: ArchiveSession) => sheet.open(<ArchiveSheet batch={batch} operator={screen.operator} close={sheet.close} />),
     confirmArchivePrint: (batch: ArchiveSession) => Alert.alert(t('Partiya QR chop etish'), t('Shu partiya uchun QR chop etamizmi?'), [
       { text: t('Bekor qilish'), style: 'cancel' }, { text: t('Chop etish'), onPress: () => void screen.operator.printArchive(batch) },

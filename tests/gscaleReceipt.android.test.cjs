@@ -123,7 +123,7 @@ test('the preparation dashboard wires the receipt view to existing device, histo
     'react-native': { ...x.mocks['react-native'], Platform: { OS: 'android' } },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'Security' },
     '../shared/appRoutes': { appRoutes: { gscaleMode: 'scale' }, canOpenRoute: () => true },
-    '../nativeSheet': { useNativeSheet: () => ({ open: content => sheets.push(content), close() {} }) },
+    '../nativeSheet': { useNativeSheet: () => ({ open: (content, options) => sheets.push({ content, options }), close() {} }) },
     './GScaleReceipt.android': { GScaleReceipt: 'GScaleReceipt' },
     './gscaleScreenModel': { gscaleDashboardSections: (_screen, section) => [{ title: section, rows: [] }] },
     './useGScaleScreen': { useGScaleSession: () => ({ session, signOut() {} }), useGScaleScreen: () => screen, useGScaleText: () => value => value },
@@ -134,6 +134,7 @@ test('the preparation dashboard wires the receipt view to existing device, histo
   assert.equal(view.props.control[0].title, 'control'); assert.equal(view.props.history[0].title, 'history');
   view.props.onSelect('history'); view.props.onRefresh(); assert.deepEqual(x.calls, ['archive', 'archive']);
   view.props.onDevices(); assert.equal(sheets.length, 1);
+  assert.deepEqual(sheets[0].options, { fitContent: true, dismissible: true });
   view.props.onBack(); assert.equal(x.calls.at(-1), 'back');
   screen.role = 'material_taminotchi';
   assert.equal(nodes(dashboard.type(dashboard.props), node => node.type === 'GScaleReceipt').length, 0);
