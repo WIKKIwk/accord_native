@@ -126,7 +126,7 @@ for (const platform of ['ios', 'android']) {
   });
 }
 const width = load('rawSplitWidthPlan.ts', { './rawSplitModel': model });
-const draft = load('rawSplitDraft.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
+const draft = load('rawSplitDraft.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, '../../modules/accord-native-clock/src/AccordNativeClockModule': {}, 'expo-crypto': {} });
 const homePresentation = load('rawSplitHomePresentation.ts', { './rawSplitModel': model, './rawSplitWidthPlan': width, './rawSplitDraft': draft });
 function home(platform, translate = value => value) {
   const calls = [], layoutEffects = [], output1 = { id: '1', width: '400', gross: '40', bobina: '1', length: '1000' };

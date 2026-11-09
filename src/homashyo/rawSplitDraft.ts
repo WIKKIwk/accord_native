@@ -1,4 +1,5 @@
 import * as Crypto from 'expo-crypto';
+import { nativeEpochMicroseconds } from '../../modules/accord-native-clock/src/AccordNativeClockModule';
 import { RawSplitRoll, RawSplitWasteCheck, rawSplitDecimal, rawSplitQuantity } from './rawSplitModel';
 import { RawSplitWidthPlan, rawSplitMinimumWidth } from './rawSplitWidthPlan';
 
@@ -7,8 +8,9 @@ export type RawSplitOutputDraft = { id?: string; width: string; gross: string; b
 export class RawSplitWasteInputError extends Error {}
 /** @v2 newRawSplitRequestId */
 export async function newRawSplitRequestId(): Promise<string> {
+  const microseconds = nativeEpochMicroseconds();
   const bytes = await Crypto.getRandomBytesAsync(16);
-  return `split-${Date.now() * 1000}-${Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')}`;
+  return `split-${microseconds}-${Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')}`;
 }
 /** @v2 _OutputDraft.net */
 export function rawSplitOutputNet(output: RawSplitOutputDraft): bigint {

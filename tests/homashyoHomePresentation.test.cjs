@@ -5,7 +5,7 @@ function load(name, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
 const model = load('rawSplitModel'), width = load('rawSplitWidthPlan', { './rawSplitModel': model });
-const draft = load('rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
+const draft = load('rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, '../../modules/accord-native-clock/src/AccordNativeClockModule': {}, 'expo-crypto': {} });
 const p = load('rawSplitHomePresentation', { './rawSplitModel': model, './rawSplitWidthPlan': width, './rawSplitDraft': draft });
 const source = new model.RawSplitRoll({ revision: '1', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM',
   item_name: 'Film', kg: '100', width_mm: '1000', micron: '20' });

@@ -6,6 +6,7 @@ function load(name, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
 const model = load('homashyo/rawSplitModel'); const width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
 const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width,
+  '../../modules/accord-native-clock/src/AccordNativeClockModule': { nativeEpochMicroseconds: () => '1760000000123456' },
   'expo-crypto': { getRandomBytesAsync: async () => Uint8Array.from({ length: 16 }, (_, i) => i) } });
 const printModels = load('printing/printModels', { '../workerControlsApi': { isCanonicalApparatusId: () => true } });
 const { rawMaterialSplitPrintRequest } = load('homashyo/rawSplitPrinting', { './rawSplitModel': model, '../printing/printModels': printModels });
@@ -47,6 +48,6 @@ test('print payload reuses native bridge and retains gross, core, length and out
   assert.equal(request.tareEnabled, true); assert.equal(request.labelKind, 'material_product');
   const legacy = rawMaterialSplitPrintRequest(source); assert.equal(legacy.tareEnabled, false); assert.equal(legacy.progressQty, null);
 });
-test('request IDs use secure 16-byte randomness and V2 prefix', async () => {
-  assert.match(await draft.newRawSplitRequestId(), /^split-\d+-000102030405060708090a0b0c0d0e0f$/);
+test('request IDs use native microseconds and secure 16-byte randomness', async () => {
+  assert.equal(await draft.newRawSplitRequestId(), 'split-1760000000123456-000102030405060708090a0b0c0d0e0f');
 });

@@ -5,7 +5,7 @@ function load(name, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename); return m.exports; }
 const model = load('homashyo/rawSplitModel'); const width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
-const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
+const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, '../../modules/accord-native-clock/src/AccordNativeClockModule': {}, 'expo-crypto': {} });
 const inventory = load('preparation/preparationInventory', { '../auth': {}, '../shared/appRoutes': {}, '../shared/inventoryViewRuntime': {},
   '../inventoryReadApi': {}, './preparationInventoryTransfers': {} });
 const sharedBarcode = load('shared/barcode/rawMaterialBarcode');

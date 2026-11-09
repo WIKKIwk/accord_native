@@ -188,7 +188,7 @@ test('equivalent decimal precision and ASCII barcode case still match the source
 
 for (const key of ['stock', 'issue']) test(`malformed persisted ${key} JSON makes the actual controller status fail closed until explicit repair and recheck`, async () => {
   const h = setup(), model = load('homashyo/rawSplitModel'), width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
-  const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
+  const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, '../../modules/accord-native-clock/src/AccordNativeClockModule': {}, 'expo-crypto': {} });
   const sync = load('shared/camera/synchronousGuard');
   const { RawSplitController } = load('homashyo/rawSplitController', { './rawSplitApi': h.api, './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, '../shared/camera/synchronousGuard': sync,
     './rawSplitBarcode': { rawSplitBarcode: value => value }, './rawSplitDraft': draft, './rawSplitModel': model, './rawSplitWidthPlan': width });
@@ -252,7 +252,7 @@ for (const kind of ['stock', 'issue']) for (const changed of ['missing', 'differ
 for (const kind of ['stock', 'issue']) for (const newer of [false, true])
   test(`session change after ${kind} API resolution suppresses caller printing${newer ? ' and leaves a newer key untouched' : ''}`, async () => {
     const h = setup(), model = load('homashyo/rawSplitModel'), width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
-    const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
+    const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, '../../modules/accord-native-clock/src/AccordNativeClockModule': {}, 'expo-crypto': {} });
     const sync = load('shared/camera/synchronousGuard'), payload = JSON.parse((kind === 'stock' ? stockRecord : issueRecord).requestBody.text);
     const key = h.api.rawSplitScope() + (kind === 'issue' ? ':issue' : ''), replacement = { request_id: 'newer' }; h.saved.set(key, JSON.stringify(payload));
     h.setResponse(async () => fakeResponse(JSON.parse((kind === 'stock' ? stockRecord : issueRecord).responseBody.text)));
@@ -276,7 +276,7 @@ for (const kind of ['stock', 'issue']) for (const newer of [false, true])
 for (const kind of ['stock', 'issue']) for (const changed of ['missing', 'different'])
   test(`controller holds ${kind} after its verified retry key becomes ${changed} until a user-initiated status recheck`, async () => {
     const h = setup(), model = load('homashyo/rawSplitModel'), width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
-    const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
+    const draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, '../../modules/accord-native-clock/src/AccordNativeClockModule': {}, 'expo-crypto': {} });
     const sync = load('shared/camera/synchronousGuard'), payload = JSON.parse((kind === 'stock' ? stockRecord : issueRecord).requestBody.text);
     const key = h.api.rawSplitScope() + (kind === 'issue' ? ':issue' : ''); h.saved.set(key, JSON.stringify(payload));
     const operations = { ...h.api, rawSplitSnapshot: async () => new model.RawSplitSnapshot({ warehouses: [], history: [], issues: [] }) };
@@ -303,7 +303,7 @@ test('same-scope old issue removal can look clear, but the production hold block
   h.store.removeItemAsync = async key => { const result = h.saved.delete(key); removed.resolve(); await gate.promise; return result; };
   const old = h.api.rawSplitReportIssue(h.ticket, payload); await removed.promise; h.switchSession();
   let newRequests = 0; const model = load('homashyo/rawSplitModel'), width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
-  const sync = load('shared/camera/synchronousGuard'), draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, 'expo-crypto': {} });
+  const sync = load('shared/camera/synchronousGuard'), draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, '../../modules/accord-native-clock/src/AccordNativeClockModule': {}, 'expo-crypto': {} });
   const safeApi = load('homashyo/rawSplitApi', { './rawSplitWritePolicy': load('homashyo/rawSplitWritePolicy'),
     'expo-sqlite/kv-store': { default: h.store, __esModule: true }, '../auth': { currentSession: () => h.replacement },
     '../shared/camera/synchronousGuard': sync, '../authorizedFetch': { authorizedFetch: async () => { newRequests++; throw new Error('unexpected'); } },
