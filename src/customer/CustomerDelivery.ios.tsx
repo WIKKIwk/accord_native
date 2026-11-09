@@ -11,13 +11,14 @@ import { customerDeliveryInfoRows, customerDeliveryResponseActions, customerDisc
 import { CustomerReturnDialog } from './CustomerReturnDialog';
 import { CustomerSnackbar } from './CustomerSnackbar';
 import { CustomerLoadingState, CustomerRetryState } from './CustomerStates';
+import { customerLayoutDirection } from './customerPresentation';
 import { useCustomerDelivery } from './useCustomerScreens';
 
 type Props = { deliveryNoteID: string; onChanged: () => void; onOpenDiscussion?: (receiptId: string) => void };
 
 // @v2 CustomerDeliveryDetailScreen
 export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpenDiscussion }: Props) {
-  const state = useCustomerDelivery(deliveryNoteID, onChanged), { text } = useCustomerText();
+  const state = useCustomerDelivery(deliveryNoteID, onChanged), { locale, text } = useCustomerText();
   const [confirm, setConfirm] = useState(false), [dialog, setDialog] = useState<CustomerReturnKind | null>(null);
   const returningFromDiscussion = useRef(false), reload = state.reload;
   useFocusEffect(useCallback(() => { if (returningFromDiscussion.current) { returningFromDiscussion.current = false; void reload(); } }, [reload]));
@@ -33,7 +34,7 @@ export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpen
     else if (current === 'claim') void state.send(customerReportClaim(deliveryNoteID, input));
   };
   return <>
-    <Host style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(state.reload)]}>
+    <Host style={{ flex: 1 }} layoutDirection={customerLayoutDirection(locale)}><List modifiers={[listStyle('insetGrouped'), refreshable(state.reload)]}>
       <Section title={text('shipmentInfoTitle')}>
         {customerDeliveryInfoRows(record, text).map(row => <VStack key={row.labelKey} alignment="leading" spacing={6}
           modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>

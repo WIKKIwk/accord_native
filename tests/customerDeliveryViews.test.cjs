@@ -186,6 +186,13 @@ test('a translated non-Status label keeps the plain V2 detail value on both plat
   }
 });
 
+test('iOS delivery content follows the selected app locale rather than the device direction', () => {
+  for (const [locale, direction] of [['uz', 'leftToRight'], ['en', 'leftToRight'], ['ru', 'leftToRight'], ['ur-PK', 'rightToLeft']]) {
+    const screen = fixture('ios', state([]), [false, null], key => key, locale).CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });
+    const host = nodes(screen, n => n.type === 'Host')[0]; assert.equal(host.props.layoutDirection, direction);
+  }
+});
+
 test('Android delivery facts use source card, section and field geometry without adding actions', async () => {
   const calls = [], snapshot = state(calls), screen = fixture('android', snapshot, [false, null], key => key, 'ur-PK')
     .CustomerDeliveryDetailScreen({ deliveryNoteID: 'dn', onChanged() {} });

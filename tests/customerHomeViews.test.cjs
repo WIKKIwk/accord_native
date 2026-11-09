@@ -327,3 +327,10 @@ test('iOS Home follows the selected Urdu locale direction, including ur-PK', () 
     assert.equal(screen.props.layoutDirection, direction);
   }
 });
+
+test('iOS status detail follows the selected app locale rather than the device direction', () => {
+  for (const [locale, direction] of [['uz', 'leftToRight'], ['en', 'leftToRight'], ['ru', 'leftToRight'], ['ur-PK', 'rightToLeft']]) {
+    const screen = fixture('ios', state, locale).CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
+    assert.equal(screen.props.layoutDirection, direction);
+  }
+});
