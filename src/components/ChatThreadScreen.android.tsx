@@ -103,7 +103,7 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
           modifiers={[size(56, 56), paddingAll(4), semantics({ contentDescription: 'Biriktirish' }), testID('chat-attach')]}>
           <Icon source={require('../../assets/icons/fab-add.xml')} tint={colors.onSurfaceVariant} size={24} />
         </IconButton>
-        <OutlinedTextField value={input} onValueChange={setDraft} enabled={!busy} minLines={1} maxLines={4}
+        <OutlinedTextField value={input} onValueChange={setDraft} minLines={1} maxLines={4}
           shape={Shape.RoundedCorner({ cornerRadii: { topStart: 28, topEnd: 28, bottomStart: 28, bottomEnd: 28 } })}
           colors={{ focusedContainerColor: colors.surface, unfocusedContainerColor: colors.surface,
             focusedTextColor: colors.onSurface, unfocusedTextColor: colors.onSurface, disabledTextColor: colors.onSurface,

@@ -98,3 +98,20 @@ test('native send blocks duplicate taps and storage-not-ready sends, retaining a
   x.input(tree).props.onValueChange('Draft'); tree = x.render(); assert.equal(x.button(tree).props.enabled, false);
   x.button(tree).props.onClick(); assert.equal(x.calls.filter(call => call[0] === 'send').length, 1);
 });
+
+test('sending keeps the native input enabled and preserves text typed for the next message', async () => {
+  let finish; const x = fixture(() => new Promise(resolve => { finish = resolve; })); let tree = x.render();
+  const nativeInput = x.input(tree).props.value;
+  x.input(tree).props.onValueChange('Birinchi xabar'); tree = x.render();
+  x.button(tree).props.onClick(); x.thread.queueing = true; tree = x.render();
+  assert.equal(x.button(tree).props.enabled, false);
+  assert.notEqual(x.input(tree).props.enabled, false);
+  assert.equal(x.input(tree).props.value, nativeInput);
+  x.input(tree).props.onValueChange('Keyingi xabar'); tree = x.render();
+  assert.equal(nativeInput.get(), 'Keyingi xabar');
+  x.thread.queueing = false; finish(true); await tick(); tree = x.render();
+  assert.deepEqual(x.calls, [['send', 'Birinchi xabar']]);
+  assert.equal(nativeInput.get(), 'Keyingi xabar');
+  assert.notEqual(x.input(tree).props.enabled, false);
+  assert.equal(x.button(tree).props.enabled, true);
+});
