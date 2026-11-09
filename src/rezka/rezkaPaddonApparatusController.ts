@@ -17,7 +17,15 @@ export class RezkaPaddonApparatusController {
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private current() { return !this.retired && !this.disposed && this.deps.isCurrent(); }
-  private publish(state: State) { this.state = state; this.listeners.forEach(listener => listener()); }
+  private publish(state: State) {
+    this.state = state;
+    for (const listener of this.listeners) {
+      try {
+        const result: unknown = listener();
+        if (result && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
+      } catch { /* View subscribers must not interrupt reads or session invalidation. */ }
+    }
+  }
   resume() {
     this.suspended = false;
     if (!this.current()) this.invalidate();

@@ -102,3 +102,17 @@ test('scope lost between resume and start retires without sending a request', as
   c.resume(); current = false; await c.start();
   assert.equal(calls, 0); assert.deepEqual(c.getSnapshot(), { phase: 'invalid', apparatus: [] }); c.dispose();
 });
+test('throwing or rejected drawer subscribers cannot interrupt reads or session invalidation', async () => {
+  let calls = 0; const observed = [];
+  const c = new RezkaPaddonApparatusController({ assigned: ['mine'], isCurrent: () => true,
+    load: async () => { calls++; return [row('mine', 'Mine')]; } });
+  c.subscribe(() => { throw Error('subscriber failure'); });
+  c.subscribe(async () => { throw Error('late subscriber failure'); });
+  c.subscribe(() => { observed.push(c.getSnapshot().phase); });
+  c.subscribe(() => { if (c.getSnapshot().phase === 'invalid') void c.start(); });
+  c.resume(); await c.start(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(c.getSnapshot().phase, 'ready'); assert.equal(calls, 1);
+  c.invalidate(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(c.getSnapshot().phase, 'invalid'); assert.equal(observed.at(-1), 'invalid');
+  c.resume(); await c.start(); assert.equal(calls, 1); c.dispose();
+});

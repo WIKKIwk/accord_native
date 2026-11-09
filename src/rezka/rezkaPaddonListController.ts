@@ -27,7 +27,15 @@ export class RezkaPaddonListController {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private current() { return !this.retired && !this.disposed && this.deps.isCurrent(); }
   private wake() { const waiters = [...this.waiters]; this.waiters.clear(); waiters.forEach(resolve => resolve()); }
-  private publish(state: RezkaPaddonListState) { this.state = state; this.listeners.forEach(listener => listener()); }
+  private publish(state: RezkaPaddonListState) {
+    this.state = state;
+    for (const listener of this.listeners) {
+      try {
+        const result: unknown = listener();
+        if (result && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
+      } catch { /* View subscribers must not interrupt reads or session invalidation. */ }
+    }
+  }
   private valid(generation: number) {
     if (!this.current()) { this.invalidate(); return false; }
     return generation === this.generation;

@@ -114,6 +114,17 @@ test('suspension before the initial microtask postpones the catalog until resume
   h.c.resume(); const pending = h.c.start(); h.c.suspend(); await tick(); assert.equal(catalogs, 0);
   h.c.resume(); await pending; assert.equal(catalogs, 1); assert.equal(h.c.getSnapshot().phase, 'ready'); h.c.dispose();
 });
+test('throwing or rejected subscribers cannot interrupt list reads or session invalidation', async () => {
+  const h = make(), observed = [];
+  h.c.subscribe(() => { throw Error('subscriber failure'); });
+  h.c.subscribe(async () => { throw Error('late subscriber failure'); });
+  h.c.subscribe(() => { observed.push(h.c.getSnapshot().phase); });
+  h.c.subscribe(() => { if (h.c.getSnapshot().phase === 'invalid') void h.c.refresh(); });
+  h.c.resume(); await h.c.start(); await tick();
+  assert.equal(h.c.getSnapshot().phase, 'ready'); assert.deepEqual(h.calls, ['catalog', ['list', 'a']]);
+  h.c.invalidate(); await tick(); assert.equal(h.c.getSnapshot().phase, 'invalid'); assert.equal(observed.at(-1), 'invalid');
+  h.c.resume(); await h.c.start(); assert.deepEqual(h.calls, ['catalog', ['list', 'a']]); h.c.dispose();
+});
 test('content uses the selected-source keys, totals and rewinding subtitle in all four locales', () => {
   const h = make(); const s = { ...h.c.getSnapshot(), phase: 'ready', scope: { apparatusId: 'a', apparatusName: 'Rezka 1', needsApparatus: false },
     paddons: [paddon('P1', 'a', 2, true)], paddonCount: 1, wipCount: 2 };
