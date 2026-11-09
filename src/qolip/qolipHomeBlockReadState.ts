@@ -1,4 +1,5 @@
 import type { QolipLocationEntry } from './qolipLocationsApi';
+import { isGuardedReadRefreshUnavailable } from './qolipApiCommon';
 
 /** Required non-revivable original-session boundary. Use the injected shared-witness adapter, never an identity/scope substitute. */
 export type QolipHomeReadBoundary = {
@@ -9,6 +10,7 @@ export type QolipHomeBlockReadSnapshot = {
   locations: readonly QolipLocationEntry[] | null;
   loading: boolean;
   error: boolean;
+  refreshUnavailable?: boolean;
   invalid: boolean;
 };
 const invalidSnapshot: QolipHomeBlockReadSnapshot = Object.freeze({ locations: null, loading: false, error: false, invalid: true });
@@ -86,10 +88,11 @@ export class QolipHomeBlockReadState {
     void future.then(locations => {
       if (generation !== this.generation || !this.canAct()) return;
       this.value = { locations, loading: false, error: false, invalid: false }; this.notify();
-    }, () => {
+    }, error => {
       if (generation !== this.generation || !this.canAct()) return;
       // FutureBuilder's AsyncSnapshot.withError discards the prior data on settled error.
-      this.value = { locations: null, loading: false, error: true, invalid: false }; this.notify();
+      this.value = { locations: null, loading: false, error: true, invalid: false,
+        ...(isGuardedReadRefreshUnavailable(error) ? { refreshUnavailable: true } : {}) }; this.notify();
     });
   }
   suspend(): void {

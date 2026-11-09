@@ -19,7 +19,7 @@ export async function qolipLocations(session: Session, block: string, guard: Qol
       assertQolipReadCurrent(guard);
       if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
     };
-    const response = await authorizedFetch(session, `/v1/mobile/qolip/locations?${query}`, {}, beforeSend);
+    const response = await authorizedFetch(session, `/v1/mobile/qolip/locations?${query}`, {}, beforeSend, undefined, { readWitness: guard });
     assertQolipReadCurrent(guard); const status = response.status; assertQolipReadCurrent(guard);
     if (status !== 200) throw new Error('Qolip locations failed');
     const data = jsonObject(await response.json()); assertQolipReadCurrent(guard);

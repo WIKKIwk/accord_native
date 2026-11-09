@@ -61,21 +61,16 @@ test('real shared witness binds the initial read-only Home owner and closes on f
   assert.deepEqual(calls.map(call => call.method), ['GET', 'GET']); owner.suspend(actions); closeShell();
 });
 
-test('real shared witness blocks the initial and 401-retry GET after a transition', async t => {
+test('real shared witness blocks an initial GET after transition', async t => {
   const h = harness(), previous = global.fetch; t.after(() => { global.fetch = previous; }); const a = session('A'); await h.auth.saveSession(a);
-  let shell = new (h.load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)(), close = shell.activate(); await tick();
-  let entry = shell.getSnapshot(), sends = 0; global.fetch = async () => { sends++; return new Response('{}', { status: 401 }); };
-  const read = h.load('qolip/qolipBlocksApi.ts').qolipBlocksData, first = read(a, entry.boundary.current), login = h.startLogin();
-  await assert.rejects(first, /qolip_read_expired/); assert.equal(sends, 0); await tick(); login.reject(new Error('mock login failed'));
+  const shell = new (h.load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)(), close = shell.activate(); await tick();
+  const entry = shell.getSnapshot(); let sends = 0; global.fetch = async () => { sends++; return new Response('{}', { status: 401 }); };
+  const read = h.load('qolip/qolipBlocksApi.ts').qolipBlocksData(a, entry.boundary.current), login = h.startLogin();
+  await assert.rejects(read, /qolip_read_expired/); assert.equal(sends, 0); await tick(); login.reject(new Error('mock login failed'));
   await assert.rejects(login.promise, /mock login failed/); close();
-  shell = new (h.load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)(); close = shell.activate(); await tick(); entry = shell.getSnapshot();
-  const refresh = deferred(); h.auth.refreshSession = () => refresh.promise;
-  const second = read(a, entry.boundary.current); await tick(); assert.equal(sends, 1); const switching = h.startLogin(); refresh.resolve(true);
-  await assert.rejects(second, /qolip_read_expired/); assert.equal(sends, 1); await tick(); switching.reject(new Error('mock login failed'));
-  await assert.rejects(switching.promise, /mock login failed/); close();
 });
 
-test('documented blocker: shared transport follows a same-origin redirect after witness invalidation', async t => {
+test('opt-in witness stops a same-origin redirect after invalidation', async t => {
   const h = harness(), previous = global.fetch; t.after(() => { global.fetch = previous; }); const a = session('A'); await h.auth.saveSession(a);
   const shell = new (h.load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)(), close = shell.activate(); await tick();
   const entry = shell.getSnapshot(), delayed = deferred(), calls = [];
@@ -84,8 +79,7 @@ test('documented blocker: shared transport follows a same-origin redirect after 
   const read = h.load('qolip/qolipBlocksApi.ts').qolipBlocksData(a, entry.boundary.current); await tick(); assert.equal(calls.length, 1);
   const login = h.startLogin(); assert.equal(entry.boundary.current(), false);
   delayed.resolve(new Response('', { status: 302, headers: { location: '/v1/mobile/qolip/blocks?redirected=1' } }));
-  await assert.rejects(read, /qolip_read_expired/); assert.equal(calls.length, 2, 'current shared redirect loop does not recheck per hop');
-  assert.equal(calls[1].authorization, 'Bearer local-token');
+  await assert.rejects(read, /qolip_read_expired/); assert.equal(calls.length, 1, 'no redirected send after invalidation');
   await tick(); login.reject(new Error('mock login failed')); await assert.rejects(login.promise, /mock login failed/); close();
 });
 
@@ -130,7 +124,7 @@ test('effect replay creates a fresh controller but never replaces the captured s
   assert.equal(owner.activate(), null); assert.equal(owner.getSnapshot().home.kind, 'invalid'); owner.suspend(second); close();
 });
 
-test('documented blocker: a late 401 can start credential refresh after witness invalidation', async t => {
+test('a 401 arriving after witness invalidation cannot start credential refresh', async t => {
   const h = harness(), previous = global.fetch; t.after(() => { global.fetch = previous; });
   const initial = h.startLogin(); await tick();
   initial.resolve({ token: 'local-token', profile: { role: 'qolipchi', ref: 'A', capabilities: ['qolip.manage'],
@@ -143,27 +137,48 @@ test('documented blocker: a late 401 can start credential refresh after witness 
   const observedRead = assert.rejects(read, /qolip_read_expired/); await tick();
   const changing = h.startLogin(); await tick(); assert.equal(entry.boundary.current(), false); assert.equal(h.authCalls.length, 2);
   delayed.resolve(new Response('{}', { status: 401 }));
-  for (let i = 0; i < 10 && h.authCalls.length < 3; i++) await tick();
-  assert.equal(h.authCalls.length, 3, 'the old read entered the shared credential refresh while the login transition was pending');
-  changing.reject(new Error('mock login failed')); await assert.rejects(changing.promise, /mock login failed/); await observedRead; close();
+  await observedRead; await tick(); assert.equal(h.authCalls.length, 2, 'the old read did not enter credential refresh');
+  changing.reject(new Error('mock login failed')); await assert.rejects(changing.promise, /mock login failed/); close();
 });
 
-test('documented blocker: refresh begun while current can reauthenticate after a same-epoch logout starts', async t => {
+test('an unaided 401 reaches the source error branch without credentials or account lookup', async t => {
   const h = harness(), previous = global.fetch; t.after(() => { global.fetch = previous; });
   const initial = h.startLogin(); await tick();
   initial.resolve({ token: 'local-token', profile: { role: 'qolipchi', ref: 'A', capabilities: ['qolip.manage'],
     assigned_apparatus: [], assigned_apparatus_labels: [] }, werka_home: null });
   const a = await initial.promise;
   const shell = new (h.load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)(), close = shell.activate(); await tick();
-  const entry = shell.getSnapshot(), lookup = deferred(); let pendingLookups = 0;
-  h.setAccountInitializer(() => { pendingLookups++; return lookup.promise; });
-  global.fetch = async () => new Response('{}', { status: 401 });
-  const read = h.load('qolip/qolipBlocksApi.ts').qolipBlocksData(a, entry.boundary.current), observedRead = assert.rejects(read, /qolip_read_expired/);
-  for (let i = 0; i < 10 && pendingLookups < 1; i++) await tick(); assert.equal(pendingLookups, 1);
-  const logout = h.auth.logout(a); assert.equal(entry.boundary.current(), false);
-  for (let i = 0; i < 10 && pendingLookups < 2; i++) await tick(); assert.equal(pendingLookups, 2);
-  lookup.reject(new Error('mock account store unavailable'));
-  for (let i = 0; i < 10 && h.authCalls.length < 2; i++) await tick();
-  assert.equal(h.authCalls.length, 2, 'refresh uses saved credentials after the logout witness transition began');
-  await logout; await observedRead; close();
+  const entry = shell.getSnapshot(); let lookups = 0, sends = 0;
+  h.setAccountInitializer(async () => { lookups++; throw new Error('unexpected account lookup'); });
+  global.fetch = async () => { sends++; return new Response('{}', { status: 401 }); };
+  const owner = h.load('qolip/qolipHomeOwnerRuntime.ts').createQolipHomeOwner(a, entry.boundary), actions = owner.activate();
+  for (let i = 0; i < 10 && owner.getSnapshot().home.kind === 'loading'; i++) await tick();
+  assert.equal(owner.getSnapshot().home.kind, 'refresh-unavailable'); assert.equal(owner.getSnapshot().blocks.length, 0);
+  assert.equal(lookups, 0); assert.equal(h.authCalls.length, 1); assert.equal(h.auth.activeSessionToken(a), 'local-token'); assert.equal(sends, 1);
+  owner.suspend(actions); close();
+});
+
+test('a new login and new owner recover a block whose old location future failed with 401', async t => {
+  const h = harness(), previous = global.fetch; t.after(() => { global.fetch = previous; }); const a = session('A'); await h.auth.saveSession(a);
+  let locations = 0; global.fetch = async url => {
+    if (url.endsWith('/v1/mobile/qolip/blocks')) return json({ warehouses: ['W'], blocks: [{ name: 'A', warehouse: 'W' }] });
+    if (url.endsWith('/v1/mobile/qolip/locations?block=A')) return ++locations === 1 ? new Response('{}', { status: 401 })
+      : json({ locations: [{ id: 'new', block: 'A', warehouse: 'W', item_name: 'Mold', qolip_code: 'NEW', size: 42, quantity: 1, location_label: 'A1' }] });
+    throw new Error(`Unexpected request ${url}`);
+  };
+  let shell = new (h.load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)(), close = shell.activate(); await tick();
+  let entry = shell.getSnapshot(), owner = h.load('qolip/qolipHomeOwnerRuntime.ts').createQolipHomeOwner(a, entry.boundary), actions = owner.activate();
+  await tick(); await tick(); const oldView = owner.getSnapshot(); assert.equal(oldView.home.kind, 'blocks');
+  const body = new (h.load('qolip/qolipHomeBlockReadState.ts').QolipHomeBlockReadState)(oldView.blocks[0].initialLocations, oldView.boundary);
+  body.activate(); body.bind(oldView.blocks[0].future); await assert.rejects(oldView.blocks[0].future,
+    error => error.code === 'guarded_read_refresh_unavailable'); await tick();
+  assert.equal(body.getSnapshot().refreshUnavailable, true); assert.equal(body.getSnapshot().locations, null);
+  const login = h.startLogin(); await tick(); assert.equal(owner.getSnapshot().home.kind, 'invalid');
+  login.resolve({ token: 'new-token', profile: { role: 'qolipchi', ref: 'A', capabilities: ['qolip.manage'],
+    assigned_apparatus: [], assigned_apparatus_labels: [] }, werka_home: null });
+  const next = await login.promise; body.suspend(); owner.suspend(actions); close();
+  shell = new (h.load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)(); close = shell.activate(); await tick();
+  entry = shell.getSnapshot(); owner = h.load('qolip/qolipHomeOwnerRuntime.ts').createQolipHomeOwner(next, entry.boundary); actions = owner.activate();
+  await tick(); await tick(); const fresh = owner.getSnapshot(); assert.equal(fresh.home.kind, 'blocks');
+  assert.equal((await fresh.blocks[0].future)[0].qolip_code, 'NEW'); assert.equal(locations, 2); owner.suspend(actions); close();
 });

@@ -1,5 +1,5 @@
 import type { QolipBlock, QolipBlocksResult } from './qolipBlocksApi';
-import { trimDart } from './qolipApiCommon';
+import { isGuardedReadRefreshUnavailable, trimDart } from './qolipApiCommon';
 import { qolipApplySavedBlockOrder, qolipHomeSearchCounts } from './qolipHomeLogic';
 import type { QolipLocationEntry } from './qolipLocationsApi';
 
@@ -10,7 +10,7 @@ type Dependencies = {
   valid: () => boolean;
 };
 type HomeState = { snapshot: QolipBlocksResult | null; orderedBlocks: QolipBlock[]; selectedIndex: number;
-  loading: boolean; error: boolean; invalid: boolean; query: string; blockCounts: Record<string, number>;
+  loading: boolean; error: boolean; refreshUnavailable?: boolean; invalid: boolean; query: string; blockCounts: Record<string, number>;
   cellCounts: Record<string, Record<string, number>> };
 function notifySafely(listener: () => unknown) {
   try { const value = listener(); if (value && (typeof value === 'object' || typeof value === 'function') &&
@@ -52,7 +52,8 @@ export class QolipHomeState {
       this.publish({ snapshot, selectedIndex: 0, loading: false, error: false });
       if (this.searchQuery) this.refreshSearch();
     } catch (error) {
-      if (this.current()) this.publish({ snapshot: null, loading: false, error: true });
+      if (this.current()) this.publish({ snapshot: null, loading: false, error: true,
+        refreshUnavailable: isGuardedReadRefreshUnavailable(error) });
       throw error;
     }
   }

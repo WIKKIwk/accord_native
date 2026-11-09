@@ -24,7 +24,8 @@ function BlockBody({ block, boundary, counts }: { block: QolipOwnedHomeBlock; bo
   counts: Readonly<Record<string, number>> }) {
   const state = useQolipHomeBlockRead(block.key, block.future, block.initialLocations, boundary);
   if (state.invalid) return null;
-  return <QolipReadOnlyHomeGrid locations={state.locations} loading={state.loading} error={state.error} searchCounts={counts} />;
+  return <QolipReadOnlyHomeGrid locations={state.locations} loading={state.loading} error={state.error}
+    refreshUnavailable={state.refreshUnavailable} searchCounts={counts} />;
 }
 function ReadOnlyHome({ session, boundary }: { session: Session; boundary: QolipHomeReadBoundary }) {
   const state = useReadOnlyQolipHome(session, boundary), { text, locale } = useQolipText(), theme = useBaseTheme(), insets = useSafeAreaInsets();
@@ -33,6 +34,7 @@ function ReadOnlyHome({ session, boundary }: { session: Session; boundary: Qolip
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: theme.colors.surface }]}>
     <Search value={state.search} change={actions.setSearch} />
     {home.kind === 'loading' ? <View style={styles.center}><ActivityIndicator /></View>
+      : home.kind === 'refresh-unavailable' ? <View style={styles.center}><Text style={{ color: theme.colors.onSurfaceVariant }}>{text('home.load_failed')}</Text></View>
       : home.kind === 'retry' ? <View style={styles.center}><Text style={{ color: theme.colors.onSurfaceVariant }}>{localizedGetter('serverDisconnectedRetry', locale)}</Text></View>
         : home.kind === 'unattached' || home.kind === 'no-blocks' ? <View style={styles.center}><Text style={{ color: theme.colors.onSurface }}>
           {text(home.kind === 'unattached' ? 'home.no_blocks_attached' : 'home.no_blocks_added')}</Text></View>

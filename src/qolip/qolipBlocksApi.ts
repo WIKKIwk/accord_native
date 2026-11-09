@@ -16,7 +16,7 @@ export async function qolipBlocksData(session: Session, guard: QolipReadGuard): 
       assertQolipReadCurrent(guard);
       if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
     };
-    const response = await authorizedFetch(session, '/v1/mobile/qolip/blocks', {}, beforeSend);
+    const response = await authorizedFetch(session, '/v1/mobile/qolip/blocks', {}, beforeSend, undefined, { readWitness: guard });
     assertQolipReadCurrent(guard); const status = response.status; assertQolipReadCurrent(guard);
     if (status !== 200) throw new Error('Qolip blocks failed');
     const data = jsonObject(await response.json()); assertQolipReadCurrent(guard);

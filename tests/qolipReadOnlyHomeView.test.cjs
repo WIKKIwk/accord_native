@@ -40,6 +40,8 @@ test('unrouted shell exposes only real search and tab selection, with no held-ac
   assert.equal(records.some(record => record.props.onLongPress || record.props.onRefresh || record.props.onRetry || record.props.onPrint), false);
   state.home = { kind: 'retry' }; const error = render(); assert.match(error, /serverDisconnectedRetry/);
   assert.equal(records.some(record => record.name === 'Pressable'), false);
+  state.home = { kind: 'refresh-unavailable' }; assert.match(render(), /home.load_failed/);
+  assert.equal(records.some(record => record.name === 'Pressable'), false);
   state.home = { kind: 'invalid' }; assert.equal(render(), '');
 });
 
@@ -66,6 +68,8 @@ for (const platform of ['ios', 'android']) test(`${platform} grid presents data 
   assert.equal(records.some(record => record.props.onPress || record.props.onClick || record.props.onLongPress || record.props.onRefresh), false);
   assert.equal(records.flatMap(record => record.props.modifiers ?? []).some(value => /click|tap|long/i.test(value.name)), false);
   assert.match(render({ locations: null, loading: false, error: true, searchCounts: {} }), /serverDisconnectedRetry/);
+  assert.equal(records.some(record => record.props.onPress || record.props.onClick || record.props.onRetry), false);
+  assert.match(render({ locations: null, loading: false, error: true, refreshUnavailable: true, searchCounts: {} }), /home.load_failed/);
   assert.equal(records.some(record => record.props.onPress || record.props.onClick || record.props.onRetry), false);
 });
 
