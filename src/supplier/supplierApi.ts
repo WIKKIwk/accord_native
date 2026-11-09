@@ -1,0 +1,165 @@
+import type { Session } from '../auth';
+import { authorizedFetch } from '../authorizedFetch';
+import { supplierItemFromJson, type SupplierItem } from '../shared/catalogApi';
+import type { SupplierSummary } from '../shared/dispatchRuntimeStores';
+import { dispatchRecordFromJson, type DispatchRecord } from '../shared/notificationApi';
+import { trimNotificationText } from '../shared/notification/notificationDetailModel';
+
+export type SupplierStatusKind = 'pending' | 'submitted' | 'returned';
+export type SupplierStatusBreakdownEntry = {
+  item_code: string;
+  item_name: string;
+  receipt_count: number;
+  total_sent_qty: number;
+  total_accepted_qty: number;
+  total_returned_qty: number;
+  uom: string;
+};
+
+type JsonObject = Record<string, unknown>;
+function object(value: unknown): JsonObject {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid supplier object');
+  return value as JsonObject;
+}
+function text(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value !== 'string') throw new TypeError('Invalid supplier string');
+  return value;
+}
+function number(value: unknown): number {
+  if (value == null) return 0;
+  if (typeof value !== 'number') throw new TypeError('Invalid supplier number');
+  return value;
+}
+function integer(value: unknown): number {
+  const result = number(value);
+  if (!Number.isInteger(result)) throw new TypeError('Invalid supplier integer');
+  return result;
+}
+function list(value: unknown): unknown[] {
+  if (!Array.isArray(value)) throw new TypeError('Invalid supplier list');
+  return value;
+}
+
+// List.toString is unambiguous for these JSON values. Numbers and maps need
+// lexical/order provenance, so keep the existing shared behavior for them.
+function simpleDartText(value: unknown): string | undefined {
+  if (value === null) return 'null';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (!Array.isArray(value)) return undefined;
+  const parts: string[] = [];
+  for (const child of value) {
+    const text = simpleDartText(child);
+    if (text === undefined) return undefined;
+    parts.push(text);
+  }
+  return `[${parts.join(', ')}]`;
+}
+function supplierItemForSupplier(value: unknown): SupplierItem {
+  const item = supplierItemFromJson(value), row = object(value);
+  const names = (row.customer_names ?? []) as unknown[];
+  const options = (row.order_apparatus_options ?? {}) as JsonObject;
+  return { ...item,
+    customer_names: names.map(entry => {
+      const text = simpleDartText(entry);
+      return text === undefined ? String(entry).trim() : trimNotificationText(text);
+    }).filter(Boolean),
+    order_apparatus_options: Object.fromEntries(Object.entries(item.order_apparatus_options)
+      .map(([key, fallback]) => [key, simpleDartText(options[key]) ?? fallback])),
+  };
+}
+
+// Dart Uri.queryParameters uses UTF-8 form encoding with RFC 3986's unreserved
+// set, and replaces unpaired UTF-16 surrogates instead of throwing.
+function queryComponent(value: string): string {
+  let valid = '';
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) { valid += value[i] + value[++i]; continue; }
+      valid += '\ufffd';
+    } else if (code >= 0xdc00 && code <= 0xdfff) valid += '\ufffd';
+    else valid += value[i];
+  }
+  return encodeURIComponent(valid).replace(/[!'()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
+    .replace(/%20/g, '+');
+}
+function queryParameters(entries: readonly (readonly [string, string])[]): string {
+  return entries.map(([key, value]) => `${queryComponent(key)}${value ? `=${queryComponent(value)}` : ''}`).join('&');
+}
+
+/** Preserve Dart Exception's visible prefix for the source's explicit failures. */
+export class SupplierApiException extends Error {
+  toString(): string { return `Exception: ${this.message}`; }
+}
+
+/** @v2 SupplierHomeSummary.fromJson */
+export function supplierSummaryFromJson(value: unknown): SupplierSummary {
+  const row = object(value);
+  return { pendingCount: integer(row.pending_count), submittedCount: integer(row.submitted_count),
+    returnedCount: integer(row.returned_count) };
+}
+
+/** @v2 SupplierStatusBreakdownEntry.fromJson */
+export function supplierStatusBreakdownEntryFromJson(value: unknown): SupplierStatusBreakdownEntry {
+  const row = object(value);
+  return { item_code: text(row.item_code), item_name: text(row.item_name), receipt_count: integer(row.receipt_count),
+    total_sent_qty: number(row.total_sent_qty), total_accepted_qty: number(row.total_accepted_qty),
+    total_returned_qty: number(row.total_returned_qty), uom: text(row.uom) };
+}
+
+/** @v2 supplierHistory */
+export async function supplierHistory(session: Session): Promise<DispatchRecord[]> {
+  const response = await authorizedFetch(session, '/v1/mobile/supplier/history');
+  if (response.status !== 200) throw new SupplierApiException('Supplier history failed');
+  return list(await response.json()).map(dispatchRecordFromJson);
+}
+
+/** @v2 supplierSummary */
+export async function supplierSummary(session: Session): Promise<SupplierSummary> {
+  const response = await authorizedFetch(session, '/v1/mobile/supplier/summary');
+  if (response.status !== 200) throw new SupplierApiException('Supplier summary failed');
+  return supplierSummaryFromJson(await response.json());
+}
+
+/** @v2 supplierStatusBreakdown */
+export async function supplierStatusBreakdown(session: Session, kind: SupplierStatusKind): Promise<SupplierStatusBreakdownEntry[]> {
+  const query = queryParameters([['kind', kind]]);
+  const response = await authorizedFetch(session, `/v1/mobile/supplier/status-breakdown?${query}`);
+  if (response.status !== 200) throw new SupplierApiException('Supplier status breakdown failed');
+  return list(await response.json()).map(supplierStatusBreakdownEntryFromJson);
+}
+
+/** @v2 supplierStatusDetails */
+export async function supplierStatusDetails(session: Session, kind: SupplierStatusKind, itemCode: string): Promise<DispatchRecord[]> {
+  const query = queryParameters([['kind', kind], ['item_code', itemCode]]);
+  const response = await authorizedFetch(session, `/v1/mobile/supplier/status-details?${query}`);
+  if (response.status !== 200) throw new SupplierApiException('Supplier status details failed');
+  return list(await response.json()).map(dispatchRecordFromJson);
+}
+
+// Dart VM String.trim uses Unicode White_Space and BOM, including U+0085.
+const hasNonDartWhitespace = (value: string): boolean =>
+  /[^\u0009-\u000D\u0020\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/.test(value);
+
+/** @v2 supplierItems */
+// The V2 test-mode branch is deferred until the shared test-mode pass (D3).
+export async function supplierItems(session: Session, query = ''): Promise<SupplierItem[]> {
+  const suffix = hasNonDartWhitespace(query) ? `?${queryParameters([['q', query]])}` : '';
+  const response = await authorizedFetch(session, `/v1/mobile/supplier/items${suffix}`);
+  if (response.status !== 200) throw new SupplierApiException('Supplier items failed');
+  return list(await response.json()).map(supplierItemForSupplier);
+}
+
+/** @v2 createDispatch */
+export async function createDispatch(session: Session, itemCode: string, qty: number): Promise<DispatchRecord> {
+  // Dart's jsonEncode rejects NaN and infinities instead of emitting JSON null.
+  if (!Number.isFinite(qty)) throw new TypeError('Invalid dispatch quantity');
+  const response = await authorizedFetch(session, '/v1/mobile/supplier/dispatch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ item_code: itemCode, qty }),
+  });
+  if (response.status !== 200) throw new SupplierApiException('Dispatch create failed');
+  return dispatchRecordFromJson(await response.json());
+}

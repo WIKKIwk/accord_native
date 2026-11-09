@@ -1,21 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { Platform } from 'react-native';
 import { appPreferences } from '../appPreferences';
 import { loadSession, logout, type Session } from '../auth';
 import { clearAppLock } from '../appLock';
-import { NativeBluetoothPrinter, type BluetoothPrinterProfile } from '../printing/nativePrinter';
-import { PrintService } from '../printing/printService';
 import { localizedGetter, localizedMethod, uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { MobileApiException } from '../shared/mobileApiException';
 import { createGScaleCatalogRuntime } from './gscaleCatalogRuntime';
-import { watchGScaleBluetoothDevices } from './gscaleBluetoothDevices';
 import { gscaleControlViewModel } from './gscaleControlViewModel';
-import type { DiscoveredServer } from './gscaleDiscovery';
 import { formatCompactKg } from './gscalePreparation';
 import { GScaleOrderSelectionStore, gscaleOrderLabel } from './gscaleOrderSelection';
 import { createGScaleOperatorStore, materialAssignedWarehouseNames } from './gscaleOperatorRuntime';
-import type { GScaleOperatorStore } from './gscaleOperatorState';
 import { MaterialWarehousePreferences } from './gscalePreferences';
 import { gscalePhotoRemoteQueries, gscalePickerRelevance } from './gscalePhotoSearch';
 import { pickGScalePhotoSearch } from './gscalePhotoSearchRuntime';
@@ -208,39 +202,4 @@ export function useGScalePicker(spec: GScalePickerSpec, session: Session) {
     loadMore: () => { if (!state.loading && state.more) void load(state.items.length); } };
 }
 
-export function useGScaleDevicePicker(operator: GScaleOperatorStore, close: () => void) {
-  const device = useSyncExternalStore(operator.subscribe, operator.getSnapshot, operator.getSnapshot).device;
-  const [printers, setPrinters] = useState<BluetoothPrinterProfile[]>([]), [scanning, setScanning] = useState(false);
-  const [scanVersion, setScanVersion] = useState(0);
-  const [error, setError] = useState(''), [address, setAddress] = useState('http://gscale.local:39117');
-  useEffect(() => { operator.selectConnection(null); }, [operator]);
-  useEffect(() => {
-    if (device.connection !== 'bluetooth') return;
-    let active = true, stop: (() => void) | undefined;
-    void watchGScaleBluetoothDevices(Platform.OS, NativeBluetoothPrinter, event => {
-      if (!active) return;
-      if (event.complete) setScanning(false);
-      if (event.paired) setPrinters(event.paired);
-      if (event.printer) { const printer = event.printer; setPrinters(old => old.some(value => value.address === printer.address)
-        ? old.map(value => value.address === printer.address ? printer : value) : [...old, printer]); }
-    }).then(dispose => { if (active) stop = dispose; else dispose(); })
-      .catch(reason => { if (active) { setScanning(false); setError(reason instanceof Error ? reason.message : String(reason)); } });
-    return () => { active = false; stop?.(); };
-  }, [operator, device.connection, scanVersion]);
-  const selectServer = async (server: DiscoveredServer) => { await operator.selectDevice({ transport: 'wifi', server }); close(); };
-  const selectBluetooth = async (printer: BluetoothPrinterProfile) => { await operator.selectDevice({ transport: 'bluetooth', bluetoothPrinter: printer }); close(); };
-  const selectUsb = async () => {
-    setError(''); setScanning(true);
-    try { const offlinePrinter = await PrintService.detectOfflinePrinter(); await operator.selectDevice({ transport: 'offline', offlinePrinter }); close(); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
-    finally { setScanning(false); }
-  };
-  const checkAddress = async () => { const server = await operator.checkDeviceAddress(address); if (server) await selectServer(server); };
-  return { device, printers, scanning, error, address, setAddress, selectServer, selectBluetooth, selectUsb, checkAddress,
-    choose: (connection: 'wifi' | 'bluetooth' | 'usb' | null) => {
-      setError(''); setScanning(connection === 'bluetooth'); if (connection === 'bluetooth') setPrinters([]);
-      operator.selectConnection(connection);
-    },
-    rescanBluetooth: () => { setError(''); setPrinters([]); setScanning(true); setScanVersion(value => value + 1); },
-    scan: () => void operator.scanDevices() };
-}
+export { useDevicePicker as useGScaleDevicePicker } from '../shared/printing/useDevicePicker';

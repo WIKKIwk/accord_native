@@ -1,0 +1,7 @@
+# Shared raw-material barcode candidate
+
+This standalone helper models the pinned f119 Flutter `rawMaterialBarcodeFromQr` without changing the protected Preparation parser. It is not imported by any route, scanner, or existing Worker/Preparation code. Homashyo, Material and Qolip integrations remain held until their own safety and native checks are complete.
+
+The source-derived oracle suite records 88,664 deterministic agent corpus cases and 30,000 independent review cases, with seeds and expected Dart 3.13.7 output digests. The independent corpus matched before inclusion. The script exports only the relevant pinned source file to an isolated temporary directory and uses a temporary HOME; it does not run Flutter/pub or contact a server. These finite Node/Dart cases do not establish exhaustive URI, Unicode, Hermes or physical-device parity. Actual scanning, native dispatch, session, and printer behavior remain unverified.
+
+Integration verification: all 118,664 source-oracle rows were regenerated from the pinned Dart source and the nine shared Node tests passed. The full Node suite reported 1,278 passed and the same six pre-existing Preparation Android Expo UI ESM failures as main. iOS TypeScript, Expo lint, ledger and offline iOS/Android Expo JS bundles passed; Android retained the same nine existing Worker diagnostics. No native build, simulator, physical phone, or live backend was used.

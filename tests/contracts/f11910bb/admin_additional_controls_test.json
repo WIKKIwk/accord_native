@@ -1,0 +1,362 @@
+{
+ "source": "test/admin_additional_settings_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/management-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"free_movement_enabled\":false,\"worker_visibility_enabled\":false}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/app-update/settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"mandatory_updates_enabled\":false}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/lamination-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"print_wip_remainder_labels\":true,\"print_film_remainder_labels\":true}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":false,\"revision\":0}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/lamination-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"print_wip_remainder_labels\":false}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"print_wip_remainder_labels\":false,\"print_film_remainder_labels\":true}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/management-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"free_movement_enabled\":false,\"worker_visibility_enabled\":false}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/app-update/settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"mandatory_updates_enabled\":false}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/lamination-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"print_wip_remainder_labels\":false,\"print_film_remainder_labels\":true}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":false,\"revision\":0}}"
+   }
+  },
+  {
+   "test": "lamination label switches persist independently for each layer",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/lamination-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"print_film_remainder_labels\":false}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"print_wip_remainder_labels\":false,\"print_film_remainder_labels\":false}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/management-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"free_movement_enabled\":false,\"worker_visibility_enabled\":true}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/app-update/settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"mandatory_updates_enabled\":false}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/lamination-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"print_wip_remainder_labels\":true,\"print_film_remainder_labels\":true}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":false,\"revision\":0}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/management-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"free_movement_enabled\":true}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"free_movement_enabled\":true,\"worker_visibility_enabled\":true}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/app-update/settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"mandatory_updates_enabled\":false}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/lamination-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"print_wip_remainder_labels\":true,\"print_film_remainder_labels\":true}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":false,\"revision\":0}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/paddons/management-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"free_movement_enabled\":false}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"free_movement_enabled\":false,\"worker_visibility_enabled\":true}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/app-update/settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"mandatory_updates_enabled\":false}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/lamination-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"print_wip_remainder_labels\":true,\"print_film_remainder_labels\":true}}"
+   }
+  },
+  {
+   "test": "admin confirms enable and can disable the shared server setting",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":false,\"revision\":0}}"
+   }
+  }
+ ]
+}

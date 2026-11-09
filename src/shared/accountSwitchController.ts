@@ -5,6 +5,8 @@ type SwitchInput = { baseUrl: string; profile: Profile; token: string; phone: st
   werkaHomeBootstrap?: Record<string, unknown> | null };
 type RefreshedAccount = { token: string; profile: Profile; werkaHomeBootstrap?: Record<string, unknown> | null };
 export interface AccountSwitchEnvironment {
+  /** Optional observer for clients that must invalidate work from the old account immediately. */
+  beginSessionTransition?(): () => void;
   current(): { token: string; profile: Profile } | null;
   snapshot(): unknown;
   restore(snapshot: unknown): Promise<void>;
@@ -28,10 +30,15 @@ export class AccountSwitchController {
   get switching(): boolean { return operations.has(this.store); }
 
   private async exclusive<T>(action: () => Promise<T>): Promise<T> {
-    return this.store.runAccountOperation(async () => {
-      operations.add(this.store);
-      try { return await action(); } finally { operations.delete(this.store); }
-    });
+    const endTransition = this.environment.beginSessionTransition?.();
+    try {
+      const pending = this.store.runAccountOperation(async () => {
+        operations.add(this.store);
+        try { return await action(); } finally { operations.delete(this.store); }
+      });
+      if (endTransition) void pending.then(endTransition, endTransition);
+      return pending;
+    } catch (error) { endTransition?.(); throw error; }
   }
 
   async addAndSwitch(input: SwitchInput): Promise<Profile> {

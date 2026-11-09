@@ -3,7 +3,7 @@ import type { Session } from '../auth';
 import { useBaseLocale } from './useBaseLocale.ios';
 import { useSwitchPinSetupCore } from './useSwitchPinSetupCore';
 
-export function useSwitchPinSetup(session: Session) {
+export function useSwitchPinSetup(session: Session, enabled = true) {
   const { text } = useBaseLocale();
-  return useSwitchPinSetupCore(session, useNativeState(''), text);
+  return useSwitchPinSetupCore(session, useNativeState(''), text, enabled);
 }

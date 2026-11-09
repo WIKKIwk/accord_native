@@ -94,12 +94,14 @@ test('a conversation-list request completing after leaving the role cannot write
   const api = load('shared/chat/useChatConversations.ts', {
     'expo-router': { useFocusEffect: callback => { focus = callback; } },
     react: { useCallback: callback => callback, useRef: value => ({ current: value }),
+      useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot(),
       useState: initial => [typeof initial === 'function' ? initial() : initial, value => writes.push(value)] },
     'react-native': { AppState: { currentState: 'active', addEventListener: () => ({ remove: () => removed++ }) } },
     '../../auth': { activeSessionToken: () => 'example' },
     '../../chatApi': { loadChatConversations: (_session, signal) => { request = signal; return new Promise(done => { resolve = done; }); } },
     '../../chatLive': { subscribeChatLive: () => () => stopped++ },
     '../../components/ChatMetadata': { useChatMetadata: () => ({ remember: () => remembered++ }) },
+    './chatUnreadRuntime': { existingChatUnreadRuntimeFor: () => null, subscribeChatUnreadRuntimeChanges: () => () => {} },
   });
   api.useChatConversations({ imageCacheScope: 'old-account' });
   const cleanup = focus();

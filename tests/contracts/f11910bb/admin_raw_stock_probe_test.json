@@ -1,0 +1,40 @@
+{
+ "source": "test/admin_raw_stock_probe_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "raw stock update sends normalized fields and reads identity",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock",
+   "requestHeaders": {
+    "Authorization": "Bearer stock-probe-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"barcode\":\"B\",\"item_code\":\"A\",\"qty\":10.5}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"barcode\":\"B\",\"item_code\":\"A\",\"qty\":10.5,\"source_receipt_id\":\"R\"}"
+   }
+  },
+  {
+   "test": "raw stock deletion reports locked server response",
+   "method": "DELETE",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock",
+   "requestHeaders": {
+    "Authorization": "Bearer stock-probe-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"barcode\":\"B\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"raw_material_stock_locked\"}"
+   }
+  }
+ ]
+}

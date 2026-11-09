@@ -18,7 +18,8 @@ export class GScaleBatchStateStore {
   private generation = 0;
   private lastErrorKey = '';
   private alive = true;
-  constructor(private readonly api: GScaleBatchStateApi) {}
+  constructor(private readonly api: GScaleBatchStateApi,
+    private readonly options: { prepareAutomaticStop?: (batch: GScaleBatchSession) => () => boolean } = {}) {}
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private update(value: Partial<GScaleBatchState>) {
@@ -53,12 +54,15 @@ export class GScaleBatchStateStore {
       this.lastErrorKey = key;
       const message = `ERPNext tasdiqlashda xatolik yuz berdi: ${detail}`;
       this.update({ error: message });
-      if (batch.active && hasExactRpsBatchContext(batch)) queueMicrotask(() => {
-        const current = this.state.batch;
-        if (this.alive && this.state.resolved && current?.active && hasExactRpsBatchContext(current)) {
-          void this.stopAfterLateError(current, message);
-        }
-      });
+      if (batch.active && hasExactRpsBatchContext(batch)) {
+        const guard = this.options.prepareAutomaticStop?.(batch);
+        queueMicrotask(() => {
+          const current = this.state.batch;
+          if (this.alive && this.state.resolved && current?.active && hasExactRpsBatchContext(current) && (!guard || guard())) {
+            void this.stopAfterLateError(current, message, guard);
+          }
+        });
+      }
     }
   }
 
@@ -78,8 +82,10 @@ export class GScaleBatchStateStore {
     } catch (error) { this.update({ loading: false, error: rpsBatchActionErrorMessage(error) }); }
   }
 
-  private async stopAfterLateError(batch: GScaleBatchSession, message: string): Promise<void> {
+  private async stopAfterLateError(batch: GScaleBatchSession, message: string, guard?: () => boolean): Promise<void> {
+    if (guard && !guard()) return;
     this.update({ loading: true, error: message });
+    if (guard && !guard()) { this.update({ loading: false }); return; }
     try {
       const result = await timed(this.api.stop(batch.id, batch.revision), 30000);
       if (!this.alive) return;
