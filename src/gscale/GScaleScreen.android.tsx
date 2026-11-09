@@ -15,6 +15,7 @@ import type { ArchivePrintEntry, ArchiveSession } from './gscaleArchive';
 import { gscaleDashboardSections, type GScaleRow } from './gscaleScreenModel';
 import type { GScaleOperatorStore } from './gscaleOperatorState';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
+import { GScaleReceipt } from './GScaleReceipt.android';
 import { useGScalePicker, useGScaleScreen, useGScaleSession, useGScaleText,
   type GScalePickerSpec } from './useGScaleScreen';
 
@@ -110,17 +111,26 @@ function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType
         .map(([key, value]) => ({ key, title: value, select: () => resolve(key) })) };
     sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />, { onDismiss: () => resolve(null) });
   });
-  const sections = gscaleDashboardSections(screen, section, {
+  const actions = {
     pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} useText={useGScaleText} Label={Label} Action={Action} />),
-    archive: batch => sheet.open(<ArchiveSheet batch={batch} operator={screen.operator} close={sheet.close} />),
-    confirmArchivePrint: batch => Alert.alert(t('Partiya QR chop etish'), t('Shu partiya uchun QR chop etamizmi?'), [
+    archive: (batch: ArchiveSession) => sheet.open(<ArchiveSheet batch={batch} operator={screen.operator} close={sheet.close} />),
+    confirmArchivePrint: (batch: ArchiveSession) => Alert.alert(t('Partiya QR chop etish'), t('Shu partiya uchun QR chop etamizmi?'), [
       { text: t('Bekor qilish'), style: 'cancel' }, { text: t('Chop etish'), onPress: () => void screen.operator.printArchive(batch) },
     ]),
-  });
+  };
+  const sections = gscaleDashboardSections(screen, section, actions);
   const exit = () => Alert.alert(t('Chiqish'), t('Hisobdan chiqasizmi?'), [{ text: t('Bekor qilish'), style: 'cancel' },
     { text: t('Chiqish'), onPress: signOut }]);
   const title = screen.controlOnly ? t('Homashyo kirimi') : screen.state.device.selection?.transport === 'wifi'
     ? screen.state.device.selection.server.handshake.serverName : t('Tarozilar rejimi');
+  if (screen.controlOnly && screen.role === 'tayyorlov_masteri') return <><Stack.Screen options={{ headerShown: false }} />
+    <GScaleReceipt session={session} title={title} section={section === 'history' ? 'history' : 'control'}
+      onSelect={id => { setSection(id); if (id === 'history') void screen.operator.refreshArchive(); }}
+      control={gscaleDashboardSections(screen, 'control', actions)} history={gscaleDashboardSections(screen, 'history', actions)}
+      connected={!!screen.state.device.selection} attention={screen.state.device.needsAttention}
+      refreshing={screen.state.archiveLoading} onRefresh={() => void screen.operator.refreshArchive()} onDevices={actions.devices}
+      onBack={() => { if (router.canGoBack()) router.back(); else exit(); }} />
+  </>;
   return <><Stack.Screen options={{ headerShown: true, title,
     ...(!router.canGoBack() ? { headerLeft: () => <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')} onPress={exit}>
       <SymbolView name={{ android: 'arrow_back' }} size={24} tintColor={colors.onSurface} /></Pressable> } : {}) }} />

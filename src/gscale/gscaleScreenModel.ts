@@ -6,7 +6,7 @@ import type { GScalePickerSpec, useGScaleScreen } from './useGScaleScreen';
 type Screen = ReturnType<typeof useGScaleScreen>;
 type Action = { kind: 'action'; label: string; detail?: string; disabled?: boolean; id?: string; press(): void };
 type Field = { kind: 'field'; label: string; value: string; disabled?: boolean; decimal?: boolean;
-  change(value: string): void; focus?(focused: boolean): void };
+  key?: keyof OperatorControlDraft; change(value: string): void; focus?(focused: boolean): void };
 type Toggle = { kind: 'toggle'; label: string; value: boolean; disabled?: boolean; change(value: boolean): void };
 type Text = { kind: 'text'; text: string };
 export type GScaleRow = Action | Field | Toggle | Text;
@@ -52,7 +52,7 @@ export function gscaleDashboardSections(screen: Screen, section: 'control' | 'hi
       : state.error ? 'Printer holati olinmadi' : 'Printer holati olinmoqda')
     : selected?.transport === 'bluetooth' ? `${selected.bluetoothPrinter.displayName} · Bluetooth`
       : selected?.transport === 'offline' ? 'USB printer · Offline' : 'Printer yoki tarozi tanlash';
-  const deviceRows: GScaleRow[] = [button(deviceLabel, actions.devices, false, state.device.needsAttention ? 'Qurilmani qayta tanlang' : undefined)];
+  const deviceRows: GScaleRow[] = [button(deviceLabel, actions.devices, false, state.device.needsAttention ? 'Qurilmani qayta tanlang' : undefined, 'gscale-device')];
   if (!controlOnly && selected?.transport === 'wifi') deviceRows.push(text(state.monitor.latencyMs > 0 ? `${state.monitor.latencyMs} ms` : '—'));
   if (control.hasScaleDevice) deviceRows.push(text(`Joriy kg: ${state.monitor.scaleValue} · ${state.monitor.scaleConnectionLabel}`));
   if (!state.batch.resolved && control.hasPrintDevice) deviceRows.push(text('Batch holati tekshirilmoqda…'),
@@ -68,7 +68,7 @@ export function gscaleDashboardSections(screen: Screen, section: 'control' | 'hi
     if (order.loading) rows.push(text('Orderlar yuklanmoqda…'));
     else if (order.error != null) rows.push(text(`Orderlar yuklanmadi: ${String(order.error)}`), button('Yangilash', () => void screen.orderStore.load()));
     else rows.push(button('Order tanlang', () => actions.pick(screen.orderPicker()), orderLocked || !order.orders.length,
-      screen.orderStore.selectedLabel || (order.orders.length ? '' : 'Buyurtma topilmadi')));
+      screen.orderStore.selectedLabel || (order.orders.length ? '' : 'Buyurtma topilmadi'), 'gscale-order'));
     if (screen.orderStore.widthLabel) rows.push(text(screen.orderStore.widthLabel));
     sections.push({ title: 'Order', rows });
   }
@@ -77,17 +77,17 @@ export function gscaleDashboardSections(screen: Screen, section: 'control' | 'hi
     if (active?.order_id) rows.push(text(`Faol batch orderi: ${active.order_id}`));
     rows.push(text(`${control.selectedItem?.name || control.selectedItem?.code || '—'} · ${control.targetWarehouse || '—'}`));
     rows.push(text(`Eni: ${active?.width_mm ?? (draft.width_text || '—')} · Mikron: ${active?.micron ?? (draft.micron_text || '—')} · Metraj: ${active?.length_m ?? (draft.length_text || '—')}`));
-    rows.push(button('O‘zgartirish', () => operator.beginContextEdit(), state.actionLoading || state.manualPrintLoading));
+    rows.push(button('O‘zgartirish', () => operator.beginContextEdit(), state.actionLoading || state.manualPrintLoading, undefined, 'gscale-context-edit'));
   }
   const field = (label: string, key: keyof OperatorControlDraft, disabled: boolean, focus?: (focused: boolean) => void): Field => ({
-    kind: 'field', label, value: String(draft[key]), disabled, decimal: true,
+    kind: 'field', key, label, value: String(draft[key]), disabled, decimal: true,
     change: value => operator.editDraft({ [key]: value }), focus });
   if (control.showFields) {
     if (draft.warehouse_mode === 'default') rows.push(text(draft.default_warehouse ? `Standart ombor: ${draft.default_warehouse}` : 'Default ombor tanlanmagan.'));
     else rows.push(button('Ombor tanlang', () => actions.pick(screen.warehousePicker()),
-      control.fieldsLocked || (!controlOnly && !draft.item_code), control.targetWarehouse || undefined));
+      control.fieldsLocked || (!controlOnly && !draft.item_code), control.targetWarehouse || undefined, 'gscale-warehouse'));
     if (!controlOnly && !draft.item_code) rows.push(text('Avval mahsulot tanlang, keyin ombor tanlash ochiladi.'));
-    rows.push(button('Mahsulot tanlang', () => actions.pick(screen.itemPicker()), control.fieldsLocked, draft.item_name || draft.item_code || undefined));
+    rows.push(button('Mahsulot tanlang', () => actions.pick(screen.itemPicker()), control.fieldsLocked, draft.item_name || draft.item_code || undefined, 'gscale-item'));
     if (!control.simpleReceiptMode && (control.selectedItem?.requiresDimensions || (role === 'material_taminotchi' && !control.selectedItem))) {
       rows.push(field('Eni (mm)', 'width_text', control.fieldsLocked), field('Mikron', 'micron_text', control.fieldsLocked));
       if (control.widthInvalid) rows.push(text('To‘g‘ri eni kiriting'));
