@@ -32,6 +32,42 @@ test('Closed history reads only on expansion, then caches a matching response ac
   c.toggle(); assert.equal(c.getSnapshot().expanded, false); f.reads[0].resolve(detail('o')); await tick();
   assert.equal(c.getSnapshot().detail.order_id, 'o'); c.toggle(); assert.equal(c.getSnapshot().expanded, true); assert.equal(f.reads.length, 1); c.dispose();
 });
+test('expansion publishes loading atomically before any synchronous observer can see summary logs', async () => {
+  const f = fixture(), observed = []; f.controller.subscribe(() => observed.push(f.controller.getSnapshot()));
+  f.controller.toggle(); assert.ok(observed.length); assert.ok(observed.every(state => !state.expanded || state.loading || state.detail));
+  f.reads[0].resolve(detail('o')); await tick(); assert.equal(f.controller.getSnapshot().loading, false); f.controller.dispose();
+});
+test('only a current expanded hydrated log receives a raw, non-reentrant sheet witness', async () => {
+  const f = fixture(), c = f.controller, log = { event_id: 'event', created_at_unix: 0 }, value = { ...detail('o'), logs: [log] };
+  assert.equal(c.captureLog(value, log), null); c.toggle(); assert.equal(c.captureLog(value, log), null);
+  f.reads[0].resolve(value); await tick(); assert.equal(c.captureLog(value, { ...log }), null); assert.equal(c.captureLog({ ...value }, log), null);
+  const selection = c.captureLog(value, log); assert.equal(selection.detail, value); assert.equal(selection.log, log);
+  assert.equal(profile.isProfileSessionCurrent(selection.isCurrent), true); assert.equal(selection.isCurrent(), true); c.dispose();
+  assert.equal(profile.isProfileSessionCurrent(selection.isCurrent), false);
+});
+test('a captured log cannot revive after collapse/reopen, row ABA or account witness loss', async () => {
+  for (const transition of ['collapse', 'row', 'account']) {
+    const f = fixture(), c = f.controller, log = { event_id: 'e', created_at_unix: 0 }, value = { ...detail('o'), logs: [log] };
+    c.toggle(); f.reads[0].resolve(value); await tick(); const selection = c.captureLog(value, log);
+    if (transition === 'collapse') { c.toggle(); c.toggle(); assert.equal(profile.isProfileSessionCurrent(c.captureLog(value, log).isCurrent), true); }
+    else if (transition === 'row') { f.setRow({ id: 'o', historyVersion: 'v1', windowGeneration: 2 }); assert.equal(profile.isProfileSessionCurrent(selection.isCurrent), false);
+      f.setRow({ id: 'o', historyVersion: 'v1', windowGeneration: 1 }); }
+    else { f.setCurrent(false); assert.equal(profile.isProfileSessionCurrent(selection.isCurrent), false); f.setCurrent(true); }
+    assert.equal(profile.isProfileSessionCurrent(selection.isCurrent), false, transition); c.dispose();
+  }
+});
+test('malformed or throwing account and row witnesses retire a captured log and observe async rejections', async () => {
+  for (const field of ['account', 'row']) for (const malformed of [false, () => { throw Error('bad'); }, async () => { throw Error('bad async'); }]) {
+    let account = () => true, row = () => true; const value = { ...detail('o'), logs: [{ event_id: 'e', created_at_unix: 0 }] };
+    const c = new Controller({ id: 'o', historyVersion: 'v1', windowGeneration: 1 }, { isCurrent: () => account(), rowIsCurrent: () => row(), read: async () => value });
+    c.toggle(); await tick(); const selection = c.captureLog(value, value.logs[0]); assert.ok(selection);
+    const invalid = typeof malformed === 'function' ? malformed : () => malformed;
+    if (field === 'account') account = invalid; else row = invalid;
+    assert.equal(profile.isProfileSessionCurrent(selection.isCurrent), false); account = () => true; row = () => true;
+    assert.equal(profile.isProfileSessionCurrent(selection.isCurrent), false); c.dispose();
+  }
+  await tick();
+});
 test('history version changes retire old results and coalesce a new read after the in-flight request', async () => {
   const f = fixture(), c = f.controller; c.toggle(); f.setRow({ id: 'o', historyVersion: 'v2', windowGeneration: 1 }); c.configure({ id: 'o', historyVersion: 'v2', windowGeneration: 1 });
   assert.equal(c.getSnapshot().loading, true); assert.equal(c.getSnapshot().detail, null); assert.equal(f.reads[0].witness(), false); assert.equal(f.reads.length, 1);

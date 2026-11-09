@@ -5,7 +5,9 @@ import { adminWorkMapClosedTime } from './adminWorkMapClosedModel';
 
 export type AdminClosedHistoryTicket = { id: string; historyVersion: string; windowGeneration: number };
 type Detail = ReturnType<typeof closedProductionOrderFromJson>;
+type Log = Detail['logs'][number];
 export type AdminClosedHistoryState = { ticket: AdminClosedHistoryTicket; expanded: boolean; loading: boolean; detail: Detail | null; error: string | null };
+export type AdminClosedLogSelection = Readonly<{ detail: Detail; log: Log; isCurrent: () => boolean }>;
 type Dependencies = { isCurrent: () => boolean; rowIsCurrent: (ticket: AdminClosedHistoryTicket) => boolean;
   read: (id: string, witness: () => boolean) => Promise<Detail> };
 
@@ -14,6 +16,7 @@ export class AdminClosedHistoryController {
   private state: AdminClosedHistoryState;
   private hidden: AdminClosedHistoryState;
   private generation = 0;
+  private visibilityGeneration = 0;
   private flight: object | null = null;
   private disposed = false;
   private listeners = new Set<() => void>();
@@ -53,10 +56,32 @@ export class AdminClosedHistoryController {
   toggle() {
     if (!this.current()) return;
     const expanded = !this.state.expanded;
-    this.publish({ expanded, ...(expanded && this.flight && !this.state.detail ? { loading: true } : {}) });
+    if (!expanded) this.visibilityGeneration++;
+    // Publish loading with expansion so a synchronous subscriber cannot present summary logs as hydrated detail.
+    this.publish({ expanded, ...(expanded && !this.state.detail ? { loading: true } : {}) });
     if (expanded) this.load();
   }
   retry() { if (this.state.expanded && this.state.error && this.current()) this.load(); }
+  /** Capture only a currently expanded, hydrated log. The returned raw witness is validated by the owner. */
+  captureLog(detail: Detail, log: Log): AdminClosedLogSelection | null {
+    if (!this.current() || !this.state.expanded || this.state.detail !== detail || !detail.logs.includes(log)) return null;
+    const ticket = this.state.ticket, generation = this.generation, visibility = this.visibilityGeneration;
+    let retired = false;
+    const isCurrent = () => {
+      if (retired) return false;
+      let account: boolean;
+      try { account = this.deps.isCurrent(); } catch (error) { retired = true; throw error; }
+      // Forward malformed/async results unchanged to the outer strict validator, which observes rejections.
+      if (account !== true) { retired = true; return account; }
+      if (this.disposed || generation !== this.generation || visibility !== this.visibilityGeneration || ticket !== this.state.ticket ||
+          !this.state.expanded || this.state.detail !== detail || !detail.logs.includes(log)) { retired = true; return false; }
+      let row: boolean;
+      try { row = this.deps.rowIsCurrent(ticket); } catch (error) { retired = true; throw error; }
+      if (row !== true) retired = true;
+      return row;
+    };
+    return Object.freeze({ detail, log, isCurrent });
+  }
   private load() {
     if (!this.state.expanded || this.state.detail || this.flight || !this.current()) return;
     const ticket = this.state.ticket, generation = this.generation, flight = {};
