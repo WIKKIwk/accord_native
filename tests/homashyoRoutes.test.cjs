@@ -150,7 +150,8 @@ test('repeated camera events cannot complete or look up a second detection', () 
   assert.deepEqual(h.values, ['ONE']); assert.equal(h.alert()[1], 'ONE'); assert.deepEqual(h.lookups, []); h.unmount();
 });
 test('provider composes the real picker owner, enables only a current witness, and cancels on transition', async () => {
-  const h = hooks(); h.react.createContext = () => ({ Provider: 'ContextProvider' }); let reset, witnessListener, runtimeOptions, disposals = 0, renderedRequest, current = true;
+  const h = hooks(); h.react.createContext = () => ({ Provider: 'ContextProvider' }); let reset, witnessListener, runtimeOptions, disposals = 0, renderedRequest, current = true, locale = 'uz', noticeMessage = 'Chop etildi';
+  const { uiText } = load('shared/localization/index.ts', { './catalog.json': require('../src/shared/localization/catalog.json') });
   const discovery = load('gscale/gscaleDiscovery.ts');
   const { createTransientDevicePicker } = load('shared/printing/transientDevicePicker.ts', { '../../gscale/gscaleDiscovery': discovery });
   const { RawSplitPickerCoordinator } = load('homashyo/rawSplitPickerCoordinator.ts');
@@ -158,7 +159,8 @@ test('provider composes the real picker owner, enables only a current witness, a
     'expo-router': { router: { replace() {} } }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => 7 },
     '../auth': { registerSessionResetHook: fn => { reset = fn; return () => {}; } },
-    '../preparation/PreparationNotice': { PreparationNotice: 'Notice' }, '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
+    '../preparation/PreparationNotice': { PreparationNotice: 'Notice' }, '../preparation/PreparationUI': { usePreparationText: () => value => uiText(value, locale) },
+    '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: noticeMessage }) },
     '../shared/printing/transientDevicePickerRuntime': { createNativeTransientDevicePicker: isCurrent => {
       renderedRequest = createTransientDevicePicker({ isCurrent, scan: async () => ({ servers: [], candidateCount: 0 }), probe: async () => null }); return renderedRequest; } },
     './rawSplitApi': { rawSplitSessionIsCurrent: () => current }, './rawSplitDeviceSelection': { rawSplitDeviceSelection: value => value, validateRawSplitDeviceSelection() {} },
@@ -167,6 +169,10 @@ test('provider composes the real picker owner, enables only a current witness, a
   const { RawSplitProvider } = load('homashyo/RawSplitContext.tsx', mocks, true), props = { session: { token: 'real-session-placeholder' }, ticket: {}, onLogout() {}, children: 'screen',
     subscribeWitness: listener => { witnessListener = listener; return () => {}; }, witnessVersion: () => 0 };
   const render = () => h.render(() => RawSplitProvider(props)); const initial = render(); assert.equal(initial.props.value.unread, 7); assert.equal(runtimeOptions.canMutate(), true);
+  assert.equal(initial.props.children.props.children[1].props.message, 'Chop etildi');
+  locale = 'ur'; assert.equal(render().props.children.props.children[1].props.message, 'پرنٹ ہوگیا');
+  noticeMessage = 'Muammo saqlandi'; assert.equal(render().props.children.props.children[1].props.message, 'خرابی محفوظ ہوگئی');
+  locale = 'ru'; assert.equal(render().props.children.props.children[1].props.message, 'Muammo saqlandi');
   const pending = runtimeOptions.selectPrinter(); const tree = render(); const content = tree.props.children.props.children;
   assert.equal(content[0].props.importantForAccessibility, 'no-hide-descendants'); assert.equal(content[2].type, 'Overlay');
   assert.equal(content[2].props.request, renderedRequest); current = false; witnessListener(); assert.equal(await pending, null); assert.equal(disposals, 1);
@@ -220,7 +226,7 @@ test('provider subscribes then rechecks a witness invalidated before subscriptio
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
     'expo-router': { router: { replace() {} } }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => 7 },
-    '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' },
+    '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' }, '../preparation/PreparationUI': { usePreparationText: () => value => value },
     '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
     '../shared/printing/transientDevicePickerRuntime': {}, './rawSplitApi': { rawSplitSessionIsCurrent: () => current },
     './rawSplitDeviceSelection': {}, './RawSplitPickerOverlay': { RawSplitPickerOverlay: 'Overlay' }, './rawSplitPickerCoordinator': { RawSplitPickerCoordinator: Picker },
@@ -281,7 +287,7 @@ test('provider rechecks a picker after subscribing, including a transition befor
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
     'expo-router': { router: {} }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => 7 },
-    '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' },
+    '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' }, '../preparation/PreparationUI': { usePreparationText: () => value => value },
     '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
     '../shared/printing/transientDevicePickerRuntime': {}, './rawSplitApi': { rawSplitSessionIsCurrent: () => true }, './rawSplitDeviceSelection': {},
     './RawSplitPickerOverlay': { RawSplitPickerOverlay: 'Overlay' }, './rawSplitPickerCoordinator': { RawSplitPickerCoordinator: Picker },

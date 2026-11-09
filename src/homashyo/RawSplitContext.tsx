@@ -5,6 +5,7 @@ import { useChatUnreadCount } from '../shared/chat/useChatUnreadCount';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { registerSessionResetHook, type Session } from '../auth';
 import { PreparationNotice } from '../preparation/PreparationNotice';
+import { usePreparationText } from '../preparation/PreparationUI';
 import { usePreparationNotice } from '../preparation/usePreparationNotice';
 import { createNativeTransientDevicePicker } from '../shared/printing/transientDevicePickerRuntime';
 import { rawSplitSessionIsCurrent, type RawSplitSessionTicket } from './rawSplitApi';
@@ -22,7 +23,7 @@ const RawSplitContext = createContext<Context | null>(null);
 export function RawSplitProvider({ session, ticket, onLogout, subscribeWitness, witnessVersion, children }: { session: Session; ticket: RawSplitSessionTicket;
   onLogout(): void; subscribeWitness(listener: () => void): () => void; witnessVersion(): number; children: ReactNode }) {
   const [picker, setPicker] = useState<Request | null>(null), [issueRevision, setIssueRevision] = useState(0);
-  const [invalidated, setInvalidated] = useState(false), notice = usePreparationNotice(), lifetime = useRef({ mounts: 0 });
+  const [invalidated, setInvalidated] = useState(false), notice = usePreparationNotice(), lifetime = useRef({ mounts: 0 }), t = usePreparationText();
   useSyncExternalStore(subscribeWitness, witnessVersion, witnessVersion);
   const unread = useChatUnreadCount(session), [chatClosing, setChatClosing] = useState(false);
   const [owner] = useState(() => {
@@ -51,7 +52,7 @@ export function RawSplitProvider({ session, ticket, onLogout, subscribeWitness, 
     <Text>Sessiya o‘zgargan. Sahifani qayta oching.</Text><WorkerSheetButton label="Bosh sahifa" onPress={() => router.replace('/')} /></View>;
   return <RawSplitContext.Provider value={{ session, ticket: owner.ticket, runtime: owner.runtime, onLogout, issueRevision, unread, chatClosing, setChatClosing }}>
     <View style={{ flex: 1 }}><View style={{ flex: 1 }} accessibilityElementsHidden={picker !== null}
-      importantForAccessibility={picker ? 'no-hide-descendants' : 'auto'}>{children}</View><PreparationNotice message={notice.message} />
+      importantForAccessibility={picker ? 'no-hide-descendants' : 'auto'}>{children}</View><PreparationNotice message={t(notice.message)} />
       {picker && <RawSplitPickerOverlay request={picker} owner={owner.pickerOwner} />}</View>
   </RawSplitContext.Provider>;
 }
