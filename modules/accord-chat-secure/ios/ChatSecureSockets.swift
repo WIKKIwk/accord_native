@@ -36,7 +36,7 @@ func chatSocketRequest(origin: String, ticket: String) throws -> URLRequest {
   parts.path = "/v1/mobile/chat/live"
   parts.queryItems = [URLQueryItem(name: "ticket", value: ticket)]
   guard let url = parts.url else { throw ChatSocketError.invalidOrigin }
-  var request = URLRequest(url: url)
+  var request = URLRequest(url: url, timeoutInterval: 10)
   request.httpShouldHandleCookies = false
   return request
 }
@@ -56,6 +56,9 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
   private let lock = NSLock()
   private let emit: ([String: Any]) -> Void
   private var entries: [String: URLSessionWebSocketTask] = [:]
+  private let pingQueue = DispatchQueue(label: "accord.chat.ping")
+  private var pingTimers: [String: DispatchWorkItem] = [:]
+  private var awaitingPong: Set<String> = []
   private var closed = false
   private lazy var session: URLSession = {
     let queue = OperationQueue()
@@ -90,6 +93,8 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
   func stop(id: String) {
     lock.lock()
     let task = entries.removeValue(forKey: id)
+    pingTimers.removeValue(forKey: id)?.cancel()
+    awaitingPong.remove(id)
     lock.unlock()
     task?.cancel()
   }
@@ -100,6 +105,9 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
     closed = true
     let tasks = Array(entries.values)
     entries.removeAll()
+    pingTimers.values.forEach { $0.cancel() }
+    pingTimers.removeAll()
+    awaitingPong.removeAll()
     lock.unlock()
     tasks.forEach { $0.cancel() }
     session.invalidateAndCancel()
@@ -120,6 +128,8 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
     defer { lock.unlock() }
     guard let id = id(for: task) else { return }
     entries.removeValue(forKey: id)
+    pingTimers.removeValue(forKey: id)?.cancel()
+    awaitingPong.remove(id)
     if error { emit(["session": id, "type": "error", "value": ""]) }
     emit(["session": id, "type": "close", "value": ""])
   }
@@ -132,7 +142,11 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
         self.event(task: task, type: "message", value: value)
         self.lock.lock(); let active = self.id(for: task) != nil; self.lock.unlock()
         if active { self.receive(task) }
-      case .success(.data), .failure:
+      case .success(.data):
+        // V2 filters out binary frames and keeps listening for JSON text.
+        self.lock.lock(); let active = self.id(for: task) != nil; self.lock.unlock()
+        if active { self.receive(task) }
+      case .failure:
         task.cancel()
         self.finish(task: task, error: true)
       @unknown default:
@@ -144,8 +158,48 @@ final class ChatSecureSockets: NSObject, URLSessionWebSocketDelegate, @unchecked
 
   func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocolName: String?) {
     event(task: webSocketTask, type: "open")
-    lock.lock(); let active = id(for: webSocketTask) != nil; lock.unlock()
-    if active { receive(webSocketTask) }
+    lock.lock()
+    let active = id(for: webSocketTask)
+    if let id = active { schedulePingLocked(id: id) }
+    lock.unlock()
+    if active != nil { receive(webSocketTask) }
+  }
+
+  /// @v2 WebSocket.pingInterval: wait 25 seconds after open/pong, then allow
+  /// one outstanding ping and 25 seconds for its pong before reconnecting.
+  private func schedulePingLocked(id: String) {
+    pingTimers.removeValue(forKey: id)?.cancel()
+    let timer = DispatchWorkItem { [weak self] in self?.ping(id: id) }
+    pingTimers[id] = timer
+    pingQueue.asyncAfter(deadline: .now() + 25, execute: timer)
+  }
+
+  private func ping(id: String) {
+    lock.lock()
+    guard let task = entries[id] else { lock.unlock(); return }
+    if awaitingPong.contains(id) {
+      lock.unlock()
+      task.cancel(with: .goingAway, reason: nil)
+      finish(task: task, error: true)
+      return
+    }
+    awaitingPong.insert(id)
+    schedulePingLocked(id: id)
+    lock.unlock()
+    task.sendPing { [weak self] error in
+      guard let self else { return }
+      if error != nil {
+        task.cancel()
+        self.finish(task: task, error: true)
+        return
+      }
+      self.lock.lock()
+      if self.entries[id] === task {
+        self.awaitingPong.remove(id)
+        self.schedulePingLocked(id: id)
+      }
+      self.lock.unlock()
+    }
   }
 
   func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,

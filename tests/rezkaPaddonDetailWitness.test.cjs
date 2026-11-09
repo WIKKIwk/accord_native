@@ -14,7 +14,7 @@ function load(auth, loadCatalog) {
       if (id === '../auth' || id === './auth') return auth;
       if (id === '../apparatusApi') return { adminApparatus: loadCatalog ?? (async (_session, options) => { options.beforeSend();
         return [{ id: 'apparatus:default:a', name: 'A', operation: 'cut', lifecycle_state: 'active', sort_order: 1 }]; }) };
-      return id.startsWith('.') ? get(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : require(id);
+      return id.startsWith('.') ? get(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
     };
     mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
     return mod.exports;

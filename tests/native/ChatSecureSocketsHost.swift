@@ -12,6 +12,7 @@ private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
     let request = try chatSocketRequest(origin: "https://example.test", ticket: "synthetic&ticket")
     require(request.url?.absoluteString == "wss://example.test/v1/mobile/chat/live?ticket=synthetic%26ticket", "endpoint")
     require(!request.httpShouldHandleCookies, "request cookies must be off")
+    require(request.timeoutInterval == 10, "V2 uses a 10-second connection deadline")
     require(request.value(forHTTPHeaderField: "Cookie") == nil, "no cookie header")
     require(request.value(forHTTPHeaderField: "Authorization") == nil, "no authorization header")
     for origin in ["http://example.test", "wss://example.test", "https://user@example.test", "https://example.test/",

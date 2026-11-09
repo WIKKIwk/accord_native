@@ -12,7 +12,7 @@ function loader(mocks) {
     const loaded = new Module(file, module); cache.set(file, loaded);
     loaded.filename = file; loaded.paths = module.paths;
     loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.')
-      ? load(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : require(id);
+      ? load(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
     loaded._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
     return loaded.exports;
   }

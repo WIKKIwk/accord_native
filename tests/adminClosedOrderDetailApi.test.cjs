@@ -8,7 +8,7 @@ function load(name, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', name + '.ts'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./') ? load(name.slice(0, name.lastIndexOf('/') + 1) + id.slice(2), mocks)
-    : id.startsWith('../') ? load(path.posix.normalize(name.slice(0, name.lastIndexOf('/') + 1) + id), mocks) : require(id);
+    : id.startsWith('../') ? load(path.posix.normalize(name.slice(0, name.lastIndexOf('/') + 1) + id), mocks) : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }

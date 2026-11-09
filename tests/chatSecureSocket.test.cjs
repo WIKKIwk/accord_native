@@ -65,7 +65,8 @@ test('destroyed native send and stop close cleanly without breaking account rese
 test('missing development module fails closed without opening a socket', () => {
   const f = fixture(false);
   assert.equal(f.secureChatAvailable(), false);
-  assert.throws(() => f.secureChatSocket(f.session, 'wss://erp.example/v1/mobile/chat/live?ticket=synthetic'), /development build/);
+  assert.throws(() => f.secureChatSocket(f.session, 'wss://erp.example/v1/mobile/chat/live?ticket=synthetic'),
+    error => error.message === f.SECURE_CHAT_UNAVAILABLE);
   assert.deepEqual(f.calls, []);
 });
 

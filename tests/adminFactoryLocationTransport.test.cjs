@@ -6,7 +6,7 @@ const test = require('node:test');
 const ts = require('typescript');
 function load(file, overrides = {}) {
   const filename = path.resolve(__dirname, '../src', file + '.ts'), mod = new Module(filename, module);
-  mod.filename = filename; mod.paths = module.paths; mod.require = name => Object.hasOwn(overrides, name) ? overrides[name] : require(name);
+  mod.filename = filename; mod.paths = module.paths; mod.require = name => Object.hasOwn(overrides, name) ? overrides[name] : name === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }

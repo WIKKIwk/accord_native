@@ -21,7 +21,7 @@ function setup() {
         appRoutes: { apparatusPaddons: '/apparatus-paddons', adminWorkerSettings: '/workers' }, canOpenRoute: () => route };
       if (id === './workerControlsApi') return { productionMapResponseError: () => Error('server error'), WorkerControlException: class extends Error {} };
       if (id === './paddonModels') return { paddonFromJson: value => value, paddonSnapshotFromJson: value => value };
-      return id.startsWith('.') ? load(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : require(id);
+      return id.startsWith('.') ? load(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
     };
     mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
     return mod.exports;

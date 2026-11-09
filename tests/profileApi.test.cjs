@@ -7,7 +7,7 @@ const ts = require('typescript');
 function load(name, mocks = {}) {
   const filename = path.resolve(__dirname, `../src/${name}.ts`), loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
-  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./') ? load(id.slice(2), mocks) : require(id);
+  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./') ? load(id.slice(2), mocks) : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return loaded.exports;
 }

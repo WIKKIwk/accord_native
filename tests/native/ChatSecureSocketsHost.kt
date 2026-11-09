@@ -82,6 +82,7 @@ fun main(args: Array<String>) {
     check(runCatching { chatSocketRequest("https://example.test", " ") }.isFailure)
     val baseClient = newChatSocketClient()
     check(!baseClient.followRedirects && !baseClient.followSslRedirects && baseClient.cookieJar === CookieJar.NO_COOKIES)
+    check(baseClient.pingIntervalMillis == 25_000) { "V2 uses 25-second protocol pings" }
     val client = baseClient.newBuilder().sslSocketFactory(tls.socketFactory, manager).build()
     val oldHandler = CookieHandler.getDefault()
     CookieHandler.setDefault(object : CookieHandler() {

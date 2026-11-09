@@ -4,7 +4,7 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 class AccordChatSecureModule : Module() {
-    private val sockets = ChatSecureSockets { event -> sendEvent("onChatSocket", event) }
+    private val sockets = ChatSecureSockets(emit = { event -> sendEvent("onChatSocket", event) })
 
     override fun definition() = ModuleDefinition {
         Name("AccordChatSecure")

@@ -134,6 +134,19 @@ test('closing or malformed live data reconnects with a fresh ticket', async () =
   } finally { stop(); f.restore(); }
 });
 
+test('binary messages are ignored while later JSON text still reaches Chat', async () => {
+  const f = fixture(), events = [];
+  const stop = f.subscribeChatLive(f.session, () => {}, event => events.push(event));
+  try {
+    await sleep(0);
+    const socket = f.sockets[0]; socket.onopen();
+    socket.onmessage({ data: new Uint8Array([1, 2, 3]) });
+    assert.equal(socket.readyState, 1); assert.deepEqual(events, []);
+    socket.onmessage({ data: '{"event":"chat.ready"}' });
+    assert.deepEqual(events, [{ event: 'chat.ready' }]);
+  } finally { stop(); f.restore(); }
+});
+
 test('logout prevents a pending ticket from opening a socket', async () => {
   let resolveTicket;
   const pending = new Promise(resolve => { resolveTicket = resolve; });

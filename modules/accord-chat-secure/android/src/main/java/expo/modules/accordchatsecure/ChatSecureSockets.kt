@@ -33,6 +33,8 @@ internal fun newChatSocketClient(): OkHttpClient = OkHttpClient.Builder()
     .followSslRedirects(false)
     .connectTimeout(10, TimeUnit.SECONDS)
     .readTimeout(0, TimeUnit.MILLISECONDS)
+    // @v2 connectWarehouseLivePlatform: WebSocket.pingInterval = 25 seconds.
+    .pingInterval(25, TimeUnit.SECONDS)
     .build()
 
 /** The only destination is the signed-in server's canonical HTTPS origin. */
@@ -132,10 +134,8 @@ internal class ChatSecureSockets(
 
         override fun onMessage(webSocket: WebSocket, text: String) = event("message", text)
 
-        override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-            webSocket.cancel()
-            finish(error = true)
-        }
+        // V2's stream filters out binary messages before decoding JSON.
+        override fun onMessage(webSocket: WebSocket, bytes: ByteString) = Unit
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { webSocket.close(code, null) }
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) = finish(error = false)

@@ -2,7 +2,7 @@ import { chatSecureNativeModule, type NativeChatSocketEvent } from '../../../mod
 import { activeSessionToken, registerSessionResetHook, type Session } from '../../auth';
 import type { ChatLiveSocket } from '../../chatLive';
 
-export const SECURE_CHAT_UNAVAILABLE = 'Xavfsiz Chat uchun ilovaning yangi development buildi kerak.';
+export const SECURE_CHAT_UNAVAILABLE = 'Chat so‘rovi bajarilmadi';
 
 export function secureChatAvailable(): boolean {
   try { return chatSecureNativeModule() != null; } catch { return false; }
@@ -10,7 +10,7 @@ export function secureChatAvailable(): boolean {
 
 /** Reject arbitrary URLs before a ticket can cross the native bridge. */
 export function secureChatDestination(session: Session, rawUrl: string): { origin: string; ticket: string } {
-  if (!activeSessionToken(session)) throw new Error('Sessiya tugagan.');
+  if (!activeSessionToken(session)) throw new Error('No session token');
   let base: URL, target: URL;
   try { base = new URL(session.baseUrl); target = new URL(rawUrl); }
   catch { throw new Error('Server manzili noto‘g‘ri.'); }
