@@ -13,7 +13,8 @@ export function useCustomerNavigation(platform: CustomerPlatform) {
   }, [store]));
   const openStatus = (kind: CustomerStatusKind) => {
     returningFromStatus.current = true;
-    router.push({ pathname: `/${platform}-customer/status`, params: { kind } } as Href);
+    const pathname: string = `/${platform}-customer/status`;
+    router.push({ pathname, params: { kind } } as Href);
   };
   const openDetail = (id: string, origin: Origin) => {
     const pathname = platform === 'ios' && origin === 'notifications'
