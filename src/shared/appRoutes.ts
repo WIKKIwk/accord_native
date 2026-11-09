@@ -709,11 +709,20 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
   [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
   [appRoutes.boyoqchiHome]: { ios: '/ios-boyoqchi' as Href, android: '/android-boyoqchi' as Href },
+  [appRoutes.materialHome]: { ios: '/ios-material' as Href, android: '/android-material' as Href },
+  [appRoutes.rawMaterialSplit]: { ios: '/ios-homashyo' as Href, android: '/android-homashyo' as Href },
+  [appRoutes.rezkaSplit]: { ios: '/rezka-split' as Href, android: '/rezka-split' as Href },
 };
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
   const route = homeRoute(session);
-  if (route === appRoutes.boyoqchiHome && !canOpenRoute(session, route)) return null;
+  if (session.profile.role === 'rezka_master') {
+    if (route !== appRoutes.apparatusQueue || !canOpenRoute(session, route)) return null;
+    return platform === 'ios' ? '/ios-rezka' as Href : platform === 'android' ? '/android-rezka' as Href : null;
+  }
+  if ((route === appRoutes.boyoqchiHome || route === appRoutes.rezkaSplit) && !canOpenRoute(session, route)) return null;
+  // Keep both protected roles' pre-integration fallback unchanged even with extra split capability.
+  if (route === appRoutes.rezkaSplit && (session.profile.role === 'aparatchi' || session.profile.role === 'tayyorlov_masteri')) return null;
   const entry = homeTargets[route];
   return platform === 'ios' ? entry?.ios ?? null : platform === 'android' ? entry?.android ?? null : null;
 }

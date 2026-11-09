@@ -24,9 +24,11 @@ export function rawMaterialLookupFromJson(value: unknown) {
 }
 
 /** @v2 adminRawMaterialLookup */
-export async function adminRawMaterialLookup(session: Session, barcode: string) {
+export async function adminRawMaterialLookup(session: Session, barcode: string, beforeSend?: () => void) {
   const query = new URLSearchParams({ barcode: barcode.trim() });
-  const { response, body } = await readApparatus(session, `/v1/mobile/admin/raw-material-assignments/lookup?${query}`, true);
+  const path = `/v1/mobile/admin/raw-material-assignments/lookup?${query}`;
+  const { response, body } = beforeSend ? await readApparatus(session, path, true, undefined, beforeSend)
+    : await readApparatus(session, path, true);
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = JSON.parse(body); } catch { payload = null; }

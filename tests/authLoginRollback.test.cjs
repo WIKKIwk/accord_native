@@ -9,7 +9,7 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
   const filename = path.resolve(__dirname, '../src/auth.ts'), loaded = new Module(filename, module);
   const accountFile = path.resolve(__dirname, '../src/authenticateAccount.ts'), account = new Module(accountFile, module);
   account.filename = accountFile; account.paths = module.paths;
-  account.require = id => id === './workerControlsApi' ? { isCanonicalApparatusId: value => /^apparatus:[^:]+:[^:]+$/.test(value) } : require(id);
+  account.require = id => id === './workerControlsApi' ? { isCanonicalApparatusId: value => /^apparatus:[^:]+:[^:]+$/.test(value) } : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   account._compile(ts.transpileModule(fs.readFileSync(accountFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, accountFile);
   const savedFile = path.resolve(__dirname, '../src/savedAccountStore.ts'), saved = new Module(savedFile, module);
   saved.filename = savedFile; saved.paths = module.paths;
@@ -30,15 +30,15 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
   const chatFile = path.resolve(__dirname, '../src/chatDeviceTokenApi.ts'), chat = new Module(chatFile, module);
   chat.filename = chatFile; chat.paths = module.paths;
   chat.require = id => id === './auth' ? loaded.exports : id === './authorizedFetch' ? {} :
-    id === './workerControlsApi' ? { WorkerControlException: class extends Error {} } : require(id);
+    id === './workerControlsApi' ? { WorkerControlException: class extends Error {} } : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   chat._compile(ts.transpileModule(fs.readFileSync(chatFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, chatFile);
   const pushFile = path.resolve(__dirname, '../src/pushTokenRuntime.ts'), push = new Module(pushFile, module);
   push.filename = pushFile; push.paths = module.paths;
-  push.require = id => id === './chatDeviceTokenApi' ? chat.exports : require(id);
+  push.require = id => id === './chatDeviceTokenApi' ? chat.exports : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   push._compile(ts.transpileModule(fs.readFileSync(pushFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, pushFile);
   const switchFile = path.resolve(__dirname, '../src/shared/accountSwitchController.ts'), switching = new Module(switchFile, module);
   switching.filename = switchFile; switching.paths = module.paths;
-  switching.require = id => id === '../savedAccountStore' ? saved.exports : require(id);
+  switching.require = id => id === '../savedAccountStore' ? saved.exports : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   switching._compile(ts.transpileModule(fs.readFileSync(switchFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, switchFile);
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: platform } }
@@ -49,7 +49,7 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
     : id === './shared/searchActivityStore' ? role.exports
     : id === './shared/accountSwitchController' ? switching.exports
     : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => endpoints }
-    : id === './logoutSavedSession' ? logoutModule.exports : id === './pushTokenRuntime' ? push.exports : require(id);
+    : id === './logoutSavedSession' ? logoutModule.exports : id === './pushTokenRuntime' ? push.exports : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return Object.assign(loaded.exports, { testAccountStore: accountStore, testEndpoints: endpoints, testPush: push.exports });
 }
@@ -572,7 +572,7 @@ test('same-session 401 token refresh keeps the issued witness valid for the exis
     const api = auth({}), session = await api.login('https://example.test', 'one', 'code');
     const witness = api.captureSessionWitness(session); let notifications = 0; const stop = api.subscribeSessionWitness(() => notifications++);
     const filename = path.resolve(__dirname, '../src/authorizedFetch.ts'), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-    mod.require = id => id === './auth' ? api : require(id);
+    mod.require = id => id === './auth' ? api : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
     mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
     const response = await mod.exports.authorizedFetch(session, '/v1/mobile/test', { method: 'PUT' }, () => {
       if (!api.isSessionWitnessCurrent(witness)) throw new Error('stale witness');
@@ -602,7 +602,7 @@ test('a refresh changing capability invalidates the witness before any 401 retry
   try {
     const api = auth({}), session = await api.login('https://example.test', 'one', 'code'), witness = api.captureSessionWitness(session);
     const filename = path.resolve(__dirname, '../src/authorizedFetch.ts'), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-    mod.require = id => id === './auth' ? api : require(id);
+    mod.require = id => id === './auth' ? api : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
     mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
     await assert.rejects(mod.exports.authorizedFetch(session, '/v1/mobile/test', { method: 'PUT' }, () => {
       if (!api.isSessionWitnessCurrent(witness)) throw new Error('stale witness');
@@ -692,4 +692,118 @@ test('observed direct scope loss permanently retires a witness after the scope r
   session.capabilities = ['two']; assert.equal(api.isSessionWitnessCurrent(old), false);
   session.capabilities = ['one']; assert.equal(api.isSessionWitnessCurrent(old), false);
   const fresh = api.captureSessionWitness(session); assert.ok(fresh); assert.equal(api.isSessionWitnessCurrent(fresh), true);
+});
+
+
+test('transition observer reports logged-out, login start and successful completion', async () => {
+  const original = global.fetch; let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  global.fetch = async () => { entered(); await new Promise(resolve => { release = resolve; });
+    return { status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) }; };
+  try {
+    const api = auth({}); assert.equal(api.currentSession(), null); assert.equal(api.sessionWitnessTransitioning(), false);
+    const seen = []; const stop = api.subscribeSessionWitness(() => seen.push(api.sessionWitnessTransitioning()));
+    const pending = api.login('https://example.test', 'one', 'code'); assert.equal(api.sessionWitnessTransitioning(), true);
+    await started; assert.equal(api.sessionWitnessTransitioning(), true); release(); await pending;
+    assert.equal(api.sessionWitnessTransitioning(), false); assert.deepEqual(seen, [true, false]); stop();
+  } finally { global.fetch = original; }
+});
+
+test('transition observer ends on failed login while the prior witness stays retired', async () => {
+  const original = global.fetch; let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  global.fetch = async () => { entered(); await new Promise(resolve => { release = resolve; }); return { status: 401 }; };
+  try {
+    const api = auth({}), old = oldSession(); await api.saveSession(old); const witness = api.captureSessionWitness(old);
+    const pending = api.login('https://example.test', 'one', 'bad'); assert.equal(api.sessionWitnessTransitioning(), true);
+    await started; release(); await assert.rejects(pending, /Login failed/);
+    assert.equal(api.sessionWitnessTransitioning(), false); assert.equal(api.currentSession(), old);
+    assert.equal(api.isSessionWitnessCurrent(witness), false); assert.ok(api.captureSessionWitness(old));
+  } finally { global.fetch = original; }
+});
+
+test('transition observer stays true until all overlapping attempts finish', async () => {
+  const original = global.fetch, started = [], release = [];
+  global.fetch = async () => { const index = release.length; let unblock; const gate = new Promise(resolve => { unblock = resolve; });
+    release[index] = unblock; started[index]?.(); await gate; return { status: 401 }; };
+  const entered = index => new Promise(resolve => { started[index] = resolve; });
+  try {
+    const api = auth({}), firstStarted = entered(0); const first = api.login('https://example.test', 'one', 'bad');
+    first.catch(() => {}); await firstStarted; const secondStarted = entered(1); const second = api.login('https://example.test', 'two', 'bad');
+    second.catch(() => {}); await secondStarted; assert.equal(api.sessionWitnessTransitioning(), true);
+    release[0](); await assert.rejects(first); assert.equal(api.sessionWitnessTransitioning(), true);
+    release[1](); await assert.rejects(second); assert.equal(api.sessionWitnessTransitioning(), false);
+    assert.equal(api.currentSession(), null);
+  } finally { global.fetch = original; }
+});
+
+test('new login retires only an older login already waiting on authentication', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous); const oldWitness = api.captureSessionWitness(previous);
+    const captures = []; const stop = api.subscribeSessionWitness(() => captures.push(!!api.captureSessionWitness(previous)));
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    const fast = await api.login('https://example.test', 'fast', 'code'); const witness = api.captureSessionWitness(fast);
+    assert.ok(witness); assert.equal(api.sessionWitnessTransitioning(), false); assert.equal(api.isSessionWitnessCurrent(oldWitness), false);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), fast); assert.equal(api.isSessionWitnessCurrent(witness), true);
+    assert.ok(captures.length > 0); assert.ok(captures.every(value => value === false)); stop();
+  } finally { global.fetch = original; }
+});
+
+test('pending endpoint setup is not retired by a newer successful login', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: JSON.parse(init.body).phone } }) });
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous);
+    const set = api.testEndpoints.setBaseUrl;
+    api.testEndpoints.setBaseUrl = async url => { if (url === 'https://old.test') { signal(); await new Promise(resolve => { release = resolve; }); } return set(url); };
+    const old = api.login('https://old.test', 'old', 'code'); const rejected = assert.rejects(old, /Sessiya o‘zgargan/); await entered;
+    const fast = await api.login('https://example.test', 'fast', 'code');
+    assert.equal(api.sessionWitnessTransitioning(), true); assert.equal(api.captureSessionWitness(fast), null);
+    release(); await rejected; assert.equal(api.currentSession(), fast); assert.ok(api.captureSessionWitness(fast));
+  } finally { global.fetch = original; }
+});
+
+test('a failed newer login can restore the previous session while a superseded auth request remains pending', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 401 };
+  };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous); const before = api.captureSessionWitness(previous);
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    await assert.rejects(api.login('https://example.test', 'bad', 'code'), /Login failed/);
+    assert.equal(api.currentSession(), previous); const witness = api.captureSessionWitness(previous); assert.ok(witness); assert.equal(api.isSessionWitnessCurrent(before), false);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), previous); assert.equal(api.isSessionWitnessCurrent(witness), true);
+  } finally { global.fetch = original; }
+});
+
+test('failed newer login storage rollback restores prior session without waiting for superseded auth', async () => {
+  const original = global.fetch, values = new Map(); let release, signal, failMetadata = false;
+  const entered = new Promise(resolve => { signal = resolve; });
+  const secure = { getItemAsync: async key => values.get(key) ?? null, deleteItemAsync: async key => values.delete(key),
+    setItemAsync: async (key, value) => { if (failMetadata && key === 'accord_v4_session') { failMetadata = false; throw Error('storage failure'); } values.set(key, value); } };
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth(secure, 'ios'), previous = oldSession(); await api.saveSession(previous);
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    failMetadata = true; await assert.rejects(api.login('https://example.test', 'new', 'code'), /storage failure/);
+    assert.equal(api.currentSession(), previous); assert.equal(values.get('accord_v4_token'), 'old-token');
+    const witness = api.captureSessionWitness(previous); assert.ok(witness);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), previous); assert.equal(api.isSessionWitnessCurrent(witness), true);
+  } finally { global.fetch = original; }
 });

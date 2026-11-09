@@ -19,11 +19,13 @@ function load(relative, mocks = {}, extra = '') {
   }).outputText + extra, filename);
   return loaded.exports;
 }
+let direction = 'leftToRight';
 const logic = load('boyoqchi/boyoqchiLogic.ts', { './returnedPaintModel': { returnedPaintDouble: raw => Number(raw) } });
 const { BoyoqchiRequestContent, __Row: Row } = load('boyoqchi/BoyoqchiRequestContent.tsx', {
   'react-native': { StyleSheet: { create: value => value, hairlineWidth: 1 }, Text: 'Text', View: 'View' },
   '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
   '../components/useWorkerColors': { useWorkerColors: () => ({ text: 'text', field: 'field' }) },
+  '../components/useBaseTheme': { useBaseTheme: () => ({ direction }) },
   './boyoqchiLogic': logic, './BoyoqchiImage': { BoyoqchiImage: 'BoyoqchiImage' },
   './useBoyoqchiText': { useBoyoqchiText: () => value => value },
 }, '\nmodule.exports.__Row = Row;');
@@ -56,4 +58,19 @@ test('waiting Astatka retains split metadata and opens the existing paint form w
   button.props.onPress(); assert.equal(opened, 1);
   const done = BoyoqchiRequestContent({ session: {}, request: { ...request, status: 'done' }, home: false, apparatus: [], onEdit() {} });
   assert.equal(nodes(done, n => n.type === 'WorkerSheetButton').length, 0);
+});
+
+
+test('Urdu RTL aligns Home metadata at start and Astatka values at end', () => {
+  direction = 'rightToLeft';
+  try {
+    const home = BoyoqchiRequestContent({ session: {}, request, home: true, apparatus: [], onEdit() {} });
+    for (const row of nodes(home, n => n.type === Row)) {
+      const value = nodes(Row(row.props), n => n.type === 'Text')[1]; assert.equal(value.props.style[1].textAlign, 'right');
+    }
+    const astatka = BoyoqchiRequestContent({ session: {}, request, home: false, apparatus: [], onEdit() {} });
+    for (const row of nodes(astatka, n => n.type === Row)) {
+      const value = nodes(Row(row.props), n => n.type === 'Text')[1]; assert.equal(value.props.style[1].textAlign, 'left');
+    }
+  } finally { direction = 'leftToRight'; }
 });

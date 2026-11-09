@@ -77,10 +77,11 @@ test('ProfileScreen forwards the supplied callback or its absence to the platfor
     '../shared/profileAvatarRuntime': { cachedProfileAvatar: () => null },
     './ProfileView': { ProfileView: 'ProfileView' },
   };
-  const { ProfileScreen } = load('ProfileScreen.tsx', mocks), callback = () => {};
+  const { ProfileScreen } = load('ProfileScreen.tsx', mocks), callback = () => {}, registerSettingsOpener = () => () => {};
   for (const onDailyWork of [callback, undefined]) {
-    const wrapper = ProfileScreen({ session: { imageCacheScope: 'scope', profile: {} }, onLogout() {}, onDailyWork });
+    const wrapper = ProfileScreen({ session: { imageCacheScope: 'scope', profile: {} }, onLogout() {}, onDailyWork, registerSettingsOpener });
     const view = wrapper.type(wrapper.props);
     assert.equal(view.type, 'ProfileView'); assert.equal(view.props.onDailyWork, onDailyWork);
+    assert.equal(view.props.registerSettingsOpener, registerSettingsOpener);
   }
 });

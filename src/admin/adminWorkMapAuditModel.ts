@@ -1,0 +1,78 @@
+import type { productionWorkflowAuditReportFromJson } from '../productionMapAuditApi';
+import type { AdminWorkMapPage } from './adminWorkMapController';
+import { dartPartialLower, dartTrim } from './dartJsonString';
+
+export type AdminWorkMapAuditReport = ReturnType<typeof productionWorkflowAuditReportFromJson>;
+
+/** V2 keeps the first page's counts/ok and concatenates finding pages without deduplication. */
+export function adminWorkMapAuditPages(pages: readonly AdminWorkMapPage[]): AdminWorkMapAuditReport | null {
+  for (const page of pages) {
+    if (page.projection !== '' || page.order_ids.length || page.pending_ids.length || page.pending_orders.length || page.closed_orders.length ||
+        (page.snapshot?.maps.length ?? 0) > 0) throw new Error('Buyurtmalar sahifasi noto‘g‘ri. Qayta yuklang.');
+  }
+  const first = pages[0]?.workflow_audit;
+  return first == null ? null : { ...first, violations: pages.flatMap(page => page.workflow_audit?.violations ?? []) };
+}
+
+// Literal source text from f11910bb _workflowAuditViolationText. These are not localized in V2.
+const violationTexts: Record<string, string> = {
+  "duplicate_active_queue_assignment": "Buyurtma bir nechta aparat navbatida faol yoki pauzadagi holatda turibdi",
+  "blank_progress_batch_id": "Progress partiyada identifikator ko‘rsatilmagan",
+  "duplicate_progress_batch_id": "Progress partiya identifikatori takrorlangan",
+  "duplicate_qr_payload": "Bir progress QR kodi bir nechta partiyada ishlatilgan",
+  "duplicate_active_order_session": "Buyurtma uchun bir nechta faol yoki pauzadagi sessiya mavjud",
+  "blank_queue_apparatus": "Navbat guruhida aparat ko‘rsatilmagan",
+  "blank_queue_order": "Navbatda buyurtma identifikatori bo‘sh",
+  "unknown_order_queue_state": "Navbat holati mavjud bo‘lmagan buyurtmaga tegishli",
+  "invalid_queue_state": "Navbat holati noto‘g‘ri",
+  "queue_order_apparatus_mismatch": "Navbat holati buyurtma yo‘nalishida bo‘lmagan aparatga saqlangan",
+  "blank_queue_sequence_order": "Aparat ketma-ketligida buyurtma identifikatori bo‘sh",
+  "duplicate_queue_sequence_order": "Aparat ketma-ketligida buyurtma takrorlangan",
+  "unknown_order_queue_sequence": "Ketma-ketlik mavjud bo‘lmagan buyurtmaga tegishli",
+  "queue_sequence_apparatus_mismatch": "Ketma-ketlikdagi buyurtma bu aparat bosqichiga tegishli emas",
+  "blank_run_session_id": "Ish sessiyasida identifikator ko‘rsatilmagan",
+  "blank_run_session_apparatus": "Ish sessiyasida aparat ko‘rsatilmagan",
+  "unknown_order_run_session": "Ish sessiyasi mavjud bo‘lmagan buyurtmaga tegishli",
+  "run_session_apparatus_mismatch": "Faol yoki pauzadagi sessiya buyurtma yo‘nalishidan tashqaridagi aparatga biriktirilgan",
+  "session_queue_state_mismatch": "Sessiya holati navbat holatiga mos emas",
+  "completed_session_active_queue": "Tugallangan sessiya faol navbat holatini qoldirgan",
+  "unknown_order_progress_batch": "Progress partiya mavjud bo‘lmagan buyurtmaga tegishli",
+  "blank_progress_batch_apparatus": "Progress partiyada aparat ko‘rsatilmagan",
+  "blank_progress_batch_session": "Progress partiyada sessiya ko‘rsatilmagan",
+  "progress_batch_session_order_mismatch": "Progress partiya sessiyasi buyurtmaga mos emas",
+  "progress_batch_session_not_found": "Progress partiya sessiyasi topilmadi",
+  "progress_batch_apparatus_mismatch": "Progress partiya aparati sessiya yoki buyurtma bosqichiga mos emas",
+  "progress_batch_status_action_mismatch": "Progress partiya holati va amali bir-biriga mos emas",
+  "waiting_wip_has_owner": "Kutilayotgan WIP foydalanish yoki qayta ishlash egasiga biriktirilgan",
+  "waiting_wip_missing_location": "Kutilayotgan WIP uchun joriy aparat ko‘rsatilmagan",
+  "in_use_wip_missing_usage": "Ishlatilayotgan WIP uchun sessiya yoki aparat ko‘rsatilmagan",
+  "in_use_wip_location_mismatch": "Ishlatilayotgan WIPning joriy aparati foydalanish egasiga mos emas",
+  "in_use_wip_session_not_found": "Ishlatilayotgan WIP sessiyasi topilmadi",
+  "processed_wip_missing_processor": "Qayta ishlangan WIP uchun sessiya yoki aparat ko‘rsatilmagan",
+  "processed_wip_session_not_found": "Qayta ishlangan WIP sessiyasi topilmadi",
+  "accepted_wip_missing_stock_id": "Ombor qabul qilgan WIP uchun tayyor mahsulot identifikatori ko‘rsatilmagan",
+  "progress_batch_self_parent": "Progress partiya o‘zini ota partiya sifatida ko‘rsatgan",
+  "progress_batch_parent_order_mismatch": "Progress partiya boshqa buyurtma partiyasiga ulanib qolgan",
+  "progress_batch_parent_apparatus_mismatch": "Farzand progress partiya ota partiyaning keyingi aparatiga kirmaydi",
+  "progress_batch_parent_not_found": "Progress partiyaning ota partiyasi topilmadi",
+  "paused_session_progress_mismatch": "Pauzadagi sessiyaga mos pauza progress partiyasi topilmadi",
+  "invalid_apparatus_transfer_receipt": "Aparat ko‘chirish qaydi to‘liq emas",
+  "unknown_order_apparatus_transfer": "Aparat ko‘chirish qaydi mavjud bo‘lmagan buyurtmaga tegishli",
+  "invalid_apparatus_transfer_route": "Aparat ko‘chirish yo‘nalishi noto‘g‘ri",
+  "apparatus_transfer_missing_reason": "Aparat ko‘chirish sababi ko‘rsatilmagan",
+  "apparatus_transfer_map_mismatch": "Aparat ko‘chirish qaydi buyurtma xaritasiga mos emas",
+  "apparatus_transfer_session_mismatch": "Aparat ko‘chirish sessiyasi maqsadli aparatdagi pauza holatiga mos emas",
+  "apparatus_transfer_progress_mismatch": "Aparat ko‘chirish progress partiyasi maqsadli aparatdagi pauza holatiga mos emas",
+  "apparatus_transfer_queue_mismatch": "Aparat ko‘chirishdan keyin navbat holati noto‘g‘ri",
+  "duplicate_capacity_profile": "Aparat uchun quvvat profili takrorlangan",
+  "invalid_capacity_profile": "Aparat quvvati yoki samaradorlik qiymati noto‘g‘ri",
+  "invalid_apparatus_downtime": "Aparat ishlamay qolish vaqti ma’lumotlari noto‘g‘ri",
+  "unknown_order_schedule_reservation": "Rejalashtirilgan navbat mavjud bo‘lmagan buyurtmaga tegishli",
+  "invalid_schedule_reservation": "Rejalashtirilgan navbat ma’lumotlari to‘liq yoki noto‘g‘ri",
+  "duplicate_schedule_idempotency_key": "Rejalashtirilgan navbat amal kaliti takrorlangan",
+  "capacity_overbooked": "Aparat quvvati bir vaqtdagi buyurtmalar bilan oshirib yuborilgan",
+};
+export function adminWorkMapAuditViolationText(code: string): string {
+  const normalized = dartPartialLower(dartTrim(code));
+  return Object.hasOwn(violationTexts, normalized) ? violationTexts[normalized] : "Ish jarayoni ma’lumotlarida nomuvofiqlik aniqlandi";
+}

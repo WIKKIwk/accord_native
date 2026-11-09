@@ -34,6 +34,8 @@ export type SessionWitness = Readonly<{ session: Session; epoch: number; generat
 let witnessGeneration = 0;
 let witnessSequence = 0;
 const witnessTransitions = new Set<number>();
+// Only logins already past endpoint setup can be retired when a newer epoch wins.
+const pendingLoginAuthWitnesses = new Map<number, () => void>();
 const witnessListeners = new Set<() => void>();
 const issuedWitnesses = new WeakSet<SessionWitness>();
 const pendingWitnessSaves = new Map<Session, number>();
@@ -65,6 +67,12 @@ function beginWitnessTransition(): () => void {
     if (!witnessTransitions.delete(id)) return;
     observedWitnessScope = witnessScope(activeSession); witnessGeneration++; notifyWitness();
   };
+}
+function retireSupersededLoginAuthWitnesses(epoch: number): void {
+  for (const [previousEpoch, end] of pendingLoginAuthWitnesses) {
+    if (previousEpoch >= epoch) continue;
+    pendingLoginAuthWitnesses.delete(previousEpoch); end();
+  }
 }
 function observeWitnessScope(): void {
   const next = witnessScope(activeSession);
@@ -357,6 +365,7 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   const epoch = ++sessionEpoch;
   const previousSession = activeSession;
   const endWitness = beginWitnessTransition();
+  retireSupersededLoginAuthWitnesses(epoch);
   let deferredWitness = false;
   try {
   const { initializeServerEndpoints } = await import('./serverEndpointRuntime');
@@ -364,7 +373,9 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
   await endpoints.setBaseUrl(server);
   if (epoch !== sessionEpoch) throw new Error('Sessiya o‘zgargan. Qayta kiring.');
+  pendingLoginAuthWitnesses.set(epoch, endWitness);
   const session = await authenticate(server, normalizedPhone, trimmedCode);
+  pendingLoginAuthWitnesses.delete(epoch);
   const account = identity(session);
   if (!account.ref || !account.role) throw new Error('Server noto‘g‘ri hisob ma’lumotlarini qaytardi.');
   const pending = inStorageOrder(async () => {
@@ -427,7 +438,10 @@ export async function login(baseUrl: string, phone: string, code: string): Promi
   deferredWitness = true;
   void pending.then(endWitness, endWitness);
   return pending;
-  } finally { if (!deferredWitness) endWitness(); }
+  } finally {
+    pendingLoginAuthWitnesses.delete(epoch);
+    if (!deferredWitness) endWitness();
+  }
 }
 
 export function currentSession(): Session | null { return activeSession; }
@@ -538,6 +552,21 @@ export async function refreshSession(session: Session, failedToken: string): Pro
   refreshing = { session, epoch, promise };
   try { return await promise; }
   finally { if (refreshing?.promise === promise) refreshing = null; }
+}
+
+/**
+ * A guarded read may observe an independently started legacy refresh, never start one.
+ * This path performs no credential authentication, account publication or session write.
+ */
+export async function joinRefreshForGuardedRead(session: Session, failedToken: string, assertCurrent: () => void): Promise<boolean> {
+  assertCurrent();
+  if (activeSession !== session) return false;
+  if (session.token !== failedToken) return true;
+  const epoch = sessionEpoch, existing = refreshing;
+  if (!existing || existing.session !== session || existing.epoch !== epoch) return false;
+  const refreshed = await existing.promise;
+  assertCurrent();
+  return refreshed && activeSession === session && epoch === sessionEpoch;
 }
 
 type AccountRuntimeSnapshot = { session: Session | null; credentials: Promise<Credentials | null> };

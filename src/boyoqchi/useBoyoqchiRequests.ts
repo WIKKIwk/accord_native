@@ -16,7 +16,7 @@ class RequestsResource {
     const beforeSend = () => { if (!this.isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.'); };
     this.controller = new BoyoqchiRequestsController(
       () => boyoqchiReturnedPaintRequests(session, 100, 0, { beforeSend, signal: this.abort?.signal }),
-      home ? () => adminApparatus(session, { limit: 10000, signal: this.abort?.signal }) : null, () => this.isCurrent());
+      home ? () => adminApparatus(session, { limit: 10000, signal: this.abort?.signal, beforeSend }) : null, () => this.isCurrent());
   }
   private isCurrent(): boolean {
     try { const token = activeSessionToken(this.session);

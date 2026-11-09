@@ -30,13 +30,13 @@ function fixture() {
     'react-native': { ActivityIndicator: 'ActivityIndicator', BackHandler: {}, Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView',
       Text: 'Text', View: 'View', StyleSheet: { create: value => value, absoluteFill: {} } },
     '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
-    '../components/useWorkerColors': { useWorkerColors: () => ({}) }, '../workerOrderLogic': { paintOptions },
-    './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' }, './BoyoqchiImage': {},
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { outlineVariant: '#theme-outline' } }) }, '../components/useWorkerColors': { useWorkerColors: () => ({}) }, '../workerOrderLogic': { paintOptions },
+    './BoyoqchiUsageSwipe': { BoyoqchiUsageSwipe: 'BoyoqchiUsageSwipe' }, './BoyoqchiPaintPalette': { BoyoqchiPaintPalette: 'BoyoqchiPaintPalette' }, './BoyoqchiImage': {},
     './boyoqchiLogic': { boyoqchiInputAllowed: () => true }, './returnedPaintModel': {}, './useBoyoqchiText': { useBoyoqchiText: () => value => value },
   }, '\nmodule.exports.__Field = Field; module.exports.__NamedFieldDialog = NamedFieldDialog;');
   const draft = new ReturnedPaintDraft(() => {});
   const render = () => { cursor = 0; return BoyoqchiFormContent({ session: {}, draft, close() {}, onBusyChange() {}, save: async () => {} }); };
-  return { render, Field, NamedFieldDialog, choose: name => nodes(render(), n => n.type === 'BoyoqchiPaintPalette')[0].props.onSelect(name) };
+  return { render, draft, Field, NamedFieldDialog, choose: name => nodes(render(), n => n.type === 'BoyoqchiPaintPalette')[0].props.onSelect(name) };
 }
 for (const [paint, fieldCount, plus] of [['Oq',8,['Pantone+']], ['Spirtlar',5,[]], ['Mix',0,['Mix+']], ['Pantone',0,['Pantone+','Mix+']]]) {
   test(`${paint} keeps fields and add buttons in bounded two-column cells`, () => {
@@ -44,6 +44,7 @@ for (const [paint, fieldCount, plus] of [['Oq',8,['Pantone+']], ['Spirtlar',5,[]
     const fields = nodes(tree, n => n.type === f.Field); assert.equal(fields.length, fieldCount);
     for (const field of fields) {
       assert.equal(field.props.paintField, true);
+      assert.equal(field.props.outlineColor, '#theme-outline');
       const cell = f.Field(field.props); assert.equal(cell.props.style[1].maxWidth, '50%');
       assert.equal(cell.props.style[1].flexBasis, '46%');
     }
@@ -57,3 +58,11 @@ for (const [paint, fieldCount, plus] of [['Oq',8,['Pantone+']], ['Spirtlar',5,[]
     }
   });
 }
+
+
+test('Pantone and Pantone Mix dynamic labels both receive the active theme outline', () => {
+  const f = fixture(); f.draft.addNamedField('rasxot:Pantone', 'Custom'); f.draft.addNamedField('rasxot:Pantone Mix', 'Mix custom');
+  f.choose('Pantone'); const fields = nodes(f.render(), n => n.type === f.Field);
+  assert.deepEqual(fields.map(field => [field.props.label, field.props.outlineColor]),
+    [['Custom', '#theme-outline'], ['Mix custom', '#theme-outline']]);
+});

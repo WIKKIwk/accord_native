@@ -7,7 +7,7 @@ const ts = require('typescript');
 function compile(relative, mocks = {}) {
   const filename = path.resolve(__dirname, `../src/${relative}.ts`), loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
-  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return loaded.exports;
 }
@@ -136,8 +136,9 @@ test('the fake demo token cannot start Boyoqchi requests or the apparatus catalo
 
 test('witness transition aborts a pending catalog and rejects both stale responses before rerender', async () => {
   const f = fixture(), a = f.session(); f.setActive(a); const { controller } = f.render(a, true);
-  assert.equal(f.catalogs[0].options.signal.aborted, false); f.transition();
+  assert.equal(f.catalogs[0].options.signal.aborted, false); f.catalogs[0].options.beforeSend(); f.transition();
   assert.equal(f.catalogs[0].options.signal.aborted, true);
+  assert.throws(() => f.catalogs[0].options.beforeSend(), /Sessiya tugagan/);
   f.requests[0].resolve({ items: [{ id: 'stale' }] }); f.catalogs[0].resolve([{ id: 'stale' }]); await tick();
   assert.deepEqual(controller.getSnapshot().items, []); assert.deepEqual(controller.getSnapshot().apparatus, []);
   await controller.refresh(); assert.equal(f.requests.length, 1); f.unmount();

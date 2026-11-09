@@ -1,0 +1,78 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "kind": "standalone source-equivalent, not Flutter or device",
+  "cases": [
+    {
+      "input": "NaN",
+      "validationPassed": true,
+      "confirmationQuantity": "NaN kg",
+      "postCalls": 0,
+      "errorType": "JsonUnsupportedObjectError",
+      "errorText": "Converting object to an encodable object failed: NaN",
+      "submittingAfter": false
+    },
+    {
+      "input": "+NaN",
+      "validationPassed": true,
+      "confirmationQuantity": "NaN kg",
+      "postCalls": 0,
+      "errorType": "JsonUnsupportedObjectError",
+      "errorText": "Converting object to an encodable object failed: NaN",
+      "submittingAfter": false
+    },
+    {
+      "input": "-NaN",
+      "validationPassed": true,
+      "confirmationQuantity": "NaN kg",
+      "postCalls": 0,
+      "errorType": "JsonUnsupportedObjectError",
+      "errorText": "Converting object to an encodable object failed: NaN",
+      "submittingAfter": false
+    },
+    {
+      "input": "Infinity",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg",
+      "postCalls": 0,
+      "errorType": "JsonUnsupportedObjectError",
+      "errorText": "Converting object to an encodable object failed: Infinity",
+      "submittingAfter": false
+    },
+    {
+      "input": "+Infinity",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg",
+      "postCalls": 0,
+      "errorType": "JsonUnsupportedObjectError",
+      "errorText": "Converting object to an encodable object failed: Infinity",
+      "submittingAfter": false
+    },
+    {
+      "input": "-Infinity",
+      "validationPassed": false,
+      "confirmationQuantity": null,
+      "postCalls": 0,
+      "errorType": null,
+      "errorText": null,
+      "submittingAfter": false
+    },
+    {
+      "input": "0",
+      "validationPassed": false,
+      "confirmationQuantity": null,
+      "postCalls": 0,
+      "errorType": null,
+      "errorText": null,
+      "submittingAfter": false
+    },
+    {
+      "input": "3.5",
+      "validationPassed": true,
+      "confirmationQuantity": "4 kg",
+      "postCalls": 1,
+      "errorType": null,
+      "errorText": null,
+      "submittingAfter": false
+    }
+  ]
+}
