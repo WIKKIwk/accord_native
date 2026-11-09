@@ -3,9 +3,10 @@ import { currentSession, registerSessionResetHook, type Session } from '../auth'
 import { sessionReadScope } from '../sessionReadScope';
 import { qolipDataRevision } from '../shared/qolipDataRevision';
 import { qolipReworks, qolipReturnFromRework } from './qolipReworkApi';
+import { newQolipReworkRequestId } from './qolipReworkRequestId';
 import { QolipReworksState } from './qolipReworksState';
 
-export function useQolipReworks(session: Session, nextRequestId: () => Promise<string>) {
+export function useQolipReworks(session: Session, nextRequestId: () => Promise<string> = newQolipReworkRequestId) {
   const controller = useMemo(() => new QolipReworksState({
     load: () => qolipReworks(session, 'all'),
     returnFromRework: (requestId, reworkIds) => qolipReturnFromRework(session, { requestId, reworkIds }),

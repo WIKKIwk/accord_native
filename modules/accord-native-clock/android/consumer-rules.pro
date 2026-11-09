@@ -1,0 +1,1 @@
+-keep class expo.modules.accordnativeclock.NativeClock { *; }
