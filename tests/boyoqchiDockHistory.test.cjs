@@ -66,14 +66,14 @@ test('dock pops an existing destination and pushes an absent one while preservin
 test('dock ignores active and unknown destinations and coalesces same-frame requests', () => {
   const f = fixture(['index']);
   const dock = f.dock('home');
-  dock.onSelect('home'); dock.onSelect('unknown'); dock.onSelect('chat');
+  dock.onSelect('home'); dock.onSelect('unknown');
   assert.equal(f.frames.length, 0);
   dock.onSelect('astatka'); dock.onSelect('profile'); dock.onSelect('chat');
   assert.equal(f.frames.length, 1);
-  assert.equal(f.dismisses(), 2);
+  assert.equal(f.dismisses(), 3);
   f.frame();
-  assert.deepEqual(f.names(), ['index', 'profile']);
-  assert.deepEqual(f.events[0], { type: 'NAVIGATE', payload: { name: 'profile', pop: true } });
+  assert.deepEqual(f.names(), ['index', 'chat']);
+  assert.deepEqual(f.events[0], { type: 'NAVIGATE', payload: { name: 'chat', pop: true } });
 });
 
 test('unmounted dock drops a queued route change', () => {

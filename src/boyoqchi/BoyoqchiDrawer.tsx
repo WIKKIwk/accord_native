@@ -16,12 +16,13 @@ export function BoyoqchiDrawer({ children }: { children: ReactNode }) {
   const items = [
     { id: 'home', label: getter('homeNavTitle'), symbol: { ios: 'house' as const, android: 'home' as const } },
     { id: 'astatka', label: t('Astatka'), symbol: { ios: 'shippingbox' as const, android: 'inventory_2' as const } },
+    { id: 'chat', label: t('Chat'), symbol: { ios: 'bubble.left' as const, android: 'chat_bubble' as const } },
     { id: 'profile', label: getter('profileTitle'), symbol: { ios: 'person' as const, android: 'person' as const } },
   ];
   const select = (id: string) => {
     if (!isSessionWitnessCurrent(witness)) return;
     if (id === 'logout') { confirmRoleDrawerLogout(onLogout); return; }
-    if (id !== 'home' && id !== 'astatka' && id !== 'profile') return;
+    if (id !== 'home' && id !== 'astatka' && id !== 'profile' && id !== 'chat') return;
     if (Platform.OS === 'android' && active === 'profile') {
       const registered = profileNavigation.current;
       if (registered) queueBoyoqchiDockNavigation({ destination: id, active: () => 'profile',
