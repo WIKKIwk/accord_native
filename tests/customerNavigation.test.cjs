@@ -16,10 +16,10 @@ const nav = load('src/customer/customerNavigation.ts');
 const routes = load('src/shared/appRoutes.ts');
 const session = (role, capabilities) => ({ token: 'token', profile: { role, ref: 'user' }, capabilities });
 
-test('Customer home is connected on both native platforms without changing existing home targets', () => {
+test('Customer home is held on both native platforms without changing existing home targets', () => {
   const customer = session('customer', ['customer.access']);
-  assert.equal(routes.homeTarget(customer, 'ios'), '/ios-customer');
-  assert.equal(routes.homeTarget(customer, 'android'), '/android-customer');
+  assert.equal(routes.homeTarget(customer, 'ios'), null);
+  assert.equal(routes.homeTarget(customer, 'android'), null);
   assert.equal(routes.homeTarget(customer, 'web'), null);
   assert.equal(routes.homeTarget(session('aparatchi', ['apparatus.queue.read']), 'ios'), '/ios-worker');
   assert.equal(routes.homeTarget(session('aparatchi', ['apparatus.queue.read']), 'android'), 'worker');

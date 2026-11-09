@@ -22,11 +22,11 @@ const brigader = session('brigader', ['brigader.access']);
 const worker = session('aparatchi', ['apparatus.queue.read']);
 const prep = session('tayyorlov_masteri', ['preparation.access']);
 
-test('login selects the Admin home on both platforms and preserves separately ported roles', () => {
+test('Admin home is held while separately ported roles retain their targets', () => {
   for (const value of [admin, session('customer', ['catalog.item.read'])]) {
     assert.equal(access.adminShellMayEnter(value), true);
-    assert.equal(routes.homeTarget(value, 'ios'), '/ios-admin');
-    assert.equal(routes.homeTarget(value, 'android'), '/android-admin');
+    assert.equal(routes.homeTarget(value, 'ios'), null);
+    assert.equal(routes.homeTarget(value, 'android'), null);
     assert.equal(routes.homeTarget(value, 'web'), null);
   }
   for (const value of [sales, brigader]) { assert.equal(access.adminShellMayEnter(value), false);
