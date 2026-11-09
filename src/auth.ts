@@ -554,6 +554,21 @@ export async function refreshSession(session: Session, failedToken: string): Pro
   finally { if (refreshing?.promise === promise) refreshing = null; }
 }
 
+/**
+ * A guarded read may observe an independently started legacy refresh, never start one.
+ * This path performs no credential authentication, account publication or session write.
+ */
+export async function joinRefreshForGuardedRead(session: Session, failedToken: string, assertCurrent: () => void): Promise<boolean> {
+  assertCurrent();
+  if (activeSession !== session) return false;
+  if (session.token !== failedToken) return true;
+  const epoch = sessionEpoch, existing = refreshing;
+  if (!existing || existing.session !== session || existing.epoch !== epoch) return false;
+  const refreshed = await existing.promise;
+  assertCurrent();
+  return refreshed && activeSession === session && epoch === sessionEpoch;
+}
+
 type AccountRuntimeSnapshot = { session: Session | null; credentials: Promise<Credentials | null> };
 
 /** @v2 createRuntimeAccountSwitchController */
