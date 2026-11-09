@@ -28,7 +28,7 @@ function load(name) {
   if (name === 'shared/qolipCatalogRuntime.ts') return { qolipCatalogRuntimeFor: () => ({ invalidateDetails() {} }) };
   if (cache.has(name)) return cache.get(name).exports;
   const filename = path.join(root, name), loaded = new Module(filename, module); cache.set(name, loaded);
-  loaded.require = id => id.startsWith('.') ? load(`${path.relative(root, path.resolve(path.dirname(filename), id))}.ts`) : require(id);
+  loaded.require = id => id.startsWith('.') ? load(`${path.relative(root, path.resolve(path.dirname(filename), id))}.ts`) : id === 'expo/fetch' ? require('../tests/support/expoFetch.cjs') : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ESNext } }).outputText, filename);
   return loaded.exports;
 }
@@ -37,7 +37,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const session = ref => ({ token: 'local-token', baseUrl: 'https://example.test', imageCacheScope: ref, profile: { role: 'qolipchi', ref }, capabilities: ['qolip.manage'], assigned_apparatus: [], assigned_apparatus_labels: [] });
 
-test('exact main auth binds, waits for login, and never revives invalid shell after rollback, ABA or clear', async () => {
+test('historical auth auth binds, waits for login, and never revives invalid shell after rollback, ABA or clear', async () => {
   const a = session('A'), b = session('B'); await auth.saveSession(a);
   const first = new QolipSettledHomeSessionOwner(), closeFirst = first.activate(); await tick();
   const original = first.getSnapshot(); assert.equal(original.kind, 'ready'); assert.equal(original.session, a);
@@ -59,7 +59,7 @@ test('exact main auth binds, waits for login, and never revives invalid shell af
   const clearing = auth.clearSession(); assert.equal(last.getSnapshot().kind, 'invalid'); await clearing; closeLast();
 });
 
-test('exact main witness reaches the existing guarded Home reader and stops initial/401-retry reads after transition', async t => {
+test('historical auth witness reaches the existing guarded Home reader and stops initial/401-retry reads after transition', async t => {
   const previousFetch = global.fetch, previousRefresh = auth.refreshSession;
   t.after(() => { global.fetch = previousFetch; auth.refreshSession = previousRefresh; });
   const a = session('A'); await auth.saveSession(a);
@@ -76,7 +76,7 @@ test('exact main witness reaches the existing guarded Home reader and stops init
   await assert.rejects(read(a, entry.boundary.current)); assert.equal(sends, 1); close();
 });
 
-test('exact main witness invalidates an active guarded checkout reader before delayed data returns', async t => {
+test('historical auth witness invalidates an active guarded checkout reader before delayed data returns', async t => {
   const oldFetch = global.fetch; t.after(() => { global.fetch = oldFetch; });
   const a = session('A'); await auth.saveSession(a);
   const shell = new QolipSettledHomeSessionOwner(), closeShell = shell.activate(); await tick();
@@ -92,7 +92,7 @@ test('exact main witness invalidates an active guarded checkout reader before de
   closeOwner(); closeShell();
 });
 
-test('exact main witness composes checkout old/new loads without authorizing a stale action', async t => {
+test('historical auth witness composes checkout old/new loads without authorizing a stale action', async t => {
   const oldFetch = global.fetch; t.after(() => { global.fetch = oldFetch; });
   const a = session('A'); await auth.saveSession(a); const shell = new QolipSettledHomeSessionOwner(), closeShell = shell.activate(); await tick();
   const entry = shell.getSnapshot(); assert.equal(entry.kind, 'ready');
@@ -118,7 +118,7 @@ test('exact main witness composes checkout old/new loads without authorizing a s
   assert.equal(owner.getSnapshot().invalid, true); stop(); closeShell();
 });
 
-test('exact main original witness stops role-local catalog initial and 401-retry sends across failed login', async t => {
+test('historical auth original witness stops role-local catalog initial and 401-retry sends across failed login', async t => {
   const previousFetch = global.fetch, previousRefresh = auth.refreshSession;
   t.after(() => { global.fetch = previousFetch; auth.refreshSession = previousRefresh; });
   const a = session('A'); await auth.saveSession(a); let sends = 0;
@@ -142,7 +142,7 @@ test('exact main original witness stops role-local catalog initial and 401-retry
   await assert.rejects(readers.page({}, () => true)); assert.equal(sends, 1); close();
 });
 
-test('exact main witness stops the catalog open-reworks 401 retry across failed login', async t => {
+test('historical auth witness stops the catalog open-reworks 401 retry across failed login', async t => {
   const previousFetch = global.fetch, previousRefresh = auth.refreshSession;
   t.after(() => { global.fetch = previousFetch; auth.refreshSession = previousRefresh; });
   const a = session('A'); await auth.saveSession(a);

@@ -1,6 +1,6 @@
 # Synthetic port handoff probes
 
-These are byte-for-byte copies of three local port-review probes. This is an archival branch based on original Qolipchi commit `1b0385e5f4cf5359fccf03658fbeb1810ad7f896`; it is not a request to merge the incomplete Qolipchi work into main. The probes use synthetic inputs and mocked transports. They are not device, backend, security, or production-readiness certification.
+These probes were originally copied byte for byte from three local port-review probes. The Qolip CJS harness now uses the existing Expo fetch host adapter and labels its historical-auth cases explicitly; the original hash below records provenance, not the adapted file checksum. This is an archival branch based on original Qolipchi commit `1b0385e5f4cf5359fccf03658fbeb1810ad7f896`; it is not a request to merge the incomplete Qolipchi work into main. The probes use synthetic inputs and mocked transports. They are not device, backend, security, or production-readiness certification.
 
 ## Contents and provenance
 
@@ -17,3 +17,7 @@ Run from the root of this branch with Node.js 24 and the project's TypeScript de
     dart handoff-probes/dart-lower-context.dart
 
 In the original local check, the Qolipchi probe passed 6 of 6 tests, the transfer probe printed its mocked completion observation, and Dart reported 1,112,064 scalars with zero contextual or surrogate mismatches. No network, real credentials, or device was used.
+
+## Integration check (2026-11-09)
+
+Reconciled the archival branch with main `112bf8a`; the app, normal tests, tooling and configuration tree matches main. The three probe payloads remain outside the app and normal test glob. Both CJS files pass `node --check`. With the one-line Expo fetch host adaptation, all six historical-auth Qolip probes pass against the restored full-role modules. The transfer probe still prints its synthetic post-switch result/acknowledgment observation; that is a limitation to review, not a production exploit claim or a successful live transfer. No Dart process, phone, backend or real credential was used. The original incomplete Qolip merge was reconciled separately; these probes do not certify full role parity.
