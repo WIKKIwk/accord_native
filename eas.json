@@ -4,6 +4,12 @@
       "developmentClient": true,
       "distribution": "internal"
     },
+    "development-arm64": {
+      "extends": "development",
+      "android": {
+        "gradleCommand": ":app:assembleDebug -PreactNativeArchitectures=arm64-v8a"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {
