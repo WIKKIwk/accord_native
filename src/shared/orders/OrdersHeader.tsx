@@ -1,6 +1,6 @@
 import { Host, TextInput, useNativeState } from '@expo/ui';
 import { SymbolView } from 'expo-symbols';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useWorkerColors } from '../../components/useWorkerColors';
 import { RoleHeaderButton } from '../navigation/RoleHeaderButton';
@@ -8,13 +8,14 @@ import { RoleHeaderButton } from '../navigation/RoleHeaderButton';
 type Props = {
   search: string; searchPlaceholder?: string;
   onSearchChange: (value: string) => void;
-  onProfile: () => void;
+  onProfile?: () => void;
   showProfile?: boolean;
+  trailing?: ReactNode;
   onSearchFocus?: () => void; onSearchBlur?: () => void;
 } & ({ onMenu: () => void; onBack?: never } | { onMenu?: never; onBack: () => void });
 
 /** The worker queue uses the same menu and search layout as V2. */
-export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, onSearchFocus, onSearchBlur, searchPlaceholder = 'Buyurtmani izlash' }: Props) {
+export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, trailing, onSearchFocus, onSearchBlur, searchPlaceholder = 'Buyurtmani izlash' }: Props) {
   const colors = useWorkerColors();
   const nativeSearch = useNativeState(search);
   useEffect(() => {
@@ -50,7 +51,7 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile
           </Pressable>
         )}
       </View>
-      {showProfile && <RoleHeaderButton icon="profile" label="Profil" onPress={onProfile} tintColor={colors.icon} />}
+      {trailing ?? (showProfile && onProfile ? <RoleHeaderButton icon="profile" label="Profil" onPress={onProfile} tintColor={colors.icon} /> : null)}
     </View>
   );
 }

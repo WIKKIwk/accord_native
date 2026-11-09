@@ -1,3 +1,4 @@
+import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { Redirect, Stack, router, useFocusEffect, useLocalSearchParams, usePathname } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -14,8 +15,10 @@ import { ChatRouteProvider, useChatRoute } from './ChatRouteContext';
 export function ChatRouteStack() {
   const { basePath, onClosingChange } = useChatRoute();
   const pathname = usePathname();
-  return <Stack>
-    <Stack.Screen name="index" listeners={{ focus: () => onClosingChange?.(false) }} />
+  const colors = useMaterialColors();
+  return <Stack screenOptions={{ headerStyle: { backgroundColor: colors.surfaceContainerLow },
+    headerTintColor: colors.onSurface, headerShadowVisible: false, contentStyle: { backgroundColor: colors.surfaceContainerLow } }}>
+    <Stack.Screen name="index" options={{ headerShown: false }} listeners={{ focus: () => onClosingChange?.(false) }} />
     <Stack.Screen name="new" listeners={{ transitionStart: event => {
       if (!event.data.closing || pathname === `${basePath}/new`) onClosingChange?.(event.data.closing);
     }, gestureCancel: () => onClosingChange?.(false) }} />

@@ -66,4 +66,18 @@ for (const platform of ['ios', 'android']) {
     buttons[1].props.onPress();
     assert.deepEqual(calls, ['focus', 'back', 'blur', 'profile']);
   });
+
+  test(`${platform}: a custom trailing action replaces profile and preserves the shared search`, () => {
+    const OrdersHeader = loadHeader(platform), calls = [];
+    const trailing = jsx.jsx('ComposeButton', { onPress: () => calls.push('compose') });
+    const tree = OrdersHeader({ search: 'chat', searchPlaceholder: 'Chatlardan qidirish', trailing,
+      onSearchChange: value => calls.push(value), onMenu() {} });
+    assert.deepEqual(nodes(tree, node => node.type === 'RoleHeaderButton').map(node => node.props.icon), ['menu']);
+    const input = nodes(tree, node => node.type === 'TextInput')[0];
+    assert.equal(input.props.placeholder, 'Chatlardan qidirish');
+    assert.equal(input.props.textAlign, 'left');
+    input.props.onChangeText('next');
+    nodes(tree, node => node.type === 'ComposeButton')[0].props.onPress();
+    assert.deepEqual(calls, ['next', 'compose']);
+  });
 }
