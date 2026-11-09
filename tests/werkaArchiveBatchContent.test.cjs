@@ -17,13 +17,14 @@ test('archive batch loading, missing and resolved text and rows follow source',(
   const loading=model.werkaArchiveBatchPresentation({payload,state:'loading'});
   assert.equal(loading.title,' Item ');assert.equal(loading.subtitle,'Mahsulot customer ro‘yxatidan qidirilmoqda...');
   assert.equal(loading.shellTitle,'Batch QR');assert.equal(loading.shellSubtitle,'Item');
-  assert.deepEqual(loading.rows,[{label:'Netto',value:'1.25 Kg'},{label:'Brutto',value:'2.5 Kg'},{label:'Sana',value:' May 01 '}]);
+  assert.deepEqual(loading.metrics,[{label:'Netto',value:'1.25 Kg'},{label:'Brutto',value:'2.5 Kg'}]);
+  assert.deepEqual(loading.infoRows,[{label:'Sana',value:'May 01'}]);
   const missing=model.werkaArchiveBatchPresentation({payload,state:'missing'});assert.equal(missing.title,'Mahsulot topilmadi');
   assert.equal(missing.subtitle,'Batch QR ichidagi mahsulot customer jo‘natish ro‘yxatidan topilmadi.');
   const resolved=model.werkaArchiveBatchPresentation({payload,state:'resolved',option,customer});
   assert.equal(resolved.title,'Item');assert.equal(resolved.subtitle,'Customer');
-  assert.deepEqual(resolved.rows.slice(-3),[{label:'Kod',value:'IT'},{label:'Haridor',value:'Customer'},{label:'Ombor',value:'WH'}]);
-  assert.equal(model.werkaArchiveBatchPresentation({payload:{...payload,batchTime:' '},state:'resolved',option:{...option,warehouse:' '},customer}).rows.length,4);
+  assert.deepEqual(resolved.infoRows.slice(-3),[{label:'Kod',value:'IT'},{label:'Haridor',value:'Customer'},{label:'Ombor',value:'WH'}]);
+  assert.equal(model.werkaArchiveBatchPresentation({payload:{...payload,batchTime:' '},state:'resolved',option:{...option,warehouse:' '},customer}).infoRows.length,2);
 });
 test('batch quantity reuses two-decimal formatter and trims only fractional zeros',()=>{
   assert.deepEqual([-0,0,100,1.5,1.234,1.999,1e21].map(model.werkaArchiveBatchQuantity),['-0','0','100','1.5','1.23','2','1e+21']);
@@ -32,16 +33,36 @@ test('batch presentation follows Dart edge whitespace for optional source fields
   const view=model.werkaArchiveBatchPresentation({payload:{...payload,itemName:'\u0085',batchTime:'\u0085'},
     state:'resolved',option:{...option,warehouse:'\u0085'},customer});
   assert.equal(view.shellSubtitle,'Batch tafsiloti');
-  assert.deepEqual(view.rows.map(row=>row.label),['Netto','Brutto','Kod','Haridor']);
+  assert.deepEqual(view.infoRows.map(row=>row.label),['Kod','Haridor']);
 });
-for(const platform of ['ios','android'])test(`${platform} archive batch body reuses native rows and exposes no held action`,()=>{
+test('info rows use source AppInfoRow trimming and blank-value dash, not raw strings',()=>{
+  const view=model.werkaArchiveBatchPresentation({payload:{...payload,batchTime:'\u0085 May 01 \u0085'},state:'resolved',
+    option:{...option,itemCode:'\u0085',warehouse:'\u0085 WH \u0085'},customer:{...customer,name:' \u0085 '}});
+  assert.deepEqual(view.infoRows,[{label:'Sana',value:'May 01'},{label:'Kod',value:'—'},
+    {label:'Haridor',value:'—'},{label:'Ombor',value:'WH'}]);
+  assert.equal(view.subtitle,' \u0085 ');
+});
+test('info-row display replays 303 standalone Dart trim samples',()=>{
+  const fixture=require('./contracts/f11910bb/werka_unannounced_input_oracle.json');assert.equal(fixture.cases.length,303);
+  for(const sample of fixture.cases){
+    const view=model.werkaArchiveBatchPresentation({payload,state:'resolved',option:{...option,itemCode:sample.input},customer});
+    assert.equal(view.infoRows.find(row=>row.label==='Kod').value,sample.trimmed||'—',JSON.stringify(sample.input));
+  }
+});
+for(const platform of ['ios','android'])test(`${platform} archive batch body groups metric tiles and exposes no held action`,()=>{
   const mocks={'react/jsx-runtime':jsx,'./werkaArchiveBatchPresentation':model,
     '@expo/ui/swift-ui':Object.fromEntries(['HStack','Image','ProgressView','Section','Spacer','Text','VStack'].map(x=>[x,x])),
-    '@expo/ui/jetpack-compose':{useMaterialColors:()=>({onSurface:'text'})},'expo-symbols':{SymbolView:'SymbolView'},
-    'react-native':{ActivityIndicator:'ActivityIndicator',ScrollView:'ScrollView',Text:'RNText'},
-    '../preparation/PreparationUI.ios':{PreparationList:'PreparationList'},'../preparation/PreparationUI.android':{PreparationRow:'PreparationRow'}};
+    '@expo/ui/swift-ui/modifiers':Object.fromEntries(['accessibilityIdentifier','font','frame'].map(name=>[name,(...args)=>({name,args})])),
+    '@expo/ui/jetpack-compose':{useMaterialColors:()=>({onSurface:'text',onSurfaceVariant:'muted',primary:'primary',error:'error',
+      surfaceContainerLow:'surface',surfaceContainerHighest:'tile',outlineVariant:'outline'})},'expo-symbols':{SymbolView:'SymbolView'},
+    'react-native':{ActivityIndicator:'ActivityIndicator',ScrollView:'ScrollView',Text:'RNText',View:'View'},
+    '../preparation/PreparationUI.ios':{PreparationList:'PreparationList'},'../components/WorkerQueueCard.android':{WorkerQueueCard:'WorkerQueueCard'}};
   const {WerkaArchiveBatchContent}=compile(`WerkaArchiveBatchContent.${platform}.tsx`,mocks);
   for(const state of ['loading','missing','resolved']){const tree=WerkaArchiveBatchContent(state==='resolved'?{payload,state,option,customer}:{payload,state});
-    assert.ok(nodes(tree,platform==='ios'?'PreparationList':'PreparationRow').length);assert.equal(nodes(tree,'Button').length,0);
-    assert.equal(nodes(tree,'PreparationRow').some(row=>typeof row.props.onPress==='function'),false);}
+    assert.ok(nodes(tree,platform==='ios'?'PreparationList':'WorkerQueueCard').length);assert.equal(nodes(tree,'Button').length,0);
+    assert.equal(nodes(tree,'WorkerQueueCard').some(row=>typeof row.props.onPress==='function'),false);
+    const group=platform==='ios'?nodes(tree,'HStack').find(row=>row.props.modifiers?.some(value=>value.name==='accessibilityIdentifier'&&value.args[0]==='archive_batch_metrics'))
+      :nodes(tree,'View').find(row=>row.props.testID==='archive_batch_metrics');
+    assert.ok(group);const labels=nodes(group,platform==='ios'?'Text':'RNText').map(value=>value.props.children);
+    assert.deepEqual(labels,['Netto','1.25 Kg','Brutto','2.5 Kg']);}
 });
