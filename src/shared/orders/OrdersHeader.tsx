@@ -33,7 +33,7 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile
             onBlur={onSearchBlur}
             placeholder={searchPlaceholder}
             placeholderTextColor={colors.muted}
-            textAlign="center"
+            textAlign="left"
             textStyle={{ color: typeof colors.text === 'string' ? colors.text : undefined, fontSize: 15 }}
             style={{ width: '100%', paddingHorizontal: 40 }}
             autoCapitalize="none"
@@ -41,6 +41,9 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile
             returnKeyType="search"
           />
         </Host>
+        <View pointerEvents="none" accessible={false} style={styles.searchIcon}>
+          <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }} size={24} tintColor={colors.icon} />
+        </View>
         {search.length > 0 && (
           <Pressable accessibilityRole="button" accessibilityLabel="Qidiruvni tozalash" onPress={() => { nativeSearch.set(''); onSearchChange(''); }} style={styles.clear} hitSlop={5}>
             <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={20} tintColor={colors.clear} />
@@ -56,5 +59,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingTop: 6, paddingBottom: 6, minHeight: 70 },
   field: { flex: 1, minHeight: 56, flexDirection: 'row', alignItems: 'center', borderRadius: 30, paddingHorizontal: 4 },
   inputHost: { flex: 1 },
+  searchIcon: { position: 'absolute', left: 4, width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   clear: { position: 'absolute', right: 4, width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
 });
