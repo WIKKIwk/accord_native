@@ -13,10 +13,15 @@ export type QolipOwnedHomeBlock = {
 };
 export type QolipHomeOwnerActions = {
   current: () => boolean;
+  invoke: (action: () => void) => void;
   setSearch: (value: string) => void;
   select: (index: number) => void;
-  retryBlocks: () => void;
-  retryBlock: (blockName: string) => void;
+  reorder: (oldIndex: number, newIndex: number) => void;
+  retry: () => Promise<void>;
+  refreshBlock: (blockName: string) => Promise<void>;
+  routeChanged: (current: boolean) => void;
+  appResumed: () => void;
+  locationsChanged: () => void;
 };
 export type QolipHomeOwnerSnapshot = {
   home: QolipHomePresentation;
@@ -91,14 +96,19 @@ export class QolipHomeOwnerState {
     run.controller = this.createController(current);
     run.actions = Object.freeze({
       current,
+      invoke: (action: () => void) => { if (current()) action(); },
       setSearch: (search: string) => {
         if (!current()) return;
         this.value = { ...this.value, search }; this.notify();
         if (current()) run.controller.setQuery(search);
       },
       select: (index: number) => { if (current()) run.controller.select(index); },
-      retryBlocks: () => { if (current()) run.controller.retryBlocks(); },
-      retryBlock: (blockName: string) => { if (current()) run.controller.retryBlock(blockName); },
+      reorder: (oldIndex: number, newIndex: number) => { if (current()) run.controller.reorder(oldIndex, newIndex); },
+      retry: async () => { if (current()) await run.controller.reload(); },
+      refreshBlock: async (blockName: string) => { if (current()) await run.controller.refreshBlock(blockName); },
+      routeChanged: (value: boolean) => { if (current()) run.controller.routeChanged(value); },
+      appResumed: () => { if (current()) run.controller.appResumed(); },
+      locationsChanged: () => { if (current()) run.controller.locationsChanged(); },
     });
     return run;
   }

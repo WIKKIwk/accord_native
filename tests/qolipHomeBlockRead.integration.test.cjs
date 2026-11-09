@@ -14,7 +14,7 @@ const readFailure = { isGuardedReadRefreshUnavailable: error => error?.code === 
 const { QolipHomeBlockReadState } = load('qolipHomeBlockReadState.ts', { './qolipApiCommon': readFailure });
 const trimDart = value => value.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '');
 const homeLogic = load('qolipHomeLogic.ts', { './qolipApiCommon': { trimDart }, './qolipSearchEngine': {} });
-const { QolipHomeState } = load('qolipHomeState.ts', { './qolipApiCommon': { trimDart, ...readFailure }, './qolipHomeLogic': homeLogic });
+const { QolipHomeState } = load('qolipReadOnlyHomeState.ts', { './qolipApiCommon': { trimDart, ...readFailure }, './qolipHomeLogic': homeLogic });
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const rows = id => [{ id, block: 'A', warehouse: 'W', item_name: id, item_code: 'I', qolip_code: 'Q', size: 1,

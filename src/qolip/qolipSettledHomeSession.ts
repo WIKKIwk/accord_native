@@ -1,20 +1,27 @@
-import { captureSessionWitness, currentSession, isSessionWitnessCurrent, sessionWitnessTransitioning, sessionWitnessVersion,
-  subscribeSessionWitness, type Session, type SessionWitness } from '../auth';
+import * as auth from '../auth';
+import type { Session } from '../auth';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import { qolipHomeWitnessBoundary } from './qolipHomeWitnessBoundary';
 
-type SharedWitness = SessionWitness;
+// These are the existing shared exports on main, not a second authentication source.
+// This older role branch has no witness exports yet, so their absence closes the shell.
+type SharedWitness = Readonly<{ session: Session; scope: string }>;
 type SharedBindings = {
-  currentSession: typeof currentSession;
-  captureSessionWitness: typeof captureSessionWitness;
-  isSessionWitnessCurrent: typeof isSessionWitnessCurrent;
-  subscribeSessionWitness: typeof subscribeSessionWitness;
-  sessionWitnessVersion: typeof sessionWitnessVersion;
-  sessionWitnessTransitioning: typeof sessionWitnessTransitioning;
+  loadSession: () => Promise<Session | null>;
+  captureSessionWitness: (session: Session) => SharedWitness | null;
+  isSessionWitnessCurrent: (witness: SharedWitness) => boolean;
+  subscribeSessionWitness: (listener: () => void) => () => void;
+  sessionWitnessVersion: () => number;
+  sessionWitnessTransitioning: () => boolean;
 };
-function sharedBindings(): SharedBindings {
-  return { currentSession, captureSessionWitness, isSessionWitnessCurrent, subscribeSessionWitness,
-    sessionWitnessVersion, sessionWitnessTransitioning };
+function sharedBindings(): SharedBindings | null {
+  const shared = auth as unknown as Partial<SharedBindings>;
+  if (typeof shared.loadSession !== 'function' || typeof shared.captureSessionWitness !== 'function' ||
+      typeof shared.isSessionWitnessCurrent !== 'function' || typeof shared.subscribeSessionWitness !== 'function' ||
+      typeof shared.sessionWitnessVersion !== 'function' || typeof shared.sessionWitnessTransitioning !== 'function') return null;
+  return { loadSession: shared.loadSession, captureSessionWitness: shared.captureSessionWitness,
+    isSessionWitnessCurrent: shared.isSessionWitnessCurrent, subscribeSessionWitness: shared.subscribeSessionWitness,
+    sessionWitnessVersion: shared.sessionWitnessVersion, sessionWitnessTransitioning: shared.sessionWitnessTransitioning };
 }
 
 export type QolipSettledHomeSession =
@@ -101,22 +108,12 @@ export class QolipSettledHomeSessionOwner {
   }
   private async load(run: Run, version: number) {
     try {
-      // The app entry owns cold restoration. Never initialize account stores or
-      // restore/write session metadata merely because this read-only shell mounts.
-      await Promise.resolve();
-      if (!this.current(run) || this.settled) return;
-      const beforeChanged = this.changed(run, version);
-      if (beforeChanged === null) { this.finish(invalid); return; }
-      if (beforeChanged) { run.dirty = true; return; }
-      const current: unknown = this.shared!.currentSession();
-      absorbThenable(current);
+      const session = await this.shared!.loadSession();
       if (!this.current(run) || this.settled) return;
       const changed = this.changed(run, version);
       if (changed === null) { this.finish(invalid); return; }
       if (changed) { run.dirty = true; return; }
-      if (!current || typeof current !== 'object' || Array.isArray(current) ||
-          typeof (current as { then?: unknown }).then === 'function') { this.finish(invalid); return; }
-      const session = current as Session;
+      if (!session) { this.finish(invalid); return; }
 
       // A capture attempt ends bootstrap, even if it returns null, throws or races a transition.
       this.captured = true;

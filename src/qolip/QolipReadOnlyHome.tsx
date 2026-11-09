@@ -5,11 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { QolipReadOnlyHomeGrid } from './QolipReadOnlyHomeGrid';
 import { QolipReadOnlyRetry } from './QolipReadOnlyRetry';
-import type { QolipOwnedHomeBlock } from './qolipHomeOwnerState';
+import type { QolipOwnedHomeBlock } from './qolipReadOnlyHomeOwnerState';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import { useQolipHomeBlockRead } from './useQolipHomeBlockRead';
 import { useReadOnlyQolipHome } from './useReadOnlyQolipHome';
-import { useQolipSettledHomeSession } from './useQolipSettledHomeSession';
+import { useReadOnlyQolipSettledHomeSession } from './useReadOnlyQolipSettledHomeSession';
 import { useQolipText } from './useQolipText';
 import type { Session } from '../auth';
 
@@ -62,7 +62,7 @@ function ReadOnlyHome({ session, boundary }: { session: Session; boundary: Qolip
 
 /** Unrouted candidate: one reviewed shared witness, reads, search, tabs and explicit failed-read retry. */
 export function QolipReadOnlyHomeShell() {
-  const entry = useQolipSettledHomeSession();
+  const entry = useReadOnlyQolipSettledHomeSession();
   return entry.kind === 'ready' ? <ReadOnlyHome session={entry.session} boundary={entry.boundary} /> : null;
 }
 const styles = StyleSheet.create({

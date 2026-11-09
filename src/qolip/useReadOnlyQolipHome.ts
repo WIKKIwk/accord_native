@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useSyncExternalStore } from 'react';
 import type { Session } from '../auth';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
-import { createQolipHomeOwner } from './qolipHomeOwnerRuntime';
+import { createQolipHomeOwner } from './qolipReadOnlyHomeOwnerRuntime';
 
 /** Read-only initial loads, search and explicit failed-read retry; no lifecycle refresh or mutation. */
 export function useReadOnlyQolipHome(session: Session, boundary: QolipHomeReadBoundary) {

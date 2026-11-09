@@ -33,7 +33,7 @@ test('unrouted shell supplies real search, tabs and failed-read retries, with he
     './QolipReadOnlyHomeGrid': { QolipReadOnlyHomeGrid: component('Grid', records) }, './QolipReadOnlyRetry': { QolipReadOnlyRetry: retryMock(records) },
     './useQolipHomeBlockRead': { useQolipHomeBlockRead: () => ({ invalid: false, locations: [], loading: false, error: false }) },
     './useReadOnlyQolipHome': { useReadOnlyQolipHome: (s, b) => { assert.equal(s, session); assert.equal(b, boundary); return state; } },
-    './useQolipSettledHomeSession': { useQolipSettledHomeSession: () => ({ kind: 'ready', session, boundary }) },
+    './useReadOnlyQolipSettledHomeSession': { useReadOnlyQolipSettledHomeSession: () => ({ kind: 'ready', session, boundary }) },
     './useQolipText': { useQolipText: () => ({ locale: 'uz', text: (key, values) => values ? `${key}:${values.count}` : key }) } };
   const Shell = compile('qolip/QolipReadOnlyHome.tsx', mocks).QolipReadOnlyHomeShell;
   const render = () => { records.length = 0; return renderToStaticMarkup(React.createElement(Shell)); };
@@ -92,9 +92,9 @@ test('retry surface uses the source label and a native button with the real call
 
 test('candidate source has no route, mutation or lifecycle refresh in its dependency entry points', () => {
   const read = name => fs.readFileSync(path.join(root, `qolip/${name}`), 'utf8');
-  const owner = read('qolipHomeOwnerState.ts'), runtime = read('qolipHomeOwnerRuntime.ts'), shell = read('QolipReadOnlyHome.tsx');
+  const owner = read('qolipReadOnlyHomeOwnerState.ts'), runtime = read('qolipReadOnlyHomeOwnerRuntime.ts'), shell = read('QolipReadOnlyHome.tsx');
   assert.doesNotMatch(owner, /reorder:|routeChanged:|appResumed:|locationsChanged:/);
   assert.doesNotMatch(runtime, /setItem|saveOrder|qolipSave|qolipMove/);
   assert.doesNotMatch(shell, /router|onMenu|onProfile|onLongPress|onRefresh|printCell|openCell/);
-  for (const api of ['qolipBlocksApi.ts', 'qolipLocationsApi.ts']) assert.doesNotMatch(read(api), /method:\s*['"](?:POST|PUT|DELETE)['"]|qolipCreate|qolipSave|qolipMove/);
+  for (const api of ['qolipReadOnlyBlocksApi.ts', 'qolipReadOnlyLocationsApi.ts']) assert.doesNotMatch(read(api), /method:\s*['"](?:POST|PUT|DELETE)['"]|qolipCreate|qolipSave|qolipMove/);
 });

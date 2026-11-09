@@ -55,7 +55,7 @@ function harness(options = {}) {
     sessionWitnessTransitioning: () => transitioning,
   };
   const load = modules({ 'auth.ts': auth });
-  const { QolipSettledHomeSessionOwner } = load('qolip/qolipSettledHomeSession.ts');
+  const { QolipSettledHomeSessionOwner } = load('qolip/qolipReadOnlySettledHomeSession.ts');
   const owner = new QolipSettledHomeSessionOwner();
   function notify() { for (const listener of [...listeners]) listener(); }
   function begin() { transitioning = true; version++; notify(); }
@@ -66,7 +66,7 @@ function harness(options = {}) {
 test('older auth without shared witness exports fails closed before loading a session', () => {
   let loads = 0;
   const load = modules({ 'auth.ts': { loadSession: async () => { loads++; return session(); }, activeSessionToken: () => 'token' } });
-  const owner = new (load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)();
+  const owner = new (load('qolip/qolipReadOnlySettledHomeSession.ts').QolipSettledHomeSessionOwner)();
   assert.equal(owner.getSnapshot().kind, 'loading'); const stop = owner.activate();
   assert.equal(owner.getSnapshot().kind, 'invalid'); assert.equal(loads, 0); stop();
 });
@@ -165,7 +165,7 @@ test('wrong role, missing capability, fake token and invalid shared predicates n
   }
   const h = harness(); h.auth.isSessionWitnessCurrent = async () => true;
   // The actual references are captured by the owner at construction, so construct after substituting.
-  const load = modules({ 'auth.ts': h.auth }), owner = new (load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)();
+  const load = modules({ 'auth.ts': h.auth }), owner = new (load('qolip/qolipReadOnlySettledHomeSession.ts').QolipSettledHomeSessionOwner)();
   const stop = owner.activate(); await tick(); assert.equal(owner.getSnapshot().kind, 'invalid'); stop();
 });
 
@@ -174,27 +174,27 @@ test('synchronous subscription signals and asynchronous unsubscribe handles are 
   assert.equal(h.owner.getSnapshot().kind, 'ready'); assert.equal(h.captures, 1); stop();
   let cleanup = 0;
   const auth = { ...h.auth, subscribeSessionWitness: async () => () => { cleanup++; } };
-  const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)();
+  const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipReadOnlySettledHomeSession.ts').QolipSettledHomeSessionOwner)();
   const close = owner.activate(); assert.equal(owner.getSnapshot().kind, 'invalid'); await tick(); assert.equal(cleanup, 1); close();
 });
 
 test('rejected asynchronous observations, observers and cleanup results are consumed without authorizing them', async () => {
   for (const key of ['sessionWitnessTransitioning', 'sessionWitnessVersion']) {
     const h = harness(), auth = { ...h.auth, [key]: () => Promise.reject(new Error(key)) };
-    const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)();
+    const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipReadOnlySettledHomeSession.ts').QolipSettledHomeSessionOwner)();
     const stop = owner.activate(); assert.equal(owner.getSnapshot().kind, 'invalid'); await tick(); stop();
   }
   const h = harness(), auth = { ...h.auth, subscribeSessionWitness: listener => {
     const stop = h.auth.subscribeSessionWitness(listener);
     return () => { stop(); return Promise.reject(new Error('async cleanup')); };
   } };
-  const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)();
+  const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipReadOnlySettledHomeSession.ts').QolipSettledHomeSessionOwner)();
   owner.subscribe(async () => { throw new Error('async observer'); });
   const stop = owner.activate(); await tick(); assert.equal(owner.getSnapshot().kind, 'ready'); stop(); await tick();
 
   const delayedCleanup = { ...h.auth, subscribeSessionWitness: async () => async () => { throw new Error('async delayed cleanup'); } };
   const loadDelayed = modules({ 'auth.ts': delayedCleanup });
-  const delayedOwner = new (loadDelayed('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)();
+  const delayedOwner = new (loadDelayed('qolip/qolipReadOnlySettledHomeSession.ts').QolipSettledHomeSessionOwner)();
   const closeDelayed = delayedOwner.activate(); assert.equal(delayedOwner.getSnapshot().kind, 'invalid'); await tick(); closeDelayed();
 });
 
@@ -215,7 +215,7 @@ test('missing, async, throwing or foreign active-session snapshots never restore
     const h = harness(), auth = { ...h.auth, currentSession }; let loads = 0, captures = 0;
     const originalLoad = auth.loadSession, originalCapture = auth.captureSessionWitness;
     auth.loadSession = () => { loads++; return originalLoad(); }; auth.captureSessionWitness = value => { captures++; return originalCapture(value); };
-    const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipSettledHomeSession.ts').QolipSettledHomeSessionOwner)();
+    const load = modules({ 'auth.ts': auth }), owner = new (load('qolip/qolipReadOnlySettledHomeSession.ts').QolipSettledHomeSessionOwner)();
     const stop = owner.activate(); await tick(); assert.equal(owner.getSnapshot().kind, 'invalid', name);
     assert.equal(captures, expectedCaptures, name); assert.equal(loads, 0, name); stop();
   }
