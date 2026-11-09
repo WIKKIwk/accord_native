@@ -1,0 +1,2128 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "kind": "standalone source-equivalent, not Flutter or device",
+  "seed": 18419899,
+  "cases": [
+    {
+      "input": "",
+      "trimmed": "",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": " ",
+      "trimmed": "",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "0",
+      "trimmed": "0",
+      "parsedBits": "0000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-0",
+      "trimmed": "-0",
+      "parsedBits": "8000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+0",
+      "trimmed": "+0",
+      "parsedBits": "0000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "1",
+      "trimmed": "1",
+      "parsedBits": "3ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1 kg"
+    },
+    {
+      "input": "1.",
+      "trimmed": "1.",
+      "parsedBits": "3ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1 kg"
+    },
+    {
+      "input": ".5",
+      "trimmed": ".5",
+      "parsedBits": "3fe0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1 kg"
+    },
+    {
+      "input": "-.5",
+      "trimmed": "-.5",
+      "parsedBits": "bfe0000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+.5",
+      "trimmed": "+.5",
+      "parsedBits": "3fe0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1 kg"
+    },
+    {
+      "input": "1e3",
+      "trimmed": "1e3",
+      "parsedBits": "408f400000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1000 kg"
+    },
+    {
+      "input": "1E-3",
+      "trimmed": "1E-3",
+      "parsedBits": "3f50624dd2f1a9fc",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "1e+3",
+      "trimmed": "1e+3",
+      "parsedBits": "408f400000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1000 kg"
+    },
+    {
+      "input": "1e",
+      "trimmed": "1e",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "1e+",
+      "trimmed": "1e+",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": ".",
+      "trimmed": ".",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+",
+      "trimmed": "+",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "--1",
+      "trimmed": "--1",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "1.2.3",
+      "trimmed": "1.2.3",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "1,2",
+      "trimmed": "1,2",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "0x10",
+      "trimmed": "0x10",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "1_000",
+      "trimmed": "1_000",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "NaN",
+      "trimmed": "NaN",
+      "parsedBits": "NaN",
+      "validationPassed": true,
+      "confirmationQuantity": "NaN kg"
+    },
+    {
+      "input": "+NaN",
+      "trimmed": "+NaN",
+      "parsedBits": "NaN",
+      "validationPassed": true,
+      "confirmationQuantity": "NaN kg"
+    },
+    {
+      "input": "-NaN",
+      "trimmed": "-NaN",
+      "parsedBits": "NaN",
+      "validationPassed": true,
+      "confirmationQuantity": "NaN kg"
+    },
+    {
+      "input": "nan",
+      "trimmed": "nan",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "Infinity",
+      "trimmed": "Infinity",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "+Infinity",
+      "trimmed": "+Infinity",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "-Infinity",
+      "trimmed": "-Infinity",
+      "parsedBits": "fff0000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "infinity",
+      "trimmed": "infinity",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "  1.25  ",
+      "trimmed": "1.25",
+      "parsedBits": "3ff4000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1 kg"
+    },
+    {
+      "input": "1",
+      "trimmed": "1",
+      "parsedBits": "3ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1 kg"
+    },
+    {
+      "input": "﻿1﻿",
+      "trimmed": "1",
+      "parsedBits": "3ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "1 kg"
+    },
+    {
+      "input": "​1​",
+      "trimmed": "​1​",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "∞",
+      "trimmed": "∞",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "١",
+      "trimmed": "١",
+      "parsedBits": null,
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "1e-9999",
+      "trimmed": "1e-9999",
+      "parsedBits": "0000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-1e-9999",
+      "trimmed": "-1e-9999",
+      "parsedBits": "8000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "1e9999",
+      "trimmed": "1e9999",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "-1e9999",
+      "trimmed": "-1e9999",
+      "parsedBits": "fff0000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "5e-324",
+      "trimmed": "5e-324",
+      "parsedBits": "0000000000000001",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "2.4703282292062327e-324",
+      "trimmed": "2.4703282292062327e-324",
+      "parsedBits": "0000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "1e21",
+      "trimmed": "1e21",
+      "parsedBits": "444b1ae4d6e2ef50",
+      "validationPassed": true,
+      "confirmationQuantity": "1e+21 kg"
+    },
+    {
+      "input": "999999999999999999999",
+      "trimmed": "999999999999999999999",
+      "parsedBits": "444b1ae4d6e2ef50",
+      "validationPassed": true,
+      "confirmationQuantity": "1e+21 kg"
+    },
+    {
+      "input": "1.5",
+      "trimmed": "1.5",
+      "parsedBits": "3ff8000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "2 kg"
+    },
+    {
+      "input": "2.5",
+      "trimmed": "2.5",
+      "parsedBits": "4004000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "3 kg"
+    },
+    {
+      "input": "0.49999999999999994",
+      "trimmed": "0.49999999999999994",
+      "parsedBits": "3fdfffffffffffff",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-2241556.796464151e-149",
+      "trimmed": "-2241556.796464151e-149",
+      "parsedBits": "a2517e72f6959f36",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+462777756.555105068e296",
+      "trimmed": "+462777756.555105068e296",
+      "parsedBits": "7f30deefba4ca988",
+      "validationPassed": true,
+      "confirmationQuantity": "4.627777565551051e+304 kg"
+    },
+    {
+      "input": "-645865311.907393228e-280",
+      "trimmed": "-645865311.907393228e-280",
+      "parsedBits": "87a17845158d8f6b",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-171101291.683104439e-79",
+      "trimmed": "-171101291.683104439e-79",
+      "parsedBits": "b13e3b219a8038c9",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "377420326.635843416e-321",
+      "trimmed": "377420326.635843416e-321",
+      "parsedBits": "00000011c93df3cb",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "856414497.962997806e-299",
+      "trimmed": "856414497.962997806e-299",
+      "parsedBits": "03b55da72dfca554",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+26484475.921218612e-53",
+      "trimmed": "+26484475.921218612e-53",
+      "parsedBits": "367831230483ae19",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-510932086.648517245e112",
+      "trimmed": "-510932086.648517245e112",
+      "parsedBits": "d8ffa87978500f38",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+520639089.406679159e-155",
+      "trimmed": "+520639089.406679159e-155",
+      "parsedBits": "2190a4a34476a14b",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "959872551.763440073e-1",
+      "trimmed": "959872551.763440073e-1",
+      "parsedBits": "4196e298dcb49386",
+      "validationPassed": true,
+      "confirmationQuantity": "95987255 kg"
+    },
+    {
+      "input": "+200016254.262538889e-201",
+      "trimmed": "+200016254.262538889e-201",
+      "parsedBits": "17ed33b5d0eef821",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-486632715.239250043e261",
+      "trimmed": "-486632715.239250043e261",
+      "parsedBits": "f7ed79f892715471",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "726406059.923957734e-287",
+      "trimmed": "726406059.923957734e-287",
+      "parsedBits": "06307b7217f16d9a",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-617577492.593000759e-145",
+      "trimmed": "-617577492.593000759e-145",
+      "parsedBits": "a3a6fb8cc87126b9",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+740593703.563763729e-230",
+      "trimmed": "+740593703.563763729e-230",
+      "parsedBits": "12056a9a4b322375",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+780672669.098315600e276",
+      "trimmed": "+780672669.098315600e276",
+      "parsedBits": "7b14ffec3de97356",
+      "validationPassed": true,
+      "confirmationQuantity": "7.806726690983157e+284 kg"
+    },
+    {
+      "input": "744507106.037290015e18",
+      "trimmed": "744507106.037290015e18",
+      "parsedBits": "45833ebc18b7f6d8",
+      "validationPassed": true,
+      "confirmationQuantity": "7.445071060372901e+26 kg"
+    },
+    {
+      "input": "225993091.551913507e172",
+      "trimmed": "225993091.551913507e172",
+      "parsedBits": "65616d91e9ad33c4",
+      "validationPassed": true,
+      "confirmationQuantity": "2.259930915519135e+180 kg"
+    },
+    {
+      "input": "267105441.218719695e143",
+      "trimmed": "267105441.218719695e143",
+      "parsedBits": "5f6051de93b5ac06",
+      "validationPassed": true,
+      "confirmationQuantity": "2.671054412187197e+151 kg"
+    },
+    {
+      "input": "137933626.668950143e262",
+      "trimmed": "137933626.668950143e262",
+      "parsedBits": "7804e32b85e14f55",
+      "validationPassed": true,
+      "confirmationQuantity": "1.3793362666895014e+270 kg"
+    },
+    {
+      "input": "794252004.813567895e-280",
+      "trimmed": "794252004.813567895e-280",
+      "parsedBits": "07a57bc494509b0f",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+447929661.139384426e-291",
+      "trimmed": "+447929661.139384426e-291",
+      "parsedBits": "0550a6e7ccfb0e91",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "571168401.533166100e-13",
+      "trimmed": "571168401.533166100e-13",
+      "parsedBits": "3f0df217af1f8747",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "503651626.096834923e-161",
+      "trimmed": "503651626.096834923e-161",
+      "parsedBits": "2050e1d548095135",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-479228353.075189426e147",
+      "trimmed": "-479228353.075189426e147",
+      "parsedBits": "e041df09b2a1f128",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "894845716.356571837e-83",
+      "trimmed": "894845716.356571837e-83",
+      "parsedBits": "309030a467544b5f",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "784897785.578377380e212",
+      "trimmed": "784897785.578377380e212",
+      "parsedBits": "6dcbcb2f802d5810",
+      "validationPassed": true,
+      "confirmationQuantity": "7.848977855783774e+220 kg"
+    },
+    {
+      "input": "-447098695.297044223e81",
+      "trimmed": "-447098695.297044223e81",
+      "parsedBits": "d28c1815069920b0",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-150012514.807118624e259",
+      "trimmed": "-150012514.807118624e259",
+      "parsedBits": "f76742fe507fd3da",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+421577451.181603221e-150",
+      "trimmed": "+421577451.181603221e-150",
+      "parsedBits": "2294903c354cb6c0",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+590533778.864605356e329",
+      "trimmed": "+590533778.864605356e329",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "+85077442.754145035e-130",
+      "trimmed": "+85077442.754145035e-130",
+      "parsedBits": "26967f12cb7bfe1f",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "219350167.816743540e62",
+      "trimmed": "219350167.816743540e62",
+      "parsedBits": "4e896ceb80ba0002",
+      "validationPassed": true,
+      "confirmationQuantity": "2.1935016781674354e+70 kg"
+    },
+    {
+      "input": "-69767980.738374369e186",
+      "trimmed": "-69767980.738374369e186",
+      "parsedBits": "e82e9568488e70c1",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+52451166.413703740e11",
+      "trimmed": "+52451166.413703740e11",
+      "parsedBits": "43d2329972e997c0",
+      "validationPassed": true,
+      "confirmationQuantity": "5245116641370374144 kg"
+    },
+    {
+      "input": "87441087.106293685e-101",
+      "trimmed": "87441087.106293685e-101",
+      "parsedBits": "2c9d2eebcfbdd84c",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-169265200.727991571e127",
+      "trimmed": "-169265200.727991571e127",
+      "parsedBits": "dc02a15aabcfb4b9",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+643785089.012777966e140",
+      "trimmed": "+643785089.012777966e140",
+      "parsedBits": "5ed423a51d0dbce4",
+      "validationPassed": true,
+      "confirmationQuantity": "6.43785089012778e+148 kg"
+    },
+    {
+      "input": "160679231.783359116e-339",
+      "trimmed": "160679231.783359116e-339",
+      "parsedBits": "0000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-825722798.243995665e-74",
+      "trimmed": "-825722798.243995665e-74",
+      "parsedBits": "b26bd3a960c471a9",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "714412390.692024129e268",
+      "trimmed": "714412390.692024129e268",
+      "parsedBits": "7969cb06480106c5",
+      "validationPassed": true,
+      "confirmationQuantity": "7.144123906920241e+276 kg"
+    },
+    {
+      "input": "514406672.399020930e36",
+      "trimmed": "514406672.399020930e36",
+      "parsedBits": "4937111957f49642",
+      "validationPassed": true,
+      "confirmationQuantity": "5.144066723990209e+44 kg"
+    },
+    {
+      "input": "+588405747.796348252e-231",
+      "trimmed": "+588405747.796348252e-231",
+      "parsedBits": "11cb39885488a5c3",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-417902386.592626829e-24",
+      "trimmed": "-417902386.592626829e-24",
+      "parsedBits": "bcbe1cf0393afb8f",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-432864930.473498386e255",
+      "trimmed": "-432864930.473498386e255",
+      "parsedBits": "f6ab7e4609369808",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-596310908.304993627e312",
+      "trimmed": "-596310908.304993627e312",
+      "parsedBits": "fff0000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+211050689.695065490e-345",
+      "trimmed": "+211050689.695065490e-345",
+      "parsedBits": "0000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-675527347.805987833e147",
+      "trimmed": "-675527347.805987833e147",
+      "parsedBits": "e049310a728e1976",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+844537093.760519524e-170",
+      "trimmed": "+844537093.760519524e-170",
+      "parsedBits": "1e7e65600950b2ea",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "510336080.137667517e183",
+      "trimmed": "510336080.137667517e183",
+      "parsedBits": "67bca297408c400f",
+      "validationPassed": true,
+      "confirmationQuantity": "5.103360801376675e+191 kg"
+    },
+    {
+      "input": "-761986837.389656860e-311",
+      "trimmed": "-761986837.389656860e-311",
+      "parsedBits": "8134e6da81a5737e",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-696350808.443643393e-119",
+      "trimmed": "-696350808.443643393e-119",
+      "parsedBits": "a910bf20c1385f6c",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "463411907.585696135e-186",
+      "trimmed": "463411907.585696135e-186",
+      "parsedBits": "1b1e0bbd5d10ef2d",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "688129663.021985438e-297",
+      "trimmed": "688129663.021985438e-297",
+      "parsedBits": "041ad2fc0ea129b9",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-191658274.450491391e227",
+      "trimmed": "-191658274.450491391e227",
+      "parsedBits": "f0c81c7f4e9d19b5",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "143209278.461076802e269",
+      "trimmed": "143209278.461076802e269",
+      "parsedBits": "7979da207fe7955d",
+      "validationPassed": true,
+      "confirmationQuantity": "1.432092784610768e+277 kg"
+    },
+    {
+      "input": "-32595323.903638092e308",
+      "trimmed": "-32595323.903638092e308",
+      "parsedBits": "fff0000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+234749925.994863110e215",
+      "trimmed": "+234749925.994863110e215",
+      "parsedBits": "6e503c511171b1e3",
+      "validationPassed": true,
+      "confirmationQuantity": "2.347499259948631e+223 kg"
+    },
+    {
+      "input": "-370349075.564226647e51",
+      "trimmed": "-370349075.564226647e51",
+      "parsedBits": "cc4d800061caaaa7",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-995602199.859693543e29",
+      "trimmed": "-995602199.859693543e29",
+      "parsedBits": "c7d2b9a6750c6d14",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-673383521.248046364e69",
+      "trimmed": "-673383521.248046364e69",
+      "parsedBits": "d0174306442f646e",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "186202902.090140028e34",
+      "trimmed": "186202902.090140028e34",
+      "parsedBits": "48b56002f0de012b",
+      "validationPassed": true,
+      "confirmationQuantity": "1.8620290209014004e+42 kg"
+    },
+    {
+      "input": "529014906.061006379e-148",
+      "trimmed": "529014906.061006379e-148",
+      "parsedBits": "230428c9367edba0",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "298567404.526200267e-212",
+      "trimmed": "298567404.526200267e-212",
+      "parsedBits": "15adf47b678bb476",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "130175529.407695191e115",
+      "trimmed": "130175529.407695191e115",
+      "parsedBits": "597f81de03a54662",
+      "validationPassed": true,
+      "confirmationQuantity": "1.3017552940769519e+123 kg"
+    },
+    {
+      "input": "677055646.593966192e-27",
+      "trimmed": "677055646.593966192e-27",
+      "parsedBits": "3c28fa9c1adf181a",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-760686757.770044949e-278",
+      "trimmed": "-760686757.770044949e-278",
+      "parsedBits": "8810131d5251b702",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "413484749.557822336e-220",
+      "trimmed": "413484749.557822336e-220",
+      "parsedBits": "140bd6fe79c923f1",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+789786623.360623160e-76",
+      "trimmed": "+789786623.360623160e-76",
+      "parsedBits": "320108b9bde87d52",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-359823158.486421123e-299",
+      "trimmed": "-359823158.486421123e-299",
+      "parsedBits": "83a1f4283ee4a136",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-583216225.356228824e-36",
+      "trimmed": "-583216225.356228824e-36",
+      "parsedBits": "ba471a83e32b74dd",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "174225666.145598836e-307",
+      "trimmed": "174225666.145598836e-307",
+      "parsedBits": "01e755e5caeef652",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-383709735.364713492e-294",
+      "trimmed": "-383709735.364713492e-294",
+      "parsedBits": "84ad36be647b2c94",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-850698507.949384069e195",
+      "trimmed": "-850698507.949384069e195",
+      "parsedBits": "ea45b4d935a98c47",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+879809250.767201557e40",
+      "trimmed": "+879809250.767201557e40",
+      "parsedBits": "4a1814607357cdb1",
+      "validationPassed": true,
+      "confirmationQuantity": "8.798092507672016e+48 kg"
+    },
+    {
+      "input": "-539504492.760042871e-288",
+      "trimmed": "-539504492.760042871e-288",
+      "parsedBits": "85f39613af481f85",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-37296281.097061219e51",
+      "trimmed": "-37296281.097061219e51",
+      "parsedBits": "cc17c43d5fbc514c",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-184123285.997997026e137",
+      "trimmed": "-184123285.997997026e137",
+      "parsedBits": "de1797a2c7a20315",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "873294823.094743402e-241",
+      "trimmed": "873294823.094743402e-241",
+      "parsedBits": "0fc15ab4843a4dda",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+806348159.149798962e-248",
+      "trimmed": "+806348159.149798962e-248",
+      "parsedBits": "0e4ae23a8b59a6b8",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-849003151.199876066e334",
+      "trimmed": "-849003151.199876066e334",
+      "parsedBits": "fff0000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-855450986.844600214e97",
+      "trimmed": "-855450986.844600214e97",
+      "parsedBits": "d5edd6d36236abcd",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "578848661.156520747e-320",
+      "trimmed": "578848661.156520747e-320",
+      "parsedBits": "00000110c8f6f96c",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+374847962.782517575e-156",
+      "trimmed": "+374847962.782517575e-156",
+      "parsedBits": "21532c185f3a0d8a",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+705408104.653097443e-184",
+      "trimmed": "+705408104.653097443e-184",
+      "parsedBits": "1b91dd98c3db924a",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-720430479.781384507e136",
+      "trimmed": "-720430479.781384507e136",
+      "parsedBits": "de027654ad442e6b",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-191373824.389681970e243",
+      "trimmed": "-191373824.389681970e243",
+      "parsedBits": "f41abaad8db8175a",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+764149658.762145048e-54",
+      "trimmed": "+764149658.762145048e-54",
+      "parsedBits": "369173395226dc01",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-540034003.931310975e-60",
+      "trimmed": "-540034003.931310975e-60",
+      "parsedBits": "b549dccc310e2c7d",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+448567437.352978428e-307",
+      "trimmed": "+448567437.352978428e-307",
+      "parsedBits": "01fe0a4d4aa85b65",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+705801318.141184366e119",
+      "trimmed": "+705801318.141184366e119",
+      "parsedBits": "5a7a110c4c7ff0b6",
+      "validationPassed": true,
+      "confirmationQuantity": "7.058013181411843e+127 kg"
+    },
+    {
+      "input": "+458130998.773922968e190",
+      "trimmed": "+458130998.773922968e190",
+      "parsedBits": "692ea4cf9cc40cc2",
+      "validationPassed": true,
+      "confirmationQuantity": "4.5813099877392294e+198 kg"
+    },
+    {
+      "input": "-425257589.682182576e-273",
+      "trimmed": "-425257589.682182576e-273",
+      "parsedBits": "890b6caa1255f795",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+373964676.047431592e218",
+      "trimmed": "+373964676.047431592e218",
+      "parsedBits": "6ef941f8b8491dc2",
+      "validationPassed": true,
+      "confirmationQuantity": "3.739646760474316e+226 kg"
+    },
+    {
+      "input": "-557533622.158363215e95",
+      "trimmed": "-557533622.158363215e95",
+      "parsedBits": "d578e489fc20f5ed",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-775039171.843239554e-39",
+      "trimmed": "-775039171.843239554e-39",
+      "parsedBits": "b9af707787b3d88d",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+126420060.771562180e300",
+      "trimmed": "+126420060.771562180e300",
+      "parsedBits": "7fe680e68ac64cb3",
+      "validationPassed": true,
+      "confirmationQuantity": "1.2642006077156218e+308 kg"
+    },
+    {
+      "input": "622003150.560710074e158",
+      "trimmed": "622003150.560710074e158",
+      "parsedBits": "6290e0825b28e732",
+      "validationPassed": true,
+      "confirmationQuantity": "6.220031505607101e+166 kg"
+    },
+    {
+      "input": "802668494.483769066e-37",
+      "trimmed": "802668494.483769066e-37",
+      "parsedBits": "3a1970053dae523f",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-800054021.780160463e273",
+      "trimmed": "-800054021.780160463e273",
+      "parsedBits": "fa76099d053fda9b",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "376453452.601779784e-241",
+      "trimmed": "376453452.601779784e-241",
+      "parsedBits": "0fadec83730d1d03",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+971026582.584826548e151",
+      "trimmed": "+971026582.584826548e151",
+      "parsedBits": "61261a016c22053b",
+      "validationPassed": true,
+      "confirmationQuantity": "9.710265825848265e+159 kg"
+    },
+    {
+      "input": "-229512434.703827621e-106",
+      "trimmed": "-229512434.703827621e-106",
+      "parsedBits": "aba9199da9139b8d",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-723561446.144836867e156",
+      "trimmed": "-723561446.144836867e156",
+      "parsedBits": "e2292135cbca29ca",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "453894600.640142403e253",
+      "trimmed": "453894600.640142403e253",
+      "parsedBits": "76427355b6fd1397",
+      "validationPassed": true,
+      "confirmationQuantity": "4.538946006401424e+261 kg"
+    },
+    {
+      "input": "526575097.668474379e-272",
+      "trimmed": "526575097.668474379e-272",
+      "parsedBits": "09453955b8be3683",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "491213463.200737836e45",
+      "trimmed": "491213463.200737836e45",
+      "parsedBits": "4b1483978fd1c675",
+      "validationPassed": true,
+      "confirmationQuantity": "4.912134632007378e+53 kg"
+    },
+    {
+      "input": "+850502774.269809570e164",
+      "trimmed": "+850502774.269809570e164",
+      "parsedBits": "63d6020469b47a41",
+      "validationPassed": true,
+      "confirmationQuantity": "8.505027742698096e+172 kg"
+    },
+    {
+      "input": "207640405.089132430e260",
+      "trimmed": "207640405.089132430e260",
+      "parsedBits": "77a41fa45ceae0f9",
+      "validationPassed": true,
+      "confirmationQuantity": "2.0764040508913244e+268 kg"
+    },
+    {
+      "input": "-522456690.229101786e126",
+      "trimmed": "-522456690.229101786e126",
+      "parsedBits": "dbe7007753f7e5ee",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-632240946.756808591e-130",
+      "trimmed": "-632240946.756808591e-130",
+      "parsedBits": "a6c4e5b7967db046",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "603414180.793834277e-155",
+      "trimmed": "603414180.793834277e-155",
+      "parsedBits": "21934a0699881017",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "680910206.006248204e337",
+      "trimmed": "680910206.006248204e337",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "-923279053.919306583e171",
+      "trimmed": "-923279053.919306583e171",
+      "parsedBits": "e54c7af9371c62e6",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-808424267.077490478e-162",
+      "trimmed": "-808424267.077490478e-162",
+      "parsedBits": "a025adab44b328af",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "936859266.924768213e-194",
+      "trimmed": "936859266.924768213e-194",
+      "parsedBits": "198461bafdcb0654",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+608231698.733390237e-143",
+      "trimmed": "+608231698.733390237e-143",
+      "parsedBits": "2411aef6d8b71678",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "260942740.229814973e210",
+      "trimmed": "260942740.229814973e210",
+      "parsedBits": "6d47a79da23081c2",
+      "validationPassed": true,
+      "confirmationQuantity": "2.6094274022981496e+218 kg"
+    },
+    {
+      "input": "-395846618.777207759e171",
+      "trimmed": "-395846618.777207759e171",
+      "parsedBits": "e5386bdcffcff868",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "654953541.133464344e-122",
+      "trimmed": "654953541.133464344e-122",
+      "parsedBits": "287021099047742c",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+703363398.889961228e-16",
+      "trimmed": "+703363398.889961228e-16",
+      "parsedBits": "3e72e179fa1d5c29",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-84071537.777534306e-104",
+      "trimmed": "-84071537.777534306e-104",
+      "parsedBits": "abfcbb6bd8d7a2ee",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+219438405.971733960e320",
+      "trimmed": "+219438405.971733960e320",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "+584570608.585543632e289",
+      "trimmed": "+584570608.585543632e289",
+      "parsedBits": "7dc1e079eafcb232",
+      "validationPassed": true,
+      "confirmationQuantity": "5.845706085855436e+297 kg"
+    },
+    {
+      "input": "-344448857.744598902e229",
+      "trimmed": "-344448857.744598902e229",
+      "parsedBits": "f140ed4b2b0a43d3",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+501613043.159610438e-184",
+      "trimmed": "+501613043.159610438e-184",
+      "parsedBits": "1b896888e7dcfb4a",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-149724785.097153125e-174",
+      "trimmed": "-149724785.097153125e-174",
+      "parsedBits": "9d81a87219ab1dee",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-523758819.877699764e-29",
+      "trimmed": "-523758819.877699764e-29",
+      "parsedBits": "bbb8bbdb08fed8e4",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-634928344.329274087e-235",
+      "trimmed": "-634928344.329274087e-235",
+      "parsedBits": "90f810dc63138eaf",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-635282557.146619897e260",
+      "trimmed": "-635282557.146619897e260",
+      "parsedBits": "f7bec8ced8fcac8b",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-11663379.376761496e-265",
+      "trimmed": "-11663379.376761496e-265",
+      "parsedBits": "8a61eed2eb514b87",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-788840231.534769684e19",
+      "trimmed": "-788840231.534769684e19",
+      "parsedBits": "c5b97d222a63114e",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "27390732.548388691e69",
+      "trimmed": "27390732.548388691e69",
+      "parsedBits": "4fce474d78339b3b",
+      "validationPassed": true,
+      "confirmationQuantity": "2.739073254838869e+76 kg"
+    },
+    {
+      "input": "-250562989.155953567e109",
+      "trimmed": "-250562989.155953567e109",
+      "parsedBits": "d84fcbb3f49bf61b",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+337354056.195768685e265",
+      "trimmed": "+337354056.195768685e265",
+      "parsedBits": "78b8f1b8215d848a",
+      "validationPassed": true,
+      "confirmationQuantity": "3.373540561957687e+273 kg"
+    },
+    {
+      "input": "+620940106.689403157e128",
+      "trimmed": "+620940106.689403157e128",
+      "parsedBits": "5c555b89247fd257",
+      "validationPassed": true,
+      "confirmationQuantity": "6.209401066894031e+136 kg"
+    },
+    {
+      "input": "+900498171.286327779e-198",
+      "trimmed": "+900498171.286327779e-198",
+      "parsedBits": "18b00c782cbf0031",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+520800894.719328845e334",
+      "trimmed": "+520800894.719328845e334",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "197730739.213375609e-170",
+      "trimmed": "197730739.213375609e-170",
+      "parsedBits": "1e5c7762f3370b79",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+589143884.706691236e-26",
+      "trimmed": "+589143884.706691236e-26",
+      "parsedBits": "3c5b2b62225c911e",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-104796352.424681204e-347",
+      "trimmed": "-104796352.424681204e-347",
+      "parsedBits": "8000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+383848496.373660476e-218",
+      "trimmed": "+383848496.373660476e-218",
+      "parsedBits": "147430e2446f11fa",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "962142810.711208674e-194",
+      "trimmed": "962142810.711208674e-194",
+      "parsedBits": "1984ee8b5329d1f8",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+82179567.526894817e314",
+      "trimmed": "+82179567.526894817e314",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "-626346651.549708695e-21",
+      "trimmed": "-626346651.549708695e-21",
+      "parsedBits": "bd6609a10c3df386",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "626862009.241981329e174",
+      "trimmed": "626862009.241981329e174",
+      "parsedBits": "65e2e232f61edd5b",
+      "validationPassed": true,
+      "confirmationQuantity": "6.268620092419813e+182 kg"
+    },
+    {
+      "input": "-484420442.793941742e106",
+      "trimmed": "-484420442.793941742e106",
+      "parsedBits": "d7bf7932ca853d40",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-976321567.639746283e-80",
+      "trimmed": "-976321567.639746283e-80",
+      "parsedBits": "b1314007240e63ee",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+927723625.411811492e-232",
+      "trimmed": "+927723625.411811492e-232",
+      "parsedBits": "11a12b78669f0f64",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+594728828.010315018e-288",
+      "trimmed": "+594728828.010315018e-288",
+      "parsedBits": "05f59752eac97a91",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+666886295.096716841e16",
+      "trimmed": "+666886295.096716841e16",
+      "parsedBits": "451610bf23cfc9a9",
+      "validationPassed": true,
+      "confirmationQuantity": "6.668862950967168e+24 kg"
+    },
+    {
+      "input": "-422656850.752581724e-339",
+      "trimmed": "-422656850.752581724e-339",
+      "parsedBits": "8000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "508892029.850908834e112",
+      "trimmed": "508892029.850908834e112",
+      "parsedBits": "58ff881d65ad5662",
+      "validationPassed": true,
+      "confirmationQuantity": "5.0889202985090885e+120 kg"
+    },
+    {
+      "input": "+755230067.543862273e-19",
+      "trimmed": "+755230067.543862273e-19",
+      "parsedBits": "3dd4c2758a519ce3",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-700160598.992261355e101",
+      "trimmed": "-700160598.992261355e101",
+      "parsedBits": "d6bdd003be5353f6",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "396197961.992745618e-207",
+      "trimmed": "396197961.992745618e-207",
+      "parsedBits": "16be53b5d881e56d",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-292416834.321571216e276",
+      "trimmed": "-292416834.321571216e276",
+      "parsedBits": "faff76a528b9ba3d",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "187762790.422726086e19",
+      "trimmed": "187762790.422726086e19",
+      "parsedBits": "4598448cb29396d4",
+      "validationPassed": true,
+      "confirmationQuantity": "1.877627904227261e+27 kg"
+    },
+    {
+      "input": "813593882.975665443e289",
+      "trimmed": "813593882.975665443e289",
+      "parsedBits": "7dc8e1731e3f8400",
+      "validationPassed": true,
+      "confirmationQuantity": "8.135938829756654e+297 kg"
+    },
+    {
+      "input": "+951615842.757714253e-332",
+      "trimmed": "+951615842.757714253e-332",
+      "parsedBits": "0000000000000002",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "845331949.570900024e189",
+      "trimmed": "845331949.570900024e189",
+      "parsedBits": "69069e052d12cad9",
+      "validationPassed": true,
+      "confirmationQuantity": "8.453319495709e+197 kg"
+    },
+    {
+      "input": "-200571599.371509562e-105",
+      "trimmed": "-200571599.371509562e-105",
+      "parsedBits": "abdb6b34bd90c2cb",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-553124728.152844433e-293",
+      "trimmed": "-553124728.152844433e-293",
+      "parsedBits": "84ea51f7bb758b02",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+708355327.884130248e-63",
+      "trimmed": "+708355327.884130248e-63",
+      "parsedBits": "34b15e6b200f1c28",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-747558699.198157139e-137",
+      "trimmed": "-747558699.198157139e-137",
+      "parsedBits": "a554ba3287350bfa",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-591699581.393454644e-123",
+      "trimmed": "-591699581.393454644e-123",
+      "parsedBits": "a837506c2c02c610",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+696893948.236013482e-177",
+      "trimmed": "+696893948.236013482e-177",
+      "parsedBits": "1d050a587ae20243",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+913303673.455276263e-134",
+      "trimmed": "+913303673.455276263e-134",
+      "parsedBits": "25f8bab93a11655b",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "427976815.580008956e323",
+      "trimmed": "427976815.580008956e323",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "-354074577.441492530e105",
+      "trimmed": "-354074577.441492530e105",
+      "parsedBits": "d782675c43cfe545",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "552219352.867643547e-300",
+      "trimmed": "552219352.867643547e-300",
+      "parsedBits": "03760af7188866d6",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+80891941.493863767e8",
+      "trimmed": "+80891941.493863767e8",
+      "parsedBits": "433cbd1447cb1889",
+      "validationPassed": true,
+      "confirmationQuantity": "8089194149386377 kg"
+    },
+    {
+      "input": "-465331116.553539287e220",
+      "trimmed": "-465331116.553539287e220",
+      "parsedBits": "ef688db970b9b04b",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "338215679.164299260e161",
+      "trimmed": "338215679.164299260e161",
+      "parsedBits": "6321ec738807bac5",
+      "validationPassed": true,
+      "confirmationQuantity": "3.382156791642993e+169 kg"
+    },
+    {
+      "input": "-262013744.414257822e-142",
+      "trimmed": "-262013744.414257822e-142",
+      "parsedBits": "a4330b4ef596ceb3",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+8306644.740795923e178",
+      "trimmed": "+8306644.740795923e178",
+      "parsedBits": "66538c9648783b12",
+      "validationPassed": true,
+      "confirmationQuantity": "8.306644740795923e+184 kg"
+    },
+    {
+      "input": "-728678648.926811232e-197",
+      "trimmed": "-728678648.926811232e-197",
+      "parsedBits": "98e03bb0fb16eb7b",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "884854857.987963320e-212",
+      "trimmed": "884854857.987963320e-212",
+      "parsedBits": "15c631b5c07e327d",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+424428343.711457467e59",
+      "trimmed": "+424428343.711457467e59",
+      "parsedBits": "4df9304d0ac387de",
+      "validationPassed": true,
+      "confirmationQuantity": "4.2442834371145744e+67 kg"
+    },
+    {
+      "input": "-425116913.306657069e110",
+      "trimmed": "-425116913.306657069e110",
+      "parsedBits": "d890dbb020c6b80a",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "440247690.507537568e-302",
+      "trimmed": "440247690.507537568e-302",
+      "parsedBits": "03067e69b7bcf82f",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-869266505.774314572e237",
+      "trimmed": "-869266505.774314572e237",
+      "parsedBits": "f2ffd3b9ef431769",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+154819497.220696520e-125",
+      "trimmed": "+154819497.220696520e-125",
+      "parsedBits": "27af3ba70df0e3c2",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+198784639.992804959e-117",
+      "trimmed": "+198784639.992804959e-117",
+      "parsedBits": "295de0f06778be1f",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-319210989.132641108e-27",
+      "trimmed": "-319210989.132641108e-27",
+      "parsedBits": "bc178db9a06d5c1e",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+390836973.186069326e-102",
+      "trimmed": "+390836973.186069326e-102",
+      "parsedBits": "2c8a1694e7defff5",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+456161917.100750442e87",
+      "trimmed": "+456161917.100750442e87",
+      "parsedBits": "53cb55f13067e9a6",
+      "validationPassed": true,
+      "confirmationQuantity": "4.5616191710075044e+95 kg"
+    },
+    {
+      "input": "+634974232.678251879e125",
+      "trimmed": "+634974232.678251879e125",
+      "parsedBits": "5bb65d4be0d7aa7b",
+      "validationPassed": true,
+      "confirmationQuantity": "6.349742326782519e+133 kg"
+    },
+    {
+      "input": "+75080960.763707357e159",
+      "trimmed": "+75080960.763707357e159",
+      "parsedBits": "62945f36e6500020",
+      "validationPassed": true,
+      "confirmationQuantity": "7.508096076370735e+166 kg"
+    },
+    {
+      "input": "595700596.805032530e308",
+      "trimmed": "595700596.805032530e308",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "916109360.459983634e-68",
+      "trimmed": "916109360.459983634e-68",
+      "parsedBits": "33ad714f85fc4e80",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+404684743.096535125e162",
+      "trimmed": "+404684743.096535125e162",
+      "parsedBits": "635acec444c01ef1",
+      "validationPassed": true,
+      "confirmationQuantity": "4.046847430965351e+170 kg"
+    },
+    {
+      "input": "+917914063.102581929e183",
+      "trimmed": "+917914063.102581929e183",
+      "parsedBits": "67c9c091db646925",
+      "validationPassed": true,
+      "confirmationQuantity": "9.179140631025819e+191 kg"
+    },
+    {
+      "input": "+774034681.877386344e-64",
+      "trimmed": "+774034681.877386344e-64",
+      "parsedBits": "347e5de93e9f1ecc",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "60450787.441632084e142",
+      "trimmed": "60450787.441632084e142",
+      "parsedBits": "5f07a35ffec7706f",
+      "validationPassed": true,
+      "confirmationQuantity": "6.045078744163208e+149 kg"
+    },
+    {
+      "input": "-374500275.123745181e-331",
+      "trimmed": "-374500275.123745181e-331",
+      "parsedBits": "8000000000000008",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-688078265.605308453e-156",
+      "trimmed": "-688078265.605308453e-156",
+      "parsedBits": "a16198b2a73b6cbf",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "492390956.954024878e245",
+      "trimmed": "492390956.954024878e245",
+      "parsedBits": "749add3b5be796e0",
+      "validationPassed": true,
+      "confirmationQuantity": "4.923909569540249e+253 kg"
+    },
+    {
+      "input": "863806248.470454219e17",
+      "trimmed": "863806248.470454219e17",
+      "parsedBits": "4551dcf3c3955bb1",
+      "validationPassed": true,
+      "confirmationQuantity": "8.638062484704542e+25 kg"
+    },
+    {
+      "input": "+53023385.919510841e342",
+      "trimmed": "+53023385.919510841e342",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "-973616554.859362759e-256",
+      "trimmed": "-973616554.859362759e-256",
+      "parsedBits": "8ca5c8a985853deb",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+540863957.351393011e138",
+      "trimmed": "+540863957.351393011e138",
+      "parsedBits": "5e65a83729a74c7c",
+      "validationPassed": true,
+      "confirmationQuantity": "5.40863957351393e+146 kg"
+    },
+    {
+      "input": "844623939.109698493e246",
+      "trimmed": "844623939.109698493e246",
+      "parsedBits": "74dccd0c088db9ce",
+      "validationPassed": true,
+      "confirmationQuantity": "8.446239391096985e+254 kg"
+    },
+    {
+      "input": "-365127339.807496259e-243",
+      "trimmed": "-365127339.807496259e-243",
+      "parsedBits": "8f4293392f930f56",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "714162690.262151729e5",
+      "trimmed": "714162690.262151729e5",
+      "parsedBits": "42d03cf9562ce9cb",
+      "validationPassed": true,
+      "confirmationQuantity": "71416269026215 kg"
+    },
+    {
+      "input": "+409623510.831204238e55",
+      "trimmed": "+409623510.831204238e55",
+      "parsedBits": "4d23ea2fcdad9238",
+      "validationPassed": true,
+      "confirmationQuantity": "4.096235108312042e+63 kg"
+    },
+    {
+      "input": "+473456179.477983024e-191",
+      "trimmed": "+473456179.477983024e-191",
+      "parsedBits": "1a141e1dfebc953c",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-368937774.864638476e185",
+      "trimmed": "-368937774.864638476e185",
+      "parsedBits": "e8202c3e471a76f5",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+615670057.819909804e301",
+      "trimmed": "+615670057.819909804e301",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "710866321.709718412e-286",
+      "trimmed": "710866321.709718412e-286",
+      "parsedBits": "06642979ccd0e050",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-247092604.063182700e332",
+      "trimmed": "-247092604.063182700e332",
+      "parsedBits": "fff0000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-124894441.497981292e-249",
+      "trimmed": "-124894441.497981292e-249",
+      "parsedBits": "8deaa647dcc06495",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-767774425.649235568e326",
+      "trimmed": "-767774425.649235568e326",
+      "parsedBits": "fff0000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "3028365.003586599e182",
+      "trimmed": "3028365.003586599e182",
+      "parsedBits": "6711666ac73cade6",
+      "validationPassed": true,
+      "confirmationQuantity": "3.028365003586599e+188 kg"
+    },
+    {
+      "input": "612363735.280498697e-302",
+      "trimmed": "612363735.280498697e-302",
+      "parsedBits": "030f49ae2a772668",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-834197902.090577063e-337",
+      "trimmed": "-834197902.090577063e-337",
+      "parsedBits": "8000000000000000",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "462169987.573876668e-64",
+      "trimmed": "462169987.573876668e-64",
+      "parsedBits": "347221bda852ef06",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "57320093.707669899e173",
+      "trimmed": "57320093.707669899e173",
+      "parsedBits": "65761a15ac36b602",
+      "validationPassed": true,
+      "confirmationQuantity": "5.73200937076699e+180 kg"
+    },
+    {
+      "input": "-126827214.364045992e-4",
+      "trimmed": "-126827214.364045992e-4",
+      "parsedBits": "c0c8c55c580731f3",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "172991937.051522049e-207",
+      "trimmed": "172991937.051522049e-207",
+      "parsedBits": "16aa7bbd0ec16370",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-8780852.536245608e200",
+      "trimmed": "-8780852.536245608e200",
+      "parsedBits": "eae5e14f5d7bd517",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-398074473.704459304e18",
+      "trimmed": "-398074473.704459304e18",
+      "parsedBits": "c5749478c75c7249",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-645436703.053058135e92",
+      "trimmed": "-645436703.053058135e92",
+      "parsedBits": "d4dd82507b10d7d4",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+618903656.628538567e-309",
+      "trimmed": "+618903656.628538567e-309",
+      "parsedBits": "019a86c3b5dd6b9a",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-304097986.846429019e101",
+      "trimmed": "-304097986.846429019e101",
+      "parsedBits": "d6a9e590c5d98885",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "826147136.503935177e176",
+      "trimmed": "826147136.503935177e176",
+      "parsedBits": "6653715ef9293e2d",
+      "validationPassed": true,
+      "confirmationQuantity": "8.261471365039351e+184 kg"
+    },
+    {
+      "input": "+4604109.943726069e178",
+      "trimmed": "+4604109.943726069e178",
+      "parsedBits": "6645abc49c1f8ca9",
+      "validationPassed": true,
+      "confirmationQuantity": "4.604109943726069e+184 kg"
+    },
+    {
+      "input": "149313155.033865839e-155",
+      "trimmed": "149313155.033865839e-155",
+      "parsedBits": "2173179a50a8418f",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-231397790.992918906e-83",
+      "trimmed": "-231397790.992918906e-83",
+      "parsedBits": "b070bf0b9e6eabcf",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-731398889.291641865e260",
+      "trimmed": "-731398889.291641865e260",
+      "parsedBits": "f7c1b89341d19c80",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-753909802.786833014e-100",
+      "trimmed": "-753909802.786833014e-100",
+      "parsedBits": "ad03a851408367de",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "891560601.476396522e-155",
+      "trimmed": "891560601.476396522e-155",
+      "parsedBits": "219c8010b419989b",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "-241548823.494175667e108",
+      "trimmed": "-241548823.494175667e108",
+      "parsedBits": "d818857f5bef8e6b",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-880201225.349286029e275",
+      "trimmed": "-880201225.349286029e275",
+      "parsedBits": "fae2f10aec5372ef",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-326436503.638630800e60",
+      "trimmed": "-326436503.638630800e60",
+      "parsedBits": "ce2837665de1032d",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+316640727.611429843e183",
+      "trimmed": "+316640727.611429843e183",
+      "parsedBits": "67b1c44dd0452440",
+      "validationPassed": true,
+      "confirmationQuantity": "3.166407276114298e+191 kg"
+    },
+    {
+      "input": "-606562452.359549998e-3",
+      "trimmed": "-606562452.359549998e-3",
+      "parsedBits": "c12282c4e79babc3",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "753936648.384019069e140",
+      "trimmed": "753936648.384019069e140",
+      "parsedBits": "5ed795c6785ff6d7",
+      "validationPassed": true,
+      "confirmationQuantity": "7.539366483840191e+148 kg"
+    },
+    {
+      "input": "-60054172.168696735e-92",
+      "trimmed": "-60054172.168696735e-92",
+      "parsedBits": "ae72aa9d17a54fc5",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "645810314.143799471e15",
+      "trimmed": "645810314.143799471e15",
+      "parsedBits": "44e1182e501f0312",
+      "validationPassed": true,
+      "confirmationQuantity": "6.458103141437994e+23 kg"
+    },
+    {
+      "input": "-606878675.468336409e-118",
+      "trimmed": "-606878675.468336409e-118",
+      "parsedBits": "a9423e5bddd71533",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "-372448656.673634339e-203",
+      "trimmed": "-372448656.673634339e-203",
+      "parsedBits": "9791668c11522231",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "215284715.582743489e200",
+      "trimmed": "215284715.582743489e200",
+      "parsedBits": "6b30c391c8284b92",
+      "validationPassed": true,
+      "confirmationQuantity": "2.152847155827435e+208 kg"
+    },
+    {
+      "input": "-319080302.690310233e107",
+      "trimmed": "-319080302.690310233e107",
+      "parsedBits": "d7e9e9f0e4ab7517",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+224573127.107707741e-61",
+      "trimmed": "+224573127.107707741e-61",
+      "parsedBits": "35013536b1558582",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+673663200.150059333e248",
+      "trimmed": "+673663200.150059333e248",
+      "parsedBits": "7541f2450039906e",
+      "validationPassed": true,
+      "confirmationQuantity": "6.736632001500594e+256 kg"
+    },
+    {
+      "input": "-9959448.005507919e-265",
+      "trimmed": "-9959448.005507919e-265",
+      "parsedBits": "8a5ea0475374fefe",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "255859746.713280435e-258",
+      "trimmed": "255859746.713280435e-258",
+      "parsedBits": "0c1d4f675ab105f6",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+334069155.411935549e169",
+      "trimmed": "+334069155.411935549e169",
+      "parsedBits": "64ca617fe8573ea3",
+      "validationPassed": true,
+      "confirmationQuantity": "3.3406915541193556e+177 kg"
+    },
+    {
+      "input": "749195191.511388594e338",
+      "trimmed": "749195191.511388594e338",
+      "parsedBits": "7ff0000000000000",
+      "validationPassed": true,
+      "confirmationQuantity": "Infinity kg"
+    },
+    {
+      "input": "353815391.858506297e145",
+      "trimmed": "353815391.858506297e145",
+      "parsedBits": "5fd0e388b5f13405",
+      "validationPassed": true,
+      "confirmationQuantity": "3.538153918585063e+153 kg"
+    },
+    {
+      "input": "-658375818.145477572e214",
+      "trimmed": "-658375818.145477572e214",
+      "parsedBits": "ee3236b1f96410b1",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    },
+    {
+      "input": "+442853368.012059734e-62",
+      "trimmed": "+442853368.012059734e-62",
+      "parsedBits": "34db2596d00e38ea",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "874299225.968478589e-332",
+      "trimmed": "874299225.968478589e-332",
+      "parsedBits": "0000000000000002",
+      "validationPassed": true,
+      "confirmationQuantity": "0 kg"
+    },
+    {
+      "input": "+162254685.131484786e275",
+      "trimmed": "+162254685.131484786e275",
+      "parsedBits": "7abbeee8c81760c3",
+      "validationPassed": true,
+      "confirmationQuantity": "1.622546851314848e+283 kg"
+    },
+    {
+      "input": "-232038516.295843913e19",
+      "trimmed": "-232038516.295843913e19",
+      "parsedBits": "c59dfd82aeefc0b4",
+      "validationPassed": false,
+      "confirmationQuantity": null
+    }
+  ]
+}

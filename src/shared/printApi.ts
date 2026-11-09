@@ -22,6 +22,16 @@ export type RawMaterialStock = {
 };
 export type RawMaterialReprint = { reprint_id: string; stock: RawMaterialStock; print_request: WorkerPrintJob };
 
+/** @v2 AdminRawMaterialStockEntry.fromJson */
+export function rawMaterialStockFromJson(value: unknown): RawMaterialStock {
+  const stock = object(value);
+  return { id: text(stock.id), warehouse: text(stock.warehouse), item_code: text(stock.item_code),
+    item_name: text(stock.item_name), barcode: text(stock.barcode), qty: number(stock.qty, 0)!,
+    width_mm: number(stock.width_mm), micron: number(stock.micron), length_m: number(stock.length_m),
+    uom: text(stock.uom), status: text(stock.status), reserved_order_id: text(stock.reserved_order_id),
+    source_receipt_id: text(stock.source_receipt_id) };
+}
+
 async function reprintException(response: Response): Promise<MobileApiException> {
   let code = 'raw_material_stock_reprint_failed';
   try {
@@ -38,34 +48,36 @@ async function reprintException(response: Response): Promise<MobileApiException>
 }
 
 /** @v2 adminPrepareRawMaterialStockReprint */
-export async function adminPrepareRawMaterialStockReprint(session: Session, barcode: string, orderId = ''): Promise<RawMaterialReprint> {
+export async function adminPrepareRawMaterialStockReprint(session: Session, barcode: string, orderId = '',
+  beforeSend?: () => void): Promise<RawMaterialReprint> {
   const normalized = barcode.trim();
   if (!normalized) throw new MobileApiException({ code: 'raw_material_stock_reprint_invalid', message: 'QR kodi topilmadi' });
-  const response = await authorizedFetch(session, '/v1/mobile/admin/raw-material-stock/reprint/prepare', {
+  const path = '/v1/mobile/admin/raw-material-stock/reprint/prepare';
+  const init = {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ barcode: normalized, ...(orderId.trim() ? { order_id: orderId.trim() } : {}) }),
-  });
+  };
+  const response = beforeSend ? await authorizedFetch(session, path, init, beforeSend) : await authorizedFetch(session, path, init);
   if (response.status !== 200) throw await reprintException(response);
   const data = object(await response.json());
   const stock = data.stock == null ? {} : object(data.stock);
   const print = data.print == null ? {} : object(data.print);
   return {
     reprint_id: text(data.reprint_id),
-    stock: { id: text(stock.id), warehouse: text(stock.warehouse), item_code: text(stock.item_code),
-      item_name: text(stock.item_name), barcode: text(stock.barcode), qty: number(stock.qty, 0)!,
-      width_mm: number(stock.width_mm), micron: number(stock.micron), length_m: number(stock.length_m),
-      uom: text(stock.uom), status: text(stock.status), reserved_order_id: text(stock.reserved_order_id),
-      source_receipt_id: text(stock.source_receipt_id) },
+    stock: rawMaterialStockFromJson(stock),
     print_request: printJobFromJson(print),
   };
 }
 
 /** @v2 adminConfirmRawMaterialStockReprint */
-export async function adminConfirmRawMaterialStockReprint(session: Session, barcode: string, reprintId: string): Promise<void> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/raw-material-stock/reprint/confirm', {
+export async function adminConfirmRawMaterialStockReprint(session: Session, barcode: string, reprintId: string,
+  beforeSend?: () => void): Promise<void> {
+  const path = '/v1/mobile/admin/raw-material-stock/reprint/confirm';
+  const init = {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ barcode: barcode.trim(), reprint_id: reprintId.trim() }),
-  });
+  };
+  const response = beforeSend ? await authorizedFetch(session, path, init, beforeSend) : await authorizedFetch(session, path, init);
   if (response.status !== 200) throw await reprintException(response);
 }
 

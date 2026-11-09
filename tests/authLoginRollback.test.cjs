@@ -36,6 +36,10 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
   push.filename = pushFile; push.paths = module.paths;
   push.require = id => id === './chatDeviceTokenApi' ? chat.exports : require(id);
   push._compile(ts.transpileModule(fs.readFileSync(pushFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, pushFile);
+  const switchFile = path.resolve(__dirname, '../src/shared/accountSwitchController.ts'), switching = new Module(switchFile, module);
+  switching.filename = switchFile; switching.paths = module.paths;
+  switching.require = id => id === '../savedAccountStore' ? saved.exports : require(id);
+  switching._compile(ts.transpileModule(fs.readFileSync(switchFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, switchFile);
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => id === 'expo-secure-store' ? store : id === 'react-native' ? { Platform: { OS: platform } }
     : id === './authenticateAccount' ? account.exports : id === './chunkedStorage' ? chunks.exports : id === './savedAccountRuntime' ? { initializeSavedAccounts: async () => {
@@ -43,6 +47,7 @@ function auth(store, platform = 'web', existingAccountStore, failAccountInitiali
       return accountStore;
     } }
     : id === './shared/searchActivityStore' ? role.exports
+    : id === './shared/accountSwitchController' ? switching.exports
     : id === './serverEndpointRuntime' ? { initializeServerEndpoints: async () => endpoints }
     : id === './logoutSavedSession' ? logoutModule.exports : id === './pushTokenRuntime' ? push.exports : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
@@ -423,5 +428,382 @@ test('login and refresh reset session-scoped state when effective access role ch
     assert.equal(resets, 1);
     assert.equal(await api.refreshSession(session, session.token), true);
     assert.equal(resets, 2);
+  } finally { global.fetch = original; }
+});
+
+
+test('active session epoch is read-only and detects a failed login attempt even if the previous object returns', async () => {
+  const original = global.fetch, values = new Map(); let failMetadata = false;
+  const secure = { getItemAsync: async key => values.get(key) ?? null, deleteItemAsync: async key => { values.delete(key); },
+    setItemAsync: async (key, value) => { if (key === 'accord_v4_session' && failMetadata) { failMetadata = false; throw Error('storage failure'); } values.set(key, value); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'new-token', profile: { role: 'aparatchi', ref: 'new' } }) });
+  try {
+    const api = auth(secure, 'ios'), previous = oldSession(), unrelated = oldSession();
+    assert.equal(api.activeSessionEpoch(previous), null);
+    await api.saveSession(previous);
+    const before = api.activeSessionEpoch(previous);
+    assert.equal(typeof before, 'number'); assert.equal(api.activeSessionEpoch(unrelated), null);
+    assert.equal(api.activeSessionToken(previous), 'old-token');
+    failMetadata = true;
+    await assert.rejects(api.login('https://example.test', '123', '456'), /storage failure/);
+    assert.equal(api.currentSession(), previous); assert.equal(api.activeSessionToken(previous), 'old-token');
+    assert.equal(api.activeSessionEpoch(previous), before + 1);
+    assert.equal(values.get('accord_v4_token'), 'old-token');
+  } finally { global.fetch = original; }
+});
+
+test('active session epoch stays stable on token refresh and changes on clear', async () => {
+  const original = global.fetch; let calls = 0;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++calls}`,
+    profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth({}), session = await api.login('https://example.test', 'one', 'code');
+    const before = api.activeSessionEpoch(session);
+    assert.equal(await api.refreshSession(session, session.token), true);
+    assert.equal(api.activeSessionEpoch(session), before);
+    await api.clearSession(); assert.equal(api.activeSessionEpoch(session), null);
+    await api.saveSession(session); assert.equal(api.activeSessionEpoch(session), before + 1);
+  } finally { global.fetch = original; }
+});
+
+test('active session epoch does not claim to detect same-epoch saveSession ABA', async () => {
+  const api = auth({}), first = oldSession(), other = { ...oldSession(), profile: { role: 'aparatchi', ref: 'other' } };
+  await api.saveSession(first); const before = api.activeSessionEpoch(first);
+  await api.saveSession(other); assert.equal(api.activeSessionEpoch(first), null);
+  await api.saveSession(first); assert.equal(api.activeSessionEpoch(first), before);
+});
+
+test('an epoch captured after login starts cannot detect that attempt rolling back', async () => {
+  const original = global.fetch; let release, signal;
+  const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async () => { signal(); return new Promise(resolve => { release = resolve; }); };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous);
+    const before = api.activeSessionEpoch(previous);
+    const attempt = api.login('https://example.test', '123', 'bad');
+    await entered;
+    const during = api.activeSessionEpoch(previous);
+    assert.equal(during, before + 1); release({ ok: false, status: 401 });
+    await assert.rejects(attempt);
+    assert.equal(api.currentSession(), previous); assert.equal(api.activeSessionEpoch(previous), during);
+  } finally { global.fetch = original; }
+});
+
+test('witness invalidates at login start, refuses during transition and never revives after failed rollback', async () => {
+  const original = global.fetch; let release, signal; const events = [];
+  const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async () => { signal(); return new Promise(resolve => { release = resolve; }); };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous);
+    const before = api.captureSessionWitness(previous); assert.ok(before); assert.equal(api.isSessionWitnessCurrent(before), true);
+    const unsubscribe = api.subscribeSessionWitness(() => events.push([api.sessionWitnessVersion(), api.isSessionWitnessCurrent(before)]));
+    const pending = api.login('https://example.test', '123', 'bad');
+    assert.equal(api.isSessionWitnessCurrent(before), false); assert.equal(api.captureSessionWitness(previous), null);
+    assert.equal(events.length, 1); assert.equal(events[0][1], false);
+    await entered; assert.equal(api.captureSessionWitness(previous), null);
+    release({ status: 401 }); await assert.rejects(pending, /Login failed/);
+    assert.equal(api.currentSession(), previous); assert.equal(api.isSessionWitnessCurrent(before), false);
+    const after = api.captureSessionWitness(previous); assert.ok(after); assert.notEqual(after.generation, before.generation);
+    assert.equal(api.isSessionWitnessCurrent(after), true); assert.ok(events.length >= 2);
+    unsubscribe();
+  } finally { global.fetch = original; }
+});
+
+test('same-epoch saveSession A to B to A invalidates the old witness permanently', async () => {
+  const api = auth({}), first = oldSession(), other = { ...oldSession(), profile: { role: 'aparatchi', ref: 'other' } };
+  await api.saveSession(first); const witness = api.captureSessionWitness(first), epoch = api.activeSessionEpoch(first);
+  const saveOther = api.saveSession(other);
+  assert.equal(api.captureSessionWitness(first), null); assert.equal(api.isSessionWitnessCurrent(witness), false);
+  await saveOther; await api.saveSession(first);
+  assert.equal(api.activeSessionEpoch(first), epoch); assert.equal(api.isSessionWitnessCurrent(witness), false);
+  assert.ok(api.captureSessionWitness(first));
+  assert.equal(api.isSessionWitnessCurrent({ ...witness }), false, 'only an issued frozen witness is accepted');
+});
+
+test('overlapping queued saves never admit a snapshot between A to B to A transitions', async () => {
+  const values = new Map(); let release, entered, block = false;
+  const started = new Promise(resolve => { entered = resolve; });
+  const store = { getItemAsync: async key => values.get(key) ?? null, deleteItemAsync: async key => values.delete(key),
+    setItemAsync: async (key, value) => { if (block && key === 'accord_v4_token') { block = false; entered(); await new Promise(resolve => { release = resolve; }); } values.set(key, value); } };
+  const api = auth(store, 'ios'), first = oldSession(), other = { ...oldSession(), profile: { role: 'aparatchi', ref: 'other' } };
+  await api.saveSession(first); const witness = api.captureSessionWitness(first); block = true;
+  const b = api.saveSession(other), a = api.saveSession(first); await started;
+  assert.equal(api.captureSessionWitness(first), null); release(); await Promise.all([b, a]);
+  assert.equal(api.currentSession(), first); assert.equal(api.isSessionWitnessCurrent(witness), false);
+  assert.ok(api.captureSessionWitness(first));
+});
+
+test('throwing and rejecting witness subscribers do not change login, rollback or clear results', async () => {
+  const original = global.fetch; let fail = false;
+  global.fetch = async () => fail ? { status: 401 } : ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth({}); let events = 0;
+    const stop1 = api.subscribeSessionWitness(() => { throw new Error('subscriber failure'); });
+    const stop2 = api.subscribeSessionWitness(() => Promise.reject(new Error('async subscriber failure')));
+    const stop3 = api.subscribeSessionWitness(() => { events++; });
+    const session = await api.login('https://example.test', 'one', 'code'); assert.equal(api.activeSessionToken(session), 'token');
+    fail = true; await assert.rejects(api.login('https://example.test', 'two', 'bad'), /Login failed/);
+    assert.equal(api.currentSession(), session); await api.clearSession(); assert.equal(api.currentSession(), null); assert.ok(events >= 6);
+    stop1(); stop2(); stop3();
+  } finally { global.fetch = original; }
+});
+
+test('scope mutation invalidates witnesses and notifies while preserving worker assignment behavior', async () => {
+  const api = auth({}), session = oldSession(); await api.saveSession(session);
+  const before = api.captureSessionWitness(session); let events = 0; const stop = api.subscribeSessionWitness(() => events++);
+  assert.equal(api.updateSessionAssignments(session, ['apparatus:default:1'], ['First']), true);
+  assert.equal(api.isSessionWitnessCurrent(before), false); assert.equal(events, 1);
+  const next = api.captureSessionWitness(session); assert.ok(next);
+  assert.equal(api.updateSessionAssignments(session, ['apparatus:default:1'], ['Renamed']), true);
+  assert.equal(api.isSessionWitnessCurrent(next), true, 'labels are not part of the access scope');
+  session.capabilities = ['rezka.master.access']; assert.equal(api.isSessionWitnessCurrent(next), false);
+  await api.saveSession(session); session.capabilities = []; await api.saveSession(session);
+  assert.equal(api.isSessionWitnessCurrent(next), false); stop();
+});
+
+test('same-session 401 token refresh keeps the issued witness valid for the existing retry', async () => {
+  const original = global.fetch; let logins = 0, writes = 0; const headers = [];
+  global.fetch = async (url, init) => {
+    if (String(url).endsWith('/auth/login')) return new Response(JSON.stringify({ token: `token-${++logins}`, profile: { role: 'aparatchi', ref: 'one' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } });
+    headers.push(new Headers(init.headers).get('authorization')); return new Response('{}', { status: ++writes === 1 ? 401 : 200 });
+  };
+  try {
+    const api = auth({}), session = await api.login('https://example.test', 'one', 'code');
+    const witness = api.captureSessionWitness(session); let notifications = 0; const stop = api.subscribeSessionWitness(() => notifications++);
+    const filename = path.resolve(__dirname, '../src/authorizedFetch.ts'), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
+    mod.require = id => id === './auth' ? api : require(id);
+    mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+    const response = await mod.exports.authorizedFetch(session, '/v1/mobile/test', { method: 'PUT' }, () => {
+      if (!api.isSessionWitnessCurrent(witness)) throw new Error('stale witness');
+    });
+    assert.equal(response.status, 200); assert.equal(writes, 2); assert.deepEqual(headers, ['Bearer token-1', 'Bearer token-2']);
+    assert.equal(api.isSessionWitnessCurrent(witness), true); assert.equal(notifications, 0); stop();
+  } finally { global.fetch = original; }
+});
+
+test('same-object ordinary profile save preserves the witness and emits no transition', async () => {
+  const api = auth({}), session = oldSession(); await api.saveSession(session);
+  const witness = api.captureSessionWitness(session); let notifications = 0; const stop = api.subscribeSessionWitness(() => notifications++);
+  session.profile.display_name = 'Updated'; await api.saveSession(session);
+  assert.equal(api.isSessionWitnessCurrent(witness), true); assert.equal(notifications, 0);
+  assert.equal((await api.loadSession()).profile.display_name, 'Updated');
+  const first = api.saveSession(session), second = api.saveSession(session);
+  await Promise.all([first, second]); assert.equal(api.isSessionWitnessCurrent(witness), true); assert.equal(notifications, 0); stop();
+});
+
+test('a refresh changing capability invalidates the witness before any 401 retry', async () => {
+  const original = global.fetch; let logins = 0, writes = 0;
+  global.fetch = async url => {
+    if (String(url).endsWith('/auth/login')) return new Response(JSON.stringify({ token: `token-${++logins}`,
+      profile: { role: 'aparatchi', ref: 'one' }, capabilities: [logins === 1 ? 'old.access' : 'new.access'] }), { status: 200 });
+    writes++; return new Response('{}', { status: 401 });
+  };
+  try {
+    const api = auth({}), session = await api.login('https://example.test', 'one', 'code'), witness = api.captureSessionWitness(session);
+    const filename = path.resolve(__dirname, '../src/authorizedFetch.ts'), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
+    mod.require = id => id === './auth' ? api : require(id);
+    mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+    await assert.rejects(mod.exports.authorizedFetch(session, '/v1/mobile/test', { method: 'PUT' }, () => {
+      if (!api.isSessionWitnessCurrent(witness)) throw new Error('stale witness');
+    }), /stale witness/);
+    assert.equal(writes, 1); assert.equal(api.isSessionWitnessCurrent(witness), false); assert.deepEqual(session.capabilities, ['new.access']);
+  } finally { global.fetch = original; }
+});
+
+test('changed-scope refresh stays in transition until persistence and session installation finish', async () => {
+  const original = global.fetch, values = new Map(); let logins = 0, block = false, release, signal;
+  const entered = new Promise(resolve => { signal = resolve; });
+  const secure = { getItemAsync: async key => values.get(key) ?? null, deleteItemAsync: async key => values.delete(key),
+    setItemAsync: async (key, value) => { if (block && key === 'accord_v4_session') { block = false; signal(); await new Promise(resolve => { release = resolve; }); } values.set(key, value); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: `token-${++logins}`, profile: { role: 'aparatchi', ref: 'one' },
+    capabilities: [logins === 1 ? 'old.access' : 'new.access'] }) });
+  try {
+    const api = auth(secure, 'ios'), session = await api.login('https://example.test', 'one', 'code'), witness = api.captureSessionWitness(session);
+    block = true; const refreshing = api.refreshSession(session, session.token); await entered;
+    assert.equal(api.isSessionWitnessCurrent(witness), false); assert.equal(api.captureSessionWitness(session), null);
+    release(); assert.equal(await refreshing, true); assert.ok(api.captureSessionWitness(session)); assert.equal(api.isSessionWitnessCurrent(witness), false);
+  } finally { global.fetch = original; }
+});
+
+test('runtime account-switch witness invalidates before reauthentication and remains invalid after switch', async () => {
+  const original = global.fetch; let hold = false, release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (hold) { signal(); await new Promise(resolve => { release = resolve; }); }
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth({}); await api.login('https://example.test', 'one', 'code'); const second = await api.login('https://example.test', 'two', 'code');
+    const witness = api.captureSessionWitness(second), controller = await api.createRuntimeAccountSwitchController();
+    const first = api.testAccountStore.accounts.find(account => account.profile.ref === 'one'); hold = true;
+    const pending = controller.switchTo(first.id); assert.equal(api.isSessionWitnessCurrent(witness), false); assert.equal(api.captureSessionWitness(second), null);
+    await entered; assert.equal(api.captureSessionWitness(second), null); release(); await pending;
+    assert.equal(api.currentSession().profile.ref, 'one'); assert.equal(api.isSessionWitnessCurrent(witness), false); assert.ok(api.captureSessionWitness(api.currentSession()));
+  } finally { global.fetch = original; }
+});
+
+test('witness scope matches the shared read scope without including tokens or presentation labels', async () => {
+  const file = path.resolve(__dirname, '../src/sessionReadScope.ts'), mod = new Module(file, module); mod.filename = file; mod.paths = module.paths;
+  mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
+  const api = auth({}), session = { ...oldSession(), capabilities: ['b', 'a', 'a'], assigned_apparatus: ['z', 'x', 'z'],
+    assigned_item_groups: undefined, profile: { role: 'aparatchi', ref: 'one', assigned_item_groups: ['g'], assigned_warehouses: ['w'] } };
+  await api.saveSession(session); const witness = api.captureSessionWitness(session);
+  assert.equal(witness.scope, mod.exports.sessionReadScope(session));
+  session.token = 'refreshed'; session.assigned_apparatus_labels = ['new label']; assert.equal(api.isSessionWitnessCurrent(witness), true);
+});
+
+test('storage failure during login restores legacy session but not its old witness', async () => {
+  const original = global.fetch, values = new Map(); let failMetadata = false;
+  const secure = { getItemAsync: async key => values.get(key) ?? null, deleteItemAsync: async key => values.delete(key),
+    setItemAsync: async (key, value) => { if (failMetadata && key === 'accord_v4_session') { failMetadata = false; throw Error('storage failure'); } values.set(key, value); } };
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'new-token', profile: { role: 'aparatchi', ref: 'new' } }) });
+  try {
+    const api = auth(secure, 'ios'), previous = oldSession(); await api.saveSession(previous); const witness = api.captureSessionWitness(previous);
+    failMetadata = true; const pending = api.login('https://example.test', '123', 'code'); assert.equal(api.captureSessionWitness(previous), null);
+    await assert.rejects(pending, /storage failure/); assert.equal(api.currentSession(), previous); assert.equal(values.get('accord_v4_token'), 'old-token');
+    assert.equal(api.isSessionWitnessCurrent(witness), false); assert.ok(api.captureSessionWitness(previous));
+  } finally { global.fetch = original; }
+});
+
+test('witness transition ends before the adopted login promise settles on success and rejection', async () => {
+  const original = global.fetch; let fail = false;
+  global.fetch = async () => fail ? { status: 401 } : ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) });
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous); const events = [];
+    const stop = api.subscribeSessionWitness(() => events.push(api.captureSessionWitness(api.currentSession()) ? 'end' : 'begin'));
+    const good = api.login('https://example.test', 'one', 'code'); good.then(() => events.push('resolved'));
+    await good; assert.deepEqual(events, ['begin', 'end', 'resolved']); events.length = 0;
+    fail = true; const bad = api.login('https://example.test', 'one', 'bad'); bad.catch(() => events.push('rejected'));
+    await assert.rejects(bad, /Login failed/); assert.deepEqual(events, ['begin', 'end', 'rejected']); stop();
+  } finally { global.fetch = original; }
+});
+
+test('witness capture fails closed for missing or inactive sessions', async () => {
+  const api = auth({}), session = oldSession();
+  assert.equal(api.captureSessionWitness(null), null); assert.equal(api.captureSessionWitness(undefined), null);
+  assert.equal(api.captureSessionWitness(session), null); await api.saveSession(session);
+  assert.ok(api.captureSessionWitness(session)); await api.clearSession(); assert.equal(api.captureSessionWitness(session), null);
+});
+
+test('observed direct scope loss permanently retires a witness after the scope returns', async () => {
+  const api = auth({}), session = oldSession(); session.capabilities = ['one']; await api.saveSession(session);
+  const old = api.captureSessionWitness(session); assert.equal(api.isSessionWitnessCurrent(old), true);
+  session.capabilities = ['two']; assert.equal(api.isSessionWitnessCurrent(old), false);
+  session.capabilities = ['one']; assert.equal(api.isSessionWitnessCurrent(old), false);
+  const fresh = api.captureSessionWitness(session); assert.ok(fresh); assert.equal(api.isSessionWitnessCurrent(fresh), true);
+});
+
+
+test('transition observer reports logged-out, login start and successful completion', async () => {
+  const original = global.fetch; let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  global.fetch = async () => { entered(); await new Promise(resolve => { release = resolve; });
+    return { status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: 'one' } }) }; };
+  try {
+    const api = auth({}); assert.equal(api.currentSession(), null); assert.equal(api.sessionWitnessTransitioning(), false);
+    const seen = []; const stop = api.subscribeSessionWitness(() => seen.push(api.sessionWitnessTransitioning()));
+    const pending = api.login('https://example.test', 'one', 'code'); assert.equal(api.sessionWitnessTransitioning(), true);
+    await started; assert.equal(api.sessionWitnessTransitioning(), true); release(); await pending;
+    assert.equal(api.sessionWitnessTransitioning(), false); assert.deepEqual(seen, [true, false]); stop();
+  } finally { global.fetch = original; }
+});
+
+test('transition observer ends on failed login while the prior witness stays retired', async () => {
+  const original = global.fetch; let release, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  global.fetch = async () => { entered(); await new Promise(resolve => { release = resolve; }); return { status: 401 }; };
+  try {
+    const api = auth({}), old = oldSession(); await api.saveSession(old); const witness = api.captureSessionWitness(old);
+    const pending = api.login('https://example.test', 'one', 'bad'); assert.equal(api.sessionWitnessTransitioning(), true);
+    await started; release(); await assert.rejects(pending, /Login failed/);
+    assert.equal(api.sessionWitnessTransitioning(), false); assert.equal(api.currentSession(), old);
+    assert.equal(api.isSessionWitnessCurrent(witness), false); assert.ok(api.captureSessionWitness(old));
+  } finally { global.fetch = original; }
+});
+
+test('transition observer stays true until all overlapping attempts finish', async () => {
+  const original = global.fetch, started = [], release = [];
+  global.fetch = async () => { const index = release.length; let unblock; const gate = new Promise(resolve => { unblock = resolve; });
+    release[index] = unblock; started[index]?.(); await gate; return { status: 401 }; };
+  const entered = index => new Promise(resolve => { started[index] = resolve; });
+  try {
+    const api = auth({}), firstStarted = entered(0); const first = api.login('https://example.test', 'one', 'bad');
+    first.catch(() => {}); await firstStarted; const secondStarted = entered(1); const second = api.login('https://example.test', 'two', 'bad');
+    second.catch(() => {}); await secondStarted; assert.equal(api.sessionWitnessTransitioning(), true);
+    release[0](); await assert.rejects(first); assert.equal(api.sessionWitnessTransitioning(), true);
+    release[1](); await assert.rejects(second); assert.equal(api.sessionWitnessTransitioning(), false);
+    assert.equal(api.currentSession(), null);
+  } finally { global.fetch = original; }
+});
+
+test('new login retires only an older login already waiting on authentication', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous); const oldWitness = api.captureSessionWitness(previous);
+    const captures = []; const stop = api.subscribeSessionWitness(() => captures.push(!!api.captureSessionWitness(previous)));
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    const fast = await api.login('https://example.test', 'fast', 'code'); const witness = api.captureSessionWitness(fast);
+    assert.ok(witness); assert.equal(api.sessionWitnessTransitioning(), false); assert.equal(api.isSessionWitnessCurrent(oldWitness), false);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), fast); assert.equal(api.isSessionWitnessCurrent(witness), true);
+    assert.ok(captures.length > 0); assert.ok(captures.every(value => value === false)); stop();
+  } finally { global.fetch = original; }
+});
+
+test('pending endpoint setup is not retired by a newer successful login', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => ({ status: 200, json: async () => ({ token: 'token', profile: { role: 'aparatchi', ref: JSON.parse(init.body).phone } }) });
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous);
+    const set = api.testEndpoints.setBaseUrl;
+    api.testEndpoints.setBaseUrl = async url => { if (url === 'https://old.test') { signal(); await new Promise(resolve => { release = resolve; }); } return set(url); };
+    const old = api.login('https://old.test', 'old', 'code'); const rejected = assert.rejects(old, /Sessiya o‘zgargan/); await entered;
+    const fast = await api.login('https://example.test', 'fast', 'code');
+    assert.equal(api.sessionWitnessTransitioning(), true); assert.equal(api.captureSessionWitness(fast), null);
+    release(); await rejected; assert.equal(api.currentSession(), fast); assert.ok(api.captureSessionWitness(fast));
+  } finally { global.fetch = original; }
+});
+
+test('a failed newer login can restore the previous session while a superseded auth request remains pending', async () => {
+  const original = global.fetch; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 401 };
+  };
+  try {
+    const api = auth({}), previous = oldSession(); await api.saveSession(previous); const before = api.captureSessionWitness(previous);
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    await assert.rejects(api.login('https://example.test', 'bad', 'code'), /Login failed/);
+    assert.equal(api.currentSession(), previous); const witness = api.captureSessionWitness(previous); assert.ok(witness); assert.equal(api.isSessionWitnessCurrent(before), false);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), previous); assert.equal(api.isSessionWitnessCurrent(witness), true);
+  } finally { global.fetch = original; }
+});
+
+test('failed newer login storage rollback restores prior session without waiting for superseded auth', async () => {
+  const original = global.fetch, values = new Map(); let release, signal, failMetadata = false;
+  const entered = new Promise(resolve => { signal = resolve; });
+  const secure = { getItemAsync: async key => values.get(key) ?? null, deleteItemAsync: async key => values.delete(key),
+    setItemAsync: async (key, value) => { if (failMetadata && key === 'accord_v4_session') { failMetadata = false; throw Error('storage failure'); } values.set(key, value); } };
+  global.fetch = async (_url, init) => {
+    const ref = JSON.parse(init.body).phone;
+    if (ref === 'slow') { signal(); return new Promise(resolve => { release = resolve; }); }
+    return { status: 200, json: async () => ({ token: `token-${ref}`, profile: { role: 'aparatchi', ref } }) };
+  };
+  try {
+    const api = auth(secure, 'ios'), previous = oldSession(); await api.saveSession(previous);
+    const slow = api.login('https://example.test', 'slow', 'code'); const rejected = assert.rejects(slow, /Sessiya o‘zgargan/); await entered;
+    failMetadata = true; await assert.rejects(api.login('https://example.test', 'new', 'code'), /storage failure/);
+    assert.equal(api.currentSession(), previous); assert.equal(values.get('accord_v4_token'), 'old-token');
+    const witness = api.captureSessionWitness(previous); assert.ok(witness);
+    release({ status: 200, json: async () => ({ token: 'slow-token', profile: { role: 'aparatchi', ref: 'slow' } }) });
+    await rejected; assert.equal(api.currentSession(), previous); assert.equal(api.isSessionWitnessCurrent(witness), true);
   } finally { global.fetch = original; }
 });

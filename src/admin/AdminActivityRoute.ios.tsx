@@ -1,0 +1,1 @@
+export { AdminActivityRoute } from './AdminActivityRouteCore';

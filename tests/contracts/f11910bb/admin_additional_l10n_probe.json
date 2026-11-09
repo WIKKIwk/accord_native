@@ -1,0 +1,138 @@
+{
+  "source": "locally authored oracle probe; not an upstream V2 test",
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "locales": {
+    "uz": {
+      "locale": "uz",
+      "getters": {
+        "appUpdateMandatorySettingTitle": "Majburiy yangilash",
+        "appUpdateMandatorySettingBody": "Yoqilsa, yangi versiya chiqqanda barcha rollardagi Android foydalanuvchilari ilovani yangilashi kerak bo‘ladi. Yangilash oynasini yopish yoki keyinga qoldirish mumkin bo‘lmaydi.",
+        "appUpdateSettingsLoadFailed": "Yangilash sozlamasi yuklanmadi. Qayta urinib ko‘ring.",
+        "appUpdateSettingsSaveFailed": "Yangilash sozlamasi saqlanmadi. Qayta urinib ko‘ring.",
+        "settingsSaved": "Sozlamalar saqlandi",
+        "retry": "Qayta urinish",
+        "yes": "Ha",
+        "no": "Yo‘q",
+        "serverDisconnectedRetry": "Server uzilgan. Qayta urining."
+      },
+      "production": {
+        "paddon.management.settings.title": "Qo‘shimcha sozlamalar",
+        "paddon.management.settings.failed": "Sozlama saqlanmadi. Qayta urinib ko‘ring.",
+        "paddon.management.free_movement.title": "Rulonlarni paddonlar aro erkin boshqarish",
+        "paddon.management.free_movement.description": "Yoqilganda barcha ishchilar bir-birining rulonlarini paddonlar orasida ko‘chira oladi va bir-birining paddonlarini qulfdan chiqara oladi. Ko‘chirishdan avval ikkala paddonni qulfdan chiqaring. Omborga qabul qilingan mahsulotlar ko‘chirilmaydi.",
+        "paddon.management.free_movement.confirm": "Erkin ko‘chirish yoqilsinmi?",
+        "paddon.management.worker_visibility.title": "Ishchilar bir-birining paddonlarini ko‘rishi",
+        "paddon.management.worker_visibility.description": "Yoqilganda rezka ishchilari boshqa ishchilar ochgan paddonlarni ham ko‘radi. O‘chirilganda har bir ishchi faqat o‘zi ochgan paddonlarni ko‘radi.",
+        "lamination.settings.wip_label": "Bosmadan ortgan rulon labelini chiqarish",
+        "lamination.settings.film_label": "Plyonkadan ortgan rulon labelini chiqarish",
+        "lamination.settings.label_description": "Qoldiq kg saqlanganda shu tomonning labelini avtomatik chiqarish.",
+        "lamination.settings.load_failed": "Laminatsiya sozlamasi yuklanmadi.",
+        "lamination.settings.save_failed": "Laminatsiya sozlamasi saqlanmadi. Qayta urinib ko‘ring.",
+        "qolip.start.settings.title": "Bosmachilar qoliplarni skan qilmasdan ish boshlashi",
+        "qolip.start.settings.description": "Yoqilganda mavjud qolip komplekti ish boshlashdan oldin avtomatik tekshiriladi. Peredelkadagi, band yoki biriktirilmagan qoliplar bilan ish boshlanmaydi.",
+        "qolip.start.settings.load_failed": "Qolipni tasdiqlash sozlamasi yuklanmadi.",
+        "qolip.start.settings.save_failed": "Qolipni tasdiqlash sozlamasi saqlanmadi. Qayta urinib ko‘ring."
+      },
+      "forbidden": ""
+    },
+    "en": {
+      "locale": "en",
+      "getters": {
+        "appUpdateMandatorySettingTitle": "Require app updates",
+        "appUpdateMandatorySettingBody": "When enabled, Android users in all roles must install new versions. The update dialog cannot be closed or postponed.",
+        "appUpdateSettingsLoadFailed": "Could not load update settings. Try again.",
+        "appUpdateSettingsSaveFailed": "Could not save update settings. Try again.",
+        "settingsSaved": "Settings saved",
+        "retry": "Retry",
+        "yes": "Yes",
+        "no": "No",
+        "serverDisconnectedRetry": "Server disconnected. Try again."
+      },
+      "production": {
+        "paddon.management.settings.title": "Additional settings",
+        "paddon.management.settings.failed": "The setting could not be saved. Please retry.",
+        "paddon.management.free_movement.title": "Manage rolls freely between paddons",
+        "paddon.management.free_movement.description": "When enabled, workers can move each other’s rolls between paddons and unlock each other’s paddons. Unlock both paddons before moving rolls. Goods already received into a warehouse cannot be moved.",
+        "paddon.management.free_movement.confirm": "Enable free movement?",
+        "paddon.management.worker_visibility.title": "Workers can see each other’s paddons",
+        "paddon.management.worker_visibility.description": "When enabled, cutting workers also see paddons created by other workers. When disabled, each worker sees only their own paddons.",
+        "lamination.settings.wip_label": "Print upstream roll remainder labels",
+        "lamination.settings.film_label": "Print film remainder labels",
+        "lamination.settings.label_description": "Automatically print this side’s label after saving the remaining net kg.",
+        "lamination.settings.load_failed": "Could not load the lamination setting.",
+        "lamination.settings.save_failed": "Could not save the lamination setting. Please retry.",
+        "qolip.start.settings.title": "Printing operators can start without scanning molds",
+        "qolip.start.settings.description": "When enabled, the assigned mold set is checked automatically before starting. Molds in rework, busy molds and missing assignments still block starting.",
+        "qolip.start.settings.load_failed": "Could not load the mold confirmation setting.",
+        "qolip.start.settings.save_failed": "Could not save the mold confirmation setting. Please retry."
+      },
+      "forbidden": ""
+    },
+    "ru": {
+      "locale": "ru",
+      "getters": {
+        "appUpdateMandatorySettingTitle": "Обязательное обновление",
+        "appUpdateMandatorySettingBody": "Если включено, пользователи Android со всеми ролями должны устанавливать новые версии. Окно обновления нельзя закрыть или отложить.",
+        "appUpdateSettingsLoadFailed": "Не удалось загрузить настройку обновления. Повторите попытку.",
+        "appUpdateSettingsSaveFailed": "Не удалось сохранить настройку обновления. Повторите попытку.",
+        "settingsSaved": "Настройки сохранены",
+        "retry": "Повторить",
+        "yes": "Да",
+        "no": "Нет",
+        "serverDisconnectedRetry": "Сервер отключен. Повторите попытку."
+      },
+      "production": {
+        "paddon.management.settings.title": "Дополнительные настройки",
+        "paddon.management.settings.failed": "Не удалось сохранить настройку. Повторите попытку.",
+        "paddon.management.free_movement.title": "Свободное перемещение рулонов между паллетами",
+        "paddon.management.free_movement.description": "Все работники смогут перемещать рулоны друг друга между паллетами и разблокировать паллеты друг друга. Перед перемещением разблокируйте обе паллеты. Принятые на склад товары перемещать нельзя.",
+        "paddon.management.free_movement.confirm": "Включить свободное перемещение?",
+        "paddon.management.worker_visibility.title": "Работники видят паллеты друг друга",
+        "paddon.management.worker_visibility.description": "При включении работники резки видят паллеты других работников. При выключении каждый работник видит только созданные им паллеты.",
+        "lamination.settings.wip_label": "Печатать этикетку остатка входного рулона",
+        "lamination.settings.film_label": "Печатать этикетку остатка плёнки",
+        "lamination.settings.label_description": "Автоматически печатать этикетку этой стороны после сохранения остатка нетто в кг.",
+        "lamination.settings.load_failed": "Не удалось загрузить настройку ламинации.",
+        "lamination.settings.save_failed": "Не удалось сохранить настройку ламинации. Повторите попытку.",
+        "qolip.start.settings.title": "Печатники могут начинать работу без сканирования форм",
+        "qolip.start.settings.description": "При включении назначенный комплект форм проверяется автоматически перед началом работы. Формы в переделке, занятые формы и отсутствие назначенных форм блокируют запуск.",
+        "qolip.start.settings.load_failed": "Не удалось загрузить настройку подтверждения форм.",
+        "qolip.start.settings.save_failed": "Не удалось сохранить настройку подтверждения форм. Повторите попытку."
+      },
+      "forbidden": ""
+    },
+    "ur": {
+      "locale": "ur",
+      "getters": {
+        "appUpdateMandatorySettingTitle": "Require app updates",
+        "appUpdateMandatorySettingBody": "When enabled, Android users in all roles must install new versions. The update dialog cannot be closed or postponed.",
+        "appUpdateSettingsLoadFailed": "Could not load update settings. Try again.",
+        "appUpdateSettingsSaveFailed": "Could not save update settings. Try again.",
+        "settingsSaved": "ترتیبات محفوظ ہو گئیں",
+        "retry": "دوبارہ کوشش کریں",
+        "yes": "ہاں",
+        "no": "نہیں",
+        "serverDisconnectedRetry": "سرور منقطع ہو گیا۔ دوبارہ کوشش کریں۔"
+      },
+      "production": {
+        "paddon.management.settings.title": "اضافی ترتیبات",
+        "paddon.management.settings.failed": "ترتیب محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
+        "paddon.management.free_movement.title": "پیلیٹس کے درمیان رول آزادانہ منتقل کریں",
+        "paddon.management.free_movement.description": "فعال ہونے پر کارکن ایک دوسرے کے رول منتقل اور پیلیٹس کھول سکتے ہیں۔ منتقلی سے پہلے دونوں پیلیٹس کھولیں۔ گودام میں وصول شدہ مال منتقل نہیں ہوگا۔",
+        "paddon.management.free_movement.confirm": "آزاد منتقلی فعال کریں؟",
+        "paddon.management.worker_visibility.title": "کارکن ایک دوسرے کے پیلیٹس دیکھ سکتے ہیں",
+        "paddon.management.worker_visibility.description": "فعال ہونے پر کٹنگ کارکن دوسرے کارکنوں کے بنائے ہوئے پیلیٹس بھی دیکھ سکتے ہیں۔ بند ہونے پر ہر کارکن صرف اپنے بنائے ہوئے پیلیٹس دیکھتا ہے۔",
+        "lamination.settings.wip_label": "آنے والے رول کے بقایا کا لیبل پرنٹ کریں",
+        "lamination.settings.film_label": "فلم کے بقایا کا لیبل پرنٹ کریں",
+        "lamination.settings.label_description": "بقایا خالص کلوگرام محفوظ کرنے کے بعد اس طرف کا لیبل خودکار پرنٹ کریں۔",
+        "lamination.settings.load_failed": "لیمینیشن کی ترتیب لوڈ نہیں ہو سکی۔",
+        "lamination.settings.save_failed": "لیمینیشن کی ترتیب محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
+        "qolip.start.settings.title": "پرنٹنگ کارکن سانچے اسکین کیے بغیر کام شروع کر سکتے ہیں",
+        "qolip.start.settings.description": "فعال ہونے پر کام شروع کرنے سے پہلے مقررہ سانچوں کا سیٹ خودکار طور پر جانچا جاتا ہے۔ مرمت میں موجود، مصروف یا غیر مقررہ سانچے کام شروع کرنے سے روکتے ہیں۔",
+        "qolip.start.settings.load_failed": "سانچوں کی تصدیق کی ترتیب لوڈ نہیں ہو سکی۔",
+        "qolip.start.settings.save_failed": "سانچوں کی تصدیق کی ترتیب محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔"
+      },
+      "forbidden": ""
+    }
+  }
+}

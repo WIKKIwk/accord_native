@@ -1,0 +1,620 @@
+{
+ "source": "test/raw_material_split_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "issue retry survives lost or invalid response and stays separate from stock",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/issues",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"command\":{\"request_id\":\"split-1794120829986503-cdd2764ab1ca7ab2bf82b6522ad3af76\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"1\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]},\"note\":\"Tarozi tekshirilsin\"}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "issue retry survives lost or invalid response and stays separate from stock",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/issues",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"command\":{\"request_id\":\"split-1794120829986503-cdd2764ab1ca7ab2bf82b6522ad3af76\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"1\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]},\"note\":\"Tarozi tekshirilsin\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"raw-issue:test\",\"request_id\":\"split-1794120829986503-cdd2764ab1ca7ab2bf82b6522ad3af76\",\"source\":{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"},\"source_kg\":\"100.000000\",\"output_kg\":\"98.000000\",\"entered_waste_kg\":\"1\",\"waste_kg\":\"1.000000\",\"difference_kg\":\"2.000000\",\"kind\":\"missing_weight\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}],\"note\":\"Tarozi tekshirilsin\",\"actor_ref\":\"split-1\",\"actor_name\":\"Cutter\",\"created_at\":\"2026-09-08T12:00:00+00:00\"}"
+   }
+  },
+  {
+   "test": "issue retry survives lost or invalid response and stays separate from stock",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/issues",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"command\":{\"request_id\":\"split-1794120829986503-cdd2764ab1ca7ab2bf82b6522ad3af76\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"1\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]},\"note\":\"Tarozi tekshirilsin\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"raw-issue:test\",\"request_id\":\"split-1794120829986503-cdd2764ab1ca7ab2bf82b6522ad3af76\",\"source\":{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"},\"source_kg\":\"100.000000\",\"output_kg\":\"98.000000\",\"entered_waste_kg\":\"1\",\"waste_kg\":\"1.000000\",\"difference_kg\":\"1.000000\",\"kind\":\"missing_weight\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}],\"note\":\"Tarozi tekshirilsin\",\"actor_ref\":\"split-1\",\"actor_name\":\"Cutter\",\"created_at\":\"2026-09-08T12:00:00+00:00\"}"
+   }
+  },
+  {
+   "test": "lost issue completion retries the same stock command including issue ID",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120830010690-b63e09d8b6ca8d7c7a39cbcb8c351960\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"1\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}],\"issue_id\":\"raw-issue:test\"}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "lost issue completion retries the same stock command including issue ID",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120830010690-b63e09d8b6ca8d7c7a39cbcb8c351960\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"1\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}],\"issue_id\":\"raw-issue:test\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"split-result\",\"source\":{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"},\"source_kg\":\"100\",\"output_kg\":\"98\",\"waste_kg\":\"1\",\"outputs\":[{\"revision\":\"1.000000\",\"stock_id\":\"child1\",\"barcode\":\"child1\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"39\",\"width_mm\":\"400\",\"micron\":\"20\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"revision\":\"1.000000\",\"stock_id\":\"child2\",\"barcode\":\"child2\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"59\",\"width_mm\":\"600\",\"micron\":\"20\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}],\"difference_kg\":\"1.000000\",\"issue_id\":\"raw-issue:test\",\"issue_note\":\"Sababi yozilgan\"}"
+   }
+  },
+  {
+   "test": "saved issue permits measured stock and printing; edited measurements need a new report",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[],\"issues\":[]}"
+   }
+  },
+  {
+   "test": "saved issue permits measured stock and printing; edited measurements need a new report",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/source?barcode=parent",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"}"
+   }
+  },
+  {
+   "test": "field-sized plus adds only fitting rolls and preserves entered data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "field-sized plus adds only fitting rolls and preserves entered data",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/source?barcode=parent",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"700\",\"micron\":\"20\"}"
+   }
+  },
+  {
+   "test": "measured split sends net stock and prints gross core and child dimensions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "measured split sends net stock and prints gross core and child dimensions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/source?barcode=parent",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"BOPP METAL 800/12\",\"kg\":\"12\",\"width_mm\":\"800\",\"micron\":\"12\"}"
+   }
+  },
+  {
+   "test": "measured split sends net stock and prints gross core and child dimensions",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831212275-b54aaa87f6a0d81d5e2118e7c8188f75\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"12\",\"expected_width_mm\":\"800\",\"expected_micron\":\"12\",\"waste_kg\":\"1.000000\",\"outputs\":[{\"kg\":\"5.000000\",\"width_mm\":\"400.000000\",\"gross_kg\":\"6.000000\",\"bobina_kg\":\"1.000000\",\"length_m\":\"1000.000000\"},{\"kg\":\"6.000000\",\"width_mm\":\"400.000000\",\"gross_kg\":\"6.500000\",\"bobina_kg\":\"0.500000\",\"length_m\":\"1200.000000\"}]}"
+   },
+   "error": "TestFailure"
+  },
+  {
+   "test": "measured split sends net stock and prints gross core and child dimensions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[{\"id\":\"split-result\",\"source\":{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"BOPP METAL 800/12\",\"kg\":\"12\",\"width_mm\":\"800\",\"micron\":\"12\"},\"source_kg\":\"12\",\"output_kg\":\"11\",\"waste_kg\":\"1\",\"outputs\":[{\"revision\":\"1.000000\",\"stock_id\":\"child1\",\"barcode\":\"300000000000000000000001\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"BOPP METAL 800/12\",\"kg\":\"5\",\"width_mm\":\"400\",\"micron\":\"12\",\"gross_kg\":\"6\",\"bobina_kg\":\"1\"},{\"revision\":\"1.000000\",\"stock_id\":\"child2\",\"barcode\":\"300000000000000000000002\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"BOPP METAL 800/12\",\"kg\":\"6\",\"width_mm\":\"400\",\"micron\":\"12\",\"gross_kg\":\"6.5\",\"bobina_kg\":\"0.5\"}]}]}"
+   }
+  },
+  {
+   "test": "lost response survives restart and reuses exactly the saved command",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831411785-586f8d49164bb56e210a866eb88e5dfa\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"2\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "lost response survives restart and reuses exactly the saved command",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831411785-586f8d49164bb56e210a866eb88e5dfa\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"2\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"split-result\",\"source\":{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"},\"source_kg\":\"100\",\"output_kg\":\"98\",\"waste_kg\":\"2\",\"outputs\":[{\"revision\":\"1.000000\",\"stock_id\":\"child1\",\"barcode\":\"child1\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"39\",\"width_mm\":\"400\",\"micron\":\"20\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"revision\":\"1.000000\",\"stock_id\":\"child2\",\"barcode\":\"child2\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"59\",\"width_mm\":\"600\",\"micron\":\"20\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   }
+  },
+  {
+   "test": "malformed success and proxy failure preserve retry; domain rejection clears it",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831414335-bb354f25f1776053c7bb4f9d065dbc57\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"2\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"incomplete\"}"
+   }
+  },
+  {
+   "test": "malformed success and proxy failure preserve retry; domain rejection clears it",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831414335-bb354f25f1776053c7bb4f9d065dbc57\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"2\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   },
+   "status": 504,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "gateway timeout"
+   }
+  },
+  {
+   "test": "malformed success and proxy failure preserve retry; domain rejection clears it",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831414335-bb354f25f1776053c7bb4f9d065dbc57\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"2\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"raw_split_conflict\",\"error\":\"Rulon band\"}"
+   }
+  },
+  {
+   "test": "uncertain commands are isolated per account",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831416953-53cf95cf851d7dccfc7d839f39d2ce32\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"2\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "parallel saves blocked; auth denial keeps retry key",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831418066-d32a854e177fda4cb14afbeb1a51c7d5\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"2\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   },
+   "status": 403,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"forbidden\"}"
+   }
+  },
+  {
+   "test": "printer failure and reprint do not submit stock again",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/split",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"split-1794120831419156-eb1394f75eb1dbbfa0dc4b69bdeee1b7\",\"source_barcode\":\"parent\",\"expected_revision\":\"1.000000\",\"expected_kg\":\"100\",\"expected_width_mm\":\"1000\",\"expected_micron\":\"20\",\"waste_kg\":\"2\",\"outputs\":[{\"kg\":\"39\",\"width_mm\":\"400\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"kg\":\"59\",\"width_mm\":\"600\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"id\":\"split-result\",\"source\":{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"},\"source_kg\":\"100\",\"output_kg\":\"98\",\"waste_kg\":\"2\",\"outputs\":[{\"revision\":\"1.000000\",\"stock_id\":\"child1\",\"barcode\":\"child1\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"39\",\"width_mm\":\"400\",\"micron\":\"20\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"revision\":\"1.000000\",\"stock_id\":\"child2\",\"barcode\":\"child2\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"59\",\"width_mm\":\"600\",\"micron\":\"20\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}"
+   }
+  },
+  {
+   "test": "printer failure and reprint do not submit stock again",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"split_id\":\"split-result\",\"barcode\":\"child1\",\"driver_url\":\"http://printer\",\"printer\":\"godex\",\"print_mode\":\"label\"}"
+   },
+   "status": 502,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"printer offline\"}"
+   }
+  },
+  {
+   "test": "printer failure and reprint do not submit stock again",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/print",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"split_id\":\"split-result\",\"barcode\":\"child1\",\"driver_url\":\"http://printer\",\"printer\":\"godex\",\"print_mode\":\"label\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"status\":\"done\",\"barcode\":\"child1\"}"
+   }
+  },
+  {
+   "test": "scan lookup and measured weights show 98 stock plus 2 waste",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "scan lookup and measured weights show 98 stock plus 2 waste",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/source?barcode=parent",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"}"
+   }
+  },
+  {
+   "test": "scan lookup and measured weights show 98 stock plus 2 waste",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "scan lookup and measured weights show 98 stock plus 2 waste",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "scan lookup and measured weights show 98 stock plus 2 waste",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "scan lookup and measured weights show 98 stock plus 2 waste",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "scan lookup and measured weights show 98 stock plus 2 waste",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "simple Rezka header, spaced scan and shared device picker",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "simple Rezka header, spaced scan and shared device picker",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[]}"
+   }
+  },
+  {
+   "test": "flat form and history fit a narrow screen and keep roll actions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[{\"id\":\"split-result\",\"source\":{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"},\"source_kg\":\"100\",\"output_kg\":\"98\",\"waste_kg\":\"2\",\"outputs\":[{\"revision\":\"1.000000\",\"stock_id\":\"child1\",\"barcode\":\"child1\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"39\",\"width_mm\":\"400\",\"micron\":\"20\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"revision\":\"1.000000\",\"stock_id\":\"child2\",\"barcode\":\"child2\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"59\",\"width_mm\":\"600\",\"micron\":\"20\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}]}"
+   }
+  },
+  {
+   "test": "flat form and history fit a narrow screen and keep roll actions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Raw W\"],\"history\":[{\"id\":\"split-result\",\"source\":{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"},\"source_kg\":\"100\",\"output_kg\":\"98\",\"waste_kg\":\"2\",\"outputs\":[{\"revision\":\"1.000000\",\"stock_id\":\"child1\",\"barcode\":\"child1\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"39\",\"width_mm\":\"400\",\"micron\":\"20\",\"gross_kg\":\"40\",\"bobina_kg\":\"1\",\"length_m\":\"1000\"},{\"revision\":\"1.000000\",\"stock_id\":\"child2\",\"barcode\":\"child2\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"59\",\"width_mm\":\"600\",\"micron\":\"20\",\"gross_kg\":\"60\",\"bobina_kg\":\"1\",\"length_m\":\"1500\"}]}]}"
+   }
+  },
+  {
+   "test": "flat form and history fit a narrow screen and keep roll actions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/raw-material-split/source?barcode=parent",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"revision\":\"1.000000\",\"stock_id\":\"parent\",\"barcode\":\"parent\",\"warehouse\":\"Raw W\",\"item_code\":\"FILM\",\"item_name\":\"Film\",\"kg\":\"100\",\"width_mm\":\"1000\",\"micron\":\"20\"}"
+   }
+  }
+ ]
+}

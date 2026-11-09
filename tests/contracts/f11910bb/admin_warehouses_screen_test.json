@@ -1,0 +1,188 @@
+{
+ "source": "test/admin_warehouses_screen_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/warehouses/summary?limit=500",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"warehouse\":\"Ulug‘bek ombori\",\"product_count\":1,\"reserved_count\":0}]"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/warehouses/assignments?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[]"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-assignments?",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[]"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock?warehouse=Ulug%E2%80%98bek+ombori&limit=500",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"id\":\"raw:30aa\",\"warehouse\":\"Ulug‘bek ombori\",\"item_code\":\"BOPP\",\"item_name\":\"BOPP 384/12\",\"barcode\":\"30AA\",\"qty\":100,\"width_mm\":384,\"micron\":12,\"length_m\":1860,\"uom\":\"kg\",\"status\":\"available\",\"reserved_order_id\":\"\",\"source_receipt_id\":\"GSR-30AA\"}]"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/inventory/locations",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"id\":\"inventory_location:warehouse:ulugbek\",\"kind\":\"warehouse\",\"name\":\"Ulug‘bek ombori\",\"warehouse_id\":\"warehouse:ulugbek\"}]"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:catalog:bosma8\",\"display\":{\"display_name\":\"8 ta rangli bosma aparat\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"print\",\"technology\":\"gravure\"},\"capabilities\":{\"print\":1}}]"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/inventory/assets?warehouse_id=warehouse%3Aulugbek&asset_kind=raw_material&limit=500",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"kind\":\"raw_material\",\"asset_ref\":\"raw:30aa\",\"custody_warehouse_id\":\"warehouse:ulugbek\",\"identifier\":\"30AA\",\"physical_location\":{\"id\":\"inventory_location:warehouse:ulugbek\",\"kind\":\"warehouse\",\"name\":\"Ulug‘bek ombori\"}}]"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/warehouses/items?warehouse=Ulug%E2%80%98bek+ombori&limit=80",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[]"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock/reprint/prepare",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"barcode\":\"30AA\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"reprint_id\":\"reprint-stock-test\",\"stock\":{\"id\":\"raw:30aa\",\"warehouse\":\"Ulug‘bek ombori\",\"item_code\":\"BOPP\",\"item_name\":\"BOPP 384/12\",\"barcode\":\"30AA\",\"qty\":100,\"width_mm\":384,\"micron\":12,\"length_m\":1860,\"uom\":\"kg\",\"status\":\"available\",\"reserved_order_id\":\"\",\"source_receipt_id\":\"GSR-30AA\"},\"print\":{\"epc\":\"30AA\",\"item_code\":\"BOPP\",\"item_name\":\"BOPP 384/12\",\"warehouse\":\"Ulug‘bek ombori\",\"gross_qty\":100,\"unit\":\"kg\",\"label_kind\":\"material_product\",\"printer\":\"godex\"}}"
+   }
+  },
+  {
+   "test": "admin warehouse detailed stock and QR reprint: available",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-stock/reprint/confirm",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"barcode\":\"30AA\",\"reprint_id\":\"reprint-stock-test\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  }
+ ]
+}

@@ -25,23 +25,30 @@ function number(value: unknown): number {
   if (typeof value !== 'number') throw new TypeError('Invalid notification number');
   return value;
 }
-function parseDetail(value: unknown): NotificationDetail {
-  const source = object(value);
-  const record = source.record == null ? {} : object(source.record);
+/** @v2 DispatchRecord.fromJson */
+export function dispatchRecordFromJson(value: unknown): DispatchRecord {
+  const record = object(value);
   const rawStatus = text(record.status).trim().toLowerCase();
   const status = (['accepted', 'partial', 'rejected', 'cancelled', 'draft'].includes(rawStatus)
     ? rawStatus : 'pending') as DispatchRecord['status'];
+  return {
+    id: text(record.id), record_type: text(record.record_type), supplier_ref: text(record.supplier_ref),
+    supplier_name: text(record.supplier_name), item_code: text(record.item_code), item_name: text(record.item_name),
+    uom: text(record.uom), sent_qty: number(record.sent_qty), accepted_qty: number(record.accepted_qty),
+    amount: number(record.amount), currency: text(record.currency), note: text(record.note),
+    event_type: text(record.event_type), highlight: text(record.highlight), status,
+    created_label: text(record.created_label),
+  };
+}
+function parseDetail(value: unknown): NotificationDetail {
+  const source = object(value);
+  const record = source.record == null ? {} : object(source.record);
+  // Preserve the original status validation before the comments validation.
+  text(record.status);
   if (source.comments != null && !Array.isArray(source.comments)) throw new TypeError('Invalid notification comments');
   const comments = (source.comments ?? []) as unknown[];
   return {
-    record: {
-      id: text(record.id), record_type: text(record.record_type), supplier_ref: text(record.supplier_ref),
-      supplier_name: text(record.supplier_name), item_code: text(record.item_code), item_name: text(record.item_name),
-      uom: text(record.uom), sent_qty: number(record.sent_qty), accepted_qty: number(record.accepted_qty),
-      amount: number(record.amount), currency: text(record.currency), note: text(record.note),
-      event_type: text(record.event_type), highlight: text(record.highlight), status,
-      created_label: text(record.created_label),
-    },
+    record: dispatchRecordFromJson(record),
     comments: comments.map(item => {
       const comment = object(item);
       return { id: text(comment.id), author_label: text(comment.author_label), body: text(comment.body),
