@@ -78,6 +78,17 @@ test('waste discrepancy displays issue, records note, then allows same measured 
   await h.controller.save(); assert.equal(h.stockCalls[0].issue_id, 'issue-1'); assert.equal(h.stockCalls[0].waste_kg, '1.000000');
   assert.equal(h.prints.length, 1); assert.equal(h.controller.getSnapshot().source, null); assert.ok(h.notices.includes('Chop etildi'));
 });
+test('validation happens before requesting a new ID for stock or issue commands', async () => {
+  const h = setup(); let ids = 0;
+  h.options.requestId = async () => { ids++; throw new Error('clock unavailable'); };
+  await fill(h.controller); h.controller.setWaste('1'); await h.controller.save();
+  assert.equal(ids, 0); assert.equal(h.controller.getSnapshot().showIssue, true);
+  assert.deepEqual(h.notices, ['issue-visible']); assert.deepEqual(h.stockCalls, []);
+  h.controller.setIssueNote('cause'); h.controller.setOutput(0, 'length', ''); await h.controller.saveIssue();
+  assert.equal(ids, 0); assert.match(h.controller.getSnapshot().issueError, /metrajini kiriting/); assert.deepEqual(h.issueCalls, []);
+  h.controller.setOutput(0, 'length', '1000'); await h.controller.saveIssue();
+  assert.equal(ids, 1); assert.equal(h.controller.getSnapshot().issueError, 'clock unavailable'); assert.deepEqual(h.issueCalls, []);
+});
 test('after committed stock, print failure reports reprint context and never resubmits stock', async () => {
   const h = setup(); h.options.print = async () => { throw new Error('printer offline'); };
   // The controller retains the same options object, so the simulated printer can fail after save.

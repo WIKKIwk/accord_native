@@ -31,9 +31,11 @@ export function rawSplitConfirmWidth(sourceWidth: string, outputs: readonly RawS
   }
   return retained;
 }
-/** @v2 _RawMaterialSplitScreenState._payload */
-export function buildRawSplitPayload(input: { source: RawSplitRoll; outputs: readonly RawSplitOutputDraft[]; waste: string;
-  issue: boolean; issueSaved: boolean; savedIssueId: string | null; requestId: string }): Record<string, unknown> {
+type RawSplitPayloadInput = { source: RawSplitRoll; outputs: readonly RawSplitOutputDraft[]; waste: string;
+  issue: boolean; issueSaved: boolean; savedIssueId: string | null };
+
+/** Validate before requesting an ID, as V2's _payload does. */
+export function buildRawSplitCommand(input: RawSplitPayloadInput): Record<string, unknown> {
   const { source, outputs, waste } = input;
   new RawSplitWidthPlan(source.widthMm, outputs.map(output => output.width)).validateForSave();
   let sum = 0n;
@@ -50,7 +52,11 @@ export function buildRawSplitPayload(input: { source: RawSplitRoll; outputs: rea
   const useIssue = !input.issue && check.kind !== null && input.issueSaved && input.savedIssueId !== null;
   if (!input.issue && check.kind !== null && (!useIssue || check.waste === null)) throw new RawSplitWasteInputError();
   if (input.issue && check.kind === null) throw new Error('Hisob teng, vazn xatosi yo‘q');
-  return { request_id: input.requestId, ...(useIssue ? { issue_id: input.savedIssueId } : {}), source_barcode: source.barcode,
+  return { ...(useIssue ? { issue_id: input.savedIssueId } : {}), source_barcode: source.barcode,
     expected_revision: source.revision, expected_kg: source.kg, expected_width_mm: source.widthMm, expected_micron: source.micron,
     waste_kg: input.issue ? waste.trim() : rawSplitDecimal(check.waste!), outputs: rows };
+}
+
+export function buildRawSplitPayload(input: RawSplitPayloadInput & { requestId: string }): Record<string, unknown> {
+  return { request_id: input.requestId, ...buildRawSplitCommand(input) };
 }

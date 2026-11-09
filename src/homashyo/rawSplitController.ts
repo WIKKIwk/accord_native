@@ -2,7 +2,7 @@ import { rawSplitBarcode } from './rawSplitBarcode';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import type { PreparationDeviceSelection } from '../preparation/preparationPrinter';
 import * as api from './rawSplitApi';
-import { buildRawSplitPayload, newRawSplitRequestId, rawSplitConfirmWidth, rawSplitOutputNet, RawSplitWasteInputError,
+import { buildRawSplitCommand, newRawSplitRequestId, rawSplitConfirmWidth, rawSplitOutputNet, RawSplitWasteInputError,
   type RawSplitOutputDraft, type RawSplitOutputField } from './rawSplitDraft';
 import { RawSplitRoll, RawSplitResult, RawSplitSnapshot, RawSplitWasteCheck, rawSplitQuantity } from './rawSplitModel';
 import { RawSplitWidthPlan } from './rawSplitWidthPlan';
@@ -154,12 +154,14 @@ export class RawSplitController {
     if (this.writesHeld || this.state.busy || this.state.pendingCheck !== 'ready') return false;
     return this.choosePrinter(this.pendingGeneration);
   }
+  /** @v2 _RawMaterialSplitScreenState._payload */
   private async payload(issue: boolean): Promise<Json> {
     const source = this.state.source;
     if (!source) throw new TypeError();
+    const command = buildRawSplitCommand({ source, outputs: this.state.outputs, waste: this.state.waste, issue,
+      issueSaved: this.state.issueSaved, savedIssueId: this.state.savedIssueId });
     const requestId = await (this.options.requestId ?? newRawSplitRequestId)();
-    return buildRawSplitPayload({ source, outputs: this.state.outputs, waste: this.state.waste, issue,
-      issueSaved: this.state.issueSaved, savedIssueId: this.state.savedIssueId, requestId });
+    return { request_id: requestId, ...command };
   }
   async save(retry = false): Promise<void> {
     if (this.writesHeld || !this.isCurrent() || this.state.pendingCheck !== 'ready' || this.state.busy || (!retry && this.locked)) return;
