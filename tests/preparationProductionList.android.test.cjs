@@ -19,15 +19,18 @@ test('production uses shared search, filter and virtual list with automatic pagi
     useRef: value => ({ current: value }), useCallback: fn => fn, useMemo: fn => fn(), useEffect() {} },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']), navigate: value => calls.push(['navigate', value]),
-      push: value => calls.push(['push', value]) }, useFocusEffect() {} },
+      push: value => calls.push(['push', value]) }, useFocusEffect() {}, useLocalSearchParams: () => ({ id: 'one' }) },
     'react-native': { View: 'View', Text: 'Text', ActivityIndicator: 'ActivityIndicator', StyleSheet: { create: v => v } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' },
     '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     './PreparationContext.android': { usePreparationContext: () => ({ session: {} }) }, './PreparationFab.android': { usePreparationFab: () => () => {} },
-    './PreparationUI.android': { usePreparationText: () => text => text, PreparationDock: 'PreparationDock', PreparationText: 'PreparationText', PreparationButton: 'PreparationButton' },
-    './preparationJournalFactory': { createPreparationProductionOrdersJournal: () => journal },
-    './preparationProductionPresentation': { preparationProductionOrderCard: () => ({ title: 'Order', subtitle: 'Customer', metrics: '2 kg' }) },
+    './PreparationUI.android': { usePreparationText: () => text => text, PreparationDock: 'PreparationDock', PreparationText: 'PreparationText',
+      PreparationButton: 'PreparationButton', PreparationPage: 'PreparationPage', PreparationRow: 'PreparationRow' },
+    './preparationJournalFactory': { createPreparationProductionOrdersJournal: () => journal, createPreparationProductionOrderJournal: () => journal },
+    './preparationProductionPresentation': { preparationProductionOrderCard: () => ({ title: 'Order', subtitle: 'Customer', metrics: '2 kg' }),
+      preparationProductionBatchCard: batch => ({ title: batch.name, subtitle: 'Davom etmoqda', metrics: '12 kg' }),
+      preparationProductionMetrics: () => '12 kg' },
   };
   const filename = path.resolve(__dirname, '../src/preparation/PreparationProduction.android.tsx'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
@@ -44,4 +47,16 @@ test('production uses shared search, filter and virtual list with automatic pagi
   const card = row.type(row.props); assert.equal(card.type, 'WorkerQueueCard'); card.props.onPress();
   assert.deepEqual(calls.at(-1), ['push', { pathname: '/android-preparation/production-order', params: { id: 'one' } }]);
   header.props.onBack(); assert.deepEqual(calls.at(-1), ['back']);
+
+  index = 2;
+  state.items = [{ batch_id: 'batch-1', name: 'PE PR' }, { batch_id: 'batch-2', name: 'BOPP' }];
+  state.summary = { order_id: 'one', order_code: '0317', order_title: 'Order', customer_name: 'Customer' };
+  const detail = mod.exports.PreparationProductionOrderScreen();
+  const rows = nodes(detail, n => typeof n.type === 'function' && n.type.name === 'ProductionBatchRow');
+  assert.equal(rows.length, 2); assert.equal(rows[0].props.first, true); assert.equal(rows[1].props.last, true);
+  const batchCard = rows[1].type(rows[1].props);
+  assert.equal(batchCard.type, 'WorkerQueueCard');
+  assert.deepEqual(nodes(batchCard, n => n.type === 'Text').map(n => n.props.children), ['BOPP', 'Davom etmoqda\n12 kg']);
+  batchCard.props.onPress();
+  assert.deepEqual(calls.at(-1), ['push', { pathname: '/android-preparation/production-batch', params: { id: 'batch-2' } }]);
 });

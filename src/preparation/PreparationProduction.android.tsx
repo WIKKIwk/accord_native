@@ -42,6 +42,18 @@ function ProductionOrderRow({ order, last }: { order: Order; last: boolean }) {
       <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{`${card.subtitle}\n${card.metrics}`}</NativeText></View>
   </WorkerQueueCard>;
 }
+function ProductionBatchRow({ batch, first, last }: { batch: Batch; first: boolean; last: boolean }) {
+  const colors = useMaterialColors(), card = preparationProductionBatchCard(batch);
+  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last} onPress={() => router.push({
+    pathname: '/android-preparation/production-batch', params: { id: batch.batch_id },
+  } as unknown as Href)}>
+    <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <SymbolView name={{ android: 'precision_manufacturing' }} size={20} tintColor={colors.onSurfaceVariant} />
+    </View>
+    <View style={styles.rowText}><NativeText style={[styles.headline, { color: colors.onSurface }]}>{card.title}</NativeText>
+      <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{`${card.subtitle}\n${card.metrics}`}</NativeText></View>
+  </WorkerQueueCard>;
+}
 const empty = <T, S,>(): JournalState<T, S> => ({ items: [], loading: true, error: null, has_more: false, next_offset: null, summary: null });
 
 function useJournal<T, S>(factory: (change: (state: JournalState<T, S>) => void) => PreparationJournal<T, S>) {
@@ -123,6 +135,7 @@ export function PreparationProductionScreen() {
 }
 
 const styles = StyleSheet.create({
+  list: { marginHorizontal: -16 },
   icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, marginStart: 16, paddingVertical: 6 },
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
@@ -141,8 +154,8 @@ export function PreparationProductionOrderScreen() {
     refreshing={state.loading && !!state.items.length} onRefresh={() => void journal.load()}>
     <JournalHeader state={state} journal={journal} />
     {order ? <PreparationRow title={order.order_title} subtitle={[order.customer_name, preparationProductionMetrics(order.roll_count, order.total_net_kg, order.total_length_m)].filter(Boolean).join('\n')} /> : null}
-    {state.items.map(batch => { const card = preparationProductionBatchCard(batch); return <PreparationRow key={batch.batch_id} title={card.title}
-      subtitle={`${card.subtitle}\n${card.metrics}`} onPress={() => router.push({ pathname: '/android-preparation/production-batch', params: { id: batch.batch_id } } as unknown as Href)} />; })}
+    {state.items.length ? <View style={styles.list}>{state.items.map((batch, index) => <ProductionBatchRow key={batch.batch_id} batch={batch}
+      first={index === 0} last={index === state.items.length - 1} />)}</View> : null}
     <JournalFooter state={state} journal={journal} emptyText="Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q." />
   </PreparationPage>;
 }
