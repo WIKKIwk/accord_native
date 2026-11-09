@@ -21,6 +21,7 @@ export function MaterialDrawer({ children }: { children: ReactNode }) {
     if (!isSessionWitnessCurrent(witness)) return;
     if (id === 'logout') { confirmRoleDrawerLogout(onLogout); return; }
     if (id === 'tasks' && !canOpenRoute(session, appRoutes.materialTasks)) return;
+    if (id === 'history' && !canOpenRoute(session, appRoutes.materialHistory)) return;
     const destination = materialRoute(id, Platform.OS === 'ios' ? 'ios' : 'android');
     if (!destination) return;
     if (id === 'history') router.push(destination as Href); else router.navigate(destination as Href);

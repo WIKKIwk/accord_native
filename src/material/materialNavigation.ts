@@ -8,6 +8,7 @@ export function materialDrawerItems(session: Session, labels: { home: string; pr
   return [
     { id: 'home', label: labels.home, symbol: { ios: 'house', android: 'home' } },
     ...(canOpenRoute(session, appRoutes.materialTasks) ? [{ id: 'tasks', label: 'Vazifalar', symbol: { ios: 'checklist' as const, android: 'assignment' as const } }] : []),
+    ...(canOpenRoute(session, appRoutes.materialHistory) ? [{ id: 'history', label: 'Harakatlar tarixi', symbol: { ios: 'clock.arrow.circlepath' as const, android: 'history' as const } }] : []),
     { id: 'profile', label: labels.profile, symbol: { ios: 'person', android: 'person' } },
   ];
 }
@@ -17,5 +18,5 @@ export function materialDrawerActive(path: string): string {
 }
 export function materialRoute(id: string, platform: 'ios' | 'android'): string | null {
   const base = `/${platform}-material`;
-  return id === 'home' ? base : id === 'profile' || id === 'tasks' ? `${base}/${id}` : null;
+  return id === 'home' ? base : id === 'profile' || id === 'tasks' || id === 'history' ? `${base}/${id}` : null;
 }
