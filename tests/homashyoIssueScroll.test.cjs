@@ -16,6 +16,7 @@ function hooks() {
     useSyncExternalStore: (_subscribe, get) => { cursor++; return get(); },
     useEffect: (effect, deps) => { const n = cursor++, old = slots[n]; if (!old || deps.some((v, i) => v !== old.deps[i]))
       pending.push(() => { old?.cleanup?.(); slots[n] = { deps, cleanup: effect() }; }); } };
+  react.useLayoutEffect = react.useEffect;
   const native = initial => next(() => { let value = initial; return { writes: [], get: () => value, set(nextValue) { value = nextValue; this.writes.push(nextValue); } }; })[1];
   return { react, native, render: fn => { cursor = 0; const tree = fn(); while (pending.length) pending.shift()(); return tree; },
     unmount: () => slots.forEach(value => value?.cleanup?.()) };
@@ -33,7 +34,7 @@ function environment(platform) {
     'react-native': { ScrollView: 'ScrollView', Text: 'Text', View: 'View', PlatformColor: name => `native(${name})` }, 'expo-symbols': { SymbolView: 'Symbol' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'Button' }, '../preparation/PreparationUI': { usePreparationText: () => s => s },
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => s => s },
-    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'Dropdown' }, './rawSplitHomePresentation': new Proxy({}, { get: () => () => '' }) };
+    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'Dropdown' }, './rawSplitHomePresentation': new Proxy({}, { get: () => () => '' }), './useRawSplitWriteHoldText': { useRawSplitWriteHoldText: () => 'hold' } };
   const component = load(`RawSplitHome.${platform}.tsx`, mocks).RawSplitHome;
   return { state, render: issueRevision => h.render(() => component({ controller, issueRevision, onScan() {} })), unmount: h.unmount };
 }

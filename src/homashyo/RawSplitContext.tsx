@@ -25,9 +25,9 @@ export function RawSplitProvider({ session, ticket, onLogout, subscribeWitness, 
   useSyncExternalStore(subscribeWitness, witnessVersion, witnessVersion);
   const [owner] = useState(() => {
     const pickerOwner = new RawSplitPickerCoordinator({ isCurrent: () => rawSplitSessionIsCurrent(ticket),
-      create: () => createNativeTransientDevicePicker(() => rawSplitSessionIsCurrent(ticket), validateRawSplitDeviceSelection),
+      create: isCurrent => createNativeTransientDevicePicker(isCurrent, validateRawSplitDeviceSelection),
       convert: rawSplitDeviceSelection, render: setPicker });
-    const runtime = createRawSplitRuntime({ ticket, canMutate: () => session.token !== 'test-mode-token' && rawSplitSessionIsCurrent(ticket), selectPrinter: () => pickerOwner.select(), onMessage: notice.show,
+    const runtime = createRawSplitRuntime({ ticket, canMutate: () => session.token !== 'test-mode-token' && rawSplitSessionIsCurrent(ticket), selectPrinter: isCurrent => pickerOwner.select(isCurrent), onMessage: notice.show,
       onIssueVisible: () => setIssueRevision(value => value + 1),
       onUnsupportedPrinter: printer => Alert.alert('Printer ulanmagan', rawSplitUnsupportedReason(printer.transport)) });
     return { ticket, pickerOwner, runtime, dispose() { pickerOwner.dispose(); runtime.dispose(); } };
@@ -35,11 +35,13 @@ export function RawSplitProvider({ session, ticket, onLogout, subscribeWitness, 
   useEffect(() => {
     const scope = lifetime.current; scope.mounts++;
     const invalidate = () => { owner.dispose(); setPicker(null); setInvalidated(true); };
+    const unsubscribePending = owner.runtime.home.subscribe(() => owner.pickerOwner.invalidateIfStale());
+    owner.pickerOwner.invalidateIfStale();
     const unregister = registerSessionResetHook(async () => { invalidate(); });
     const unsubscribe = subscribeWitness(() => { if (!rawSplitSessionIsCurrent(ticket)) invalidate(); });
     if (!rawSplitSessionIsCurrent(ticket)) invalidate();
     return () => {
-      unsubscribe(); unregister(); scope.mounts--;
+      unsubscribe(); unsubscribePending(); unregister(); scope.mounts--;
       queueMicrotask(() => { if (scope.mounts === 0) owner.dispose(); });
     };
   }, [owner, subscribeWitness, ticket]);

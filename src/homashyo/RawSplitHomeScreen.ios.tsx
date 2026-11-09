@@ -14,7 +14,7 @@ export function RawSplitHomeScreen() {
   return <View style={{ flex: 1 }}><Stack.Screen options={{ title: t('Rezka') }} />
     <Stack.Toolbar placement="right"><Stack.Toolbar.Button icon="clock.arrow.circlepath" accessibilityLabel={t('Rezka tarixi')} disabled={state.busy}
       onPress={() => router.push('/ios-homashyo/history' as Href)} />
-      <Stack.Toolbar.Button icon="printer" accessibilityLabel={t('Printer tanlash')} disabled={state.busy}
+      <Stack.Toolbar.Button icon="printer" accessibilityLabel={t('Printer tanlash')} disabled={state.busy || state.pendingCheck !== 'ready' || flow.controller.writesHeld}
         onPress={selectPrinter} /></Stack.Toolbar>
     {state.busy && <RawSplitBusy />}
     <RawSplitHome controller={flow.controller} onScan={flow.scan} issueRevision={flow.issueRevision} />

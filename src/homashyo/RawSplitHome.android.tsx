@@ -1,13 +1,14 @@
 import { Host, IconButton, OutlinedTextField, RNHostView, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { PreparationText, usePreparationText } from '../preparation/PreparationUI.android';
 import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
 import { rawSplitBalance, rawSplitNetLabel, rawSplitSourceSummary, rawSplitWasteWidthLabel, rawSplitWidthSummary } from './rawSplitHomePresentation';
 import type { RawSplitHomeViewProps } from './rawSplitHomeViewTypes';
+import { useRawSplitWriteHoldText } from './useRawSplitWriteHoldText';
 
 function Input({ label, value, enabled, onChange, decimal = false, onDone, search = false, multiline = false, error = false }: {
   label: string; value: string; enabled: boolean; onChange: (value: string) => void; decimal?: boolean; onDone?: () => void;
@@ -24,8 +25,10 @@ function Input({ label, value, enabled, onChange, decimal = false, onDone, searc
 
 export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplitHomeViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), colors = useMaterialColors(), t = usePreparationText();
-  useEffect(() => { void controller.reload(); }, [controller]);
-  const locked = controller.locked, plan = controller.widthPlan, check = controller.wasteCheck, source = state.source;
+  // V2 starts the first reload in initState, before the initial frame.
+  useLayoutEffect(() => { if (controller.getSnapshot().pendingCheck === 'unread') void controller.reload(); }, [controller]);
+  const writeHoldText = useRawSplitWriteHoldText();
+  const locked = controller.locked, writesHeld = controller.writesHeld, plan = controller.widthPlan, check = controller.wasteCheck, source = state.source;
   const widthLabel = plan ? rawSplitWasteWidthLabel(plan) : null;
   const issueVisible = !!(source && plan && state.showIssue && check && check.kind !== null);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null), handledIssue = useRef(0);
@@ -41,11 +44,19 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
   }, [issueRevision, issueVisible, issueY]);
   return <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120, gap: 12 }}>
     {state.error !== null && <Text style={{ color: colors.error }}>{state.error}</Text>}
-    {state.pending !== null && <><PreparationText>{t('Oldingi saqlash natijasini tekshiring.')}</PreparationText>
-      <WorkerSheetButton label={t('Tekshirish va chop etish')} variant="filled" disabled={state.busy} onPress={() => { void controller.save(true); }} /></>}
-    {state.pendingIssue !== null && <><PreparationText>{t('Oldingi muammo qaydi natijasini tekshiring.')}</PreparationText>
+    {writesHeld && <Text style={{ color: colors.error }}>{writeHoldText}</Text>}
+    {state.snapshotError !== null && <Text style={{ color: colors.error }}>{state.snapshotError}</Text>}
+    {state.pendingCheck === 'failed' && <><Text style={{ color: colors.error }}>{t('Xatolik yuz berdi')}</Text>
+      <PreparationText>{t('Oldingi saqlash natijasini tekshiring.')}</PreparationText><PreparationText>{t('Oldingi muammo qaydi natijasini tekshiring.')}</PreparationText>
+      {state.pendingCheckError !== null && <Text style={{ color: colors.error }}>{state.pendingCheckError}</Text>}
+      <WorkerSheetButton label={t('Qayta urinish')} onPress={() => { void controller.recheckPending(); }} /></>}
+    {state.pendingCheck === 'ready' && state.pending !== null && <><PreparationText>{t('Oldingi saqlash natijasini tekshiring.')}</PreparationText>
+      <WorkerSheetButton label={t('Tekshirish va chop etish')} variant="filled" disabled={state.busy || state.pendingCheck !== 'ready' || writesHeld} onPress={() => { void controller.save(true); }} /></>}
+    {state.pendingCheck === 'ready' && state.pendingIssue !== null && <><PreparationText>{t('Oldingi muammo qaydi natijasini tekshiring.')}</PreparationText>
       {state.issueError !== null && <Text style={{ color: colors.error }}>{state.issueError}</Text>}
-      <WorkerSheetButton label={t('Muammo qaydini tekshirish')} disabled={state.busy} onPress={() => { void controller.saveIssue(true); }} /></>}
+      <WorkerSheetButton label={t('Muammo qaydini tekshirish')} disabled={state.busy || state.pendingCheck !== 'ready' || writesHeld} onPress={() => { void controller.saveIssue(true); }} /></>}
+    {writesHeld && state.pendingCheck === 'ready' && (state.pending !== null || state.pendingIssue !== null) &&
+      <WorkerSheetButton label={t('Tekshirish')} disabled={state.busy} onPress={() => { void controller.recheckPending(); }} />}
     <PreparationText>{t(state.snapshot === null ? 'Omborlar yuklanmoqda' : !state.snapshot.warehouses.length ? 'Ombor biriktirilmagan' :
       `Ombor: ${state.snapshot.warehouses.join(', ')}`)}</PreparationText>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><View style={{ flex: 1 }}><Input label="Rulon QR / shtrix-kodi"
@@ -57,7 +68,7 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
     {state.printer && <><View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <SymbolView name={{ android: 'print' }} size={20} tintColor={colors.onSurfaceVariant} /><View style={{ flex: 1 }}>
         <PreparationText>{t(`Printer: ${state.printer.transport}`)}</PreparationText></View></View>{state.printer.transport === 'wifi' &&
-      <DropdownFilter label="" selectedLabel={t(state.wifiPrinter === 'godex' ? 'GoDEX' : 'Zebra')} backgroundColor={colors.surface} enabled={!state.busy}
+      <DropdownFilter label="" selectedLabel={t(state.wifiPrinter === 'godex' ? 'GoDEX' : 'Zebra')} backgroundColor={colors.surface} enabled={!state.busy && state.pendingCheck === 'ready'}
         options={[{ value: 'godex', label: t('GoDEX') }, { value: 'zebra', label: t('Zebra') }]} onChange={value => controller.setWifiPrinter(value)} />}</>}
     {source && plan && <><PreparationText title>{source.itemName}</PreparationText><PreparationText>{t(rawSplitSourceSummary(source))}</PreparationText>
       <PreparationText>{t(`Ombor: ${source.warehouse}`)}</PreparationText><PreparationText>{rawSplitWidthSummary(plan, state.outputs)}</PreparationText>
@@ -81,10 +92,10 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
         {state.issueError !== null && <Text style={{ color: colors.error }}>{state.issueError}</Text>}
         {state.issueSaved ? <PreparationText>{t(check.waste === null ? 'Muammo saqlandi. Chop etish uchun atxot kg ni son bilan kiriting.' :
           'Muammo saqlandi. Endi chop etishingiz mumkin.')}</PreparationText> :
-          <WorkerSheetButton label={t('Muammoni saqlash')} disabled={locked} onPress={() => { void controller.saveIssue(); }} />}</View>}
+          <WorkerSheetButton label={t('Muammoni saqlash')} disabled={locked || writesHeld} onPress={() => { void controller.saveIssue(); }} />}</View>}
       {plan.errors.map((error, i) => error !== null && <Text key={state.outputs[i]?.id ?? i} style={{ color: colors.error }}>{t(`${i + 1}-rulon: ${error}`)}</Text>)}
       <PreparationText>{rawSplitBalance(source, state.outputs, state.waste)}</PreparationText>{widthLabel !== null && <PreparationText>{widthLabel}</PreparationText>}
-      <WorkerSheetButton label={t('Saqlash va chop etish')} icon={{ android: 'print' }} variant="filled" disabled={locked} onPress={() => { void controller.save(); }} />
+      <WorkerSheetButton label={t('Saqlash va chop etish')} icon={{ android: 'print' }} variant="filled" disabled={locked || writesHeld} onPress={() => { void controller.save(); }} />
     </>}
   </ScrollView>;
 }

@@ -18,7 +18,7 @@ function setup(name, options = {}) {
   const store = { getItemAsync: async key => saved.get(key) ?? null, setItemAsync: async (key, value) => { saved.set(key, typeof value === 'function' ? value(saved.get(key) ?? null) : value); },
     removeItemAsync: async key => saved.delete(key) };
   const replay = contractFetch(stem, name, options);
-  const raw = load('homashyo/rawSplitApi', { 'expo-sqlite/kv-store': { default: store, __esModule: true },
+  const raw = load('homashyo/rawSplitApi', { './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, 'expo-sqlite/kv-store': { default: store, __esModule: true },
     '../auth': { currentSession: () => current }, '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard'), '../authorizedFetch': { authorizedFetch: (s, p, init = {}, guard) => {
       guard?.(); return replay(new URL(p, s.baseUrl), { ...init, headers: { ...(init.headers ?? {}), Authorization: `Bearer ${s.token}` } });
     } }, '../shared/mobileApiException': load('shared/mobileApiException'), './rawSplitModel': load('homashyo/rawSplitModel'), './rawSplitResultMatch': load('homashyo/rawSplitResultMatch', { './rawSplitModel': load('homashyo/rawSplitModel') }) });
