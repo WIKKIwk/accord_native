@@ -15,7 +15,7 @@ function run(active, permission, error = null, isCurrent = () => true) {
     './rawSplitScanLogic': { RawSplitScanGate: class { accept(value) { return value || null; } } } };
   m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
-  const state = m.exports.useRawSplitScanner(active, isCurrent, value => calls.push(['complete', value])); effects.forEach(effect => effect()); return { calls, state };
+  const state = m.exports.useRawSplitScanner(active, isCurrent, (value, source) => calls.push(['complete', value, source])); effects.forEach(effect => effect()); return { calls, state };
 }
 test('role waits for initial permission read and never prompts while inactive', () => {
   assert.deepEqual(run(true, null).calls, []); assert.deepEqual(run(false, { granted: false, canAskAgain: true }).calls, []);
@@ -31,6 +31,12 @@ test('role requests only a known, denied, askable permission and handles initial
 test('role rejects camera or manual completion immediately after owner/session becomes stale', () => {
   let current = true; const h = run(true, { granted: true, canAskAgain: true }, null, () => current);
   current = false; h.state.complete('old'); assert.deepEqual(h.calls, []);
+});
+
+test('manual entry remains usable without camera permission and retains its origin', () => {
+  const h = run(true, { granted: false, canAskAgain: false });
+  h.state.complete('typed-code', 'manual');
+  assert.deepEqual(h.calls, [['complete', 'typed-code', 'manual']]);
 });
 
 test('async or rejected role owner guard cannot start a prompt or complete a scan', async () => {

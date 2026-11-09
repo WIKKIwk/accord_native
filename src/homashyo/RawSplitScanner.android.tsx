@@ -7,12 +7,12 @@ import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
-import { useRawSplitScanner } from './useRawSplitScanner';
+import { useRawSplitScanner, type RawSplitScanSource } from './useRawSplitScanner';
 
-export function RawSplitScanner({ visible, active, isCurrent, onClose, onComplete }: { visible: boolean; active: boolean; isCurrent: () => boolean; onClose: () => void; onComplete: (barcode: string) => void }) {
+export function RawSplitScanner({ visible, active, isCurrent, onClose, onComplete }: { visible: boolean; active: boolean; isCurrent: () => boolean; onClose: () => void; onComplete: (barcode: string, source: RawSplitScanSource) => void }) {
   return visible ? <ScannerSession active={active} isCurrent={isCurrent} onClose={onClose} onComplete={onComplete} /> : null;
 }
-function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: boolean; isCurrent: () => boolean; onClose: () => void; onComplete: (barcode: string) => void }) {
+function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: boolean; isCurrent: () => boolean; onClose: () => void; onComplete: (barcode: string, source: RawSplitScanSource) => void }) {
   const scan = useRawSplitScanner(active, isCurrent, onComplete), input = useNativeState(''), insets = useSafeAreaInsets(), colors = useMaterialColors();
   useEffect(() => { if (input.get() !== scan.manual) input.set(scan.manual); }, [input, scan.manual]);
   return <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -21,7 +21,7 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
       <View style={styles.preview}>
         {scan.permission?.granted && !scan.failed ? <CameraSurface active={active} permission={scan.permission} checking={scan.checking} isCurrent={() => isSynchronouslyTrue(isCurrent) && isSynchronouslyTrue(scan.canUseCamera)} style={StyleSheet.absoluteFill} facing="back" torch={false}
           barcodeTypes={['qr', 'datamatrix']} sessionKey="homashyo" onMountError={scan.cameraFailed}
-          onDetection={event => scan.complete(event.raw ?? event.data)} /> : scan.permission === null && !scan.failed ?
+          onDetection={event => scan.complete(event.raw ?? event.data, 'camera')} /> : scan.permission === null && !scan.failed ?
           <ActivityIndicator /> : <Text style={{ color: colors.onSurface }}>{scan.unavailable}</Text>}
         {scan.permission?.granted && !scan.failed && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           <View style={styles.guide}><View style={styles.verticalOne} /><View style={styles.verticalTwo} />
@@ -31,9 +31,9 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
       </View>
       <View style={[styles.manual, { paddingBottom: Math.max(insets.bottom, 16) }]}><View style={{ flex: 1 }}>
         <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={input} singleLine onValueChange={scan.setManual}
-          keyboardOptions={{ imeAction: 'done' }} keyboardActions={{ onDone: () => scan.complete(scan.manual) }} modifiers={[fillMaxWidth()]}>
+          keyboardOptions={{ imeAction: 'done' }} keyboardActions={{ onDone: () => scan.complete(scan.manual, 'manual') }} modifiers={[fillMaxWidth()]}>
           <OutlinedTextField.Label><ComposeText>{scan.manualLabel}</ComposeText></OutlinedTextField.Label>
-        </OutlinedTextField></Host></View><View style={{ width: 92 }}><WorkerSheetButton label="OK" icon={{ ios: 'checkmark', android: 'check' }} variant="filled" onPress={() => scan.complete(scan.manual)} /></View></View>
+        </OutlinedTextField></Host></View><View style={{ width: 92 }}><WorkerSheetButton label="OK" icon={{ ios: 'checkmark', android: 'check' }} variant="filled" onPress={() => scan.complete(scan.manual, 'manual')} /></View></View>
     </View>
   </Modal>;
 }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState } from 'react-native';
 import { rawSplitSessionIsCurrent } from './rawSplitApi';
 import { useRawSplitContext } from './RawSplitContext';
+import type { RawSplitScanSource } from './useRawSplitScanner';
 
 /** Whole-preview detections require an explicit barcode check until native scan-window parity exists. */
 export function useRawSplitHomeScreen() {
@@ -34,15 +35,18 @@ export function useRawSplitHomeScreen() {
     if (!isOwnerCurrent()) return; const next = runtime.home.captureClearLease(); if (!next) return;
     generation.current++; lease.current = next; open.current = true; setVisible(true); setCameraActive(true);
   };
-  const complete = (barcode: string) => {
+  const complete = (barcode: string, source: RawSplitScanSource = 'camera') => {
     if (!isScannerCurrent()) return;
     const currentLease = lease.current!; const selection = ++generation.current; open.current = false; setCameraActive(false); runtime.home.setBarcode(barcode);
     const cancelSelection = () => { if (selection === generation.current) close(); };
-    Alert.alert('Skanerlangan kod', barcode, [{ text: 'Bekor qilish', style: 'cancel', onPress: cancelSelection }, { text: 'Rulonni topish', onPress: () => {
+    const lookup = () => {
       if (selection !== generation.current || !isOwnerCurrent() || !currentLease()) return;
       const dispatch = ++generation.current; hide();
       void runtime.home.lookup(barcode).catch(error => { if (dispatch === generation.current && isOwnerCurrent()) Alert.alert('Xatolik', String(error)); });
-    } }], { cancelable: true, onDismiss: cancelSelection });
+    };
+    if (source === 'manual') { lookup(); return; }
+    Alert.alert('Skanerlangan kod', barcode, [{ text: 'Bekor qilish', style: 'cancel', onPress: cancelSelection },
+      { text: 'Rulonni topish', onPress: lookup }], { cancelable: true, onDismiss: cancelSelection });
   };
   return { controller: runtime.home, visible, cameraActive, isScannerCurrent, scan, close, complete, issueRevision };
 }

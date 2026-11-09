@@ -113,6 +113,17 @@ test('scanner displays detected code and requires confirmation before source loo
   flow.complete('CODE-123'); assert.deepEqual(h.values, ['CODE-123']); assert.deepEqual(h.lookups, []);
   assert.equal(h.alert()[1], 'CODE-123'); h.alert()[2][1].onPress(); await flush(); assert.deepEqual(h.lookups, ['CODE-123']); h.unmount();
 });
+test('manual scanner entry looks up directly without the camera confirmation', async () => {
+  const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render();
+  flow.complete('MANUAL', 'manual'); await flush();
+  assert.equal(h.alert(), undefined); assert.deepEqual(h.values, ['MANUAL']); assert.deepEqual(h.lookups, ['MANUAL']);
+  flow.complete('MANUAL', 'manual'); await flush(); assert.deepEqual(h.lookups, ['MANUAL']); h.unmount();
+});
+test('manual scanner entry cannot start a lookup after its pending-state lease expires', async () => {
+  const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); h.setGate(false);
+  flow.complete('OLD', 'manual'); await flush();
+  assert.equal(h.alert(), undefined); assert.deepEqual(h.values, []); assert.deepEqual(h.lookups, []); h.unmount();
+});
 test('scanner rejects background, lost session, and confirmation after the session changes', async () => {
   const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); h.app('background');
   flow.complete('wrong'); assert.deepEqual(h.values, []); h.app('active'); flow = h.render(); flow.complete('current');

@@ -7,7 +7,8 @@ import { RawSplitScanGate } from './rawSplitScanLogic';
 
 const subscribe = (listener: () => void) => localeController.addListener(listener);
 const localeSnapshot = () => localeController.locale;
-export function useRawSplitScanner(active: boolean, isCurrent: () => boolean, onComplete: (barcode: string) => void) {
+export type RawSplitScanSource = 'camera' | 'manual';
+export function useRawSplitScanner(active: boolean, isCurrent: () => boolean, onComplete: (barcode: string, source: RawSplitScanSource) => void) {
   const { permission, checking, canUseCamera, requestPermission, error: permissionError } = useCameraSurfacePermission();
   const [failed, setFailed] = useState(false), [manual, setManual] = useState('');
   const gate = useRef(new RawSplitScanGate()), requested = useRef(false);
@@ -18,9 +19,9 @@ export function useRawSplitScanner(active: boolean, isCurrent: () => boolean, on
     void requestPermission().catch(() => { if (requestActive) setFailed(true); });
     return () => { requestActive = false; };
   }, [active, isCurrent, permission, permissionError, requestPermission]);
-  const complete = useCallback((raw: string) => {
+  const complete = useCallback((raw: string, source: RawSplitScanSource) => {
     if (!active || !isSynchronouslyTrue(isCurrent)) return;
-    const barcode = gate.current.accept(raw); if (barcode !== null) onComplete(barcode);
+    const barcode = gate.current.accept(raw); if (barcode !== null) onComplete(barcode, source);
   }, [active, isCurrent, onComplete]);
   return { permission, checking, canUseCamera, failed: failed || (active && !!permissionError), manual, setManual, complete, cameraFailed: () => setFailed(true),
     title: productionText('worker.material.scanner.title', locale), manualLabel: productionText('worker.material.scanner.manual', locale),

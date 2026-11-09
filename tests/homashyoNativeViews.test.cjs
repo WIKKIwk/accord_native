@@ -479,7 +479,7 @@ function scanner(platform, granted, active = true, isCurrent = () => active) {
   guardModule.filename = guardFile; guardModule.paths = module.paths;
   guardModule._compile(ts.transpileModule(fs.readFileSync(guardFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, guardFile);
   const calls = [], scan = { permission: { granted }, checking: false, canUseCamera: () => granted, failed: false, manual: 'manual-code', setManual: value => calls.push(['manual', value]),
-    complete: value => calls.push(['complete', value]), cameraFailed: () => calls.push('camera-failed'), title: 'Homashyo QR',
+    complete: (value, source) => calls.push(['complete', value, source]), cameraFailed: () => calls.push('camera-failed'), title: 'Homashyo QR',
     manualLabel: 'Barcode', unavailable: 'Kamera ochilmadi. Quyidagi maydonga QR yoki barcode kiriting.', guide: 'QR kodni shu to‘r ichiga olib keling' };
   const state = value => ({ current: value, get() { return this.current; }, set(next) { this.current = next; } });
   const swift = new Proxy({ useNativeState: state }, { get: (o, name) => o[name] ?? name });
@@ -506,7 +506,7 @@ for (const platform of ['ios', 'android']) {
     assert.deepEqual(manualButton.props.icon, { ios: 'checkmark', android: 'check' });
     manualButton.props.onPress();
     find(h.tree, n => n.type === 'Modal')[0].props.onRequestClose();
-    assert.deepEqual(h.calls, [['complete', 'raw-code'], ['complete', 'manual-code'], 'close']);
+    assert.deepEqual(h.calls, [['complete', 'raw-code', 'camera'], ['complete', 'manual-code', 'manual'], 'close']);
   });
   test(`${platform} scanner permission failure retains manual entry`, () => {
     const h = scanner(platform, false); assert.equal(find(h.tree, n => n.type === 'CameraSurface').length, 0);
@@ -536,7 +536,7 @@ for (const platform of ['ios', 'android']) test(`${platform} candidate passes ac
   const h = scanner(platform, true, false), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
   assert.equal(camera.props.active, false); assert.equal(camera.props.torch, false);
   // V2 uses raw when present, even an empty raw string; role gate decides whether it is usable.
-  camera.props.onDetection({ raw: '', data: 'display-value' }); assert.deepEqual(h.calls, [['complete', '']]);
+  camera.props.onDetection({ raw: '', data: 'display-value' }); assert.deepEqual(h.calls, [['complete', '', 'camera']]);
 });
 
 for (const platform of ['ios', 'android']) test(`${platform} issue sheet retains V2 microsecond precision`, () => {

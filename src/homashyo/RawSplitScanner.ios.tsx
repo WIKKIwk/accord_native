@@ -7,12 +7,12 @@ import { ActivityIndicator, Modal, PlatformColor, StyleSheet, Text, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerIconButton } from '../components/WorkerIconButton';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
-import { useRawSplitScanner } from './useRawSplitScanner';
+import { useRawSplitScanner, type RawSplitScanSource } from './useRawSplitScanner';
 
-export function RawSplitScanner({ visible, active, isCurrent, onClose, onComplete }: { visible: boolean; active: boolean; isCurrent: () => boolean; onClose: () => void; onComplete: (barcode: string) => void }) {
+export function RawSplitScanner({ visible, active, isCurrent, onClose, onComplete }: { visible: boolean; active: boolean; isCurrent: () => boolean; onClose: () => void; onComplete: (barcode: string, source: RawSplitScanSource) => void }) {
   return visible ? <ScannerSession active={active} isCurrent={isCurrent} onClose={onClose} onComplete={onComplete} /> : null;
 }
-function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: boolean; isCurrent: () => boolean; onClose: () => void; onComplete: (barcode: string) => void }) {
+function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: boolean; isCurrent: () => boolean; onClose: () => void; onComplete: (barcode: string, source: RawSplitScanSource) => void }) {
   const scan = useRawSplitScanner(active, isCurrent, onComplete), input = useNativeState(''), insets = useSafeAreaInsets();
   useEffect(() => { if (input.get() !== scan.manual) input.set(scan.manual); }, [input, scan.manual]);
   return <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -22,7 +22,7 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
       <View style={styles.preview}>
         {scan.permission?.granted && !scan.failed ? <CameraSurface active={active} permission={scan.permission} checking={scan.checking} isCurrent={() => isSynchronouslyTrue(isCurrent) && isSynchronouslyTrue(scan.canUseCamera)} style={StyleSheet.absoluteFill} facing="back" torch={false}
           barcodeTypes={['qr', 'datamatrix']} sessionKey="homashyo" onMountError={scan.cameraFailed}
-          onDetection={event => scan.complete(event.raw ?? event.data)} /> : scan.permission === null && !scan.failed ?
+          onDetection={event => scan.complete(event.raw ?? event.data, 'camera')} /> : scan.permission === null && !scan.failed ?
           <ActivityIndicator /> : <Text style={{ color: PlatformColor('label') }}>{scan.unavailable}</Text>}
         {scan.permission?.granted && !scan.failed && <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           <View style={styles.guide}><View style={styles.verticalOne} /><View style={styles.verticalTwo} />
@@ -32,8 +32,8 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
       </View>
       <View style={[styles.manual, { paddingBottom: Math.max(insets.bottom, 16) }]}><Host matchContents={{ vertical: true }} style={{ flex: 1 }}>
         <TextField text={input} placeholder={scan.manualLabel} onTextChange={scan.setManual}
-          modifiers={[textFieldStyle('roundedBorder'), frame({ maxWidth: Infinity }), submitLabel('done'), onSubmit(() => scan.complete(scan.manual))]} />
-      </Host><View style={{ width: 92 }}><WorkerSheetButton label="OK" icon={{ ios: 'checkmark', android: 'check' }} variant="filled" onPress={() => scan.complete(scan.manual)} /></View></View>
+          modifiers={[textFieldStyle('roundedBorder'), frame({ maxWidth: Infinity }), submitLabel('done'), onSubmit(() => scan.complete(scan.manual, 'manual'))]} />
+      </Host><View style={{ width: 92 }}><WorkerSheetButton label="OK" icon={{ ios: 'checkmark', android: 'check' }} variant="filled" onPress={() => scan.complete(scan.manual, 'manual')} /></View></View>
     </View>
   </Modal>;
 }
