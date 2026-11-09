@@ -3,8 +3,8 @@ import type { Session } from '../auth';
 
 export type QolipReworksScreenProps = {
   session: Session;
-  // Must be the real secure V2-format ID source. No implementation is available yet.
-  nextRequestId: () => Promise<string>;
+  // Defaults to the real native-clock/secure-random V2 ID source; injectable for tests.
+  nextRequestId?: () => Promise<string>;
   onMenu: () => void;
   onProfile: () => void;
   dock: ReactNode;

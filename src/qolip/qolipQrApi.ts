@@ -3,7 +3,7 @@ import { authorizedFetch } from '../authorizedFetch';
 import { qolipProductFromJson } from '../qolipCatalogApi';
 import { qolipProducts } from '../qolipProductsApi';
 import { MobileApiException } from '../shared/mobileApiException';
-import { dartQuery, jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart } from './qolipApiCommon';
+import { assertQolipReadCurrent, dartQuery, jsonObject, optionalInteger, optionalText, qolipApiResponseError, trimDart, type QolipReadGuard } from './qolipApiCommon';
 import { qolipLocationFromJson, type QolipLocationEntry } from './qolipLocationsApi';
 
 /** @v2 QolipCellQr */
@@ -48,21 +48,36 @@ async function cellQrError(response: Response): Promise<MobileApiException> {
   return new MobileApiException({ code, message, statusCode: response.status });
 }
 
-async function get(session: Session, path: string): Promise<Response> {
+async function get(session: Session, path: string, guard?: QolipReadGuard): Promise<Response> {
+  assertQolipReadCurrent(guard);
   await Promise.resolve();
   if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
-  return authorizedFetch(session, path);
+  if (guard === undefined) return authorizedFetch(session, path);
+  const beforeSend = () => {
+    assertQolipReadCurrent(guard);
+    if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
+  };
+  return authorizedFetch(session, path, {}, beforeSend, 10_000, { readWitness: guard });
 }
 
 /** @v2 qolipCellQrLookup */
-export async function qolipCellQrLookup(session: Session, qrPayload: string): Promise<QolipCellQr> {
+export async function qolipCellQrLookup(session: Session, qrPayload: string, guard?: QolipReadGuard): Promise<QolipCellQr> {
+  assertQolipReadCurrent(guard);
   const qr = trimDart(qrPayload);
   if (!qr) throw new MobileApiException({ code: 'qolip_cell_qr_required', message: 'Yachayka QR bo‘sh.' });
   const query = dartQuery({ qr });
-  const response = await get(session, `/v1/mobile/qolip/cell-qr?${query}`);
-  if (response.status !== 200) throw await cellQrError(response);
-  const data = jsonObject(await response.json());
-  return qolipCellQrFromJson(data?.cell_qr);
+  try {
+    const response = await get(session, `/v1/mobile/qolip/cell-qr?${query}`, guard);
+    assertQolipReadCurrent(guard);
+    if (response.status !== 200) {
+      const error = await cellQrError(response);
+      assertQolipReadCurrent(guard); throw error;
+    }
+    const data = jsonObject(await response.json());
+    assertQolipReadCurrent(guard);
+    const cell = qolipCellQrFromJson(data?.cell_qr);
+    assertQolipReadCurrent(guard); return cell;
+  } catch (error) { assertQolipReadCurrent(guard); throw error; }
 }
 
 /** @v2 qolipScanQr */

@@ -89,6 +89,7 @@ test('rework hook uses the existing APIs, shared revision and caller-supplied ID
     '../sessionReadScope': { sessionReadScope: () => 'scope-a' }, '../shared/qolipDataRevision': { qolipDataRevision: { notifyLocationsChanged: () => calls.push('revision') } },
     './qolipReworkApi': { qolipReworks: (s, status) => { calls.push(['list', s, status]); return Promise.resolve([]); },
       qolipReturnFromRework: (s, input) => { calls.push(['return', s, input]); return Promise.resolve([]); } },
+    './qolipReworkRequestId': { newQolipReworkRequestId: async () => { throw new Error('explicit factory expected'); } },
     './qolipReworksState': { QolipReworksState: FakeState },
   });
   useQolipReworks(session, nextRequestId); await dependencies.load(); await dependencies.returnFromRework('r', ['id']);

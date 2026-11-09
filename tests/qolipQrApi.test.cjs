@@ -24,12 +24,13 @@ const cell = { id: 'cell-1', block: 'A blok', warehouse: 'Qolip ombor', row_lett
 const product = { code: 'ITEM-001', name: 'Kross qolip', item_group: 'Qolip', qolip_code: 'QOLIP-0007', size: 42 };
 const location = { id: 'l1', block: 'A blok', warehouse: 'Qolip ombor', item_code: 'ITEM-001', item_name: 'Kross qolip',
   qolip_code: 'QOLIP-0007', size: 42, quantity: 1, row_letter: 'C', column_number: 4, location_label: 'C4' };
-function harness(response, products = []) {
+function harness(response, products = [], transport) {
   const calls = [], productCalls = [], session = { token: 'token' };
   const api = load('qolip/qolipQrApi.ts', {
     '../auth': { activeSessionToken: value => value.token || null },
-    '../authorizedFetch': { authorizedFetch: async (value, target) => {
+    '../authorizedFetch': { authorizedFetch: async (value, target, ...args) => {
       calls.push({ session: value, target });
+      if (transport) return transport(value, target, ...args);
       return typeof response === 'function' ? response(calls.length, target) : response;
     } },
     '../qolipCatalogApi': productParser,
@@ -100,4 +101,35 @@ test('malformed scan payloads fail and test mode cannot reach a backend', async 
   await assert.rejects(api.qolipCellQrLookup(session, 'QR'), /test mode is not yet ported/);
   await assert.rejects(api.qolipProductByQr(session, 'QR'), /test mode is not yet ported/);
   assert.equal(calls.length + productCalls.length, 0);
+});
+
+test('scanner cell lookup forwards its original lifetime to guarded read dispatch without changing the V2 query', async () => {
+  let sent = 0; const guard = () => true;
+  const h = harness(null, [], async (account, target, init, beforeSend, timeout, options) => {
+    sent++; assert.equal(account, h.session); assert.equal(target, '/v1/mobile/qolip/cell-qr?qr=CELL+QR');
+    assert.deepEqual(init, {}); assert.equal(timeout, 10000); assert.equal(options.readWitness, guard);
+    beforeSend(); return json({ cell_qr: cell });
+  });
+  assert.equal((await h.api.qolipCellQrLookup(h.session, ' CELL QR ', guard)).id, 'cell-1'); assert.equal(sent, 1);
+});
+test('retired and asynchronous scanner guards fail before the first transport call', async () => {
+  const h = harness(json({ cell_qr: cell }));
+  for (const guard of [() => false, async () => true, null, () => { throw Error('retired'); }]) {
+    await assert.rejects(h.api.qolipCellQrLookup(h.session, 'QR', guard));
+  }
+  assert.equal(h.calls.length, 0);
+});
+for (const status of [200, 404]) test(`a stale ${status} body cannot publish a cell or its source error`, async () => {
+  let current = true;
+  const h = harness({ status, json: async () => { current = false; return status === 200 ? { cell_qr: cell } : { error: 'cell_qr_not_found' }; } });
+  await assert.rejects(h.api.qolipCellQrLookup(h.session, 'QR', () => current), /qolip_read_expired/);
+});
+test('each opt-in dispatch checks the original lifetime and the current demo token', async () => {
+  let current = true;
+  const h = harness(null, [], async (_account, _target, _init, beforeSend) => {
+    beforeSend(); current = false; assert.throws(beforeSend, /qolip_read_expired/); current = true;
+    h.session.token = 'test-mode-token'; assert.throws(beforeSend, /test mode/);
+    throw Error('stopped before a simulated retry send');
+  });
+  await assert.rejects(h.api.qolipCellQrLookup(h.session, 'QR', () => current), /stopped before/);
 });
