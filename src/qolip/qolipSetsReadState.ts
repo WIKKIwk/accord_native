@@ -2,6 +2,7 @@ import { trimDart, type QolipReadGuard } from './qolipApiCommon';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import { QolipLocationChoiceLifetime } from './qolipLocationChoiceLifetime';
 import type { QolipManagedSet } from './qolipSetsApi';
+import { qolipSimpleLower } from './qolipSimpleLower';
 
 export type QolipSetsReadActions = {
   setSearch: (value: string) => void;
@@ -26,18 +27,12 @@ function safelyInvoke(callback: () => unknown) {
   } catch { /* Other observers and cleanup must still run. */ }
 }
 
-// Dart's source uses simple lowercase rather than JavaScript's context-sensitive final sigma
-// and U+0130 expansion. Device Unicode-table versions still need native verification.
-function setsLower(value: string): string {
-  return [...value].map(character => character === '\u0130' ? 'i' : character.toLowerCase()).join('');
-}
-
 /** @v2 _QolipSetsScreenState.build */
 export function qolipFilterManagedSets(entries: readonly QolipManagedSet[], search: string): QolipManagedSet[] {
-  const query = setsLower(trimDart(search));
+  const query = qolipSimpleLower(trimDart(search));
   return entries.filter(entry => entry.set.members.length > 0 &&
     [entry.name, entry.set.id, ...entry.set.members.map(member => member.qolip_code)]
-      .some(value => setsLower(value).includes(query)));
+      .some(value => qolipSimpleLower(value).includes(query)));
 }
 
 /** Unrouted read/search/expansion lifetime. No create, edit, delete, copy or retry callback is exposed. */
