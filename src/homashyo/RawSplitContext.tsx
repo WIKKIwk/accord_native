@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useChatUnreadCount } from '../shared/chat/useChatUnreadCount';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { registerSessionResetHook, type Session } from '../auth';
 import { PreparationNotice } from '../preparation/PreparationNotice';
@@ -15,7 +16,7 @@ import { rawSplitUnsupportedReason } from './rawSplitPrintRuntime';
 
 type Request = ReturnType<typeof createNativeTransientDevicePicker>;
 type Runtime = ReturnType<typeof createRawSplitRuntime>;
-type Context = { session: Session; ticket: RawSplitSessionTicket; runtime: Runtime; onLogout(): void; issueRevision: number };
+type Context = { session: Session; ticket: RawSplitSessionTicket; runtime: Runtime; onLogout(): void; issueRevision: number; unread: number; chatClosing: boolean; setChatClosing(closing: boolean): void };
 const RawSplitContext = createContext<Context | null>(null);
 
 export function RawSplitProvider({ session, ticket, onLogout, subscribeWitness, witnessVersion, children }: { session: Session; ticket: RawSplitSessionTicket;
@@ -23,6 +24,7 @@ export function RawSplitProvider({ session, ticket, onLogout, subscribeWitness, 
   const [picker, setPicker] = useState<Request | null>(null), [issueRevision, setIssueRevision] = useState(0);
   const [invalidated, setInvalidated] = useState(false), notice = usePreparationNotice(), lifetime = useRef({ mounts: 0 });
   useSyncExternalStore(subscribeWitness, witnessVersion, witnessVersion);
+  const unread = useChatUnreadCount(session), [chatClosing, setChatClosing] = useState(false);
   const [owner] = useState(() => {
     const pickerOwner = new RawSplitPickerCoordinator({ isCurrent: () => rawSplitSessionIsCurrent(ticket),
       create: isCurrent => createNativeTransientDevicePicker(isCurrent, validateRawSplitDeviceSelection),
@@ -47,7 +49,7 @@ export function RawSplitProvider({ session, ticket, onLogout, subscribeWitness, 
   }, [owner, subscribeWitness, ticket]);
   if (invalidated || !rawSplitSessionIsCurrent(owner.ticket)) return <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16 }}>
     <Text>Sessiya o‘zgargan. Sahifani qayta oching.</Text><WorkerSheetButton label="Bosh sahifa" onPress={() => router.replace('/')} /></View>;
-  return <RawSplitContext.Provider value={{ session, ticket: owner.ticket, runtime: owner.runtime, onLogout, issueRevision }}>
+  return <RawSplitContext.Provider value={{ session, ticket: owner.ticket, runtime: owner.runtime, onLogout, issueRevision, unread, chatClosing, setChatClosing }}>
     <View style={{ flex: 1 }}><View style={{ flex: 1 }} accessibilityElementsHidden={picker !== null}
       importantForAccessibility={picker ? 'no-hide-descendants' : 'auto'}>{children}</View><PreparationNotice message={notice.message} />
       {picker && <RawSplitPickerOverlay request={picker} owner={owner.pickerOwner} />}</View>
