@@ -161,3 +161,75 @@ test('a lifetime invalidated in the final parse microtask cannot receive a succe
     await assert.rejects(method === 'page' ? h.readers.page({}, () => current) : h.readers.details('id', () => current), /qolip_read_expired/);
   }
 });
+
+test('open-reworks reader replays the exact f119 read contract without exposing mutations', async t => {
+  const stem = 'f11910bb/qolip_reworks_api_test', name = 'same-account token refresh does not invalidate pending rework reads';
+  const session = { ...recordedSession(stem, name), profile: { role: 'qolipchi', ref: 'A' }, capabilities: ['qolip.manage'] };
+  const h = harness({ account: session }), replay = contractFetch(stem, name), previous = global.fetch; t.after(() => { global.fetch = previous; }); global.fetch = replay;
+  assert.deepEqual(await h.readers.reworks(h.lifetime), []); replay.assertDone();
+  assert.deepEqual(Object.keys(h.readers).sort(), ['details', 'page', 'reworks']);
+  assert.throws(() => h.readers.reworks(undefined), /qolip_read_expired/);
+});
+
+test('open-reworks read uses the original witness and checks before a 401 retry', async t => {
+  const refresh = deferred(), h = harness({ refresh: () => refresh.promise }); let sends = 0;
+  const previous = global.fetch; t.after(() => { global.fetch = previous; });
+  global.fetch = async url => { sends++; assert.equal(url, 'https://example.test/v1/mobile/qolip/reworks?status=open'); return json({}, 401); };
+  const before = h.readers.reworks(h.lifetime); h.stop(); await assert.rejects(before, /qolip_read_expired/); assert.equal(sends, 0);
+  h.resume(); const retry = h.readers.reworks(h.lifetime); await tick(); assert.equal(sends, 1);
+  h.invalidate(); h.account.token = 'new-token'; refresh.resolve(true); await assert.rejects(retry, /qolip_read_expired/); assert.equal(sends, 1);
+  h.revive(); await assert.rejects(h.readers.reworks(h.lifetime)); assert.equal(sends, 1);
+});
+
+test('open-reworks read blocks invalid, asynchronous and reentrant lifetime predicates', async t => {
+  const h = harness(), previous = global.fetch; let sends = 0; t.after(() => { global.fetch = previous; });
+  global.fetch = async () => { sends++; return json({ reworks: [] }); };
+  const { assertQolipReadCurrent } = h.load('qolip/qolipApiCommon.ts');
+  const reentrant = () => { try { assertQolipReadCurrent(reentrant); } catch {} return true; };
+  for (const guard of [() => false, () => { throw new Error('bad'); }, async () => true, async () => { throw new Error('async'); }, reentrant]) {
+    await assert.rejects(h.readers.reworks(guard));
+  }
+  assert.equal(sends, 0);
+});
+
+test('open-reworks parse and error bodies cannot publish after lifetime invalidation', async () => {
+  for (const stage of ['response', 'status', 'error', 'json', 'list', 'field', 'microtask']) {
+    let current = true, reads = 0; const pending = deferred();
+    const h = harness({ overrides: { 'authorizedFetch.ts': { authorizedFetch: async (_s, _path, _init, beforeSend) => {
+      beforeSend();
+      if (stage === 'response') return pending.promise;
+      if (stage === 'status') return { get status() { current = false; return 200; }, json: async () => { reads++; return {}; } };
+      if (stage === 'error' || stage === 'json') return { status: stage === 'error' ? 409 : 200, json: async () => { reads++; return pending.promise; } };
+      const row = { id: 'r1', qolip_code: 'Q-1', sent_at: '2026-10-24T10:00:00Z' };
+      if (stage === 'field' || stage === 'microtask') Object.defineProperty(row, 'id', { get() {
+        if (stage === 'field') current = false; else queueMicrotask(() => { current = false; }); return 'private';
+      } });
+      const result = { reworks: [row] };
+      if (stage === 'list') Object.defineProperty(result, 'reworks', { get() { current = false; return []; } });
+      return { status: 200, json: async () => result };
+    } } } });
+    const promise = h.readers.reworks(() => current);
+    if (['response', 'error', 'json'].includes(stage)) {
+      await tick(); current = false;
+      pending.resolve(stage === 'response' ? { status: 200, json: async () => { reads++; return { reworks: [] }; } } : {});
+    }
+    await assert.rejects(promise, /qolip_read_expired/, stage);
+    if (stage === 'response' || stage === 'status') assert.equal(reads, 0);
+  }
+});
+
+test('valid open-reworks read preserves rows and source server errors', async t => {
+  const h = harness(), previous = global.fetch; t.after(() => { global.fetch = previous; });
+  global.fetch = async () => json({ reworks: [{ id: 'r1', qolip_code: 'Q-1', sent_at: '2026-10-24T10:00:00Z' }] });
+  const rows = await h.readers.reworks(h.lifetime); assert.equal(rows[0].qolip_code, 'Q-1'); assert.equal(rows[0].is_open, true);
+  global.fetch = async () => json({ error: 'failed', message: ' Bad ' }, 409);
+  await assert.rejects(h.readers.reworks(h.lifetime), error => error.code === 'failed' && error.message === 'Bad' && error.statusCode === 409);
+});
+
+
+test('direct opt-in reworks guard rejects a test token introduced by 401 refresh', async t => {
+  const h = harness({ refresh: async () => { h.account.token = 'test-mode-token'; return true; } }); let sends = 0;
+  const previous = global.fetch; t.after(() => { global.fetch = previous; }); global.fetch = async () => { sends++; return json({}, 401); };
+  await assert.rejects(h.load('qolip/qolipReworkApi.ts').qolipReworks(h.account, 'open', () => true), /test mode is not yet ported/);
+  assert.equal(sends, 1);
+});

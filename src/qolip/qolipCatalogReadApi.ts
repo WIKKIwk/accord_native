@@ -4,6 +4,7 @@ import { qolipProductFromJson } from '../qolipCatalogApi';
 import { assertQolipReadCurrent, dartQuery, jsonObject, qolipApiResponseError, trimDart, type QolipReadGuard } from './qolipApiCommon';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import { qolipRoleReadBoundary } from './qolipRoleReadBoundary';
+import { qolipReworks, type QolipReworkEntry } from './qolipReworkApi';
 
 type Product = Readonly<ReturnType<typeof qolipProductFromJson>>;
 export type QolipCatalogReadItem = Readonly<{ id: string; name: string; order_image_order_id: string }>;
@@ -86,6 +87,11 @@ export function createQolipCatalogReaders(session: Session, originalBoundary: Qo
         assertQolipReadCurrent(guard);
         return Object.freeze({ items: Object.freeze(items), next_cursor: hasMore ? next as string : null });
       });
+    },
+    /** Source's concurrent open-reworks read, without exposing the mutation APIs. */
+    reworks(lifetime: QolipReadGuard): Promise<readonly QolipReworkEntry[]> {
+      const guard = composeGuard(lifetime);
+      return guarded(guard, () => qolipReworks(session, 'open', guard));
     },
     /** Source detail contract; the raw ID is preserved rather than trimmed. */
     details(id: string, lifetime: QolipReadGuard): Promise<readonly Product[]> {

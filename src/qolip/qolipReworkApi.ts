@@ -2,7 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { sessionReadScope } from '../sessionReadScope';
 import { MobileApiException } from '../shared/mobileApiException';
-import { dartQuery, jsonObject as object, optionalText, parseDartDateTime, qolipApiResponseError, trimDart as trim, type JsonObject } from './qolipApiCommon';
+import { assertQolipReadCurrent, dartQuery, jsonObject as object, optionalText, parseDartDateTime, qolipApiResponseError, trimDart as trim, type JsonObject, type QolipReadGuard } from './qolipApiCommon';
 function requiredString(value: unknown): string {
   if (typeof value !== 'string') throw new TypeError('Expected string');
   return value;
@@ -65,22 +65,39 @@ function requireScope(session: Session) {
 }
 
 async function request(session: Session, path: string, fallbackCode: string, fallbackMessage: string,
-  body?: JsonObject): Promise<JsonObject> {
-  const guard = requireScope(session);
-  // V2 checks test mode asynchronously; the shared test-mode pass is still pending.
-  await Promise.resolve();
-  guard();
-  if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
-  const response = await authorizedFetch(session, path, body === undefined ? {} : {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  }, guard);
-  guard();
-  if (response.status !== 200) throw await qolipApiResponseError(response, fallbackCode, fallbackMessage);
-  const data: unknown = await response.json();
-  guard();
-  const result = object(data);
-  if (!result) throw new TypeError('Expected JSON object');
-  return result;
+  body?: JsonObject, readGuard?: QolipReadGuard): Promise<JsonObject> {
+  const scope = requireScope(session);
+  const guard = () => {
+    assertQolipReadCurrent(readGuard); scope();
+    if (readGuard !== undefined && activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
+    assertQolipReadCurrent(readGuard);
+  };
+  try {
+    if (readGuard !== undefined) guard();
+    // V2 checks test mode asynchronously; the shared test-mode pass is still pending.
+    await Promise.resolve();
+    guard();
+    if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
+    const response = await authorizedFetch(session, path, body === undefined ? {} : {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }, guard);
+    guard();
+    const status = response.status;
+    if (readGuard !== undefined) guard();
+    if (status !== 200) {
+      const error = await qolipApiResponseError(response, fallbackCode, fallbackMessage);
+      if (readGuard !== undefined) guard();
+      throw error;
+    }
+    const data: unknown = await response.json();
+    guard();
+    const result = object(data);
+    if (!result) throw new TypeError('Expected JSON object');
+    return result;
+  } catch (error) {
+    if (readGuard !== undefined) guard();
+    throw error;
+  }
 }
 
 function decodeReworks(data: JsonObject): QolipReworkEntry[] {
@@ -89,11 +106,23 @@ function decodeReworks(data: JsonObject): QolipReworkEntry[] {
 }
 
 /** @v2 qolipReworks */
-export async function qolipReworks(session: Session, status: 'open' | 'returned' | 'all' = 'open'): Promise<QolipReworkEntry[]> {
-  if (!['open', 'returned', 'all'].includes(status)) throw new TypeError('Invalid mold rework status');
-  const query = dartQuery({ status });
-  return decodeReworks(await request(session, `/v1/mobile/qolip/reworks?${query}`,
-    'qolip_rework_failed', 'Peredelkadagi qoliplar yuklanmadi'));
+export async function qolipReworks(session: Session, status: 'open' | 'returned' | 'all' = 'open',
+  readGuard?: QolipReadGuard): Promise<QolipReworkEntry[]> {
+  if (readGuard === undefined) {
+    if (!['open', 'returned', 'all'].includes(status)) throw new TypeError('Invalid mold rework status');
+    const query = dartQuery({ status });
+    return decodeReworks(await request(session, `/v1/mobile/qolip/reworks?${query}`,
+      'qolip_rework_failed', 'Peredelkadagi qoliplar yuklanmadi'));
+  }
+  try {
+    assertQolipReadCurrent(readGuard);
+    if (!['open', 'returned', 'all'].includes(status)) throw new TypeError('Invalid mold rework status');
+    const data = await request(session, `/v1/mobile/qolip/reworks?${dartQuery({ status })}`,
+      'qolip_rework_failed', 'Peredelkadagi qoliplar yuklanmadi', undefined, readGuard);
+    assertQolipReadCurrent(readGuard);
+    const result = decodeReworks(data);
+    assertQolipReadCurrent(readGuard); return result;
+  } catch (error) { assertQolipReadCurrent(readGuard); throw error; }
 }
 
 /** @v2 qolipSendToRework */
