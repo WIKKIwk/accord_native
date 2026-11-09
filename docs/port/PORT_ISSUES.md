@@ -34,6 +34,7 @@ Bu qatorlar mavjud holat fayllaridagi ochiq ishlarni bir joydan kuzatish uchun k
 | PORT-015 | Boyoqchi logout / PIN | V2 `SecurityController.clearForLogout` app PIN, switch PIN va biometric sozlamalarni o‘chiradi. Boyoqchi hozir guarded auth logout’ni chaqiradi, ammo yangi same-account login PIN’ini kechikkan cleanup o‘chirib yubormasligi uchun ushbu cleanup vaqtincha yo‘q. Account-operation va witness bilan muvofiqlashtirilgan cleanup kerak. | `src/boyoqchi/BoyoqchiLayout.ios.tsx`, `.android.tsx`; V2 `security_controller.dart:59-72`; `status/boyoqchi.md` | Keyin tuzatish |
 | PORT-016 | Text ledger scope | `ledger-scope` faqat diagnostikani kuchaytiradi: qisqa `@v2` nomi bir nechta Dart declaration’ga mos kelishi yoki native matn faqat boshqa global V2 scope’da topilishi text gate’ni ochiq qoldiradi. Boyoqchi: 2 ambiguous tag, iOS 1 uncertain match, global-only iOS 482 / Android 489; Homashyo: 0 ambiguous tag, global-only 59/59. Bu sonlar tasdiqlangan UI bug soni emas; manba/reachability auditi kerak. | `docs/port/LEDGER_SCOPE.md`, `.port/text-boyoqchi.md`, `.port/text-homashyo.md`; 16/16 fixture test | Keyin provenance auditi |
 | PORT-017 | Transfer / synthetic probe | Arxivdagi fake transport testi `adminTransferProductionMapOrder` javobi va lokal acknowledgment akkaunt almashtirilgandan keyin ham yakunlanishini ko‘rsatdi. Bu real backend’da boshqa akkauntga ta’sir bo‘lganini isbotlamaydi. Ko‘rilgan snapshot’da ushbu API uchun production UI caller topilmagan; transfer amallari hamon yopiq. Caller/response/ack scope’ini yozish yo‘li ochilishidan oldin muvofiqlashtirish kerak. | `handoff-probes/stale-transfer-response.cjs`, `src/productionMapTransferApi.ts`; fake probe qayta ishga tushirildi | Keyin caller va sent-write auditi |
+| PORT-018 | `port/scoped-read-experiment` / alohida tajriba | V2 portiga teng bo‘lmagan, production caller’i yo‘q mustaqil transport. 27/27 fake test o‘tdi, lekin ulardan biri tekshiruvdan keyingi ichki dispatch oralig‘ida eski token trusted origin’ga yuborilishi mumkinligini ataylab ko‘rsatadi; bu native qurilmada takrorlangan hodisa emas. 401 va path/redirect siyosati ham V2’dan farq qiladi. Amaldagi reviewed transport yoniga ushbu alternativani ulash uchun asos yo‘q, shu sabab branch merge qilinmadi va o‘zgartirilmay saqlandi. | `port/scoped-read-experiment` `cb0e751`, `tests/scopedReadTransport.test.cjs` oxirgi test; o‘z worktree’sida qayta tekshirildi | Merge qilinmadi; alohida tadqiqot |
 
 ## V2’dan meros bo‘lgan va alohida tuzatiladigan holatlar
 
@@ -54,3 +55,32 @@ PORT-009, Homashyo qismi: `c6ddfd4` — V2’dagi Rezka/Profil/Chat dock tartibi
 PORT-012 integratsiya: original `port/qolipchi` `f02051e` orqali (main merge `5e0b23c`) qabul qilindi. `port/qolipchi-home-readonly-20261109a` dagi eski transport/Home checkpoint’i ham keyingi main varianti bilan tekshirildi; yangi main xulqi saqlandi. To‘liq Qolip roli hali yopilmagan.
 
 PORT-013 integratsiya: `b0278c4` (main merge `7bdec60`) — Admin Work Map read authority qabul qilindi. Root redirect hold va ochiq rol ishlari saqlandi.
+
+## 2026-11-09 lokal merge paketi
+
+Bu paket avvalgi `c07156e` holatidan davom etdi. Quyidagi 10 branch bittalab joriy main bilan solishtirildi va lokal merge qilindi. Branchlar o‘chirilmagan va remote’ga push qilinmagan. `backup/accord-native-before-github-update-2026-11-07` eski backup’i merge qilinmadi. Kalendar kunlari Asia/Tashkent bo‘yicha 8–9 noyabr bo‘lgan port branchlar ko‘rildi; Git’dagi asl timezone sabab ayrim head’lar 7-noyabr sanasi bilan ko‘rinadi.
+
+| Branch | Main merge | Natija |
+|---|---|---|
+| `port/boyoqchi` | `ee19c78` | Keyingi main tuzatishlari saqlandi; ikki platformada Chat list/new/thread, V2 drawer/dock tartibi va real unread dot ulandi. Qolgan rol tafovutlari PORT-010/015’da. |
+| `port/homashyo` | `4cac4ba` | Keyingi save/print/pending guard’lari saqlandi; V2 dock Chat’i ikki platformada ulandi. PORT-011 hold ochiq. |
+| `port/qolipchi` | `5e0b23c` | Asl full-role modullar va main’dagi tor read-only Home alohida saqlandi; API/controller tip nomuvofiqliklari bartaraf etildi. Rol hali route’larga ulanmagan, PORT-012 ochiq. |
+| `port/qolipchi-home-readonly-20261109a` | `8f968a4` | Eski checkpoint keyingi reviewed Home/transport xulqi bilan muvofiqlashtirildi; original variantlar qayta buzilmadi. |
+| `port/integrate-admin-readonly-20261109a` | `7bdec60` | Original-operation read witness va immutable window/detail authority qo‘shildi; root release hold saqlandi. PORT-013 ochiq. |
+| `port/ledger-scope` | `6c87e63` | Matn scope noaniqligi uchun diagnostika va 16 fixture test; UI matni va business logic o‘zgarmadi. |
+| `port/integrate-production-roles-20261109a` | `f3c8afc` | WIP’dagi ikki xil Home modelini aralashtirish muammosi keyingi main yechimiga muvofiqlashtirildi; ilova kodi main bilan bir xil. |
+| `port/chat-integrate` | `5409ea6` | Alohida qolgan non-merge patch yo‘q; keyingi shared Chat transport/main kodi saqlandi. Faqat tarix birlashtirildi. |
+| `port/integrate-rezka` | `112bf8a` | Alohida qolgan non-merge patch yo‘q; protected split deep-link guard saqlandi. Faqat tarix birlashtirildi. |
+| `port/handoff-scratch-20261109a` | `10ea19d` | Arxivdagi synthetic probe’lar app va odatiy test globidan tashqarida saqlandi. Expo fetch host adapteriga moslangan Qolip probe’i 6/6; transfer observation PORT-017’da. Dart ishga tushirilmadi. |
+
+`port/scoped-read-experiment` `cb0e751` ko‘rildi, 27 fake testi o‘tdi va o‘zgarishsiz qoldirildi; PORT-018 sabab main’ga olinmadi. Merge natijasi butun V2 porti yoki barcha rollar tugaganini anglatmaydi. Hali ochiq V2 tafovutlari va telefondagi tekshiruvlar yuqoridagi ID’larda davom etadi.
+
+### Paketning yakuniy tekshiruvi
+
+- To‘liq Node to‘plami: `node --test --test-concurrency=6 tests/*.test.cjs` — 4,972 test, 4,954 pass, avvalgi aynan 6 Preparation host-import fail va 12 TODO. Exit 1; hammasi o‘tdi deb belgilanmagan. Fail nomlari yuqoridagi PORT-001’dagi ikki faylga tegishli.
+- `npx tsc --noEmit -p tsconfig.ios.json` — exit 0. Android — exit 2, avvalgi aynan 9 Worker diagnostikasi; yakuniy log dastlabki batch diagnostikalari bilan satrma-satr bir xil.
+- `npx expo lint` — exit 0, 0 error va avvalgi 1 Admin warning.
+- `CI=1 EXPO_OFFLINE=1 npx expo export --platform ios --output-dir .expo/port-batch-final-ios` va Android uchun mos buyruq — ikkalasi exit 0, Hermes bytecode yaratildi. Bu native build yoki telefon sinovi emas.
+- Ledger `check` — exit 0, 1,030 source va 87 test tag V2’da resolve bo‘ldi; 11 literal-endpoint warning saqlangan. Text gate’lar yuqoridagi tafovutlar va PORT-016 scope diagnostikalari sabab ochiq; yangi istisno qo‘shilmadi.
+- V2 checkout toza, HEAD va baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`, drift 0. V2’da Flutter/Dart, live backend, telefon, simulator yoki printer ishlatilmadi.
+- Qolgan unmerged branchlar: eski backup va o‘zgartirilmagan `port/scoped-read-experiment`. Qolgan o‘nta ko‘rilgan port/integratsiya branchi main tarixida mavjud. Keyingi journal-only commit/merge tekshirilgan app kodini o‘zgartirmaydi.
