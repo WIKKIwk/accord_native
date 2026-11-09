@@ -140,23 +140,65 @@ test('changing only Move target invalidates old membership rather than reusing t
   pending[1].resolve(page('new')); await tick(); assert.equal(controller.getSnapshot().rows[0].id, 'new'); assert.equal(requests[1].target, c.id); controller.dispose();
 });
 const nodes = tree => tree && typeof tree === 'object' ? [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)] : [];
+test('Move divider uses source delta/height, 24–76% bounds and rounded thousandths without transfer authority', () => {
+  const Split = load('admin/adminWorkMapMoveSplitState.ts').AdminWorkMapMoveSplit, split = new Split(); let changes = 0;
+  const unsubscribe = split.subscribe(() => changes++); assert.deepEqual(split.flex(), { top: 500, bottom: 500 });
+  split.start([{ identifier: 1, pageY: 100 }]); split.move([{ identifier: 1, pageY: 200 }]); assert.equal(split.getSnapshot(), 0.5);
+  split.setHeight(1000); split.move([{ identifier: 1, pageY: 300 }]); assert.equal(split.getSnapshot(), 0.6); assert.deepEqual(split.flex(), { top: 600, bottom: 400 });
+  split.move([{ identifier: 1, pageY: 700 }]); assert.equal(split.getSnapshot(), 0.76);
+  split.move([{ identifier: 1, pageY: 690 }]); assert.equal(split.getSnapshot(), 0.75); // Incremental reverse moves immediately after a clamp.
+  split.move([{ identifier: 1, pageY: -1000 }]); assert.equal(split.getSnapshot(), 0.24); assert.deepEqual(split.flex(), { top: 240, bottom: 760 });
+  split.start([{ identifier: 2, pageY: 0 }]); split.move([{ identifier: 2, pageY: 111.4 }]); assert.equal(split.flex().top, 351);
+  split.end([{ identifier: 2, pageY: 111.4 }]); const before = split.getSnapshot(); split.move([{ identifier: 2, pageY: 800 }]); assert.equal(split.getSnapshot(), before);
+  split.move([{ identifier: 1, pageY: -950 }]); assert.ok(Math.abs(split.getSnapshot() - (before + 0.05)) < 1e-12);
+  split.end([{ identifier: 1, pageY: -950 }]); unsubscribe(); const observed = changes; split.setHeight(Infinity); split.start([{ identifier: 3, pageY: 0 }]); split.move([{ identifier: 3, pageY: 100 }]);
+  assert.equal(changes, observed); assert.equal(Object.hasOwn(split, 'onMove'), false);
+});
+test('Move divider forwards boundary touch deltas without claiming taps and lays out both bodies', () => {
+  const Split = load('admin/adminWorkMapMoveSplitState.ts').AdminWorkMapMoveSplit; let instance;
+  const View = load('admin/AdminWorkMapMoveSplit.tsx', { react: { useMemo: fn => instance ??= fn(), useSyncExternalStore: (_subscribe, snapshot) => snapshot() },
+    'react-native': { View: 'View', StyleSheet: { create: value => value } }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { outlineVariant: 'outline' }, direction: 'rightToLeft' }) },
+    './adminWorkMapMoveSplitState': { AdminWorkMapMoveSplit: Split } }).AdminWorkMapMoveSplit;
+  const props = { topHeader: 'top header', topBody: 'top body', bottomHeader: 'bottom header', bottomBody: 'bottom body' };
+  let tree = nodes(View(props)), boundary = tree.find(row => row.props.testID === 'admin-move-divider'); assert.equal(tree[0].props.style[1].direction, 'rtl');
+  tree.find(row => row.props.onLayout).props.onLayout({ nativeEvent: { layout: { height: 500 } } });
+  const event = (id, pageY) => ({ nativeEvent: { changedTouches: [{ identifier: id, pageY }] } });
+  boundary.props.onTouchStart(event(1, 100)); boundary.props.onTouchMove(event(1, 150));
+  assert.equal(instance.getSnapshot(), 0.6); boundary.props.onTouchCancel(event(1, 150)); boundary.props.onTouchMove(event(1, 300)); assert.equal(instance.getSnapshot(), 0.6);
+  tree = nodes(View(props)); boundary = tree.find(row => row.props.testID === 'admin-move-divider');
+  assert.equal(tree.some(row => row.props.style?.flex === 600), true); assert.equal(tree.some(row => row.props.style?.flex === 400), true);
+  assert.deepEqual(boundary.props.children.map(row => row.props.children).filter(Boolean), ['bottom header']);
+  assert.equal(boundary.props.onStartShouldSetResponder, undefined); assert.equal(boundary.props.onMoveShouldSetResponder, undefined);
+});
+test('Move picker headers retain source apparatus icon, text, accessibility and their supplied callbacks', () => {
+  const Header = load('admin/AdminWorkMapMoveHeader.tsx', { 'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { Pressable: 'Pressable', Text: 'Text', StyleSheet: { create: value => value } },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { primaryContainer: 'bg', onPrimaryContainer: 'fg' }, direction: 'rightToLeft' }) } }).AdminWorkMapMoveHeader;
+  let picked = 0; const pane = { id: 'bottom', name: 'Pechat B', onPick: () => picked++ }, tree = nodes(Header({ pane })), button = tree[0];
+  assert.equal(button.props.testID, 'admin-move-bottom-picker'); assert.equal(button.props.accessibilityRole, 'button'); assert.equal(button.props.accessibilityLabel, pane.name); assert.equal(button.props.style[1].direction, 'rtl');
+  assert.deepEqual(tree.filter(row => row.type === 'SymbolView').map(row => row.props.name), [
+    { ios: 'gearshape.2', android: 'precision_manufacturing' }, { ios: 'chevron.down', android: 'expand_more' }]);
+  assert.equal(tree.find(row => row.type === 'Text').props.numberOfLines, 1); button.props.onPress(); assert.equal(picked, 1);
+});
 for (const platform of ['ios', 'android']) test(`${platform} passive Move panes reuse native lists/summary rows with read-only refresh and pagination`, async () => {
   const calls = [], native = { Button: 'Button', Text: 'NativeText', Image: 'Image', RNHostView: 'RNHostView' };
   const component = load(`admin/AdminWorkMapMove.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
     [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
     '@expo/ui/swift-ui/modifiers': { font: x => x, accessibilityHidden: () => ({}) }, 'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ActivityIndicator: 'ActivityIndicator', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) }, '../components/BaseHost': { BaseHost: 'BaseHost' },
-    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'ReadOnlyRow' } }).AdminWorkMapMove;
+    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'ReadOnlyRow' },
+    './AdminWorkMapMoveSplit': { AdminWorkMapMoveSplit: 'Split' }, './AdminWorkMapMoveHeader': { AdminWorkMapMoveHeader: 'Header' } }).AdminWorkMapMove;
   const pane = { id: 'top', name: 'Pechat A', rows: [{ id: 'o', position: '1', headline: '1 • Film', supporting: 'P' }],
     loading: false, loaded: true, error: null, hasMore: true, empty: 'empty', retryLabel: 'retry', moreLabel: 'more',
     onRefresh: async () => calls.push('refresh'), onMore: async () => calls.push('more'), onPick: () => calls.push('pick') };
-  const tree = component({ loading: false, error: null, empty: '', retryLabel: 'retry', onRetry() {}, panes: [pane] });
+  const bottom = { ...pane, id: 'bottom', name: 'Pechat B' }, tree = component({ loading: false, error: null, empty: '', retryLabel: 'retry', onRetry() {}, panes: [pane, bottom] });
   assert.equal(nodes(tree).some(row => row.type === 'NativeText' && row.props.children === 'partial'), false);
-  const wrapped = nodes(tree).find(row => typeof row.type === 'function'), rendered = wrapped.type(wrapped.props), all = nodes(rendered);
+  const split = nodes(tree).find(row => row.type === 'Split'); assert.equal(split.props.topHeader.props.pane, pane); assert.equal(split.props.bottomHeader.props.pane, bottom);
+  const wrapped = split.props.topBody, rendered = wrapped.type(wrapped.props), all = nodes(rendered);
   const list = all.find(row => row.type === 'OrdersList'); await list.props.onRefresh();
   assert.equal(all.find(row => row.type === 'ReadOnlyRow').props.row, pane.rows[0]);
   assert.equal(all.find(row => row.type === 'ReadOnlyRow').props.onPress, undefined);
-  all.find(row => row.props.testID === 'admin-move-top-picker').props.onPress();
+  split.props.topHeader.props.pane.onPick();
   all.find(row => row.type === (platform === 'ios' ? 'Button' : 'ListItem') && (platform === 'ios' ? row.props.label === 'more' : row.props.children === 'more')).props.onPress(); await tick();
   assert.deepEqual(calls, ['refresh', 'pick', 'more']); assert.equal(all.some(row => row.props.onLongPress || row.props.onMove || row.props.onToggleSelect), false);
 });
