@@ -36,7 +36,8 @@ function fixture(send = async () => true) {
   const { ChatThreadScreen } = load('components/ChatThreadScreen.android.tsx', {
     react, '@expo/ui/jetpack-compose': { Host: 'Host', Row: 'Row', Icon: 'Icon', IconButton: 'IconButton', FilledIconButton: 'FilledIconButton',
       CircularProgressIndicator: 'Progress', Text: 'ComposeText', Shape: { RoundedCorner: props => jsx.jsx('RoundedCorner', props), Circle: props => jsx.jsx('Circle', props) }, OutlinedTextField: field,
-      useMaterialColors: () => ({ surface: 'surface', surfaceContainerLow: 'page', primary: 'primary', onPrimary: 'white' }),
+      useMaterialColors: () => ({ surface: 'surface', surfaceContainerLow: 'page', surfaceContainerHighest: 'disabled',
+        onSurface: 'text', onSurfaceVariant: 'secondary', primary: 'primary', onPrimary: 'white' }),
       useNativeState: initial => react.useRef({ get: () => initial, set: value => { initial = value; } }).current },
     '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ name, args }) }),
     'expo-document-picker': {}, 'expo-image-picker': {}, 'expo-router': { Stack: { Screen: 'Screen' } },
@@ -53,23 +54,31 @@ function fixture(send = async () => true) {
   return { calls, thread, render, input, button };
 }
 
-test('Android composer reserves its own native row while only the message list flexes with resize', () => {
+test('Android composer keeps native text and send controls visible while the message list flexes with resize', () => {
   const x = fixture(), tree = x.render();
   assert.equal(tree.type, 'View'); assert.equal(nodes(tree, node => node.type === 'KeyboardAvoidingView').length, 0);
-  const host = nodes(tree, node => node.type === 'Host')[0];
-  assert.equal(host.props.matchContents.vertical, true); assert.equal(host.props.style.flexShrink, 0);
+  const composer = nodes(tree, node => node.type === 'Host')[0];
+  assert.equal(composer.props.matchContents.vertical, true); assert.equal(composer.props.style.flexShrink, 0);
   const list = nodes(tree, node => node.type === 'FlatList')[0];
   assert.equal(list.props.style.flex, 1); assert.equal(list.props.style.minHeight, 0);
-  assert.equal(x.input(host).props.maxLines, 4); assert.equal(x.input(host).props.textStyle.textAlign, 'left');
-  assert.equal(x.button(host).props.enabled, false);
-  assert.equal(nodes(host, node => node.type === 'IconButton').length, 1);
-  assert.equal(nodes(host, node => node.type === 'FilledIconButton').length, 1);
+  assert.equal(x.input(tree).props.maxLines, 4); assert.equal(x.input(tree).props.textStyle.textAlign, 'left');
+  assert.equal(x.input(tree).props.textStyle.color, 'text'); assert.equal(x.input(tree).props.colors.focusedTextColor, 'text');
+  assert.equal(x.input(tree).props.colors.unfocusedTextColor, 'text');
+  assert.equal(x.button(tree).props.enabled, false);
+  // Shape.Circle({}) defaults to radius=0 on Android and clips the whole button.
+  assert.equal(x.button(tree).props.shape, undefined);
+  assert.equal(x.button(tree).props.colors.disabledContainerColor, 'disabled');
+  assert.equal(nodes(composer, node => node.type === 'IconButton').length, 1);
+  assert.equal(nodes(composer, node => node.type === 'FilledIconButton').length, 1);
+  const sendIcon = nodes(x.button(tree), node => node.type === 'Icon')[0];
+  assert.equal(sendIcon.props.tint, 'secondary');
 });
 
 test('typing appears in the native state and send clears only a successfully queued message', async () => {
   const x = fixture(); let tree = x.render();
   x.input(tree).props.onValueChange('Salom'); tree = x.render();
   assert.equal(x.input(tree).props.value.get(), 'Salom'); assert.equal(x.button(tree).props.enabled, true);
+  assert.equal(nodes(x.button(tree), node => node.type === 'Icon')[0].props.tint, 'white');
   x.button(tree).props.onClick(); await tick(); tree = x.render();
   assert.deepEqual(x.calls, [['send', 'Salom']]); assert.equal(x.input(tree).props.value.get(), ''); assert.equal(x.button(tree).props.enabled, false);
   const failed = fixture(async () => false); tree = failed.render();

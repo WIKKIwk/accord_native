@@ -23,6 +23,7 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
   const updateMedia = (next: ChatMediaDraft[]) => { selection.current = next; setMedia(next); };
   const remove = (item: ChatMediaDraft) => { updateMedia(selection.current.filter(value => value.clientMessageId !== item.clientMessageId)); discardChatMedia(item); };
   const busy = selecting || batchSending || thread.queueing || thread.mediaSending;
+  const canSend = !busy && thread.storageReady && (!!draft.trim() || !!media.length);
   const choose = async (source: 'library' | 'camera' | 'file') => {
     if (busy) return;
     setSelecting(true); thread.clearMediaError();
@@ -98,21 +99,26 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
         fillMaxWidth(), background(colors.surfaceContainerLow), padding(4, 8, 4, Math.max(8, insets.bottom)), testID('chat-composer'),
       ]}>
         <IconButton enabled={!busy && thread.storageReady} onClick={attachments}
+          colors={{ contentColor: colors.onSurfaceVariant, disabledContentColor: colors.onSurfaceVariant }}
           modifiers={[size(56, 56), paddingAll(4), semantics({ contentDescription: 'Biriktirish' }), testID('chat-attach')]}>
-          <Icon source={require('../../assets/icons/fab-add.xml')} size={24} />
+          <Icon source={require('../../assets/icons/fab-add.xml')} tint={colors.onSurfaceVariant} size={24} />
         </IconButton>
         <OutlinedTextField value={input} onValueChange={setDraft} enabled={!busy} minLines={1} maxLines={4}
           shape={Shape.RoundedCorner({ cornerRadii: { topStart: 28, topEnd: 28, bottomStart: 28, bottomEnd: 28 } })}
-          colors={{ focusedContainerColor: colors.surface, unfocusedContainerColor: colors.surface }}
-          textStyle={{ textAlign: 'left', fontSize: 16 }}
+          colors={{ focusedContainerColor: colors.surface, unfocusedContainerColor: colors.surface,
+            focusedTextColor: colors.onSurface, unfocusedTextColor: colors.onSurface, disabledTextColor: colors.onSurface,
+            focusedPlaceholderColor: colors.onSurfaceVariant, unfocusedPlaceholderColor: colors.onSurfaceVariant, cursorColor: colors.primary }}
+          textStyle={{ textAlign: 'left', fontSize: 16, color: colors.onSurface }}
           modifiers={[weight(1), semantics({ contentDescription: 'Xabar yozing' }), testID('chat-message-input')]}>
-          <OutlinedTextField.Placeholder><ComposeText>Xabar yozing</ComposeText></OutlinedTextField.Placeholder>
+          <OutlinedTextField.Placeholder><ComposeText color={colors.onSurfaceVariant}>Xabar yozing</ComposeText></OutlinedTextField.Placeholder>
         </OutlinedTextField>
-        <FilledIconButton enabled={!busy && thread.storageReady && (!!draft.trim() || !!media.length)} onClick={() => void send()}
-          colors={{ containerColor: colors.primary, contentColor: colors.onPrimary }} shape={Shape.Circle({})}
+        {/* Use Material's default circle: Shape.Circle({}) has a zero native radius. */}
+        <FilledIconButton enabled={canSend} onClick={() => void send()}
+          colors={{ containerColor: colors.primary, contentColor: colors.onPrimary,
+            disabledContainerColor: colors.surfaceContainerHighest, disabledContentColor: colors.onSurfaceVariant }}
           modifiers={[size(56, 56), paddingAll(4), semantics({ contentDescription: 'Yuborish' }), testID('chat-send')]}>
           {busy ? <CircularProgressIndicator color={colors.onSurfaceVariant} modifiers={[size(24, 24)]} />
-            : <Icon source={require('../../assets/icons/chat-send.xml')} size={24} />}
+            : <Icon source={require('../../assets/icons/chat-send.xml')} tint={canSend ? colors.onPrimary : colors.onSurfaceVariant} size={24} />}
         </FilledIconButton>
       </Row>
     </Host>
