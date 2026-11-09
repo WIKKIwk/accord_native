@@ -1,4 +1,6 @@
-# Qolipchi integration checkpoint: WIP, not buildable
+# Historical Qolipchi WIP checkpoint — integration reconciled
+
+Current: the conflicting integration was reconciled with tested main on 2026-11-09; see the final section. Full Qolip role parity remains incomplete.
 
 This is an incomplete merge checkpoint, not ready for main or production. It merges the original source branch `port/qolipchi` at `1b0385e5f4cf5359fccf03658fbeb1810ad7f896` onto `45b21d2a07a8e97e37091176c93ae6e40b91793f`. The original source branch and worktree are preserved.
 
