@@ -6,9 +6,14 @@ const test = require('node:test');
 const ts = require('typescript');
 const { loadCustomerStates } = require('./support/customerNativeStates.cjs');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+const resolvedStatusTargets = new WeakMap();
 function nodes(node, predicate) {
   if (!node || typeof node !== 'object') return [];
   if (Array.isArray(node)) return node.flatMap(child => nodes(child, predicate));
+  if (typeof node.type === 'function' && node.type.name === 'CustomerStatusPressable') {
+    if (!resolvedStatusTargets.has(node)) resolvedStatusTargets.set(node, node.type(node.props));
+    return nodes(resolvedStatusTargets.get(node), predicate);
+  }
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
 function load(file, overrides = {}) {
@@ -20,7 +25,9 @@ function load(file, overrides = {}) {
 }
 const logic = load('customerLogic.ts'), presentation = load('customerPresentation.ts', { './customerLogic': logic });
 const record = { id: 'dn', item_name: 'Product', item_code: 'P1', sent_qty: 3, uom: 'kg', note: 'note', created_label: 'date', status: 'pending' };
-function fixture(platform, state, locale = 'uz') {
+function fixture(platform, state, locale = 'uz', reducedMotion = false) {
+  const animations = [], cleanups = []; let motionListener, removed = 0;
+  function AnimatedValue(value) { this.initial = value; this.setValue = value => { this.current = value; }; }
   const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': { ListItem: 'ListItem', Text: 'Text', Host: 'Host', Button: 'Button' },
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', List: 'List', ProgressView: 'ProgressView', Section: 'Section', VStack: 'VStack' },
     '@expo/ui/swift-ui/modifiers': { listStyle: v => ['listStyle', v], refreshable: f => ['refreshable', f], listRowBackground: v => ['background', v],
@@ -28,11 +35,18 @@ function fixture(platform, state, locale = 'uz') {
       fixedSize: v => ['fixedSize', v], font: v => ['font', v], frame: v => ['frame', v], lineLimit: () => ['lineLimit'], padding: v => ['padding', v],
       shapes: { rectangle: () => ['rectangle'] } },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'highlight', onSurface: 'fg', onSurfaceVariant: 'muted', outlineVariant: 'outline' }) },
-    'react-native': { ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList', Pressable: 'Pressable', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
+    react: { useEffect: fn => cleanups.push(fn()), useRef: value => ({ current: value }),
+      useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}] },
+    'react-native': { AccessibilityInfo: { isReduceMotionEnabled: () => Promise.resolve(reducedMotion),
+      addEventListener: (_, listener) => { motionListener = listener; return { remove() { removed++; } }; } },
+      ActivityIndicator: 'ActivityIndicator', Animated: { Value: AnimatedValue, View: 'AnimatedView',
+      timing: (value, config) => ({ start: () => animations.push({ value, config }) }) }, Easing: { bezier: (...values) => values },
+      FlatList: 'FlatList', Pressable: 'Pressable', RefreshControl: 'RefreshControl', Text: 'Text', View: 'View', PlatformColor: v => v },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './CustomerContext': { useCustomerText: () => ({ locale, text: key => key }) },
     './CustomerStates': loadCustomerStates(platform), './CustomerStatusPanel': { CustomerStatusPanel: 'CustomerStatusPanel' }, './customerPresentation': presentation,
     './useCustomerScreens': { useCustomerHome: () => state, useCustomerStatus: () => state } };
-  return load(`CustomerHome.${platform}.tsx`, mocks);
+  return { ...load(`CustomerHome.${platform}.tsx`, mocks), animations, setReducedMotion: value => motionListener(value),
+    cleanup: () => cleanups.forEach(fn => fn?.()), removals: () => removed };
 }
 const state = { loading: false, loaded: true, error: null, summary: { pendingCount: 2, confirmedCount: 1, rejectedCount: 0 }, records: [record], refresh: async () => {} };
 test('iOS home supplies the real summary and status callback to its native panel and opens shipments', () => {
@@ -250,6 +264,60 @@ test('Android status rows preserve source quantity emphasis and body spacing', (
   assert.equal(quantity.props.style.letterSpacing, -0.6); assert.equal(quantity.props.style.marginTop, 10);
   const note = nodes(row, item => item.type === 'Text' && item.props.children === 'note')[0];
   assert.equal(note.props.style.fontSize, 12); assert.equal(note.props.style.marginTop, 8);
+});
+
+test('Android status press feedback follows the source scale, duration and easing without changing the detail target', async () => {
+  const calls = [], records = [record, { ...record, id: 'dn-2' }], f = fixture('android', { ...state, records });
+  const screen = f.CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail: id => calls.push(id) });
+  await Promise.resolve();
+  const first = screen.props.renderItem({ item: records[0], index: 0 }), second = screen.props.renderItem({ item: records[1], index: 1 });
+  const firstAnimation = nodes(first, item => item.type === 'AnimatedView')[0], secondAnimation = nodes(second, item => item.type === 'AnimatedView')[0];
+  assert.ok(firstAnimation && secondAnimation);
+  const firstValue = firstAnimation.props.style.transform[0].scale, secondValue = secondAnimation.props.style.transform[0].scale;
+  assert.equal(firstValue.initial, 1); assert.notEqual(firstValue, secondValue);
+  const press = nodes(first, item => item.type === 'Pressable')[0];
+  press.props.onPressIn(); press.props.onPressOut(); press.props.onPress();
+  assert.deepEqual(calls, ['dn']);
+  assert.deepEqual(f.animations.map(({ value, config }) => [value, config.toValue, config.duration, config.easing, config.useNativeDriver]), [
+    [firstValue, 0.985, 160, [0.2, 0, 0, 1], true], [firstValue, 1, 160, [0.2, 0, 0, 1], true],
+  ]);
+});
+
+test('Android status press feedback respects a changed reduced-motion setting', async () => {
+  const calls = [], f = fixture('android', state), screen = f.CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail: id => calls.push(id) });
+  await Promise.resolve(); f.setReducedMotion(true);
+  const row = screen.props.renderItem({ item: record, index: 0 }), value = nodes(row, item => item.type === 'AnimatedView')[0].props.style.transform[0].scale;
+  const press = nodes(row, item => item.type === 'Pressable')[0]; press.props.onPressIn(); press.props.onPressOut(); press.props.onPress();
+  assert.equal(value.current, 1); assert.deepEqual(f.animations, []); assert.deepEqual(calls, ['dn']); f.cleanup(); assert.equal(f.removals(), 1);
+});
+
+test('Android status press feedback honors a newer motion event over the pending initial query', async () => {
+  let resolve; const pending = new Promise(done => { resolve = done; });
+  const f = fixture('android', state, 'uz', pending), screen = f.CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
+  f.setReducedMotion(true); resolve(false); await Promise.resolve();
+  const row = screen.props.renderItem({ item: record, index: 0 }), press = nodes(row, item => item.type === 'Pressable')[0];
+  press.props.onPressIn(); press.props.onPressOut(); assert.deepEqual(f.animations, []); f.cleanup();
+});
+
+test('Android status resets a pressed scale when reduced motion is enabled mid-press', async () => {
+  const f = fixture('android', state), screen = f.CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
+  await Promise.resolve(); const row = screen.props.renderItem({ item: record, index: 0 });
+  const value = nodes(row, item => item.type === 'AnimatedView')[0].props.style.transform[0].scale, press = nodes(row, item => item.type === 'Pressable')[0];
+  press.props.onPressIn(); assert.equal(f.animations.length, 1); f.setReducedMotion(true); press.props.onPressOut();
+  assert.equal(f.animations.length, 1); assert.equal(value.current, 1); f.cleanup();
+});
+
+test('Android status skips motion if the accessibility query fails or resolves after cleanup', async () => {
+  const failed = fixture('android', state, 'uz', Promise.reject(Error('unavailable')));
+  const failedScreen = failed.CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  nodes(failedScreen.props.renderItem({ item: record, index: 0 }), item => item.type === 'Pressable')[0].props.onPressIn();
+  assert.deepEqual(failed.animations, []); failed.cleanup();
+  let resolve; const pending = new Promise(done => { resolve = done; });
+  const unmounted = fixture('android', state, 'uz', pending), screen = unmounted.CustomerStatusDetailScreen({ kind: 'pending', onOpenDetail() {} });
+  unmounted.cleanup(); unmounted.setReducedMotion(false); resolve(false); await Promise.resolve();
+  nodes(screen.props.renderItem({ item: record, index: 0 }), item => item.type === 'Pressable')[0].props.onPressIn();
+  assert.deepEqual(unmounted.animations, []); assert.equal(unmounted.removals(), 1);
 });
 
 test('iOS status rows retain one full-width native target, Dynamic Type and verbatim timestamp text', () => {
