@@ -1,7 +1,7 @@
 # qolipchi
 
-Status: part 1 of 2 in progress; role port incomplete
-Stopped at: Prepared the three native Qolip QR scanner pages and their shared V2 flow on top of reconciled main, then added the real secure V2 request-ID source using a local native microsecond clock. Camera, permission and lookup callbacks are tied to the original focused/foreground role lifetime. Full Home/caller/navigation, other role contracts, held mutations and device/native scanner gaps remain open; no Qolip app route was exposed.
+Status: parts 1 and 2 in progress; role port incomplete
+Stopped at: Ported storage retry ID retention, the original-boundary Paddons/archive read/filter/paging owner, both native create/inspection dialogs and storage/archive value projections on top of main 9020735. Continue the real raw-material scanner with manual entry, grouped image-bearing storage list/picker, Paddon/archive detail/action owners, full Home/role navigation and the remaining source surfaces. The role is still unrouted; held writes and phone checks remain open.
 
 ## Open items
 | Where | V2 reference | What is needed |
@@ -25,17 +25,17 @@ Stopped at: Prepared the three native Qolip QR scanner pages and their shared V2
 | Sets screen read-only model | `qolip_sets_screen.dart:33–58,216–405` | An unrouted original-witness guarded GET, source-order search and expansion model now feed partial unmounted native content. Complete dialog contract, clipboard, retry/refresh, real shell and all writes remain absent; member color swatches are present but need native verification. The required saving lock is supplied by the real owner; Unicode lowercasing, native interactions and accessibility need phone verification. Calls omitting the API guard remain unguarded. |
 | Set-name dialog input limit | `qolip_set_name_dialog.dart`, `QolipSetNameDialog.android.tsx` | Flutter limits input to 160 grapheme clusters. Installed Android Compose truncates UTF-16 code units and can split emoji, so its native `maxLength` is not applied. Implement and phone-verify faithful grapheme limiting before marking the dialog complete; both views remain unwired. |
 | Native scanner | `qolip_cell_qr_scan_screen.dart`, `reliable_mobile_scanner.dart` | Cell, raw and universal camera pages and source flow now exist on both platforms, with original-witness lookup, permission/start/release deadlines and late-result retirement. They are not routed by the incomplete role. Torch availability, the app-wide reliable scanner coordinator/decoder recovery and native/device interaction remain open (PORT-019). |
-| Shared raw-material barcode parser | `qolip_storage_picker.dart:672`, `qolip_storage_picker_scanning.dart:59` | V2 uses `rawMaterialBarcodeFromQr`. The shared native parser and its URI/Hermes parity are still under review; reuse it after verification rather than copying another role's partial adapter. Any unconnected consumer must require an injected parser with no fake fallback. |
+| Shared raw-material barcode parser | `qolip_storage_picker.dart:672`, `qolip_storage_picker_scanning.dart:59` | The existing shared parser is now reused by inspection after source comparison and its host cases pass. Full URI/Unicode/Hermes and real-camera parity remain unverified. The actual raw-material scanner with manual entry and MoldPicker consumers still need porting; do not substitute the raw Qolip scanner. |
 | Reworks views | `qolip_reworks_screen.dart`, `qolip_mileage_sheet.dart` | Both platform reworks views and mileage-sheet openers now exist, with the real secure ID factory as their default; explicit injection remains supported. They are not routed. Original-witness ownership, real caller wiring, native sheet behavior and sent-write settlement still need review before enabling return. |
 | Rework request ID | `qolip_rework_request_id.dart` | The 128-bit secure-random plus native microsecond timestamp source is implemented; native C/Swift host checks, Android module assembly and iOS module build passed. Rebuild development binaries to include AccordNativeClock and verify native clock/crypto on phones (PORT-020). Existing retry retention is unchanged. |
 | Pallet and cell printing | `qolip_storage_print.dart`, `qolipPrintCellQr` | The server print request and print-job models are ported, but the platform views and real printer selection, cancellation and dispatch flows remain to be connected. Real-printer verification remains open. |
-| Retry intent | `QolipStorageIntent` | Port storage retry-intent keys and their lifecycle using the now-available secure request ID source. Existing Reworks selection-signature retention is unchanged. |
+| Retry intent | `QolipStorageIntent` | Storage retry-key retention is ported and source-tested. Wire each real storage action and recheck the original role lifetime after awaiting the async native entropy/clock helper, before dispatch. Completion and sent-write settlement are still action-owner responsibilities. |
 | Rework JSON edge values | `QolipReworkEntry.fromJson`, `QolipMileage.fromJson` | JavaScript JSON parsing can lose integer precision above 2^53 or the `.0` spelling of a floating numeric value when V2 converts optional fields with `toString`; no recorded response exercises those edge values. |
 | Shared product parser edge cases | `QolipProduct.fromJson`, `src/qolipCatalogApi.ts` | Existing native `customer_names` handling drops null entries, while V2 converts them to the string `null`; Dart-style trimming and other non-string JSON conversions also need a shared comparison. Leave the protected existing consumers intact until the integrator coordinates a fix. |
 | Set reuse | `_sharedMoldForProduct` | Reused-set `is_in_rework` reflects the deferred V2 test-mode rework store; that in-memory branch remains open. |
 | Shared product cache invalidation | `mobile_api_qolip_reworks.dart` `_qolipProductsSnapshot`, `src/qolipProductsApi.ts`, `src/authorizedFetch.ts` | V2 clears the product snapshot after successful rework mutations. The existing native shared request layer invalidates its read epoch for every mutation, including failures; reconcile without changing worker or preparation behavior. |
 | Shared contract ownership | `admin_sequence_list_widget_test`, `order_image_memory_peek_test`, `order_image_widgets_test`, `tayyorlov_order_sheet_test` | These cross-role fixture stems are owned by the integrator or another role; do not overwrite them here. The Qolip PostgreSQL E2E case writes to a server and was not run. |
-| Full test gate | `tests/preparationHomeDependentPages.test.cjs`, `tests/preparationWarehouse.android.test.cjs` | Latest full run: 5,016 pass, 6 existing failures and 12 TODO out of 5,034 tests. The same six preparation Android tests cannot resolve `@expo/ui`'s extensionless `createModifier` import under Node; they do not import Qolip code. |
+| Full test gate | `tests/preparationHomeDependentPages.test.cjs`, `tests/preparationWarehouse.android.test.cjs` | Latest full run: 5,089 pass, 6 existing failures and 12 TODO out of 5,107 tests. The same six preparation Android tests cannot resolve `@expo/ui`'s extensionless `createModifier` import under Node; they do not import Qolip code. |
 | Android typecheck | `WorkerOutputProgress.android.tsx`, `WorkerPaintPalette.android.tsx` | Nine existing errors remain in worker components; none points to the Qolip code. |
 
 ## Checkpoint
@@ -481,3 +481,57 @@ Final checks for this checkpoint and the preceding scanner group:
 - Ledger check passed: 1,038 source and 88 test tags resolve, with the existing 11 endpoint warnings. Drift is zero. The role and text reports were regenerated; text remains 80 missing per platform, 55/64 extras, zero ambiguous tags and 163 surface references. No exceptions were added.
 
 PORT-019 and PORT-020 record scanner and native-build/device limits centrally. Full-role routing and all held writes remain open. Both platforms need a new development binary including AccordNativeClock before phone verification. V2 stayed clean at f119; no Dart/Flutter, phone, simulator, backend or printer was used.
+
+## Storage intent checkpoint
+
+`QolipStorageIntent` now retains a source-format secure request ID while `JSON.stringify(intent)` is unchanged, including insertion and array order, and clears it only through `complete` or a different intent. The V2 storage test's identical-body/revision/completion assertions are ported. Eight focused tests pass, also covering overlapping native draws, completion during a draw, rejection and immutable signature capture. A late draw never replaces the current intent. This helper does not dispatch a request or prove whether one committed.
+
+Unlike the synchronous Dart generator, the Expo secure generator is asynchronous: callers must await `keyFor` and recheck their original role lifetime before sending. An entropy/clock rejection retires the failed retained promise so a retry cannot receive the previous action's ID. V2's synchronous exceptional path can leave the previous `_id` after updating `_signature`; this difference is recorded in PORT-021 rather than exposed as a safe write. Request bodies in this role use string keys, strings, arrays and integer revisions; arbitrary double spelling, nonfinite numbers and numeric-key ordering remain outside proven JSON-signature parity.
+
+## Storage/archive read lifecycle checkpoint
+
+Added the V2 300 ms search, initial/more paging, archive client-kind/warehouse/date/history filters, exclusive filter expansion and layout-frame auto-pagination model. Original role-boundary invalidation clears its lists, filters, timers and pending continuations. Its runtime uses actual storage GETs and the existing guarded read-only blocks API; no shared catalog cache or mutation is introduced. The shared hook activates, fetches and releases this owner, with the real caller supplying its mutation lock.
+
+The existing storage GETs have an optional original-run read guard, including detail, molds and every legacy archive fallback page. Existing unguarded callers and writes retain their request contracts. A guarded GET uses the existing authorized transport's read-witness option; it may join independently initiated token refresh, but never initiates one. The source V2 API does initiate refresh, so this limitation remains open with the other isolated read owners. Source-derived requests, actual transport/body/fallback retirement and role ABA tests pass; the original 17 storage API tests remain green. No f119 fixture was fabricated or historical recording relabeled.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Paddons/archive load/search/filter; storage screen:259–449 | `qolipStorageReadState`, `qolipStorageReadRuntime`, `useQolipStorageRead` | shared logic | shared logic | Native list shell/actions/routes still absent; guarded GET cannot start credential refresh. |
+| Archive continuation; storage screen:335–407,911–919 | Same read owner | shared logic | shared logic | Real viewport dimensions and frame scheduler are required; no phone scroll evidence. |
+| Paddons old-read during search debounce; storage screen:319–334 | Same read owner | retained | retained | Source quirk remains within a valid original boundary; role reset always blanks data. |
+
+Focused verification: 15 read-state cases, 12 actual transport/runtime cases and the existing 17 storage API cases passed. These are host assertions against source-derived data, not a phone or live server run. Full-role storage actions, native controls, real navigation and sent-write settlement remain open in PORT-012/021/022.
+
+## Storage native dialog checkpoint
+
+Both platforms now have actual `QolipPaddonCreateDialog` and `QolipInspectionDialog` views and shared source-derived state/hooks. The create dialog retains the user's warehouse through ordinary parent rebuilds, applies its initial draft only once and returns only warehouse plus empty location/note. Create precedes cancel as in V2. Inspection preserves the source case-insensitive insertion/update rules, expected spelling and ordering, empty/incomplete save, chip deletion during a scan and ordinary back/outside dismissal while scan/cancel/save buttons are locked. The existing shared barcode parser is reused after comparing its source branch and running its host tests; no second parser was created. Expired/replaced original boundaries blank data and seal captured actions, including pending scan completion and duplicate close events.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Create dialog; storage screen:945–1059 | `QolipPaddonCreateDialog.*`, `qolipStorageFormsState`, `useQolipStorageForms` | native SwiftUI menu/buttons in modal dialog | native Compose dropdown/dialog/buttons | Parent create/draft/action owner is not wired; native dimensions, dropdown and access/RTL need phones. |
+| Inspection dialog; storage picker:654–731 | `QolipInspectionDialog.*`, same state/hooks | native controls in scrollable modal dialog | native Compose dialog/scroll/chips | Caller must supply the real full-screen raw-material scanner with manual entry, not substitute the raw Qolip scanner. Paddon inspection POST/action owner remains unwired. |
+| Case-insensitive parser and ordered found/missing/unexpected/chips | `QolipInspectionState`, existing shared barcode parser | shared rules | shared rules | Host cases pass; complete URI/Unicode/Hermes and native scan geometry are not phone-certified. |
+| Dialog buttons, dismissal and source exceptional scan path | Both native dialogs and shared hook | source flow | source flow | A rejected scan-dialog future leaves source scanning locked until ordinary dismissal; no invented error text or retry is added. Native bridge reporting differs from Flutter error logging. |
+
+Focused checks: 15 state, 10 native-view host and 4 hook-lifecycle cases pass; shared barcode parser host cases also pass. Source annotations mark the real dialog surfaces, not a full StorageScreen. The hook keeps the original scanner opener for one dialog lifetime and updates expected/warehouse lists without resetting selected/scanned values. An actual phone and the complete role/storage caller remain open. PORT-023 records these remaining dependencies centrally.
+
+## Storage product/archive projection checkpoint
+
+Ported source product grouping/membership, archive snapshot-to-mold identity projection, pallet count/location, mold/pallet status precedence and storage-specific exception localization keys. Nine focused source-derived cases pass. Duplicate normalized product links retain repeated occurrences and first metadata; archive entries with the same code remain separate objects, matching the source identity map. No API/cache/action is invoked by these projections. Existing shared product/parser edge notes and phone Unicode-table checks remain applicable.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Group/membership; picker products:3–59 | `qolipStoragePresentation.ts` | shared rule | shared rule | Grouped native cards, image resolver, detail/selection callers remain open. |
+| Archive mold snapshots; archive mold list:23–41 | Same projection file | shared rule | shared rule | Source object identity retained; no claim that the archive view is implemented. |
+| Pallet count/location; storage screen:239–250 | Same projection file | shared rule | shared rule | Unknown count stays unknown rather than inferred zero. |
+| Status/error precedence; storage screen:95–146 | Same projection file | shared rule | shared rule | Actual notice/action callers remain to be wired; no new user-facing text added. |
+
+## Final storage continuation verification
+
+Four local checkpoints continue main `9020735`: `1c9cf3b` storage intent, `5237c84` guarded storage/archive reads, `5a922dd` native create/inspection dialogs and `70533b0` grouping/archive projections. The final text review removed a newly introduced internal count-error message instead of adding a text exception. The source value error still throws a RangeError and is not shown as new UI copy.
+
+- Qolip/shared-camera: 823/823 cases passed. Full Node: 5,107 tests, 5,089 pass, exactly the existing six Preparation ESM host-import failures and 12 TODO; exit 1. The final string-only error cleanup was additionally checked with the focused presentation cases.
+- iOS types passed. Android types retained exactly the same nine Worker diagnostics; the log matches the preceding main baseline line for line. Lint passed with the same one Admin warning.
+- Offline Hermes exports passed for iOS and Android. Newly ported unmounted dialog views are covered by platform types and host view/hook cases, not by this routed-app export or a phone run. No new native package or dependency change was needed.
+- Ledger: 1,049 source / 88 test tags resolve; existing 11 endpoint warnings remain outside the new storage requests. V2 drift remains zero. No historical fixture was rewritten and no new text exception was added.
+- Full storage/native role wiring, real raw-material scan/manual opener, remaining role surfaces, sent-write settlement and all phone/printer checks remain open (PORT-012/019–023). This is a tested partial role port, not a release or complete-role declaration. V2 stayed clean at f119. No phone, simulator, Flutter/Dart or live backend was used.
