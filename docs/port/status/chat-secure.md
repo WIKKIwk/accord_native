@@ -1,16 +1,58 @@
-# Chat secure transport: partial, not integrated
+# chat-secure
 
-- Branch starts from main `2b6bacf49e1dd09afb9cddf8c335d340a8f36e01`. This is a new-role opt-in security transport, not a claim of full Chat parity. Worker and preparation routes retain their existing transport. No role opts in yet.
-- The Android prototype constructs the fixed Chat endpoint from the authenticated HTTPS origin and a short-lived ticket, uses a separate OkHttp client with `CookieJar.NO_COOKIES`, no authenticators, and both redirect flags disabled. It does not override TLS trust or hostname verification and does not enable cleartext. The repo declares OkHttp 4.9.2; the actual Gradle resolution is not yet verified.
-- The iOS prototype constructs a WSS endpoint from the HTTPS origin, disables cookies, credential storage and cache on a new ephemeral session, refuses redirects, and uses normal system server-trust handling. Non-server-trust authentication challenges are cancelled. The trusted origin is supplied by the authenticated JS session; arbitrary compromised app JavaScript is outside this boundary. Expo module bindings require a new development build and are not yet device-verified.
-- Host Android tests compiled the actual core with Kotlin and Maven Central OkHttp 4.9.2/Okio 2.8.0. A synthetic self-signed `localhost` TLS certificate and PKCS#12 fixture are generated only in the test scratch directory. The test builds a test-only client SSL context trusting that certificate, with the real secure-client settings retained; it does not alter the system trust store. Production code contains no custom trust manager, hostname-verification bypass or cleartext exception. The test verifies no synthetic cookie/authorization header, no redirect to a second loopback server, open/send and cancellation.
-- Host Swift core typechecked with the macOS Command Line Tools Foundation SDK. Its real production session configuration and redirect delegate were tested using synthetic loopback `ws://` requests constructed exclusively in the host test. Production request construction rejects non-HTTPS origins and creates WSS. This is macOS host evidence, not an iOS build or iOS runtime test.
-- A new role must explicitly pass `livePolicy="secure"` to its **role-nested** `ChatRouteProvider` and use `useSecureChatUnreadState(session)` in its persistent shell. The provider supplies the policy before list/thread hooks render, so they do not fall back to React Native's legacy socket while the shared runtime is starting. The existing standalone `/ios-chat` and `/android-chat` routes remain legacy: new secure roles must not navigate to them. No existing route has been switched. Future role integration must verify all entry points and nested route pushes.
-- The secure role path is currently **gated unavailable**, even when the native module exists, until ticket/401 handling is agreed and verified. The role-nested provider shows the reason before mounting Chat children; direct secure list/thread hooks, live subscription and the shared runtime entry also stop before Chat network work. Expo Go or an older development build reports a development-build-required message. The unread hook returns `count: null`; it never claims an unknown count is zero. These errors are intentional temporary limitations, not a V2 text parity claim.
-- Native socket IDs are process-scoped monotonic strings and fail closed on exhaustion. JS checks the exact active session, its original server/role/ref, closed state and socket ID; logout/account-switch reset hooks stop the subscription and abort a pending ticket. A late event already queued before native cancellation cannot reach a newer socket. Host contracts cover delayed old events, fresh-ticket reconnect on a failed native send, background/resume, and per-module shutdown isolation. Android module shutdown cancels its private OkHttp client and closes its dispatcher/pool; Swift invalidates its own URLSession and serializes send enqueue with stop. JS catches a destroyed native module during send/stop without breaking session reset.
-- The current ticket helper uses `authorizedFetch`, which specifies `credentials: 'omit'` and `redirect: 'manual'`. Expo SDK 58 normally installs `expo/fetch` globally (`node_modules/expo/src/winter/runtime.native.ts:35–46`), and its installed Android/iOS native implementations respect those options. The RN/XHR redirect-cookie concern applies if `EXPO_PUBLIC_USE_RN_FETCH` selects RN's fallback; no such flag was found in this checkout or current process, but build environments and actual device runtime have not been verified. A role-scoped explicit `import { fetch } from 'expo/fetch'` is a smaller candidate than a new HTTP client and is independent of that flag, per https://docs.expo.dev/versions/v58.0.0/sdk/expo/#expofetch-api.
-- On a ticket 401, existing `refreshSession` reauthenticates via `authenticateAccount`; that login uses global fetch with default credentials and redirect-following behavior and sends phone/code credentials. A safe one-time retry needs a separately reviewed, role-scoped secure reauthentication seam that retains existing storage transactions and session/epoch checks. The global in-flight refresh must not cause a secure call to join a legacy refresh or race a second login. A fail-closed 401 would be an explicit V2 auto-refresh deviation. No shared auth code or credentials were changed.
-- Design candidate: a role-scoped helper explicitly imports `expo/fetch`, posts the fixed ticket URL with the current bearer and empty body, `credentials: 'omit'`, `redirect: 'manual'`, abort support and a 10-second fully buffered deadline. A separately owned auth seam can use the same explicit Expo fetch options for the fixed login URL and JSON `{phone, code}`, retain existing parsing/storage, serialize refresh by exact session/epoch/policy and retry the ticket at most once. Check cancellation and original session/origin/role/ref at every await and before applying tokens. Test synthetic 3xx destinations, cookies, authorization, login body, timeout, cancellation, concurrent legacy/secure 401 and account switches. The current native Chat ticket controller has an overall 10-second deadline; f119 uses 10 seconds per `_post` phase, so reconcile that timing explicitly. This is a design, not an implemented or device-verified guarantee.
-- Checks at this checkpoint: 1,185/1,191 Node tests pass; the six failures are the existing preparation Android Expo UI `createModifier` resolution failures. iOS TypeScript and uncached Expo lint pass. Android TypeScript reports the same nine pre-existing worker errors. Focused Chat, secure-policy, account-switch and preparation-Chat contracts pass; the host-only native tests described above pass. Offline JavaScript exports for both iOS and Android pass; these do not compile native code.
-- Expo autolinking search discovers the local module for Android and Apple. No simulator, device, live backend, production ticket, production cookie, or OS security settings were used or changed.
-- The selected Mac has no Xcode or iPhone SDK. An Android compile is pending the official Gradle 9.4.1 download; the generated, ignored wrapper is pinned to the checksum returned by `https://services.gradle.org/distributions/gradle-9.4.1-bin.zip.sha256`. Download, checksum verification and build outcome are not yet confirmed. SDK 37/build-tools 37 and the configured NDK are not currently installed; establish what the build actually requires before installing anything, and do not accept new licenses without user approval. Do not merge until the native builds, route integration, account switching, Expo Go failure handling and device-level behavior have been independently checked.
+Status: in progress
+Stopped at: finish native build checks and complete the integration gates, then merge this branch as explicitly requested by the user.
+
+## Scope and source
+
+This branch completes the shared Chat connection transport. It does not claim completion of the full Chat role, its media features or other roles' held routes. The selected V2 source is `f11910bb2c8c7081ce26770e69811b03fd0739ed`; the original V2 checkout was clean and at that SHA before work.
+
+The previous branch was a prototype with an independent secure/legacy UI policy and a permanent authentication hold. Those extra route blockers and messages are absent in V2 and have been removed. Shared Chat routes and hooks keep their current main implementation; their existing `subscribeChatLive` now uses the local native transport. There is no RN WebSocket fallback and no second authentication state machine.
+
+## V2 comparison
+
+| Behavior | V2 source | V4 implementation |
+|---|---|---|
+| Empty-body bearer POST for a fresh socket ticket | `lib/src/core/api/chat/mobile_api_chat.dart:400`, `chatLiveUri` | `src/chatLive.ts` calls the existing `authorizedFetch` with POST `/v1/mobile/chat/socket-ticket` |
+| One shared stored-account login after 401, then one retry | `lib/src/core/api/mobile_api.dart:494-637`, `_sendAuthorized`, `_reauthenticateFromStorage` | Existing `refreshSession` and saved-account transaction remain authoritative; ticket and ordinary requests share them |
+| No POST redirect or ambient cookies | `lib/src/core/network/mobile_http_client.dart:42-91`, `SecureMobileApiClient`; `_loginAt` | `authenticateAccount.ts` and `authorizedFetch.ts` explicitly import SDK 58 `expo/fetch`; login supplies `credentials: omit`, `redirect: manual`; authorized requests retain their existing manual redirect rules |
+| Ten seconds per HTTP phase, rather than one combined ticket/login/retry deadline | `lib/src/core/api/mobile_api.dart:292,392-418`, `_requestTimeout`, `_post` | Removed the outer ticket timer; existing individual request/login deadlines are retained |
+| Fresh ticket on reconnect, 1/2/4/8/15 second delays, any decoded map resets backoff | `lib/src/features/chat/realtime/chat_realtime_service.dart:38-76` | `src/chatLive.ts` |
+| Ten-second socket handshake, 25-second protocol ping/pong; binary frames ignored | `lib/src/core/realtime/warehouse_live_client_io.dart:59-86` | Native OkHttp and URLSession WebSocket adapters; JS handshake deadline ends on open and no JSON heartbeat is injected |
+| Pause and account reset cancel the old subscription | `lib/src/features/chat/state/chat_store_ChatStore_methods_01.dart:90-141`, Chat runtime | Existing app lifecycle plus session reset hooks cancel ticket work, native socket and late events |
+
+SDK evidence: [Expo SDK 58 named fetch](https://docs.expo.dev/versions/v58.0.0/sdk/expo/#expofetch-api). The installed Android `expo/modules/fetch/NativeRequest.kt` disables cookies and redirects for these flags; iOS `Expo/Fetch/ExpoURLSessionTask.swift` applies the matching request properties. Native TLS uses normal platform validation, with no custom production trust or cleartext exception.
+
+## Surface audit
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Existing Chat routes, list and thread; connection failure does not replace the whole page | `src/shared/chat/ChatRouteContext.tsx`, `useChatConversations.ts`, `src/useChatThread.ts` | unchanged from main | unchanged from main | Removed the prototype's additional secure-only blocker page and messages; no new surface, field, label or action |
+| `ChatRealtimeService` connection lifecycle | `src/chatLive.ts`, `modules/accord-chat-secure` | source compared | source compared | Native adapters replace Dart I/O; physical-device behavior still needs user smoke testing |
+
+No text exceptions were added for this transport scope. The full Chat role's separate text/surface audit remains tracked in `status/chat.md`.
+
+## Checks so far
+
+- 296 focused Chat, authentication, redirect, timeout, guarded-read and affected caller tests passed.
+- iOS TypeScript passed.
+- Android TypeScript reports the same nine existing Worker prop/import errors; none is in this scope.
+- macOS Foundation host tests passed for the actual Swift core: origin validation, cookie-free configuration, redirect rejection, socket IDs and cancellation.
+- Expo prebuild completed for iOS and Android; its incidental package-script edits were restored.
+- V2 drift: zero commits/files. Ledger check resolves all 928 source tags and 76 test tags. Its 11 literal-endpoint warnings include existing dynamic Chat conversation/media paths.
+
+## Open items
+
+| Item | Required work |
+|---|---|
+| Native build integration | Compile the module bindings against the actual Expo iOS/Android dependencies and run the Android core host contracts |
+| Final gates | Full Node suite, lint, export checks and merge review |
+| User phone smoke test | Reconnect after network loss, background/resume, expired-session re-login and account switching on iOS and Android; no simulator or physical device has been used |
+
+## Deviations candidates
+
+The branch preserves the existing V4 request/session lifecycle checks; it adds no retry, cache, product policy or user flow. Full Chat model/UI parity is outside this transport branch and remains open in `status/chat.md`.
+
+## Test mode pending
+
+Shared test mode remains a separate final port step under D3. No test-mode network behavior is introduced here.

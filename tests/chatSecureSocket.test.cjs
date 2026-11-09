@@ -119,16 +119,20 @@ test('native send false closes the socket and the live controller reconnects wit
   });
   let ticket = 0;
   const live = load('chatLive.ts', { './auth': auth,
+    './shared/chat/chatSecureSocket': adapter,
     'react-native': { AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } },
     './authorizedFetch': { authorizedFetch: async () => ({ ok: true, json: async () => ({ ticket: `synthetic-${++ticket}` }) }) } });
   const Original = global.WebSocket;
   global.WebSocket = class { static OPEN = 1; constructor() { throw new Error('legacy socket must not open'); } };
-  const stop = live.subscribeChatLive(session, () => {}, undefined, { socketFactory: url => adapter.secureChatSocket(session, url) });
+  let facade;
+  const stop = live.subscribeChatLive(session, () => {}, undefined, {
+    socketFactory: url => { facade = adapter.secureChatSocket(session, url); return facade; },
+  });
   try {
     await new Promise(resolve => setImmediate(resolve));
     callbacks[0]({ session: '1', type: 'open', value: '' });
     callbacks[0]({ session: '1', type: 'message', value: '{"event":"chat.ready"}' });
-    t.mock.timers.tick(25000);
+    assert.throws(() => facade.send('synthetic-message'), /Chat aloqasi ochilmadi/);
     await Promise.resolve();
     assert.deepEqual(stopped, ['1']);
     t.mock.timers.tick(1000);

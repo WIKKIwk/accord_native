@@ -1,102 +1,98 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const Module = require('node:module');
-const path = require('node:path');
 const test = require('node:test');
-const ts = require('typescript');
+const { authHarness, loadTs, mountLive, tick, until } = require('./support/chatSecureHarness.cjs');
+const profile = token => ({ token, profile: { role: 'customer', ref: 'one' }, capabilities: ['customer.access'] });
+const response = value => new Response(JSON.stringify(value));
 
-function load(file, mocks) {
-  const filename = path.resolve(__dirname, '../src', file);
-  const loaded = new Module(filename, module); loaded.filename = filename; loaded.paths = module.paths;
-  loaded.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
-  loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText, filename);
-  return loaded.exports;
-}
-
-test('route policy is selected before nested Chat children render and pushes stay nested', () => {
-  const jsx = (type, props) => ({ type, props });
-  let unavailable = null;
-  const route = load('shared/chat/ChatRouteContext.tsx', {
-    'react/jsx-runtime': { jsx, jsxs: jsx },
-    react: { createContext: () => ({ Provider: 'RouteContext' }), useContext: () => null, useMemo: fn => fn() },
-    'react-native': { View: 'View', Text: 'Text' },
-    'expo-router': { router: {} }, '../../components/ChatMetadata': { ChatMetadataProvider: 'Metadata' },
-    './chatNavigation': { createChatNavigation: () => ({}) }, './ChatLivePolicy': { ChatLivePolicyProvider: 'Policy' },
-    './chatSecureReadiness': { secureChatUnavailableReason: () => unavailable },
-  });
-  const base = { session: { imageCacheScope: 'synthetic' }, basePath: '/ios-customer/chat', children: 'child' };
-  assert.equal(route.ChatRouteProvider({ ...base, livePolicy: 'secure' }).props.policy, 'secure');
-  assert.equal(route.ChatRouteProvider(base).props.policy, 'legacy');
-  unavailable = 'secure authentication unavailable';
-  const blocked = route.ChatRouteProvider({ ...base, livePolicy: 'secure' });
-  assert.equal(blocked.props.children.props.children.type, 'View');
-  assert.equal(blocked.props.children.props.children.props.children.props.children, unavailable);
-  assert.equal(route.ChatRouteProvider(base).props.children.props.children.type, 'Metadata');
-  const navigation = load('shared/chat/chatNavigation.ts', {});
+// @v2 MobileApi._sendAuthorized, _reauthenticateFromStorage and chatLiveUri.
+test('ticket and ordinary concurrent 401s share V2 reauthentication and each retry only once', async t => {
+  const original = global.fetch; t.after(() => { global.fetch = original; });
+  let logins = 0, releaseRefresh;
   const calls = [];
-  const nav = navigation.createChatNavigation('/ios-customer/chat', { push: value => calls.push(value), replace: value => calls.push(value) });
-  nav.openDirectory(); nav.openConversation({ id: 'conversation', title: 'title' });
-  assert.equal(calls[0], '/ios-customer/chat/new');
-  assert.equal(calls[1].pathname, '/ios-customer/chat/[conversationId]');
-});
-
-function unreadFixture(available, pendingAuth = false) {
-  let current = null, transport, liveCallback, count = 0;
-  const effects = [];
-  const session = { baseUrl: 'https://erp.example', token: 'synthetic', profile: { role: 'customer', ref: 'a' } };
-  const runtime = { subscribe: () => () => {}, getSnapshot: () => count, start: async () => {} };
-  const api = load('shared/chat/useSecureChatUnreadState.ts', {
-    react: { useEffect: callback => effects.push(callback), useSyncExternalStore: (_subscribe, get) => get() },
-    '../../auth': { activeSessionToken: candidate => candidate === session ? session.token : null },
-    './chatLocalStore': { chatCacheScope: () => 'scope' },
-    './chatUnreadRuntime': { existingChatUnreadRuntimeFor: (_session, policy) => policy === 'secure' ? current : null,
-      subscribeChatUnreadRuntimeChanges: () => () => {}, chatUnreadRuntimeFor: (_session, options) => { current = runtime; transport = options; return runtime; } },
-    './chatSecureReadiness': { secureChatUnavailableReason: () => !available ? 'development build required'
-      : pendingAuth ? 'secure authentication unavailable' : null },
-    './secureChatLive': { subscribeSecureChatLive: (_session, _onInvalidate, _onEvent, onState) => { liveCallback = onState; return () => {}; } },
-  });
-  return { ...api, session, effects, getTransport: () => transport, setCount: value => { count = value; },
-    live: state => liveCallback(state) };
-}
-
-test('secure unread reports missing native module, never an invented zero', () => {
-  const f = unreadFixture(false);
-  assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: null, status: 'unavailable', message: 'development build required' });
-  f.effects[0]();
-  assert.equal(f.getTransport(), undefined);
-});
-
-test('native module present but unresolved ticket policy remains unavailable without starting runtime', () => {
-  const f = unreadFixture(true, true);
-  assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: null, status: 'unavailable', message: 'secure authentication unavailable' });
-  f.effects[0]();
-  assert.equal(f.getTransport(), undefined);
-});
-
-test('production readiness remains closed even when the native socket module exists', () => {
-  for (const [available, expected] of [[false, 'development build required'], [true, 'Xavfsiz Chat aloqasi hozircha mavjud emas.']]) {
-    const readiness = load('shared/chat/chatSecureReadiness.ts', {
-      './chatSecureSocket': { secureChatAvailable: () => available, SECURE_CHAT_UNAVAILABLE: 'development build required' },
-    });
-    assert.equal(readiness.secureChatUnavailableReason(), expected);
+  global.fetch = async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/login')) {
+      if (++logins === 1) return response(profile('old'));
+      return new Promise(resolve => { releaseRefresh = () => resolve(response(profile('new'))); });
+    }
+    if (init.headers.get('authorization') === 'Bearer old') return new Response('{}', { status: 401 });
+    return response(url.endsWith('/socket-ticket') ? { ticket: 'fresh-ticket' } : {});
+  };
+  const auth = authHarness(), session = await auth.login('https://example.test', 'synthetic-phone', 'synthetic-code');
+  const transport = loadTs('authorizedFetch.ts', { './auth': auth }), live = mountLive(auth, transport);
+  const stop = live.subscribeChatLive(session, () => {}); t.after(stop);
+  const ordinary = transport.authorizedFetch(session, '/v1/mobile/me');
+  await until(() => !!releaseRefresh); releaseRefresh();
+  await ordinary; await until(() => live.opens.length === 1);
+  assert.equal(logins, 2);
+  assert.deepEqual(live.opens[0], { id: '1', origin: 'https://example.test', ticket: 'fresh-ticket' });
+  assert.equal(session.token, 'new');
+  const saved = await auth.testAccountStore.sessionFor(auth.testAccountStore.activeAccountId);
+  assert.equal(saved.token, 'new');
+  const tickets = calls.filter(call => call.url.endsWith('/socket-ticket'));
+  assert.deepEqual(tickets.map(call => call.init.headers.get('authorization')), ['Bearer old', 'Bearer new']);
+  for (const call of calls) {
+    assert.equal(call.init.credentials, 'omit'); assert.equal(call.init.redirect, 'manual');
+    if (call.url.endsWith('/auth/login')) assert.deepEqual(JSON.parse(call.init.body), { phone: 'synthetic-phone', code: 'synthetic-code' });
   }
+  assert.ok(tickets.every(call => call.init.method === 'POST' && call.init.body === undefined));
 });
 
-test('secure unread exposes a count only after a real list result and marks loss of live sync', () => {
-  const f = unreadFixture(true);
-  assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: null, status: 'loading' });
-  f.effects[0]();
-  const transport = f.getTransport();
-  assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: null, status: 'loading' });
-  transport.onConversationsFailed();
-  assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: null, status: 'unavailable' });
-  f.setCount(3);
-  transport.onConversationsLoaded();
-  transport.subscribeLive(() => {}, () => {});
-  f.live('ready');
-  assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: 3, status: 'ready' });
-  f.live('unavailable');
-  assert.deepEqual(f.useSecureChatUnreadState(f.session), { count: 3, status: 'degraded' });
+test('failed stored-account refresh clears the active account and starts no socket', async t => {
+  const original = global.fetch; t.after(() => { global.fetch = original; });
+  let logins = 0, tickets = 0;
+  global.fetch = async url => {
+    if (url.endsWith('/auth/login')) return ++logins === 1 ? response(profile('old')) : new Response('{}', { status: 401 });
+    tickets++; return new Response('{}', { status: 401 });
+  };
+  const auth = authHarness(), session = await auth.login('https://example.test', 'synthetic-phone', 'synthetic-code');
+  const live = mountLive(auth), stop = live.subscribeChatLive(session, () => {}); t.after(stop);
+  await until(() => auth.currentSession() === null);
+  assert.equal(logins, 2); assert.equal(tickets, 1);
+  assert.equal(auth.testAccountStore.activeAccountId, null); assert.deepEqual(live.opens, []);
+});
+
+test('a login POST redirect is returned as failure without following it or sharing cookies', async t => {
+  const calls = [];
+  const account = loadTs('authenticateAccount.ts', {
+    './workerControlsApi': { isCanonicalApparatusId: () => true },
+    'expo/fetch': { fetch: async (url, init) => { calls.push({ url, init }); return new Response(null,
+      { status: 302, headers: { location: 'https://elsewhere.test/capture' } }); } },
+  });
+  const original = global.fetch; global.fetch = () => { throw new Error('RN fetch must not be selected'); };
+  t.after(() => { global.fetch = original; });
+  await assert.rejects(account.authenticateAccount('https://example.test', 'synthetic-phone', 'synthetic-code'), error => error.statusCode === 302);
+  assert.equal(calls.length, 1); assert.equal(calls[0].url, 'https://example.test/v1/mobile/auth/login');
+  assert.equal(calls[0].init.redirect, 'manual'); assert.equal(calls[0].init.credentials, 'omit');
+});
+
+test('a ticket retry returning 401 is not followed by a second login within the attempt', async t => {
+  const original = global.fetch; t.after(() => { global.fetch = original; });
+  let logins = 0, tickets = 0;
+  global.fetch = async url => url.endsWith('/auth/login') ? response(profile(`token-${++logins}`))
+    : (tickets++, new Response('{}', { status: 401 }));
+  const auth = authHarness(), session = await auth.login('https://example.test', 'synthetic-phone', 'synthetic-code');
+  const live = mountLive(auth), stop = live.subscribeChatLive(session, () => {}); t.after(stop);
+  await until(() => tickets === 2); await tick(); await tick();
+  assert.equal(logins, 2); assert.deepEqual(live.opens, []);
+});
+
+test('ticket, saved-account login and retry retain V2 separate 10-second deadlines', async t => {
+  const original = global.fetch; t.after(() => { global.fetch = original; });
+  global.fetch = async () => response(profile('old'));
+  const auth = authHarness(), session = await auth.login('https://example.test', 'synthetic-phone', 'synthetic-code');
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let phases = 0;
+  global.fetch = async (url, init) => {
+    phases++;
+    await new Promise(resolve => setTimeout(resolve, 9000));
+    if (url.endsWith('/auth/login')) return response(profile('new'));
+    return init.headers.get('authorization') === 'Bearer old' ? new Response('{}', { status: 401 }) : response({ ticket: 'after-refresh' });
+  };
+  const live = mountLive(auth), stop = live.subscribeChatLive(session, () => {}); t.after(stop);
+  await until(() => phases === 1); t.mock.timers.tick(9000);
+  await until(() => phases === 2); t.mock.timers.tick(9000);
+  await until(() => phases === 3); t.mock.timers.tick(9000);
+  await until(() => live.opens.length === 1);
+  assert.equal(live.opens[0].ticket, 'after-refresh');
 });

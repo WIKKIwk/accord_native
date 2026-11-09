@@ -7,7 +7,7 @@ const ts = require('typescript');
 function load(mocks) {
   const filename = path.resolve(__dirname, '../src/authorizedFetch.ts'), loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
-  loaded.require = id => id === './auth' ? mocks : require(id);
+  loaded.require = id => id === './auth' ? mocks : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return loaded.exports;
 }

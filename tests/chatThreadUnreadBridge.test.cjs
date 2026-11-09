@@ -9,11 +9,11 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 const message = sequence => ({ id: `m${sequence}`, conversationId: 'c1', sequence, clientMessageId: '',
   senderRole: 'customer', senderRef: 'other', body: 'Hello', timestamp: sequence });
 
-function fixture(runtime = null, role = 'customer', policy = 'legacy', nativeAvailable = true) {
+function fixture(runtime = null, role = 'customer') {
   const effects = [], focusEffects = [], calls = [];
   const appState = { currentState: 'active', addEventListener: () => ({ remove() {} }) };
   const react = {
-    useState: initial => [typeof initial === 'function' ? initial() : initial, value => calls.push(['setState', value])],
+    useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
     useRef: initial => ({ current: initial }),
     useCallback: callback => callback,
     useEffect: callback => { effects.push(callback); },
@@ -29,7 +29,7 @@ function fixture(runtime = null, role = 'customer', policy = 'legacy', nativeAva
     'react-native': { AppState: appState },
     './auth': { activeSessionToken: () => 'token' },
     './chatApi': { ChatRequestError: class ChatRequestError extends Error {},
-      loadChatMessages: async (_session, _id, _signal, before) => { calls.push(['load']); return { items: [message(before ? 1 : 2)], hasMore: true }; },
+      loadChatMessages: async (_session, _id, _signal, before) => ({ items: [message(before ? 1 : 2)], hasMore: true }),
       markChatRead: async (...args) => { calls.push(['directRead', ...args]); } },
     './chatLive': { subscribeChatLive: () => { calls.push(['existingLive']); return () => calls.push(['stopExistingLive']); } },
     './chatMedia': { sendChatMedia: async () => {} },
@@ -39,13 +39,6 @@ function fixture(runtime = null, role = 'customer', policy = 'legacy', nativeAva
     './chatOutboxDelivery': { flushChatOutbox: async () => {} },
     './shared/chat/chatUnreadRuntime': { existingChatUnreadRuntimeFor: () => runtime,
       subscribeChatUnreadRuntimeChanges: () => () => {} },
-    './shared/chat/ChatLivePolicy': { useChatLivePolicy: () => policy },
-    './shared/chat/chatSecureSocket': { SECURE_CHAT_UNAVAILABLE: 'development build required' },
-    './shared/chat/chatSecureReadiness': { secureChatUnavailableReason: () => nativeAvailable ? null : 'development build required' },
-    './shared/chat/secureChatLive': { subscribeSecureChatLive: () => {
-      if (!nativeAvailable) throw new Error('development build required');
-      calls.push(['secureLive']); return () => calls.push(['stopSecureLive']);
-    } },
   };
   loaded.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
@@ -71,21 +64,6 @@ test('without an opted-in runtime, the existing thread and direct read receipt r
       assert.equal(read[4], 'device-1');
       assert.ok(f.calls.some(call => call[0] === 'existingLive'));
     } finally { f.unmount(); }
-  }
-});
-
-test('a secure thread never starts the legacy socket before runtime startup or in Expo Go', async () => {
-  for (const available of [true, false]) {
-    const f = fixture(null, 'customer', 'secure', available);
-    f.mount();
-    try {
-      await tick(); await tick();
-      assert.ok(!f.calls.some(call => call[0] === 'existingLive'));
-      assert.equal(f.calls.some(call => call[0] === 'secureLive'), available);
-      if (!available) assert.ok(f.calls.some(call => call[0] === 'setState' && call[1] === 'development build required'));
-      if (!available) assert.ok(!f.calls.some(call => call[0] === 'load' || call[0] === 'directRead'));
-    } finally { f.unmount(); }
-    if (available) assert.ok(f.calls.some(call => call[0] === 'stopSecureLive'));
   }
 });
 

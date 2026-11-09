@@ -60,7 +60,6 @@ function fixture(overrides = {}) {
     } },
     '../../chatModel': model,
     '../../chatOutbox': { chatDeviceId: async () => 'device-1' },
-    './chatSecureReadiness': { secureChatUnavailableReason: () => overrides.secureUnavailable ?? null },
     './chatLocalStore': storage,
     './chatSessionRuntime': sessionRuntime,
   });
@@ -118,40 +117,6 @@ test('a stale session cannot replace the current account runtime', async () => {
   assert.equal(old.value, 0);
   assert.throws(() => f.chatUnreadRuntimeFor(f.session), /Sessiya tugagan/);
   assert.equal(f.existingChatUnreadRuntimeFor(nextSession), next);
-  await f.reset();
-});
-
-test('a secure role cannot reuse a legacy runtime for the same session', async () => {
-  const f = fixture();
-  const legacy = f.chatUnreadRuntimeFor(f.session);
-  await legacy.start();
-  assert.equal(f.existingChatUnreadRuntimeFor(f.session, 'secure'), null);
-  let secureStarts = 0, secureStops = 0;
-  const secure = f.chatUnreadRuntimeFor(f.session, { policy: 'secure',
-    subscribeLive: () => { secureStarts++; return () => secureStops++; },
-    onConversationsLoaded: () => {}, onConversationsFailed: () => {} });
-  await secure.start();
-  await tick();
-  assert.notEqual(secure, legacy);
-  assert.equal(f.existingChatUnreadRuntimeFor(f.session), null);
-  assert.equal(f.existingChatUnreadRuntimeFor(f.session, 'secure'), secure);
-  assert.equal(f.liveStops(), 1);
-  assert.equal(secureStarts, 1);
-  await f.reset();
-  assert.equal(secureStops, 1);
-});
-
-test('an unavailable secure policy cannot start network work or dispose an existing legacy runtime', async () => {
-  const f = fixture({ secureUnavailable: 'secure authentication unavailable' });
-  const legacy = f.chatUnreadRuntimeFor(f.session);
-  await legacy.start();
-  await tick();
-  const starts = f.liveStarts(), signals = f.signals.length;
-  assert.throws(() => f.chatUnreadRuntimeFor(f.session, { policy: 'secure', subscribeLive: () => {
-    throw new Error('must not start'); }, onConversationsLoaded: () => {}, onConversationsFailed: () => {} }), /secure authentication unavailable/);
-  assert.equal(f.existingChatUnreadRuntimeFor(f.session), legacy);
-  assert.equal(f.liveStarts(), starts);
-  assert.equal(f.signals.length, signals);
   await f.reset();
 });
 

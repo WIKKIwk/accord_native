@@ -102,10 +102,6 @@ test('a conversation-list request completing after leaving the role cannot write
     '../../chatLive': { subscribeChatLive: () => () => stopped++ },
     '../../components/ChatMetadata': { useChatMetadata: () => ({ remember: () => remembered++ }) },
     './chatUnreadRuntime': { existingChatUnreadRuntimeFor: () => null, subscribeChatUnreadRuntimeChanges: () => () => {} },
-    './ChatLivePolicy': { useChatLivePolicy: () => 'legacy' },
-    './chatSecureSocket': { SECURE_CHAT_UNAVAILABLE: 'development build required' },
-    './chatSecureReadiness': { secureChatUnavailableReason: () => null },
-    './secureChatLive': { subscribeSecureChatLive: () => { throw new Error('must not be used'); } },
   });
   api.useChatConversations({ imageCacheScope: 'old-account' });
   const cleanup = focus();

@@ -1,6 +1,7 @@
 import { AppState, type AppStateStatus } from 'react-native';
-import { activeSessionToken, type Session } from './auth';
+import { activeSessionToken, registerSessionResetHook, type Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
+import { secureChatSocket } from './shared/chat/chatSecureSocket';
 
 /** Chat uses its own short-lived socket ticket, separate from the worker stream. */
 export type ChatLiveState = 'connecting' | 'ready' | 'unavailable' | 'paused';
@@ -9,6 +10,7 @@ export type ChatLiveSocket = { readonly readyState: number; onopen: ((event: Eve
   onclose: ((event: CloseEvent) => void) | null; send: (data: string) => void; close: () => void };
 type ChatLiveOptions = { socketFactory?: (url: string) => ChatLiveSocket; onStateChange?: (state: ChatLiveState) => void };
 
+/** @v2 ChatRealtimeService */
 export function subscribeChatLive(session: Session, onInvalidate: () => void, onEvent?: (event: Record<string, unknown>) => void,
   options?: ChatLiveOptions): () => void {
   let stopped = false;
@@ -18,20 +20,17 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
   let socket: ChatLiveSocket | null = null;
   let ticketRequest: AbortController | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
-  let readyTimer: ReturnType<typeof setTimeout> | undefined;
+  let connectTimer: ReturnType<typeof setTimeout> | undefined;
   let notifyTimer: ReturnType<typeof setTimeout> | undefined;
-  let heartbeat: ReturnType<typeof setInterval> | undefined;
   const state = (value: ChatLiveState) => { try { options?.onStateChange?.(value); } catch { /* Observers cannot interrupt cleanup. */ } };
 
   const invalidate = () => {
     if (notifyTimer !== undefined) clearTimeout(notifyTimer);
-    notifyTimer = setTimeout(() => { notifyTimer = undefined; if (!stopped && foreground) onInvalidate(); }, 100);
+    notifyTimer = setTimeout(() => { notifyTimer = undefined; if (!stopped && foreground && activeSessionToken(session)) onInvalidate(); }, 100);
   };
   const clearSocketTimers = () => {
-    if (readyTimer !== undefined) clearTimeout(readyTimer);
-    if (heartbeat !== undefined) clearInterval(heartbeat);
-    readyTimer = undefined;
-    heartbeat = undefined;
+    if (connectTimer !== undefined) clearTimeout(connectTimer);
+    connectTimer = undefined;
   };
   const reconnect = () => {
     if (stopped || !foreground || retryTimer !== undefined || !activeSessionToken(session)) return;
@@ -44,8 +43,9 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
     const current = generation;
     const controller = new AbortController();
     ticketRequest = controller;
-    const timeout = setTimeout(() => controller.abort(), 10000);
     try {
+      // @v2 chatLiveUri: authorizedFetch owns the 10-second deadline of each
+      // POST attempt, including the single retry after shared reauthentication.
       const response = await authorizedFetch(session, '/v1/mobile/chat/socket-ticket', { method: 'POST', signal: controller.signal });
       if (!response.ok) throw new Error('Chat aloqasi ochilmadi.');
       const payload = await response.json() as { ticket?: unknown };
@@ -58,34 +58,30 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
       url.pathname = '/v1/mobile/chat/live';
       url.search = '';
       url.searchParams.set('ticket', ticket);
-      const ws = options?.socketFactory ? options.socketFactory(url.toString()) : new WebSocket(url.toString());
+      const ws = options?.socketFactory ? options.socketFactory(url.toString()) : secureChatSocket(session, url.toString());
       socket = ws;
-      readyTimer = setTimeout(() => { if (socket === ws) ws.close(); }, 10000);
+      // @v2 connectWarehouseLivePlatform: time out the handshake, not a quiet
+      // established connection. Protocol ping/pong is owned by the native socket.
+      connectTimer = setTimeout(() => { if (socket === ws) ws.close(); }, 10000);
       ws.onopen = () => {
         if (socket !== ws || stopped || !foreground) return;
-        heartbeat = setInterval(() => {
-          if (socket === ws && ws.readyState === WebSocket.OPEN) {
-            try { ws.send('{"type":"ping"}'); } catch { ws.close(); }
-          }
-        }, 25000);
+        clearSocketTimers();
       };
       ws.onmessage = event => {
         if (socket !== ws || stopped || !foreground || !activeSessionToken(session)) return;
+        if (typeof event.data !== 'string') return;
         let payload: Record<string, unknown>;
         try {
-          const parsed: unknown = JSON.parse(String(event.data));
+          const parsed: unknown = JSON.parse(event.data);
           if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { ws.close(); return; }
           payload = parsed as Record<string, unknown>;
         } catch { ws.close(); return; }
-        if (payload.event === 'chat.ready') {
-          if (readyTimer !== undefined) clearTimeout(readyTimer);
-          readyTimer = undefined;
-          attempts = 0;
-          state('ready');
-          onEvent?.(payload);
-          invalidate();
-        } else if (payload.event === 'chat.resync_required' || payload.event === 'chat.message.created' || payload.event === 'chat.message.updated') {
-          onEvent?.(payload);
+        // V2 marks the connection up and resets backoff for every decoded map.
+        attempts = 0;
+        state('ready');
+        onEvent?.(payload);
+        if (payload.event === 'chat.ready' || payload.event === 'chat.resync_required' ||
+            payload.event === 'chat.message.created' || payload.event === 'chat.message.updated') {
           invalidate();
         }
       };
@@ -100,7 +96,6 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
     } catch {
       if (!stopped && foreground && current === generation) { state('unavailable'); reconnect(); }
     } finally {
-      clearTimeout(timeout);
       if (ticketRequest === controller) ticketRequest = null;
     }
   };
@@ -125,6 +120,14 @@ export function subscribeChatLive(session: Session, onInvalidate: () => void, on
     if (!next) pause();
     else { attempts = 0; void connect(); }
   });
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    pause();
+    subscription.remove();
+    unregister();
+  };
+  const unregister = registerSessionResetHook(async () => stop());
   void connect();
-  return () => { stopped = true; pause(); subscription.remove(); };
+  return stop;
 }

@@ -9,7 +9,7 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a, b)
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function transport(refresh = async () => false, join = async () => false) {
   const auth = { activeSessionToken: s => s.token, refreshSession: refresh, joinRefreshForGuardedRead: join }, m = new Module(filename, module);
-  m.require = id => id === './auth' ? auth : require(id);
+  m.require = id => id === './auth' ? auth : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return m.exports;
 }

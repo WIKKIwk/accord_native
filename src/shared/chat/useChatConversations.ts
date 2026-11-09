@@ -7,20 +7,14 @@ import { subscribeChatLive } from '../../chatLive';
 import type { ChatConversation } from '../../chatModel';
 import { useChatMetadata } from '../../components/ChatMetadata';
 import { existingChatUnreadRuntimeFor, subscribeChatUnreadRuntimeChanges } from './chatUnreadRuntime';
-import { useChatLivePolicy } from './ChatLivePolicy';
-import { SECURE_CHAT_UNAVAILABLE } from './chatSecureSocket';
-import { subscribeSecureChatLive } from './secureChatLive';
-import { secureChatUnavailableReason } from './chatSecureReadiness';
 
 const noUnreadRuntime = () => null;
 
 export function useChatConversations(session: Session) {
-  const policy = useChatLivePolicy();
-  const unreadRuntime = useSyncExternalStore(subscribeChatUnreadRuntimeChanges, () => existingChatUnreadRuntimeFor(session, policy), noUnreadRuntime);
+  const unreadRuntime = useSyncExternalStore(subscribeChatUnreadRuntimeChanges, () => existingChatUnreadRuntimeFor(session), noUnreadRuntime);
   const { remember } = useChatMetadata();
   const [items, setItems] = useState<ChatConversation[] | null>(null);
   const [error, setError] = useState('');
-  const [liveError, setLiveError] = useState('');
   const [query, setQuery] = useState('');
   const [avatarToken, setAvatarToken] = useState(() => activeSessionToken(session));
   const focused = useRef(false);
@@ -49,28 +43,10 @@ export function useChatConversations(session: Session) {
   }, [remember, session]);
 
   useFocusEffect(useCallback(() => {
-    const unavailable = policy === 'secure' ? secureChatUnavailableReason() : null;
-    if (unavailable) {
-      focused.current = false;
-      setLiveError(unavailable);
-      return () => { focused.current = false; };
-    }
     focused.current = true;
     void refresh();
     const onInvalidate = () => { void refresh(); };
-    let stopLive = () => {};
-    if (policy === 'secure') setLiveError('');
-    if (unreadRuntime) stopLive = unreadRuntime.subscribeInvalidation(onInvalidate);
-    else if (policy === 'secure') {
-      try {
-        stopLive = subscribeSecureChatLive(session, onInvalidate, undefined, state => {
-          if (state === 'ready') setLiveError('');
-          else if (state === 'unavailable') setLiveError('Chat aloqasi ochilmadi.');
-        });
-      } catch (reason) {
-        setLiveError(reason instanceof Error && reason.message === SECURE_CHAT_UNAVAILABLE ? reason.message : 'Chat aloqasi ochilmadi.');
-      }
-    } else stopLive = subscribeChatLive(session, onInvalidate);
+    const stopLive = unreadRuntime ? unreadRuntime.subscribeInvalidation(onInvalidate) : subscribeChatLive(session, onInvalidate);
     const timer = setInterval(() => { void refresh(); }, 30000);
     const appState = AppState.addEventListener('change', state => {
       if (state === 'active') void refresh();
@@ -85,7 +61,7 @@ export function useChatConversations(session: Session) {
       appState.remove();
       stopLive();
     };
-  }, [policy, refresh, session, unreadRuntime]));
+  }, [refresh, session, unreadRuntime]));
 
-  return { items, error: (policy === 'secure' && liveError) || error, query, setQuery, avatarToken, refresh };
+  return { items, error, query, setQuery, avatarToken, refresh };
 }

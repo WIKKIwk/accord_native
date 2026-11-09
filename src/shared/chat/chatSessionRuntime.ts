@@ -12,8 +12,6 @@ type RuntimeDependencies = {
   loadConversations: () => Promise<ChatConversation[]>;
   saveConversations: (items: readonly ChatConversation[]) => Promise<void>;
   fetchConversations: () => Promise<ChatPage>;
-  onConversationsLoaded?: () => void;
-  onConversationsFailed?: () => void;
   loadCursor: () => Promise<number>;
   saveCursor: (cursor: number) => Promise<void>;
   loadSync: (cursor: number) => Promise<SyncPage>;
@@ -123,9 +121,8 @@ export class ChatSessionRuntime {
         const page = await this.deps.fetchConversations();
         if (!this.current()) return;
         this.unread.replaceConversations(page.items);
-        this.deps.onConversationsLoaded?.();
         try { await this.deps.saveConversations(page.items); } catch { /* Keep the in-memory result. */ }
-      } catch { if (this.current()) this.deps.onConversationsFailed?.(); /* Keep the last cached or successfully loaded list. */ }
+      } catch { /* Keep the last cached or successfully loaded list. */ }
     } while (this.refreshRequested && this.current());
   }
 

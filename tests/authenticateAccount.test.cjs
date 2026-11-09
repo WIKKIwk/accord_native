@@ -7,7 +7,7 @@ const ts = require('typescript');
 function load(name, mocks = {}) {
   const filename = path.resolve(__dirname, `../src/${name}.ts`), loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
-  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./') ? load(id.slice(2), mocks) : require(id);
+  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./') ? load(id.slice(2), mocks) : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return loaded.exports;
 }
@@ -17,6 +17,8 @@ test('authenticate account leaves supplied credentials intact and parses profile
   try {
     const result = await load('authenticateAccount', { './authorizedFetch': {} }).authenticateAccount('example.test', ' +998 ', ' 123 ');
     assert.equal(request.url, 'https://example.test/v1/mobile/auth/login');
+    assert.equal(request.credentials, 'omit');
+    assert.equal(request.redirect, 'manual');
     assert.deepEqual(JSON.parse(request.body), { phone: ' +998 ', code: ' 123 ' });
     assert.equal(result.token, 'token'); assert.deepEqual(result.profile.assigned_apparatus, ['apparatus:default:press']);
     assert.deepEqual(result.profile.assigned_warehouses, ['W']); assert.equal(result.werka_home, null);
