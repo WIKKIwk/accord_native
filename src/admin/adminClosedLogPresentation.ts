@@ -8,6 +8,7 @@ type Log = ReturnType<typeof productionOrderLogFromJson>;
 type Order = ReturnType<typeof closedProductionOrderFromJson>;
 type Batch = ReturnType<typeof progressBatchFromJson>;
 type Apparatus = { id: string; name: string };
+export type ClosedLogIcon = 'freeze' | 'transfer' | 'start' | 'pause' | 'detach_roll' | 'merge' | 'resume' | 'roll_complete' | 'complete' | 'close_early' | 'history';
 export type ClosedLogField = { label: string; value: string; selectable?: true };
 export type ClosedLogBatch = { title: string; status: string; fields: ClosedLogField[]; metrics: string[]; note?: ClosedLogField;
   qr?: { payload: string; label: string; copyLabel: string; copiedText: string } };
@@ -57,7 +58,7 @@ export function adminClosedLogState(log: Log): string {
 export function adminClosedLogRow(log: Log, catalog: readonly Apparatus[]) {
   const apparatus = adminClosedLogApparatus(log, catalog), reason = clean(log.transfer?.reason ?? '');
   const note = log.action === 'close_early' ? clean(log.issue_note) : '';
-  const icons: Record<string, string> = { start: 'start', pause: 'pause', detach_roll: 'detach_roll', merge: 'merge', resume: 'resume',
+  const icons: Record<string, ClosedLogIcon> = { start: 'start', pause: 'pause', detach_roll: 'detach_roll', merge: 'merge', resume: 'resume',
     roll_complete: 'roll_complete', complete: 'complete', close_early: 'close_early' }, action = clean(log.action);
   const icon = log.freeze ? 'freeze' : log.transfer ? 'transfer' : Object.hasOwn(icons, action) ? icons[action] : 'history';
   return { icon, title: [adminClosedLogTitle(log), apparatus].filter(Boolean).join(' • '),

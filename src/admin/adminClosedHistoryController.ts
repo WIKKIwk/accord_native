@@ -1,8 +1,9 @@
 import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
 import { MobileApiException } from '../shared/mobileApiException';
 import type { closedProductionOrderFromJson } from '../workerClosedOrders';
+import { adminWorkMapClosedTime } from './adminWorkMapClosedModel';
 
-export type AdminClosedHistoryTicket = { id: string; historyVersion: string };
+export type AdminClosedHistoryTicket = { id: string; historyVersion: string; windowGeneration: number };
 type Detail = ReturnType<typeof closedProductionOrderFromJson>;
 export type AdminClosedHistoryState = { ticket: AdminClosedHistoryTicket; expanded: boolean; loading: boolean; detail: Detail | null; error: string | null };
 type Dependencies = { isCurrent: () => boolean; rowIsCurrent: (ticket: AdminClosedHistoryTicket) => boolean;
@@ -39,7 +40,7 @@ export class AdminClosedHistoryController {
   }
   configure(ticket: AdminClosedHistoryTicket) {
     if (this.disposed) return;
-    if (ticket.id === this.state.ticket.id && ticket.historyVersion === this.state.ticket.historyVersion) {
+    if (ticket.id === this.state.ticket.id && ticket.historyVersion === this.state.ticket.historyVersion && ticket.windowGeneration === this.state.ticket.windowGeneration) {
       if (this.state.expanded && !this.state.error) this.load();
       return;
     }
@@ -67,8 +68,15 @@ export class AdminClosedHistoryController {
     void request.then(detail => {
       if (!this.current(generation, ticket)) return;
       // Do not put another order's response into this row; V2's endpoint can omit history_version.
-      if (detail.order_id !== ticket.id) this.publish({ detail: null, error: 'Tarix yuklanmadi' });
-      else this.publish({ detail, error: null });
+      try {
+        if (detail.order_id !== ticket.id) throw new Error('Closed history identity mismatch');
+        adminWorkMapClosedTime(detail.completed_at_unix ?? 0);
+        for (const log of detail.logs) {
+          adminWorkMapClosedTime(log.created_at_unix ?? 0);
+          if (log.freeze) { adminWorkMapClosedTime(log.freeze.requested_at_unix ?? 0); adminWorkMapClosedTime(log.freeze.transitioned_at_unix ?? 0); }
+        }
+      } catch { this.publish({ detail: null, error: 'Tarix yuklanmadi' }); return; }
+      this.publish({ detail, error: null });
     }, error => {
       if (this.current(generation, ticket)) this.publish({ detail: null, error: error instanceof MobileApiException ? error.message : 'Tarix yuklanmadi' });
     }).finally(() => {

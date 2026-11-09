@@ -1,6 +1,7 @@
 import { adminWorkMapAuditPages, type AdminWorkMapAuditReport } from './adminWorkMapAuditModel';
 import { adminWorkMapClosedPages, type AdminWorkMapClosedOrder } from './adminWorkMapClosedModel';
 import { dartTrim } from './dartJsonString';
+import type { AdminClosedHistoryTicket } from './adminClosedHistoryController';
 
 export type AdminWorkMapModule = 'sequence' | 'orders' | 'move' | 'closed' | 'audit';
 export type AdminWorkMapRequest = { view: AdminWorkMapModule; apparatus?: string; target?: string };
@@ -111,6 +112,15 @@ export class AdminWorkMapController {
   }
   detailIsCurrent(ticket: AdminWorkMapDetailTicket): boolean {
     return this.current(ticket.generation) && this.state.rows.some(item => item.id === ticket.id && item.kind === ticket.kind);
+  }
+  /** Membership authority only; the history owner must separately supply the original raw account witness. */
+  closedHistoryTicket(order: Pick<AdminWorkMapClosedOrder, 'order_id' | 'history_version'>): AdminClosedHistoryTicket | null {
+    if (this.disposed || this.request?.view !== 'closed' || this.state.loading || !this.state.closed.some(row => row.order_id === order.order_id && row.history_version === order.history_version)) return null;
+    return { id: order.order_id, historyVersion: order.history_version, windowGeneration: this.generation };
+  }
+  closedHistoryIsCurrent(ticket: AdminClosedHistoryTicket): boolean {
+    return !this.disposed && this.request?.view === 'closed' && !this.state.loading && ticket.windowGeneration === this.generation &&
+      this.state.closed.some(row => row.order_id === ticket.id && row.history_version === ticket.historyVersion);
   }
   configure(request: AdminWorkMapRequest | null) {
     if (this.disposed || !this.deps.isCurrent()) return;

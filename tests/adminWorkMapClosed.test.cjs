@@ -58,6 +58,30 @@ test('Closed window pages and server search use view=closed without giving live 
   assert.equal(c.detailTicket({ id: 'zakaz-1', kind: 'order' }), null);
   c.setQuery('  Ana  '); await c.reload(); assert.equal(requests.at(-1).search, 'Ana'); c.dispose();
 });
+test('Closed membership tickets bind ID, history version and the exact window generation', async () => {
+  const c = new Controller({ isCurrent: () => true, request: { view: 'closed' }, read: async request => page(request.cursor ? 1 : 0) });
+  c.start(); await tick(); const first = c.getSnapshot().closed[0], ticket = c.closedHistoryTicket(first);
+  assert.equal(ticket.id, first.order_id); assert.equal(ticket.historyVersion, first.history_version); assert.equal(c.closedHistoryIsCurrent(ticket), true);
+  assert.equal(c.closedHistoryTicket({ ...first, history_version: 'other' }), null);
+  await c.next(); assert.equal(c.closedHistoryIsCurrent(ticket), false);
+  const later = c.closedHistoryTicket(c.getSnapshot().closed[0]); assert.notEqual(later.windowGeneration, ticket.windowGeneration); assert.equal(c.closedHistoryIsCurrent(later), true);
+  await c.reload(); assert.equal(c.closedHistoryIsCurrent(later), false); c.configure({ view: 'orders' });
+  assert.equal(c.closedHistoryTicket(first), null); c.dispose();
+});
+test('Closed history owner retires a pending read as soon as the underlying window changes', async () => {
+  const profile = load('shared/profileSessionGuard.ts'), mobile = load('shared/mobileApiException.ts');
+  const History = load('admin/adminClosedHistoryController.ts', { '../shared/profileSessionGuard': profile, '../shared/mobileApiException': mobile,
+    './adminWorkMapClosedModel': closed }).AdminClosedHistoryController;
+  const c = new Controller({ isCurrent: () => true, request: { view: 'closed' }, read: async request => page(request.cursor ? 1 : 0) });
+  c.start(); await tick(); const ticket = c.closedHistoryTicket(c.getSnapshot().closed[0]), reads = [];
+  const h = new History(ticket, { isCurrent: () => true, rowIsCurrent: value => c.closedHistoryIsCurrent(value),
+    read: (id, witness) => new Promise(resolve => reads.push({ id, witness, resolve })) });
+  h.toggle(); assert.equal(reads[0].witness(), true); const append = c.next(); assert.equal(reads[0].witness(), false);
+  assert.equal(c.closedHistoryTicket(c.getSnapshot().closed[0]), null);
+  assert.equal(h.getSnapshot().expanded, false); await append; const newer = c.closedHistoryTicket(c.getSnapshot().closed[0]); h.configure(newer);
+  reads[0].resolve({ order_id: ticket.id, logs: [] }); await tick(); assert.equal(reads.length, 2);
+  reads[1].resolve({ order_id: newer.id, logs: [] }); await tick(); assert.equal(h.getSnapshot().detail.order_id, newer.id); h.dispose(); c.dispose();
+});
 test('stale responses, changed page versions and malformed dates cannot replace Closed summaries', async () => {
   let calls = 0; const c = new Controller({ isCurrent: () => true, request: { view: 'closed' }, read: async () => {
     if (++calls === 1) return page(); if (calls === 2) return page(1, { version: 'changed' }); return page(0, { closed_orders: [order({ completed_at_unix: Infinity })] });
