@@ -10,7 +10,7 @@ import { useRezkaLocale } from './useRezkaShell';
 
 /** Passive, unconnected content; it intentionally has no reprint or selection actions. */
 export function RezkaPaddonWipReadOnly({ snapshot, binding, index }: RezkaPaddonWipReadOnlyProps) {
-  const locale = useRezkaLocale(), allowed = useRezkaPaddonDetailAccess(snapshot);
+  const locale = useRezkaLocale(), allowed = useRezkaPaddonDetailAccess(snapshot, binding);
   if (!allowed || !isRezkaPaddonDetailBinding(binding, snapshot) || !Number.isInteger(index) || index < 0 || index >= binding.data.items.length) return null;
   let content: ReturnType<typeof rezkaPaddonWipContent>;
   try { content = rezkaPaddonWipContent(binding.data.items[index], binding.catalog, snapshot.session.profile, key => productionText(key, locale)); }

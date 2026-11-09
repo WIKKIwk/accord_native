@@ -28,7 +28,7 @@ for (const platform of ['ios', 'android']) {
       './rezkaPaddonWipModel': { rezkaPaddonWipContent: (value, machines, viewer, text) => {
         if (overflow) throw new RangeError(); calls.push([value, machines, viewer, text('key')]); return content; } },
       './rezkaPaddonDetailRead': { isRezkaPaddonDetailBinding: (value, owner) => issued && value === binding && value.owner === owner },
-      './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: value => value === snapshot && allowed },
+      './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: (value, supplied) => value === snapshot && supplied === binding && allowed },
       './useRezkaShell': { useRezkaLocale: () => 'uz' } });
     const render = () => RezkaPaddonWipReadOnly({ snapshot, binding, index });
     const view = render(); assert.deepEqual(calls[0], [batch, catalog, snapshot.session.profile, 'uz:key']);

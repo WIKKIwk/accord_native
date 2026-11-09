@@ -11,7 +11,7 @@ import { useRezkaLocale } from './useRezkaShell';
 
 /** Unconnected assigned-WIP section; no add, remove, reprint or filtering controls are exposed. */
 export function RezkaPaddonWipSection({ snapshot, binding }: RezkaPaddonWipSectionProps) {
-  const locale = useRezkaLocale(), allowed = useRezkaPaddonDetailAccess(snapshot);
+  const locale = useRezkaLocale(), allowed = useRezkaPaddonDetailAccess(snapshot, binding);
   if (!allowed || !isRezkaPaddonDetailBinding(binding, snapshot)) return null;
   const section = rezkaPaddonWipSection(binding.data, key => productionText(key, locale),
     count => localizedMethod('productionCount', locale, { count }));

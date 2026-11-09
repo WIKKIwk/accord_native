@@ -41,7 +41,7 @@ for (const platform of ['ios', 'android']) {
         localizedMethod: (key, locale, values) => `${locale}:${key}:${values.count}` },
       './RezkaPaddonWipReadOnly': { RezkaPaddonWipReadOnly: 'WipCard' }, './rezkaPaddonWipSectionModel': model,
       './rezkaPaddonDetailRead': { isRezkaPaddonDetailBinding: (value, owner) => value === binding && value.owner === owner },
-      './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: value => value === snapshot && allowed },
+      './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: (value, supplied) => value === snapshot && supplied === binding && allowed },
       './useRezkaShell': { useRezkaLocale: () => 'uz' } });
     const render = () => RezkaPaddonWipSection({ snapshot, binding }), page = render();
     assert.deepEqual(nodes(page, n => n.type === 'Text').map(n => n.props.children),

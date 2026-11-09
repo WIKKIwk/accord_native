@@ -9,7 +9,7 @@ import { useRezkaLocale } from './useRezkaShell';
 
 /** Unconnected display fragment; only a guarded detail binding is accepted. */
 export function RezkaPaddonDetailHeader({ snapshot, binding }: RezkaPaddonDetailHeaderProps) {
-  const locale = useRezkaLocale(), colors = useMaterialColors(), allowed = useRezkaPaddonDetailAccess(snapshot);
+  const locale = useRezkaLocale(), colors = useMaterialColors(), allowed = useRezkaPaddonDetailAccess(snapshot, binding);
   if (!allowed || !isRezkaPaddonDetailBinding(binding, snapshot)) return null;
   let content: ReturnType<typeof rezkaPaddonDetailHeader>;
   try {

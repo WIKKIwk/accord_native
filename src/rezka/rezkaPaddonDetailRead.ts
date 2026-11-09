@@ -2,20 +2,31 @@ import { adminApparatus, type AdminApparatus } from '../apparatusApi';
 import { adminPaddonDetail } from '../paddonManagementApi';
 import type { paddonSnapshotFromJson } from '../paddonModels';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { rezkaPaddonDetailOwnerInput, subscribeRezkaPaddonDetailOwner, type RezkaPaddonDetailOwner } from './rezkaPaddonDetailLifetime';
 import { assignedPaddonApparatus } from './rezkaPaddonScope';
 import { guardedRezkaRequest, isRezkaSessionCurrent, RezkaScopeChanged, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 
+export { createRezkaPaddonDetailOwner } from './rezkaPaddonDetailLifetime';
+
 type Detail = ReturnType<typeof paddonSnapshotFromJson>;
 export type RezkaPaddonDetailBinding = Readonly<{ owner: RezkaSessionSnapshot; data: Detail; catalog: readonly AdminApparatus[] }>;
-const issued = new WeakSet<object>();
+const issued = new WeakMap<object, RezkaPaddonDetailOwner>();
 
 /** Internal rejection; a future host must map this to V2's ordinary load-failure state. */
 export class RezkaPaddonDetailUnavailable extends Error {}
 
 /** Only data returned by this adapter can be used by the prepared passive fragments. */
 export function isRezkaPaddonDetailBinding(value: unknown, owner: RezkaSessionSnapshot): value is RezkaPaddonDetailBinding {
-  return !!value && typeof value === 'object' && issued.has(value) && (value as RezkaPaddonDetailBinding).owner === owner &&
+  if (!value || typeof value !== 'object') return false;
+  const view = issued.get(value), input = view && rezkaPaddonDetailOwnerInput(view);
+  return !!input && input.snapshot === owner && (value as RezkaPaddonDetailBinding).owner === owner &&
     isRezkaSessionCurrent(owner, 'master') && canOpenRoute(owner.session, appRoutes.apparatusPaddonDetail);
+}
+
+/** Retire already-mounted fragments when their original view closes. */
+export function subscribeRezkaPaddonDetailBinding(value: unknown, listener: () => void): () => void {
+  const view = value && typeof value === 'object' ? issued.get(value) : undefined;
+  return view ? subscribeRezkaPaddonDetailOwner(view, listener) : () => {};
 }
 
 // Fresh JSON-decoded API results are private to this read. Freeze their full
@@ -34,9 +45,11 @@ function freezeGraph<T>(value: T): T {
 }
 
 /** Unconnected read-only adapter. It never opens a route or invokes a Paddon mutation. */
-export async function readRezkaPaddonDetail(snapshot: RezkaSessionSnapshot, apparatusId: string, code: string): Promise<RezkaPaddonDetailBinding> {
-  const apparatus = apparatusId.trim(), normalizedCode = code.trim();
-  const current = () => isRezkaSessionCurrent(snapshot, 'master') &&
+export async function readRezkaPaddonDetail(view: RezkaPaddonDetailOwner): Promise<RezkaPaddonDetailBinding> {
+  const input = rezkaPaddonDetailOwnerInput(view);
+  if (!input) throw new RezkaScopeChanged(false);
+  const { snapshot, apparatusId: apparatus, code: normalizedCode } = input;
+  const current = () => rezkaPaddonDetailOwnerInput(view) === input && isRezkaSessionCurrent(snapshot, 'master') &&
     canOpenRoute(snapshot.session, appRoutes.apparatusPaddonDetail) && !!apparatus &&
     snapshot.session.assigned_apparatus.some(id => id.trim() === apparatus);
   if (!apparatus || !normalizedCode) throw new RezkaPaddonDetailUnavailable();
@@ -62,5 +75,5 @@ export async function readRezkaPaddonDetail(snapshot: RezkaSessionSnapshot, appa
     throw new RezkaPaddonDetailUnavailable();
   freezeGraph(data); freezeGraph(catalog);
   if (!current()) throw new RezkaScopeChanged(false);
-  const binding = Object.freeze({ owner: snapshot, data, catalog }); issued.add(binding); return binding;
+  const binding = Object.freeze({ owner: snapshot, data, catalog }); issued.set(binding, view); return binding;
 }

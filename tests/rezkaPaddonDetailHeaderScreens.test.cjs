@@ -29,7 +29,7 @@ for (const platform of ['ios', 'android']) {
       './rezkaPaddonDetailModel': { rezkaPaddonDetailHeader: (value, machines, text, unspecified, count) => {
         if (overflow) throw new RangeError(); calls.push([value, machines, text('title'), unspecified, count(3)]); return content; } },
       './rezkaPaddonDetailRead': { isRezkaPaddonDetailBinding: (value, owner) => issued && value === binding && owner === snapshot },
-      './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: value => value === snapshot && allowed },
+      './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: (value, supplied) => value === snapshot && supplied === binding && allowed },
       './useRezkaShell': { useRezkaLocale: () => 'uz' } });
     const render = () => RezkaPaddonDetailHeader({ snapshot, binding });
     const view = render(); assert.deepEqual(calls[0], [data, catalog, 'uz:title', 'uz:wip.unspecified', 'uz:productionCount:3']);

@@ -1,10 +1,11 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { registerSessionResetHook, subscribeSessionWitness } from '../auth';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { isRezkaPaddonDetailBinding, subscribeRezkaPaddonDetailBinding, type RezkaPaddonDetailBinding } from './rezkaPaddonDetailRead';
 import { isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 
 /** A reset permanently retires this particular captured witness, even if the session later appears unchanged. */
-export function useRezkaPaddonDetailAccess(snapshot: RezkaSessionSnapshot): boolean {
+export function useRezkaPaddonDetailAccess(snapshot: RezkaSessionSnapshot, binding: RezkaPaddonDetailBinding): boolean {
   const retired = useRef(new WeakSet<RezkaSessionSnapshot>());
   const current = useCallback(() => isRezkaSessionCurrent(snapshot, 'master') &&
     canOpenRoute(snapshot.session, appRoutes.apparatusPaddonDetail), [snapshot]);
@@ -18,9 +19,11 @@ export function useRezkaPaddonDetailAccess(snapshot: RezkaSessionSnapshot): bool
     const invalidateIfStale = () => { if (!current()) { retired.current.add(snapshot); notify(); } };
     const unwatch = subscribeSessionWitness(invalidateIfStale);
     const unregister = registerSessionResetHook(async () => { retired.current.add(snapshot); notify(); });
+    const unbind = subscribeRezkaPaddonDetailBinding(binding, notify);
     invalidateIfStale();
-    return () => { unwatch(); unregister(); };
-  }, [snapshot, current]);
-  const getSnapshot = useCallback(() => !retired.current.has(snapshot) && current(), [snapshot, current]);
+    return () => { unwatch(); unregister(); unbind(); };
+  }, [snapshot, binding, current]);
+  const getSnapshot = useCallback(() => !retired.current.has(snapshot) && current() &&
+    isRezkaPaddonDetailBinding(binding, snapshot), [snapshot, binding, current]);
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
