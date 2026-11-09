@@ -20,11 +20,13 @@ export class RezkaScopeChanged extends Error {
 export function isRezkaSessionCurrent(snapshot: RezkaSessionSnapshot | null | undefined, access: RezkaAccess): boolean {
   if (!snapshot || retiredSnapshots.has(snapshot)) return false;
   const { session, epoch, scope } = snapshot;
+  // Do not expose the new split deep link to existing Worker or Preparation sessions.
+  const protectedRole = session.profile.role === 'aparatchi' || session.profile.role === 'tayyorlov_masteri';
   const current = epoch !== null && !!activeSessionToken(session) && session.token !== 'test-mode-token' && snapshot.witness?.session === session &&
     isSessionWitnessCurrent(snapshot.witness) && activeSessionEpoch(session) === epoch && sessionReadScope(session) === scope &&
     (access === 'master'
       ? session.profile.role === 'rezka_master' && session.capabilities.includes('rezka.master.access') && canOpenRoute(session, appRoutes.adminWorkerSettings)
-      : canOpenRoute(session, appRoutes.rezkaSplit));
+      : !protectedRole && canOpenRoute(session, appRoutes.rezkaSplit));
   if (!current) retiredSnapshots.add(snapshot);
   return current;
 }

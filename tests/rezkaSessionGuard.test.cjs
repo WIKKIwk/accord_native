@@ -210,3 +210,16 @@ test('shared apparatus read rejects a 401 retry after witness or scope changes',
     assert.equal(sends, 1);
   } finally { global.fetch = original; }
 });
+
+test('split deep links reject protected roles even with overlapping capability', async () => {
+  for (const role of ['aparatchi', 'tayyorlov_masteri']) {
+    const s = session(role, ['rezka.split.manage']), t = setup(s);
+    assert.equal(t.guard.isRezkaSessionCurrent(t.guard.captureRezkaSession(s), 'split'), false, role);
+    let sends = 0;
+    await assert.rejects(t.guard.guardedRezkaRequest(s, 'split', t.guard.captureRezkaSession(s), false,
+      async beforeSend => { beforeSend(); sends++; }), error => error.name === 'RezkaScopeChanged');
+    assert.equal(sends, 0, role);
+  }
+  const admin = session('admin', ['rezka.split.manage']), t = setup(admin);
+  assert.equal(t.guard.isRezkaSessionCurrent(t.guard.captureRezkaSession(admin), 'split'), true);
+});
