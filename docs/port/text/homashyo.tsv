@@ -1,4 +1,12 @@
 # platform	text	reason
+both	Bad state: ${reason.message}	Dart StateError.toString() emits this prefix; raw_material_split_screen.dart:197 throws StateError and :307 displays e.toString(). The Dart SDK check and rawSplitModel.ts:10 preserve that output.
+both	fence handle accepts no input	rawSplitJournalPrototype.ts:1 describes this as an unconnected experiment; homashyoJournalPrototype.test.cjs:81 verifies no other src file imports it.
+both	invalid scope	rawSplitJournalPrototype.ts:1 describes this as an unconnected experiment; homashyoJournalPrototype.test.cjs:81 verifies no other src file imports it.
+both	invalid public fence handle	rawSplitJournalPrototype.ts:1 describes this as an unconnected experiment; homashyoJournalPrototype.test.cjs:81 verifies no other src file imports it.
+both	independent recovery authority unavailable	rawSplitJournalPrototype.ts:1 describes this as an unconnected experiment; homashyoJournalPrototype.test.cjs:81 verifies no other src file imports it.
+both	dispatch provenance unavailable	rawSplitJournalPrototype.ts:1 describes this as an unconnected experiment; homashyoJournalPrototype.test.cjs:81 verifies no other src file imports it.
+both	outcome authority unavailable	rawSplitJournalPrototype.ts:1 describes this as an unconnected experiment; homashyoJournalPrototype.test.cjs:81 verifies no other src file imports it.
+both	acknowledgment authority unavailable	rawSplitJournalPrototype.ts:1 describes this as an unconnected experiment; homashyoJournalPrototype.test.cjs:81 verifies no other src file imports it.
 both	Mac print bridge failed	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
 both	Mac print bridge returned an invalid response	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
 both	Mac USB printer not found	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
