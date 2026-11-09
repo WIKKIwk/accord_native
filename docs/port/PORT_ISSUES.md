@@ -40,6 +40,8 @@ Bu qatorlar mavjud holat fayllaridagi ochiq ishlarni bir joydan kuzatish uchun k
 
 | PORT-021 | Qolip storage retry intent | Retry ID retention port qilindi, ammo Expo secure ID async bo‘lgani uchun har bir caller `await keyFor`dan so‘ng original rol umrini qayta tekshirishi kerak. Native entropy/clock xatosidan keyin failed promise chiqariladi; V2 synchronous xato yo‘li oldingi `_id`ni qoldirishi mumkin. Arbitrary JSON double/numeric-key tafovutlari va real sent-write settlement tasdiqlanmagan. | `qolipStorageIntent.ts`; `qolip_storage_test.dart:349`; 8 focused test | Helper tayyor; action caller’lari ochiq |
 
+| PORT-022 | Qolip storage/archive | Paddon/arxiv read/filter/pagination owner’i va original-run GET guard’lari port qilindi. Native list shell/caller, detail/action oqimlari va telefon scroll/date/filter sinovi hali ochiq. Guarded GET mustaqil boshlangan refresh’ga qo‘shilishi mumkin, lekin V2 kabi refresh’ni o‘zi boshlamaydi. Paddons search debounce ichida oldingi read natijasini qabul qilish V2 xulqi sifatida saqlandi; akkaunt almashsa data darhol yopiladi. | `qolipStorageReadState.ts`, `qolipStorageReadRuntime.ts`, `qolipStorageReadApi.test.cjs` | Read owner tayyor; qolgan storage ishlari ochiq |
+
 ## V2’dan meros bo‘lgan va alohida tuzatiladigan holatlar
 
 Quyidagilar Chat manba auditi vaqtida qayd etilgan V2 xulqlari. Ular yangi V4 regressiyasi deb belgilanmagan; tuzatishdan oldin tegishli holat takrorlanadi va alohida o‘zgarish qilinadi.
@@ -98,4 +100,3 @@ Bu paket avvalgi `c07156e` holatidan davom etdi. Quyidagi 10 branch bittalab jor
 - Clock moduli iOS `iphoneos` uchun unsigned build va Android debug AAR assembly’dan o‘tdi; Android tekshiruvi command-only SDK 36 / NDK 28.2 bilan bo‘ldi. C va Swift clock core’lari host’da kompilyatsiya qilinib tekshirildi. Bu butun app yoki telefon sinovi emas.
 - Ledger: 1,038 source / 88 test tag resolve, avvalgi 11 endpoint warning, V2 drift 0. Text gate hali ochiq: iOS 80 missing / 55 extra; Android 80 / 64, global-only scope mosliklari 376 / 381. Yangi matn istisnosi yo‘q.
 - Native development binary qayta build qilinishi va telefon sinovi kerak. V2 checkout o‘zgarmadi; Flutter/Dart, live backend, simulator yoki printer ishlatilmadi. Push qilinmaydi.
-

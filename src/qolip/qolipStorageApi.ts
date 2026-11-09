@@ -3,7 +3,7 @@ import { authorizedFetch } from '../authorizedFetch';
 import { sessionReadScope } from '../sessionReadScope';
 import { MobileApiException } from '../shared/mobileApiException';
 import { qolipCatalogRuntimeFor } from '../shared/qolipCatalogRuntime';
-import { dartQuery, dartString, jsonObject, optionalInteger, trimDart } from './qolipApiCommon';
+import { assertQolipReadCurrent, dartQuery, dartString, jsonObject, optionalInteger, trimDart, type QolipReadGuard } from './qolipApiCommon';
 
 type JsonObject = Record<string, unknown>;
 /** @v2 QolipStoragePage */
@@ -98,14 +98,17 @@ function scopeGuard(session: Session, scope: string) {
   };
 }
 
-export async function storageRequest(session: Session, path: string, query: Record<string, string> = {}, body?: JsonObject): Promise<JsonObject> {
-  const scope = sessionReadScope(session), guard = scopeGuard(session, scope), suffix = dartQuery(query);
+export async function storageRequest(session: Session, path: string, query: Record<string, string> = {}, body?: JsonObject,
+  readGuard?: QolipReadGuard): Promise<JsonObject> {
+  assertQolipReadCurrent(readGuard);
+  const scope = sessionReadScope(session), requireScope = scopeGuard(session, scope), suffix = dartQuery(query);
+  const guard = () => { requireScope(); assertQolipReadCurrent(readGuard); };
   const target = `/v1/mobile/qolip/${path}${suffix ? `?${suffix}` : ''}`;
   guard();
   if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
   const response = await authorizedFetch(session, target, body === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'text/plain; charset=utf-8' }, body: JSON.stringify(body),
-  }, guard);
+  }, guard, 10_000, readGuard === undefined ? undefined : { readWitness: () => { guard(); return true; } });
   guard();
   const raw = await response.text();
   guard();
@@ -126,6 +129,11 @@ export async function storageRequest(session: Session, path: string, query: Reco
   return data;
 }
 
+async function storageRead<T>(guard: QolipReadGuard | undefined, read: () => Promise<T>): Promise<T> {
+  try { assertQolipReadCurrent(guard); const result = await read(); assertQolipReadCurrent(guard); return result; }
+  catch (error) { assertQolipReadCurrent(guard); throw error; }
+}
+
 function page<T>(data: JsonObject, key: string, decode: (value: unknown) => T): QolipStoragePage<T> {
   const items = data[key];
   if (!Array.isArray(items)) throw new TypeError('Expected storage page items');
@@ -133,22 +141,28 @@ function page<T>(data: JsonObject, key: string, decode: (value: unknown) => T): 
 }
 
 /** @v2 qolipPaddons */
-export async function qolipPaddons(session: Session, input: { archived?: boolean; query?: string; offset?: number } = {}): Promise<QolipStoragePage<QolipPaddon>> {
-  const data = await storageRequest(session, 'paddons', { archived: String(input.archived ?? false), q: input.query ?? '',
-    limit: '100', offset: String(input.offset ?? 0) });
-  return page(data, 'paddons', qolipPaddonFromJson);
+export async function qolipPaddons(session: Session, input: { archived?: boolean; query?: string; offset?: number } = {},
+  guard?: QolipReadGuard): Promise<QolipStoragePage<QolipPaddon>> {
+  return storageRead(guard, async () => {
+    const data = await storageRequest(session, 'paddons', { archived: String(input.archived ?? false), q: input.query ?? '',
+      limit: '100', offset: String(input.offset ?? 0) }, undefined, guard);
+    return page(data, 'paddons', qolipPaddonFromJson);
+  });
 }
 
 /** @v2 qolipPaddonDetail */
-export async function qolipPaddonDetail(session: Session, code: string): Promise<QolipPaddonDetail> {
-  return qolipPaddonDetailFromJson(await storageRequest(session, 'paddons/detail', { code }));
+export async function qolipPaddonDetail(session: Session, code: string, guard?: QolipReadGuard): Promise<QolipPaddonDetail> {
+  return storageRead(guard, async () => qolipPaddonDetailFromJson(await storageRequest(session, 'paddons/detail', { code }, undefined, guard)));
 }
 
 /** @v2 qolipStorageMolds */
-export async function qolipStorageMolds(session: Session, input: { query?: string; code?: string; offset?: number } = {}): Promise<QolipStoragePage<QolipStorageMold>> {
-  const data = await storageRequest(session, 'paddons/molds', { ...(input.code ? { code: input.code } : {}),
-    q: input.query ?? '', limit: '100', offset: String(input.offset ?? 0) });
-  return page(data, 'molds', qolipStorageMoldFromJson);
+export async function qolipStorageMolds(session: Session, input: { query?: string; code?: string; offset?: number } = {},
+  guard?: QolipReadGuard): Promise<QolipStoragePage<QolipStorageMold>> {
+  return storageRead(guard, async () => {
+    const data = await storageRequest(session, 'paddons/molds', { ...(input.code ? { code: input.code } : {}),
+      q: input.query ?? '', limit: '100', offset: String(input.offset ?? 0) }, undefined, guard);
+    return page(data, 'molds', qolipStorageMoldFromJson);
+  });
 }
 
 /** @v2 qolipStorageSet */
@@ -189,30 +203,34 @@ export function qolipStorageDate(date: Date): string {
   return `${String(date.getFullYear()).padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-type ArchiveInput = { status?: string; view?: string; query?: string; offset?: number; warehouse?: string; from?: Date | null; to?: Date | null };
+export type QolipArchiveInput = { status?: string; view?: string; query?: string; offset?: number; warehouse?: string; from?: Date | null; to?: Date | null };
 /** @v2 qolipArchive */
-export async function qolipArchive(session: Session, input: ArchiveInput = {}): Promise<QolipStoragePage<QolipArchiveEntry>> {
-  const scope = sessionReadScope(session), status = input.status ?? 'open', view = input.view ?? '', offset = input.offset ?? 0;
-  const query = input.query ?? '', warehouse = input.warehouse ?? '';
-  try {
-    const data = await storageRequest(session, 'archive', { status, ...(view ? { view } : {}), ...(warehouse ? { warehouse } : {}),
-      ...(input.from ? { from: qolipStorageDate(input.from) } : {}), ...(input.to ? { to: qolipStorageDate(input.to) } : {}),
-      q: query, limit: '100', offset: String(offset) });
-    return page(data, 'entries', qolipArchiveEntryFromJson);
-  } catch (error) {
-    if (view !== 'molds' || !(error instanceof MobileApiException) || error.code !== 'qolip_archive_view_unsupported') throw error;
-    return legacyArchiveMolds(session, { status, query, offset, warehouse, from: input.from, to: input.to }, scope);
-  }
+export async function qolipArchive(session: Session, input: QolipArchiveInput = {}, guard?: QolipReadGuard): Promise<QolipStoragePage<QolipArchiveEntry>> {
+  return storageRead(guard, async () => {
+    const scope = sessionReadScope(session), status = input.status ?? 'open', view = input.view ?? '', offset = input.offset ?? 0;
+    const query = input.query ?? '', warehouse = input.warehouse ?? '';
+    try {
+      const data = await storageRequest(session, 'archive', { status, ...(view ? { view } : {}), ...(warehouse ? { warehouse } : {}),
+        ...(input.from ? { from: qolipStorageDate(input.from) } : {}), ...(input.to ? { to: qolipStorageDate(input.to) } : {}),
+        q: query, limit: '100', offset: String(offset) }, undefined, guard);
+      return page(data, 'entries', qolipArchiveEntryFromJson);
+    } catch (error) {
+      if (view !== 'molds' || !(error instanceof MobileApiException) || error.code !== 'qolip_archive_view_unsupported') throw error;
+      assertQolipReadCurrent(guard);
+      return legacyArchiveMolds(session, { status, query, offset, warehouse, from: input.from, to: input.to }, scope, guard);
+    }
+  });
 }
 
-async function legacyArchiveMolds(session: Session, input: Required<Pick<ArchiveInput, 'status' | 'query' | 'offset' | 'warehouse'>> &
-  Pick<ArchiveInput, 'from' | 'to'>, scope: string): Promise<QolipStoragePage<QolipArchiveEntry>> {
-  const guard = scopeGuard(session, scope), matches: QolipArchiveEntry[] = [], search = trimDart(input.query).toLowerCase();
+async function legacyArchiveMolds(session: Session, input: Required<Pick<QolipArchiveInput, 'status' | 'query' | 'offset' | 'warehouse'>> &
+  Pick<QolipArchiveInput, 'from' | 'to'>, scope: string, readGuard?: QolipReadGuard): Promise<QolipStoragePage<QolipArchiveEntry>> {
+  const requireScope = scopeGuard(session, scope), matches: QolipArchiveEntry[] = [], search = trimDart(input.query).toLowerCase();
+  const guard = () => { requireScope(); assertQolipReadCurrent(readGuard); };
   let sourceOffset = 0, seen = 0;
   while (true) {
     guard();
     const current = await qolipArchive(session, { status: input.status, query: input.query, offset: sourceOffset,
-      warehouse: input.warehouse, from: input.from, to: input.to });
+      warehouse: input.warehouse, from: input.from, to: input.to }, readGuard);
     guard();
     for (const entry of current.items) {
       const candidates: QolipArchiveEntry[] = [];
