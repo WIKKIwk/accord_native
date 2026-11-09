@@ -7,7 +7,7 @@ const ts = require('typescript');
 function api(refresh = async () => false) {
   const filename = path.resolve(__dirname, '../src/authorizedFetch.ts');
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-  mod.require = name => name === './auth' ? { activeSessionToken: s => s.token, refreshSession: refresh } : require(name);
+  mod.require = name => name === './auth' ? { activeSessionToken: s => s.token, refreshSession: refresh } : name === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }

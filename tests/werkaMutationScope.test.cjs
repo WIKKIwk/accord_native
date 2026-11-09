@@ -19,7 +19,7 @@ function setup(changeOnRefresh) {
     if (cache.has(resolved)) return cache.get(resolved);
     const module = new Module(resolved); module.filename = resolved; module.paths = require.main.paths; cache.set(resolved, module.exports);
     module.require = name => name === './auth' || name === '../auth' ? auth
-      : name.startsWith('.') ? load(path.resolve(path.dirname(resolved), name)) : require(name);
+      : name.startsWith('.') ? load(path.resolve(path.dirname(resolved), name)) : name === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(name);
     module._compile(ts.transpileModule(fs.readFileSync(resolved, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, resolved);
     cache.set(resolved, module.exports); return module.exports;
   }

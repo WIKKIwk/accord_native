@@ -1,3 +1,4 @@
+import { fetch } from 'expo/fetch';
 import { activeSessionToken, joinRefreshForGuardedRead, refreshSession, type Session } from './auth';
 
 let queueSnapshotReadEpoch = 0;

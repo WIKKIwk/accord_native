@@ -25,7 +25,7 @@ function setup() {
         assert.equal(s, session); assert.equal(options.limit, 10000); catalogCalls++; catalogGuard = options.beforeSend; catalogGuard(); return catalog; } };
       if (id === './workerControlsApi') return { productionMapResponseError: () => Error('server error'), WorkerControlException: class extends Error {} };
       if (id === './paddonModels') return { paddonFromJson: value => value, paddonSnapshotFromJson: value => value };
-      return id.startsWith('.') ? load(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : require(id);
+      return id.startsWith('.') ? load(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
     };
     mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
     return mod.exports;
@@ -185,7 +185,7 @@ test('the real issued binding notifies its mounted access subscription when the 
     '../shared/appRoutes': { appRoutes: { apparatusPaddonDetail: '/detail' }, canOpenRoute: () => true },
     './rezkaSessionGuard': { isRezkaSessionCurrent: () => true }, './rezkaPaddonDetailRead': h.reader };
     const filename = path.resolve(__dirname, '../src/rezka/useRezkaPaddonDetailAccess.ts'), mod = new Module(filename, module);
-    mod.filename = filename; mod.paths = module.paths; mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+    mod.filename = filename; mod.paths = module.paths; mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
     mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
     assert.equal(mod.exports.useRezkaPaddonDetailAccess(h.snapshot, binding), true);
     h.owner.close(); assert.equal(notifications, 1); assert.equal(get(), false); cleanup();

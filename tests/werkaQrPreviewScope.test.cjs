@@ -18,7 +18,7 @@ function setup(onRefresh) {
   function load(file) {
     const filename=path.resolve(file.endsWith('.ts')?file:`${file}.ts`); if(cache.has(filename)) return cache.get(filename);
     const loaded=new Module(filename); loaded.filename=filename; loaded.paths=require.main.paths; cache.set(filename,loaded.exports);
-    loaded.require=name=>name==='../auth'||name==='./auth'?auth:name.startsWith('.')?load(path.resolve(path.dirname(filename),name)):require(name);
+    loaded.require=name=>name==='../auth'||name==='./auth'?auth:name.startsWith('.')?load(path.resolve(path.dirname(filename),name)): name === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(name);
     loaded._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,filename);
     cache.set(filename,loaded.exports);return loaded.exports;
   }
