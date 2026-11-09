@@ -25,10 +25,13 @@ function fixture(platform, values, locale = 'uz') {
       contentShape: x => ['contentShape', x], disabled: x => ['disabled', x], fixedSize: x => ['fixedSize', x], font: x => ['font', x], frame: x => ['frame', x],
       keyboardType: x => ['keyboard', x], lineLimit: x => ['lines', x], padding: x => ['padding', x], textFieldStyle: x => ['field', x],
       shapes: { rectangle: () => ['rectangle'] } },
-    '@expo/ui/jetpack-compose': { AlertDialog, Host: 'Host', OutlinedTextField, RNHostView: 'RNHostView', Text: 'Text', TextButton: 'TextButton', useNativeState: () => ({}) },
+    '@expo/ui/jetpack-compose': { AlertDialog, Host: 'Host', OutlinedTextField, RNHostView: 'RNHostView', Text: 'Text', TextButton: 'TextButton',
+      useMaterialColors: () => ({ onSurface: 'onSurface' }), useNativeState: () => ({}) },
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fill' },
-    'react-native': { Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', View: 'View', PlatformColor: x => x, useWindowDimensions: () => ({ width: 400, height: 800 }) },
-    '../components/WorkerRadioChoice': { WorkerRadioChoice: 'WorkerRadioChoice' }, './CustomerContext': { useCustomerText: () => ({ locale, text: x => x }) },
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'RNText', View: 'View', PlatformColor: x => x,
+      useWindowDimensions: () => ({ width: 400, height: 800 }) },
+    './CustomerContext': { useCustomerText: () => ({ locale, text: x => x }) },
     './customerLogic': logic, './customerDeliveryView': view, './customerPresentation': presentation };
   return { ...load(`CustomerReturnDialog.${platform}.tsx`, mocks), updates };
 }
@@ -39,12 +42,11 @@ function render(platform, kind, values, callbacks, locale = 'uz') {
 test('return dialogs preserve three reasons, quantity boundaries and V2 action labels on both platforms', () => {
   for (const platform of ['ios', 'android']) for (const kind of ['reject', 'partial', 'claim']) {
     const calls = [], rendered = render(platform, kind, ['2', '', 'rejectReasonWrongItem'], { onCancel: () => calls.push('cancel'), onConfirm: input => calls.push(input) });
-    const choices = platform === 'ios' ? nodes(rendered.tree, n => n.type === 'Button' && n.props.testID?.startsWith('customer-reason-'))
-      : nodes(rendered.tree, n => n.type === 'WorkerRadioChoice');
-    const labels = choices.map(c => platform === 'ios' ? nodes(c, n => n.type === 'Text')[0].props.children : c.props.label);
+    const choices = nodes(rendered.tree, n => n.type === (platform === 'ios' ? 'Button' : 'Pressable') && n.props.testID?.startsWith('customer-reason-'));
+    const labels = choices.map(c => nodes(c, n => n.type === (platform === 'ios' ? 'Text' : 'RNText'))[0].props.children);
     assert.deepEqual(labels, ['rejectReasonDefective', 'rejectReasonWrongItem', 'rejectReasonQtyMismatch']);
     if (platform === 'ios') assert.ok(choices[1].props.modifiers.some(m => m[0] === 'traits' && m[1].includes('isSelected')));
-    else assert.equal(choices[1].props.selected, true);
+    else assert.equal(choices[1].props.accessibilityState.checked, true);
     choices[1].props.onPress(); assert.deepEqual(rendered.updates.at(-1), [2, null]);
     choices[0].props.onPress(); assert.deepEqual(rendered.updates.at(-1), [2, 'rejectReasonDefective']);
     if (platform === 'ios') {
@@ -112,6 +114,61 @@ test('return dialog hosts and reason controls follow the app-selected locale', (
         }
       }
     }
+  }
+});
+
+test('Android reason rows use source geometry, selection icon and wrapping', () => {
+  for (const kind of ['reject', 'partial', 'claim']) {
+    const rendered = render('android', kind, ['2', '', 'rejectReasonWrongItem'], { onCancel() {}, onConfirm() {} });
+    const choices = nodes(rendered.tree, n => n.type === 'Pressable' && n.props.testID?.startsWith('customer-reason-'));
+    assert.equal(choices.length, 3);
+    const group = nodes(rendered.tree, n => n.type === 'View' && n.props.testID === 'customer-reason-group')[0];
+    assert.ok(group);
+    assert.equal(nodes(group, n => n.type === 'Pressable').length, 3);
+    const scroll = nodes(rendered.tree, n => n.type === 'ScrollView')[0];
+    assert.equal(scroll.props.contentContainerStyle.gap, 12);
+    const quantity = nodes(rendered.tree, n => n.type === OutlinedTextField && n.props.singleLine)[0];
+    if (kind !== 'reject') {
+      assert.ok(quantity);
+      const quantityHost = nodes(scroll, n => n.type === 'Host' && nodes(n, c => c === quantity).length)[0];
+      assert.equal(quantityHost.props.style.marginBottom, 4);
+    } else assert.equal(quantity, undefined);
+    const reasonLabel = nodes(group, n => n.type === 'Text' && n.props.children === 'reasonLabel')[0];
+    assert.deepEqual(reasonLabel.props.style, { typography: 'titleMedium', fontSize: 16, fontWeight: '500' });
+    const labelHost = nodes(group, n => n.type === 'Host')[0];
+    assert.equal(labelHost.props.style.marginBottom, 8);
+    for (const [index, choice] of choices.entries()) {
+      assert.equal(choice.props.accessibilityRole, 'radio');
+      assert.equal(choice.props.accessibilityState.checked, index === 1);
+      assert.deepEqual(choice.props.style, { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderRadius: 16 });
+      const icon = nodes(choice, n => n.type === 'SymbolView')[0];
+      assert.equal(icon.props.size, 22);
+      assert.equal(icon.props.name.android, index === 1 ? 'check_circle' : 'radio_button_unchecked');
+      assert.equal(icon.props.accessible, false);
+      const label = nodes(choice, n => n.type === 'RNText')[0];
+      assert.equal(label.props.style.flex, 1);
+      assert.equal(label.props.style.fontSize, 16);
+      assert.equal(label.props.style.fontWeight, '400');
+      assert.equal(label.props.numberOfLines, undefined);
+    }
+  }
+});
+
+test('iOS reason rows stay contiguous with the source label and action spacing', () => {
+  for (const kind of ['reject', 'partial', 'claim']) {
+    const rendered = render('ios', kind, ['2', '', 'rejectReasonWrongItem'], { onCancel() {}, onConfirm() {} });
+    const scroll = nodes(rendered.tree, n => n.type === 'ScrollView')[0];
+    assert.equal(scroll.props.contentContainerStyle.gap, 12);
+    const group = nodes(scroll, n => n.type === 'View' && n.props.testID === 'customer-reason-group')[0];
+    assert.ok(group);
+    assert.equal(nodes(group, n => n.type === 'Button' && n.props.testID?.startsWith('customer-reason-')).length, 3);
+    const label = nodes(group, n => n.type === 'Text' && n.props.children === 'reasonLabel')[0];
+    assert.ok(label.props.modifiers.some(m => m[0] === 'font' && m[1].textStyle === 'body' && m[1].weight === 'medium'));
+    assert.equal(nodes(group, n => n.type === 'Host')[0].props.style.marginBottom, 8);
+    const heading = nodes(scroll, n => n.type === 'Host' && nodes(n, c => c.type === 'Text' && c.props.children === view.customerReturnTitleKey(kind)).length)[0];
+    assert.equal(heading.props.style.marginBottom, 4);
+    const comment = nodes(scroll, n => n.type === 'Host' && nodes(n, c => c.type === 'Text' && c.props.children === 'extraCommentLabel').length)[0];
+    assert.equal(comment.props.style.marginBottom, 8);
   }
 });
 test('delivery status and discussion ID follow the V2 mapping', () => {

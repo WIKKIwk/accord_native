@@ -1,8 +1,8 @@
-import { AlertDialog, Host, OutlinedTextField, RNHostView, Text, TextButton, useNativeState } from '@expo/ui/jetpack-compose';
+import { AlertDialog, Host, OutlinedTextField, RNHostView, Text, TextButton, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
+import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { ScrollView, useWindowDimensions, View } from 'react-native';
-import { WorkerRadioChoice } from '../components/WorkerRadioChoice';
+import { Pressable, ScrollView, Text as RNText, useWindowDimensions, View } from 'react-native';
 import { useCustomerText } from './CustomerContext';
 import { customerReturnInput } from './customerLogic';
 import { customerReturnTitleKey, type CustomerReturnDialogProps, type CustomerReturnKind } from './customerDeliveryView';
@@ -13,7 +13,7 @@ export function CustomerReturnDialog(props: CustomerReturnDialogProps) {
   return <ReturnDialogForm key={props.kind} {...props} kind={props.kind} />;
 }
 function ReturnDialogForm({ kind, sentQty, uom, onCancel, onConfirm }: Omit<CustomerReturnDialogProps, 'kind'> & { kind: CustomerReturnKind }) {
-  const { locale, text } = useCustomerText(), { width, height } = useWindowDimensions();
+  const { locale, text } = useCustomerText(), { width, height } = useWindowDimensions(), colors = useMaterialColors();
   const quantityState = useNativeState(''), commentState = useNativeState('');
   const [quantity, setQuantity] = useState(''), [comment, setComment] = useState(''), [reason, setReason] = useState<string | null>(null);
   const reasons = ['rejectReasonDefective', 'rejectReasonWrongItem', 'rejectReasonQtyMismatch'].map(text);
@@ -26,14 +26,24 @@ function ReturnDialogForm({ kind, sentQty, uom, onCancel, onConfirm }: Omit<Cust
       <AlertDialog.Text><RNHostView matchContents><View style={{ width: Math.max(1, Math.min(width - 112, 480)),
         direction: direction === 'rightToLeft' ? 'rtl' : 'ltr' }}>
         <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: height * 0.55 }} contentContainerStyle={{ gap: 12 }}>
-          {kind !== 'reject' ? <Host matchContents={{ vertical: true }} style={{ width: '100%' }} layoutDirection={direction}>
+          {kind !== 'reject' ? <Host matchContents={{ vertical: true }} style={{ width: '100%', marginBottom: 4 }} layoutDirection={direction}>
             <OutlinedTextField value={quantityState} onValueChange={setQuantity} singleLine keyboardOptions={{ keyboardType: 'decimal' }} modifiers={[fillMaxWidth()]}>
               <OutlinedTextField.Label><Text>{text(kind === 'partial' ? 'returningQtyLabel' : 'returnedQtyLabel')}</Text></OutlinedTextField.Label>
               <OutlinedTextField.Placeholder><Text>{`${sentQty.toFixed(2)} ${uom}`}</Text></OutlinedTextField.Placeholder>
               <OutlinedTextField.Suffix><Text>{uom}</Text></OutlinedTextField.Suffix>
             </OutlinedTextField></Host> : null}
-          <Host matchContents={{ vertical: true }} layoutDirection={direction}><Text>{text('reasonLabel')}</Text></Host>
-          {reasons.map(item => <WorkerRadioChoice key={item} label={item} selected={reason === item} onPress={() => setReason(reason === item ? null : item)} />)}
+          <View testID="customer-reason-group">
+            <Host matchContents={{ vertical: true }} style={{ marginBottom: 8 }} layoutDirection={direction}>
+              <Text style={{ typography: 'titleMedium', fontSize: 16, fontWeight: '500' }}>{text('reasonLabel')}</Text>
+            </Host>
+            {reasons.map((item, index) => <Pressable key={item} testID={`customer-reason-${index}`} accessibilityRole="radio"
+              accessibilityState={{ checked: reason === item }} android_ripple={{}} onPress={() => setReason(reason === item ? null : item)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderRadius: 16 }}>
+              <SymbolView name={{ android: reason === item ? 'check_circle' : 'radio_button_unchecked' }} size={22} tintColor={colors.onSurface}
+                accessible={false} importantForAccessibility="no-hide-descendants" />
+              <RNText style={{ color: colors.onSurface, flex: 1, fontSize: 16, fontWeight: '400' }}>{item}</RNText>
+            </Pressable>)}
+          </View>
           <Host matchContents={{ vertical: true }} style={{ width: '100%' }} layoutDirection={direction}>
             <OutlinedTextField value={commentState} onValueChange={setComment} minLines={2} maxLines={4} modifiers={[fillMaxWidth()]}>
               <OutlinedTextField.Label><Text>{text('extraCommentLabel')}</Text></OutlinedTextField.Label>

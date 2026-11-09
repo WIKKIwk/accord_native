@@ -26,23 +26,27 @@ function ReturnDialogForm({ kind, sentQty, uom, onCancel, onConfirm }: Omit<Cust
       <View accessibilityViewIsModal style={{ width: '100%', maxWidth: 420, maxHeight: '85%', backgroundColor: PlatformColor('systemBackground'), borderRadius: 28, padding: 22,
         direction: direction === 'rightToLeft' ? 'rtl' : 'ltr' }}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 12 }}>
-          <Host matchContents={{ vertical: true }} style={{ width: '100%' }} layoutDirection={direction}><VStack alignment="leading" spacing={8}>
+          <Host matchContents={{ vertical: true }} style={{ width: '100%', marginBottom: 4 }} layoutDirection={direction}><VStack alignment="leading" spacing={8}>
             <Text>{text(customerReturnTitleKey(kind))}</Text>
             {kind !== 'reject' ? <><Text>{text(kind === 'partial' ? 'returningQtyLabel' : 'returnedQtyLabel')}</Text>
               <HStack><TextField text={quantityState} placeholder={`${sentQty.toFixed(2)} ${uom}`} onTextChange={setQuantity}
                 modifiers={[keyboardType('decimal-pad'), textFieldStyle('roundedBorder'), frame({ maxWidth: Infinity })]} /><Text>{uom}</Text></HStack></> : null}
-            <Text>{text('reasonLabel')}</Text>
           </VStack></Host>
-          {reasons.map((item, index) => <Host key={item} matchContents={{ vertical: true }} style={{ width: '100%' }} layoutDirection={direction}>
-            <Button testID={`customer-reason-${index}`} onPress={() => setReason(reason === item ? null : item)}
-              modifiers={[buttonStyle('plain'), ...(reason === item ? [accessibilityAddTraits(['isSelected'])] : [])]}>
-              <HStack spacing={10} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' }), padding({ vertical: 10 }), contentShape(shapes.rectangle())]}>
-                <Image systemName={reason === item ? 'checkmark.circle.fill' : 'circle'} size={22} modifiers={[accessibilityHidden()]} />
-                <Text modifiers={[font({ textStyle: 'body' }), lineLimit(), fixedSize({ horizontal: false, vertical: true })]}>{item}</Text>
-              </HStack>
-            </Button>
-          </Host>)}
-          <Host matchContents={{ vertical: true }} style={{ width: '100%' }} layoutDirection={direction}><VStack alignment="leading" spacing={6}>
+          <View testID="customer-reason-group">
+            <Host matchContents={{ vertical: true }} style={{ width: '100%', marginBottom: 8 }} layoutDirection={direction}>
+              <Text modifiers={[font({ textStyle: 'body', weight: 'medium' })]}>{text('reasonLabel')}</Text>
+            </Host>
+            {reasons.map((item, index) => <Host key={item} matchContents={{ vertical: true }} style={{ width: '100%' }} layoutDirection={direction}>
+              <Button testID={`customer-reason-${index}`} onPress={() => setReason(reason === item ? null : item)}
+                modifiers={[buttonStyle('plain'), ...(reason === item ? [accessibilityAddTraits(['isSelected'])] : [])]}>
+                <HStack spacing={10} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' }), padding({ vertical: 10 }), contentShape(shapes.rectangle())]}>
+                  <Image systemName={reason === item ? 'checkmark.circle.fill' : 'circle'} size={22} modifiers={[accessibilityHidden()]} />
+                  <Text modifiers={[font({ textStyle: 'body' }), lineLimit(), fixedSize({ horizontal: false, vertical: true })]}>{item}</Text>
+                </HStack>
+              </Button>
+            </Host>)}
+          </View>
+          <Host matchContents={{ vertical: true }} style={{ width: '100%', marginBottom: 8 }} layoutDirection={direction}><VStack alignment="leading" spacing={6}>
             <Text>{text('extraCommentLabel')}</Text><TextField text={commentState} axis="vertical" placeholder={text('optionalReasonHint')}
               onTextChange={setComment} modifiers={[textFieldStyle('roundedBorder'), lineLimit({ min: 2, max: 4 }), frame({ maxWidth: Infinity })]} />
           </VStack></Host>
