@@ -1,8 +1,9 @@
 import type { CustomerDirectoryEntry, CustomerItemOption, WerkaArchiveBatchQrPayload } from './werkaArchiveBatchQr';
+import { uiText } from '../shared/localization';
 import { werkaDeliveryQuantity } from './werkaDeliveryPresentation';
 import { werkaBatchTrim } from './werkaBatchTrim';
 
-export type WerkaArchiveBatchContentProps = { payload: WerkaArchiveBatchQrPayload } & (
+export type WerkaArchiveBatchContentProps = { payload: WerkaArchiveBatchQrPayload; locale: string } & (
   | { state: 'loading' }
   | { state: 'missing' }
   | { state: 'resolved'; option: CustomerItemOption; customer: CustomerDirectoryEntry }
@@ -24,5 +25,6 @@ export function werkaArchiveBatchPresentation(props: WerkaArchiveBatchContentPro
   const infoRows = [...(werkaBatchTrim(payload.batchTime) ? [{ label: 'Sana', value: infoValue(payload.batchTime) }] : []),
     ...(props.state === 'resolved' ? [{ label: 'Kod', value: infoValue(props.option.itemCode) }, { label: 'Haridor', value: infoValue(props.customer.name) },
       ...(werkaBatchTrim(props.option.warehouse) ? [{ label: 'Ombor', value: infoValue(props.option.warehouse) }] : [])] : [])];
-  return { title, subtitle, metrics, infoRows, shellTitle: 'Batch QR', shellSubtitle: werkaBatchTrim(payload.itemName) || 'Batch tafsiloti' };
+  return { title, subtitle, metrics, infoRows, shellTitle: 'Batch QR', shellSubtitle: werkaBatchTrim(payload.itemName) || 'Batch tafsiloti',
+    showScanActions: props.state !== 'loading', scanLabel: uiText('Qayta scan', props.locale), backLabel: uiText('Ortga', props.locale) };
 }

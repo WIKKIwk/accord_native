@@ -1,4 +1,5 @@
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Button, FilledTonalButton, Host, RNHostView, Row, Text as ComposeText, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
@@ -27,5 +28,17 @@ export function WerkaArchiveBatchContent(props: WerkaArchiveBatchContentProps) {
         <Text style={{ flex: 1, color: colors.onSurface, fontWeight: '700' }}>{row.value}</Text>
       </View>)}</View>
     </View></WorkerQueueCard>
+    {view.showScanActions ? <Host matchContents={{ vertical: true }} style={{ width: '100%', paddingTop: 14 }}>
+      <Row modifiers={[fillMaxWidth()]} horizontalArrangement={{ spacedBy: 12 }}>
+        <FilledTonalButton enabled={false} modifiers={[weight(1)]}><Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }}>
+          <RNHostView matchContents><SymbolView name={{ android: 'qr_code_scanner' }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView>
+          <ComposeText>{view.scanLabel}</ComposeText>
+        </Row></FilledTonalButton>
+        <Button enabled={false} modifiers={[weight(1)]}><Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }}>
+          <RNHostView matchContents><SymbolView name={{ android: 'arrow_back' }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView>
+          <ComposeText>{view.backLabel}</ComposeText>
+        </Row></Button>
+      </Row>
+    </Host> : null}
   </ScrollView>;
 }
