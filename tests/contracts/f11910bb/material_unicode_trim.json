@@ -1,0 +1,71 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "source": "Dart String.trim, RegExp whitespace and toLowerCase over all Unicode scalar values",
+  "oracle": "oracles/material_unicode_probe_test.dart",
+  "dart_sdk": "3.13.7 stable, macos_arm64",
+  "trim": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    32,
+    133,
+    160,
+    5760,
+    8192,
+    8193,
+    8194,
+    8195,
+    8196,
+    8197,
+    8198,
+    8199,
+    8200,
+    8201,
+    8202,
+    8232,
+    8233,
+    8239,
+    8287,
+    12288,
+    65279
+  ],
+  "regexWhitespace": [
+    9,
+    10,
+    11,
+    12,
+    13,
+    32,
+    160,
+    5760,
+    8192,
+    8193,
+    8194,
+    8195,
+    8196,
+    8197,
+    8198,
+    8199,
+    8200,
+    8201,
+    8202,
+    8232,
+    8233,
+    8239,
+    8287,
+    12288,
+    65279
+  ],
+  "nonAsciiToAscii": [
+    [
+      304,
+      "i"
+    ],
+    [
+      8490,
+      "k"
+    ]
+  ]
+}

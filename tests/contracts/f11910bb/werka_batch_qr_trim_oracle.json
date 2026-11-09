@@ -1,0 +1,119 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "sourceSha256": "c79c733497e09403c1ef6244df4754d626ab154d562a9ba44040887c3d88aad7",
+  "kind": "exact V2 parser, standalone Dart 3.13.7; not Flutter or device",
+  "cases": [
+    {
+      "name": "basic",
+      "input": "https://scan.example/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU",
+      "output": {
+        "sessionID": "s",
+        "itemName": "Item",
+        "qtyText": "2.5",
+        "qty": 2.5,
+        "bruttoText": "2.5",
+        "bruttoQty": 2.5,
+        "nettoText": "2.5",
+        "nettoQty": 2.5,
+        "batchTime": "time",
+        "rawValue": "https://scan.example/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU"
+      }
+    },
+    {
+      "name": "raw edge U+0085",
+      "input": "https://scan.example/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU",
+      "output": {
+        "sessionID": "s",
+        "itemName": "Item",
+        "qtyText": "2.5",
+        "qty": 2.5,
+        "bruttoText": "2.5",
+        "bruttoQty": 2.5,
+        "nettoText": "2.5",
+        "nettoQty": 2.5,
+        "batchTime": "time",
+        "rawValue": "https://scan.example/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU"
+      }
+    },
+    {
+      "name": "decoded edges U+0085",
+      "input": "https://scan.example/A/woVBUkNISVZFwoUKwoVzwoUKwoVJdGVtwoUKwoUyLjUga2fChQrChXRpbWXChQ",
+      "output": {
+        "sessionID": "s",
+        "itemName": "Item",
+        "qtyText": "2.5 kg",
+        "qty": 2.5,
+        "bruttoText": "2.5 kg",
+        "bruttoQty": 2.5,
+        "nettoText": "2.5 kg",
+        "nettoQty": 2.5,
+        "batchTime": "time",
+        "rawValue": "https://scan.example/A/woVBUkNISVZFwoUKwoVzwoUKwoVJdGVtwoUKwoUyLjUga2fChQrChXRpbWXChQ"
+      }
+    },
+    {
+      "name": "decoded blank leading segment",
+      "input": "https://scan.example/%C2%85/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU",
+      "output": {
+        "sessionID": "s",
+        "itemName": "Item",
+        "qtyText": "2.5",
+        "qty": 2.5,
+        "bruttoText": "2.5",
+        "bruttoQty": 2.5,
+        "nettoText": "2.5",
+        "nettoQty": 2.5,
+        "batchTime": "time",
+        "rawValue": "https://scan.example/%C2%85/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU"
+      }
+    },
+    {
+      "name": "fallback edge U+0085",
+      "input": "prefix/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU",
+      "output": {
+        "sessionID": "s",
+        "itemName": "Item",
+        "qtyText": "2.5",
+        "qty": 2.5,
+        "bruttoText": "2.5",
+        "bruttoQty": 2.5,
+        "nettoText": "2.5",
+        "nettoQty": 2.5,
+        "batchTime": "time",
+        "rawValue": "prefix/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU"
+      }
+    },
+    {
+      "name": "internal U+0085 preserved",
+      "input": "https://scan.example/A/QVJDSElWRQpzCmxlZnTChXJpZ2h0CjIuNQp0aW1l",
+      "output": {
+        "sessionID": "s",
+        "itemName": "leftright",
+        "qtyText": "2.5",
+        "qty": 2.5,
+        "bruttoText": "2.5",
+        "bruttoQty": 2.5,
+        "nettoText": "2.5",
+        "nettoQty": 2.5,
+        "batchTime": "time",
+        "rawValue": "https://scan.example/A/QVJDSElWRQpzCmxlZnTChXJpZ2h0CjIuNQp0aW1l"
+      }
+    },
+    {
+      "name": "mixed whitespace",
+      "input": "  https://scan.example/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU  ",
+      "output": {
+        "sessionID": "s",
+        "itemName": "Item",
+        "qtyText": "2.5",
+        "qty": 2.5,
+        "bruttoText": "2.5",
+        "bruttoQty": 2.5,
+        "nettoText": "2.5",
+        "nettoQty": 2.5,
+        "batchTime": "time",
+        "rawValue": "https://scan.example/A/QVJDSElWRQpzCkl0ZW0KMi41CnRpbWU"
+      }
+    }
+  ]
+}

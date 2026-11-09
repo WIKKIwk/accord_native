@@ -41,7 +41,7 @@ function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedA
 
 // @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout, settingsUnavailableMessage } = props;
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const dark = useColorScheme() === 'dark';
   const theme = useBaseTheme();
@@ -76,15 +76,16 @@ export function ProfileView(props: ProfileViewProps) {
       editorSheet.update(content, { dismissible: true, onDismiss: onCloseEditor });
       editorSheet.close();
     }
-    if (settingsSheet.isOpen()) {
+    if (settingsUnavailableMessage && settingsSheet.isOpen()) { disconnectPending.current = false; settingsSheet.close(); }
+    if (!settingsUnavailableMessage && settingsSheet.isOpen()) {
       settingsSheet.update(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}>
         <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
       </Host>, { dismissible: true, onDismiss: settingsDismissed });
     }
-  }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet, dynamicColors]);
-  const openSettings = () => settingsSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}>
+  }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet, dynamicColors, settingsUnavailableMessage]);
+  const openSettings = () => { if (settingsUnavailableMessage) return; settingsSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}>
     <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
-  </Host>, { dismissible: true, onDismiss: settingsDismissed });
+  </Host>, { dismissible: true, onDismiss: settingsDismissed }); };
   const details = profileDisplay(snapshot);
   return <Host dynamicColors={dynamicColors} style={{ flex: 1 }}>
     <PullToRefreshBox isRefreshing={props.refreshing} onRefresh={() => { void props.onRefresh(); }}><FieldGroup
@@ -121,11 +122,12 @@ export function ProfileView(props: ProfileViewProps) {
       </FieldGroup.Section>
       <FieldGroup.Section>
         {onDailyWork && session.profile.role !== 'tayyorlov_masteri' ? <Button label="Kunlik ish" variant="text" onPress={onDailyWork} /> : null}
-        <Button label={localizedGetter('profileSettingsTitle', locale)} variant="text" onPress={openSettings} testID="profile-settings" />
+        {settingsUnavailableMessage ? <Text>{settingsUnavailableMessage}</Text> :
+          <Button label={localizedGetter('profileSettingsTitle', locale)} variant="text" onPress={openSettings} testID="profile-settings" />}
       </FieldGroup.Section>
-      <FieldGroup.Section>
+      {showDirectLogout !== false ? <FieldGroup.Section>
         <Button label={localizedGetter('logoutTitle', locale)} variant="outlined" onPress={onLogout} />
-      </FieldGroup.Section>
+      </FieldGroup.Section> : null}
     </FieldGroup></PullToRefreshBox>
   </Host>;
 }

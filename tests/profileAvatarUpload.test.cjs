@@ -9,7 +9,7 @@ function loadTs(relativePath, overrides = {}) {
   const filename = path.resolve(__dirname, '../src', relativePath);
   const loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
-  loaded.require = name => Object.hasOwn(overrides, name) ? overrides[name] : require(name);
+  loaded.require = name => Object.hasOwn(overrides, name) ? overrides[name] : name === './shared/profileSessionGuard' ? loadTs('shared/profileSessionGuard.ts') : require(name);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, filename);

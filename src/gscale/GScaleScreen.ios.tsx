@@ -9,11 +9,12 @@ import { ActivityIndicator, Alert, Platform, Pressable, View } from 'react-nativ
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { DeviceSheet } from '../shared/printing/DeviceSheet';
 import type { ArchivePrintEntry, ArchiveSession } from './gscaleArchive';
 import { gscaleDashboardSections, type GScaleRow } from './gscaleScreenModel';
 import type { GScaleOperatorStore } from './gscaleOperatorState';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
-import { useGScaleDevicePicker, useGScalePicker, useGScaleScreen, useGScaleSession, useGScaleText,
+import { useGScalePicker, useGScaleScreen, useGScaleSession, useGScaleText,
   type GScalePickerSpec } from './useGScaleScreen';
 
 function Field({ row }: { row: Extract<GScaleRow, { kind: 'field' }> }) {
@@ -48,34 +49,6 @@ function ChoiceSheet({ spec, close, session }: { spec: GScalePickerSpec; close()
         {item.subtitle ? <Text>{item.subtitle}</Text> : null}</VStack></Button>)}
       {picker.more && <Button label={t('Yana yuklash')} modifiers={[disabled(picker.loading)]} onPress={picker.loadMore} />}</List>
     <Button label={t('Bekor qilish')} role="cancel" onPress={close} /></VStack></Host>;
-}
-
-function DeviceSheet({ operator, close }: { operator: GScaleOperatorStore; close(): void }) {
-  const picker = useGScaleDevicePicker(operator, close), address = useNativeState(picker.address), t = useGScaleText();
-  return <Host style={{ minHeight: 430 }}><VStack><Text>{t('Qurilma tanlash')}</Text><List>
-    {picker.device.connection == null ? <Section>
-      <Button label={t('Wi-Fi qurilma')} onPress={() => picker.choose('wifi')} />
-      <Button label={t('Bluetooth printer')} onPress={() => picker.choose('bluetooth')} />
-      <Button label={t('USB printer')} onPress={() => picker.choose('usb')} />
-    </Section> : <Section><Button label={t('Orqaga')} onPress={() => picker.choose(null)} /></Section>}
-    {picker.device.connection === 'wifi' && <Section title="Wi-Fi">
-      <TextField text={address} placeholder={t('Server manzili')} onTextChange={picker.setAddress} />
-      <Button label={t('Wi-Fi manzilini qo‘shish')} modifiers={[disabled(picker.device.checkingAddress)]} onPress={() => void picker.checkAddress()} />
-      {!!picker.device.addressError && <Text>{picker.device.addressError}</Text>}
-      {picker.device.scanning && <ProgressView />}
-      {!picker.device.scanning && !picker.device.scanResult?.servers.length && <Text>{t('Qurilma topilmadi')}</Text>}
-      {picker.device.scanResult?.servers.map(server => <Button key={server.endpoint.baseUrl} label={`${server.handshake.serverName} · ${server.endpoint.baseUrl}`}
-        onPress={() => void picker.selectServer(server)} />)}
-      <Button label={t('Yangilash')} modifiers={[disabled(picker.device.scanning)]} onPress={picker.scan} />
-    </Section>}
-    {picker.device.connection === 'bluetooth' && <Section title="Bluetooth">{picker.scanning && <ProgressView />}
-      {!picker.scanning && !picker.printers.length && <Text>{t('Printer topilmadi')}</Text>}
-      {picker.printers.map(printer => <Button key={printer.address} label={`${printer.displayName} · ${printer.address}`}
-        onPress={() => void picker.selectBluetooth(printer)} />)}
-      <Button label={t('Yangilash')} modifiers={[disabled(picker.scanning)]} onPress={picker.rescanBluetooth} /></Section>}
-    {picker.device.connection === 'usb' && <Section title="USB">{picker.scanning && <ProgressView />}
-      <Button label={t('USB printerni aniqlash')} modifiers={[disabled(picker.scanning)]} onPress={() => void picker.selectUsb()} /></Section>}
-    {!!picker.error && <Text>{picker.error}</Text>}</List><Button label={t('Bekor qilish')} role="cancel" onPress={close} /></VStack></Host>;
 }
 
 function ArchiveSheet({ batch, operator, close }: { batch: ArchiveSession; operator: GScaleOperatorStore; close(): void }) {
@@ -114,7 +87,7 @@ function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType
     sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />, { onDismiss: () => resolve(null) });
   });
   const sections = gscaleDashboardSections(screen, section, {
-    pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} />),
+    pick, chooseApparatus, devices: () => sheet.open(<DeviceSheet operator={screen.operator} close={sheet.close} useText={useGScaleText} />),
     archive: batch => sheet.open(<ArchiveSheet batch={batch} operator={screen.operator} close={sheet.close} />),
     confirmArchivePrint: batch => Alert.alert(t('Partiya QR chop etish'), t('Shu partiya uchun QR chop etamizmi?'), [
       { text: t('Bekor qilish'), style: 'cancel' }, { text: t('Chop etish'), onPress: () => void screen.operator.printArchive(batch) },
