@@ -39,7 +39,8 @@ function fixture() {
     'react-native': { View: 'View', Text: 'NativeText', Pressable: 'Pressable', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl',
       useWindowDimensions: () => ({ width: 400, fontScale: 1 }), StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
-    'react-native-gesture-handler': { GestureDetector: 'GestureDetector', useNativeGesture: config => { gestures.push(config); return config; } },
+    'react-native-gesture-handler': { GestureHandlerRootView: 'GestureHandlerRootView', GestureDetector: 'GestureDetector',
+      useNativeGesture: config => { gestures.push(config); return config; } },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     '../preparation/PreparationUI.android': { PreparationDock: 'PreparationDock' },
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
@@ -96,6 +97,7 @@ test('receipt reuses the pager and role dock with device, back, profile, history
     onSelect: id => x.calls.push(['tab', id]), control: [{ rows: [x.action('gscale-device')] }, { rows: [field] }], history: [{ rows: [] }],
     connected: false, attention: true, refreshing: false, onDevices: () => x.calls.push('devices'),
     onBack: () => x.calls.push('back'), onRefresh: () => x.calls.push('refresh') });
+  assert.equal(tree.type, 'GestureHandlerRootView', 'the standalone receipt route must provide a root for its pager and scroll gestures');
   assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 1);
   const bar = nodes(tree, node => node.type === 'OrdersWorkspace')[0];
   assert.deepEqual(bar.props.tabs.map(tab => tab.name), ['Print', 'Print tarixi']);

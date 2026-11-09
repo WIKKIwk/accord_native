@@ -5,7 +5,7 @@ import { router, type Href } from 'expo-router';
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GestureDetector, useNativeGesture, type PanGesture } from 'react-native-gesture-handler';
+import { GestureDetector, GestureHandlerRootView, useNativeGesture, type PanGesture } from 'react-native-gesture-handler';
 import type { Session } from '../auth';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { PreparationDock } from '../preparation/PreparationUI.android';
@@ -158,7 +158,7 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = useGScaleText();
   const order = control.find(group => group.title === 'Order'), device = control[0]?.rows[0];
   const status = control[0]?.rows.slice(1) ?? [];
-  return <View style={[styles.root, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}>
+  return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}>
     <View style={styles.header}>
       <RoleHeaderButton icon="back" label={t('Orqaga')} tintColor={colors.onSurfaceVariant} onPress={onBack} />
       <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><Text color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '600' }}>{title}</Text></Host>
@@ -187,7 +187,7 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
       </ReceiptScroll>}
     </OrdersWorkspace>
     <PreparationDock />
-  </View>;
+  </GestureHandlerRootView>;
 }
 
 const styles = StyleSheet.create({
