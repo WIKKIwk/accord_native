@@ -1,0 +1,191 @@
+{
+ "source": "test/qolip_start_settings_api_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "mold setting read and writes preserve the server revision",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":false,\"revision\":0}}"
+   }
+  },
+  {
+   "test": "mold setting read and writes preserve the server revision",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"automatic_confirmation_enabled\":true}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":true,\"revision\":1}}"
+   }
+  },
+  {
+   "test": "mold setting read and writes preserve the server revision",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"automatic_confirmation_enabled\":false}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":false,\"revision\":2}}"
+   }
+  },
+  {
+   "test": "unacknowledged or malformed settings cannot enable bypass",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"automatic_confirmation_enabled\":true}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":true}}"
+   }
+  },
+  {
+   "test": "unacknowledged or malformed settings cannot enable bypass",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"automatic_confirmation_enabled\":true}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":\"true\",\"revision\":1}}"
+   }
+  },
+  {
+   "test": "unacknowledged or malformed settings cannot enable bypass",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"automatic_confirmation_enabled\":true}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":true,\"revision\":-1}}"
+   }
+  },
+  {
+   "test": "unacknowledged or malformed settings cannot enable bypass",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-start-settings",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"automatic_confirmation_enabled\":true}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"settings\":{\"automatic_confirmation_enabled\":false,\"revision\":1}}"
+   }
+  },
+  {
+   "test": "requirements explicitly opt in and retain physical readiness",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-validate",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"qolip_code\":\"\",\"automatic_confirmation\":true}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"qolip\":{\"qolip_code\":\"\",\"automatic_confirmation_enabled\":true,\"policy_revision\":3,\"blocking_reason_code\":\"\",\"sets\":[{\"set_id\":\"950100000001\",\"fingerprint\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"ready\":true,\"blocking_reason_code\":\"\"}],\"required_qolip_count\":2,\"required_qolip_codes\":[\"MOLD1\",\"EXTRA\"],\"required_qolips\":[{\"qolip_code\":\"MOLD1\",\"color\":\"blue\",\"qolip_set_id\":\"950100000001\",\"is_extension\":false,\"ready\":true,\"blocking_reason_code\":\"\"},{\"qolip_code\":\"EXTRA\",\"color\":\"black\",\"qolip_set_id\":\"950100000002\",\"is_extension\":true,\"ready\":true,\"blocking_reason_code\":\"\"}]}}"
+   }
+  },
+  {
+   "test": "bootstrap opts in and binds automatic readiness to the policy contract",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap&automatic_qolip_confirmation=true",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"control_state\":{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"scan-read-scope\",\"control\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\",\"qolip_automatic_confirmation\":true,\"qolip_policy_revision\":3}},\"queue_state\":\"pending\",\"stage_states\":{},\"order_control\":\"active\"},\"sections\":{\"materials\":{\"status\":\"ready\",\"data\":{\"policy\":\"state_all\",\"requires_material\":true,\"material_scan_required\":true,\"requirement_groups\":[],\"assigned_barcodes\":[\"ROLL1\"],\"staged_barcodes\":[\"ROLL1\"],\"eligible_barcodes\":[\"ROLL1\"],\"required_scan_count\":1,\"matched_scan_count\":0,\"assignments_satisfied\":true,\"scan_satisfied\":false,\"assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}],\"start_assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}]}},\"qolips\":{\"status\":\"ready\",\"data\":{\"ok\":true,\"qolip\":{\"qolip_code\":\"\",\"automatic_confirmation_enabled\":true,\"policy_revision\":3,\"blocking_reason_code\":\"\",\"sets\":[{\"set_id\":\"950100000001\",\"fingerprint\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"ready\":true,\"blocking_reason_code\":\"\"}],\"required_qolip_count\":2,\"required_qolip_codes\":[\"MOLD1\",\"EXTRA\"],\"required_qolips\":[{\"qolip_code\":\"MOLD1\",\"color\":\"blue\",\"qolip_set_id\":\"950100000001\",\"is_extension\":false,\"ready\":true,\"blocking_reason_code\":\"\"},{\"qolip_code\":\"EXTRA\",\"color\":\"black\",\"qolip_set_id\":\"950100000002\",\"is_extension\":true,\"ready\":true,\"blocking_reason_code\":\"\"}]}}}}}"
+   }
+  },
+  {
+   "test": "automatic start and resume send confirmation without inventing QR scans",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"action\":\"start\",\"qolip_confirmation\":{\"method\":\"automatic\",\"set_id\":\"950100000001\",\"fingerprint\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"policy_revision\":3}}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{}}"
+   }
+  },
+  {
+   "test": "automatic start and resume send confirmation without inventing QR scans",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/queue-action",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-start-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"action\":\"resume\",\"qolip_confirmation\":{\"method\":\"automatic\",\"set_id\":\"950100000001\",\"fingerprint\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"policy_revision\":3}}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"states\":{}}"
+   }
+  }
+ ]
+}

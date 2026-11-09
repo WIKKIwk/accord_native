@@ -1,0 +1,67 @@
+# platform	text	reason
+both	Mac print bridge failed	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
+both	Mac print bridge returned an invalid response	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
+both	Mac USB printer not found	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
+both	Mac print bridge returned an invalid printer profile	print_service.dart:107-109 and 129-132 use the Mac bridge only for kIsWeb; this role targets iOS and Android.
+both	qr payload is empty	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,BUZZER,0	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~MDELG,${graphicNames.text}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~EB,${graphicNames.text},${textGraphic.length}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~MDELG,${graphicNames.qr}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~EB,${graphicNames.qr},${qrGraphic.length}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~S,STATUS	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	~S,ESG	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^AD	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,UNICODE,1	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,IMMEDIATE,1	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,ACTIVERESPONSE,1	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	^XSET,CODEPAGE,16	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,72,1,1,0,0,COMPANY: ${content.companyName}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,${112 + i * 40},1,1,0,0,${lines[i]}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,264,1,1,0,0,NETTO: ${content.kgText} KG	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,304,1,1,0,0,BRUTTO: ${content.bruttoText} KG	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	BA,0,24,1,2,42,0,0,${content.epc}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,264,1,1,0,0,${netIncludesBobina ? 'NETTO' : 'KG'}: ${GodexRpsRenderer._normalizeKgValue(grossQty.toString())}${netIncludesBobina ? ' KG' : ''}	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	AB,16,304,1,1,0,0,METRAJ: $qtyText	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	7 TA RANGLI BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	7 TA RANGLI BOSMA APARAT	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	7TALIK BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	8 TA RANGLI BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	8 TA RANGLI BOSMA APARAT	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	8TALIK BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	9 TA RANGLI BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	9 TA RANGLI BOSMA APARAT	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	9TALIK BOSMA	raw_material_split_print.dart sets labelKind material_product; native_bluetooth_printer.dart:99-107 uses progress layout only for progress labels.
+both	qr data too long	PORT.md D13 excludes GoDEX; this string is from the GoDEX renderer or its validation, not a supported role printer path.
+both	Brutto: ${rawSplitDisplay(output.grossKg)} kg · Babina: ${rawSplitDisplay(output.bobinaKg!)} kg	raw_material_split_result_view.dart:389-391 shows the same Brutto/Babina line; template syntax differs between Dart and TypeScript.
+both	#fff	RawSplitScanner platform styles use this as a color literal, not visible text.
+both	Bu USB printer qo‘llab-quvvatlanmaydi. Zebra yoki Bluetooth printerni tanlang.	PORT.md D13 excludes GoDEX; this explicit message explains why unsupported USB selection is blocked before stock mutation.
+both	${rawSplitDisplay(output.width_mm as string)} mm · Og‘irlik: ${rawSplitDisplay(output.gross_kg as string)} kg · 	raw_material_split_result_view.dart:557-561 shows the same issue width and Og‘irlik values; the scanner splits the template.
+both	Babina: ${rawSplitDisplay(output.bobina_kg as string)} kg · Netto: ${rawSplitDisplay(output.kg as string)} kg	raw_material_split_result_view.dart:557-561 shows the same issue Babina and Netto values; the scanner splits the template.
+both	${rawSplitDisplay(issue.source.kg)} kg · Atxot: ${issue.enteredWaste === '' ? 'kiritilmagan' : issue.enteredWaste} kg	raw_material_split_result_view.dart:549-552 keeps Asl as a separate label and this weight/Atxot value; the JS empty-string condition is the same as Dart enteredWaste.isEmpty.
+both	Sessiya tekshiruvi kerak	Role-only API rejects calls without an issued epoch-checked session ticket; the fail-closed guard has no V2 equivalent.
+both	Zebra yoki Bluetooth printerni tanlang.	PORT.md D13 excludes GoDEX; the role explicitly explains unsupported printing before any stock write.
+both	Homashyo sessiyasi mavjud emas	RawSplitContext.tsx throws this developer invariant only when a role view is rendered outside its authenticated provider.
+both	Menyuni yopish	RawSplitDrawer.tsx supplies an accessibility label for the reused native drawer close gesture; V2 has no equivalent visible text.
+both	Sessiya xavfsizligi mavjud emas.	RawSplitSessionGate.tsx fails closed when the required main auth epoch accessor is unavailable, rather than using an unsafe identity-only fallback.
+both	Sessiya xavfsizligi tasdiqlanmagan	RawSplitController.ts and rawSplitHistoryController.ts fail closed before a write or print when the required session witness is unavailable or revoked.
+both	Sessiya xavfsizligi tasdiqlanmaguncha chop etib bo‘lmaydi.	RawSplitHistoryController.ts explicitly tells the operator that printing is blocked until the required session witness is available.
+both	Bosh sahifa	RawSplitContext.tsx offers a user-driven exit from an invalidated witness screen; it avoids silently recapturing stale work.
+both	Sessiya o‘zgargan. Sahifani qayta oching.	RawSplitContext.tsx reports a retired session witness and requires a fresh role entry instead of reviving old operations.
+both	Demo/test rejimi hozir mavjud emas.	RawSplitSessionGate.tsx and rawSplitApi.ts block the demo token because the native V2 test-mode policy and backend-free account exit are not implemented.
+both	USB printer qurilmasini aniq tekshirib bo‘lmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.	RawSplitPrintRuntime rejects USB before stock save because the native bridge reselects by kind instead of the chosen individual device.
+both	Printer qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.	RawSplitDeviceSelection.ts rejects unrecognized printer choices before they can reach a stock operation.
+both	GoDEX qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.	PORT.md D13 excludes GoDEX; the role explains this before committing stock.
+both	iOS Bluetooth printerini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.	The iOS native send path does not recheck the connected peripheral UUID against the selected job, so the role blocks this path before stock save or reprint.
+both	GoDEX qo‘llab-quvvatlanmaydi. Wi-Fi Zebra tanlang.	PORT.md D13 excludes GoDEX; the Wi-Fi Zebra message describes a future preflight choice only. All printer selection and printing are currently held by rawSplitWritePolicy.ts.
+both	USB printer qurilmasini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.	The iOS role independently blocks USB and Bluetooth until exact printer identity is checked; the broader current hold also blocks Wi-Fi printing.
+both	Boshqa bo‘lish natijasi olindi. Natijani qayta tekshiring.	RawSplitResultMatch.ts rejects a response that does not match the saved stock command and keeps its pending key to prevent printing the wrong roll.
+both	Chiqib bo‘lmadi	RawSplitSessionGate.tsx reports a failed explicit logout without redirecting or claiming success.
+both	Profil sozlamalari hozircha mavjud emas.	The role opts into the shared Profile guard while Settings/PIN remains unavailable until those security-sensitive actions have their own session guard.
+both	Saqlash xavfsizlik tekshiruvi tugaguncha to‘xtatilgan	User-authorized temporary safety hold: V2 raw_material_split_screen.dart:219–238 selects a printer, saves and prints; raw_material_split_screen.dart:275–292 reports issues; raw_material_split_history_screen.dart:61–92 selects a printer and reprints. rawSplitWritePolicy.ts currently holds those actions pending durable acknowledgment and reconciliation.
+both	Muammo qaydi xavfsizlik tekshiruvi tugaguncha to‘xtatilgan	User-authorized temporary safety hold: V2 raw_material_split_screen.dart:219–238 selects a printer, saves and prints; raw_material_split_screen.dart:275–292 reports issues; raw_material_split_history_screen.dart:61–92 selects a printer and reprints. rawSplitWritePolicy.ts currently holds those actions pending durable acknowledgment and reconciliation.
+both	Chop etish xavfsizlik tekshiruvi tugaguncha to‘xtatilgan	User-authorized temporary safety hold: V2 raw_material_split_screen.dart:219–238 selects a printer, saves and prints; raw_material_split_screen.dart:275–292 reports issues; raw_material_split_history_screen.dart:61–92 selects a printer and reprints. rawSplitWritePolicy.ts currently holds those actions pending durable acknowledgment and reconciliation.
+both	حفاظتی جانچ مکمل ہونے تک محفوظ کرنا، مسئلہ درج کرنا، پرنٹر منتخب کرنا اور پرنٹ کرنا عارضی طور پر بند ہے۔	User-authorized temporary safety hold: V2 raw_material_split_screen.dart:219–238 selects a printer, saves and prints; raw_material_split_screen.dart:275–292 reports issues; raw_material_split_history_screen.dart:61–92 selects a printer and reprints. rawSplitWritePolicy.ts currently holds those actions pending durable acknowledgment and reconciliation.
+both	Сохранение, регистрация проблемы, выбор принтера и печать временно приостановлены до завершения проверки безопасности.	User-authorized temporary safety hold: V2 raw_material_split_screen.dart:219–238 selects a printer, saves and prints; raw_material_split_screen.dart:275–292 reports issues; raw_material_split_history_screen.dart:61–92 selects a printer and reprints. rawSplitWritePolicy.ts currently holds those actions pending durable acknowledgment and reconciliation.
+both	Saving, issue reporting, printer selection and printing are temporarily paused pending a safety check.	User-authorized temporary safety hold: V2 raw_material_split_screen.dart:219–238 selects a printer, saves and prints; raw_material_split_screen.dart:275–292 reports issues; raw_material_split_history_screen.dart:61–92 selects a printer and reprints. rawSplitWritePolicy.ts currently holds those actions pending durable acknowledgment and reconciliation.
+both	Xavfsizlik tekshiruvi tugaguncha saqlash, muammoni qayd etish, printer tanlash va chop etish vaqtincha to‘xtatilgan.	User-authorized temporary safety hold: V2 raw_material_split_screen.dart:219–238 selects a printer, saves and prints; raw_material_split_screen.dart:275–292 reports issues; raw_material_split_history_screen.dart:61–92 selects a printer and reprints. rawSplitWritePolicy.ts currently holds those actions pending durable acknowledgment and reconciliation.

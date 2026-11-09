@@ -1,0 +1,46 @@
+import { Button, Host, HStack, Image, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import { accessibilityHidden, background, buttonStyle, font, foregroundStyle, frame, padding, shapes } from '@expo/ui/swift-ui/modifiers';
+import { useBaseTheme } from '../components/useBaseTheme';
+import { paintOptions } from '../workerOrderLogic';
+import type { BoyoqchiPaintPaletteProps } from './boyoqchiPaintPaletteTypes';
+import { boyoqchiPaintCompletion, boyoqchiPaintGroups as groups, boyoqchiPaintTones as tones } from './boyoqchiPaintPaletteLogic';
+import { useBoyoqchiText } from './useBoyoqchiText';
+
+// @v2 ReturnedPaintSheet: category and swatch values from returned_paint_sheet.dart.
+export function BoyoqchiPaintPalette({ usage, draft, onUsage, onSelect }: BoyoqchiPaintPaletteProps) {
+  const t = useBoyoqchiText(), { direction } = useBaseTheme(), rtl = direction === 'rightToLeft';
+  return <Host matchContents={{ vertical: true }} layoutDirection={direction} style={{ width: '100%' }}>
+    <VStack alignment="leading" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
+      <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity })]}>
+        {(['rasxot', 'astatka'] as const).map(value => <Button key={value} onPress={() => onUsage(value)}
+          modifiers={[buttonStyle(usage === value ? 'borderedProminent' : 'bordered'), frame({ maxWidth: Infinity })]}>
+          <Text modifiers={[frame({ maxWidth: Infinity, minHeight: 38 })]}>{t(value === 'rasxot' ? 'Rasxot' : 'Astatka')}</Text>
+        </Button>)}
+      </HStack>
+      {groups.map(group => {
+        const items = paintOptions.filter(option => option.category === group.id);
+        const rows = Array.from({ length: Math.ceil(items.length / 3) }, (_, index) => items.slice(index * 3, index * 3 + 3));
+        return <VStack key={group.id} alignment="leading" spacing={10} modifiers={[frame({ maxWidth: Infinity })]}>
+          <Text modifiers={[font({ weight: 'bold' })]}>{t(group.title)}</Text>
+          {rows.map(row => <HStack key={row[0].name} spacing={10} modifiers={[frame({ maxWidth: Infinity })]}>
+            {row.map(option => {
+              const { name } = option, indicator = boyoqchiPaintCompletion(draft, usage, option);
+              return <Button key={name} onPress={() => onSelect(name)} modifiers={[buttonStyle('plain'), frame({ maxWidth: Infinity })]}>
+                <ZStack alignment={rtl ? 'topLeading' : 'topTrailing'} modifiers={[frame({ maxWidth: Infinity, minHeight: 64, maxHeight: 64 }),
+                  background(tones[name][0], shapes.capsule())]}>
+                  <Text modifiers={[font({ size: 12, weight: 'heavy' }), foregroundStyle(tones[name][1]),
+                    frame({ maxWidth: Infinity, minHeight: 64, maxHeight: 64 })]}>{t(name)}</Text>
+                  {indicator && <Image systemName={indicator === 'complete' ? 'checkmark' : 'star.fill'}
+                    size={indicator === 'complete' ? 17 : 16} color={tones[name][1]}
+                    modifiers={[padding(rtl ? { top: 8, leading: 12 } : { top: 8, trailing: 12 }), accessibilityHidden(true)]} />}
+                </ZStack>
+              </Button>;
+            })}
+            {Array.from({ length: 3 - row.length }, (_, index) => <Text key={`empty-${index}`}
+              modifiers={[frame({ maxWidth: Infinity, minHeight: 64, maxHeight: 64 })]}>{''}</Text>)}
+          </HStack>)}
+        </VStack>;
+      })}
+    </VStack>
+  </Host>;
+}

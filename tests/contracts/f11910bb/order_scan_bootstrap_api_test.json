@@ -1,0 +1,263 @@
+{
+ "source": "test/order_scan_bootstrap_api_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "bootstrap scoped candidate sections match independent decoders",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-assignments?order_id=zakaz-scan-bootstrap&apparatus=apparatus%3Adefault%3Abosma_7",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"7 ta rangli bosma aparat\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\",\"received_qty\":12,\"consumed_qty\":2,\"remaining_qty\":10,\"apparatus_id\":\"apparatus:default:bosma_7\"}]"
+   }
+  },
+  {
+   "test": "bootstrap scoped candidate sections match independent decoders",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/wip-batches?status=waiting&order_id=zakaz-scan-bootstrap&limit=500",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"batches\":[{\"batch_id\":\"scan-roll\",\"order_id\":\"zakaz-scan-bootstrap\",\"qr_payload\":\"400118DF489A8D297E68163A\",\"apparatus\":\"apparatus:default:asset-008\",\"wip_status\":\"waiting\",\"produced_qty\":484,\"uom\":\"m\",\"payload_json\":{\"next_stage_node_id\":\"historical-next\"}}]}"
+   }
+  },
+  {
+   "test": "bootstrap context and QR flags remain additive for older servers",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap&include_sections=false&include_context=true&qr_payload=400118DF489A8D297E68163A",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"control_state\":{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"scan-read-scope\",\"control\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}},\"queue_state\":\"pending\",\"stage_states\":{},\"order_control\":\"active\"},\"sections\":{\"materials\":{\"status\":\"ready\",\"data\":{\"policy\":\"state_all\",\"requires_material\":true,\"material_scan_required\":true,\"requirement_groups\":[],\"assigned_barcodes\":[\"ROLL1\"],\"staged_barcodes\":[\"ROLL1\"],\"eligible_barcodes\":[\"ROLL1\"],\"required_scan_count\":1,\"matched_scan_count\":0,\"assignments_satisfied\":true,\"scan_satisfied\":false,\"assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}],\"start_assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}]}},\"qolips\":{\"status\":\"ready\",\"data\":{\"ok\":true,\"qolip\":{\"qolip_code\":\"\",\"required_qolip_count\":1,\"required_qolip_codes\":[\"MOLD1\"],\"required_qolips\":[{\"qolip_code\":\"MOLD1\",\"color\":\"blue\"}]}}}}}"
+   }
+  },
+  {
+   "test": "bootstrap decodes context and QR proof in one authorized request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap&include_context=true&qr_payload=400118DF489A8D297E68163A",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"control_state\":{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"scan-read-scope\",\"control\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}},\"queue_state\":\"pending\",\"stage_states\":{},\"order_control\":\"active\"},\"sections\":{\"materials\":{\"status\":\"ready\",\"data\":{\"policy\":\"state_all\",\"requires_material\":true,\"material_scan_required\":true,\"requirement_groups\":[],\"assigned_barcodes\":[\"ROLL1\"],\"staged_barcodes\":[\"ROLL1\"],\"eligible_barcodes\":[\"ROLL1\"],\"required_scan_count\":1,\"matched_scan_count\":0,\"assignments_satisfied\":true,\"scan_satisfied\":false,\"assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}],\"start_assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}]}},\"qolips\":{\"status\":\"ready\",\"data\":{\"ok\":true,\"qolip\":{\"qolip_code\":\"\",\"required_qolip_count\":1,\"required_qolip_codes\":[\"MOLD1\"],\"required_qolips\":[{\"qolip_code\":\"MOLD1\",\"color\":\"blue\"}]}}}},\"queue_context\":{\"ok\":true,\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"scan-read-scope\",\"maps\":[{\"map\":{\"id\":\"zakaz-scan-bootstrap\",\"product_code\":\"TEST\",\"title\":\"Test\",\"nodes\":[],\"edges\":[]},\"program\":{}}],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":\"pending\"}},\"queue_action_controls\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}}}},\"queue_policies\":[],\"stage_states\":{\"zakaz-scan-bootstrap\":{}},\"order_controls\":{\"zakaz-scan-bootstrap\":{\"state\":\"active\"}},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"order_customers\":{}},\"validated_progress\":{\"ok\":true,\"active_order_validated\":true,\"validated_apparatus\":\"apparatus:default:bosma_7\",\"validated_order_id\":\"zakaz-scan-bootstrap\",\"can_resume\":true,\"batch\":{\"batch_id\":\"scan-roll\",\"order_id\":\"zakaz-scan-bootstrap\",\"qr_payload\":\"400118DF489A8D297E68163A\",\"apparatus\":\"apparatus:default:asset-008\",\"wip_status\":\"waiting\",\"produced_qty\":484,\"uom\":\"m\",\"payload_json\":{\"next_stage_node_id\":\"historical-next\"}},\"input_route\":{\"source_stage_node_id\":\"previous\",\"stage_node_id\":\"apparatus\",\"consumer_apparatus_ids\":[\"apparatus:default:bosma_7\"],\"map_fingerprint\":\"scan-map\",\"remapped\":true},\"input_route_error\":\"\"}}"
+   }
+  },
+  {
+   "test": "bootstrap sends one scoped GET and passes scanned barcodes",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap&material_barcodes=ROLL1%2CROLL2",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"control_state\":{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"scan-read-scope\",\"control\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}},\"queue_state\":\"pending\",\"stage_states\":{},\"order_control\":\"active\"},\"sections\":{\"materials\":{\"status\":\"ready\",\"data\":{\"policy\":\"state_all\",\"requires_material\":true,\"material_scan_required\":true,\"requirement_groups\":[],\"assigned_barcodes\":[\"ROLL1\"],\"staged_barcodes\":[\"ROLL1\"],\"eligible_barcodes\":[\"ROLL1\"],\"required_scan_count\":1,\"matched_scan_count\":0,\"assignments_satisfied\":true,\"scan_satisfied\":false,\"assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}],\"start_assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}]}},\"qolips\":{\"status\":\"ready\",\"data\":{\"ok\":true,\"qolip\":{\"qolip_code\":\"\",\"required_qolip_count\":1,\"required_qolip_codes\":[\"MOLD1\"],\"required_qolips\":[{\"qolip_code\":\"MOLD1\",\"color\":\"blue\"}]}}}}}"
+   }
+  },
+  {
+   "test": "scan bootstrap synthetic 250ms RTT aggregate=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/sequence?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"\",\"maps\":[],\"sequences\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"visible_order_ids\":{\"apparatus:default:bosma_7\":[\"zakaz-scan-bootstrap\"]},\"queue_states\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":\"pending\"}},\"queue_action_controls\":{\"apparatus:default:bosma_7\":{\"zakaz-scan-bootstrap\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}}}},\"queue_policies\":[],\"stage_states\":{\"zakaz-scan-bootstrap\":{}},\"order_controls\":{\"zakaz-scan-bootstrap\":{\"state\":\"active\"}},\"order_statuses\":{},\"frozen_orders_by_apparatus\":{},\"order_customers\":{}}"
+   }
+  },
+  {
+   "test": "scan bootstrap synthetic 250ms RTT aggregate=false",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/raw-material-start-requirements?order_id=zakaz-scan-bootstrap&apparatus=apparatus%3Adefault%3Abosma_7",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"policy\":\"state_all\",\"requires_material\":true,\"material_scan_required\":true,\"requirement_groups\":[],\"assigned_barcodes\":[\"ROLL1\"],\"staged_barcodes\":[\"ROLL1\"],\"eligible_barcodes\":[\"ROLL1\"],\"required_scan_count\":1,\"matched_scan_count\":0,\"assignments_satisfied\":true,\"scan_satisfied\":false,\"assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}],\"start_assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}]}"
+   }
+  },
+  {
+   "test": "scan bootstrap synthetic 250ms RTT aggregate=false",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/qolip-validate",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"qolip_code\":\"\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"qolip\":{\"qolip_code\":\"\",\"required_qolip_count\":1,\"required_qolip_codes\":[\"MOLD1\"],\"required_qolips\":[{\"qolip_code\":\"MOLD1\",\"color\":\"blue\"}]}}"
+   }
+  },
+  {
+   "test": "scan bootstrap synthetic 250ms RTT aggregate=true",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"control_state\":{\"apparatus\":\"apparatus:default:bosma_7\",\"order_id\":\"zakaz-scan-bootstrap\",\"rev\":7,\"epoch\":\"scan-server\",\"scope\":\"scan-read-scope\",\"control\":{\"state\":\"pending\",\"allowed_actions\":[\"start\"],\"previous_stage_ready\":true,\"stage_node_id\":\"apparatus\",\"complete_requires_full_report\":false,\"interaction\":{\"mode\":\"fresh_start\",\"start_materials_mode\":\"scan_required\",\"material_scan_required\":true,\"assigned_materials_display_only\":true,\"material_intake_allowed\":false,\"previous_wip_mode\":\"not_required\",\"opening_wip_mode\":\"not_required\",\"qolip_mode\":\"scan_required\"}},\"queue_state\":\"pending\",\"stage_states\":{},\"order_control\":\"active\"},\"sections\":{\"materials\":{\"status\":\"ready\",\"data\":{\"policy\":\"state_all\",\"requires_material\":true,\"material_scan_required\":true,\"requirement_groups\":[],\"assigned_barcodes\":[\"ROLL1\"],\"staged_barcodes\":[\"ROLL1\"],\"eligible_barcodes\":[\"ROLL1\"],\"required_scan_count\":1,\"matched_scan_count\":0,\"assignments_satisfied\":true,\"scan_satisfied\":false,\"assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}],\"start_assignments\":[{\"order_id\":\"zakaz-scan-bootstrap\",\"apparatus\":\"apparatus:default:bosma_7\",\"barcode\":\"ROLL1\",\"item_code\":\"FILM1\",\"item_name\":\"Scan test film\",\"item_group\":\"film\",\"execution_status\":\"compatible\",\"stock_qty\":10,\"stock_uom\":\"kg\"}]}},\"qolips\":{\"status\":\"ready\",\"data\":{\"ok\":true,\"qolip\":{\"qolip_code\":\"\",\"required_qolip_count\":1,\"required_qolip_codes\":[\"MOLD1\"],\"required_qolips\":[{\"qolip_code\":\"MOLD1\",\"color\":\"blue\"}]}}}}}"
+   }
+  },
+  {
+   "test": "bootstrap empty route 404 allows legacy reader",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "bootstrap empty route 405 allows legacy reader",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 405,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": ""
+   }
+  },
+  {
+   "test": "bootstrap domain 400 remains failure without legacy fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_not_available\"}"
+   }
+  },
+  {
+   "test": "bootstrap domain 403 remains failure without legacy fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 403,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_not_available\"}"
+   }
+  },
+  {
+   "test": "bootstrap domain 404 remains failure without legacy fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 404,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_not_available\"}"
+   }
+  },
+  {
+   "test": "bootstrap domain 409 remains failure without legacy fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_not_available\"}"
+   }
+  },
+  {
+   "test": "bootstrap domain 503 remains failure without legacy fallback",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/production-maps/order-scan-bootstrap?apparatus=apparatus%3Adefault%3Abosma_7&order_id=zakaz-scan-bootstrap",
+   "requestHeaders": {
+    "Authorization": "Bearer scan-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 503,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"order_not_available\"}"
+   }
+  }
+ ]
+}

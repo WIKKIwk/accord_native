@@ -1,0 +1,73 @@
+import { router, type Href } from 'expo-router';
+import { useCallback, useState, useSyncExternalStore } from 'react';
+import { Platform } from 'react-native';
+import { useNativeSheet } from '../nativeSheet';
+import { appRoutes } from '../shared/appRoutes';
+import { adminText, localizedGetter, productionText } from '../shared/localization';
+import { localeController } from '../shared/localization/runtime';
+import { AdminWorkMapDetail } from './AdminWorkMapDetail';
+import { AdminWorkMapMovePicker } from './AdminWorkMapMovePicker';
+import { adminWorkMapMoveIsUnassigned, adminWorkMapMoveName, adminWorkMapMoveRow, adminWorkMapMoveSame } from './adminWorkMapMoveModel';
+import { dartTrim } from './dartJsonString';
+import { adminWorkMapText } from './adminWorkMapText';
+import type { AdminWorkMapMoveProps } from './adminWorkMapMoveTypes';
+import { adminWorkMapClosedRows } from './adminWorkMapClosedModel';
+import { adminWorkMapAuditPresentation } from './adminWorkMapAuditPresentation';
+import type { AdminWorkMapModule, AdminWorkMapRow } from './adminWorkMapController';
+import { useAdminShell } from './AdminShellContext';
+import { useAdminWorkMap } from './useAdminWorkMap';
+const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
+const localeNow = () => localeController.locale;
+export function useAdminWorkMapView() {
+  const shell = useAdminShell(), locale = useSyncExternalStore(subscribeLocale, localeNow, localeNow), sheet = useNativeSheet();
+  const { state, controller, workspace, workspaceState } = useAdminWorkMap(shell.session, shell.isCurrent), [query, setQuery] = useState('');
+  const [filterExpanded, setFilterExpanded] = useState(false);
+  const goBack = useCallback(() => { if (router.canGoBack()) router.back(); else router.replace(`/${Platform.OS}-admin` as Href); }, []);
+  const onProfile = useCallback(() => {
+    const path = shell.isCurrent() ? shell.destination(appRoutes.profile, Platform.OS) : null;
+    if (path) router.push(path as Href);
+  }, [shell]);
+  const search = (value: string) => { setQuery(value); workspace.setQuery(value); };
+  const open = (row: AdminWorkMapRow) => {
+    if (!shell.isCurrent() || !shell.destination(appRoutes.adminProductionMapOrders, Platform.OS)) return;
+    const ticket = controller.detailTicket(row); if (!ticket) return;
+    sheet.open(<AdminWorkMapDetail session={shell.session} isCurrent={shell.isCurrent} controller={controller} row={row} ticket={ticket} close={sheet.close} />,
+      { dismissible: row.kind !== 'order' });
+  };
+  const openMovePicker = (side: 'top' | 'bottom') => {
+    if (!shell.isCurrent() || !shell.destination(appRoutes.adminProductionMapOrders, Platform.OS)) return;
+    const ticket = workspace.move.picker(side); if (!ticket) return;
+    const rows = ticket.options.map(selection => ({ selection,
+      key: adminWorkMapMoveIsUnassigned(selection) ? 'unassigned' : `apparatus:${selection.id}`,
+      name: adminWorkMapMoveIsUnassigned(selection) ? productionText('worker.queue.filter.unselected', locale) : dartTrim(selection.name),
+      selected: adminWorkMapMoveSame(selection, ticket.selected) }));
+    sheet.open(<AdminWorkMapMovePicker title={productionText('worker.queue.select_apparatus', locale)} rows={rows}
+      onChoose={selection => { workspace.move.choose(ticket, selection); sheet.close(); }} />, { compact: true, dismissible: true });
+  };
+  const controls = { module: workspaceState.module, catalog: workspaceState.catalog, selected: workspaceState.selected, expanded: filterExpanded,
+    onToggle: () => setFilterExpanded(value => !value),
+    onModule: (value: AdminWorkMapModule) => { if (shell.isCurrent()) { sheet.close(); workspace.selectModule(value); setFilterExpanded(false); } },
+    onApparatus: (id: string) => { if (shell.isCurrent()) { sheet.close(); workspace.selectApparatus(id); setFilterExpanded(false); } },
+    apparatusLabel: productionText('worker.queue.filter.apparatus', locale), unselectedLabel: productionText('worker.queue.filter.unselected', locale),
+    countText: workspaceState.module === 'sequence' && state.total > 0 ? productionText('worker.queue.orders_count', locale, { count: state.total }) : '' };
+  const error = state.error ?? (workspaceState.module === 'sequence' || workspaceState.module === 'move' ? workspaceState.catalogError : null);
+  const loading = state.loading || ((workspaceState.module === 'sequence' || workspaceState.module === 'move') && workspaceState.catalogLoading);
+  const emptyText = workspaceState.module === 'sequence'
+    ? !workspaceState.catalogLoaded || loading ? '' : workspaceState.selected == null
+      ? productionText('worker.queue.empty.select_apparatus', locale)
+      : state.loaded && !state.rows.length ? productionText('worker.queue.empty.for_apparatus', locale, { apparatus: workspaceState.selected.name.trim() }) : ''
+    : workspaceState.module === 'closed' ? state.loaded && !loading && !state.closed.length ? adminText('production.closed_empty', locale) : ''
+    : workspaceState.module === 'orders' && state.loaded && !loading && !state.rows.length ? adminText(state.query ? 'production.search_empty' : 'production.open_empty', locale) : '';
+  const pair = workspaceState.move, label = adminWorkMapText(locale), retryLabel = localizedGetter('retry', locale);
+  const move: AdminWorkMapMoveProps = { loading: workspaceState.catalogLoading, error: workspaceState.catalogError,
+    empty: workspaceState.catalogLoaded && (!pair.top || !pair.bottom) ? adminText('production.move.no_equipment', locale) : '', retryLabel,
+    onRetry: () => workspace.reload(), panes: !pair.top || !pair.bottom ? [] : (['top', 'bottom'] as const).map(id => {
+      const apparatus = id === 'top' ? pair.top! : pair.bottom!, pane = id === 'top' ? pair.topWindow : pair.bottomWindow,
+        controller = id === 'top' ? workspace.move.topWindow : workspace.move.bottomWindow;
+      return { id, name: adminWorkMapMoveName(apparatus), loading: pane.loading, loaded: pane.loaded, error: pane.error, hasMore: pane.hasMore,
+        rows: pane.rows.map((row, index) => adminWorkMapMoveRow(row, index, productionText('worker.order.fallback', locale))),
+        empty: adminWorkMapMoveIsUnassigned(apparatus) ? 'Tanlanmagan zakaz yo‘q' : `${apparatus.name} uchun zakaz yo‘q`, moreLabel: label.more, retryLabel,
+        onRefresh: () => controller.reload(), onMore: () => controller.next(), onPick: () => openMovePicker(id) };
+    }) };
+  return { shell, locale, state, controller, controls, error, loading, emptyText, move, closed: adminWorkMapClosedRows(state.closed ?? []), audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), query, goBack, onProfile, search, open };
+}

@@ -1,0 +1,7 @@
+# Superseded login witness candidate
+
+Isolated candidate based on main `fdbfcfdcc6500e70ca8525e2e1d18c468649d728`; no route or legacy auth caller opts into anything new. A newer login retires only an older login witness that has already completed endpoint setup and passed the epoch check and is awaiting authentication. Its request is not cancelled and legacy login/fetch/storage behavior is unchanged. The newer transition is registered before the old witness is retired, so subscribers cannot capture the previous session in between. Any late old response still encounters the existing epoch guard before session installation.
+
+A login still awaiting endpoint initialization or `setBaseUrl`, or already beyond authentication and queued for storage, is not retired. It can therefore continue to hold new role shells until it settles; the caller should show a truthful waiting/retry instruction rather than pretend the session is ready. In particular, the existing legacy endpoint setter may complete late after a newer login; this candidate deliberately does not change that behavior. No claims are made about native dispatch, redirect safety, already-sent requests or unobserved direct session mutation.
+
+Synthetic tests cover hung old auth + new success + late old response, pending endpoint setup, newer failed authentication, newer storage rollback, subscriber ordering, and existing auth/switch/profile/worker behavior. No real credentials or backend are used. Integrator review is required before merging.

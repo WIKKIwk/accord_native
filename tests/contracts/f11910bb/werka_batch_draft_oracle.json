@@ -1,0 +1,2782 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "screenSha256": "c93935e4e76914ad393ec76398b5ea3407d4058d358a107d04d45ce65d6d116f",
+  "methodsSha256": "4ea0b28f1beb735786e5873133624edfb7ca5cea9f05299c5d84462dd38cbc56",
+  "kind": "standalone source-equivalent batch draft probe; not Flutter or device",
+  "values": [
+    {
+      "input": "",
+      "positive": false
+    },
+    {
+      "input": " ",
+      "positive": false
+    },
+    {
+      "input": "0",
+      "positive": false
+    },
+    {
+      "input": "-0",
+      "positive": false
+    },
+    {
+      "input": "+0",
+      "positive": false
+    },
+    {
+      "input": "1",
+      "positive": true
+    },
+    {
+      "input": "1.",
+      "positive": true
+    },
+    {
+      "input": ".5",
+      "positive": true
+    },
+    {
+      "input": "-.5",
+      "positive": false
+    },
+    {
+      "input": "+.5",
+      "positive": true
+    },
+    {
+      "input": "1e3",
+      "positive": true
+    },
+    {
+      "input": "1E-3",
+      "positive": true
+    },
+    {
+      "input": "1e+3",
+      "positive": true
+    },
+    {
+      "input": "1e",
+      "positive": false
+    },
+    {
+      "input": "1e+",
+      "positive": false
+    },
+    {
+      "input": ".",
+      "positive": false
+    },
+    {
+      "input": "+",
+      "positive": false
+    },
+    {
+      "input": "--1",
+      "positive": false
+    },
+    {
+      "input": "1.2.3",
+      "positive": false
+    },
+    {
+      "input": "1,2",
+      "positive": false
+    },
+    {
+      "input": "0x10",
+      "positive": false
+    },
+    {
+      "input": "1_000",
+      "positive": false
+    },
+    {
+      "input": "NaN",
+      "positive": false
+    },
+    {
+      "input": "+NaN",
+      "positive": false
+    },
+    {
+      "input": "-NaN",
+      "positive": false
+    },
+    {
+      "input": "nan",
+      "positive": false
+    },
+    {
+      "input": "Infinity",
+      "positive": true
+    },
+    {
+      "input": "+Infinity",
+      "positive": true
+    },
+    {
+      "input": "-Infinity",
+      "positive": false
+    },
+    {
+      "input": "infinity",
+      "positive": false
+    },
+    {
+      "input": "  1.25  ",
+      "positive": true
+    },
+    {
+      "input": "1",
+      "positive": true
+    },
+    {
+      "input": "﻿1﻿",
+      "positive": true
+    },
+    {
+      "input": "​1​",
+      "positive": false
+    },
+    {
+      "input": "∞",
+      "positive": false
+    },
+    {
+      "input": "١",
+      "positive": false
+    },
+    {
+      "input": "1e-9999",
+      "positive": false
+    },
+    {
+      "input": "-1e-9999",
+      "positive": false
+    },
+    {
+      "input": "1e9999",
+      "positive": true
+    },
+    {
+      "input": "-1e9999",
+      "positive": false
+    },
+    {
+      "input": "5e-324",
+      "positive": true
+    },
+    {
+      "input": "2.4703282292062327e-324",
+      "positive": false
+    },
+    {
+      "input": "1e21",
+      "positive": true
+    },
+    {
+      "input": "999999999999999999999",
+      "positive": true
+    },
+    {
+      "input": "1.5",
+      "positive": true
+    },
+    {
+      "input": "2.5",
+      "positive": true
+    },
+    {
+      "input": "0.49999999999999994",
+      "positive": true
+    },
+    {
+      "input": "-2241556.796464151e-149",
+      "positive": false
+    },
+    {
+      "input": "+462777756.555105068e296",
+      "positive": true
+    },
+    {
+      "input": "-645865311.907393228e-280",
+      "positive": false
+    },
+    {
+      "input": "-171101291.683104439e-79",
+      "positive": false
+    },
+    {
+      "input": "377420326.635843416e-321",
+      "positive": true
+    },
+    {
+      "input": "856414497.962997806e-299",
+      "positive": true
+    },
+    {
+      "input": "+26484475.921218612e-53",
+      "positive": true
+    },
+    {
+      "input": "-510932086.648517245e112",
+      "positive": false
+    },
+    {
+      "input": "+520639089.406679159e-155",
+      "positive": true
+    },
+    {
+      "input": "959872551.763440073e-1",
+      "positive": true
+    },
+    {
+      "input": "+200016254.262538889e-201",
+      "positive": true
+    },
+    {
+      "input": "-486632715.239250043e261",
+      "positive": false
+    },
+    {
+      "input": "726406059.923957734e-287",
+      "positive": true
+    },
+    {
+      "input": "-617577492.593000759e-145",
+      "positive": false
+    },
+    {
+      "input": "+740593703.563763729e-230",
+      "positive": true
+    },
+    {
+      "input": "+780672669.098315600e276",
+      "positive": true
+    },
+    {
+      "input": "744507106.037290015e18",
+      "positive": true
+    },
+    {
+      "input": "225993091.551913507e172",
+      "positive": true
+    },
+    {
+      "input": "267105441.218719695e143",
+      "positive": true
+    },
+    {
+      "input": "137933626.668950143e262",
+      "positive": true
+    },
+    {
+      "input": "794252004.813567895e-280",
+      "positive": true
+    },
+    {
+      "input": "+447929661.139384426e-291",
+      "positive": true
+    },
+    {
+      "input": "571168401.533166100e-13",
+      "positive": true
+    },
+    {
+      "input": "503651626.096834923e-161",
+      "positive": true
+    },
+    {
+      "input": "-479228353.075189426e147",
+      "positive": false
+    },
+    {
+      "input": "894845716.356571837e-83",
+      "positive": true
+    },
+    {
+      "input": "784897785.578377380e212",
+      "positive": true
+    },
+    {
+      "input": "-447098695.297044223e81",
+      "positive": false
+    },
+    {
+      "input": "-150012514.807118624e259",
+      "positive": false
+    },
+    {
+      "input": "+421577451.181603221e-150",
+      "positive": true
+    },
+    {
+      "input": "+590533778.864605356e329",
+      "positive": true
+    },
+    {
+      "input": "+85077442.754145035e-130",
+      "positive": true
+    },
+    {
+      "input": "219350167.816743540e62",
+      "positive": true
+    },
+    {
+      "input": "-69767980.738374369e186",
+      "positive": false
+    },
+    {
+      "input": "+52451166.413703740e11",
+      "positive": true
+    },
+    {
+      "input": "87441087.106293685e-101",
+      "positive": true
+    },
+    {
+      "input": "-169265200.727991571e127",
+      "positive": false
+    },
+    {
+      "input": "+643785089.012777966e140",
+      "positive": true
+    },
+    {
+      "input": "160679231.783359116e-339",
+      "positive": false
+    },
+    {
+      "input": "-825722798.243995665e-74",
+      "positive": false
+    },
+    {
+      "input": "714412390.692024129e268",
+      "positive": true
+    },
+    {
+      "input": "514406672.399020930e36",
+      "positive": true
+    },
+    {
+      "input": "+588405747.796348252e-231",
+      "positive": true
+    },
+    {
+      "input": "-417902386.592626829e-24",
+      "positive": false
+    },
+    {
+      "input": "-432864930.473498386e255",
+      "positive": false
+    },
+    {
+      "input": "-596310908.304993627e312",
+      "positive": false
+    },
+    {
+      "input": "+211050689.695065490e-345",
+      "positive": false
+    },
+    {
+      "input": "-675527347.805987833e147",
+      "positive": false
+    },
+    {
+      "input": "+844537093.760519524e-170",
+      "positive": true
+    },
+    {
+      "input": "510336080.137667517e183",
+      "positive": true
+    },
+    {
+      "input": "-761986837.389656860e-311",
+      "positive": false
+    },
+    {
+      "input": "-696350808.443643393e-119",
+      "positive": false
+    },
+    {
+      "input": "463411907.585696135e-186",
+      "positive": true
+    },
+    {
+      "input": "688129663.021985438e-297",
+      "positive": true
+    },
+    {
+      "input": "-191658274.450491391e227",
+      "positive": false
+    },
+    {
+      "input": "143209278.461076802e269",
+      "positive": true
+    },
+    {
+      "input": "-32595323.903638092e308",
+      "positive": false
+    },
+    {
+      "input": "+234749925.994863110e215",
+      "positive": true
+    },
+    {
+      "input": "-370349075.564226647e51",
+      "positive": false
+    },
+    {
+      "input": "-995602199.859693543e29",
+      "positive": false
+    },
+    {
+      "input": "-673383521.248046364e69",
+      "positive": false
+    },
+    {
+      "input": "186202902.090140028e34",
+      "positive": true
+    },
+    {
+      "input": "529014906.061006379e-148",
+      "positive": true
+    },
+    {
+      "input": "298567404.526200267e-212",
+      "positive": true
+    },
+    {
+      "input": "130175529.407695191e115",
+      "positive": true
+    },
+    {
+      "input": "677055646.593966192e-27",
+      "positive": true
+    },
+    {
+      "input": "-760686757.770044949e-278",
+      "positive": false
+    },
+    {
+      "input": "413484749.557822336e-220",
+      "positive": true
+    },
+    {
+      "input": "+789786623.360623160e-76",
+      "positive": true
+    },
+    {
+      "input": "-359823158.486421123e-299",
+      "positive": false
+    },
+    {
+      "input": "-583216225.356228824e-36",
+      "positive": false
+    },
+    {
+      "input": "174225666.145598836e-307",
+      "positive": true
+    },
+    {
+      "input": "-383709735.364713492e-294",
+      "positive": false
+    },
+    {
+      "input": "-850698507.949384069e195",
+      "positive": false
+    },
+    {
+      "input": "+879809250.767201557e40",
+      "positive": true
+    },
+    {
+      "input": "-539504492.760042871e-288",
+      "positive": false
+    },
+    {
+      "input": "-37296281.097061219e51",
+      "positive": false
+    },
+    {
+      "input": "-184123285.997997026e137",
+      "positive": false
+    },
+    {
+      "input": "873294823.094743402e-241",
+      "positive": true
+    },
+    {
+      "input": "+806348159.149798962e-248",
+      "positive": true
+    },
+    {
+      "input": "-849003151.199876066e334",
+      "positive": false
+    },
+    {
+      "input": "-855450986.844600214e97",
+      "positive": false
+    },
+    {
+      "input": "578848661.156520747e-320",
+      "positive": true
+    },
+    {
+      "input": "+374847962.782517575e-156",
+      "positive": true
+    },
+    {
+      "input": "+705408104.653097443e-184",
+      "positive": true
+    },
+    {
+      "input": "-720430479.781384507e136",
+      "positive": false
+    },
+    {
+      "input": "-191373824.389681970e243",
+      "positive": false
+    },
+    {
+      "input": "+764149658.762145048e-54",
+      "positive": true
+    },
+    {
+      "input": "-540034003.931310975e-60",
+      "positive": false
+    },
+    {
+      "input": "+448567437.352978428e-307",
+      "positive": true
+    },
+    {
+      "input": "+705801318.141184366e119",
+      "positive": true
+    },
+    {
+      "input": "+458130998.773922968e190",
+      "positive": true
+    },
+    {
+      "input": "-425257589.682182576e-273",
+      "positive": false
+    },
+    {
+      "input": "+373964676.047431592e218",
+      "positive": true
+    },
+    {
+      "input": "-557533622.158363215e95",
+      "positive": false
+    },
+    {
+      "input": "-775039171.843239554e-39",
+      "positive": false
+    },
+    {
+      "input": "+126420060.771562180e300",
+      "positive": true
+    },
+    {
+      "input": "622003150.560710074e158",
+      "positive": true
+    },
+    {
+      "input": "802668494.483769066e-37",
+      "positive": true
+    },
+    {
+      "input": "-800054021.780160463e273",
+      "positive": false
+    },
+    {
+      "input": "376453452.601779784e-241",
+      "positive": true
+    },
+    {
+      "input": "+971026582.584826548e151",
+      "positive": true
+    },
+    {
+      "input": "-229512434.703827621e-106",
+      "positive": false
+    },
+    {
+      "input": "-723561446.144836867e156",
+      "positive": false
+    },
+    {
+      "input": "453894600.640142403e253",
+      "positive": true
+    },
+    {
+      "input": "526575097.668474379e-272",
+      "positive": true
+    },
+    {
+      "input": "491213463.200737836e45",
+      "positive": true
+    },
+    {
+      "input": "+850502774.269809570e164",
+      "positive": true
+    },
+    {
+      "input": "207640405.089132430e260",
+      "positive": true
+    },
+    {
+      "input": "-522456690.229101786e126",
+      "positive": false
+    },
+    {
+      "input": "-632240946.756808591e-130",
+      "positive": false
+    },
+    {
+      "input": "603414180.793834277e-155",
+      "positive": true
+    },
+    {
+      "input": "680910206.006248204e337",
+      "positive": true
+    },
+    {
+      "input": "-923279053.919306583e171",
+      "positive": false
+    },
+    {
+      "input": "-808424267.077490478e-162",
+      "positive": false
+    },
+    {
+      "input": "936859266.924768213e-194",
+      "positive": true
+    },
+    {
+      "input": "+608231698.733390237e-143",
+      "positive": true
+    },
+    {
+      "input": "260942740.229814973e210",
+      "positive": true
+    },
+    {
+      "input": "-395846618.777207759e171",
+      "positive": false
+    },
+    {
+      "input": "654953541.133464344e-122",
+      "positive": true
+    },
+    {
+      "input": "+703363398.889961228e-16",
+      "positive": true
+    },
+    {
+      "input": "-84071537.777534306e-104",
+      "positive": false
+    },
+    {
+      "input": "+219438405.971733960e320",
+      "positive": true
+    },
+    {
+      "input": "+584570608.585543632e289",
+      "positive": true
+    },
+    {
+      "input": "-344448857.744598902e229",
+      "positive": false
+    },
+    {
+      "input": "+501613043.159610438e-184",
+      "positive": true
+    },
+    {
+      "input": "-149724785.097153125e-174",
+      "positive": false
+    },
+    {
+      "input": "-523758819.877699764e-29",
+      "positive": false
+    },
+    {
+      "input": "-634928344.329274087e-235",
+      "positive": false
+    },
+    {
+      "input": "-635282557.146619897e260",
+      "positive": false
+    },
+    {
+      "input": "-11663379.376761496e-265",
+      "positive": false
+    },
+    {
+      "input": "-788840231.534769684e19",
+      "positive": false
+    },
+    {
+      "input": "27390732.548388691e69",
+      "positive": true
+    },
+    {
+      "input": "-250562989.155953567e109",
+      "positive": false
+    },
+    {
+      "input": "+337354056.195768685e265",
+      "positive": true
+    },
+    {
+      "input": "+620940106.689403157e128",
+      "positive": true
+    },
+    {
+      "input": "+900498171.286327779e-198",
+      "positive": true
+    },
+    {
+      "input": "+520800894.719328845e334",
+      "positive": true
+    },
+    {
+      "input": "197730739.213375609e-170",
+      "positive": true
+    },
+    {
+      "input": "+589143884.706691236e-26",
+      "positive": true
+    },
+    {
+      "input": "-104796352.424681204e-347",
+      "positive": false
+    },
+    {
+      "input": "+383848496.373660476e-218",
+      "positive": true
+    },
+    {
+      "input": "962142810.711208674e-194",
+      "positive": true
+    },
+    {
+      "input": "+82179567.526894817e314",
+      "positive": true
+    },
+    {
+      "input": "-626346651.549708695e-21",
+      "positive": false
+    },
+    {
+      "input": "626862009.241981329e174",
+      "positive": true
+    },
+    {
+      "input": "-484420442.793941742e106",
+      "positive": false
+    },
+    {
+      "input": "-976321567.639746283e-80",
+      "positive": false
+    },
+    {
+      "input": "+927723625.411811492e-232",
+      "positive": true
+    },
+    {
+      "input": "+594728828.010315018e-288",
+      "positive": true
+    },
+    {
+      "input": "+666886295.096716841e16",
+      "positive": true
+    },
+    {
+      "input": "-422656850.752581724e-339",
+      "positive": false
+    },
+    {
+      "input": "508892029.850908834e112",
+      "positive": true
+    },
+    {
+      "input": "+755230067.543862273e-19",
+      "positive": true
+    },
+    {
+      "input": "-700160598.992261355e101",
+      "positive": false
+    },
+    {
+      "input": "396197961.992745618e-207",
+      "positive": true
+    },
+    {
+      "input": "-292416834.321571216e276",
+      "positive": false
+    },
+    {
+      "input": "187762790.422726086e19",
+      "positive": true
+    },
+    {
+      "input": "813593882.975665443e289",
+      "positive": true
+    },
+    {
+      "input": "+951615842.757714253e-332",
+      "positive": true
+    },
+    {
+      "input": "845331949.570900024e189",
+      "positive": true
+    },
+    {
+      "input": "-200571599.371509562e-105",
+      "positive": false
+    },
+    {
+      "input": "-553124728.152844433e-293",
+      "positive": false
+    },
+    {
+      "input": "+708355327.884130248e-63",
+      "positive": true
+    },
+    {
+      "input": "-747558699.198157139e-137",
+      "positive": false
+    },
+    {
+      "input": "-591699581.393454644e-123",
+      "positive": false
+    },
+    {
+      "input": "+696893948.236013482e-177",
+      "positive": true
+    },
+    {
+      "input": "+913303673.455276263e-134",
+      "positive": true
+    },
+    {
+      "input": "427976815.580008956e323",
+      "positive": true
+    },
+    {
+      "input": "-354074577.441492530e105",
+      "positive": false
+    },
+    {
+      "input": "552219352.867643547e-300",
+      "positive": true
+    },
+    {
+      "input": "+80891941.493863767e8",
+      "positive": true
+    },
+    {
+      "input": "-465331116.553539287e220",
+      "positive": false
+    },
+    {
+      "input": "338215679.164299260e161",
+      "positive": true
+    },
+    {
+      "input": "-262013744.414257822e-142",
+      "positive": false
+    },
+    {
+      "input": "+8306644.740795923e178",
+      "positive": true
+    },
+    {
+      "input": "-728678648.926811232e-197",
+      "positive": false
+    },
+    {
+      "input": "884854857.987963320e-212",
+      "positive": true
+    },
+    {
+      "input": "+424428343.711457467e59",
+      "positive": true
+    },
+    {
+      "input": "-425116913.306657069e110",
+      "positive": false
+    },
+    {
+      "input": "440247690.507537568e-302",
+      "positive": true
+    },
+    {
+      "input": "-869266505.774314572e237",
+      "positive": false
+    },
+    {
+      "input": "+154819497.220696520e-125",
+      "positive": true
+    },
+    {
+      "input": "+198784639.992804959e-117",
+      "positive": true
+    },
+    {
+      "input": "-319210989.132641108e-27",
+      "positive": false
+    },
+    {
+      "input": "+390836973.186069326e-102",
+      "positive": true
+    },
+    {
+      "input": "+456161917.100750442e87",
+      "positive": true
+    },
+    {
+      "input": "+634974232.678251879e125",
+      "positive": true
+    },
+    {
+      "input": "+75080960.763707357e159",
+      "positive": true
+    },
+    {
+      "input": "595700596.805032530e308",
+      "positive": true
+    },
+    {
+      "input": "916109360.459983634e-68",
+      "positive": true
+    },
+    {
+      "input": "+404684743.096535125e162",
+      "positive": true
+    },
+    {
+      "input": "+917914063.102581929e183",
+      "positive": true
+    },
+    {
+      "input": "+774034681.877386344e-64",
+      "positive": true
+    },
+    {
+      "input": "60450787.441632084e142",
+      "positive": true
+    },
+    {
+      "input": "-374500275.123745181e-331",
+      "positive": false
+    },
+    {
+      "input": "-688078265.605308453e-156",
+      "positive": false
+    },
+    {
+      "input": "492390956.954024878e245",
+      "positive": true
+    },
+    {
+      "input": "863806248.470454219e17",
+      "positive": true
+    },
+    {
+      "input": "+53023385.919510841e342",
+      "positive": true
+    },
+    {
+      "input": "-973616554.859362759e-256",
+      "positive": false
+    },
+    {
+      "input": "+540863957.351393011e138",
+      "positive": true
+    },
+    {
+      "input": "844623939.109698493e246",
+      "positive": true
+    },
+    {
+      "input": "-365127339.807496259e-243",
+      "positive": false
+    },
+    {
+      "input": "714162690.262151729e5",
+      "positive": true
+    },
+    {
+      "input": "+409623510.831204238e55",
+      "positive": true
+    },
+    {
+      "input": "+473456179.477983024e-191",
+      "positive": true
+    },
+    {
+      "input": "-368937774.864638476e185",
+      "positive": false
+    },
+    {
+      "input": "+615670057.819909804e301",
+      "positive": true
+    },
+    {
+      "input": "710866321.709718412e-286",
+      "positive": true
+    },
+    {
+      "input": "-247092604.063182700e332",
+      "positive": false
+    },
+    {
+      "input": "-124894441.497981292e-249",
+      "positive": false
+    },
+    {
+      "input": "-767774425.649235568e326",
+      "positive": false
+    },
+    {
+      "input": "3028365.003586599e182",
+      "positive": true
+    },
+    {
+      "input": "612363735.280498697e-302",
+      "positive": true
+    },
+    {
+      "input": "-834197902.090577063e-337",
+      "positive": false
+    },
+    {
+      "input": "462169987.573876668e-64",
+      "positive": true
+    },
+    {
+      "input": "57320093.707669899e173",
+      "positive": true
+    },
+    {
+      "input": "-126827214.364045992e-4",
+      "positive": false
+    },
+    {
+      "input": "172991937.051522049e-207",
+      "positive": true
+    },
+    {
+      "input": "-8780852.536245608e200",
+      "positive": false
+    },
+    {
+      "input": "-398074473.704459304e18",
+      "positive": false
+    },
+    {
+      "input": "-645436703.053058135e92",
+      "positive": false
+    },
+    {
+      "input": "+618903656.628538567e-309",
+      "positive": true
+    },
+    {
+      "input": "-304097986.846429019e101",
+      "positive": false
+    },
+    {
+      "input": "826147136.503935177e176",
+      "positive": true
+    },
+    {
+      "input": "+4604109.943726069e178",
+      "positive": true
+    },
+    {
+      "input": "149313155.033865839e-155",
+      "positive": true
+    },
+    {
+      "input": "-231397790.992918906e-83",
+      "positive": false
+    },
+    {
+      "input": "-731398889.291641865e260",
+      "positive": false
+    },
+    {
+      "input": "-753909802.786833014e-100",
+      "positive": false
+    },
+    {
+      "input": "891560601.476396522e-155",
+      "positive": true
+    },
+    {
+      "input": "-241548823.494175667e108",
+      "positive": false
+    },
+    {
+      "input": "-880201225.349286029e275",
+      "positive": false
+    },
+    {
+      "input": "-326436503.638630800e60",
+      "positive": false
+    },
+    {
+      "input": "+316640727.611429843e183",
+      "positive": true
+    },
+    {
+      "input": "-606562452.359549998e-3",
+      "positive": false
+    },
+    {
+      "input": "753936648.384019069e140",
+      "positive": true
+    },
+    {
+      "input": "-60054172.168696735e-92",
+      "positive": false
+    },
+    {
+      "input": "645810314.143799471e15",
+      "positive": true
+    },
+    {
+      "input": "-606878675.468336409e-118",
+      "positive": false
+    },
+    {
+      "input": "-372448656.673634339e-203",
+      "positive": false
+    },
+    {
+      "input": "215284715.582743489e200",
+      "positive": true
+    },
+    {
+      "input": "-319080302.690310233e107",
+      "positive": false
+    },
+    {
+      "input": "+224573127.107707741e-61",
+      "positive": true
+    },
+    {
+      "input": "+673663200.150059333e248",
+      "positive": true
+    },
+    {
+      "input": "-9959448.005507919e-265",
+      "positive": false
+    },
+    {
+      "input": "255859746.713280435e-258",
+      "positive": true
+    },
+    {
+      "input": "+334069155.411935549e169",
+      "positive": true
+    },
+    {
+      "input": "749195191.511388594e338",
+      "positive": true
+    },
+    {
+      "input": "353815391.858506297e145",
+      "positive": true
+    },
+    {
+      "input": "-658375818.145477572e214",
+      "positive": false
+    },
+    {
+      "input": "+442853368.012059734e-62",
+      "positive": true
+    },
+    {
+      "input": "874299225.968478589e-332",
+      "positive": true
+    },
+    {
+      "input": "+162254685.131484786e275",
+      "positive": true
+    },
+    {
+      "input": "-232038516.295843913e19",
+      "positive": false
+    }
+  ],
+  "matrix": [
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 0,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 1,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": false,
+      "drafts": 2,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 0,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 1,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": false,
+      "item": true,
+      "drafts": 2,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 0,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 1,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": false,
+      "drafts": 2,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": true,
+      "showQuantity": false,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": true,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": true,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": true,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": true,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": true,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 0,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": false,
+      "canSave": true,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": false
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 1,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "0",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "0",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "1.5",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "1.5",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "NaN",
+      "phone": "",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "NaN",
+      "phone": " +998 ",
+      "valid": false,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": false,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "Infinity",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": "Infinity",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": " 2 ",
+      "phone": "",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    },
+    {
+      "customer": true,
+      "item": true,
+      "drafts": 2,
+      "quantityText": " 2 ",
+      "phone": " +998 ",
+      "valid": true,
+      "showPhone": false,
+      "showQuantity": true,
+      "showList": true,
+      "canSave": true,
+      "canConfirmReview": true
+    }
+  ]
+}

@@ -1,13 +1,17 @@
 # chat
 
 Status: in progress
-Stopped at: opt-in native session adapter, React hook and existing thread bridge; role shells are not yet connected.
+Stopped at: finish the full Chat model, media, text and surface audit and each new role's Chat wiring. The shared connection transport is completed in `chat-secure.md`; it uses the V2 ticket/reauthentication flow and cookie-free native WebSockets. A development build containing the new module is required for realtime connections.
+
+## Completed shared transport
+
+`subscribeChatLive` now uses the local `AccordChatSecure` module on both platforms, retaining the existing Chat routes and hooks. Ticket requests and saved-account reauthentication use the existing shared auth state with explicit SDK 58 Expo fetch. Native redirect/cookie rejection, cancellation, retry deadlines and protocol pings have source comparisons and automated checks in `status/chat-secure.md`. Its iOS module build and Android module build (available SDK 36) passed; physical-device QA and the default SDK 37 app build remain verification limits.
 
 ## Open items
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Shared unread runtime | `ChatRuntime`, `ChatStore.startForCurrentSession` | Role shells can opt in through `useChatUnreadCount(session)`. It is not installed in common app entry and does not start for worker or preparation by itself. Validate lifecycle and badge behavior on real devices and against the backend. |
+| Shared unread runtime | `ChatRuntime`, `ChatStore.startForCurrentSession` | `useChatUnreadCount(session)` is implemented and now shares the completed native connection transport. It is not installed in common app entry and does not start for worker or preparation by itself. Finish each role's wiring and validate lifecycle and badge behavior on real devices and against the backend. |
 | Chat synchronization | `ChatStore._synchronizeChat`, `_fillMessageGap`, `_acceptRealtimeMessage` | The native adapter composes the tested runtime with existing network/socket and local storage, but needs device and backend validation. The existing native message model omits some V2 fields, which remain open for the full Chat role. |
 | Live conversation display | `ChatStore._acceptMessage` | Unread state updates the latest sequence and cache ordering time, but does not yet replace the displayed last-message preview or re-sort a live list. Complete that behavior in the Chat role audit before claiming full screen parity. |
 | Malformed recovery payloads | `ChatSyncPage.fromJson`, `ChatMessage.fromJson` | V4 currently rejects a message map that its existing parser cannot preserve rather than advancing past it; V2 supplies defaults for some missing fields. Compare malformed backend responses and resolve this explicit difference in the full Chat audit. |
