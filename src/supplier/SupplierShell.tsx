@@ -23,7 +23,9 @@ export function SupplierShell({ platform, children }: { platform: 'ios' | 'andro
     const unregister = registerSessionResetHook(async () => { generation.current++; if (mounted) setSession(null); });
     return () => { mounted = false; unregister(); };
   }, []);
-  if (Platform.OS !== platform || session === null || (session && !canOpenRoute(session, appRoutes.supplierHome))) return <Redirect href="/" />;
+  // Existing Worker and Preparation sessions must not acquire Supplier routes through overlapping capabilities.
+  const protectedRole = session && (session.profile.role === 'aparatchi' || session.profile.role === 'tayyorlov_masteri');
+  if (Platform.OS !== platform || session === null || (session && (protectedRole || !canOpenRoute(session, appRoutes.supplierHome)))) return <Redirect href="/" />;
   if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   const onLogout = () => { void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {})])
     .finally(() => { setSession(null); router.replace('/'); }); };
