@@ -34,3 +34,17 @@ export function werkaBatchPartialResultLabels(createdCount: number, failedCount:
     failed: localizedMethod('batchFailedCountLabel', locale, { count: failedCount }),
     close: localizedGetter('closeAction', locale) };
 }
+
+export type WerkaBatchSuccessContentProps = { createdCount: number; failedCount: number; returnLabel: string; locale: string };
+
+/** Display supplied counts only. This does not establish that any write succeeded. */
+export function werkaBatchSuccessPresentation({ createdCount, failedCount, returnLabel, locale }: WerkaBatchSuccessContentProps) {
+  if (!Number.isSafeInteger(createdCount) || createdCount < 0 || !Number.isSafeInteger(failedCount) || failedCount < 0) {
+    throw new RangeError('Invalid batch result counts');
+  }
+  if (typeof returnLabel !== 'string') throw new TypeError('Invalid return label');
+  return { title: localizedGetter('sentSuccess', locale),
+    created: localizedMethod('batchCreatedCountLabel', locale, { count: createdCount }),
+    detail: localizedMethod(failedCount > 0 ? 'batchFailedCountLabel' : 'batchSentLine', locale,
+      { count: failedCount > 0 ? failedCount : createdCount }), returnLabel };
+}
