@@ -36,7 +36,8 @@ for (const platform of ['ios', 'android']) {
     let allowed = true; const components = new Proxy({ useMaterialColors: () => ({}) }, { get: (obj, key) => obj[key] ?? key });
     const modifiers = new Proxy({}, { get: (_obj, key) => (...args) => ({ name: key, args }) });
     const { RezkaPaddonWipSection } = load(`rezka/RezkaPaddonWipSection.${platform}.tsx`, {
-      'react/jsx-runtime': jsx, '@expo/ui/swift-ui': components, '@expo/ui/jetpack-compose': components, '@expo/ui/swift-ui/modifiers': modifiers,
+      'react/jsx-runtime': jsx, '@expo/ui/swift-ui': components, '@expo/ui/jetpack-compose': components,
+      '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers,
       'react-native': { View: 'View' }, '../shared/localization': { productionText: (key, locale) => `${locale}:${key}`,
         localizedMethod: (key, locale, values) => `${locale}:${key}:${values.count}` },
       './RezkaPaddonWipReadOnly': { RezkaPaddonWipReadOnly: 'WipCard' }, './rezkaPaddonWipSectionModel': model,
@@ -44,6 +45,11 @@ for (const platform of ['ios', 'android']) {
       './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: (value, supplied) => value === snapshot && supplied === binding && allowed },
       './useRezkaShell': { useRezkaLocale: () => 'uz' } });
     const render = () => RezkaPaddonWipSection({ snapshot, binding }), page = render();
+    assert.deepEqual(page.props.style, { gap: 8, paddingTop: 8 });
+    const stack = nodes(page, n => n.type === (platform === 'ios' ? 'VStack' : 'Column'))[0];
+    assert.equal(platform === 'ios' ? stack.props.spacing : stack.props.verticalArrangement.spacedBy, 12);
+    const title = nodes(page, n => n.type === 'Text' && n.props.children === 'uz:worker.paddon.assigned.title')[0];
+    assert.ok(title.props.modifiers.some(value => value.name === (platform === 'ios' ? 'frame' : 'weight')));
     assert.deepEqual(nodes(page, n => n.type === 'Text').map(n => n.props.children),
       ['uz:paddon.management.free_movement.hint', 'uz:worker.paddon.assigned.title', 'uz:productionCount:2']);
     const cards = nodes(page, n => n.type === 'WipCard'); assert.equal(cards.length, 2);
