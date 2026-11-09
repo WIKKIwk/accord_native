@@ -40,7 +40,7 @@ test('home target opens Material on both platforms without changing Worker or Pr
   assert.equal(routes.homeTarget(material, 'web'), null);
 });
 
-test('Expo Router exposes Material task entrypoints but no held destinations', () => {
+test('Expo Router discovers gated History and no other held destinations', () => {
   const walk = (directory, prefix = '.') => fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory() ? walk(path.join(directory, entry.name), `${prefix}/${entry.name}`)
       : /\.[jt]sx?$/.test(entry.name) ? [`${prefix}/${entry.name}`] : []);
@@ -55,7 +55,20 @@ test('Expo Router exposes Material task entrypoints but no held destinations', (
       assert.ok(paths.includes(`./${other}-material/_layout.tsx`)); assert.ok(paths.includes(`./${other}-material/profile.tsx`));
       assert.ok(paths.includes(other === 'ios' ? './ios-material/(home)/index.tsx' : './android-material/index.tsx'));
       assert.ok(paths.includes(`./${other}-material/tasks.tsx`));
+      assert.ok(paths.includes(other === 'ios' ? './ios-material/(home)/history.tsx' : './android-material/history.tsx'));
     }
-    assert.equal(paths.some(key => /^\.\/(ios|android)-material\/.*(?:history|chat|gscale|assignment|inventory)/.test(key)), false);
+    assert.equal(paths.some(key => /^\.\/(ios|android)-material\/.*(?:chat|gscale|assignment|inventory)/.test(key)), false);
   }
+});
+
+
+test('both direct History routes export the passive gate, never the History screen', () => {
+  for (const file of ['../src/app/android-material/history.tsx', '../src/app/ios-material/(home)/history.tsx']) {
+    const source = fs.readFileSync(path.resolve(__dirname, file), 'utf8');
+    assert.match(source, /export \{ MaterialHistoryUnavailable as default \} from ['"][^'"]+MaterialHistoryUnavailable['"]/);
+    assert.doesNotMatch(source, /from ['"][^'"]+MaterialHistory['"]/);
+  }
+  const gate = fs.readFileSync(path.resolve(__dirname, '../src/material/MaterialHistoryUnavailable.tsx'), 'utf8');
+  assert.match(gate, /Harakatlar tarixi hozircha mavjud emas/);
+  assert.doesNotMatch(gate, /useMaterialHistory|MaterialHistoryApi|fetch\s*\(/);
 });

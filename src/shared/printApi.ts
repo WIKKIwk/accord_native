@@ -48,13 +48,16 @@ async function reprintException(response: Response): Promise<MobileApiException>
 }
 
 /** @v2 adminPrepareRawMaterialStockReprint */
-export async function adminPrepareRawMaterialStockReprint(session: Session, barcode: string, orderId = ''): Promise<RawMaterialReprint> {
+export async function adminPrepareRawMaterialStockReprint(session: Session, barcode: string, orderId = '',
+  beforeSend?: () => void): Promise<RawMaterialReprint> {
   const normalized = barcode.trim();
   if (!normalized) throw new MobileApiException({ code: 'raw_material_stock_reprint_invalid', message: 'QR kodi topilmadi' });
-  const response = await authorizedFetch(session, '/v1/mobile/admin/raw-material-stock/reprint/prepare', {
+  const path = '/v1/mobile/admin/raw-material-stock/reprint/prepare';
+  const init = {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ barcode: normalized, ...(orderId.trim() ? { order_id: orderId.trim() } : {}) }),
-  });
+  };
+  const response = beforeSend ? await authorizedFetch(session, path, init, beforeSend) : await authorizedFetch(session, path, init);
   if (response.status !== 200) throw await reprintException(response);
   const data = object(await response.json());
   const stock = data.stock == null ? {} : object(data.stock);
@@ -67,11 +70,14 @@ export async function adminPrepareRawMaterialStockReprint(session: Session, barc
 }
 
 /** @v2 adminConfirmRawMaterialStockReprint */
-export async function adminConfirmRawMaterialStockReprint(session: Session, barcode: string, reprintId: string): Promise<void> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/raw-material-stock/reprint/confirm', {
+export async function adminConfirmRawMaterialStockReprint(session: Session, barcode: string, reprintId: string,
+  beforeSend?: () => void): Promise<void> {
+  const path = '/v1/mobile/admin/raw-material-stock/reprint/confirm';
+  const init = {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ barcode: barcode.trim(), reprint_id: reprintId.trim() }),
-  });
+  };
+  const response = beforeSend ? await authorizedFetch(session, path, init, beforeSend) : await authorizedFetch(session, path, init);
   if (response.status !== 200) throw await reprintException(response);
 }
 
