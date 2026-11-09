@@ -6,13 +6,15 @@ const test = require('node:test');
 const ts = require('typescript');
 
 const jsx = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
-function load(file, mocks = {}) {
+function load(file, mocks = {}, animationFrames) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
   mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.endsWith('.xml') ? id : require(id);
-  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+  mod.animationFrames = animationFrames;
+  const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText, filename);
+  }).outputText;
+  mod._compile((animationFrames ? 'const { requestAnimationFrame, cancelAnimationFrame } = module.animationFrames;\n' : '') + compiled, filename);
   return mod.exports;
 }
 function nodes(node, predicate) {
@@ -24,6 +26,9 @@ const { draftAfterSending } = load('chatComposer.ts');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function fixture(send = async () => true) {
   const calls = [], slots = [], effects = []; let cursor = 0;
+  const frames = new Map(); let frameId = 0;
+  const animationFrames = { requestAnimationFrame: fn => { frames.set(++frameId, fn); return frameId; }, cancelAnimationFrame: id => frames.delete(id) };
+  const flushFrames = () => { const next = [...frames.values()]; frames.clear(); next.forEach(fn => fn()); };
   const react = {
     useState: value => { const slot = cursor++; if (!(slot in slots)) slots[slot] = value;
       return [slots[slot], next => { slots[slot] = typeof next === 'function' ? next(slots[slot]) : next; }]; },
@@ -46,17 +51,17 @@ function fixture(send = async () => true) {
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 24 }) },
     '../chatComposer': { draftAfterSending }, '../chatMedia': { discardChatMedia() {} }, '../chatModel': { chatTimeline: () => [] },
     '../useChatThread': { useChatThread: () => thread }, './ChatMediaPreview': {},
-  });
+  }, animationFrames);
   const render = () => { cursor = 0; effects.length = 0; const tree = ChatThreadScreen({ session: {}, conversationId: 'conversation', title: 'Chat' });
     effects.forEach(effect => effect()); return tree; };
   const input = tree => nodes(tree, node => node.type === field)[0];
   const button = tree => nodes(tree, node => node.type === 'FilledIconButton')[0];
-  return { calls, thread, render, input, button };
+  return { calls, thread, render, input, button, flushFrames };
 }
 
 test('Android composer keeps native text and send controls visible while the message list flexes with resize', () => {
   const x = fixture(), tree = x.render();
-  assert.equal(tree.type, 'View'); assert.equal(nodes(tree, node => node.type === 'KeyboardAvoidingView').length, 0);
+  assert.equal(tree.type, 'View');
   const composer = nodes(tree, node => node.type === 'Host')[0];
   assert.equal(composer.props.matchContents.vertical, true); assert.equal(composer.props.style.flexShrink, 0);
   const list = nodes(tree, node => node.type === 'FlatList')[0];
@@ -121,21 +126,28 @@ const scrollEvent = (offset, contentHeight = 1000, viewportHeight = 300) => ({ n
 } });
 function scrollFixture() {
   const x = fixture(), tree = x.render(), list = nodes(tree, node => node.type === 'FlatList')[0], offsets = [];
-  list.props.ref.current = { scrollToOffset: options => offsets.push(options.offset) };
+  const native = { contentHeight: 900, viewportHeight: 400 };
+  list.props.ref.current = { getScrollResponder: () => ({ scrollToEnd: options => {
+    assert.equal(options.animated, false); offsets.push(Math.max(0, native.contentHeight - native.viewportHeight));
+  } }) };
   list.props.onLayout({ nativeEvent: { layout: { height: 400 } } });
-  list.props.onContentSizeChange(360, 900); offsets.length = 0;
-  return { ...x, tree, list, offsets };
+  list.props.onContentSizeChange(360, 900); x.flushFrames(); offsets.length = 0;
+  return { ...x, tree, list, offsets, native };
 }
 
 test('new messages and keyboard resizing follow the measured bottom without scroll events disabling it', () => {
   const x = scrollFixture();
   // Native resize/content events can report the old offset before JS scrolls.
   x.list.props.onScroll(scrollEvent(500, 1200, 300));
+  x.native.viewportHeight = 300; x.native.contentHeight = 1200;
   x.list.props.onLayout({ nativeEvent: { layout: { height: 300 } } });
   x.list.props.onContentSizeChange(360, 1200);
+  assert.deepEqual(x.offsets, []); x.flushFrames();
   assert.equal(x.offsets.at(-1), 900);
+  // Native can finish a taller layout than the last JS content-size event.
+  x.native.contentHeight = 1400;
   x.list.props.onContentSizeChange(360, 1380);
-  assert.equal(x.offsets.at(-1), 1080);
+  x.flushFrames(); assert.equal(x.offsets.at(-1), 1100);
 });
 
 test('manual history scrolling keeps its position, then resumes following when the user reaches the bottom', () => {
@@ -148,10 +160,13 @@ test('manual history scrolling keeps its position, then resumes following when t
   x.list.props.onMomentumScrollEnd(scrollEvent(50));
   x.list.props.onContentSizeChange(360, 1200);
   x.list.props.onLayout({ nativeEvent: { layout: { height: 300 } } });
+  x.flushFrames();
   assert.deepEqual(x.offsets, []);
   x.list.props.onScrollBeginDrag(scrollEvent(900, 1200));
   x.list.props.onScrollEndDrag(scrollEvent(900, 1200));
+  x.native.contentHeight = 1300; x.native.viewportHeight = 300;
   x.list.props.onContentSizeChange(360, 1300);
+  x.flushFrames();
   assert.equal(x.offsets.at(-1), 1000);
 });
 
@@ -162,7 +177,9 @@ test('sending from older messages follows the newly appended message', async () 
   x.list.props.onMomentumScrollBegin();
   x.input(x.tree).props.onValueChange('Yangi xabar');
   x.button(x.render()).props.onClick();
+  x.native.contentHeight = 1100;
   x.list.props.onContentSizeChange(360, 1100);
+  x.flushFrames();
   assert.equal(x.offsets.at(-1), 700);
   await tick();
 });

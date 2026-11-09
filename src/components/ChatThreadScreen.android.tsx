@@ -19,18 +19,28 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
   const input = useNativeState(''), mounted = useRef(true), sending = useRef(false), selection = useRef<ChatMediaDraft[]>([]);
   const followLatest = useRef(true), list = useRef<FlatList>(null);
   const messageLayout = useRef({ contentHeight: 0, viewportHeight: 0 }), userScrolling = useRef(false);
+  const scrollFrame = useRef<number | null>(null);
   const scrollToLatest = () => {
-    const { contentHeight, viewportHeight } = messageLayout.current;
-    if (followLatest.current && !userScrolling.current && viewportHeight > 0) {
-      list.current?.scrollToOffset({ offset: Math.max(0, contentHeight - viewportHeight), animated: false });
-    }
+    if (!followLatest.current || userScrolling.current || messageLayout.current.viewportHeight <= 0) return;
+    if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current);
+    scrollFrame.current = requestAnimationFrame(() => {
+      scrollFrame.current = null;
+      if (followLatest.current && !userScrolling.current) {
+        // Let native finish layout, then use its actual maximum scroll range.
+        list.current?.getScrollResponder()?.scrollToEnd({ animated: false });
+      }
+    });
   };
   const rememberScrollPosition = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     followLatest.current = contentSize.height - layoutMeasurement.height - contentOffset.y < 80;
   };
   useEffect(() => { input.set(draft); }, [draft, input]);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; selection.current.forEach(discardChatMedia); }; }, []);
+  useEffect(() => { mounted.current = true; return () => {
+    mounted.current = false;
+    if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current);
+    selection.current.forEach(discardChatMedia);
+  }; }, []);
   const updateMedia = (next: ChatMediaDraft[]) => { selection.current = next; setMedia(next); };
   const remove = (item: ChatMediaDraft) => { updateMedia(selection.current.filter(value => value.clientMessageId !== item.clientMessageId)); discardChatMedia(item); };
   const busy = selecting || batchSending || thread.queueing || thread.mediaSending;
@@ -64,6 +74,7 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
   const send = async () => {
     if (sending.current || busy || !thread.storageReady || (!draft.trim() && !media.length)) return;
     sending.current = true; setBatchSending(true); followLatest.current = true; userScrolling.current = false;
+    scrollToLatest();
     const sent = draft, batch = [...selection.current];
     try {
       if (!batch.length) {
@@ -73,12 +84,9 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
         remove(batch[index]);
         if (index === 0) setDraft(current => draftAfterSending(sent, current));
       }
-    } finally { sending.current = false; if (mounted.current) setBatchSending(false); }
+    } finally { sending.current = false; if (mounted.current) { setBatchSending(false); scrollToLatest(); } }
   };
   const rows = chatTimeline(session, thread.messages ?? [], thread.pending);
-  // Android's adjustResize already gives this screen the area above the IME.
-  // A second KeyboardAvoidingView height calculation used screen coordinates
-  // below the native header and left the composer behind the keyboard.
   return <View testID="chat-thread" style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}>
     <Stack.Screen options={{ title: title || 'Suhbat' }} />
     <FlatList ref={list} style={styles.messages} data={rows} keyExtractor={item => item.key} keyboardShouldPersistTaps="handled"
