@@ -4,7 +4,7 @@ import { PlatformColor, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { localizedMethod } from '../shared/localization';
 import { qolipGridCells, qolipGridLetters, qolipGridRowCount, type QolipGridCell } from './qolipGridLogic';
-import type { QolipLocationEntry } from './qolipLocationsApi';
+import type { QolipLocationEntry } from './qolipReadOnlyLocationsApi';
 import { useQolipGridScroll } from './useQolipGridScroll';
 import { useQolipText } from './useQolipText';
 import { QolipReadOnlyRetry } from './QolipReadOnlyRetry';

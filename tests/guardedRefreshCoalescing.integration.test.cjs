@@ -16,7 +16,7 @@ function authHarness(...args) {
 }
 function transport(auth) {
   const filename = path.join(root, 'src/authorizedFetch.ts'), m = new Module(filename, module); m.filename = filename; m.paths = module.paths;
-  m.require = id => id === './auth' ? auth : require(id);
+  m.require = id => id === './auth' ? auth : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return m.exports;
 }

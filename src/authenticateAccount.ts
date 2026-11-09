@@ -1,3 +1,4 @@
+import { fetch } from 'expo/fetch';
 import { isCanonicalApparatusId } from './workerControlsApi';
 
 type Obj = Record<string, unknown>;
@@ -56,8 +57,9 @@ export async function authenticateAccount(baseUrl: string, phone: string, code: 
   const server = normalizeEndpoint(baseUrl), controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {
+    // V2's SecureMobileApiClient never follows a login POST redirect or shares cookies.
     const response = await fetch(`${server}/v1/mobile/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, code }), signal: controller.signal });
+      body: JSON.stringify({ phone, code }), signal: controller.signal, credentials: 'omit', redirect: 'manual' });
     if (response.status !== 200) throw new MobileLoginException(response.status);
     const payload = object(await response.json());
     if (!payload || typeof payload.token !== 'string' || !payload.token.trim() || !object(payload.profile)) throw new MobileLoginException(response.status);

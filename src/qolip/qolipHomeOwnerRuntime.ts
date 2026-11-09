@@ -42,7 +42,20 @@ export function createQolipHomeOwner(session: Session, boundary: QolipHomeReadBo
         assertCurrent();
         return value;
       },
+      saveOrder: async keys => {
+        // V2 does not await this preference write or display a save result.
+        // A write already handed to storage cannot be cancelled by a later witness invalidation.
+        try {
+          assertCurrent();
+          const raw = JSON.stringify(keys);
+          assertCurrent();
+          await appPreferences.setItem(qolipHomeBlockOrderKey, raw);
+          assertCurrent();
+        } catch { /* No unhandled stale-lifetime rejection or invented success/error UI. */ }
+      },
+      scope: () => scope,
       valid: isCurrent,
-    });
+      afterFrame: callback => requestAnimationFrame(() => requestAnimationFrame(() => { if (isCurrent()) callback(); })),
+    }, true);
   });
 }

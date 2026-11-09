@@ -30,3 +30,7 @@ Final aggregate and platform gate results are recorded below after the current r
 - Full suite: 2,182/2,188 pass. The same six pre-existing Preparation Android tests fail because Node cannot resolve Expo UI's extensionless `createModifier` import.
 - iOS typecheck and uncached Expo lint pass. Android typecheck reports the same nine pre-existing protected Worker diagnostics and no Qolipchi diagnostic.
 - Ledger check resolves 648 `@v2` and 65 `@v2-test` tags; nine warnings concern other-domain endpoints. V2 drift is zero. The broad role text gate remains open at iOS 137 missing / 41 extra, Android 137 / 50, with 163 surfaces inventoried and no accepted exceptions.
+
+## Original-role branch reconciliation (2026-11-09)
+
+The original `port/qolipchi` work was subsequently reconciled with this main candidate. To preserve this candidate's exact narrower authorities and the original full-role modules, its eight colliding modules now have explicit `ReadOnly` names. `QolipReadOnlyHome`, `useReadOnlyQolipHome` and the existing integration/view tests use that dependency closure; full-role content retains the original names. The shared block read/error state and pure search/grid helpers remain shared. The candidate is still unrouted and incomplete. No cold restoration, reorder preference write, mutation, printer action or new authentication authority was introduced. See `status/qolipchi.md` and `PORT_ISSUES.md` for the combined integration limits.

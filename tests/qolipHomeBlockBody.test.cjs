@@ -8,7 +8,8 @@ const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 function load(name, dependencies = {}) {
   const filename = path.resolve(__dirname, '../src/qolip', name), m = new Module(filename, module);
-  m.require = key => key in dependencies ? dependencies[key] : require(key);
+  m.require = key => key in dependencies ? dependencies[key] : key.startsWith('.')
+    ? load(`${path.relative(path.resolve(__dirname, '../src/qolip'), path.resolve(path.dirname(filename), key))}.ts`, dependencies) : require(key);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ESNext,
   } }).outputText, filename);

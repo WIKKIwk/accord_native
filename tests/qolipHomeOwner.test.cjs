@@ -11,7 +11,7 @@ function modules(overrides = {}) {
     if (name in overrides) return overrides[name];
     if (cache.has(name)) return cache.get(name).exports;
     const filename = path.join(root, name), loaded = new Module(filename, module); cache.set(name, loaded);
-    loaded.require = target => target.startsWith('.') ? load(`${path.relative(root, path.resolve(path.dirname(filename), target))}.ts`) : require(target);
+    loaded.require = target => target.startsWith('.') ? load(`${path.relative(root, path.resolve(path.dirname(filename), target))}.ts`) : target === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(target);
     loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ESNext },
     }).outputText, filename);
