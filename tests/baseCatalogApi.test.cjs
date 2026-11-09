@@ -52,3 +52,46 @@ test('catalog operations require status 200', async () => {
   await assert.rejects(api.gscaleItemsPage(session('admin', [])), error => error.code === 'gscale_items_failed' && error.statusCode === 403);
   await assert.rejects(api.adminWarehouseAssignments({}), /Admin warehouse assignments failed/);
 });
+
+test('catalog optional read guard is forwarded without changing default requests', async () => {
+  const callbacks = [], guard = () => {};
+  const api = fixture(async (_s, _p, _init, beforeSend) => { callbacks.push(beforeSend); beforeSend?.(); return new Response('[]'); });
+  const worker = session('material_taminotchi', ['gscale.print']);
+  await api.gscaleItemsPage(worker, { limit: 30 }, guard); await api.gscaleItemsPage(worker, { limit: 30 });
+  assert.equal(callbacks[0], guard); assert.equal(callbacks[1], undefined);
+});
+
+test('isolated picker sorter cannot overwrite the shared account activity after a late old-account load', async () => {
+  let release, entered, active = true; const started = new Promise(resolve => { entered = resolve; });
+  const storage = { getItem: async key => { if (key.endsWith(':old')) { entered(); return new Promise(resolve => { release = resolve; }); }
+    return key.endsWith(':new') ? '{"z":9}' : null; }, setItem: async () => {} };
+  const api = load('shared/catalogApi', { '../authorizedFetch': { authorizedFetch: async (_s, _p, _init, beforeSend) => {
+    beforeSend?.(); return new Response(JSON.stringify([{ code: 'A', name: 'Alpha' }, { code: 'Z', name: 'Zulu' }])); } },
+    './mobileApiException': load('shared/mobileApiException'), '../appPreferences': { appPreferences: storage }, './searchActivityStore': { SearchActivityStore } });
+  const old = session('admin', ['admin.access'], 'old'), current = session('admin', ['admin.access'], 'new');
+  const isolated = new SearchActivityStore(storage), guard = () => { if (!active) throw new Error('stale scope'); };
+  const pending = api.gscaleItemsPage(old, { limit: 30 }, guard, isolated); await started;
+  assert.deepEqual((await api.gscaleItemsPage(current)).map(item => item.code), ['Z', 'A']);
+  active = false; release('{"a":20}'); await assert.rejects(pending, /stale scope/);
+  assert.deepEqual((await api.gscaleItemsPage(current)).map(item => item.code), ['Z', 'A']);
+});
+
+test('catalog guarded 401 retry stops after an account transition', async () => {
+  const original = global.fetch; let allowed = true, sends = 0;
+  const transport = load('authorizedFetch', { './auth': { activeSessionToken: s => s.token,
+    refreshSession: async () => { allowed = false; return true; } } });
+  global.fetch = async () => { sends++; return new Response('{}', { status: 401 }); };
+  try {
+    const api = fixture(transport.authorizedFetch), s = { ...session('admin', ['admin.access']), token: 'token', baseUrl: 'https://example.test' };
+    await assert.rejects(api.gscaleItemsPage(s, {}, () => { if (!allowed) throw new Error('scope changed'); }), /scope changed/);
+    assert.equal(sends, 1);
+  } finally { global.fetch = original; }
+});
+
+test('catalog checks the guard again before touching the activity sorter', async () => {
+  let active = true, sorts = 0;
+  const api = fixture(async (_s, _p, _init, beforeSend) => { beforeSend(); active = false; return new Response('[]'); });
+  const activity = { sortByItemCode: async () => { sorts++; return []; } }, s = session('admin', ['admin.access']);
+  await assert.rejects(api.gscaleItemsPage(s, {}, () => { if (!active) throw new Error('scope changed'); }, activity), /scope changed/);
+  assert.equal(sorts, 0);
+});

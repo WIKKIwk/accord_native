@@ -1,0 +1,189 @@
+{
+ "source": "test/rezka_master_role_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka-master/workers",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"workers\":[{\"id\":\"worker-bek\",\"name\":\"Bek\",\"level\":\"Master\"},{\"id\":\"worker-ali\",\"name\":\"Ali\",\"level\":\"Master\"}],\"assignments\":[{\"principal_role\":\"aparatchi\",\"principal_ref\":\"worker-ali\",\"role_id\":\"aparatchi\",\"assigned_apparatus\":[\"apparatus:default:asset-010\"]}]}"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=500",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka 1\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}},{\"apparatus_id\":\"apparatus:default:asset-011\",\"display\":{\"display_name\":\"Rezka 2\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=10000",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka 1\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}},{\"apparatus_id\":\"apparatus:default:asset-011\",\"display\":{\"display_name\":\"Rezka 2\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka-master/workers",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"worker_id\":\"worker-ali\",\"apparatus_ids\":[\"apparatus:default:asset-011\"],\"previous_apparatus_ids\":[\"apparatus:default:asset-010\"]}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"error\":\"rezka_worker_has_open_run\",\"blocked_apparatus_ids\":[\"apparatus:default:asset-010\"]}"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka-master/workers",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"worker_id\":\"worker-ali\",\"apparatus_ids\":[\"apparatus:default:asset-011\"],\"previous_apparatus_ids\":[\"apparatus:default:asset-010\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka-master/workers",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"workers\":[{\"id\":\"worker-bek\",\"name\":\"Bek\",\"level\":\"Master\"},{\"id\":\"worker-ali\",\"name\":\"Ali\",\"level\":\"Master\"}],\"assignments\":[{\"principal_role\":\"aparatchi\",\"principal_ref\":\"worker-ali\",\"role_id\":\"aparatchi\",\"assigned_apparatus\":[\"apparatus:default:asset-011\"]}]}"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=500",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka 1\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}},{\"apparatus_id\":\"apparatus:default:asset-011\",\"display\":{\"display_name\":\"Rezka 2\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "PUT",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka-master/workers",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"worker_id\":\"worker-ali\",\"apparatus_ids\":[\"apparatus:default:asset-010\",\"apparatus:default:asset-011\"],\"previous_apparatus_ids\":[\"apparatus:default:asset-011\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/rezka-master/workers",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"workers\":[{\"id\":\"worker-bek\",\"name\":\"Bek\",\"level\":\"Master\"},{\"id\":\"worker-ali\",\"name\":\"Ali\",\"level\":\"Master\"}],\"assignments\":[{\"principal_role\":\"aparatchi\",\"principal_ref\":\"worker-ali\",\"role_id\":\"aparatchi\",\"assigned_apparatus\":[\"apparatus:default:asset-010\",\"apparatus:default:asset-011\"]}]}"
+   }
+  },
+  {
+   "test": "master can move or add cutting apparatus and cannot save none",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/admin/apparatus?limit=500",
+   "requestHeaders": {
+    "Authorization": "Bearer master-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "[{\"apparatus_id\":\"apparatus:default:asset-010\",\"display\":{\"display_name\":\"Rezka 1\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}},{\"apparatus_id\":\"apparatus:default:asset-011\",\"display\":{\"display_name\":\"Rezka 2\"},\"source_revision\":1,\"source_aasx_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"execution_profile\":{\"operation\":\"cut\",\"technology\":\"slitting\"}}]"
+   }
+  }
+ ]
+}
