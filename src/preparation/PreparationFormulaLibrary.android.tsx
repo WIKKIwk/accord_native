@@ -32,7 +32,7 @@ const recipeOptions = (recipe: Recipe) => ({ orderId: '', orderCode: '', product
   manageSavedFormula: true, allowAddingFormula: recipe.can_create });
 
 function LibraryRow({ title, subtitle, disabled, first, last, onPress, onLongPress }: {
-  title: string; subtitle: string; disabled: boolean; first: boolean; last: boolean; onPress: () => void; onLongPress: () => void;
+  title: string; subtitle: string; disabled: boolean; first: boolean; last: boolean; onPress: () => void; onLongPress?: () => void;
 }) {
   const colors = useMaterialColors();
   return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last}
@@ -106,6 +106,7 @@ function Library({ mode }: { mode: 'sets' | 'catalog' }) {
 }
 
 const styles = StyleSheet.create({
+  list: { marginHorizontal: -16 },
   icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, marginStart: 16, paddingVertical: 6 },
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
@@ -167,11 +168,15 @@ function SetDetail({ set, recipes }: { set: FormulaSet; recipes: Recipe[] }) {
     <PreparationText>{t(preparationSharedFormulaWarning)}</PreparationText>
     {state.error ? <PreparationText>{state.error}</PreparationText> : null}
     {!state.recipes.length && !state.legacyFormulas.length ? <PreparationText>{t('Bu komplektda formula qolmadi.')}</PreparationText> : null}
-    {state.recipes.map(recipe => <PreparationRow key={`${recipe.material_id}:${recipe.id}`} title={recipe.name} subtitle={preparationSetRecipeSubtitle(recipe)}
-      disabled={state.busy} onPress={() => openPreparationFormula(recipeOptions(recipe))}
-      onLongPress={() => recipeActions(recipe)} />)}
-    {state.legacyFormulas.map(entry => <PreparationRow key={`${entry.material_id}:${entry.variant_id}:${entry.formula.name}`}
-      title={preparationLegacyFormulaTitle(entry)} subtitle={preparationLegacyFormulaSubtitle(entry)} disabled={state.busy} onPress={() => legacy(entry)} />)}
+    {state.recipes.length || state.legacyFormulas.length ? <View style={styles.list}>
+      {state.recipes.map((recipe, index) => <LibraryRow key={`${recipe.material_id}:${recipe.id}`} title={recipe.name}
+        subtitle={preparationSetRecipeSubtitle(recipe)} disabled={state.busy} first={index === 0}
+        last={index === state.recipes.length - 1 && !state.legacyFormulas.length} onPress={() => openPreparationFormula(recipeOptions(recipe))}
+        onLongPress={() => recipeActions(recipe)} />)}
+      {state.legacyFormulas.map((entry, index) => <LibraryRow key={`${entry.material_id}:${entry.variant_id}:${entry.formula.name}`}
+        title={preparationLegacyFormulaTitle(entry)} subtitle={preparationLegacyFormulaSubtitle(entry)} disabled={state.busy}
+        first={!state.recipes.length && index === 0} last={index === state.legacyFormulas.length - 1} onPress={() => legacy(entry)} />)}
+    </View> : null}
   </PreparationPage><PreparationNotice message={notice.message} /></View>{shares ? <PreparationSharesDialog formulas={state.controller.formulasFor(shares)} materialName={shares.material_name}
     onSave={values => state.controller.saveShares(shares, values)} onClose={() => setShares(null)} /> : null}
   {renameTarget ? <VariantNameDialog initial={renameTarget.name} busy={renaming} error={renameError}
