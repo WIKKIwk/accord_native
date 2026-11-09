@@ -5,7 +5,7 @@ import { sessionReadScope } from '../sessionReadScope';
 import { preparationDeleteFormula, preparationFormulaCatalog, preparationFormulaSets, preparationRenameFormulaVariant, preparationUpdateFormulaShares } from './preparationFormulaApi';
 import { preparationFormulaShareInputs } from './preparationLogic';
 import { preparationFormulaErrorMessage } from './usePreparationFormula';
-import { preparationVariantName, preparationVariantNameCanSave } from './usePreparationLibrary';
+import { preparationVariantName, preparationVariantNameCanSave, readPreparationLibrary } from './usePreparationLibrary';
 
 type SetItem = Awaited<ReturnType<typeof preparationFormulaSets>>[number];
 type Recipe = Awaited<ReturnType<typeof preparationFormulaCatalog>>[number];
@@ -28,11 +28,11 @@ export class PreparationSetDetailState {
   get legacyFormulas() { return this.state.formulas.filter(item => !item.variant_id); }
   formulasFor(entry: Scoped) { return this.state.formulas.filter(item => item.material_id === entry.material_id && item.variant_id === entry.variant_id).map(item => item.formula); }
   activate() { this.active = true; }
-  async reload() {
+  async reload(force = true) {
     if (!this.current) return;
     const generation = this.generation; this.update({ busy: true, error: null });
     try {
-      const sets = await preparationFormulaSets(this.session), recipes = await preparationFormulaCatalog(this.session);
+      const { sets, recipes } = await readPreparationLibrary(this.session, 'sets', force);
       if (this.current && generation === this.generation) this.update({ formulas: sets.find(item => item.set_id === this.formulaSet.set_id)?.formulas ?? [],
         recipes: recipes.filter(item => item.product_code === this.formulaSet.product_code) });
     } catch (error) { if (this.current && generation === this.generation) this.update({ error: preparationFormulaErrorMessage(error) }); }

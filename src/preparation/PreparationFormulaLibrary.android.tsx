@@ -1,7 +1,7 @@
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { SymbolView } from 'expo-symbols';
-import { useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text as NativeText, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,15 +31,20 @@ const recipeOptions = (recipe: Recipe) => ({ orderId: '', orderCode: '', product
   materialId: recipe.material_id, materialName: recipe.material_name, variantId: recipe.id, variantName: recipe.name, variantCode: recipe.formula_code,
   manageSavedFormula: true, allowAddingFormula: recipe.can_create });
 
+const LibraryIcon = memo(function LibraryIcon() {
+  const colors = useMaterialColors();
+  return <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
+    <SymbolView name={{ android: 'functions' }} size={20} tintColor={colors.onSurfaceVariant} />
+  </View>;
+});
+
 function LibraryRow({ title, subtitle, disabled, first, last, onPress, onLongPress }: {
   title: string; subtitle: string; disabled: boolean; first: boolean; last: boolean; onPress: () => void; onLongPress?: () => void;
 }) {
   const colors = useMaterialColors();
-  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last}
-    onPress={disabled ? undefined : onPress} onLongPress={disabled ? undefined : onLongPress}>
-    <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
-      <SymbolView name={{ android: 'functions' }} size={20} tintColor={colors.onSurfaceVariant} />
-    </View>
+  return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last} disabled={disabled}
+    onPress={onPress} onLongPress={onLongPress}>
+    <LibraryIcon />
     <View style={styles.rowText}><NativeText style={[styles.headline, { color: colors.onSurface }]}>{title}</NativeText>
       <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{subtitle}</NativeText></View>
   </WorkerQueueCard>;
@@ -57,7 +62,7 @@ function Library({ mode }: { mode: 'sets' | 'catalog' }) {
   const [renameTarget, setRenameTarget] = useState<Recipe | null>(null), [renaming, setRenaming] = useState(false), [renameError, setRenameError] = useState<string | null>(null);
   const renameInFlight = useRef(false);
   const focused = useRef(false);
-  useFocusEffect(useCallback(() => { if (focused.current) void state.controller.load(); focused.current = true; }, [state.controller]));
+  useFocusEffect(useCallback(() => { if (focused.current) void state.controller.load(false); focused.current = true; }, [state.controller]));
   const renameRecipe = async (name: string) => {
     if (!renameTarget || renameInFlight.current) return;
     renameInFlight.current = true; setRenaming(true); setRenameError(null);
@@ -132,7 +137,7 @@ function SetDetail({ set, recipes }: { set: FormulaSet; recipes: Recipe[] }) {
   const renameInFlight = useRef(false);
   const focused = useRef(false), afterSheet = useRef<(() => void) | null>(null);
   useFocusEffect(useCallback(() => {
-    if (focused.current) void state.controller.reload(); focused.current = true;
+    if (focused.current) void state.controller.reload(false); focused.current = true;
   }, [state.controller]));
   const rename = async (name: string) => {
     if (!renameTarget || renameInFlight.current) return;

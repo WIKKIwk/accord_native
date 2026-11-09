@@ -21,7 +21,7 @@ test('formula library uses the shared search and virtual list with working row a
     error: null, actionsBlocked: false, controller: { setQuery: value => calls.push(['query', value]), load: async () => calls.push(['load']),
       recipeCount: () => 1, recipesFor: () => [recipe] } };
   const ui = new Proxy({ usePreparationText: () => value => value, usePreparationDialogs: () => ({}) }, { get: (obj, key) => obj[key] ?? key });
-  const mocks = { 'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value }), useState: value => [value, () => {}], useCallback: fn => fn },
+  const mocks = { 'react/jsx-runtime': jsx, react: { memo: fn => fn, useRef: value => ({ current: value }), useState: value => [value, () => {}], useCallback: fn => fn },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']), navigate: route => calls.push(['navigate', route]),
       push: route => calls.push(['push', route]) }, useFocusEffect() {}, useLocalSearchParams: () => ({ data: 'detail' }) },
@@ -55,7 +55,8 @@ test('formula library uses the shared search and virtual list with working row a
     assert.ok(row); const card = row.type(row.props); assert.equal(card.type, 'WorkerQueueCard');
     card.props.onPress(); assert.equal(calls.at(-1)[0], screen === 'PreparationFormulaOrdersScreen' ? 'push' : 'formula');
     card.props.onLongPress(); assert.ok(sheets.length);
-    assert.equal(row.type({ ...row.props, disabled: true }).props.onPress, undefined);
+    const blocked = row.type({ ...row.props, disabled: true });
+    assert.equal(blocked.props.disabled, true); assert.equal(blocked.props.onPress, card.props.onPress);
     header.props.onBack(); assert.deepEqual(calls.at(-1), ['back']);
     header.props.onProfile(); assert.deepEqual(calls.at(-1), ['navigate', '/android-preparation/profile']);
   }
@@ -70,5 +71,5 @@ test('formula library uses the shared search and virtual list with working row a
   first.props.onLongPress(); assert.ok(sheets.at(-1));
   second.props.onPress(); assert.equal(sheets.at(-1).type, 'FormulaDetails');
   assert.equal(second.props.onLongPress, undefined);
-  assert.equal(rows[0].type({ ...rows[0].props, disabled: true }).props.onPress, undefined);
+  assert.equal(rows[0].type({ ...rows[0].props, disabled: true }).props.disabled, true);
 });

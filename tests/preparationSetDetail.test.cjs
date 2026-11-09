@@ -15,7 +15,8 @@ function setup(rename = async () => {}) {
     if (id === '../sessionReadScope') return { sessionReadScope: s => s.scope };
     if (id === './usePreparationFormula') return { preparationFormulaErrorMessage: e => e.message };
     if (id === './usePreparationLibrary') return { preparationVariantName: v => v.trim().replace(/\s+/g, ' '),
-      preparationVariantNameCanSave: (v, initial) => !!v.trim() && v.trim().replace(/\s+/g, ' ') !== initial };
+      preparationVariantNameCanSave: (v, initial) => !!v.trim() && v.trim().replace(/\s+/g, ' ') !== initial,
+      readPreparationLibrary: async () => ({ sets: [formulaSet], recipes }) };
     if (id === './preparationLogic') return { preparationFormulaShareInputs: (names, values) => names.map((name, i) => ({ name, percent: values[i] })) };
     if (id === './preparationFormulaApi') return { preparationFormulaSets: async () => [formulaSet], preparationFormulaCatalog: async () => recipes,
       preparationDeleteFormula: async (session, product, name, options) => calls.push({ product, name, options }),

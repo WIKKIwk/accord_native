@@ -2,6 +2,8 @@ import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { WorkerControlException } from '../workerControlsApi';
 import { jsonObject } from './preparationModel';
+import { sessionReadScope } from '../sessionReadScope';
+import { preparationLibraryCache } from './preparationLibraryCache';
 
 export function preparationStorageKey(session: Session): string {
   if (session.profile?.role !== 'tayyorlov_masteri' || !session.profile.ref || !session.capabilities?.includes('preparation.access')) {
@@ -31,7 +33,13 @@ export async function preparationRequest(session: Session, path: string, init: R
   const guard = preparationGuard(session, accountError);
   const response = await authorizedFetch(session, path, init, guard);
   guard();
-  return preparationResponse(response);
+  const data = await preparationResponse(response);
+  guard();
+  if (init.method && !['GET', 'HEAD'].includes(init.method.toUpperCase()) &&
+      /^\/v1\/mobile\/preparation\/(?:formulas|formula-sets|formula-variants)(?:\/|\?|$)/.test(path)) {
+    preparationLibraryCache.invalidate(sessionReadScope(session));
+  }
+  return data;
 }
 export function withQuery(path: string, params: Record<string, string>): string {
   const query = new URLSearchParams(params).toString().replace(/=(?=&|$)/g, '');
