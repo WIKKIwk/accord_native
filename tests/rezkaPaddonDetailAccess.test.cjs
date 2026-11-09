@@ -1,9 +1,10 @@
 const assert = require('node:assert/strict'), fs = require('node:fs'), Module = require('node:module');
 const path = require('node:path'), test = require('node:test'), ts = require('typescript');
-function setup() {
+function setup(listenerMode = '') {
   const snapshot = { session: {} }, calls = []; let current = true, route = true, watch, reset, get, cleanup;
   const mocks = { react: { useCallback: fn => fn, useRef: value => ({ current: value }), useSyncExternalStore: (subscribe, read) => {
-    get = read; cleanup = subscribe(() => calls.push('changed')); return read(); } },
+    get = read; cleanup = subscribe(() => { calls.push('changed'); if (listenerMode === 'throw') throw Error('view listener');
+      if (listenerMode === 'async') return Promise.reject(Error('late listener')); }); return read(); } },
   '../auth': { subscribeSessionWitness: fn => { watch = fn; return () => calls.push('unwatch'); },
     registerSessionResetHook: fn => { reset = fn; return () => calls.push('unregister'); } },
   '../shared/appRoutes': { appRoutes: { apparatusPaddonDetail: '/detail' }, canOpenRoute: (s, path) => s === snapshot.session && route && path === '/detail' },
@@ -27,4 +28,10 @@ test('a witness or route loss retires the captured header even after an ABA rest
 test('a session reset retires the header even if its session still appears current', async () => {
   const h = setup(); assert.equal(h.initial, true); await h.reset(); assert.equal(h.get(), false);
   assert.ok(h.calls.includes('changed')); h.cleanup();
+});
+test('a throwing view listener cannot fail a session reset or restore old content', async () => {
+  for (const mode of ['throw', 'async']) {
+    const h = setup(mode); await h.reset(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.get(), false); assert.ok(h.calls.includes('changed')); h.cleanup();
+  }
 });

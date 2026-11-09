@@ -1,7 +1,5 @@
-import type { AdminApparatus } from '../apparatusApi';
-import type { paddonSnapshotFromJson } from '../paddonModels';
+import type { RezkaPaddonDetailBinding } from './rezkaPaddonDetailRead';
 import type { RezkaSessionSnapshot } from './rezkaSessionGuard';
 
-/** The future host must supply data read under this same captured witness. */
-export type RezkaPaddonDetailHeaderProps = { snapshot: RezkaSessionSnapshot; data: ReturnType<typeof paddonSnapshotFromJson>;
-  catalog: readonly AdminApparatus[] };
+/** Only a binding issued by the guarded detail reader is accepted. */
+export type RezkaPaddonDetailHeaderProps = { snapshot: RezkaSessionSnapshot; binding: RezkaPaddonDetailBinding };

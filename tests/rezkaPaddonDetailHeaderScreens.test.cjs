@@ -14,7 +14,8 @@ function nodes(node, predicate) {
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform}: detail header is read-only and redacts when its captured witness or route is stale`, () => {
-    const snapshot = { session: {} }, data = { paddon: {} }, catalog = [], calls = []; let allowed = true, overflow = false;
+    const snapshot = { session: {} }, data = { paddon: {} }, catalog = [], binding = { owner: snapshot, data, catalog }, calls = [];
+    let allowed = true, issued = true, overflow = false;
     const content = { code: '00001', peremotka: 'Peremotka', location: 'Rezka 1', creatorLabel: 'Created by', creator: 'Operator',
       gross: 'Gross: 24.375 kg', net: 'Net: 23.125 kg', locked: 'Locked', wip: 'WIP: 3', bobinaTitle: 'Bobina',
       bobina: [{ units: 2_000_000, label: '2 kg', countText: '2 ta' }, { units: 0, label: 'Unknown', countText: '1 ta' }], note: 'Note' };
@@ -27,9 +28,10 @@ for (const platform of ['ios', 'android']) {
         localizedMethod: (key, locale, values) => `${locale}:${key}:${values.count}` },
       './rezkaPaddonDetailModel': { rezkaPaddonDetailHeader: (value, machines, text, unspecified, count) => {
         if (overflow) throw new RangeError(); calls.push([value, machines, text('title'), unspecified, count(3)]); return content; } },
+      './rezkaPaddonDetailRead': { isRezkaPaddonDetailBinding: (value, owner) => issued && value === binding && owner === snapshot },
       './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: value => value === snapshot && allowed },
       './useRezkaShell': { useRezkaLocale: () => 'uz' } });
-    const render = () => RezkaPaddonDetailHeader({ snapshot, data, catalog });
+    const render = () => RezkaPaddonDetailHeader({ snapshot, binding });
     const view = render(); assert.deepEqual(calls[0], [data, catalog, 'uz:title', 'uz:wip.unspecified', 'uz:productionCount:3']);
     assert.deepEqual(nodes(view, n => n.type === 'Text').map(n => n.props.children), ['00001', 'Peremotka', 'Rezka 1', 'Created by', 'Operator',
       'Gross: 24.375 kg', 'Net: 23.125 kg', 'Locked', 'WIP: 3', 'Bobina', '2 kg', '2 ta', 'Unknown', '1 ta', 'Note']);
@@ -38,7 +40,7 @@ for (const platform of ['ios', 'android']) {
     content.locked = ''; content.peremotka = ''; content.location = ''; content.bobinaTitle = ''; content.note = '';
     const emptyOptional = nodes(render(), n => n.type === 'Text').map(n => n.props.children);
     assert.deepEqual(emptyOptional, ['00001', 'Created by', 'Operator', 'Gross: 24.375 kg', 'Net: 23.125 kg', 'WIP: 3']);
-    overflow = true; assert.equal(render(), null); overflow = false;
+    issued = false; assert.equal(render(), null); issued = true; overflow = true; assert.equal(render(), null); overflow = false;
     allowed = false; assert.equal(render(), null);
   });
 }

@@ -36,12 +36,25 @@ export async function adminPaddonDelete(session: Session, code: string): Promise
   }
 }
 
+function checkedPaddonReadGuard(beforeSend: () => void): () => void {
+  return () => {
+    const result: unknown = beforeSend();
+    if (result === undefined) return;
+    // An accidentally async guard cannot authorize a send or leak a rejection.
+    if (result !== null && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
+    throw new TypeError('Paddon read guard must be synchronous');
+  };
+}
+
 /** @v2 adminPaddonDetail */
-export async function adminPaddonDetail(session: Session, code: string) {
+export async function adminPaddonDetail(session: Session, code: string, options: { beforeSend?: () => void } | undefined = undefined) {
   const normalized = code.trim();
   if (!normalized) throw new WorkerControlException('paddon_not_found', 'Paddon topilmadi');
   const query = new URLSearchParams({ code: normalized });
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons/detail?${query}`);
+  const path = `/v1/mobile/admin/production-maps/paddons/detail?${query}`;
+  const beforeSend = options?.beforeSend;
+  const response = beforeSend ? await authorizedFetch(session, path, {}, checkedPaddonReadGuard(beforeSend))
+    : await authorizedFetch(session, path);
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
@@ -75,14 +88,7 @@ export async function adminPaddons(session: Session, input: { limit?: number; se
   // Preserve the legacy call shape while allowing scoped callers to check the
   // original witness immediately before the first send and any 401 retry.
   const beforeSend = input.beforeSend;
-  const checkedGuard = beforeSend ? () => {
-    const result: unknown = beforeSend();
-    if (result === undefined) return;
-    // An accidentally async guard cannot authorize a send. Consume a rejected
-    // promise too, so its rejection is not left unhandled after failing closed.
-    if (result !== null && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
-    throw new TypeError('Paddon read guard must be synchronous');
-  } : undefined;
+  const checkedGuard = beforeSend ? checkedPaddonReadGuard(beforeSend) : undefined;
   const response = checkedGuard ? await authorizedFetch(session, path, {}, checkedGuard) : await authorizedFetch(session, path);
   if (response.status !== 200) {
     let payload: unknown;

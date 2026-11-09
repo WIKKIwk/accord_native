@@ -3,6 +3,7 @@ import { fixedSize, font, foregroundStyle, multilineTextAlignment } from '@expo/
 import { View } from 'react-native';
 import { localizedMethod, productionText } from '../shared/localization';
 import { RezkaPaddonWipReadOnly } from './RezkaPaddonWipReadOnly';
+import { isRezkaPaddonDetailBinding } from './rezkaPaddonDetailRead';
 import { rezkaPaddonWipSection } from './rezkaPaddonWipSectionModel';
 import type { RezkaPaddonWipSectionProps } from './rezkaPaddonWipSectionTypes';
 import { useRezkaPaddonDetailAccess } from './useRezkaPaddonDetailAccess';
@@ -11,7 +12,7 @@ import { useRezkaLocale } from './useRezkaShell';
 /** Unconnected assigned-WIP section; no add, remove, reprint or filtering controls are exposed. */
 export function RezkaPaddonWipSection({ snapshot, binding }: RezkaPaddonWipSectionProps) {
   const locale = useRezkaLocale(), allowed = useRezkaPaddonDetailAccess(snapshot);
-  if (!allowed || binding.owner !== snapshot) return null;
+  if (!allowed || !isRezkaPaddonDetailBinding(binding, snapshot)) return null;
   const section = rezkaPaddonWipSection(binding.data, key => productionText(key, locale),
     count => localizedMethod('productionCount', locale, { count }));
   return <View style={{ gap: 8 }}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}><VStack alignment="leading" spacing={8}>
@@ -21,7 +22,6 @@ export function RezkaPaddonWipSection({ snapshot, binding }: RezkaPaddonWipSecti
   </VStack></Host>
     {section.empty ? <View style={{ padding: 24, alignItems: 'center' }}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
       <Text modifiers={[fixedSize({ horizontal: false, vertical: true }), multilineTextAlignment('center')]}>{section.empty}</Text></Host></View> : null}
-    {section.items.map((batch, index) => <RezkaPaddonWipReadOnly key={`${String(batch.batch_id)}:${index}`} snapshot={snapshot}
-      binding={{ owner: binding.owner, batch, catalog: binding.catalog }} />)}
+    {section.items.map((batch, index) => <RezkaPaddonWipReadOnly key={`${String(batch.batch_id)}:${index}`} snapshot={snapshot} binding={binding} index={index} />)}
   </View>;
 }

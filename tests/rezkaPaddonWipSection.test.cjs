@@ -40,6 +40,7 @@ for (const platform of ['ios', 'android']) {
       'react-native': { View: 'View' }, '../shared/localization': { productionText: (key, locale) => `${locale}:${key}`,
         localizedMethod: (key, locale, values) => `${locale}:${key}:${values.count}` },
       './RezkaPaddonWipReadOnly': { RezkaPaddonWipReadOnly: 'WipCard' }, './rezkaPaddonWipSectionModel': model,
+      './rezkaPaddonDetailRead': { isRezkaPaddonDetailBinding: (value, owner) => value === binding && value.owner === owner },
       './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: value => value === snapshot && allowed },
       './useRezkaShell': { useRezkaLocale: () => 'uz' } });
     const render = () => RezkaPaddonWipSection({ snapshot, binding }), page = render();
@@ -47,8 +48,7 @@ for (const platform of ['ios', 'android']) {
       ['uz:paddon.management.free_movement.hint', 'uz:worker.paddon.assigned.title', 'uz:productionCount:2']);
     const cards = nodes(page, n => n.type === 'WipCard'); assert.equal(cards.length, 2);
     for (const [index, card] of cards.entries()) {
-      assert.equal(card.props.snapshot, snapshot); assert.equal(card.props.binding.owner, snapshot);
-      assert.equal(card.props.binding.batch, items[index]); assert.equal(card.props.binding.catalog, catalog);
+      assert.equal(card.props.snapshot, snapshot); assert.equal(card.props.binding, binding); assert.equal(card.props.index, index);
       assert.equal(card.props.onPress, undefined); assert.equal(card.props.onLongPress, undefined);
     }
     assert.equal(nodes(page, n => ['Button', 'Pressable', 'IconButton'].includes(n.type)).length, 0);

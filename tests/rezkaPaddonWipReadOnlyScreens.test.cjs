@@ -14,8 +14,8 @@ function nodes(node, predicate) {
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform}: passive WIP card uses only bound data and has noninteractive EPC`, () => {
-    const snapshot = { session: { profile: { ref: 'mine' } } }, batch = {}, catalog = [], binding = { owner: snapshot, batch, catalog }, calls = [];
-    let allowed = true, overflow = false;
+    const snapshot = { session: { profile: { ref: 'mine' } } }, batch = {}, catalog = [], binding = { owner: snapshot, data: { items: [batch] }, catalog }, calls = [];
+    let allowed = true, issued = true, overflow = false, index = 0;
     const content = { order: 'Buyurtma: 0038 - Bosma', peremotka: 'Peremotka', rows: [
       { key: 'quantity', label: 'Miqdor', value: '1 450 m' }, { key: 'gross', label: 'Brutto', value: '12.5 kg' },
       { key: 'epc', label: 'EPC kodi', value: '4001 1234 5678 90AB CDEF 0001', isEpc: true }] };
@@ -27,9 +27,10 @@ for (const platform of ['ios', 'android']) {
       '../components/WorkerQueueCard.android': { WorkerQueueCard: 'Card' }, '../shared/localization': { productionText: (key, locale) => `${locale}:${key}` },
       './rezkaPaddonWipModel': { rezkaPaddonWipContent: (value, machines, viewer, text) => {
         if (overflow) throw new RangeError(); calls.push([value, machines, viewer, text('key')]); return content; } },
+      './rezkaPaddonDetailRead': { isRezkaPaddonDetailBinding: (value, owner) => issued && value === binding && value.owner === owner },
       './useRezkaPaddonDetailAccess': { useRezkaPaddonDetailAccess: value => value === snapshot && allowed },
       './useRezkaShell': { useRezkaLocale: () => 'uz' } });
-    const render = () => RezkaPaddonWipReadOnly({ snapshot, binding });
+    const render = () => RezkaPaddonWipReadOnly({ snapshot, binding, index });
     const view = render(); assert.deepEqual(calls[0], [batch, catalog, snapshot.session.profile, 'uz:key']);
     assert.deepEqual(nodes(view, n => n.type === 'Text').map(n => n.props.children), ['Buyurtma: 0038 - Bosma', 'Peremotka', 'Miqdor', '1 450 m', 'Brutto', '12.5 kg', 'EPC kodi']);
     const epc = nodes(view, n => n.type === 'NativeText')[0]; assert.equal(epc.props.children, content.rows[2].value);
@@ -37,6 +38,8 @@ for (const platform of ['ios', 'android']) {
     assert.equal(nodes(view, n => ['Button', 'IconButton', 'Pressable'].includes(n.type)).length, 0);
     if (platform === 'android') { const card = nodes(view, n => n.type === 'Card')[0]; assert.equal(card.props.onPress, undefined); assert.equal(card.props.onLongPress, undefined); }
     const before = calls.length; binding.owner = { session: {} }; assert.equal(render(), null); assert.equal(calls.length, before);
-    binding.owner = snapshot; allowed = false; assert.equal(render(), null); allowed = true; overflow = true; assert.equal(render(), null);
+    binding.owner = snapshot; issued = false; assert.equal(render(), null); issued = true;
+    for (const invalid of [-1, 1, 0.5, NaN]) { index = invalid; assert.equal(render(), null); }
+    index = 0; allowed = false; assert.equal(render(), null); allowed = true; overflow = true; assert.equal(render(), null);
   });
 }

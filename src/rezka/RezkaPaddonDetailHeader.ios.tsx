@@ -2,17 +2,18 @@ import { Host, HStack, Text, VStack } from '@expo/ui/swift-ui';
 import { fixedSize, font, foregroundStyle } from '@expo/ui/swift-ui/modifiers';
 import { adminText, localizedMethod, productionText } from '../shared/localization';
 import { rezkaPaddonDetailHeader } from './rezkaPaddonDetailModel';
+import { isRezkaPaddonDetailBinding } from './rezkaPaddonDetailRead';
 import type { RezkaPaddonDetailHeaderProps } from './rezkaPaddonDetailHeaderTypes';
 import { useRezkaPaddonDetailAccess } from './useRezkaPaddonDetailAccess';
 import { useRezkaLocale } from './useRezkaShell';
 
-/** Unconnected display fragment. The host must bind data to the same guarded witness. */
-export function RezkaPaddonDetailHeader({ snapshot, data, catalog }: RezkaPaddonDetailHeaderProps) {
+/** Unconnected display fragment; only a guarded detail binding is accepted. */
+export function RezkaPaddonDetailHeader({ snapshot, binding }: RezkaPaddonDetailHeaderProps) {
   const locale = useRezkaLocale(), allowed = useRezkaPaddonDetailAccess(snapshot);
-  if (!allowed) return null;
+  if (!allowed || !isRezkaPaddonDetailBinding(binding, snapshot)) return null;
   let content: ReturnType<typeof rezkaPaddonDetailHeader>;
   try {
-    content = rezkaPaddonDetailHeader(data, catalog, key => productionText(key, locale), adminText('wip.unspecified', locale),
+    content = rezkaPaddonDetailHeader(binding.data, binding.catalog, key => productionText(key, locale), adminText('wip.unspecified', locale),
       count => localizedMethod('productionCount', locale, { count }));
   } catch (error) { if (error instanceof RangeError) return null; throw error; }
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><VStack alignment="leading" spacing={14}>
