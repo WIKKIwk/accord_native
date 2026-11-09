@@ -4,6 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const { presentation } = require('./support/customerNativeStates.cjs');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 function nodes(node, pred) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(n => nodes(n, pred));
   return [...(pred(node) ? [node] : []), ...nodes(node.props?.children, pred)]; }
@@ -16,31 +17,38 @@ function load(file, mocks = {}) {
 const logic = load('customerLogic.ts'), view = load('customerDeliveryView.ts');
 const AlertDialog = Object.assign(() => null, { Title: 'Title', Text: 'DialogText', DismissButton: 'DismissButton', ConfirmButton: 'ConfirmButton' });
 const OutlinedTextField = Object.assign(() => null, { Label: 'Label', Placeholder: 'Placeholder', Suffix: 'Suffix' });
-function fixture(platform, values) {
+function fixture(platform, values, locale = 'uz') {
   let stateIndex = 0; const updates = [];
   const mocks = { 'react/jsx-runtime': jsx, react: { useState: () => { const i = stateIndex++; return [values[i], next => updates.push([i, next])]; } },
-    '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', Text: 'Text', TextField: 'TextField', VStack: 'VStack', useNativeState: () => ({}) },
-    '@expo/ui/swift-ui/modifiers': { buttonStyle: x => ['style', x], disabled: x => ['disabled', x], frame: x => ['frame', x],
-      keyboardType: x => ['keyboard', x], lineLimit: x => ['lines', x], textFieldStyle: x => ['field', x] },
+    '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', Image: 'Image', Text: 'Text', TextField: 'TextField', VStack: 'VStack', useNativeState: () => ({}) },
+    '@expo/ui/swift-ui/modifiers': { accessibilityAddTraits: x => ['traits', x], accessibilityHidden: () => ['hidden'], buttonStyle: x => ['style', x],
+      contentShape: x => ['contentShape', x], disabled: x => ['disabled', x], fixedSize: x => ['fixedSize', x], font: x => ['font', x], frame: x => ['frame', x],
+      keyboardType: x => ['keyboard', x], lineLimit: x => ['lines', x], padding: x => ['padding', x], textFieldStyle: x => ['field', x],
+      shapes: { rectangle: () => ['rectangle'] } },
     '@expo/ui/jetpack-compose': { AlertDialog, Host: 'Host', OutlinedTextField, RNHostView: 'RNHostView', Text: 'Text', TextButton: 'TextButton', useNativeState: () => ({}) },
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fill' },
     'react-native': { Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', View: 'View', PlatformColor: x => x, useWindowDimensions: () => ({ width: 400, height: 800 }) },
-    '../components/WorkerRadioChoice': { WorkerRadioChoice: 'WorkerRadioChoice' }, './CustomerContext': { useCustomerText: () => ({ text: x => x }) },
-    './customerLogic': logic, './customerDeliveryView': view };
+    '../components/WorkerRadioChoice': { WorkerRadioChoice: 'WorkerRadioChoice' }, './CustomerContext': { useCustomerText: () => ({ locale, text: x => x }) },
+    './customerLogic': logic, './customerDeliveryView': view, './customerPresentation': presentation };
   return { ...load(`CustomerReturnDialog.${platform}.tsx`, mocks), updates };
 }
-function render(platform, kind, values, callbacks) {
-  const f = fixture(platform, values), shell = f.CustomerReturnDialog({ kind, sentQty: 10, uom: 'kg', ...callbacks });
+function render(platform, kind, values, callbacks, locale = 'uz') {
+  const f = fixture(platform, values, locale), shell = f.CustomerReturnDialog({ kind, sentQty: 10, uom: 'kg', ...callbacks });
   return { ...f, tree: shell && shell.type(shell.props) };
 }
 test('return dialogs preserve three reasons, quantity boundaries and V2 action labels on both platforms', () => {
   for (const platform of ['ios', 'android']) for (const kind of ['reject', 'partial', 'claim']) {
     const calls = [], rendered = render(platform, kind, ['2', '', 'rejectReasonWrongItem'], { onCancel: () => calls.push('cancel'), onConfirm: input => calls.push(input) });
-    const choices = nodes(rendered.tree, n => n.type === 'WorkerRadioChoice');
-    assert.deepEqual(choices.map(c => c.props.label), ['rejectReasonDefective', 'rejectReasonWrongItem', 'rejectReasonQtyMismatch']);
-    assert.equal(choices[1].props.selected, true); choices[1].props.onPress(); assert.deepEqual(rendered.updates.at(-1), [2, null]);
+    const choices = platform === 'ios' ? nodes(rendered.tree, n => n.type === 'Button' && n.props.testID?.startsWith('customer-reason-'))
+      : nodes(rendered.tree, n => n.type === 'WorkerRadioChoice');
+    const labels = choices.map(c => platform === 'ios' ? nodes(c, n => n.type === 'Text')[0].props.children : c.props.label);
+    assert.deepEqual(labels, ['rejectReasonDefective', 'rejectReasonWrongItem', 'rejectReasonQtyMismatch']);
+    if (platform === 'ios') assert.ok(choices[1].props.modifiers.some(m => m[0] === 'traits' && m[1].includes('isSelected')));
+    else assert.equal(choices[1].props.selected, true);
+    choices[1].props.onPress(); assert.deepEqual(rendered.updates.at(-1), [2, null]);
+    choices[0].props.onPress(); assert.deepEqual(rendered.updates.at(-1), [2, 'rejectReasonDefective']);
     if (platform === 'ios') {
-      const buttons = nodes(rendered.tree, n => n.type === 'Button');
+      const buttons = nodes(rendered.tree, n => n.type === 'Button' && !n.props.testID?.startsWith('customer-reason-'));
       assert.deepEqual(buttons.map(b => b.props.label), ['no', 'yes']);
       buttons[1].props.onPress();
     } else {
@@ -60,6 +68,49 @@ test('invalid partial full return and short reasonless comments disable confirma
       assert.ok(yes.props.modifiers.some(m => m[0] === 'disabled' && m[1] === true)); yes.props.onPress();
     } else {
       const yes = nodes(rendered.tree, n => n.type === 'TextButton')[1]; assert.equal(yes.props.enabled, false); yes.props.onClick();
+    }
+  }
+});
+
+test('return dialog cancel and dismissal callbacks remain wired on both platforms', () => {
+  for (const platform of ['ios', 'android']) for (const kind of ['reject', 'partial', 'claim']) {
+    let cancelled = 0;
+    const rendered = render(platform, kind, ['2', '', 'rejectReasonWrongItem'], { onCancel: () => cancelled++, onConfirm() { throw Error('must not submit'); } });
+    if (platform === 'ios') {
+      nodes(rendered.tree, n => n.type === 'Modal')[0].props.onRequestClose();
+      nodes(rendered.tree, n => n.type === 'Pressable')[0].props.onPress();
+      nodes(rendered.tree, n => n.type === 'Button' && n.props.label === 'no')[0].props.onPress();
+      assert.equal(cancelled, 3);
+    } else {
+      const dialog = nodes(rendered.tree, n => n.type === AlertDialog)[0];
+      assert.deepEqual(dialog.props.properties, { dismissOnBackPress: true, dismissOnClickOutside: true });
+      dialog.props.onDismissRequest();
+      nodes(rendered.tree, n => n.type === 'TextButton')[0].props.onClick();
+      assert.equal(cancelled, 2);
+    }
+  }
+});
+
+test('return dialog hosts and reason controls follow the app-selected locale', () => {
+  for (const platform of ['ios', 'android']) for (const kind of ['reject', 'partial', 'claim']) {
+    for (const [locale, direction, nativeDirection] of [['uz', 'leftToRight', 'ltr'], ['en', 'leftToRight', 'ltr'], ['ru', 'leftToRight', 'ltr'], ['ur-PK', 'rightToLeft', 'rtl']]) {
+      const rendered = render(platform, kind, ['2', '', 'rejectReasonWrongItem'], { onCancel() {}, onConfirm() {} }, locale);
+      const hosts = nodes(rendered.tree, n => n.type === 'Host'); assert.ok(hosts.length >= 3);
+      assert.ok(hosts.every(host => host.props.layoutDirection === direction));
+      assert.ok(nodes(rendered.tree, n => n.type === 'View' && n.props.style?.direction === nativeDirection).length);
+      if (platform === 'ios') {
+        const choices = nodes(rendered.tree, n => n.type === 'Button' && n.props.testID?.startsWith('customer-reason-'));
+        assert.equal(choices.length, 3);
+        for (const [index, choice] of choices.entries()) {
+          assert.equal(typeof choice.props.onPress, 'function');
+          assert.equal(choice.props.modifiers.some(m => m[0] === 'traits' && m[1].includes('isSelected')), index === 1);
+          const icon = nodes(choice, n => n.type === 'Image')[0]; assert.equal(icon.props.size, 22);
+          assert.ok(icon.props.modifiers.some(m => m[0] === 'hidden'));
+          const row = choice.props.children; assert.equal(row.props.spacing, 10);
+          assert.ok(row.props.modifiers.some(m => m[0] === 'padding' && m[1].vertical === 10));
+          assert.ok(row.props.modifiers.some(m => m[0] === 'contentShape'));
+        }
+      }
     }
   }
 });
