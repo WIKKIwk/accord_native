@@ -72,7 +72,17 @@
           "cameraPermission": "Chat va profil uchun suratga olish hamda QR kodlarni skanerlash uchun kameraga ruxsat bering."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keep class net.posprinter.serial.SerialControl { *; }"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
