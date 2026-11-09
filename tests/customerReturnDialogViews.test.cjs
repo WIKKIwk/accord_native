@@ -23,11 +23,12 @@ function fixture(platform, values, locale = 'uz') {
     '@expo/ui/swift-ui': { Button: 'Button', Host: 'Host', HStack: 'HStack', Image: 'Image', Text: 'Text', TextField: 'TextField', VStack: 'VStack', useNativeState: () => ({}) },
     '@expo/ui/swift-ui/modifiers': { accessibilityAddTraits: x => ['traits', x], accessibilityHidden: () => ['hidden'], buttonStyle: x => ['style', x],
       contentShape: x => ['contentShape', x], disabled: x => ['disabled', x], fixedSize: x => ['fixedSize', x], font: x => ['font', x], frame: x => ['frame', x],
-      keyboardType: x => ['keyboard', x], lineLimit: x => ['lines', x], padding: x => ['padding', x], textFieldStyle: x => ['field', x],
+      keyboardType: x => ['keyboard', x], kerning: x => ['kerning', x], lineLimit: x => ['lines', x], padding: x => ['padding', x], textFieldStyle: x => ['field', x],
       shapes: { rectangle: () => ['rectangle'] } },
-    '@expo/ui/jetpack-compose': { AlertDialog, Host: 'Host', OutlinedTextField, RNHostView: 'RNHostView', Text: 'Text', TextButton: 'TextButton',
-      useMaterialColors: () => ({ onSurface: 'onSurface' }), useNativeState: () => ({}) },
-    '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fill' },
+    '@expo/ui/jetpack-compose': { AlertDialog, Button: 'ComposeButton', Host: 'Host', OutlinedButton: 'OutlinedButton', OutlinedTextField, RNHostView: 'RNHostView',
+      Row: 'Row', Shape: { RoundedCorner: x => ['rounded', x] }, Text: 'Text', TextButton: 'TextButton',
+      useMaterialColors: () => ({ onSurface: 'onSurface', primary: 'primary', onPrimary: 'onPrimary' }), useNativeState: () => ({}) },
+    '@expo/ui/jetpack-compose/modifiers': { defaultMinSize: x => ['minSize', x], fillMaxWidth: () => 'fill', weight: x => ['weight', x] },
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'RNText', View: 'View', PlatformColor: x => x,
       useWindowDimensions: () => ({ width: 400, height: 800 }) },
@@ -54,8 +55,8 @@ test('return dialogs preserve three reasons, quantity boundaries and V2 action l
       assert.deepEqual(buttons.map(b => b.props.label), ['no', 'yes']);
       buttons[1].props.onPress();
     } else {
-      const buttons = nodes(rendered.tree, n => n.type === 'TextButton');
-      assert.equal(buttons[1].props.enabled, true); buttons[1].props.onClick();
+      const confirm = nodes(rendered.tree, n => n.type === 'ComposeButton')[0];
+      assert.equal(confirm.props.enabled, true); confirm.props.onClick();
       const dialog = nodes(rendered.tree, n => n.type === AlertDialog)[0];
       assert.deepEqual(dialog.props.properties, { dismissOnBackPress: true, dismissOnClickOutside: true });
     }
@@ -69,7 +70,7 @@ test('invalid partial full return and short reasonless comments disable confirma
       const yes = nodes(rendered.tree, n => n.type === 'Button' && n.props.label === 'yes')[0];
       assert.ok(yes.props.modifiers.some(m => m[0] === 'disabled' && m[1] === true)); yes.props.onPress();
     } else {
-      const yes = nodes(rendered.tree, n => n.type === 'TextButton')[1]; assert.equal(yes.props.enabled, false); yes.props.onClick();
+      const yes = nodes(rendered.tree, n => n.type === 'ComposeButton')[0]; assert.equal(yes.props.enabled, false); yes.props.onClick();
     }
   }
 });
@@ -87,7 +88,7 @@ test('return dialog cancel and dismissal callbacks remain wired on both platform
       const dialog = nodes(rendered.tree, n => n.type === AlertDialog)[0];
       assert.deepEqual(dialog.props.properties, { dismissOnBackPress: true, dismissOnClickOutside: true });
       dialog.props.onDismissRequest();
-      nodes(rendered.tree, n => n.type === 'TextButton')[0].props.onClick();
+      nodes(rendered.tree, n => n.type === 'OutlinedButton')[0].props.onClick();
       assert.equal(cancelled, 2);
     }
   }
@@ -169,6 +170,41 @@ test('iOS reason rows stay contiguous with the source label and action spacing',
     assert.equal(heading.props.style.marginBottom, 4);
     const comment = nodes(scroll, n => n.type === 'Host' && nodes(n, c => c.type === 'Text' && c.props.children === 'extraCommentLabel').length)[0];
     assert.equal(comment.props.style.marginBottom, 8);
+  }
+});
+
+test('return titles retain V2 headline emphasis on both platforms', () => {
+  for (const platform of ['ios', 'android']) for (const kind of ['reject', 'partial', 'claim']) {
+    const rendered = render(platform, kind, ['2', '', 'rejectReasonWrongItem'], { onCancel() {}, onConfirm() {} });
+    const title = nodes(rendered.tree, n => n.type === 'Text' && n.props.children === view.customerReturnTitleKey(kind))[0];
+    assert.ok(title);
+    if (platform === 'ios') {
+      assert.ok(title.props.modifiers.some(m => m[0] === 'font' && m[1].textStyle === 'title' && m[1].weight === 'bold'));
+      assert.ok(title.props.modifiers.some(m => m[0] === 'kerning' && m[1] === -0.6));
+    } else assert.deepEqual(title.props.style, { typography: 'headlineMedium', fontSize: 28, fontWeight: '700', letterSpacing: -0.6 });
+  }
+});
+
+test('Android return actions use the source outlined and filled equal-width hierarchy', () => {
+  for (const kind of ['reject', 'partial', 'claim']) {
+    const calls = [], rendered = render('android', kind, ['2', '', 'rejectReasonWrongItem'], { onCancel: () => calls.push('cancel'), onConfirm: input => calls.push(input) });
+    const row = nodes(rendered.tree, n => n.type === 'Row')[0];
+    assert.ok(row.props.modifiers.includes('fill'));
+    assert.deepEqual(row.props.horizontalArrangement, { spacedBy: 12 });
+    const [cancel, confirm] = row.props.children;
+    assert.equal(cancel.type, 'OutlinedButton'); assert.equal(confirm.type, 'ComposeButton');
+    assert.deepEqual([cancel, confirm].map(button => nodes(button, n => n.type === 'Text')[0].props.children), ['no', 'yes']);
+    assert.deepEqual(cancel.props.colors, { contentColor: 'onSurface' });
+    assert.deepEqual(confirm.props.colors, { containerColor: 'primary', contentColor: 'onPrimary' });
+    for (const button of [cancel, confirm]) {
+      assert.ok(button.props.modifiers.some(m => Array.isArray(m) && m[0] === 'weight' && m[1] === 1));
+      assert.ok(button.props.modifiers.some(m => Array.isArray(m) && m[0] === 'minSize' && m[1].minHeight === 56));
+      assert.deepEqual(button.props.shape[1].cornerRadii, { topStart: 20, topEnd: 20, bottomStart: 20, bottomEnd: 20 });
+      const label = nodes(button, n => n.type === 'Text')[0];
+      assert.deepEqual(label.props.style, { typography: 'labelLarge', fontSize: 16, fontWeight: '500' });
+    }
+    assert.equal(confirm.props.enabled, true); cancel.props.onClick(); confirm.props.onClick();
+    assert.deepEqual(calls, ['cancel', { returnedQty: kind === 'reject' ? 10 : 2, reason: 'rejectReasonWrongItem', comment: '' }]);
   }
 });
 test('delivery status and discussion ID follow the V2 mapping', () => {

@@ -1,5 +1,5 @@
-import { AlertDialog, Host, OutlinedTextField, RNHostView, Text, TextButton, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers';
+import { AlertDialog, Button, Host, OutlinedButton, OutlinedTextField, RNHostView, Row, Shape, Text, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
+import { defaultMinSize, fillMaxWidth, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text as RNText, useWindowDimensions, View } from 'react-native';
@@ -20,9 +20,11 @@ function ReturnDialogForm({ kind, sentQty, uom, onCancel, onConfirm }: Omit<Cust
   const input = customerReturnInput({ sentQty, rawQty: quantity, selectedReason: reason, comment,
     requireQtyEntry: kind !== 'reject', allowFullReturn: kind !== 'partial' });
   const direction = customerLayoutDirection(locale);
+  const buttonShape = Shape.RoundedCorner({ cornerRadii: { topStart: 20, topEnd: 20, bottomStart: 20, bottomEnd: 20 } });
   return <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none" layoutDirection={direction}>
     <AlertDialog onDismissRequest={onCancel} properties={{ dismissOnBackPress: true, dismissOnClickOutside: true }}>
-      <AlertDialog.Title><Text>{text(customerReturnTitleKey(kind))}</Text></AlertDialog.Title>
+      <AlertDialog.Title><Text style={{ typography: 'headlineMedium', fontSize: 28, fontWeight: '700', letterSpacing: -0.6 }}>
+        {text(customerReturnTitleKey(kind))}</Text></AlertDialog.Title>
       <AlertDialog.Text><RNHostView matchContents><View style={{ width: Math.max(1, Math.min(width - 112, 480)),
         direction: direction === 'rightToLeft' ? 'rtl' : 'ltr' }}>
         <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: height * 0.55 }} contentContainerStyle={{ gap: 12 }}>
@@ -51,8 +53,15 @@ function ReturnDialogForm({ kind, sentQty, uom, onCancel, onConfirm }: Omit<Cust
             </OutlinedTextField></Host>
         </ScrollView>
       </View></RNHostView></AlertDialog.Text>
-      <AlertDialog.DismissButton><TextButton onClick={onCancel}><Text>{text('no')}</Text></TextButton></AlertDialog.DismissButton>
-      <AlertDialog.ConfirmButton><TextButton enabled={!!input} onClick={() => { if (input) onConfirm(input); }}><Text>{text('yes')}</Text></TextButton></AlertDialog.ConfirmButton>
+      <AlertDialog.ConfirmButton><Row horizontalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth()]}>
+        <OutlinedButton onClick={onCancel} colors={{ contentColor: colors.onSurface }} shape={buttonShape} modifiers={[weight(1), defaultMinSize({ minHeight: 56 })]}>
+          <Text style={{ typography: 'labelLarge', fontSize: 16, fontWeight: '500' }}>{text('no')}</Text>
+        </OutlinedButton>
+        <Button enabled={!!input} onClick={() => { if (input) onConfirm(input); }} colors={{ containerColor: colors.primary, contentColor: colors.onPrimary }}
+          shape={buttonShape} modifiers={[weight(1), defaultMinSize({ minHeight: 56 })]}>
+          <Text style={{ typography: 'labelLarge', fontSize: 16, fontWeight: '500' }}>{text('yes')}</Text>
+        </Button>
+      </Row></AlertDialog.ConfirmButton>
     </AlertDialog>
   </Host>;
 }

@@ -1,5 +1,5 @@
 import { Button, Host, HStack, Image, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
-import { accessibilityAddTraits, accessibilityHidden, buttonStyle, contentShape, disabled, fixedSize, font, frame, keyboardType, lineLimit,
+import { accessibilityAddTraits, accessibilityHidden, buttonStyle, contentShape, disabled, fixedSize, font, frame, keyboardType, kerning, lineLimit,
   padding, shapes, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
 import { useState } from 'react';
 import { Modal, PlatformColor, Pressable, ScrollView, View } from 'react-native';
@@ -27,7 +27,7 @@ function ReturnDialogForm({ kind, sentQty, uom, onCancel, onConfirm }: Omit<Cust
         direction: direction === 'rightToLeft' ? 'rtl' : 'ltr' }}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 12 }}>
           <Host matchContents={{ vertical: true }} style={{ width: '100%', marginBottom: 4 }} layoutDirection={direction}><VStack alignment="leading" spacing={8}>
-            <Text>{text(customerReturnTitleKey(kind))}</Text>
+            <Text modifiers={[font({ textStyle: 'title', weight: 'bold' }), kerning(-0.6)]}>{text(customerReturnTitleKey(kind))}</Text>
             {kind !== 'reject' ? <><Text>{text(kind === 'partial' ? 'returningQtyLabel' : 'returnedQtyLabel')}</Text>
               <HStack><TextField text={quantityState} placeholder={`${sentQty.toFixed(2)} ${uom}`} onTextChange={setQuantity}
                 modifiers={[keyboardType('decimal-pad'), textFieldStyle('roundedBorder'), frame({ maxWidth: Infinity })]} /><Text>{uom}</Text></HStack></> : null}
