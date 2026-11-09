@@ -1,0 +1,78 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "source": "Locally authored f119 source-derived oracle probe, not an upstream V2 test.",
+  "locales": {
+    "uz": {
+      "text": {
+        "factory.attach_title": "Aparat ulash",
+        "factory.state_search": "Aparat qidiring",
+        "factory.no_equipment": "Mos apparat topilmadi",
+        "factory.default_equipment": "Default aparatlar",
+        "factory.custom_equipment": "Custom aparatlar",
+        "factory.continue_without_selection": "Tanlamasdan davom etish",
+        "factory.selected_count": "Tanlash ({count})"
+      },
+      "closeAction": "Yopish",
+      "selected": {
+        "0": "Tanlash (0)",
+        "1": "Tanlash (1)",
+        "2": "Tanlash (2)",
+        "12": "Tanlash (12)"
+      }
+    },
+    "en": {
+      "text": {
+        "factory.attach_title": "Attach equipment",
+        "factory.state_search": "Search equipment",
+        "factory.no_equipment": "No matching equipment found",
+        "factory.default_equipment": "Default equipment",
+        "factory.custom_equipment": "Custom equipment",
+        "factory.continue_without_selection": "Continue without selecting",
+        "factory.selected_count": "Select ({count})"
+      },
+      "closeAction": "Close",
+      "selected": {
+        "0": "Select (0)",
+        "1": "Select (1)",
+        "2": "Select (2)",
+        "12": "Select (12)"
+      }
+    },
+    "ru": {
+      "text": {
+        "factory.attach_title": "Подключить оборудование",
+        "factory.state_search": "Поиск оборудования",
+        "factory.no_equipment": "Подходящее оборудование не найдено",
+        "factory.default_equipment": "Стандартное оборудование",
+        "factory.custom_equipment": "Пользовательское оборудование",
+        "factory.continue_without_selection": "Продолжить без выбора",
+        "factory.selected_count": "Выбрать ({count})"
+      },
+      "closeAction": "Закрыть",
+      "selected": {
+        "0": "Выбрать (0)",
+        "1": "Выбрать (1)",
+        "2": "Выбрать (2)",
+        "12": "Выбрать (12)"
+      }
+    },
+    "ur": {
+      "text": {
+        "factory.attach_title": "آلہ منسلک کریں",
+        "factory.state_search": "آلات تلاش کریں",
+        "factory.no_equipment": "کوئی مماثل آلہ نہیں ملا",
+        "factory.default_equipment": "طے شدہ آلہ",
+        "factory.custom_equipment": "حسبِ ضرورت آلہ",
+        "factory.continue_without_selection": "منتخب کیے بغیر جاری رکھیں",
+        "factory.selected_count": "منتخب کریں ({count})"
+      },
+      "closeAction": "بند کریں",
+      "selected": {
+        "0": "منتخب کریں (0)",
+        "1": "منتخب کریں (1)",
+        "2": "منتخب کریں (2)",
+        "12": "منتخب کریں (12)"
+      }
+    }
+  }
+}

@@ -68,13 +68,14 @@ test('missing epoch reader is fail-closed and an old load cannot restore access 
   old.render(); await old.reset(); resolve(session('homashyo_rezkachi', ['raw_material.split'])); await flush();
   assert.equal(old.render().type, 'View'); old.unmount();
 });
-test('both platform layouts guard index, history and profile; no Homashyo Chat route exists', () => {
+test('both platform layouts guard index, history, profile and shared Chat routes', () => {
   for (const platform of ['ios', 'android']) {
     const root = path.resolve(__dirname, `../src/app/${platform}-homashyo`);
     assert.match(fs.readFileSync(path.join(root, '_layout.tsx'), 'utf8'), new RegExp(`RawSplitSessionGate platform="${platform}"`));
     const folder = platform === 'ios' ? path.join(root, '(home)') : root;
     for (const name of ['index.tsx', 'history.tsx']) assert.ok(fs.existsSync(path.join(folder, name)));
-    assert.ok(fs.existsSync(path.join(root, 'profile.tsx'))); assert.equal(fs.existsSync(path.join(root, 'chat')), false);
+    assert.ok(fs.existsSync(path.join(root, 'profile.tsx'))); assert.equal(fs.existsSync(path.join(root, 'chat')), true);
+    for (const page of ['_layout', 'index', 'new', '[conversationId]']) assert.ok(fs.existsSync(path.join(root, 'chat', `${page}.tsx`)));
   }
 });
 
@@ -155,6 +156,7 @@ test('provider composes the real picker owner, enables only a current witness, a
   const { RawSplitPickerCoordinator } = load('homashyo/rawSplitPickerCoordinator.ts');
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
     'expo-router': { router: { replace() {} } }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
+    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => 7 },
     '../auth': { registerSessionResetHook: fn => { reset = fn; return () => {}; } },
     '../preparation/PreparationNotice': { PreparationNotice: 'Notice' }, '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
     '../shared/printing/transientDevicePickerRuntime': { createNativeTransientDevicePicker: isCurrent => {
@@ -164,7 +166,7 @@ test('provider composes the real picker owner, enables only a current witness, a
     './rawSplitPrintRuntime': { rawSplitUnsupportedReason: () => 'blocked' }, './rawSplitRuntime': { createRawSplitRuntime: options => { runtimeOptions = options; return { home: { reload: async () => {}, subscribe: () => () => {} }, dispose() { disposals++; } }; } } };
   const { RawSplitProvider } = load('homashyo/RawSplitContext.tsx', mocks, true), props = { session: { token: 'real-session-placeholder' }, ticket: {}, onLogout() {}, children: 'screen',
     subscribeWitness: listener => { witnessListener = listener; return () => {}; }, witnessVersion: () => 0 };
-  const render = () => h.render(() => RawSplitProvider(props)); render(); assert.equal(runtimeOptions.canMutate(), true);
+  const render = () => h.render(() => RawSplitProvider(props)); const initial = render(); assert.equal(initial.props.value.unread, 7); assert.equal(runtimeOptions.canMutate(), true);
   const pending = runtimeOptions.selectPrinter(); const tree = render(); const content = tree.props.children.props.children;
   assert.equal(content[0].props.importantForAccessibility, 'no-hide-descendants'); assert.equal(content[2].type, 'Overlay');
   assert.equal(content[2].props.request, renderedRequest); current = false; witnessListener(); assert.equal(await pending, null); assert.equal(disposals, 1);
@@ -217,6 +219,7 @@ test('provider subscribes then rechecks a witness invalidated before subscriptio
   class Picker { dispose() {} invalidateIfStale() {} }
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
     'expo-router': { router: { replace() {} } }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
+    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => 7 },
     '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' },
     '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
     '../shared/printing/transientDevicePickerRuntime': {}, './rawSplitApi': { rawSplitSessionIsCurrent: () => current },
@@ -277,6 +280,7 @@ test('provider rechecks a picker after subscribing, including a transition befor
   class Picker { invalidateIfStale() { checks++; if (stale) invalidations++; } dispose() {} }
   const mocks = { 'react/jsx-runtime': jsx, react: h.react, 'react-native': { Alert: { alert() {} }, View: 'View', Text: 'Text' },
     'expo-router': { router: {} }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
+    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => 7 },
     '../auth': { registerSessionResetHook: () => () => {} }, '../preparation/PreparationNotice': { PreparationNotice: 'Notice' },
     '../preparation/usePreparationNotice': { usePreparationNotice: () => ({ show() {}, message: '' }) },
     '../shared/printing/transientDevicePickerRuntime': {}, './rawSplitApi': { rawSplitSessionIsCurrent: () => true }, './rawSplitDeviceSelection': {},

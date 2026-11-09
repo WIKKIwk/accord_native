@@ -1,7 +1,7 @@
 # homashyo
 
 Status: part 1 in progress
-Stopped at: The pending-command checkpoint is under a real stock, issue and print hold pending a durable acknowledgment and same-scope reconciliation design. This role is not ready for real operations. Continue the scanner/localization, navigation/dismissal and device audits later; independent test mode and all physical-device safety holds remain open.
+Stopped at: Reconciled the original Homashyo branch with main, preserving the later pending-check, response identity, write/print hold, device picker, Profile and native surface fixes. Connected V2's shared Chat dock on both platforms. Full-role parity remains incomplete; the write/print release protocol and device checks below remain open.
 
 Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot. The original V2 checkout is read-only. After the previous role checkpoints were merged, this role branch was verified clean and fully merged and fast-forwarded to native main `c093f14`. Existing session, GScale picker and device safety holds remain unchanged.
 
@@ -77,7 +77,7 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed` in an isolated clean snapshot
 
 ## Needs from the integrator
 - Integrate this role on main containing `56f620d` session-witness and optional-`onDailyWork` shared Profile. The role branch deliberately does not copy auth/account-switch files and fails closed if these shared bindings are absent. Review scanner confirmation, overlay ownership, witness lifetime and real-send/uncertain-outcome handling. Complete the shared independent test-mode flag and verified demo-account exit; demo-token actions are blocked.
-Do not expose a Homashyo Chat route until the shared WebSocket redirect/cookie security hold is cleared; do not change the protected worker/preparation Chat paths.
+The shared WebSocket redirect/cookie hold was resolved in main `3f8f158`; this integration exposes the role Chat adapters using that transport. Protected Worker/Preparation paths are unchanged. Shared Chat UI/model/media open items remain in `status/chat.md`.
 
 ## Surface audit
 | V2 surface and location | V4 file | iOS | Android | What differs |
@@ -92,7 +92,7 @@ Do not expose a Homashyo Chat route until the shared WebSocket redirect/cookie s
 ## Shell and navigation source audit (guarded branch routes)
 - V2 routes `/raw-material-split` and `/raw-material-split-history` both require the `homashyoRezkachi` role and `raw_material.split` capability; the role becomes its home only when both are present. Native `appRoutes` and both platform entry layouts enforce role and capability; `homeTargets` points to the new role routes.
 - The drawer header is `Rezka`, with `Rezka`, `Rezka tarixi`, `Profil` in that order and a logout footer. Its selected item follows home/history/profile. The branch now uses this heading and selection through the existing shared drawer. Reuse `RoleDrawer` and its existing logout confirmation rather than changing protected roles. V2 closes before navigation, waits 220 ms, and `AppRootNavigation` coalesces same-frame requests, unfocuses and pops to an existing target or pushes it. The existing shared drawer closes and delegates immediately; navigation timing, stack behavior, focus, cancellation and session cleanup still need real integration and device checks.
-- The V2 dock order is `Rezka`, `Profil`, then shared `Chat`, which `RoleDock` appends with the real unread badge. History keeps `Rezka` selected and Profile selects `Profil`. The dock currently exposes the non-Chat prefix, without inventing unread counts. Chat is unavailable under the security hold. `useChatUnreadCount` starts a session Chat runtime and can start the existing socket even without a Chat route, so it is also held.
+- The V2 dock order is `Rezka`, `Profil`, then shared `Chat`, which `RoleDock` appends with the real unread badge. History keeps `Rezka` selected and Profile selects `Profil`. The dock now exposes all three destinations with the existing session-scoped `useChatUnreadCount`. Compose and NativeTabs derive the unread dot from that count. Native Chat routes reuse shared list/new/thread pages; iOS hides the dock during conversation and new-message screens and restores it on the shared closing signal.
 - Home header is `Rezka` with drawer, history and a held printer action; history header is `Rezka tarixi` with back and a held printer action. Busy shows loading and disables history/printer actions. History back pops when possible, otherwise replaces with home. Branch routes now use those destinations and native header actions; top busy feedback is now wired with native controls on both platforms; native layout/timing and full navigation parity remain open. Android `RoleHeader` has title and leading control but no trailing actions slot; use existing native header/button composition without changing protected screens.
 - V2 uses the shared Profile with this same drawer and dock. Reuse `ProfileScreen` without `onDailyWork`; the branch guards Profile access and temporarily makes Settings/PIN unavailable pending their own guarded integration. The branch route owns a captured witness ticket, transition/reset/unmount cleanup and picker; integration review, uncertain-write handling, feedback and stack/back/device checks remain open.
 
@@ -103,3 +103,16 @@ Do not expose a Homashyo Chat route until the shared WebSocket redirect/cookie s
 
 ## Tomorrow testing limit
 Read-only navigation, History, scanner/lookup after a successful status check, and the explicit status-only retry can be tested on phones. Stock saves, issue reports, pending-command retries, printer selection and every print/reprint are intentionally unavailable. No phone test can establish durable completion or same-scope exclusion; those need a reviewed implementation and authoritative reconciliation first.
+
+## 2026-11-09 branch integration
+
+Main `ee19c78` was merged into the original role branch as `a275db1`. The old role changes were already represented by later main implementations. Reviewed conflicts retain those main implementations, including all production write/print holds. An obsolete general oracle README was omitted because main has the more specific, updated reproduction document. Before Chat wiring, 378 Homashyo/shared-picker tests passed.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Rezka/Profile and appended Chat, `raw_material_split_navigation.dart:7-35`, `role_dock.dart` | iOS role layout; `RawSplitDock.android.tsx` | connected | connected | Native tab appearance; true session unread dot. History still selects Rezka. |
+| Shared Chat list/new/thread | Both role Chat route trees | shared pages | shared pages | Shared Chat open items remain; no printer or stock action is enabled by this wiring. |
+
+The source V2 checkout was neither changed nor executed. No phone, simulator, printer, credentials or live backend was used. Source save/issue/print flows remain unavailable under the pre-existing release hold and are not reported as finished.
+
+Verification after Chat wiring: focused Homashyo/Chat unread run 370/370 passed; final route/owner/Chat manifest and dock checks 28/28 passed. Full Node suite 4,332 total, 4,314 passed, the same six baseline Preparation host-import failures and 12 TODOs. iOS TypeScript passed; Android retained the same nine Worker diagnostics; lint retained only the existing Admin warning. Ledger resolves 928 source and 76 test tags, with 11 existing literal-endpoint warnings. The role has one ledger part; the text gate remains open at iOS 1 missing/16 extra and Android 1 missing/15 extra, with all previous exceptions unchanged. No new exception was introduced to hide a mismatch.

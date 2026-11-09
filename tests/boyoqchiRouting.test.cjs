@@ -27,34 +27,35 @@ test('Boyoqchi entry follows V2 home and route capability eligibility', () => {
   assert.equal(routes.canOpenRoute({ ...session, capabilities: [] }, routes.appRoutes.boyoqchiAstatka), false);
 });
 
-test('role route trees expose Profile while shared Chat routes stay held on both platforms', () => {
+test('role route trees expose Profile and all shared Chat destinations on both platforms', () => {
   for (const platform of ['ios', 'android']) {
     const root = path.resolve(__dirname, `../src/app/${platform}-boyoqchi`);
-    const held = path.resolve(__dirname, `../src/held-routes/${platform}-boyoqchi`);
     const chat = platform === 'ios' ? '(tabs)/chat' : 'chat';
     assert.equal(fs.existsSync(path.join(root, '_layout.tsx')), true);
-    for (const relative of [`${chat}/_layout.${platform}.tsx`, `${chat}/index.${platform}.tsx`, `${chat}/new.${platform}.tsx`, `${chat}/[conversationId].${platform}.tsx`]) {
-      assert.equal(fs.existsSync(path.join(held, relative)), true, `${platform} ${relative}`);
+    for (const relative of [`${chat}/_layout.tsx`, `${chat}/index.tsx`, `${chat}/new.tsx`, `${chat}/[conversationId].tsx`]) {
+      assert.equal(fs.existsSync(path.join(root, relative)), true, `${platform} ${relative}`);
     }
-    assert.equal(fs.existsSync(path.join(root, chat)), false);
-    assert.match(fs.readFileSync(path.join(held, chat, `_layout.${platform}.tsx`), 'utf8'), /ChatRouteProvider/);
+    assert.match(fs.readFileSync(path.join(root, chat, '_layout.tsx'), 'utf8'), /ChatRouteProvider/);
   }
 });
 
-test('role docks and drawer omit Chat and its unread runtime while the transport is held', () => {
+test('role docks and drawer preserve V2 destination order with real unread dots', () => {
   const android = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiDock.android.tsx'), 'utf8');
   const ios = fs.readFileSync(path.resolve(__dirname, '../src/app/ios-boyoqchi/(tabs)/_layout.tsx'), 'utf8');
   const drawer = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiDrawer.tsx'), 'utf8');
   const context = fs.readFileSync(path.resolve(__dirname, '../src/boyoqchi/BoyoqchiContext.tsx'), 'utf8');
   assert.ok(android.indexOf("id: 'home'") < android.indexOf("id: 'astatka'"));
   assert.ok(android.indexOf("id: 'astatka'") < android.indexOf("id: 'profile'"));
-  assert.doesNotMatch(android, /id: 'chat'|showBadge|useChatUnreadCount|chatUnreadRuntimeFor/);
-  assert.doesNotMatch(ios, /name="chat"|NativeTabs\.Trigger\.Badge|useChatUnreadCount|chatUnreadRuntimeFor/);
-  assert.doesNotMatch(drawer, /id: 'chat'/);
-  assert.doesNotMatch(context, /useChatUnreadCount|chatUnreadRuntimeFor/);
+  assert.ok(android.indexOf("id: 'profile'") < android.indexOf("id: 'chat'"));
+  assert.ok(drawer.indexOf("id: 'astatka'") < drawer.indexOf("id: 'chat'"));
+  assert.ok(drawer.indexOf("id: 'chat'") < drawer.indexOf("id: 'profile'"));
+  assert.match(android, /showBadge: unread > 0/);
+  assert.match(ios, /name="chat"/);
+  assert.match(ios, /NativeTabs\.Trigger\.Badge hidden=\{unread <= 0\}/);
+  assert.match(context, /useChatUnreadCount\(session\)/);
 });
 
-test('mounting the role provider does not start the opt-in unread runtime or invent an unread count', () => {
+test('mounting the role provider uses the shared session unread runtime', () => {
   const filename = path.resolve(__dirname, '../src/boyoqchi/BoyoqchiContext.tsx');
   const loaded = new Module(filename, module), onLogout = () => {};
   let starts = 0;
@@ -62,7 +63,7 @@ test('mounting the role provider does not start the opt-in unread runtime or inv
     react: { createContext: () => ({ Provider: 'Provider' }), useContext: () => null, useRef: value => ({ current: value }),
       useState: value => [value, () => {}] },
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
-    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => { starts++; return 7; } },
+    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: value => { assert.equal(value, session); starts++; return 7; } },
   };
   loaded.filename = filename; loaded.paths = module.paths;
   loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
@@ -70,8 +71,38 @@ test('mounting the role provider does not start the opt-in unread runtime or inv
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
   const provider = loaded.exports.BoyoqchiProvider({ session, onLogout, children: null });
-  assert.equal(starts, 0);
+  assert.equal(starts, 1);
   assert.equal(provider.props.value.session, session);
   assert.equal(provider.props.value.onLogout, onLogout);
-  assert.equal(Object.hasOwn(provider.props.value, 'unread'), false);
+  assert.equal(provider.props.value.unread, 7);
+});
+
+test('iOS hides its dock inside a conversation and derives the unread dot from the shared count', () => {
+  const filename = path.resolve(__dirname, '../src/app/ios-boyoqchi/(tabs)/_layout.tsx');
+  const loaded = new Module(filename, module);
+  const Trigger = Object.assign(() => {}, { Icon: 'Icon', Label: 'Label', Badge: 'Badge' });
+  const NativeTabs = Object.assign(() => {}, { Trigger });
+  const state = { unread: 0, chatClosing: false };
+  let pathname = '/ios-boyoqchi/chat';
+  const mocks = {
+    'expo-router': { usePathname: () => pathname }, 'expo-router/native-tabs': { NativeTabs },
+    '../../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => state },
+    '../../../boyoqchi/useBoyoqchiText': { useBoyoqchiGetter: () => key => key, useBoyoqchiText: () => key => key },
+    'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
+  };
+  loaded.filename = filename; loaded.paths = module.paths;
+  loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, filename);
+  const render = loaded.exports.default;
+  let tabs = render();
+  assert.equal(tabs.props.hidden, false);
+  assert.deepEqual(tabs.props.children.map(child => child.props.name), ['(home)', '(astatka)', 'profile', 'chat']);
+  const badge = tree => tree.props.children.at(-1).props.children.find(child => child.type === 'Badge');
+  assert.equal(badge(tabs).props.hidden, true);
+  state.unread = 3; pathname = '/ios-boyoqchi/chat/conversation-1'; tabs = render();
+  assert.equal(tabs.props.hidden, true); assert.equal(badge(tabs).props.hidden, false);
+  assert.equal(badge(tabs).props.children, '', 'an unread dot has no invented count label');
+  state.chatClosing = true; assert.equal(render().props.hidden, false);
 });

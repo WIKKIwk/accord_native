@@ -38,7 +38,8 @@ export function supplierItemFromJson(value: unknown): SupplierItem {
 }
 
 /** @v2 gscaleItemsPage */
-export async function gscaleItemsPage(session: Session, options: GscaleItemsOptions = {}): Promise<SupplierItem[]> {
+export async function gscaleItemsPage(session: Session, options: GscaleItemsOptions = {}, beforeSend?: () => void,
+  activity?: Pick<SearchActivityStore, 'sortByItemCode'>): Promise<SupplierItem[]> {
   const query = new URLSearchParams();
   if (options.query?.trim()) query.set('q', options.query.trim());
   if (options.group?.trim()) query.set('group', options.group.trim());
@@ -47,12 +48,18 @@ export async function gscaleItemsPage(session: Session, options: GscaleItemsOpti
   if (limit > 0) query.set('limit', String(limit));
   if (offset > 0) query.set('offset', String(offset));
   const path = '/v1/mobile/gscale/items', suffix = query.toString();
-  const response = await authorizedFetch(session, suffix ? `${path}?${suffix}` : path);
+  const target = suffix ? `${path}?${suffix}` : path;
+  const response = beforeSend ? await authorizedFetch(session, target, {}, beforeSend) : await authorizedFetch(session, target);
   if (response.status !== 200) throw new MobileApiException({ code: 'gscale_items_failed', message: 'GScale items failed', statusCode: response.status });
   const data: unknown = await response.json();
   if (!Array.isArray(data)) throw new TypeError('Invalid item list');
-  return searchActivityStore.sortByItemCode(session, data.map(supplierItemFromJson), item => item.code,
+  beforeSend?.();
+  const sorted = (activity ?? searchActivityStore).sortByItemCode(session, data.map(supplierItemFromJson), item => item.code,
     (left, right) => compare(left.name.toLowerCase(), right.name.toLowerCase()) || compare(left.code.toLowerCase(), right.code.toLowerCase()));
+  if (!beforeSend) return sorted;
+  const result = await sorted;
+  beforeSend();
+  return result;
 }
 
 export type WarehouseAssignment = { warehouse: string; principal_role: string; principal_ref: string; display_name: string };

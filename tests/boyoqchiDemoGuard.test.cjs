@@ -13,7 +13,7 @@ function nodes(node, predicate) {
 function compile(relative, mocks = {}) {
   const filename = path.resolve(__dirname, `../src/${relative}`), loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
-  loaded.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
+  loaded.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename); return loaded.exports;
