@@ -1,14 +1,16 @@
 import { activeSessionToken, type Session } from './auth';
 import { initialProfileSnapshot, type ProfileSnapshot } from './profileModel';
 import { updateNickname } from './shared/profileApi';
+import { isProfileSessionCurrent, type ProfileSessionGuard } from './shared/profileSessionGuard';
 
 export class ProfileNameError extends Error {}
 
-export async function updateProfileName(session: Session, name: string, signal: AbortSignal): Promise<ProfileSnapshot> {
-  if (!activeSessionToken(session) || signal.aborted) throw new ProfileNameError('Sessiya tugagan.');
+export async function updateProfileName(session: Session, name: string, signal: AbortSignal, isCurrent?: ProfileSessionGuard): Promise<ProfileSnapshot> {
+  if (!activeSessionToken(session) || signal.aborted || !isProfileSessionCurrent(isCurrent)) throw new ProfileNameError('Sessiya tugagan.');
   try {
-    await updateNickname(session, name.trim(), signal);
-    if (!activeSessionToken(session) || signal.aborted) throw new ProfileNameError('Sessiya tugagan.');
+    if (isCurrent) await updateNickname(session, name.trim(), signal, isCurrent);
+    else await updateNickname(session, name.trim(), signal);
+    if (!activeSessionToken(session) || signal.aborted || !isProfileSessionCurrent(isCurrent)) throw new ProfileNameError('Sessiya tugagan.');
     return initialProfileSnapshot(session);
   } catch (error) {
     if (error instanceof ProfileNameError) throw error;

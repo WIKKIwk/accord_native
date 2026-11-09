@@ -36,12 +36,25 @@ export async function adminPaddonDelete(session: Session, code: string): Promise
   }
 }
 
+function checkedPaddonReadGuard(beforeSend: () => void): () => void {
+  return () => {
+    const result: unknown = beforeSend();
+    if (result === undefined) return;
+    // An accidentally async guard cannot authorize a send or leak a rejection.
+    if (result !== null && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
+    throw new TypeError('Paddon read guard must be synchronous');
+  };
+}
+
 /** @v2 adminPaddonDetail */
-export async function adminPaddonDetail(session: Session, code: string) {
+export async function adminPaddonDetail(session: Session, code: string, options: { beforeSend?: () => void } | undefined = undefined) {
   const normalized = code.trim();
   if (!normalized) throw new WorkerControlException('paddon_not_found', 'Paddon topilmadi');
   const query = new URLSearchParams({ code: normalized });
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons/detail?${query}`);
+  const path = `/v1/mobile/admin/production-maps/paddons/detail?${query}`;
+  const beforeSend = options?.beforeSend;
+  const response = beforeSend ? await authorizedFetch(session, path, {}, checkedPaddonReadGuard(beforeSend))
+    : await authorizedFetch(session, path);
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
@@ -65,12 +78,18 @@ export async function adminPaddonQrReport(session: Session, code: string) {
 }
 
 /** @v2 adminPaddons */
-export async function adminPaddons(session: Session, input: { limit?: number; selectable_only?: boolean; apparatus?: string } = {}) {
+export async function adminPaddons(session: Session, input: { limit?: number; selectable_only?: boolean; apparatus?: string;
+  beforeSend?: () => void } = {}) {
   const limit = Math.min(200, Math.max(1, Math.trunc(input.limit ?? 100)));
   const query = new URLSearchParams({ limit: String(limit) });
   if (input.apparatus?.trim()) query.set('apparatus', input.apparatus.trim());
   if (input.selectable_only) query.set('selectable_only', 'true');
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons?${query}`);
+  const path = `/v1/mobile/admin/production-maps/paddons?${query}`;
+  // Preserve the legacy call shape while allowing scoped callers to check the
+  // original witness immediately before the first send and any 401 retry.
+  const beforeSend = input.beforeSend;
+  const checkedGuard = beforeSend ? checkedPaddonReadGuard(beforeSend) : undefined;
+  const response = checkedGuard ? await authorizedFetch(session, path, {}, checkedGuard) : await authorizedFetch(session, path);
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }

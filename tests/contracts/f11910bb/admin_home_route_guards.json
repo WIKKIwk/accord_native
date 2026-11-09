@@ -1,0 +1,311 @@
+{
+  "kind": "source-derived capability inventory, not HTTP recordings",
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "sources": [
+    "lib/src/app/app_router_declarations_part_01.dart",
+    "lib/src/app/app_router_AppRouter_resplit_class_AppRouter_resplit2_static__routeCapabilities.dart"
+  ],
+  "routes": {
+    "adminHome": {
+      "path": "/admin-home",
+      "capabilities": [
+        "admin.access",
+        "role.capability.read",
+        "role.capability.manage",
+        "admin.settings.read",
+        "admin.settings.manage",
+        "catalog.item.read",
+        "catalog.item.create",
+        "catalog.item_group.read",
+        "catalog.item_group.manage",
+        "catalog.item.bulk_move",
+        "party.supplier.read",
+        "party.supplier.manage",
+        "party.supplier.item.assign",
+        "party.supplier.code.manage",
+        "party.customer.read",
+        "party.customer.manage",
+        "party.customer.item.assign",
+        "party.customer.code.manage",
+        "admin.activity.read",
+        "werka.code.manage",
+        "production.map.manage",
+        "factory.location.manage",
+        "inventory.movement.manage",
+        "raw_material.rule.manage",
+        "raw_material.assign",
+        "rezka.split.manage"
+      ]
+    },
+    "salesHome": {
+      "path": "/sales-home",
+      "capabilities": [
+        "sales.access"
+      ]
+    },
+    "brigaderHome": {
+      "path": "/brigader-home",
+      "capabilities": [
+        "brigader.access"
+      ]
+    },
+    "adminActivity": {
+      "path": "/admin-activity",
+      "capabilities": [
+        "admin.activity.read"
+      ]
+    },
+    "adminCalculate": {
+      "path": "/admin-calculate",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage",
+        "production.order.create",
+        "production.order.edit"
+      ]
+    },
+    "adminCalculateMaterials": {
+      "path": "/admin-calculate-materials",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage"
+      ]
+    },
+    "adminCalculateOrders": {
+      "path": "/admin-calculate-orders",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage",
+        "production.order.create"
+      ]
+    },
+    "adminCreateHub": {
+      "path": "/admin-create-hub",
+      "capabilities": [
+        "admin.access",
+        "catalog.item.create",
+        "catalog.item_group.manage",
+        "party.supplier.manage",
+        "party.customer.manage",
+        "werka.code.manage",
+        "role.capability.manage"
+      ]
+    },
+    "adminSettings": {
+      "path": "/admin-settings",
+      "capabilities": [
+        "admin.settings.read"
+      ]
+    },
+    "adminAdditionalSettings": {
+      "path": "/admin-additional-settings",
+      "capabilities": [
+        "admin.access"
+      ]
+    },
+    "adminPushConfig": {
+      "path": "/admin-push-config",
+      "capabilities": [
+        "admin.settings.read"
+      ]
+    },
+    "adminTraining": {
+      "path": "/admin-training",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage"
+      ]
+    },
+    "adminEmergencyReset": {
+      "path": "/admin-emergency-reset",
+      "capabilities": [
+        "admin.access"
+      ]
+    },
+    "adminTelegram": {
+      "path": "/admin-telegram",
+      "capabilities": [
+        "admin.settings.read"
+      ]
+    },
+    "adminRoles": {
+      "path": "/admin-roles",
+      "capabilities": [
+        "role.capability.read"
+      ]
+    },
+    "adminNotifications": {
+      "path": "/admin-notifications",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage"
+      ]
+    },
+    "adminProductionMapTest": {
+      "path": "/admin-production-map-test",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage",
+        "production.map.edit"
+      ]
+    },
+    "adminProductionMapOrders": {
+      "path": "/admin-production-map-orders",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage",
+        "production.map.read"
+      ]
+    },
+    "adminOpeningWip": {
+      "path": "/admin-opening-wip",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage"
+      ]
+    },
+    "adminProgressQrScan": {
+      "path": "/admin-progress-qr-scan",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage",
+        "apparatus.queue.read",
+        "apparatus.queue.manage"
+      ]
+    },
+    "adminServerMonitor": {
+      "path": "/admin-server-monitor",
+      "capabilities": [
+        "admin.access"
+      ]
+    },
+    "adminFactoryMap": {
+      "path": "/admin-factory-map",
+      "capabilities": [
+        "admin.access"
+      ]
+    },
+    "adminFactoryLocations": {
+      "path": "/admin-factory-locations",
+      "capabilities": [
+        "factory.location.manage"
+      ]
+    },
+    "adminWipBatches": {
+      "path": "/admin-wip-batches",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage"
+      ]
+    },
+    "adminQueuePolicies": {
+      "path": "/admin-queue-policies",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage"
+      ]
+    },
+    "adminApparatusSettings": {
+      "path": "/admin-apparatus-settings",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage"
+      ]
+    },
+    "adminApparatusGroups": {
+      "path": "/admin-apparatus-groups",
+      "capabilities": [
+        "admin.access",
+        "production.map.manage"
+      ]
+    },
+    "adminRawMaterialSettings": {
+      "path": "/admin-raw-material-settings",
+      "capabilities": [
+        "raw_material.rule.manage",
+        "raw_material.assign"
+      ]
+    },
+    "adminRawMaterialRules": {
+      "path": "/admin-raw-material-rules",
+      "capabilities": [
+        "raw_material.rule.manage"
+      ]
+    },
+    "adminRawMaterialAssignments": {
+      "path": "/admin-raw-material-assignments",
+      "capabilities": [
+        "raw_material.assign"
+      ]
+    },
+    "adminSuppliers": {
+      "path": "/admin-suppliers",
+      "capabilities": [
+        "party.supplier.read",
+        "party.customer.read"
+      ]
+    },
+    "adminWorkerSettings": {
+      "path": "/admin-worker-settings",
+      "capabilities": [
+        "admin.access"
+      ]
+    },
+    "adminWarehouses": {
+      "path": "/admin-warehouses",
+      "capabilities": [
+        "catalog.item.read",
+        "catalog.item_group.read",
+        "raw_material.assign"
+      ]
+    },
+    "adminUserCreate": {
+      "path": "/admin-user-create",
+      "capabilities": [
+        "party.supplier.manage",
+        "party.customer.manage",
+        "werka.code.manage"
+      ]
+    },
+    "adminItemCreate": {
+      "path": "/admin-item-create",
+      "capabilities": [
+        "catalog.item.read",
+        "catalog.item.create",
+        "catalog.item.bulk_move"
+      ]
+    },
+    "adminItemGroupCreate": {
+      "path": "/admin-item-group-create",
+      "capabilities": [
+        "catalog.item_group.manage"
+      ]
+    },
+    "adminItemBulkMove": {
+      "path": "/admin-item-bulk-move",
+      "capabilities": [
+        "catalog.item.bulk_move"
+      ]
+    },
+    "inventoryMovements": {
+      "path": "/inventory-movements",
+      "capabilities": [
+        "inventory.movement.manage"
+      ]
+    },
+    "gscaleMode": {
+      "path": "/gscale-mode",
+      "capabilities": [
+        "gscale.catalog.read",
+        "gscale.print",
+        "rps.batch.manage"
+      ]
+    },
+    "rezkaSplit": {
+      "path": "/rezka-split",
+      "capabilities": [
+        "rezka.split.manage"
+      ]
+    }
+  }
+}

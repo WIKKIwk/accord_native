@@ -3,6 +3,11 @@ import { MobileApiException } from '../shared/mobileApiException';
 export type JsonObject = Record<string, unknown>;
 /** Opt-in read lifetime. Only synchronous true permits a Home request or result. */
 export type QolipReadGuard = () => boolean;
+/** The transport deliberately cannot initiate authentication for an isolated guarded read. */
+export function isGuardedReadRefreshUnavailable(error: unknown): boolean {
+  try { return error !== null && typeof error === 'object' &&
+    (error as { code?: unknown }).code === 'guarded_read_refresh_unavailable'; } catch { return false; }
+}
 const checkingReadGuards = new WeakMap<QolipReadGuard, { reentered: boolean }>();
 export function assertQolipReadCurrent(guard?: QolipReadGuard): void {
   if (guard === undefined) return;

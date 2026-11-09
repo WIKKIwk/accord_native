@@ -22,7 +22,7 @@ export function createQolipHomeOwner(session: Session, boundary: QolipHomeReadBo
       if (!allowed()) { expired = true; return false; }
       assertQolipReadCurrent(boundaryCurrent);
       if (!allowed()) { expired = true; return false; }
-      return true;
+      return !expired;
     } catch { expired = true; return false; }
   };
   const roleBoundary = { current, subscribe: (listener: () => void) => boundary.subscribe(listener) };

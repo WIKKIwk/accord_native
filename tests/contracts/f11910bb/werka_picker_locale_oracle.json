@@ -1,0 +1,3846 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "kind": "standalone source-equivalent locale data, not Flutter or device",
+  "flutterRevision": "737ba8f885dc774b53b442759999a312c9461e4e",
+  "flutterVersion": "3.47.8",
+  "intlVersion": "0.20.3",
+  "dateDataSha256": "6dbcf772b367b3c993008b3267d63c38eccd4039b476dadf33753fe888401526",
+  "materialLocalizationsSha256": "3971b1b90d5d047261a57d547f9f0ff072282ab3f53a1d76fecf671decf59e8b",
+  "materialStringsSha256": "dfe987456b1757657ce10123f1c7488eabcf43495983ea5b6241e62f168522a6",
+  "intlDateFormatSha256": "dbd8281cf20bec610323692e637cf81716275231effe993c82d7a01a89ebc1b3",
+  "intlNumberFormatSha256": "afcbde1a551503bdc9edda251a865eb9bada8c9367823c38596b28d4c2c92040",
+  "locales": {
+    "uz": {
+      "dateLocale": "uz",
+      "numberLocale": "uz",
+      "firstDayOfWeekIndex": 1,
+      "narrowWeekdays": [
+        "Y",
+        "D",
+        "S",
+        "C",
+        "P",
+        "J",
+        "S"
+      ],
+      "weekdays": [
+        "yakshanba",
+        "dushanba",
+        "seshanba",
+        "chorshanba",
+        "payshanba",
+        "juma",
+        "shanba"
+      ],
+      "months": [
+        "yanvar",
+        "fevral",
+        "mart",
+        "aprel",
+        "may",
+        "iyun",
+        "iyul",
+        "avgust",
+        "sentabr",
+        "oktabr",
+        "noyabr",
+        "dekabr"
+      ],
+      "fullDatePattern": "EEEE, d-MMMM, y",
+      "decimals": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31"
+      ],
+      "decimalSamples": [
+        {
+          "number": -1000000,
+          "formatted": "-1 000 000"
+        },
+        {
+          "number": -1000,
+          "formatted": "-1 000"
+        },
+        {
+          "number": -31,
+          "formatted": "-31"
+        },
+        {
+          "number": -1,
+          "formatted": "-1"
+        },
+        {
+          "number": 0,
+          "formatted": "0"
+        },
+        {
+          "number": 1,
+          "formatted": "1"
+        },
+        {
+          "number": 9,
+          "formatted": "9"
+        },
+        {
+          "number": 10,
+          "formatted": "10"
+        },
+        {
+          "number": 31,
+          "formatted": "31"
+        },
+        {
+          "number": 999,
+          "formatted": "999"
+        },
+        {
+          "number": 1000,
+          "formatted": "1 000"
+        },
+        {
+          "number": 10000,
+          "formatted": "10 000"
+        },
+        {
+          "number": 1000000,
+          "formatted": "1 000 000"
+        },
+        {
+          "number": 123456789,
+          "formatted": "123 456 789"
+        }
+      ],
+      "samples": [
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 22,
+          "fullDate": "dushanba, 22-yanvar, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 23,
+          "fullDate": "seshanba, 23-yanvar, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 24,
+          "fullDate": "chorshanba, 24-yanvar, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 25,
+          "fullDate": "payshanba, 25-yanvar, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 26,
+          "fullDate": "juma, 26-yanvar, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 27,
+          "fullDate": "shanba, 27-yanvar, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 28,
+          "fullDate": "yakshanba, 28-yanvar, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 22,
+          "fullDate": "payshanba, 22-fevral, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 23,
+          "fullDate": "juma, 23-fevral, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 24,
+          "fullDate": "shanba, 24-fevral, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 25,
+          "fullDate": "yakshanba, 25-fevral, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 26,
+          "fullDate": "dushanba, 26-fevral, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 27,
+          "fullDate": "seshanba, 27-fevral, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 28,
+          "fullDate": "chorshanba, 28-fevral, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 22,
+          "fullDate": "juma, 22-mart, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 23,
+          "fullDate": "shanba, 23-mart, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 24,
+          "fullDate": "yakshanba, 24-mart, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 25,
+          "fullDate": "dushanba, 25-mart, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 26,
+          "fullDate": "seshanba, 26-mart, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 27,
+          "fullDate": "chorshanba, 27-mart, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 28,
+          "fullDate": "payshanba, 28-mart, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 22,
+          "fullDate": "dushanba, 22-aprel, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 23,
+          "fullDate": "seshanba, 23-aprel, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 24,
+          "fullDate": "chorshanba, 24-aprel, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 25,
+          "fullDate": "payshanba, 25-aprel, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 26,
+          "fullDate": "juma, 26-aprel, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 27,
+          "fullDate": "shanba, 27-aprel, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 28,
+          "fullDate": "yakshanba, 28-aprel, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 22,
+          "fullDate": "chorshanba, 22-may, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 23,
+          "fullDate": "payshanba, 23-may, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 24,
+          "fullDate": "juma, 24-may, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 25,
+          "fullDate": "shanba, 25-may, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 26,
+          "fullDate": "yakshanba, 26-may, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 27,
+          "fullDate": "dushanba, 27-may, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 28,
+          "fullDate": "seshanba, 28-may, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 22,
+          "fullDate": "shanba, 22-iyun, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 23,
+          "fullDate": "yakshanba, 23-iyun, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 24,
+          "fullDate": "dushanba, 24-iyun, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 25,
+          "fullDate": "seshanba, 25-iyun, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 26,
+          "fullDate": "chorshanba, 26-iyun, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 27,
+          "fullDate": "payshanba, 27-iyun, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 28,
+          "fullDate": "juma, 28-iyun, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 22,
+          "fullDate": "dushanba, 22-iyul, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 23,
+          "fullDate": "seshanba, 23-iyul, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 24,
+          "fullDate": "chorshanba, 24-iyul, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 25,
+          "fullDate": "payshanba, 25-iyul, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 26,
+          "fullDate": "juma, 26-iyul, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 27,
+          "fullDate": "shanba, 27-iyul, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 28,
+          "fullDate": "yakshanba, 28-iyul, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 22,
+          "fullDate": "payshanba, 22-avgust, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 23,
+          "fullDate": "juma, 23-avgust, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 24,
+          "fullDate": "shanba, 24-avgust, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 25,
+          "fullDate": "yakshanba, 25-avgust, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 26,
+          "fullDate": "dushanba, 26-avgust, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 27,
+          "fullDate": "seshanba, 27-avgust, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 28,
+          "fullDate": "chorshanba, 28-avgust, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 22,
+          "fullDate": "yakshanba, 22-sentabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 23,
+          "fullDate": "dushanba, 23-sentabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 24,
+          "fullDate": "seshanba, 24-sentabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 25,
+          "fullDate": "chorshanba, 25-sentabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 26,
+          "fullDate": "payshanba, 26-sentabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 27,
+          "fullDate": "juma, 27-sentabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 28,
+          "fullDate": "shanba, 28-sentabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 22,
+          "fullDate": "seshanba, 22-oktabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 23,
+          "fullDate": "chorshanba, 23-oktabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 24,
+          "fullDate": "payshanba, 24-oktabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 25,
+          "fullDate": "juma, 25-oktabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 26,
+          "fullDate": "shanba, 26-oktabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 27,
+          "fullDate": "yakshanba, 27-oktabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 28,
+          "fullDate": "dushanba, 28-oktabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 22,
+          "fullDate": "juma, 22-noyabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 23,
+          "fullDate": "shanba, 23-noyabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 24,
+          "fullDate": "yakshanba, 24-noyabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 25,
+          "fullDate": "dushanba, 25-noyabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 26,
+          "fullDate": "seshanba, 26-noyabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 27,
+          "fullDate": "chorshanba, 27-noyabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 28,
+          "fullDate": "payshanba, 28-noyabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 22,
+          "fullDate": "yakshanba, 22-dekabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 23,
+          "fullDate": "dushanba, 23-dekabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 24,
+          "fullDate": "seshanba, 24-dekabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 25,
+          "fullDate": "chorshanba, 25-dekabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 26,
+          "fullDate": "payshanba, 26-dekabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 27,
+          "fullDate": "juma, 27-dekabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 28,
+          "fullDate": "shanba, 28-dekabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": -5,
+          "month": 1,
+          "day": 1,
+          "fullDate": "yakshanba, 1-yanvar, 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": -5,
+          "month": 2,
+          "day": 28,
+          "fullDate": "seshanba, 28-fevral, 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": -5,
+          "month": 12,
+          "day": 1,
+          "fullDate": "juma, 1-dekabr, 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": 0,
+          "month": 1,
+          "day": 1,
+          "fullDate": "shanba, 1-yanvar, 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 0,
+          "month": 2,
+          "day": 28,
+          "fullDate": "dushanba, 28-fevral, 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 0,
+          "month": 12,
+          "day": 1,
+          "fullDate": "juma, 1-dekabr, 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 1,
+          "month": 1,
+          "day": 1,
+          "fullDate": "dushanba, 1-yanvar, 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 1,
+          "month": 2,
+          "day": 28,
+          "fullDate": "chorshanba, 28-fevral, 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 1,
+          "month": 12,
+          "day": 1,
+          "fullDate": "shanba, 1-dekabr, 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 50,
+          "month": 1,
+          "day": 1,
+          "fullDate": "shanba, 1-yanvar, 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 50,
+          "month": 2,
+          "day": 28,
+          "fullDate": "dushanba, 28-fevral, 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 50,
+          "month": 12,
+          "day": 1,
+          "fullDate": "payshanba, 1-dekabr, 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 99,
+          "month": 1,
+          "day": 1,
+          "fullDate": "payshanba, 1-yanvar, 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 99,
+          "month": 2,
+          "day": 28,
+          "fullDate": "shanba, 28-fevral, 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 99,
+          "month": 12,
+          "day": 1,
+          "fullDate": "seshanba, 1-dekabr, 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 100,
+          "month": 1,
+          "day": 1,
+          "fullDate": "juma, 1-yanvar, 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 100,
+          "month": 2,
+          "day": 28,
+          "fullDate": "yakshanba, 28-fevral, 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 100,
+          "month": 12,
+          "day": 1,
+          "fullDate": "chorshanba, 1-dekabr, 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 1900,
+          "month": 1,
+          "day": 1,
+          "fullDate": "dushanba, 1-yanvar, 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 1900,
+          "month": 2,
+          "day": 28,
+          "fullDate": "chorshanba, 28-fevral, 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 1900,
+          "month": 12,
+          "day": 1,
+          "fullDate": "shanba, 1-dekabr, 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 1,
+          "fullDate": "dushanba, 1-yanvar, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 28,
+          "fullDate": "chorshanba, 28-fevral, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 1,
+          "fullDate": "yakshanba, 1-dekabr, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2026,
+          "month": 1,
+          "day": 1,
+          "fullDate": "payshanba, 1-yanvar, 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 2026,
+          "month": 2,
+          "day": 28,
+          "fullDate": "shanba, 28-fevral, 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 2026,
+          "month": 12,
+          "day": 1,
+          "fullDate": "seshanba, 1-dekabr, 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 9999,
+          "month": 1,
+          "day": 1,
+          "fullDate": "juma, 1-yanvar, 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 9999,
+          "month": 2,
+          "day": 28,
+          "fullDate": "yakshanba, 28-fevral, 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 9999,
+          "month": 12,
+          "day": 1,
+          "fullDate": "chorshanba, 1-dekabr, 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 10000,
+          "month": 1,
+          "day": 1,
+          "fullDate": "shanba, 1-yanvar, 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 10000,
+          "month": 2,
+          "day": 28,
+          "fullDate": "dushanba, 28-fevral, 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 10000,
+          "month": 12,
+          "day": 1,
+          "fullDate": "juma, 1-dekabr, 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "fullDate": "payshanba, 29-fevral, 2024",
+          "yearLabel": "2024"
+        }
+      ]
+    },
+    "en": {
+      "dateLocale": "en",
+      "numberLocale": "en",
+      "firstDayOfWeekIndex": 0,
+      "narrowWeekdays": [
+        "S",
+        "M",
+        "T",
+        "W",
+        "T",
+        "F",
+        "S"
+      ],
+      "weekdays": [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday"
+      ],
+      "months": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+      "fullDatePattern": "EEEE, MMMM d, y",
+      "decimals": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31"
+      ],
+      "decimalSamples": [
+        {
+          "number": -1000000,
+          "formatted": "-1,000,000"
+        },
+        {
+          "number": -1000,
+          "formatted": "-1,000"
+        },
+        {
+          "number": -31,
+          "formatted": "-31"
+        },
+        {
+          "number": -1,
+          "formatted": "-1"
+        },
+        {
+          "number": 0,
+          "formatted": "0"
+        },
+        {
+          "number": 1,
+          "formatted": "1"
+        },
+        {
+          "number": 9,
+          "formatted": "9"
+        },
+        {
+          "number": 10,
+          "formatted": "10"
+        },
+        {
+          "number": 31,
+          "formatted": "31"
+        },
+        {
+          "number": 999,
+          "formatted": "999"
+        },
+        {
+          "number": 1000,
+          "formatted": "1,000"
+        },
+        {
+          "number": 10000,
+          "formatted": "10,000"
+        },
+        {
+          "number": 1000000,
+          "formatted": "1,000,000"
+        },
+        {
+          "number": 123456789,
+          "formatted": "123,456,789"
+        }
+      ],
+      "samples": [
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 22,
+          "fullDate": "Monday, January 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 23,
+          "fullDate": "Tuesday, January 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 24,
+          "fullDate": "Wednesday, January 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 25,
+          "fullDate": "Thursday, January 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 26,
+          "fullDate": "Friday, January 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 27,
+          "fullDate": "Saturday, January 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 28,
+          "fullDate": "Sunday, January 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 22,
+          "fullDate": "Thursday, February 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 23,
+          "fullDate": "Friday, February 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 24,
+          "fullDate": "Saturday, February 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 25,
+          "fullDate": "Sunday, February 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 26,
+          "fullDate": "Monday, February 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 27,
+          "fullDate": "Tuesday, February 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Wednesday, February 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 22,
+          "fullDate": "Friday, March 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 23,
+          "fullDate": "Saturday, March 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 24,
+          "fullDate": "Sunday, March 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 25,
+          "fullDate": "Monday, March 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 26,
+          "fullDate": "Tuesday, March 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 27,
+          "fullDate": "Wednesday, March 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 28,
+          "fullDate": "Thursday, March 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 22,
+          "fullDate": "Monday, April 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 23,
+          "fullDate": "Tuesday, April 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 24,
+          "fullDate": "Wednesday, April 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 25,
+          "fullDate": "Thursday, April 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 26,
+          "fullDate": "Friday, April 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 27,
+          "fullDate": "Saturday, April 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 28,
+          "fullDate": "Sunday, April 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 22,
+          "fullDate": "Wednesday, May 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 23,
+          "fullDate": "Thursday, May 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 24,
+          "fullDate": "Friday, May 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 25,
+          "fullDate": "Saturday, May 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 26,
+          "fullDate": "Sunday, May 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 27,
+          "fullDate": "Monday, May 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 28,
+          "fullDate": "Tuesday, May 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 22,
+          "fullDate": "Saturday, June 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 23,
+          "fullDate": "Sunday, June 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 24,
+          "fullDate": "Monday, June 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 25,
+          "fullDate": "Tuesday, June 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 26,
+          "fullDate": "Wednesday, June 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 27,
+          "fullDate": "Thursday, June 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 28,
+          "fullDate": "Friday, June 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 22,
+          "fullDate": "Monday, July 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 23,
+          "fullDate": "Tuesday, July 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 24,
+          "fullDate": "Wednesday, July 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 25,
+          "fullDate": "Thursday, July 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 26,
+          "fullDate": "Friday, July 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 27,
+          "fullDate": "Saturday, July 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 28,
+          "fullDate": "Sunday, July 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 22,
+          "fullDate": "Thursday, August 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 23,
+          "fullDate": "Friday, August 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 24,
+          "fullDate": "Saturday, August 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 25,
+          "fullDate": "Sunday, August 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 26,
+          "fullDate": "Monday, August 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 27,
+          "fullDate": "Tuesday, August 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 28,
+          "fullDate": "Wednesday, August 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 22,
+          "fullDate": "Sunday, September 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 23,
+          "fullDate": "Monday, September 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 24,
+          "fullDate": "Tuesday, September 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 25,
+          "fullDate": "Wednesday, September 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 26,
+          "fullDate": "Thursday, September 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 27,
+          "fullDate": "Friday, September 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 28,
+          "fullDate": "Saturday, September 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 22,
+          "fullDate": "Tuesday, October 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 23,
+          "fullDate": "Wednesday, October 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 24,
+          "fullDate": "Thursday, October 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 25,
+          "fullDate": "Friday, October 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 26,
+          "fullDate": "Saturday, October 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 27,
+          "fullDate": "Sunday, October 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 28,
+          "fullDate": "Monday, October 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 22,
+          "fullDate": "Friday, November 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 23,
+          "fullDate": "Saturday, November 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 24,
+          "fullDate": "Sunday, November 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 25,
+          "fullDate": "Monday, November 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 26,
+          "fullDate": "Tuesday, November 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 27,
+          "fullDate": "Wednesday, November 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 28,
+          "fullDate": "Thursday, November 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 22,
+          "fullDate": "Sunday, December 22, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 23,
+          "fullDate": "Monday, December 23, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 24,
+          "fullDate": "Tuesday, December 24, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 25,
+          "fullDate": "Wednesday, December 25, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 26,
+          "fullDate": "Thursday, December 26, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 27,
+          "fullDate": "Friday, December 27, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 28,
+          "fullDate": "Saturday, December 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": -5,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Sunday, January 1, 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": -5,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Tuesday, February 28, 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": -5,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Friday, December 1, 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": 0,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Saturday, January 1, 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 0,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Monday, February 28, 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 0,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Friday, December 1, 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 1,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Monday, January 1, 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 1,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Wednesday, February 28, 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 1,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Saturday, December 1, 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 50,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Saturday, January 1, 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 50,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Monday, February 28, 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 50,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Thursday, December 1, 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 99,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Thursday, January 1, 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 99,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Saturday, February 28, 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 99,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Tuesday, December 1, 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 100,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Friday, January 1, 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 100,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Sunday, February 28, 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 100,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Wednesday, December 1, 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 1900,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Monday, January 1, 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 1900,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Wednesday, February 28, 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 1900,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Saturday, December 1, 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Monday, January 1, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Wednesday, February 28, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Sunday, December 1, 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2026,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Thursday, January 1, 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 2026,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Saturday, February 28, 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 2026,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Tuesday, December 1, 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 9999,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Friday, January 1, 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 9999,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Sunday, February 28, 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 9999,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Wednesday, December 1, 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 10000,
+          "month": 1,
+          "day": 1,
+          "fullDate": "Saturday, January 1, 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 10000,
+          "month": 2,
+          "day": 28,
+          "fullDate": "Monday, February 28, 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 10000,
+          "month": 12,
+          "day": 1,
+          "fullDate": "Friday, December 1, 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "fullDate": "Thursday, February 29, 2024",
+          "yearLabel": "2024"
+        }
+      ]
+    },
+    "ru": {
+      "dateLocale": "ru",
+      "numberLocale": "ru",
+      "firstDayOfWeekIndex": 1,
+      "narrowWeekdays": [
+        "В",
+        "П",
+        "В",
+        "С",
+        "Ч",
+        "П",
+        "С"
+      ],
+      "weekdays": [
+        "воскресенье",
+        "понедельник",
+        "вторник",
+        "среда",
+        "четверг",
+        "пятница",
+        "суббота"
+      ],
+      "months": [
+        "января",
+        "февраля",
+        "марта",
+        "апреля",
+        "мая",
+        "июня",
+        "июля",
+        "августа",
+        "сентября",
+        "октября",
+        "ноября",
+        "декабря"
+      ],
+      "fullDatePattern": "EEEE, d MMMM y 'г'.",
+      "decimals": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31"
+      ],
+      "decimalSamples": [
+        {
+          "number": -1000000,
+          "formatted": "-1 000 000"
+        },
+        {
+          "number": -1000,
+          "formatted": "-1 000"
+        },
+        {
+          "number": -31,
+          "formatted": "-31"
+        },
+        {
+          "number": -1,
+          "formatted": "-1"
+        },
+        {
+          "number": 0,
+          "formatted": "0"
+        },
+        {
+          "number": 1,
+          "formatted": "1"
+        },
+        {
+          "number": 9,
+          "formatted": "9"
+        },
+        {
+          "number": 10,
+          "formatted": "10"
+        },
+        {
+          "number": 31,
+          "formatted": "31"
+        },
+        {
+          "number": 999,
+          "formatted": "999"
+        },
+        {
+          "number": 1000,
+          "formatted": "1 000"
+        },
+        {
+          "number": 10000,
+          "formatted": "10 000"
+        },
+        {
+          "number": 1000000,
+          "formatted": "1 000 000"
+        },
+        {
+          "number": 123456789,
+          "formatted": "123 456 789"
+        }
+      ],
+      "samples": [
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 22,
+          "fullDate": "понедельник, 22 января 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 23,
+          "fullDate": "вторник, 23 января 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 24,
+          "fullDate": "среда, 24 января 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 25,
+          "fullDate": "четверг, 25 января 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 26,
+          "fullDate": "пятница, 26 января 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 27,
+          "fullDate": "суббота, 27 января 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 28,
+          "fullDate": "воскресенье, 28 января 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 22,
+          "fullDate": "четверг, 22 февраля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 23,
+          "fullDate": "пятница, 23 февраля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 24,
+          "fullDate": "суббота, 24 февраля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 25,
+          "fullDate": "воскресенье, 25 февраля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 26,
+          "fullDate": "понедельник, 26 февраля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 27,
+          "fullDate": "вторник, 27 февраля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 28,
+          "fullDate": "среда, 28 февраля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 22,
+          "fullDate": "пятница, 22 марта 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 23,
+          "fullDate": "суббота, 23 марта 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 24,
+          "fullDate": "воскресенье, 24 марта 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 25,
+          "fullDate": "понедельник, 25 марта 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 26,
+          "fullDate": "вторник, 26 марта 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 27,
+          "fullDate": "среда, 27 марта 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 28,
+          "fullDate": "четверг, 28 марта 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 22,
+          "fullDate": "понедельник, 22 апреля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 23,
+          "fullDate": "вторник, 23 апреля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 24,
+          "fullDate": "среда, 24 апреля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 25,
+          "fullDate": "четверг, 25 апреля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 26,
+          "fullDate": "пятница, 26 апреля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 27,
+          "fullDate": "суббота, 27 апреля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 28,
+          "fullDate": "воскресенье, 28 апреля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 22,
+          "fullDate": "среда, 22 мая 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 23,
+          "fullDate": "четверг, 23 мая 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 24,
+          "fullDate": "пятница, 24 мая 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 25,
+          "fullDate": "суббота, 25 мая 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 26,
+          "fullDate": "воскресенье, 26 мая 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 27,
+          "fullDate": "понедельник, 27 мая 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 28,
+          "fullDate": "вторник, 28 мая 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 22,
+          "fullDate": "суббота, 22 июня 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 23,
+          "fullDate": "воскресенье, 23 июня 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 24,
+          "fullDate": "понедельник, 24 июня 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 25,
+          "fullDate": "вторник, 25 июня 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 26,
+          "fullDate": "среда, 26 июня 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 27,
+          "fullDate": "четверг, 27 июня 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 28,
+          "fullDate": "пятница, 28 июня 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 22,
+          "fullDate": "понедельник, 22 июля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 23,
+          "fullDate": "вторник, 23 июля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 24,
+          "fullDate": "среда, 24 июля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 25,
+          "fullDate": "четверг, 25 июля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 26,
+          "fullDate": "пятница, 26 июля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 27,
+          "fullDate": "суббота, 27 июля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 28,
+          "fullDate": "воскресенье, 28 июля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 22,
+          "fullDate": "четверг, 22 августа 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 23,
+          "fullDate": "пятница, 23 августа 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 24,
+          "fullDate": "суббота, 24 августа 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 25,
+          "fullDate": "воскресенье, 25 августа 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 26,
+          "fullDate": "понедельник, 26 августа 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 27,
+          "fullDate": "вторник, 27 августа 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 28,
+          "fullDate": "среда, 28 августа 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 22,
+          "fullDate": "воскресенье, 22 сентября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 23,
+          "fullDate": "понедельник, 23 сентября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 24,
+          "fullDate": "вторник, 24 сентября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 25,
+          "fullDate": "среда, 25 сентября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 26,
+          "fullDate": "четверг, 26 сентября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 27,
+          "fullDate": "пятница, 27 сентября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 28,
+          "fullDate": "суббота, 28 сентября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 22,
+          "fullDate": "вторник, 22 октября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 23,
+          "fullDate": "среда, 23 октября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 24,
+          "fullDate": "четверг, 24 октября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 25,
+          "fullDate": "пятница, 25 октября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 26,
+          "fullDate": "суббота, 26 октября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 27,
+          "fullDate": "воскресенье, 27 октября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 28,
+          "fullDate": "понедельник, 28 октября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 22,
+          "fullDate": "пятница, 22 ноября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 23,
+          "fullDate": "суббота, 23 ноября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 24,
+          "fullDate": "воскресенье, 24 ноября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 25,
+          "fullDate": "понедельник, 25 ноября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 26,
+          "fullDate": "вторник, 26 ноября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 27,
+          "fullDate": "среда, 27 ноября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 28,
+          "fullDate": "четверг, 28 ноября 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 22,
+          "fullDate": "воскресенье, 22 декабря 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 23,
+          "fullDate": "понедельник, 23 декабря 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 24,
+          "fullDate": "вторник, 24 декабря 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 25,
+          "fullDate": "среда, 25 декабря 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 26,
+          "fullDate": "четверг, 26 декабря 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 27,
+          "fullDate": "пятница, 27 декабря 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 28,
+          "fullDate": "суббота, 28 декабря 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": -5,
+          "month": 1,
+          "day": 1,
+          "fullDate": "воскресенье, 1 января 5 г.",
+          "yearLabel": "5"
+        },
+        {
+          "year": -5,
+          "month": 2,
+          "day": 28,
+          "fullDate": "вторник, 28 февраля 5 г.",
+          "yearLabel": "5"
+        },
+        {
+          "year": -5,
+          "month": 12,
+          "day": 1,
+          "fullDate": "пятница, 1 декабря 5 г.",
+          "yearLabel": "5"
+        },
+        {
+          "year": 0,
+          "month": 1,
+          "day": 1,
+          "fullDate": "суббота, 1 января 0 г.",
+          "yearLabel": "0"
+        },
+        {
+          "year": 0,
+          "month": 2,
+          "day": 28,
+          "fullDate": "понедельник, 28 февраля 0 г.",
+          "yearLabel": "0"
+        },
+        {
+          "year": 0,
+          "month": 12,
+          "day": 1,
+          "fullDate": "пятница, 1 декабря 0 г.",
+          "yearLabel": "0"
+        },
+        {
+          "year": 1,
+          "month": 1,
+          "day": 1,
+          "fullDate": "понедельник, 1 января 1 г.",
+          "yearLabel": "1"
+        },
+        {
+          "year": 1,
+          "month": 2,
+          "day": 28,
+          "fullDate": "среда, 28 февраля 1 г.",
+          "yearLabel": "1"
+        },
+        {
+          "year": 1,
+          "month": 12,
+          "day": 1,
+          "fullDate": "суббота, 1 декабря 1 г.",
+          "yearLabel": "1"
+        },
+        {
+          "year": 50,
+          "month": 1,
+          "day": 1,
+          "fullDate": "суббота, 1 января 50 г.",
+          "yearLabel": "50"
+        },
+        {
+          "year": 50,
+          "month": 2,
+          "day": 28,
+          "fullDate": "понедельник, 28 февраля 50 г.",
+          "yearLabel": "50"
+        },
+        {
+          "year": 50,
+          "month": 12,
+          "day": 1,
+          "fullDate": "четверг, 1 декабря 50 г.",
+          "yearLabel": "50"
+        },
+        {
+          "year": 99,
+          "month": 1,
+          "day": 1,
+          "fullDate": "четверг, 1 января 99 г.",
+          "yearLabel": "99"
+        },
+        {
+          "year": 99,
+          "month": 2,
+          "day": 28,
+          "fullDate": "суббота, 28 февраля 99 г.",
+          "yearLabel": "99"
+        },
+        {
+          "year": 99,
+          "month": 12,
+          "day": 1,
+          "fullDate": "вторник, 1 декабря 99 г.",
+          "yearLabel": "99"
+        },
+        {
+          "year": 100,
+          "month": 1,
+          "day": 1,
+          "fullDate": "пятница, 1 января 100 г.",
+          "yearLabel": "100"
+        },
+        {
+          "year": 100,
+          "month": 2,
+          "day": 28,
+          "fullDate": "воскресенье, 28 февраля 100 г.",
+          "yearLabel": "100"
+        },
+        {
+          "year": 100,
+          "month": 12,
+          "day": 1,
+          "fullDate": "среда, 1 декабря 100 г.",
+          "yearLabel": "100"
+        },
+        {
+          "year": 1900,
+          "month": 1,
+          "day": 1,
+          "fullDate": "понедельник, 1 января 1900 г.",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 1900,
+          "month": 2,
+          "day": 28,
+          "fullDate": "среда, 28 февраля 1900 г.",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 1900,
+          "month": 12,
+          "day": 1,
+          "fullDate": "суббота, 1 декабря 1900 г.",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 1,
+          "fullDate": "понедельник, 1 января 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 28,
+          "fullDate": "среда, 28 февраля 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 1,
+          "fullDate": "воскресенье, 1 декабря 2024 г.",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2026,
+          "month": 1,
+          "day": 1,
+          "fullDate": "четверг, 1 января 2026 г.",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 2026,
+          "month": 2,
+          "day": 28,
+          "fullDate": "суббота, 28 февраля 2026 г.",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 2026,
+          "month": 12,
+          "day": 1,
+          "fullDate": "вторник, 1 декабря 2026 г.",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 9999,
+          "month": 1,
+          "day": 1,
+          "fullDate": "пятница, 1 января 9999 г.",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 9999,
+          "month": 2,
+          "day": 28,
+          "fullDate": "воскресенье, 28 февраля 9999 г.",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 9999,
+          "month": 12,
+          "day": 1,
+          "fullDate": "среда, 1 декабря 9999 г.",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 10000,
+          "month": 1,
+          "day": 1,
+          "fullDate": "суббота, 1 января 10000 г.",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 10000,
+          "month": 2,
+          "day": 28,
+          "fullDate": "понедельник, 28 февраля 10000 г.",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 10000,
+          "month": 12,
+          "day": 1,
+          "fullDate": "пятница, 1 декабря 10000 г.",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "fullDate": "четверг, 29 февраля 2024 г.",
+          "yearLabel": "2024"
+        }
+      ]
+    },
+    "ur-PK": {
+      "dateLocale": "ur",
+      "numberLocale": "ur",
+      "firstDayOfWeekIndex": 0,
+      "narrowWeekdays": [
+        "S",
+        "M",
+        "T",
+        "W",
+        "T",
+        "F",
+        "S"
+      ],
+      "weekdays": [
+        "اتوار",
+        "پیر",
+        "منگل",
+        "بدھ",
+        "جمعرات",
+        "جمعہ",
+        "ہفتہ"
+      ],
+      "months": [
+        "جنوری",
+        "فروری",
+        "مارچ",
+        "اپریل",
+        "مئی",
+        "جون",
+        "جولائی",
+        "اگست",
+        "ستمبر",
+        "اکتوبر",
+        "نومبر",
+        "دسمبر"
+      ],
+      "fullDatePattern": "EEEE، d MMMM، y",
+      "decimals": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31"
+      ],
+      "decimalSamples": [
+        {
+          "number": -1000000,
+          "formatted": "‎-1,000,000"
+        },
+        {
+          "number": -1000,
+          "formatted": "‎-1,000"
+        },
+        {
+          "number": -31,
+          "formatted": "‎-31"
+        },
+        {
+          "number": -1,
+          "formatted": "‎-1"
+        },
+        {
+          "number": 0,
+          "formatted": "0"
+        },
+        {
+          "number": 1,
+          "formatted": "1"
+        },
+        {
+          "number": 9,
+          "formatted": "9"
+        },
+        {
+          "number": 10,
+          "formatted": "10"
+        },
+        {
+          "number": 31,
+          "formatted": "31"
+        },
+        {
+          "number": 999,
+          "formatted": "999"
+        },
+        {
+          "number": 1000,
+          "formatted": "1,000"
+        },
+        {
+          "number": 10000,
+          "formatted": "10,000"
+        },
+        {
+          "number": 1000000,
+          "formatted": "1,000,000"
+        },
+        {
+          "number": 123456789,
+          "formatted": "123,456,789"
+        }
+      ],
+      "samples": [
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 22,
+          "fullDate": "پیر، 22 جنوری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 23,
+          "fullDate": "منگل، 23 جنوری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 24,
+          "fullDate": "بدھ، 24 جنوری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 25,
+          "fullDate": "جمعرات، 25 جنوری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 26,
+          "fullDate": "جمعہ، 26 جنوری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 27,
+          "fullDate": "ہفتہ، 27 جنوری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 28,
+          "fullDate": "اتوار، 28 جنوری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 22,
+          "fullDate": "جمعرات، 22 فروری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 23,
+          "fullDate": "جمعہ، 23 فروری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 24,
+          "fullDate": "ہفتہ، 24 فروری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 25,
+          "fullDate": "اتوار، 25 فروری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 26,
+          "fullDate": "پیر، 26 فروری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 27,
+          "fullDate": "منگل، 27 فروری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 28,
+          "fullDate": "بدھ، 28 فروری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 22,
+          "fullDate": "جمعہ، 22 مارچ، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 23,
+          "fullDate": "ہفتہ، 23 مارچ، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 24,
+          "fullDate": "اتوار، 24 مارچ، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 25,
+          "fullDate": "پیر، 25 مارچ، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 26,
+          "fullDate": "منگل، 26 مارچ، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 27,
+          "fullDate": "بدھ، 27 مارچ، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "day": 28,
+          "fullDate": "جمعرات، 28 مارچ، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 22,
+          "fullDate": "پیر، 22 اپریل، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 23,
+          "fullDate": "منگل، 23 اپریل، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 24,
+          "fullDate": "بدھ، 24 اپریل، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 25,
+          "fullDate": "جمعرات، 25 اپریل، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 26,
+          "fullDate": "جمعہ، 26 اپریل، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 27,
+          "fullDate": "ہفتہ، 27 اپریل، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 4,
+          "day": 28,
+          "fullDate": "اتوار، 28 اپریل، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 22,
+          "fullDate": "بدھ، 22 مئی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 23,
+          "fullDate": "جمعرات، 23 مئی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 24,
+          "fullDate": "جمعہ، 24 مئی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 25,
+          "fullDate": "ہفتہ، 25 مئی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 26,
+          "fullDate": "اتوار، 26 مئی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 27,
+          "fullDate": "پیر، 27 مئی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 5,
+          "day": 28,
+          "fullDate": "منگل، 28 مئی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 22,
+          "fullDate": "ہفتہ، 22 جون، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 23,
+          "fullDate": "اتوار، 23 جون، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 24,
+          "fullDate": "پیر، 24 جون، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 25,
+          "fullDate": "منگل، 25 جون، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 26,
+          "fullDate": "بدھ، 26 جون، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 27,
+          "fullDate": "جمعرات، 27 جون، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 6,
+          "day": 28,
+          "fullDate": "جمعہ، 28 جون، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 22,
+          "fullDate": "پیر، 22 جولائی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 23,
+          "fullDate": "منگل، 23 جولائی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 24,
+          "fullDate": "بدھ، 24 جولائی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 25,
+          "fullDate": "جمعرات، 25 جولائی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 26,
+          "fullDate": "جمعہ، 26 جولائی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 27,
+          "fullDate": "ہفتہ، 27 جولائی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 7,
+          "day": 28,
+          "fullDate": "اتوار، 28 جولائی، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 22,
+          "fullDate": "جمعرات، 22 اگست، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 23,
+          "fullDate": "جمعہ، 23 اگست، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 24,
+          "fullDate": "ہفتہ، 24 اگست، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 25,
+          "fullDate": "اتوار، 25 اگست، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 26,
+          "fullDate": "پیر، 26 اگست، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 27,
+          "fullDate": "منگل، 27 اگست، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 8,
+          "day": 28,
+          "fullDate": "بدھ، 28 اگست، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 22,
+          "fullDate": "اتوار، 22 ستمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 23,
+          "fullDate": "پیر، 23 ستمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 24,
+          "fullDate": "منگل، 24 ستمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 25,
+          "fullDate": "بدھ، 25 ستمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 26,
+          "fullDate": "جمعرات، 26 ستمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 27,
+          "fullDate": "جمعہ، 27 ستمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 9,
+          "day": 28,
+          "fullDate": "ہفتہ، 28 ستمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 22,
+          "fullDate": "منگل، 22 اکتوبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 23,
+          "fullDate": "بدھ، 23 اکتوبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 24,
+          "fullDate": "جمعرات، 24 اکتوبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 25,
+          "fullDate": "جمعہ، 25 اکتوبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 26,
+          "fullDate": "ہفتہ، 26 اکتوبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 27,
+          "fullDate": "اتوار، 27 اکتوبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 10,
+          "day": 28,
+          "fullDate": "پیر، 28 اکتوبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 22,
+          "fullDate": "جمعہ، 22 نومبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 23,
+          "fullDate": "ہفتہ، 23 نومبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 24,
+          "fullDate": "اتوار، 24 نومبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 25,
+          "fullDate": "پیر، 25 نومبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 26,
+          "fullDate": "منگل، 26 نومبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 27,
+          "fullDate": "بدھ، 27 نومبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 11,
+          "day": 28,
+          "fullDate": "جمعرات، 28 نومبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 22,
+          "fullDate": "اتوار، 22 دسمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 23,
+          "fullDate": "پیر، 23 دسمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 24,
+          "fullDate": "منگل، 24 دسمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 25,
+          "fullDate": "بدھ، 25 دسمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 26,
+          "fullDate": "جمعرات، 26 دسمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 27,
+          "fullDate": "جمعہ، 27 دسمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 28,
+          "fullDate": "ہفتہ، 28 دسمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": -5,
+          "month": 1,
+          "day": 1,
+          "fullDate": "اتوار، 1 جنوری، 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": -5,
+          "month": 2,
+          "day": 28,
+          "fullDate": "منگل، 28 فروری، 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": -5,
+          "month": 12,
+          "day": 1,
+          "fullDate": "جمعہ، 1 دسمبر، 5",
+          "yearLabel": "5"
+        },
+        {
+          "year": 0,
+          "month": 1,
+          "day": 1,
+          "fullDate": "ہفتہ، 1 جنوری، 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 0,
+          "month": 2,
+          "day": 28,
+          "fullDate": "پیر، 28 فروری، 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 0,
+          "month": 12,
+          "day": 1,
+          "fullDate": "جمعہ، 1 دسمبر، 0",
+          "yearLabel": "0"
+        },
+        {
+          "year": 1,
+          "month": 1,
+          "day": 1,
+          "fullDate": "پیر، 1 جنوری، 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 1,
+          "month": 2,
+          "day": 28,
+          "fullDate": "بدھ، 28 فروری، 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 1,
+          "month": 12,
+          "day": 1,
+          "fullDate": "ہفتہ، 1 دسمبر، 1",
+          "yearLabel": "1"
+        },
+        {
+          "year": 50,
+          "month": 1,
+          "day": 1,
+          "fullDate": "ہفتہ، 1 جنوری، 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 50,
+          "month": 2,
+          "day": 28,
+          "fullDate": "پیر، 28 فروری، 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 50,
+          "month": 12,
+          "day": 1,
+          "fullDate": "جمعرات، 1 دسمبر، 50",
+          "yearLabel": "50"
+        },
+        {
+          "year": 99,
+          "month": 1,
+          "day": 1,
+          "fullDate": "جمعرات، 1 جنوری، 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 99,
+          "month": 2,
+          "day": 28,
+          "fullDate": "ہفتہ، 28 فروری، 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 99,
+          "month": 12,
+          "day": 1,
+          "fullDate": "منگل، 1 دسمبر، 99",
+          "yearLabel": "99"
+        },
+        {
+          "year": 100,
+          "month": 1,
+          "day": 1,
+          "fullDate": "جمعہ، 1 جنوری، 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 100,
+          "month": 2,
+          "day": 28,
+          "fullDate": "اتوار، 28 فروری، 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 100,
+          "month": 12,
+          "day": 1,
+          "fullDate": "بدھ، 1 دسمبر، 100",
+          "yearLabel": "100"
+        },
+        {
+          "year": 1900,
+          "month": 1,
+          "day": 1,
+          "fullDate": "پیر، 1 جنوری، 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 1900,
+          "month": 2,
+          "day": 28,
+          "fullDate": "بدھ، 28 فروری، 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 1900,
+          "month": 12,
+          "day": 1,
+          "fullDate": "ہفتہ، 1 دسمبر، 1900",
+          "yearLabel": "1900"
+        },
+        {
+          "year": 2024,
+          "month": 1,
+          "day": 1,
+          "fullDate": "پیر، 1 جنوری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 28,
+          "fullDate": "بدھ، 28 فروری، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2024,
+          "month": 12,
+          "day": 1,
+          "fullDate": "اتوار، 1 دسمبر، 2024",
+          "yearLabel": "2024"
+        },
+        {
+          "year": 2026,
+          "month": 1,
+          "day": 1,
+          "fullDate": "جمعرات، 1 جنوری، 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 2026,
+          "month": 2,
+          "day": 28,
+          "fullDate": "ہفتہ، 28 فروری، 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 2026,
+          "month": 12,
+          "day": 1,
+          "fullDate": "منگل، 1 دسمبر، 2026",
+          "yearLabel": "2026"
+        },
+        {
+          "year": 9999,
+          "month": 1,
+          "day": 1,
+          "fullDate": "جمعہ، 1 جنوری، 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 9999,
+          "month": 2,
+          "day": 28,
+          "fullDate": "اتوار، 28 فروری، 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 9999,
+          "month": 12,
+          "day": 1,
+          "fullDate": "بدھ، 1 دسمبر، 9999",
+          "yearLabel": "9999"
+        },
+        {
+          "year": 10000,
+          "month": 1,
+          "day": 1,
+          "fullDate": "ہفتہ، 1 جنوری، 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 10000,
+          "month": 2,
+          "day": 28,
+          "fullDate": "پیر، 28 فروری، 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 10000,
+          "month": 12,
+          "day": 1,
+          "fullDate": "جمعہ، 1 دسمبر، 10000",
+          "yearLabel": "10000"
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "fullDate": "جمعرات، 29 فروری، 2024",
+          "yearLabel": "2024"
+        }
+      ]
+    }
+  }
+}

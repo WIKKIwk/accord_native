@@ -1,0 +1,89 @@
+import { Button, Host, HStack, Image, Menu, ScrollView, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { accessibilityLabel, buttonStyle, disabled, foregroundStyle, frame, id, keyboardType, labelStyle, lineLimit, onSubmit, padding, scrollPosition, scrollTargetLayout, strokeBorder, submitLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { PlatformColor } from 'react-native';
+import { usePreparationText } from '../preparation/PreparationUI';
+import { rawSplitBalance, rawSplitNetLabel, rawSplitSourceSummary, rawSplitWasteWidthLabel, rawSplitWidthSummary } from './rawSplitHomePresentation';
+import type { RawSplitHomeViewProps } from './rawSplitHomeViewTypes';
+import { useRawSplitWriteHoldText } from './useRawSplitWriteHoldText';
+
+function Input({ label, value, enabled, onChange, decimal = false, onDone, search = false, multiline = false, error = false }: { label: string; value: string;
+  enabled: boolean; onChange: (value: string) => void; decimal?: boolean; onDone?: () => void; search?: boolean; multiline?: boolean; error?: boolean }) {
+  const native = useNativeState(value);
+  useEffect(() => { if (native.get() !== value) native.set(value); }, [native, value]);
+  return <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity })]}><Text>{label}</Text>
+    <TextField text={native} onTextChange={onChange} axis={multiline ? 'vertical' : 'horizontal'}
+      maxLength={multiline ? 1000 : undefined} modifiers={[accessibilityLabel(label), disabled(!enabled), textFieldStyle('roundedBorder'),
+        ...(decimal ? [keyboardType('decimal-pad')] : []), ...(multiline ? [lineLimit({ min: 2, max: 3 })] : []),
+        ...(enabled && error ? [strokeBorder({ content: PlatformColor('systemRed'), shape: 'roundedRectangle', style: { lineWidth: 1 } })] : []),
+        ...(onDone ? [submitLabel(search ? 'search' : 'done'), onSubmit(onDone)] : [])]} />
+  </VStack>;
+}
+
+export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplitHomeViewProps) {
+  const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), t = usePreparationText();
+  // V2 starts the first reload in initState, before the initial frame.
+  useLayoutEffect(() => { if (controller.getSnapshot().pendingCheck === 'unread') void controller.reload(); }, [controller]);
+  const writeHoldText = useRawSplitWriteHoldText();
+  const locked = controller.locked, writesHeld = controller.writesHeld, plan = controller.widthPlan, check = controller.wasteCheck, source = state.source;
+  const widthLabel = plan ? rawSplitWasteWidthLabel(plan) : null;
+  const issueVisible = !!(source && plan && state.showIssue && check && check.kind !== null);
+  const issueTarget = useNativeState<string | null>(null), handledIssue = useRef(0);
+  useEffect(() => {
+    if (!issueVisible || issueRevision <= handledIssue.current) return;
+    issueTarget.set(null);
+    const frame = requestAnimationFrame(() => { handledIssue.current = issueRevision; issueTarget.set('raw-split-issue'); });
+    return () => cancelAnimationFrame(frame);
+  }, [issueRevision, issueTarget, issueVisible]);
+  return <Host style={{ flex: 1 }}><ScrollView modifiers={[scrollPosition(issueTarget, { anchor: 'top' })]}><VStack alignment="leading" spacing={12} modifiers={[padding({ horizontal: 16, vertical: 20 }), scrollTargetLayout()]}>
+    {state.error !== null && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{state.error}</Text>}
+    {writesHeld && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{writeHoldText}</Text>}
+    {state.snapshotError !== null && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{state.snapshotError}</Text>}
+    {state.pendingCheck === 'failed' && <><Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{t('Xatolik yuz berdi')}</Text>
+      <Text>{t('Oldingi saqlash natijasini tekshiring.')}</Text><Text>{t('Oldingi muammo qaydi natijasini tekshiring.')}</Text>
+      {state.pendingCheckError !== null && <Text>{state.pendingCheckError}</Text>}
+      <Button label={t('Qayta urinish')} modifiers={[buttonStyle('bordered')]} onPress={() => { void controller.recheckPending(); }} /></>}
+    {state.pendingCheck === 'ready' && state.pending !== null && <><Text>{t('Oldingi saqlash natijasini tekshiring.')}</Text>
+      <Button label={t('Tekshirish va chop etish')} modifiers={[disabled(state.busy || state.pendingCheck !== 'ready' || writesHeld), buttonStyle('borderedProminent')]} onPress={() => { void controller.save(true); }} /></>}
+    {state.pendingCheck === 'ready' && state.pendingIssue !== null && <><Text>{t('Oldingi muammo qaydi natijasini tekshiring.')}</Text>
+      {state.issueError !== null && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{state.issueError}</Text>}
+      <Button label={t('Muammo qaydini tekshirish')} modifiers={[disabled(state.busy || state.pendingCheck !== 'ready' || writesHeld), buttonStyle('bordered')]} onPress={() => { void controller.saveIssue(true); }} /></>}
+    {writesHeld && state.pendingCheck === 'ready' && (state.pending !== null || state.pendingIssue !== null) &&
+      <Button label={t('Tekshirish')} modifiers={[disabled(state.busy), buttonStyle('bordered')]} onPress={() => { void controller.recheckPending(); }} />}
+    <Text>{t(state.snapshot === null ? 'Omborlar yuklanmoqda' : !state.snapshot.warehouses.length ? 'Ombor biriktirilmagan' :
+      `Ombor: ${state.snapshot.warehouses.join(', ')}`)}</Text>
+    <HStack alignment="bottom" spacing={8}><Input label="Rulon QR / shtrix-kodi" value={state.barcode} enabled={!locked} search
+      onChange={value => controller.setBarcode(value)} onDone={() => { void controller.lookup(); }} />
+      <Button label="Rulonni topish" systemImage="arrow.forward" modifiers={[labelStyle('iconOnly'), accessibilityLabel('Rulonni topish'), disabled(locked)]}
+        onPress={() => { void controller.lookup(); }} /></HStack>
+    <Button label={t('Skanerlash')} systemImage="qrcode.viewfinder" modifiers={[disabled(locked), buttonStyle('bordered')]} onPress={onScan} />
+    {state.printer && <HStack spacing={8}><Image systemName="printer" size={20} /><Text>{t(`Printer: ${state.printer.transport}`)}</Text>{state.printer.transport === 'wifi' &&
+      <Menu label={t(state.wifiPrinter === 'godex' ? 'GoDEX' : 'Zebra')}><Button label={t('GoDEX')} modifiers={[disabled(state.busy || state.pendingCheck !== 'ready')]} onPress={() => controller.setWifiPrinter('godex')} />
+        <Button label={t('Zebra')} modifiers={[disabled(state.busy || state.pendingCheck !== 'ready')]} onPress={() => controller.setWifiPrinter('zebra')} /></Menu>}</HStack>}
+    {source && plan && <><Text>{source.itemName}</Text><Text>{t(rawSplitSourceSummary(source))}</Text><Text>{t(`Ombor: ${source.warehouse}`)}</Text>
+      <Text>{rawSplitWidthSummary(plan, state.outputs)}</Text>
+      {state.outputs.map((output, i) => <VStack key={output.id ?? String(i)} alignment="leading" spacing={8}>
+        <HStack><Text>{t(`${i + 1}-rulon`)}</Text><Button label="Rulonni olib tashlash" systemImage="xmark" modifiers={[labelStyle('iconOnly'),
+          accessibilityLabel('Rulonni olib tashlash'), disabled(locked || state.outputs.length <= 1)]} onPress={() => controller.removeRoll(i)} /></HStack>
+        <HStack spacing={12}><Input label="Eni (mm)" value={output.width} enabled={!locked} decimal error={plan.errors[i] !== null} onDone={() => controller.confirmWidth()}
+          onChange={value => controller.setOutput(i, 'width', value)} />
+          <Input label="Og‘irlik (kg)" value={output.gross} enabled={!locked} decimal onChange={value => controller.setOutput(i, 'gross', value)} /></HStack>
+        <HStack spacing={12}><Input label="Babina (kg)" value={output.bobina} enabled={!locked} decimal onChange={value => controller.setOutput(i, 'bobina', value)} />
+          <Input label="Metraj (m)" value={output.length} enabled={!locked} decimal onChange={value => controller.setOutput(i, 'length', value)} /></HStack>
+        <HStack spacing={12}><Text>{rawSplitNetLabel(output)}</Text>{i === state.outputs.length - 1 && plan.canAdd &&
+          <Button label={t('+ rulon')} modifiers={[disabled(locked), buttonStyle('borderedProminent')]} onPress={() => controller.addRoll()} />}</HStack>
+      </VStack>)}
+      <Input label="Atxot (kg) *" value={state.waste} enabled={!locked} decimal onChange={value => controller.setWaste(value)} />
+      {state.showIssue && check?.kind !== null && check !== null && <VStack alignment="leading" spacing={8} modifiers={[id('raw-split-issue')]}><Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{check.message}</Text>
+        <Input label={t('Farq sababi')} value={state.issueNote} enabled={!locked && !state.issueSaved} multiline onChange={value => controller.setIssueNote(value)} />
+        {state.issueError !== null && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{state.issueError}</Text>}
+        {state.issueSaved ? <Text>{t(check.waste === null ? 'Muammo saqlandi. Chop etish uchun atxot kg ni son bilan kiriting.' :
+          'Muammo saqlandi. Endi chop etishingiz mumkin.')}</Text> :
+          <Button label={t('Muammoni saqlash')} modifiers={[disabled(locked || writesHeld), buttonStyle('bordered')]} onPress={() => { void controller.saveIssue(); }} />}</VStack>}
+      {plan.errors.map((error, i) => error !== null && <Text key={state.outputs[i]?.id ?? i} modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{t(`${i + 1}-rulon: ${error}`)}</Text>)}
+      <Text>{rawSplitBalance(source, state.outputs, state.waste)}</Text>{widthLabel !== null && <Text>{widthLabel}</Text>}
+      <Button label={t('Saqlash va chop etish')} systemImage="printer" modifiers={[disabled(locked || writesHeld), buttonStyle('borderedProminent')]}
+        onPress={() => { void controller.save(); }} />
+    </>}
+  </VStack></ScrollView></Host>;
+}

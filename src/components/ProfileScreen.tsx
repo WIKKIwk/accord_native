@@ -10,12 +10,14 @@ import { updateProfileName } from '../profileNameUpdate';
 import { profile } from '../profileApi';
 import { profileNickname, saveProfileChanges } from '../shared/profileEditing';
 import { cachedProfileAvatar, ensureProfileAvatar, refreshProfileAvatar } from '../shared/profileAvatarRuntime';
+import { isProfileSessionCurrent, type ProfileSessionGuard } from '../shared/profileSessionGuard';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { ProfileView } from './ProfileView';
 import type { AvatarSource } from './profileViewTypes';
 
-type Props = { session: Session; onLogout: () => void; onDailyWork?: () => void };
+type Props = { session: Session; onLogout: () => void; onDailyWork?: () => void; showDirectLogout?: boolean;
+  registerSettingsOpener?: (open: () => void) => () => void; isCurrent?: ProfileSessionGuard; settingsUnavailableMessage?: string };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 
@@ -28,12 +30,13 @@ export function ProfileScreen(props: Props) {
   return <ProfileContent key={props.session.imageCacheScope} {...props} />;
 }
 
-function ProfileContent({ session, onLogout, onDailyWork }: Props) {
-  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+function ProfileContent({ session, onLogout, onDailyWork, showDirectLogout, registerSettingsOpener, isCurrent, settingsUnavailableMessage }: Props) {
+  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), hasGuard = isCurrent != null;
   const [snapshot, setSnapshot] = useState(() => initialProfileSnapshot(session));
   const [avatarToken, setAvatarToken] = useState(() => activeSessionToken(session));
   const [avatarRevision, setAvatarRevision] = useState(0);
-  const [cachedAvatar, setCachedAvatar] = useState(() => cachedProfileAvatar(session, session.profile));
+  const [cachedAvatar, setCachedAvatar] = useState(() => hasGuard
+    ? cachedProfileAvatar(session, session.profile, isCurrent) : cachedProfileAvatar(session, session.profile));
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [draftPhoto, setDraftPhoto] = useState<{ uri: string; filename?: string } | null>(null);
@@ -48,32 +51,34 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
   const readGeneration = useRef(0);
   const operationController = useRef<AbortController | null>(null);
   const refreshingRef = useRef(false);
+  const current = useCallback(() => !!activeSessionToken(session) && isProfileSessionCurrent(isCurrent), [session, isCurrent]);
 
   useEffect(() => {
     mounted.current = true;
     const initialProfile = session.profile;
-    void ensureProfileAvatar(session, initialProfile).then(uri => {
-      if (mounted.current && activeSessionToken(session) && session.profile.avatar_url === initialProfile.avatar_url) setCachedAvatar(uri);
+    const avatar = hasGuard ? ensureProfileAvatar(session, initialProfile, isCurrent) : ensureProfileAvatar(session, initialProfile);
+    void avatar.then(uri => {
+      if (mounted.current && current() && session.profile.avatar_url === initialProfile.avatar_url) setCachedAvatar(uri);
     });
     return () => { mounted.current = false; operationController.current?.abort(); };
-  }, [session]);
+  }, [session, isCurrent, current, hasGuard]);
 
   const refresh = useCallback(async () => {
-    if (busy.current || refreshingRef.current || !activeSessionToken(session)) return;
+    if (busy.current || refreshingRef.current || !current()) return;
     refreshingRef.current = true;
     setRefreshing(true);
     const generation = readGeneration.current;
     try {
-      const next = profileSnapshotFromResponse(session, await profile(session));
-      if (!mounted.current || generation !== readGeneration.current || !activeSessionToken(session) || !next) return;
-      const avatar = await refreshProfileAvatar(session, next.profile);
-      if (!mounted.current || generation !== readGeneration.current || !activeSessionToken(session)) return;
+      const next = profileSnapshotFromResponse(session, hasGuard ? await profile(session, false, isCurrent) : await profile(session));
+      if (!mounted.current || generation !== readGeneration.current || !current() || !next) return;
+      const avatar = hasGuard ? await refreshProfileAvatar(session, next.profile, isCurrent) : await refreshProfileAvatar(session, next.profile);
+      if (!mounted.current || generation !== readGeneration.current || !current()) return;
       setSnapshot(next);
       setCachedAvatar(avatar);
       setAvatarToken(activeSessionToken(session));
     } catch { /* Keep the last known profile when refresh fails. */ }
-    finally { refreshingRef.current = false; if (mounted.current) setRefreshing(false); }
-  }, [session]);
+    finally { refreshingRef.current = false; if (mounted.current && (!hasGuard || current())) setRefreshing(false); }
+  }, [session, isCurrent, current, hasGuard]);
 
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
   useEffect(() => {
@@ -82,13 +87,13 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
   }, [refresh]);
 
   const openEditor = useCallback(() => {
-    if (busy.current || !activeSessionToken(session)) return;
+    if (busy.current || !current()) return;
     readGeneration.current++;
     editorGeneration.current++;
     setDraftName(profileDisplay(snapshot).name);
     setDraftPhoto(pendingPhoto);
     setEditing(true);
-  }, [pendingPhoto, session, snapshot]);
+  }, [pendingPhoto, snapshot, current]);
 
   const closeEditor = useCallback(() => {
     if (savingRef.current && Platform.OS !== 'android') return;
@@ -98,7 +103,7 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
   }, [pendingPhoto]);
 
   const choosePhoto = useCallback(async (source: AvatarSource) => {
-    if (busy.current || !activeSessionToken(session)) return;
+    if (busy.current || !current()) return;
     busy.current = true;
     const generation = editorGeneration.current;
     try {
@@ -110,6 +115,7 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
         if (source === 'camera' && Platform.OS !== 'web') {
           const permission = await ImagePicker.requestCameraPermissionsAsync();
           if (!permission.granted) throw new AvatarUploadError('Kameradan foydalanishga ruxsat bering.');
+          if (hasGuard && !current()) return;
         }
         // The iOS library uses the modern picker and copies the photo without re-encoding it.
         const options: ImagePicker.ImagePickerOptions = source === 'library'
@@ -120,18 +126,18 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
           : await ImagePicker.launchImageLibraryAsync(options);
         if (!result.canceled) { uri = result.assets[0]?.uri; filename = result.assets[0]?.fileName ?? undefined; }
       }
-      if (uri && mounted.current && generation === editorGeneration.current && activeSessionToken(session)) setDraftPhoto({ uri, filename });
+      if (uri && mounted.current && generation === editorGeneration.current && current()) setDraftPhoto({ uri, filename });
     } catch (error) {
-      if (mounted.current && generation === editorGeneration.current && activeSessionToken(session)) {
+      if (mounted.current && generation === editorGeneration.current && current()) {
         showError(localizedGetter('imagePickFailed', locale), error instanceof AvatarUploadError ? error.message : localizedGetter('retry', locale));
       }
     } finally {
       busy.current = false;
     }
-  }, [locale, session]);
+  }, [locale, current, hasGuard]);
 
   const save = useCallback(async () => {
-    if (busy.current || !activeSessionToken(session)) return;
+    if (busy.current || !current()) return;
     const name = profileNickname(draftName, profileDisplay(snapshot).name);
     if (name === profileDisplay(snapshot).name && !draftPhoto) { closeEditor(); return; }
 
@@ -146,17 +152,18 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
     editorGeneration.current++;
     setEditing(false);
     try {
-      const active = () => mounted.current && !controller.signal.aborted && !!activeSessionToken(session);
+      const active = () => mounted.current && !controller.signal.aborted && current();
       const error = await saveProfileChanges(name !== profileDisplay(snapshot).name ? async () => {
-        const next = await updateProfileName(session, name, controller.signal);
+        const next = hasGuard ? await updateProfileName(session, name, controller.signal, isCurrent) : await updateProfileName(session, name, controller.signal);
         if (active()) { setSnapshot(next); setAvatarToken(activeSessionToken(session)); }
       } : null, draftPhoto ? async () => {
-        const next = await uploadProfileAvatar(session, draftPhoto.uri, controller.signal, draftPhoto.filename);
+        const next = hasGuard ? await uploadProfileAvatar(session, draftPhoto.uri, controller.signal, draftPhoto.filename, isCurrent)
+          : await uploadProfileAvatar(session, draftPhoto.uri, controller.signal, draftPhoto.filename);
         if (active()) {
-          const avatar = await refreshProfileAvatar(session, next.profile);
+          const avatar = hasGuard ? await refreshProfileAvatar(session, next.profile, isCurrent) : await refreshProfileAvatar(session, next.profile);
           if (!active()) return;
           setSnapshot(next); setAvatarToken(activeSessionToken(session));
-          setCachedAvatar(avatar ?? cachedProfileAvatar(session, next.profile));
+          setCachedAvatar(avatar ?? (hasGuard ? cachedProfileAvatar(session, next.profile, isCurrent) : cachedProfileAvatar(session, next.profile)));
           setAvatarRevision(revision => revision + 1); setPendingPhoto(null); setDraftPhoto(null);
         }
       } : null, active);
@@ -165,12 +172,15 @@ function ProfileContent({ session, onLogout, onDailyWork }: Props) {
       if (operationController.current === controller) operationController.current = null;
       busy.current = false;
       savingRef.current = false;
-      if (mounted.current) { setIsBusy(false); setSaving(false); }
+      if (mounted.current && (!hasGuard || current())) { setIsBusy(false); setSaving(false); }
     }
-  }, [closeEditor, draftName, draftPhoto, locale, session, snapshot]);
+  }, [closeEditor, draftName, draftPhoto, locale, session, snapshot, isCurrent, current, hasGuard]);
+  const changeDraftName = useCallback((value: string) => { if (!hasGuard || current()) setDraftName(value); }, [current, hasGuard]);
 
+  if (hasGuard && !current()) return null;
   return <ProfileView session={session} snapshot={snapshot} avatarToken={avatarToken} avatarRevision={avatarRevision} cachedAvatar={cachedAvatar}
     editing={editing} busy={isBusy} saving={saving} refreshing={refreshing} onRefresh={refresh} draftName={draftName} draftPhoto={draftPhoto?.uri ?? null}
-    onOpenEditor={openEditor} onCloseEditor={closeEditor} onChangeName={setDraftName}
-    onChoosePhoto={choosePhoto} onSave={save} onDailyWork={onDailyWork} onLogout={onLogout} />;
+    onOpenEditor={openEditor} onCloseEditor={closeEditor} onChangeName={changeDraftName}
+    onChoosePhoto={choosePhoto} onSave={save} onDailyWork={onDailyWork} onLogout={onLogout} showDirectLogout={showDirectLogout}
+    registerSettingsOpener={registerSettingsOpener} settingsUnavailableMessage={settingsUnavailableMessage} />;
 }

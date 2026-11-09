@@ -16,7 +16,7 @@ function harness(refresh = async () => false) {
     name = name.replaceAll('\\', '/'); if (name in overrides) return overrides[name];
     if (cache.has(name)) return cache.get(name).exports;
     const filename = path.join(root, name), loaded = new Module(filename, module); cache.set(name, loaded);
-    loaded.require = target => target.startsWith('.') ? load(`${path.relative(root, path.resolve(path.dirname(filename), target))}.ts`) : require(target);
+    loaded.require = target => target.startsWith('.') ? load(`${path.relative(root, path.resolve(path.dirname(filename), target))}.ts`) : target === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(target);
     loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ESNext } }).outputText, filename);
     return loaded.exports;
   }
@@ -70,7 +70,7 @@ test('response, error JSON, success JSON and parsed field invalidation cannot ex
     function load(name) {
       name = name.replaceAll('\\', '/'); if (name in overrides) return overrides[name]; if (cache.has(name)) return cache.get(name).exports;
       const filename = path.join(root, name), module = new Module(filename); cache.set(name, module);
-      module.require = target => target.startsWith('.') ? load(`${path.relative(root, path.resolve(path.dirname(filename), target))}.ts`) : require(target);
+      module.require = target => target.startsWith('.') ? load(`${path.relative(root, path.resolve(path.dirname(filename), target))}.ts`) : target === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(target);
       module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ESNext } }).outputText, filename);
       return module.exports;
     }

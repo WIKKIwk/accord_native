@@ -1,0 +1,246 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "sourceSha256": "b3a9ba63836be0a119cb0d01c969b8d0e07ca72565c175bd5072c15064898d3d",
+  "kind": "standalone source-equivalent batch result projection; not Flutter or device",
+  "cases": [
+    {
+      "name": "empty",
+      "lineCount": 0,
+      "created": [],
+      "failed": [],
+      "expected": {
+        "sourceCreatedCount": 0,
+        "sourceFailedIndices": [],
+        "sourceActivityCodes": [],
+        "sourcePendingRecords": [],
+        "sourceBranch": "success"
+      }
+    },
+    {
+      "name": "mixed duplicates",
+      "lineCount": 4,
+      "created": [
+        {
+          "entryID": "1",
+          "customerRef": "C1",
+          "customerName": "Customer 1",
+          "itemCode": " A ",
+          "itemName": "Item 1",
+          "uom": "kg",
+          "qty": 2.5,
+          "createdLabel": "time 1"
+        },
+        null,
+        {
+          "entryID": "2",
+          "customerRef": "C2",
+          "customerName": "Customer 2",
+          "itemCode": "",
+          "itemName": "Item 2",
+          "uom": "kg",
+          "qty": 1.0,
+          "createdLabel": "time 2"
+        },
+        {
+          "entryID": "3",
+          "customerRef": "C3",
+          "customerName": "Customer 3",
+          "itemCode": "B",
+          "itemName": "Item 3",
+          "uom": "kg",
+          "qty": 4.0,
+          "createdLabel": "time 3"
+        }
+      ],
+      "failed": [
+        3,
+        1,
+        3,
+        -1,
+        99
+      ],
+      "expected": {
+        "sourceCreatedCount": 4,
+        "sourceFailedIndices": [
+          1,
+          3
+        ],
+        "sourceActivityCodes": [
+          " A ",
+          "B"
+        ],
+        "sourcePendingRecords": [
+          {
+            "id": "1",
+            "record_type": "",
+            "supplier_ref": "C1",
+            "supplier_name": "Customer 1",
+            "item_code": " A ",
+            "item_name": "Item 1",
+            "uom": "kg",
+            "sent_qty": 2.5,
+            "accepted_qty": 0,
+            "amount": 0,
+            "currency": "",
+            "note": "",
+            "event_type": "customer_issue_pending",
+            "highlight": "",
+            "status": "pending",
+            "created_label": "time 1"
+          },
+          {
+            "id": "2",
+            "record_type": "",
+            "supplier_ref": "C2",
+            "supplier_name": "Customer 2",
+            "item_code": "",
+            "item_name": "Item 2",
+            "uom": "kg",
+            "sent_qty": 1.0,
+            "accepted_qty": 0,
+            "amount": 0,
+            "currency": "",
+            "note": "",
+            "event_type": "customer_issue_pending",
+            "highlight": "",
+            "status": "pending",
+            "created_label": "time 2"
+          },
+          {
+            "id": "3",
+            "record_type": "",
+            "supplier_ref": "C3",
+            "supplier_name": "Customer 3",
+            "item_code": "B",
+            "item_name": "Item 3",
+            "uom": "kg",
+            "sent_qty": 4.0,
+            "accepted_qty": 0,
+            "amount": 0,
+            "currency": "",
+            "note": "",
+            "event_type": "customer_issue_pending",
+            "highlight": "",
+            "status": "pending",
+            "created_label": "time 3"
+          }
+        ],
+        "sourceBranch": "partial"
+      }
+    },
+    {
+      "name": "out of range failures",
+      "lineCount": 2,
+      "created": [
+        null
+      ],
+      "failed": [
+        2,
+        -1,
+        99
+      ],
+      "expected": {
+        "sourceCreatedCount": 1,
+        "sourceFailedIndices": [],
+        "sourceActivityCodes": [],
+        "sourcePendingRecords": [],
+        "sourceBranch": "success"
+      }
+    },
+    {
+      "name": "all failed in input order",
+      "lineCount": 3,
+      "created": [],
+      "failed": [
+        2,
+        0,
+        1
+      ],
+      "expected": {
+        "sourceCreatedCount": 0,
+        "sourceFailedIndices": [
+          0,
+          1,
+          2
+        ],
+        "sourceActivityCodes": [],
+        "sourcePendingRecords": [],
+        "sourceBranch": "partial"
+      }
+    },
+    {
+      "name": "duplicate activity codes",
+      "lineCount": 2,
+      "created": [
+        {
+          "entryID": "4",
+          "customerRef": "C4",
+          "customerName": "Customer 4",
+          "itemCode": "X",
+          "itemName": "Item 4",
+          "uom": "kg",
+          "qty": 1.0,
+          "createdLabel": "time 4"
+        },
+        {
+          "entryID": "5",
+          "customerRef": "C5",
+          "customerName": "Customer 5",
+          "itemCode": "X",
+          "itemName": "Item 5",
+          "uom": "kg",
+          "qty": 2.0,
+          "createdLabel": "time 5"
+        }
+      ],
+      "failed": [],
+      "expected": {
+        "sourceCreatedCount": 2,
+        "sourceFailedIndices": [],
+        "sourceActivityCodes": [
+          "X",
+          "X"
+        ],
+        "sourcePendingRecords": [
+          {
+            "id": "4",
+            "record_type": "",
+            "supplier_ref": "C4",
+            "supplier_name": "Customer 4",
+            "item_code": "X",
+            "item_name": "Item 4",
+            "uom": "kg",
+            "sent_qty": 1.0,
+            "accepted_qty": 0,
+            "amount": 0,
+            "currency": "",
+            "note": "",
+            "event_type": "customer_issue_pending",
+            "highlight": "",
+            "status": "pending",
+            "created_label": "time 4"
+          },
+          {
+            "id": "5",
+            "record_type": "",
+            "supplier_ref": "C5",
+            "supplier_name": "Customer 5",
+            "item_code": "X",
+            "item_name": "Item 5",
+            "uom": "kg",
+            "sent_qty": 2.0,
+            "accepted_qty": 0,
+            "amount": 0,
+            "currency": "",
+            "note": "",
+            "event_type": "customer_issue_pending",
+            "highlight": "",
+            "status": "pending",
+            "created_label": "time 5"
+          }
+        ],
+        "sourceBranch": "success"
+      }
+    }
+  ]
+}

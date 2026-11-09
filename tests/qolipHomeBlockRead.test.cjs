@@ -6,7 +6,8 @@ const test = require('node:test');
 const ts = require('typescript');
 function load(name, dependencies = {}) {
   const filename = path.resolve(__dirname, '../src/qolip', name), m = new Module(filename, module);
-  m.require = key => key in dependencies ? dependencies[key] : require(key);
+  m.require = key => key in dependencies ? dependencies[key] : key.startsWith('.')
+    ? load(`${path.relative(path.resolve(__dirname, '../src/qolip'), path.resolve(path.dirname(filename), key))}.ts`, dependencies) : require(key);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return m.exports;
 }

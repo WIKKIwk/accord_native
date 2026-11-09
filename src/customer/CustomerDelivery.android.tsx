@@ -1,0 +1,92 @@
+import { Button, FilledTonalButton, Host, OutlinedButton, Shape, Text as NativeText, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { defaultMinSize, fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { WorkerAlert } from '../components/WorkerAlert';
+import { useCustomerText } from './CustomerContext';
+import { customerAcceptPartial, customerApproveAll, customerRejectAll, customerReportClaim, trimCustomerInput, type CustomerReturnInput } from './customerLogic';
+import { customerDeliveryInfoRows, customerDeliveryResponseActions, customerDiscussionEventId, type CustomerDeliveryInfoRow,
+  type CustomerDeliveryResponseAction, type CustomerReturnKind } from './customerDeliveryView';
+import { CustomerReturnDialog } from './CustomerReturnDialog';
+import { CustomerSnackbar } from './CustomerSnackbar';
+import { CustomerLoadingState, CustomerRetryState } from './CustomerStates';
+import { customerLayoutDirection } from './customerPresentation';
+import { useCustomerDelivery } from './useCustomerScreens';
+
+type Props = { deliveryNoteID: string; onChanged: () => void; onOpenDiscussion?: (receiptId: string) => void };
+
+// @v2 CustomerDeliveryDetailScreen
+export function CustomerDeliveryDetailScreen({ deliveryNoteID, onChanged, onOpenDiscussion }: Props) {
+  const state = useCustomerDelivery(deliveryNoteID, onChanged), colors = useMaterialColors(), { locale, text } = useCustomerText();
+  const [confirm, setConfirm] = useState(false), [dialog, setDialog] = useState<CustomerReturnKind | null>(null);
+  const returningFromDiscussion = useRef(false), reload = state.reload;
+  const openDiscussion = useCallback(() => {
+    if (!onOpenDiscussion) return;
+    returningFromDiscussion.current = true; onOpenDiscussion(customerDiscussionEventId(deliveryNoteID));
+  }, [deliveryNoteID, onOpenDiscussion]);
+  useFocusEffect(useCallback(() => { if (returningFromDiscussion.current) { returningFromDiscussion.current = false; void reload(); } }, [reload]));
+  if (state.loading) return <CustomerLoadingState />;
+  if (state.error != null || !state.detail) return <CustomerRetryState retry={state.reload} />;
+  const detail = state.detail, record = detail.record;
+  const actions = customerDeliveryResponseActions(detail, state.submitting);
+  const hasDiscussion = ['accepted', 'partial', 'rejected'].includes(record.status);
+  const onReturn = (input: CustomerReturnInput) => {
+    const current = dialog; setDialog(null);
+    if (current === 'reject') void state.send(customerRejectAll(deliveryNoteID, record.sent_qty, input));
+    else if (current === 'partial') void state.send(customerAcceptPartial(deliveryNoteID, record.sent_qty, input));
+    else if (current === 'claim') void state.send(customerReportClaim(deliveryNoteID, input));
+  };
+  const line = (row: CustomerDeliveryInfoRow) => <View key={row.labelKey} style={{ gap: 6 }}>
+    <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, fontWeight: '600' }}>{row.label}</Text>
+    <View style={row.highlighted ? { alignSelf: 'flex-start', backgroundColor: colors.secondaryContainer, borderRadius: 14,
+      paddingHorizontal: 12, paddingVertical: 8 } : undefined}>
+      <Text style={{ color: row.highlighted ? colors.onSecondaryContainer : colors.onSurface, fontSize: row.highlighted ? 16 : 20,
+        fontWeight: row.highlighted ? '700' : '600' }}>{row.value}</Text>
+    </View></View>;
+  const sectionHeader = (label: string, topRounded = false) => <View testID="customer-delivery-header"
+    style={{ backgroundColor: colors.surfaceContainerHigh, paddingHorizontal: 18, paddingVertical: 14,
+      borderTopLeftRadius: topRounded ? 20 : 0, borderTopRightRadius: topRounded ? 20 : 0 }}>
+    <Text style={{ color: colors.onSurfaceVariant, fontSize: 16, fontWeight: '700' }}>{text(label)}</Text>
+  </View>;
+  const divider = () => <View testID="customer-delivery-divider" style={{ height: 1, marginHorizontal: 18,
+    backgroundColor: colors.outlineVariant, opacity: 0.55 }} />;
+  const action = (key: string, label: string, appearance: CustomerDeliveryResponseAction['appearance'], onPress: () => void,
+    blocked = false, spacingBefore = 0) => {
+    const NativeButton = appearance === 'tonal' ? FilledTonalButton : appearance === 'outlined' ? OutlinedButton : Button;
+    return <Host key={key} matchContents={{ vertical: true }} style={{ width: '100%', marginTop: spacingBefore }}>
+      <NativeButton enabled={!blocked} onClick={blocked ? undefined : onPress}
+        colors={appearance === 'outlined' ? { contentColor: colors.onSurface } : { containerColor: colors.primary, contentColor: colors.onPrimary }}
+        shape={Shape.RoundedCorner({ cornerRadii: { topStart: 20, topEnd: 20, bottomStart: 20, bottomEnd: 20 } })}
+        modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID(`customer-response-${key}`)]}>
+        <NativeText style={{ typography: 'labelLarge', fontSize: 16, fontWeight: '500' }}>{text(label)}</NativeText>
+      </NativeButton>
+    </Host>;
+  };
+  return <>
+    <ScrollView contentContainerStyle={{ paddingBottom: 24 }}
+      refreshControl={<RefreshControl refreshing={state.loading} onRefresh={() => { void state.reload(); }} />}>
+      <View testID="customer-delivery-panel" style={{ marginStart: 4, marginEnd: 6, borderRadius: 24, overflow: 'hidden',
+        backgroundColor: colors.surfaceContainerLow, direction: customerLayoutDirection(locale) === 'rightToLeft' ? 'rtl' : 'ltr' }}>
+        {sectionHeader('shipmentInfoTitle', true)}
+        <View testID="customer-delivery-facts" style={{ padding: 18, gap: 12 }}>{customerDeliveryInfoRows(record, text).map(line)}</View>
+        {trimCustomerInput(record.note) ? <>{divider()}{sectionHeader('noteTitle')}
+          <View testID="customer-delivery-note" style={{ padding: 18 }}><Text style={{ color: colors.onSurface, fontSize: 14 }}>{record.note}</Text></View></> : null}
+        {hasDiscussion && onOpenDiscussion ? <>{divider()}{sectionHeader('commentsTitle')}
+          <View style={{ paddingHorizontal: 18, paddingTop: 18 }}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+            <OutlinedButton enabled onClick={openDiscussion} modifiers={[fillMaxWidth(), testID('customer-discussion')]}>
+              <NativeText>{text('openDiscussionAction')}</NativeText>
+            </OutlinedButton>
+          </Host></View></> : null}
+        {actions.length ? <>{divider()}{sectionHeader('responseTitle')}
+          <View style={{ padding: 18 }}>{actions.map(item => action(item.kind, item.labelKey, item.appearance,
+            () => { if (item.kind === 'approve') setConfirm(true); else setDialog(item.kind); }, state.submitting, item.spacingBefore))}</View>
+        </> : null}
+      </View>
+    </ScrollView>
+    <WorkerAlert alert={confirm ? { title: text('confirmTitle'), message: text('confirmQuestion'), cancelLabel: text('no'),
+      confirmLabel: text('yes'), onConfirm: () => { void state.send(customerApproveAll(deliveryNoteID)); } } : null} onDismiss={() => setConfirm(false)} />
+    <CustomerReturnDialog kind={dialog} sentQty={record.sent_qty} uom={record.uom} onCancel={() => setDialog(null)} onConfirm={onReturn} />
+    <CustomerSnackbar message={state.message} messageId={state.messageId} onDismiss={state.clearMessage} />
+  </>;
+}
