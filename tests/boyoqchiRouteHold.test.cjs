@@ -23,7 +23,7 @@ function manifest(platform, keys) {
   const visit = route => { result.push(route.contextKey); (route.children ?? []).forEach(visit); };
   visit(root); return result;
 }
-for (const platform of ['ios', 'android']) test(`${platform} Expo Router exposes core Boyoqchi routes but holds Chat`, () => {
+for (const platform of ['ios', 'android']) test(`${platform} Expo Router exposes core and all Boyoqchi Chat routes`, () => {
   const actual = manifest(platform, realKeys);
   for (const route of ['./index.tsx', './ios-boyoqchi/_layout.tsx', './ios-boyoqchi/(tabs)/(home)/index.tsx',
     './ios-boyoqchi/(tabs)/(astatka)/astatka.tsx', './ios-boyoqchi/(tabs)/profile/index.tsx',
@@ -32,11 +32,9 @@ for (const platform of ['ios', 'android']) test(`${platform} Expo Router exposes
   assert.ok(actual.some(key => key.startsWith('./ios-worker/')));
   assert.ok(actual.some(key => key.startsWith('./ios-preparation/')));
   assert.ok(actual.some(key => key.startsWith('./android-preparation/')));
-  const isBoyoqchiChat = key => /^\.\/(?:ios-boyoqchi\/\(tabs\)|android-boyoqchi)\/chat(?:\/|\.)/.test(key);
-  assert.ok(!actual.some(isBoyoqchiChat), actual.join('\n'));
-  // Positive control: the installed resolver would detect Chat paths if restored.
-  const withChat = manifest(platform, [...realKeys, './ios-boyoqchi/(tabs)/chat/_layout.tsx', './ios-boyoqchi/(tabs)/chat/index.tsx',
-    './android-boyoqchi/chat/_layout.tsx', './android-boyoqchi/chat/index.tsx']);
-  assert.ok(withChat.includes('./ios-boyoqchi/(tabs)/chat/index.tsx'));
-  assert.ok(withChat.includes('./android-boyoqchi/chat/index.tsx'));
+  for (const root of ['./ios-boyoqchi/(tabs)/chat', './android-boyoqchi/chat']) {
+    for (const page of ['_layout', 'index', 'new', '[conversationId]']) {
+      assert.ok(actual.includes(`${root}/${page}.tsx`), `${root}/${page}`);
+    }
+  }
 });

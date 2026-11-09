@@ -23,3 +23,26 @@ test('history time uses local today, otherwise date and original invalid string'
   assert.equal(p.rawSplitHistoryTime('20260908T120000', now), '12:00');
   assert.equal(p.rawSplitHistoryTime('09/08/2026', now), '09/08/2026');
 });
+
+test('result metadata keeps V2 row labels, order, raw warehouse and raw timestamp without added punctuation', () => {
+  const linked = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '1',
+    difference_kg: '1.000000', issue_id: 'issue', issue_note: '  mismatch\nchecked  ', created_at: '  original time  ', outputs: [output] });
+  assert.deepEqual(p.rawSplitResultDetailRows(linked), [{ label: 'Manba QR', value: 'parent' }, { label: 'Ombor', value: ' Raw W ' },
+    { label: 'Vaqti', value: '  original time  ' }, { label: 'Farq', value: 'Izohli kamomad: 1 kg' }, { label: 'Sabab', value: '  mismatch\nchecked  ' }]);
+});
+test('metadata optional fields follow null checks rather than truthiness', () => {
+  assert.deepEqual(p.rawSplitResultDetailRows(result).map(row => row.label), ['Manba QR', 'Ombor']);
+  const emptyTime = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2', created_at: '', outputs: [output] });
+  assert.deepEqual(p.rawSplitResultDetailRows(emptyTime).at(-1), { label: 'Vaqti', value: '' });
+});
+const issueValue = { source: result.source, outputs: [output], enteredWaste: '1' };
+test('issue metadata preserves actual roll order and V2 measured values', () => {
+  assert.deepEqual(p.rawSplitIssueDetailRows({ ...issueValue, outputs: [output, { ...output, width_mm: '355.000000', kg: '9', gross_kg: '10', bobina_kg: '1' }] }),
+    [{ label: 'QR', value: 'parent' }, { label: 'Asl', value: '100 kg · Atxot: 1 kg' },
+      { label: '1-rulon', value: '1000 mm · Og‘irlik: 99 kg · Babina: 1 kg · Netto: 98 kg' },
+      { label: '2-rulon', value: '355 mm · Og‘irlik: 10 kg · Babina: 1 kg · Netto: 9 kg' }]);
+});
+test('issue entered-waste fallback applies only to an exactly empty string', () => {
+  for (const [enteredWaste, expected] of [['', 'kiritilmagan'], ['  ', '  '], ['invalid', 'invalid'], ['0', '0']])
+    assert.equal(p.rawSplitIssueDetailRows({ ...issueValue, enteredWaste })[1].value, `100 kg · Atxot: ${expected} kg`);
+});

@@ -8,8 +8,8 @@ import { useRawSplitHeaderPrinter } from './useRawSplitHeaderPrinter';
 export function RawSplitHomeScreen() {
   const flow = useRawSplitHomeScreen(), state = useSyncExternalStore(flow.controller.subscribe, flow.controller.getSnapshot, flow.controller.getSnapshot), t = usePreparationText();
   const selectPrinter = useRawSplitHeaderPrinter(flow.controller);
-  return <RawSplitFrame title={t('Rezka')} page="home" busy={state.busy} onPrinter={selectPrinter}>
-    <RawSplitHome controller={flow.controller} onScan={flow.scan} />
+  return <RawSplitFrame title={t('Rezka')} page="home" busy={state.busy} printerDisabled={state.pendingCheck !== 'ready' || flow.controller.writesHeld} onPrinter={selectPrinter}>
+    <RawSplitHome controller={flow.controller} onScan={flow.scan} issueRevision={flow.issueRevision} />
     <RawSplitScanner visible={flow.visible} active={flow.cameraActive} isCurrent={flow.isScannerCurrent} onClose={flow.close} onComplete={flow.complete} />
   </RawSplitFrame>;
 }

@@ -42,13 +42,13 @@ test('every role home/history header uses the guarded picker action', () => {
 test('iOS history Back pops when possible and otherwise replaces the role home', () => {
   let canBack = true; const calls = [];
   const toolbar = Object.assign(() => {}, { Button: 'ToolbarButton' });
-  const controller = { subscribe() {}, getSnapshot: () => ({ busy: false }) };
-  const mocks = { 'react/jsx-runtime': jsx, react: { useSyncExternalStore: (_subscribe, get) => get() },
+  const controller = { subscribe() {}, getSnapshot: () => ({ busy: false }), capturePrinterLease: () => () => true };
+  const mocks = { 'react/jsx-runtime': jsx, react: { useSyncExternalStore: (_subscribe, get) => get(), useLayoutEffect() {} },
     'expo-router': { Stack: { Screen: 'StackScreen', Toolbar: toolbar }, router: { canGoBack: () => canBack,
       back: () => calls.push('back'), replace: route => calls.push(['replace', route]) } },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { Pressable: 'Pressable', View: 'View' },
     '../preparation/PreparationUI': { usePreparationText: () => value => value },
-    './RawSplitHistory': { RawSplitHistory: 'History' }, './useRawSplitHistoryActions': { useRawSplitHistoryActions: () => ({ controller }) },
+    './RawSplitBusy': { RawSplitBusy: 'RawSplitBusy' }, './RawSplitPendingCheck': { RawSplitPendingCheck: 'PendingCheck' }, './RawSplitHistory': { RawSplitHistory: 'History' }, './useRawSplitHistoryActions': { useRawSplitHistoryActions: () => ({ controller, pendingController: controller, isCurrent: () => true }) },
     './useRawSplitHeaderPrinter': { useRawSplitHeaderPrinter: () => () => {} } };
   const tree = load('RawSplitHistoryScreen.ios.tsx', mocks, true).RawSplitHistoryScreen();
   const options = tree.props.children[0].props.options; assert.equal(options.headerBackVisible, false);

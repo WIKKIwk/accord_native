@@ -58,7 +58,23 @@ test('split hook binds printer bridge methods and passes the captured scope to A
 test('a scanner result arriving after scope change is discarded', async () => {
   const session = { active: true, token: 'x', scope: 'old', epoch: 7, profile: { role: 'admin' }, capabilities: ['rezka.split.manage'] };
   const t = setup(session); let finish;
-  const pending = t.hook.scan(() => new Promise(resolve => { finish = resolve; })); session.scope = 'new'; finish('QR'); await pending;
+  const pending = t.hook.scan({ open: () => new Promise(resolve => { finish = resolve; }), isCurrent: () => true });
+  session.scope = 'new'; finish({ value: 'QR', isCurrent: () => true }); await pending;
+  assert.equal(t.calls.some(x => Array.isArray(x) && x[0] === 'scan'), false);
+});
+test('a valid scan enters the source controller once; cancellation has no effect', async () => {
+  const session = { active: true, token: 'x', scope: 'old', epoch: 7, profile: { role: 'admin' }, capabilities: ['rezka.split.manage'] };
+  const t = setup(session);
+  await t.hook.scan({ open: async () => ({ value: 'https://example.test/?qr=RPS-1', isCurrent: () => true }), isCurrent: () => true });
+  await t.hook.scan({ open: async () => null, isCurrent: () => true });
+  assert.deepEqual(t.calls.filter(x => Array.isArray(x) && x[0] === 'scan'), [['scan', 'https://example.test/?qr=RPS-1']]);
+});
+test('a result from a previous focus or dialog generation cannot update the source field', async () => {
+  const session = { active: true, token: 'x', scope: 'old', epoch: 7, profile: { role: 'admin' }, capabilities: ['rezka.split.manage'] };
+  const t = setup(session); let finish;
+  const pending = t.hook.scan({ open: () => new Promise(resolve => { finish = resolve; }), isCurrent: () => true });
+  finish({ value: 'QR', isCurrent: () => false }); await pending;
+  await t.hook.scan({ open: () => { assert.fail('inactive owner must not open a scanner'); }, isCurrent: () => false });
   assert.equal(t.calls.some(x => Array.isArray(x) && x[0] === 'scan'), false);
 });
 

@@ -68,8 +68,9 @@ export async function adminWarehouses(session: Session, options: { query?: strin
 }
 
 /** @v2 adminRawMaterialAssignmentOrders */
-export async function adminRawMaterialAssignmentOrders(session: Session) {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/raw-material-assignments/orders');
+export async function adminRawMaterialAssignmentOrders(session: Session, beforeSend?: () => void) {
+  const path = '/v1/mobile/admin/raw-material-assignments/orders';
+  const response = beforeSend ? await authorizedFetch(session, path, {}, beforeSend) : await authorizedFetch(session, path);
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }

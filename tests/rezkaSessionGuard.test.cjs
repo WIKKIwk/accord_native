@@ -12,7 +12,7 @@ function loader(mocks) {
     const loaded = new Module(file, module); cache.set(file, loaded);
     loaded.filename = file; loaded.paths = module.paths;
     loaded.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.')
-      ? load(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : require(id);
+      ? load(path.relative(path.resolve(__dirname, '../src'), path.resolve(path.dirname(file), id))) : id === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(id);
     loaded._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
     return loaded.exports;
   }
@@ -209,4 +209,17 @@ test('shared apparatus read rejects a 401 retry after witness or scope changes',
       t.apparatus.adminApparatus(s, { limit: 500, beforeSend })), e => e.name === 'RezkaScopeChanged');
     assert.equal(sends, 1);
   } finally { global.fetch = original; }
+});
+
+test('split deep links reject protected roles even with overlapping capability', async () => {
+  for (const role of ['aparatchi', 'tayyorlov_masteri']) {
+    const s = session(role, ['rezka.split.manage']), t = setup(s);
+    assert.equal(t.guard.isRezkaSessionCurrent(t.guard.captureRezkaSession(s), 'split'), false, role);
+    let sends = 0;
+    await assert.rejects(t.guard.guardedRezkaRequest(s, 'split', t.guard.captureRezkaSession(s), false,
+      async beforeSend => { beforeSend(); sends++; }), error => error.name === 'RezkaScopeChanged');
+    assert.equal(sends, 0, role);
+  }
+  const admin = session('admin', ['rezka.split.manage']), t = setup(admin);
+  assert.equal(t.guard.isRezkaSessionCurrent(t.guard.captureRezkaSession(admin), 'split'), true);
 });

@@ -8,7 +8,7 @@ import { useBoyoqchiGetter, useBoyoqchiText } from './useBoyoqchiText';
 import { queueBoyoqchiDockNavigation } from './boyoqchiDockScheduler';
 export function BoyoqchiDock({ active }: { active: 'home' | 'astatka' | 'profile' | 'chat' | '' }) {
   const insets = useSafeAreaInsets(), getter = useBoyoqchiGetter(), t = useBoyoqchiText();
-  const { witness } = useBoyoqchiContext();
+  const { witness, unread } = useBoyoqchiContext();
   const navigation = useNavigation('/android-boyoqchi');
   const mounted = useRef(true), current = useRef(active);
   useEffect(() => { current.current = active; }, [active]);
@@ -17,9 +17,10 @@ export function BoyoqchiDock({ active }: { active: 'home' | 'astatka' | 'profile
     { id: 'home', label: getter('homeNavTitle'), icon: 'home' },
     { id: 'astatka', label: t('Astatka'), icon: 'inventory_2' },
     { id: 'profile', label: getter('profileTitle'), icon: 'person' },
+    { id: 'chat', label: t('Chat'), icon: 'chat_bubble', showBadge: unread > 0 },
   ];
   return <RoleBottomBar active={active} items={items} bottomInset={insets.bottom} onSelect={id => {
-    if (id === active || (id !== 'home' && id !== 'astatka' && id !== 'profile')) return;
+    if (id === active || (id !== 'home' && id !== 'astatka' && id !== 'profile' && id !== 'chat')) return;
     queueBoyoqchiDockNavigation({ destination: id, active: () => current.current, isMounted: () => mounted.current && isSessionWitnessCurrent(witness),
       dispatch: action => navigation.dispatch(action) });
   }} />;

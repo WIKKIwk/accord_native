@@ -41,3 +41,11 @@ test('session switch or owner disposal resolves null and ignores late completion
     assert.equal(await result, null); assert.equal(await h.coordinator.select(), null);
   }
 });
+test('a gate transition dismisses a live picker and prevents queued Wi-Fi discovery before overlay removal', async () => {
+  let valid = true, request, renders = [], scans = 0;
+  const owner = new RawSplitPickerCoordinator({ isCurrent: () => true,
+    create: isCurrent => { request = createTransientDevicePicker({ isCurrent, scan: async () => { scans++; return { servers: [], candidateCount: 0 }; }, probe: async () => null }); return request; },
+    render: value => renders.push(value), convert: selection => selection });
+  const pending = owner.select(() => valid); valid = false; owner.invalidateIfStale(); request.adapter.selectConnection('wifi');
+  assert.equal(scans, 0); assert.equal(renders.at(-1), null); owner.removed(request); assert.equal(await pending, null);
+});

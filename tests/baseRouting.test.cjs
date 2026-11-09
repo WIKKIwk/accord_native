@@ -99,3 +99,12 @@ test('capability-only split home respects V2 role allowlists and keeps other hom
   assert.equal(homeTarget(session('aparatchi', ['apparatus.queue.read']), 'ios'), '/ios-worker');
   assert.equal(homeTarget(session('tayyorlov_masteri', ['preparation.access']), 'android'), '/android-preparation');
 });
+
+
+test('protected roles keep pre-integration fallback when only split capability is present', () => {
+  for (const role of ['aparatchi', 'tayyorlov_masteri']) {
+    for (const platform of ['ios', 'android', 'web']) {
+      assert.equal(homeTarget(session(role, ['rezka.split.manage']), platform), null, `${role}/${platform}`);
+    }
+  }
+});

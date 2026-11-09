@@ -4,6 +4,7 @@ import { PrintService } from '../printing/printService';
 import { rawSplitPrint, rawSplitSessionIsCurrent, requireRawSplitRealAccount, type RawSplitSessionTicket } from './rawSplitApi';
 import type { RawSplitResult, RawSplitRoll } from './rawSplitModel';
 import { rawMaterialSplitPrintRequest } from './rawSplitPrinting';
+import { rawSplitWriteDispatchAllowed } from './rawSplitWritePolicy';
 
 export class RawSplitUnsupportedPrinter extends Error {}
 /** USB cannot bind exact identity; iOS Bluetooth does not recheck the selected UUID at dispatch. */
@@ -26,11 +27,13 @@ export function rawSplitUnsupportedReason(transport: PreparationDeviceSelection[
 /** Print one existing child roll through the existing native bridge or V2 Wi-Fi API. */
 export async function printRawSplitRoll(ticket: RawSplitSessionTicket, result: RawSplitResult, output: RawSplitRoll,
   device: PreparationDeviceSelection, wifiPrinter: string, guard: () => void): Promise<void> {
-  requireRawSplitRealAccount(ticket); guard(); if (!rawSplitSessionIsCurrent(ticket)) throw new Error('Akkaunt o‘zgargan');
+  requireRawSplitRealAccount(ticket);
+  if (!rawSplitWriteDispatchAllowed()) throw new Error('Chop etish xavfsizlik tekshiruvi tugaguncha to‘xtatilgan');
+  guard(); if (!rawSplitSessionIsCurrent(ticket)) throw new Error('Akkaunt o‘zgargan');
   if (!rawSplitPrinterSupported(device, wifiPrinter)) throw new RawSplitUnsupportedPrinter();
   if (device.transport === 'wifi') {
     await rawSplitPrint(ticket, { splitId: result.id, barcode: output.barcode, driverUrl: device.driverBaseUrl!,
-      printer: wifiPrinter, printMode: 'label' });
+      printer: wifiPrinter, printMode: 'label' }, guard);
     return;
   }
   const request = rawMaterialSplitPrintRequest(output);

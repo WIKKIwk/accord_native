@@ -14,12 +14,14 @@ export function rezkaShellDrawerItems(session: Session, locale: string): RoleDra
     { id: 'workers', label: adminText('worker.title', locale), symbol: { ios: 'person.2', android: 'groups' } },
     ...(session.assigned_apparatus.some(isCanonicalApparatusId) ? [{ id: 'daily', label: productionText('worker.daily', locale),
       symbol: { ios: 'calendar' as const, android: 'today' as const } }] : []),
+    { id: 'instructions', label: productionText('worker.instructions', locale), symbol: { ios: 'book', android: 'menu_book' } },
     { id: 'profile', label: localizedGetter('profileTitle', locale), symbol: { ios: 'person.crop.circle', android: 'person' } },
   ];
 }
 export function rezkaShellCanNavigate(session: Session, destination: string): boolean {
   if (!canEnterRezkaShell(session)) return false;
   const route = destination === 'queue' ? appRoutes.apparatusQueue : destination === 'workers' ? appRoutes.adminWorkerSettings
-    : destination === 'daily' ? appRoutes.apparatusDailyWork : destination === 'profile' ? appRoutes.profile : null;
+    : destination === 'daily' ? appRoutes.apparatusDailyWork : destination === 'instructions' ? appRoutes.apparatusWorkInstructions
+      : destination === 'profile' ? appRoutes.profile : null;
   return route !== null && canOpenRoute(session, route);
 }

@@ -24,10 +24,12 @@ test('master shell guard rejects unauthorized users and exposes only real prepar
   const s = session(); assert.equal(model.canEnterRezkaShell(s), true);
   assert.equal(model.canEnterRezkaShell(null), false); assert.equal(model.canEnterRezkaShell(session('aparatchi', ['apparatus.queue.read'])), false);
   assert.equal(model.canEnterRezkaShell(session('rezka_master', ['apparatus.queue.read'])), false);
-  const items = model.rezkaShellDrawerItems(s, 'uz'); assert.deepEqual(items.map(item => item.id), ['queue', 'workers', 'daily', 'profile']);
+  const items = model.rezkaShellDrawerItems(s, 'uz'); assert.deepEqual(items.map(item => item.id), ['queue', 'workers', 'daily', 'instructions', 'profile']);
   assert.equal(items[0].label, 'Kuzatish'); assert.equal(items[1].label, catalog.admin['admin.worker.title'].uz);
   assert.ok(!items.some(item => ['chat', 'settings', 'split'].includes(item.id)));
-  s.assigned_apparatus = []; assert.deepEqual(model.rezkaShellDrawerItems(s, 'uz').map(item => item.id), ['queue', 'workers', 'profile']);
+  assert.equal(items[3].label, catalog.production['worker.instructions'].uz);
+  assert.equal(model.rezkaShellCanNavigate(s, 'instructions'), true);
+  s.assigned_apparatus = []; assert.deepEqual(model.rezkaShellDrawerItems(s, 'uz').map(item => item.id), ['queue', 'workers', 'instructions', 'profile']);
   assert.equal(model.rezkaShellCanNavigate(s, 'workers'), true); assert.equal(model.rezkaShellCanNavigate(s, 'chat'), false);
   s.capabilities = []; assert.equal(model.rezkaShellCanNavigate(s, 'workers'), false);
 });
@@ -76,6 +78,7 @@ test('Android shell composes real Worker and settings screens, with no new Chat 
     '../shared/localization': localization, '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
     '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: fn => { logoutDialog = fn; } },
     './RezkaWorkerSettings': { RezkaWorkerSettingsScreen: 'RezkaWorkerSettingsScreen' }, './RezkaTestSessionUnavailable': { RezkaTestSessionUnavailable: 'TestUnavailable' },
+    './RezkaWorkInstructions': { RezkaWorkInstructionsScreen: 'RezkaWorkInstructionsScreen' },
     './RezkaSessionWaiting': { RezkaSessionWaiting: 'SessionWaiting' },
     './rezkaSessionGuard': { isRezkaSessionCurrent: () => current }, './rezkaShellModel': model,
     './useRezkaShell': { useRezkaShellSession: () => snapshot, useRezkaLocale: () => 'uz', logoutRezkaSession: (_s, fn) => { actions.push('logout'); fn(); } } };
@@ -84,8 +87,11 @@ test('Android shell composes real Worker and settings screens, with no new Chat 
   let page = render(); assert.equal(nodes(page, n => n.type === 'WorkerScreen').length, 1);
   let drawer = nodes(page, n => n.type === 'RoleDrawer')[0]; assert.ok(!JSON.stringify(drawer.props.items).includes('chat'));
   drawer.props.onSelect('workers'); page = render(); const settings = nodes(page, n => n.type === 'RezkaWorkerSettingsScreen')[0];
-  assert.equal(settings.props.allowAssignments, true); assert.equal(settings.props.snapshot, snapshot);
+  assert.notEqual(settings.props.allowAssignments, true); assert.equal(settings.props.snapshot, snapshot);
   const bar = nodes(page, n => n.type === 'RoleBottomBar')[0]; assert.equal(bar.props.active, ''); assert.ok(!JSON.stringify(bar.props.items).includes('chat'));
+  drawer.props.onSelect('instructions'); page = render();
+  assert.equal(nodes(page, n => n.type === 'RezkaWorkInstructionsScreen')[0].props.snapshot, snapshot);
+  assert.equal(nodes(page, n => n.type === 'RoleBottomBar')[0].props.active, '');
   drawer = nodes(page, n => n.type === 'RoleDrawer')[0]; drawer.props.onSelect('logout'); current = false; logoutDialog();
   assert.ok(!actions.includes('logout')); assert.ok(!actions.some(x => Array.isArray(x) && x[0] === 'replace'));
 });
@@ -113,8 +119,9 @@ test('iOS shell uses native tabs, real worker settings route and refuses invalid
   const Component = compile('app/ios-rezka/_layout.tsx', mocks).default;
   const render = () => { index = 0; return Component(); }; const page = render(), drawer = nodes(page, n => n.type === 'RoleDrawer')[0];
   assert.ok(drawer); assert.ok(!JSON.stringify(drawer.props.items).includes('chat')); drawer.props.onSelect('workers');
-  assert.deepEqual(calls.at(-1), ['navigate', '/ios-rezka/workers']); drawer.props.onSelect('logout'); current = false; logoutDialog();
-  assert.equal(render().type, 'Redirect'); drawer.props.onSelect('daily'); assert.equal(calls.length, 1);
+  assert.deepEqual(calls.at(-1), ['navigate', '/ios-rezka/workers']); drawer.props.onSelect('instructions');
+  assert.deepEqual(calls.at(-1), ['navigate', '/ios-rezka/instructions']); drawer.props.onSelect('logout'); current = false; logoutDialog();
+  assert.equal(render().type, 'Redirect'); drawer.props.onSelect('daily'); drawer.props.onSelect('instructions'); assert.equal(calls.length, 2);
 });
 
 test('iOS worker home reuses WorkerScreen and never adds a Chat route', () => {

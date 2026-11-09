@@ -13,6 +13,7 @@ import { RoleBottomBar, type RoleNavigationItem } from '../shared/navigation/Rol
 import { RoleDrawer } from '../shared/navigation/RoleDrawer';
 import { confirmRoleDrawerLogout } from '../shared/navigation/roleDrawerLogout';
 import { RezkaWorkerSettingsScreen } from './RezkaWorkerSettings';
+import { RezkaWorkInstructionsScreen } from './RezkaWorkInstructions';
 import type { RezkaDestination } from './RezkaShellContext';
 import { isRezkaSessionCurrent } from './rezkaSessionGuard';
 import { rezkaShellCanNavigate, rezkaShellDrawerItems } from './rezkaShellModel';
@@ -43,7 +44,9 @@ export function RezkaAndroidShell() {
   const items: RoleNavigationItem[] = [{ id: 'queue', label: localizedGetter('homeNavTitle', locale), icon: 'home' },
     { id: 'profile', label: localizedGetter('profileTitle', locale), icon: 'person' }];
   const content = section === 'workers'
-    ? <RezkaWorkerSettingsScreen session={session} snapshot={snapshot} allowAssignments
+    ? <RezkaWorkerSettingsScreen session={session} snapshot={snapshot}
+      navigation={{ icon: 'menu', label: localizedGetter('adminDrawerSections', locale), onPress: () => setDrawerOpen(true) }} />
+    : section === 'instructions' ? <RezkaWorkInstructionsScreen snapshot={snapshot}
       navigation={{ icon: 'menu', label: localizedGetter('adminDrawerSections', locale), onPress: () => setDrawerOpen(true) }} />
     : <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
       {section === 'queue' ? <WorkerScreen session={session} onLogout={onLogout} nativeNavigation onOpenDrawer={() => setDrawerOpen(true)}
@@ -56,7 +59,7 @@ export function RezkaAndroidShell() {
       title={localizedGetter('adminDrawerSections', locale)} items={rezkaShellDrawerItems(session, locale)} active={section}
       closeAccessibilityLabel={localizedGetter('closeAction', locale)}
       footerAction={{ id: 'logout', label: localizedGetter('logoutTitle', locale), symbol: 'rectangle.portrait.and.arrow.right', destructive: true }}
-      onSelect={id => { if (id === 'logout') confirmRoleDrawerLogout(onLogout); else if (id === 'queue' || id === 'workers' || id === 'daily' || id === 'profile') navigate(id); }}>
+      onSelect={id => { if (id === 'logout') confirmRoleDrawerLogout(onLogout); else if (id === 'queue' || id === 'workers' || id === 'daily' || id === 'instructions' || id === 'profile') navigate(id); }}>
       <View style={{ flex: 1 }}>{content}<RoleBottomBar items={items} active={section === 'queue' || section === 'profile' ? section : ''}
         bottomInset={insets.bottom} onSelect={id => { if (id === 'queue' || id === 'profile') navigate(id); }} /></View>
     </RoleDrawer>

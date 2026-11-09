@@ -1,0 +1,207 @@
+{
+ "source": "test/qolip_storage_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "API sends revision and request id and honors pagination",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/molds?q=Q-ONE&limit=100&offset=100",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"molds\":[{\"qolip_code\":\"Q-ONE\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1}],\"has_more\":true,\"next_offset\":200}"
+   }
+  },
+  {
+   "test": "API sends revision and request id and honors pagination",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/action",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"action\":\"restore\",\"code\":\"QP-00012\",\"expected_revision\":4,\"request_id\":\"stable-retry\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"warehouse\":\"Qolip ombori\",\"location\":\"A1\",\"note\":\"\",\"locked\":true,\"archived\":false,\"revision\":5,\"item_count\":1},\"items\":[{\"qolip_code\":\"Q-ONE\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1}],\"history\":[]}"
+   }
+  },
+  {
+   "test": "an account switch discards a late successful read",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/detail?code=QP-00012",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"warehouse\":\"Qolip ombori\",\"location\":\"A1\",\"note\":\"\",\"locked\":true,\"archived\":false,\"revision\":4,\"item_count\":1},\"items\":[{\"qolip_code\":\"Q-ONE\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1}],\"history\":[]}"
+   }
+  },
+  {
+   "test": "malformed successful mutation never reports a valid pallet",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/action",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"action\":\"lock\",\"request_id\":\"x\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\"}}"
+   }
+  },
+  {
+   "test": "archive filter sends calendar dates without UTC conversion",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/archive?status=all&warehouse=Qolip+ombori&from=2026-10-01&to=2026-10-28&q&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"entries\":[],\"has_more\":false}"
+   }
+  },
+  {
+   "test": "complete set lookup includes later pages and rejects any unavailable member",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/molds?q=9501&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"molds\":[{\"qolip_code\":\"Q-ONE\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1}],\"has_more\":true,\"next_offset\":100}"
+   }
+  },
+  {
+   "test": "complete set lookup includes later pages and rejects any unavailable member",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/molds?q=9501&limit=100&offset=100",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"molds\":[{\"qolip_code\":\"Q-TWO\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1,\"is_in_use\":true}],\"has_more\":false,\"next_offset\":100}"
+   }
+  },
+  {
+   "test": "complete set includes every distinct code across pages",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/molds?q=9501&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"molds\":[{\"qolip_code\":\"Q-ONE\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1}],\"has_more\":true,\"next_offset\":100}"
+   }
+  },
+  {
+   "test": "complete set includes every distinct code across pages",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/molds?q=9501&limit=100&offset=100",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"molds\":[{\"qolip_code\":\"Q-ONE\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1},{\"qolip_code\":\"Q-TWO\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1}],\"has_more\":false,\"next_offset\":100}"
+   }
+  },
+  {
+   "test": "archive mutation resets names as well as cached mold details",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/action",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"action\":\"archive\",\"request_id\":\"archive-reset\"}"
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"warehouse\":\"Qolip ombori\",\"location\":\"A1\",\"note\":\"\",\"locked\":true,\"archived\":true,\"revision\":4,\"item_count\":1},\"items\":[{\"qolip_code\":\"Q-ONE\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1}],\"history\":[],\"catalog_delta\":{\"reset\":true}}"
+   }
+  },
+  {
+   "test": "QR mold lookup requests exact code rather than fuzzy first page",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/molds?code=Q-ONE&q&limit=100&offset=0",
+   "requestHeaders": {
+    "Authorization": "Bearer storage-test"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json"
+   },
+   "responseBody": {
+    "text": "{\"ok\":true,\"molds\":[{\"qolip_code\":\"Q-ONE\",\"qolip_set_id\":\"9501\",\"warehouse\":\"Qolip ombori\",\"item_name\":\"Shared mold\",\"size\":40,\"quantity\":1}],\"has_more\":false}"
+   }
+  }
+ ]
+}

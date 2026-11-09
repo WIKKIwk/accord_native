@@ -717,10 +717,12 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
   const route = homeRoute(session);
   if (session.profile.role === 'rezka_master') {
-    if (route !== appRoutes.apparatusQueue || !canOpenRoute(session, appRoutes.apparatusQueue)) return null;
+    if (route !== appRoutes.apparatusQueue || !canOpenRoute(session, route)) return null;
     return platform === 'ios' ? '/ios-rezka' as Href : platform === 'android' ? '/android-rezka' as Href : null;
   }
   if ((route === appRoutes.boyoqchiHome || route === appRoutes.rezkaSplit) && !canOpenRoute(session, route)) return null;
+  // Keep both protected roles' pre-integration fallback unchanged even with extra split capability.
+  if (route === appRoutes.rezkaSplit && (session.profile.role === 'aparatchi' || session.profile.role === 'tayyorlov_masteri')) return null;
   const entry = homeTargets[route];
   return platform === 'ios' ? entry?.ios ?? null : platform === 'android' ? entry?.android ?? null : null;
 }

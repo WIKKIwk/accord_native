@@ -14,7 +14,7 @@ import { rezkaShellCanNavigate, rezkaShellDrawerItems } from '../../rezka/rezkaS
 import { logoutRezkaSession, useRezkaLocale, useRezkaShellSession } from '../../rezka/useRezkaShell';
 
 const paths: Record<RezkaDestination, Href> = { queue: '/ios-rezka' as Href, workers: '/ios-rezka/workers' as Href,
-  daily: '/ios-rezka/daily' as Href, profile: '/ios-rezka/profile' as Href };
+  daily: '/ios-rezka/daily' as Href, instructions: '/ios-rezka/instructions' as Href, profile: '/ios-rezka/profile' as Href };
 
 export default function IosRezkaLayout() {
   const snapshot = useRezkaShellSession(), locale = useRezkaLocale(), pathname = usePathname(), colorScheme = useColorScheme();
@@ -33,7 +33,7 @@ export default function IosRezkaLayout() {
     setSigningOut(true); logoutRezkaSession(snapshot, () => router.replace('/'));
   };
   const active = pathname === '/ios-rezka' ? 'queue' : pathname === '/ios-rezka/workers' ? 'workers'
-    : pathname === '/ios-rezka/daily' ? 'daily' : pathname === '/ios-rezka/profile' ? 'profile' : '';
+    : pathname === '/ios-rezka/daily' ? 'daily' : pathname === '/ios-rezka/instructions' ? 'instructions' : pathname === '/ios-rezka/profile' ? 'profile' : '';
   return <RezkaShellContext.Provider value={{ snapshot, openDrawer: () => setDrawerOpen(true), onLogout, navigate }}>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
@@ -41,7 +41,7 @@ export default function IosRezkaLayout() {
           title={localizedGetter('adminDrawerSections', locale)} items={rezkaShellDrawerItems(session, locale)} active={active}
           closeAccessibilityLabel={localizedGetter('closeAction', locale)}
           footerAction={{ id: 'logout', label: localizedGetter('logoutTitle', locale), symbol: 'rectangle.portrait.and.arrow.right', destructive: true }}
-          onSelect={id => { if (id === 'logout') confirmRoleDrawerLogout(onLogout); else if (id === 'queue' || id === 'workers' || id === 'daily' || id === 'profile') navigate(id); }}>
+          onSelect={id => { if (id === 'logout') confirmRoleDrawerLogout(onLogout); else if (id === 'queue' || id === 'workers' || id === 'daily' || id === 'instructions' || id === 'profile') navigate(id); }}>
           <NativeTabs>
             <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
               <NativeTabs.Trigger.Label>{localizedGetter('homeNavTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>

@@ -1,4 +1,5 @@
 import type { RezkaSessionSnapshot } from './rezkaSessionGuard';
+import type { RezkaScannerAction } from './rezkaScannerOwner';
 import type { RezkaOutput } from './rezkaSplitApi';
 import type { RezkaPrinterTarget, RezkaSplitState, RezkaTransport } from './rezkaSplitController';
 
@@ -11,7 +12,7 @@ export type RezkaPrinterBridge = {
   print(output: RezkaOutput, target: RezkaPrinterTarget): Promise<{ ok: boolean }>;
 };
 export type RezkaSplitScreenProps = { snapshot: RezkaSessionSnapshot; printer: RezkaPrinterBridge | null;
-  /** The reviewed full-screen QR/Data Matrix scanner; omitted until available. */
-  scan?: () => Promise<string | null>;
+  /** The full-screen scanner and its synchronous focused-owner guard. */
+  scan?: RezkaScannerAction;
   onBack?: () => void;
 };

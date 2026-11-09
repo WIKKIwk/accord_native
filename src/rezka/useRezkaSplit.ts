@@ -9,6 +9,7 @@ import { rezkaSource, rezkaSplit, rezkaSplitClientPrintConfirm, rezkaSplitClient
 import { guardedRezkaRequest, isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
 import { RezkaItemPickerController } from './rezkaItemPickerController';
 import { RezkaSplitController } from './rezkaSplitController';
+import type { RezkaScannerAction } from './rezkaScannerOwner';
 import type { RezkaPrinterBridge } from './rezkaSplitScreenTypes';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -66,10 +67,10 @@ export function useRezkaSplit(snapshot: RezkaSessionSnapshot, printer: RezkaPrin
     if (!selection || !isRezkaSessionCurrent(snapshot, 'split')) return;
     controller.setPrinter({ transport: selection.transport, ...(selection.driverUrl ? { driverUrl: selection.driverUrl } : {}) });
   };
-  const scan = async (scanAction: () => Promise<string | null>) => {
-    if (!isRezkaSessionCurrent(snapshot, 'split')) return;
-    const value = await scanAction();
-    if (value && isRezkaSessionCurrent(snapshot, 'split')) await controller.scan(value);
+  const scan = async (scanner: RezkaScannerAction) => {
+    if (!scanner.isCurrent() || !isRezkaSessionCurrent(snapshot, 'split')) return;
+    const result = await scanner.open();
+    if (result && result.isCurrent() && isRezkaSessionCurrent(snapshot, 'split')) await controller.scan(result.value);
   };
   return { controller, state, device, snapshot, choosePrinter, scan, isCurrent: () => isRezkaSessionCurrent(snapshot, 'split') };
 }

@@ -1,0 +1,40 @@
+{
+ "source": "test/qolip_set_names_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "rename wire contract persists names and preserves conflict errors",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/sets/rename",
+   "requestHeaders": {
+    "Authorization": "Bearer set-name-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"set_id\":\"950100000001\",\"name\":\"Hot lunch\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"set\":{\"set_id\":\"950100000001\",\"fingerprint\":\"[[\\\"950100000001\\\",\\\"NAME-A\\\",420,\\\"BLACK\\\",\\\"Qolip ombori\\\"]]\",\"name\":\"Hot lunch\",\"warehouse\":\"Qolip ombori\",\"members\":[{\"qolip_code\":\"NAME-A\",\"size\":420,\"color\":\"BLACK\",\"warehouse\":\"Qolip ombori\"}],\"products\":[]}}"
+   }
+  },
+  {
+   "test": "rename wire contract persists names and preserves conflict errors",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/sets/rename",
+   "requestHeaders": {
+    "Authorization": "Bearer set-name-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"set_id\":\"950100000001\",\"name\":\"Hot lunch\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"qolip_set_name_conflict\"}"
+   }
+  }
+ ]
+}

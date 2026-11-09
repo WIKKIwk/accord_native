@@ -1,0 +1,121 @@
+{
+ "source": "test/werka_paddon_api_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "Werka preview and receive use authenticated pallet contract",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/werka/paddons/preview?code=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"paddon\":{\"id\":\"p1\",\"total_gross_kg\":12,\"total_net_kg\":11.25,\"code\":\"00001\",\"location\":\"Rezka\"},\"items\":[{\"batch_id\":\"b1\",\"apparatus\":\"apparatus:default:asset-010\",\"finished_goods_kg\":12,\"processed_by_apparatus\":\"\"}],\"warehouses\":[\"WH-1\"],\"snapshot_token\":\"snapshot-v1\",\"can_receive\":true,\"receipt\":null}"
+   }
+  },
+  {
+   "test": "Werka preview and receive use authenticated pallet contract",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/werka/paddons/receive",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"warehouse\":\"WH-1\",\"expected_batch_ids\":[\"b1\"],\"snapshot_token\":\"snapshot-v1\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"receipt\":{\"warehouse\":\"WH-1\",\"accepted_by_display_name\":\"Werka\"}}"
+   }
+  },
+  {
+   "test": "receipt conflict is surfaced to refresh, not retried automatically",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/werka/paddons/receive",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"code\":\"00001\",\"warehouse\":\"WH-1\",\"expected_batch_ids\":[\"b1\"],\"snapshot_token\":\"snapshot-v1\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"paddon_receipt_conflict\"}"
+   }
+  },
+  {
+   "test": "universal preview never guesses type from code and rejects unknown kind",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/werka/qr/preview?qr_payload=00001",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"kind\":\"unknown\"}"
+   }
+  },
+  {
+   "test": "universal preview never guesses type from code and rejects unknown kind",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/werka/qr/preview?qr_payload=WIP-v2%3Abatch%2F01",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"kind\":\"unknown\"}"
+   }
+  },
+  {
+   "test": "universal preview never guesses type from code and rejects unknown kind",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/werka/qr/preview?qr_payload=https%3A%2F%2Fexample.invalid%2FW%2FQR",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"kind\":\"unknown\"}"
+   }
+  },
+  {
+   "test": "single WIP stale token returns conflict without automatic POST retry",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/werka/wip/receive",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"progress_batch_id\":\"b1\",\"qr_payload\":\"QR-b1\",\"warehouse\":\"WH-1\",\"snapshot_token\":\"before\"}"
+   },
+   "status": 409,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"wip_receipt_conflict\"}"
+   }
+  }
+ ]
+}

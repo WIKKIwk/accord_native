@@ -4,7 +4,7 @@ const path = require('node:path'); const test = require('node:test'); const ts =
 const filename = path.resolve(__dirname, '../src/homashyo/rawSplitPrintRuntime.ts');
 function setup(platform = 'android') {
   const calls = [], result = { id: 'split-id', outputs: [{ barcode: 'a' }, { barcode: 'b' }] };
-  const mocks = { 'react-native': { Platform: { OS: platform } }, '../printing/printService': { PrintService: { printRps: async (request, options) => { calls.push(['local', request, options]); return { ok: true, status: 'done' }; } } },
+  const mocks = { './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, 'react-native': { Platform: { OS: platform } }, '../printing/printService': { PrintService: { printRps: async (request, options) => { calls.push(['local', request, options]); return { ok: true, status: 'done' }; } } },
     './rawSplitApi': { rawSplitPrint: async (_session, body) => { calls.push(['wifi', body]); }, rawSplitSessionIsCurrent: ticket => ticket.current !== false, requireRawSplitRealAccount: ticket => { if (ticket.session.token === 'test-mode-token') throw new Error('Demo/test rejimi hozir mavjud emas.'); } },
     './rawSplitPrinting': { rawMaterialSplitPrintRequest: output => ({ epc: output.barcode }) } };
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
@@ -83,4 +83,16 @@ test('printer safety guidance lists Bluetooth only when the current platform can
   assert.doesNotMatch(ios.api.rawSplitUnsupportedReason('wifi'), /Bluetooth/);
   assert.match(android.api.rawSplitUnsupportedReason('offline'), /Bluetooth/);
   assert.match(android.api.rawSplitUnsupportedReason('wifi'), /Bluetooth/);
+});
+test('production hold blocks local and Wi-Fi print runtimes before native or network dispatch', async () => {
+  const calls = [], mocks = { './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => false },
+    'react-native': { Platform: { OS: 'android' } }, '../printing/printService': { PrintService: { printRps: async () => { calls.push('native'); } } },
+    './rawSplitApi': { rawSplitPrint: async () => { calls.push('wifi'); }, rawSplitSessionIsCurrent: () => true, requireRawSplitRealAccount() {} },
+    './rawSplitPrinting': { rawMaterialSplitPrintRequest: () => ({}) } };
+  const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+  for (const device of [{ transport: 'bluetooth', printer: {} }, { transport: 'wifi', driverBaseUrl: 'https://printer.invalid' }])
+    await assert.rejects(mod.exports.printRawSplitRoll({ session: {} }, { id: 's' }, { barcode: 'b' }, device, 'zebra', () => {}), /to‘xtatilgan/);
+  assert.deepEqual(calls, []);
 });
