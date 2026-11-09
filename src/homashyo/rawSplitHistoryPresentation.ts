@@ -32,3 +32,27 @@ export function rawSplitIssueOutputSummary(output: Record<string, unknown>): str
   return `${rawSplitDisplay(output.width_mm as string)} mm · Og‘irlik: ${rawSplitDisplay(output.gross_kg as string)} kg · ` +
     `Babina: ${rawSplitDisplay(output.bobina_kg as string)} kg · Netto: ${rawSplitDisplay(output.kg as string)} kg`;
 }
+
+export type RawSplitDetailRow = { label: string; value: string };
+
+// V2 RawSplitDetailsSheet, raw_material_split_result_view.dart:343-364.
+export function rawSplitResultDetailRows(result: RawSplitResult): RawSplitDetailRow[] {
+  return [
+    { label: 'Manba QR', value: result.source.barcode },
+    { label: 'Ombor', value: result.source.warehouse },
+    ...(result.createdAt !== null ? [{ label: 'Vaqti', value: result.createdAt }] : []),
+    ...(result.issueId !== null ? [
+      { label: 'Farq', value: result.differenceLabel },
+      { label: 'Sabab', value: result.issueNote ?? '' },
+    ] : []),
+  ];
+}
+
+// V2 RawSplitIssueDetailsSheet, raw_material_split_result_view.dart:545-561.
+export function rawSplitIssueDetailRows(issue: RawSplitIssue): RawSplitDetailRow[] {
+  return [
+    { label: 'QR', value: issue.source.barcode },
+    { label: 'Asl', value: `${rawSplitDisplay(issue.source.kg)} kg · Atxot: ${issue.enteredWaste === '' ? 'kiritilmagan' : issue.enteredWaste} kg` },
+    ...issue.outputs.map((output, index) => ({ label: `${index + 1}-rulon`, value: rawSplitIssueOutputSummary(output) })),
+  ];
+}

@@ -1,0 +1,2301 @@
+{
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "source": "test/supply_tasks_api_test.dart and lib/src/core/api/admin/mobile_api_supply_tasks.dart",
+  "oracle": "oracles/material_supply_tasks_golden_test.dart",
+  "dart_sdk": "3.13.7 stable, macos_arm64",
+  "windows": {
+    "material": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 7,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:bosma_7"
+          ]
+        }
+      }
+    },
+    "qolip": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "qolip",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "qolip",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 7,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:bosma_7"
+          ]
+        }
+      }
+    },
+    "combo_products": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing",
+            "combo": {
+              "id": "layout",
+              "item_code": "SKU",
+              "name": "Combo",
+              "revision": 2,
+              "layout_fingerprint": "fp"
+            },
+            "products": [
+              {
+                "id": "child",
+                "item_code": "SKU-1",
+                "product": "Child",
+                "frame_product_size_mm": 12.5,
+                "frame_count": 2
+              },
+              "ignored"
+            ]
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 7,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing",
+              "combo": {
+                "id": "layout",
+                "item_code": "SKU",
+                "name": "Combo",
+                "revision": 2,
+                "layout_fingerprint": "fp"
+              },
+              "products": [
+                {
+                  "id": "child",
+                  "item_code": "SKU-1",
+                  "product": "Child",
+                  "frame_product_size_mm": 12.5,
+                  "frame_count": 2
+                }
+              ]
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:bosma_7"
+          ]
+        }
+      }
+    },
+    "search_subset": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "hello",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 7,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "hello",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:bosma_7"
+          ]
+        }
+      }
+    },
+    "empty": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "",
+        "limit": 10,
+        "search": "",
+        "checked_count": 0,
+        "missing_count": 0,
+        "rows": [],
+        "apparatus": []
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 7,
+          "version": "version-7",
+          "apparatus_id": "",
+          "limit": 10,
+          "search": "",
+          "checked_count": 0,
+          "missing_count": 0,
+          "rows": [],
+          "apparatus_ids": []
+        }
+      }
+    },
+    "missing_rows": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "missing_apparatus": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "string_count": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": "10",
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "too_many_missing": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 11,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "wrong_projection": {
+      "input": {
+        "ok": true,
+        "projection": "worker_list_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "empty_scope": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "scope_only_next_line": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "id_only_next_line": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "unsearched_incomplete": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "duplicate_ids": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "same",
+            "code": "same",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "same",
+            "code": "same",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 1,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "out_of_window": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "bad",
+            "code": "bad",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 10,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "invalid_state": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "bad",
+            "code": "bad",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "ready"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "out_of_order": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "later",
+            "code": "later",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "earlier",
+            "code": "earlier",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "wrong_selected": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:other",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "duplicate_apparatus": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          },
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "no_apparatus_but_rows": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": []
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "unsafe_revision": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 9007199254740992,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "floating_revision": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7.0,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:bosma_7",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:bosma_7",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "dart_unicode_apparatus": {
+      "input": {
+        "ok": true,
+        "projection": "supply_tasks_v1",
+        "kind": "material",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "apparatus_id": "apparatus:default:Ϳ",
+        "limit": 10,
+        "search": "",
+        "checked_count": 10,
+        "missing_count": 2,
+        "rows": [
+          {
+            "id": "first",
+            "code": "first",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 0,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "partial"
+          }
+        ],
+        "apparatus": [
+          {
+            "apparatus_id": "apparatus:default:Ϳ",
+            "source_revision": 1,
+            "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "display": {
+              "display_name": "Bosma 7"
+            },
+            "execution_profile": {
+              "operation": "print",
+              "technology": "flexographic"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 7,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:Ϳ",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:Ϳ"
+          ]
+        }
+      }
+    }
+  },
+  "messages": {
+    "delta": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "server",
+        "scope": "scope",
+        "base_rev": 7,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "second",
+          "third"
+        ],
+        "upsert": [
+          {
+            "id": "second",
+            "code": "second",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 1,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "remove": [
+          "first"
+        ]
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 8,
+          "version": "version-8",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "second",
+              "code": "second",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 1,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:bosma_7"
+          ]
+        },
+        "same_object": false,
+        "baseline_rows": [
+          "first",
+          "third"
+        ]
+      }
+    },
+    "checkpoint": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "server",
+        "scope": "scope",
+        "base_rev": 7,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "first",
+          "third"
+        ],
+        "upsert": [],
+        "remove": []
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 8,
+          "version": "version-8",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:bosma_7"
+          ]
+        },
+        "same_object": false,
+        "baseline_rows": [
+          "first",
+          "third"
+        ]
+      }
+    },
+    "ready": {
+      "input": {
+        "ok": true,
+        "type": "tasks_ready",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "resync": false
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 7,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:bosma_7"
+          ]
+        },
+        "same_object": true,
+        "baseline_rows": [
+          "first",
+          "third"
+        ]
+      }
+    },
+    "wrong_ready_revision": {
+      "input": {
+        "ok": true,
+        "type": "tasks_ready",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 8,
+        "version": "version-7",
+        "resync": false
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "ready_resync": {
+      "input": {
+        "ok": true,
+        "type": "tasks_ready",
+        "epoch": "server",
+        "scope": "scope",
+        "rev": 7,
+        "version": "version-7",
+        "resync": true
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "wrong_base": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "server",
+        "scope": "scope",
+        "base_rev": 6,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "second",
+          "third"
+        ],
+        "upsert": [
+          {
+            "id": "second",
+            "code": "second",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 1,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "remove": [
+          "first"
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "wrong_epoch": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "old",
+        "scope": "scope",
+        "base_rev": 7,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "second",
+          "third"
+        ],
+        "upsert": [
+          {
+            "id": "second",
+            "code": "second",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 1,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "remove": [
+          "first"
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "wrong_scope": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "server",
+        "scope": "other",
+        "base_rev": 7,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "second",
+          "third"
+        ],
+        "upsert": [
+          {
+            "id": "second",
+            "code": "second",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 1,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "remove": [
+          "first"
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "missing_remove": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "server",
+        "scope": "scope",
+        "base_rev": 7,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "second",
+          "third"
+        ],
+        "upsert": [
+          {
+            "id": "second",
+            "code": "second",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 1,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "remove": []
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "missing_upsert": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "server",
+        "scope": "scope",
+        "base_rev": 7,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "second",
+          "third"
+        ],
+        "upsert": [],
+        "remove": [
+          "first"
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "duplicate_order_ids": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "server",
+        "scope": "scope",
+        "base_rev": 7,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "second",
+          "second"
+        ],
+        "upsert": [
+          {
+            "id": "second",
+            "code": "second",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 1,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          },
+          {
+            "id": "third",
+            "code": "third",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 2,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "remove": [
+          "first"
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "invalid_upsert_position": {
+      "input": {
+        "ok": true,
+        "type": "tasks_delta",
+        "epoch": "server",
+        "scope": "scope",
+        "base_rev": 7,
+        "rev": 8,
+        "version": "version-8",
+        "checked_count": 10,
+        "missing_count": 2,
+        "order_ids": [
+          "second",
+          "third"
+        ],
+        "upsert": [
+          {
+            "id": "second",
+            "code": "second",
+            "order_number": "42",
+            "title": "Mahsulot 😀",
+            "product_code": "product",
+            "customer_name": "Mijoz",
+            "image_id": "image-1",
+            "position": 12,
+            "apparatus_count": 2,
+            "task_state": "missing"
+          }
+        ],
+        "remove": [
+          "first"
+        ]
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "snapshot": {
+      "input": {
+        "ok": true,
+        "type": "tasks_snapshot",
+        "window": {
+          "ok": true,
+          "projection": "supply_tasks_v1",
+          "kind": "material",
+          "epoch": "server",
+          "scope": "scope",
+          "rev": 9,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus": [
+            {
+              "apparatus_id": "apparatus:default:bosma_7",
+              "source_revision": 1,
+              "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+              "display": {
+                "display_name": "Bosma 7"
+              },
+              "execution_profile": {
+                "operation": "print",
+                "technology": "flexographic"
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "ok": true,
+        "value": {
+          "kind": "material",
+          "scope": "scope",
+          "epoch": "server",
+          "revision": 9,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus_ids": [
+            "apparatus:default:bosma_7"
+          ]
+        },
+        "same_object": false,
+        "baseline_rows": [
+          "first",
+          "third"
+        ]
+      }
+    },
+    "wrong_kind_snapshot": {
+      "input": {
+        "ok": true,
+        "type": "tasks_snapshot",
+        "window": {
+          "ok": true,
+          "projection": "supply_tasks_v1",
+          "kind": "qolip",
+          "epoch": "server",
+          "scope": "scope",
+          "rev": 7,
+          "version": "version-7",
+          "apparatus_id": "apparatus:default:bosma_7",
+          "limit": 10,
+          "search": "",
+          "checked_count": 10,
+          "missing_count": 2,
+          "rows": [
+            {
+              "id": "first",
+              "code": "first",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 0,
+              "apparatus_count": 2,
+              "task_state": "missing"
+            },
+            {
+              "id": "third",
+              "code": "third",
+              "order_number": "42",
+              "title": "Mahsulot 😀",
+              "product_code": "product",
+              "customer_name": "Mijoz",
+              "image_id": "image-1",
+              "position": 2,
+              "apparatus_count": 2,
+              "task_state": "partial"
+            }
+          ],
+          "apparatus": [
+            {
+              "apparatus_id": "apparatus:default:bosma_7",
+              "source_revision": 1,
+              "source_aasx_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+              "display": {
+                "display_name": "Bosma 7"
+              },
+              "execution_profile": {
+                "operation": "print",
+                "technology": "flexographic"
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_resync"
+      }
+    },
+    "unknown_type": {
+      "input": {
+        "ok": true,
+        "type": "unknown"
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    },
+    "snapshot_without_window": {
+      "input": {
+        "ok": true,
+        "type": "tasks_snapshot"
+      },
+      "expected": {
+        "ok": false,
+        "code": "supply_tasks_invalid"
+      }
+    }
+  }
+}

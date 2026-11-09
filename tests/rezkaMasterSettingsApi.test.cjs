@@ -17,3 +17,13 @@ test('rezka print side saves current and previous values', async () => {
   assert.equal(sent.path, '/v1/mobile/rezka-master/print-side'); assert.equal(sent.method, 'PUT');
   assert.deepEqual(JSON.parse(sent.body), { order_id: 'order', standard_print_side: true, previous_standard_print_side: false });
 });
+test('legacy print-side call forwards an optional send guard without changing default behavior', async () => {
+  const marker = () => {}; let forwarded;
+  const api = load('rezkaMasterSettingsApi', { './authorizedFetch': { authorizedFetch: async (_s, _p, _init, beforeSend) => {
+    forwarded = beforeSend; return { status: 200 };
+  } } });
+  await api.rezkaMasterSavePrintSide({}, 'order', true, false);
+  assert.equal(forwarded, undefined);
+  await api.rezkaMasterSavePrintSide({}, 'order', true, false, marker);
+  assert.equal(forwarded, marker);
+});

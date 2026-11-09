@@ -23,8 +23,12 @@ assert source.startswith('String rawMaterialBarcodeFromQr(String raw) {') and so
 Path(sys.argv[2]).write_text("import 'dart:convert';\nimport 'dart:io';\n\n" + source + "\n\nvoid main(List<String> args) { final values = jsonDecode(File(args.single).readAsStringSync()) as List; for (final raw in values) { try { print(jsonEncode({'raw': raw, 'value': rawMaterialBarcodeFromQr(raw as String)})); } catch (e) { print(jsonEncode({'raw': raw, 'error': e.runtimeType.toString()})); } } }\n")
 PY
 
-for name in expanded deep ipv6 ascii unicode schemes dotPort; do
-  "$NODE_BIN" "$ROOT/tests/oracles/generateRawMaterialBarcodeCorpus.cjs" "$name" > "$WORK/export/$name-inputs.json"
+for name in expanded deep ipv6 ascii unicode schemes dotPort independent; do
+  if [ "$name" = independent ]; then
+    "$NODE_BIN" "$ROOT/tests/oracles/generateRawMaterialBarcodeIndependent.cjs" > "$WORK/export/$name-inputs.json"
+  else
+    "$NODE_BIN" "$ROOT/tests/oracles/generateRawMaterialBarcodeCorpus.cjs" "$name" > "$WORK/export/$name-inputs.json"
+  fi
   (cd "$WORK/export" && HOME="$WORK/home" CI=1 DART_SUPPRESS_ANALYTICS=true FLUTTER_SUPPRESS_ANALYTICS=true \
     "$DART_BIN" oracle.dart "$name-inputs.json" > "$name-results.jsonl")
 done

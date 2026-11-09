@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["AccordChatSecureModule"] },
+  "android": { "modules": ["expo.modules.accordchatsecure.AccordChatSecureModule"] }
+}

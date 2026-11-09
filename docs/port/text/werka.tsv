@@ -1,0 +1,29 @@
+# platform	text	reason
+both	Avvalgi oy	Material 3.47.8 generated_material_localizations.dart:44310-44409, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Keyingi oy	Material 3.47.8 generated_material_localizations.dart:44310-44409, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Yilni tanlang	Material 3.47.8 generated_material_localizations.dart:44310-44409, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Previous month	Material 3.47.8 generated_material_localizations.dart:8354-8453, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Next month	Material 3.47.8 generated_material_localizations.dart:8354-8453, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Select year	Material 3.47.8 generated_material_localizations.dart:8354-8453, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Предыдущий месяц	Material 3.47.8 generated_material_localizations.dart:35754,36021-36120, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Следующий месяц	Material 3.47.8 generated_material_localizations.dart:35754,36021-36120, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Выберите год	Material 3.47.8 generated_material_localizations.dart:35754,36021-36120, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	Сегодня	Material 3.47.8 generated_material_localizations.dart:35754,36021-36120, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	پچھلا مہینہ	Material 3.47.8 generated_material_localizations.dart:43814-43913, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	اگلا مہینہ	Material 3.47.8 generated_material_localizations.dart:43814-43913, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	سال منتخب کریں	Material 3.47.8 generated_material_localizations.dart:43814-43913, used by V2 CalendarDatePicker in werka_archive_daily_calendar_screen.dart:294
+both	вторник	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8593-8600 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	среда	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8593-8600 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	четверг	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8593-8600 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	пятница	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8593-8600 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	суббота	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8593-8600 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	февраля	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	марта	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	апреля	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	июня	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	июля	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	августа	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	сентября	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	октября	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	ноября	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294
+both	декабря	Russian full-date accessibility label is built from Flutter 3.47.8 generated_date_localizations.dart:8537-8549 in calendar_date_picker.dart:1296; V2 supplies the picker at werka_archive_daily_calendar_screen.dart:294

@@ -16,7 +16,8 @@ export class GScaleDeviceStore {
     scanning: false, scanResult: null, checkingAddress: false, addressError: '' };
   private listeners = new Set<() => void>();
   private alive = true;
-  constructor(private readonly deps: GScaleDeviceDependencies) {}
+  constructor(private readonly deps: GScaleDeviceDependencies,
+    private readonly allowSelection?: (selection: PrintDeviceSelection) => boolean) {}
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private update(patch: Partial<GScaleDeviceState>) {
@@ -31,21 +32,25 @@ export class GScaleDeviceStore {
     if (!this.alive) return;
     if (bluetooth) {
       const selection: PrintDeviceSelection = { transport: 'bluetooth', bluetoothPrinter: bluetooth };
-      this.update({ selection, transport: 'bluetooth', needsAttention: false });
-      await this.deps.preferences.saveLastPrintDevice(selection);
-      return;
+      if (!this.allowSelection || this.allowSelection(selection)) {
+        this.update({ selection, transport: 'bluetooth', needsAttention: false });
+        await this.deps.preferences.saveLastPrintDevice(selection);
+        return;
+      }
+      this.update({ needsAttention: true });
     }
     const saved = await this.deps.preferences.loadLastPrintDevice();
     if (!saved) return;
     const selection = await restoreLastPrintDevice(saved, this.deps.resolver);
     if (!this.alive) return;
-    if (!selection) { this.update({ needsAttention: true }); return; }
+    if (!selection || (this.allowSelection && !this.allowSelection(selection))) { this.update({ needsAttention: true }); return; }
     this.update({ selection, transport: selection.transport, needsAttention: false });
   }
 
   /** @v2 _applyDeviceSelection */
   async select(selection: PrintDeviceSelection): Promise<void> {
     if (!this.alive) return;
+    if (this.allowSelection && !this.allowSelection(selection)) { this.update({ needsAttention: true }); throw new Error('Printer ulanmagan'); }
     this.update({ selection, transport: selection.transport, needsAttention: false });
     if (selection.transport === 'bluetooth') this.deps.rememberSessionBluetooth(selection.bluetoothPrinter);
     await this.deps.preferences.saveLastPrintDevice(selection);

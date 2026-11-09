@@ -2,8 +2,8 @@
 
 `rawMaterialBarcodeFromQr` is sourced from
 `lib/src/features/admin/presentation/raw_material_scan_dialog_widgets_part_01.dart:24-47`
-at `f11910bb2c8c7081ce26770e69811b03fd0739ed`. The corpus generator names each seed
-and produces 88,664 cases. The small f119 JSON fixture records source-output digests,
+at `f11910bb2c8c7081ce26770e69811b03fd0739ed`. The corpus generators name each seed
+and produce 118,664 cases, including an independently designed 30,000-case review corpus. The small f119 JSON fixture records source-output digests,
 counts, and human-readable samples; the old Homashyo fixture is not overwritten.
 
 From the native worktree, with Node LTS on PATH and the matching Dart SDK installed:

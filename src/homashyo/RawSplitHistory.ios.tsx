@@ -1,23 +1,26 @@
 import { Button, HStack, Image, ProgressView, Section, Text, VStack } from '@expo/ui/swift-ui';
-import { lineLimit } from '@expo/ui/swift-ui/modifiers';
-import { useEffect, useSyncExternalStore } from 'react';
+import { disabled, lineLimit } from '@expo/ui/swift-ui/modifiers';
+import { useLayoutEffect, useSyncExternalStore } from 'react';
 import { PreparationList, usePreparationText } from '../preparation/PreparationUI';
 import { rawSplitHistorySubtitle, rawSplitHistoryTime, rawSplitHistoryTitle, rawSplitIssueTime } from './rawSplitHistoryPresentation';
 import type { RawSplitHistoryViewProps } from './rawSplitHistoryViewTypes';
 
 export function RawSplitHistory({ controller, onResult, onIssue }: RawSplitHistoryViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), t = usePreparationText();
-  useEffect(() => { void controller.reload(); }, [controller]);
+  // V2 starts the first reload in initState, before the initial frame.
+  useLayoutEffect(() => { void controller.reload(); }, [controller]);
   const history = state.snapshot?.history ?? [], issues = state.snapshot?.issues ?? [];
   const isEmpty = history.length === 0 && issues.length === 0;
   return <PreparationList refresh={() => controller.reload()}>
-    {state.error ? <Section><Button onPress={() => { void controller.reload(); }}><VStack alignment="leading">
-      <Text>Tarix yuklanmadi</Text><Text>{state.error}</Text></VStack></Button></Section>
-      : !state.snapshot ? <Section><ProgressView /></Section>
-      : isEmpty ? <Section><Text>Hali bo‘lish tarixi yo‘q.</Text></Section>
+    {state.error !== null ? <Section><Button modifiers={[disabled(state.busy)]} onPress={() => { if (!state.busy) void controller.reload(); }}>
+      <HStack spacing={12}><Image systemName="exclamationmark.circle" size={22} /><VStack alignment="leading">
+        <Text>Tarix yuklanmadi</Text>{!!state.error.trim() && <Text>{state.error.trim()}</Text>}</VStack></HStack></Button></Section>
+      : state.snapshot === null && state.busy ? <Section><ProgressView /></Section>
+      : isEmpty ? <Section><HStack spacing={12}><Image systemName="clock.arrow.circlepath" size={22} /><Text>Hali bo‘lish tarixi yo‘q.</Text></HStack></Section>
       : <>
-        {state.printer && <Section><Text>Printer: {state.printer.transport}</Text>{state.printer.transport === 'wifi' &&
-          <Text>Wi-Fi printer: {state.wifiPrinter}</Text>}</Section>}
+        {state.printer && <Section><HStack spacing={12}><Image systemName="printer" size={22} /><VStack alignment="leading">
+          <Text>Printer: {state.printer.transport}</Text>{state.printer.transport === 'wifi' &&
+            <Text>Wi-Fi printer: {state.wifiPrinter}</Text>}</VStack></HStack></Section>}
         {!!history.length && <Section>{history.map(result => <Button key={result.id} onPress={() => onResult(result)}>
           <HStack spacing={10}><Image systemName="scissors" size={22} /><VStack alignment="leading">
             <Text modifiers={[lineLimit(1)]}>{rawSplitHistoryTitle(result)}</Text>

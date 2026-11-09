@@ -14,6 +14,20 @@ function integer(value: unknown, fallback: number | null = null): number | null 
 export type ApparatusCapabilityProfile = { code: string; level: number; valid_from_unix: number | null;
   valid_to_unix: number | null; enabled: boolean };
 
+const apparatusFamilies: Record<string, string> = { print: 'pechat', laminate: 'laminatsiya', cut: 'rezka', package: 'paket', glue: 'kley' };
+const apparatusKinds: Record<string, string> = { rotogravure: 'color_pechat', flexographic: 'flexo', adhesive_lamination: 'laminatsiya',
+  extrusion_lamination: 'extruder_laminatsiya', slitting: 'rezka', bag_making: 'paket', cold_glue: 'holodniy_kley' };
+
+/** Looks up a caller-normalized canonical key without inherited object properties. */
+export function apparatusFamilyForNormalizedOperation(operation: string): string {
+  return Object.hasOwn(apparatusFamilies, operation) ? apparatusFamilies[operation] : 'other';
+}
+
+/** Looks up a caller-normalized canonical key without inherited object properties. */
+export function apparatusKindForNormalizedTechnology(technology: string): string {
+  return Object.hasOwn(apparatusKinds, technology) ? apparatusKinds[technology] : 'other';
+}
+
 export type AdminApparatus = { id: string; name: string; source: 'canonical'; sort_order: number; family: string; kind: string;
   capabilities: string[]; capability_profiles: ApparatusCapabilityProfile[]; color_stations: number | null;
   factory_map_object_id: string; training_enabled: boolean; source_revision: number; source_aasx_sha256: string;
@@ -55,12 +69,9 @@ export function apparatusFromJson(raw: unknown): AdminApparatus {
   profiles.sort((left, right) => left.code < right.code ? -1 : left.code > right.code ? 1 : 0);
   const operation = text(execution.operation).trim(), technology = text(execution.technology).trim();
   if (!operation || !technology) throw new TypeError('Canonical apparatus execution profile is required');
-  const families: Record<string, string> = { print: 'pechat', laminate: 'laminatsiya', cut: 'rezka', package: 'paket', glue: 'kley' };
-  const kinds: Record<string, string> = { rotogravure: 'color_pechat', flexographic: 'flexo', adhesive_lamination: 'laminatsiya',
-    extrusion_lamination: 'extruder_laminatsiya', slitting: 'rezka', bag_making: 'paket', cold_glue: 'holodniy_kley' };
   return { id, name, source: 'canonical', worker_material_assignment_allowed: projection.worker_material_assignment_allowed === true,
     sort_order: integer(display.catalog_order, null) ?? integer(projection.sort_order, 10000)!,
-    family: families[operation.toLowerCase()] ?? 'other', kind: kinds[technology.toLowerCase()] ?? 'other',
+    family: apparatusFamilies[operation.toLowerCase()] ?? 'other', kind: apparatusKinds[technology.toLowerCase()] ?? 'other',
     capabilities: profiles.map(profile => profile.code), capability_profiles: profiles,
     color_stations: integer(execution.color_station_count), factory_map_object_id: text(placement.factory_map_object_id).trim(),
     training_enabled: training.enabled === true, source_revision: revision, source_aasx_sha256: sha256,
@@ -107,12 +118,15 @@ export function apparatusUsesLaminationWorkflow(operation: string): boolean {
 }
 
 class ReadTimeout extends Error {}
+class ReadGuardFailure extends Error {
+  constructor(readonly cause: unknown) { super('Scoped read was invalidated'); }
+}
 class ApparatusException extends WorkerControlException {
   constructor(code: string, message: string, statusCode?: number, readonly details: string[] = []) {
     super(code, message, statusCode);
   }
 }
-async function readAttempt(session: Session, path: string, timeoutMs: number, signal?: AbortSignal) {
+async function readAttempt(session: Session, path: string, timeoutMs: number, signal?: AbortSignal, beforeSend?: () => void) {
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal?.aborted) controller.abort();
   signal?.addEventListener('abort', abort, { once: true });
@@ -120,7 +134,9 @@ async function readAttempt(session: Session, path: string, timeoutMs: number, si
   try {
     return await Promise.race([
       (async () => {
-        const response = await authorizedFetch(session, path, { signal: controller.signal });
+        const response = beforeSend
+          ? await authorizedFetch(session, path, { signal: controller.signal }, beforeSend)
+          : await authorizedFetch(session, path, { signal: controller.signal });
         return { response, body: await response.text() };
       })(),
       new Promise<never>((_resolve, reject) => { timer = setTimeout(() => { controller.abort(); reject(new ReadTimeout('API read attempt timed out')); }, timeoutMs); }),
@@ -131,13 +147,17 @@ async function readAttempt(session: Session, path: string, timeoutMs: number, si
   }
 }
 
-export async function readApparatus(session: Session, path: string, retryTransient: boolean, signal?: AbortSignal) {
+export async function readApparatus(session: Session, path: string, retryTransient: boolean, signal?: AbortSignal,
+  beforeSend?: () => void) {
   const start = Date.now(), attempts = retryTransient ? 2 : 1;
+  // Guard failures are not transient network errors, even when the caller
+  // happens to throw a TypeError. Preserve the original error for that caller.
+  const guard = beforeSend ? () => { try { beforeSend(); } catch (error) { throw new ReadGuardFailure(error); } } : undefined;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const remaining = retryTransient ? 15_000 - (Date.now() - start) : 10_000;
     if (remaining <= 0) throw new ReadTimeout('API read deadline exceeded');
     try {
-      const result = await readAttempt(session, path, Math.min(10_000, remaining), signal);
+      const result = await readAttempt(session, path, Math.min(10_000, remaining), signal, guard);
       if (!retryTransient) return result;
       const contentType = result.response.headers.get('content-type')?.toLowerCase() ?? '';
       const html = result.response.status >= 200 && result.response.status < 300 &&
@@ -146,6 +166,7 @@ export async function readApparatus(session: Session, path: string, retryTransie
       if (!html && ![502, 503, 504].includes(result.response.status)) return result;
       if (!html && attempt === attempts - 1) return result;
     } catch (error) {
+      if (error instanceof ReadGuardFailure) throw error.cause;
       const message = error instanceof Error ? error.message.toLowerCase() : '';
       const terminal = signal?.aborted || /require https|too many api redirects|certificate|handshake/.test(message);
       const transient = error instanceof ReadTimeout || error instanceof TypeError ||
@@ -160,12 +181,15 @@ export async function readApparatus(session: Session, path: string, retryTransie
 
 /** @v2 adminApparatus */
 export async function adminApparatus(session: Session, options: { query?: string; limit?: number; retryTransient?: boolean;
-  signal?: AbortSignal } = {}): Promise<AdminApparatus[]> {
+  signal?: AbortSignal; beforeSend?: () => void } = {}): Promise<AdminApparatus[]> {
   const query = new URLSearchParams(), value = (options.query ?? '').trim(), limit = options.limit ?? 50;
   if (value) query.set('q', value);
   if (limit > 0) query.set('limit', String(limit));
   await Promise.resolve();
-  const { response, body } = await readApparatus(session, `/v1/mobile/admin/apparatus?${query}`, options.retryTransient === true, options.signal);
+  const path = `/v1/mobile/admin/apparatus?${query}`;
+  const { response, body } = options.beforeSend
+    ? await readApparatus(session, path, options.retryTransient === true, options.signal, options.beforeSend)
+    : await readApparatus(session, path, options.retryTransient === true, options.signal);
   if (response.status !== 200) {
     let payload: Obj | null = null;
     try { payload = object(JSON.parse(body)); } catch { /* Use the fallback error. */ }

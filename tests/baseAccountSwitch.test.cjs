@@ -81,3 +81,34 @@ test('controllers sharing a store reject overlapping operations', async () => {
   await assert.rejects(other.switchTo(f.second.id), /already in progress/);
   resume(); await pending; assert.equal(other.switching, false);
 });
+
+test('optional transition observer starts before account work and ends after success or failure', async () => {
+  const f = await fixture(); const events = []; let release, signal; const entered = new Promise(resolve => { signal = resolve; });
+  f.environment.beginSessionTransition = () => { events.push('begin'); return () => events.push('end'); };
+  f.environment.reauthenticate = async () => { events.push('reauth'); signal(); await new Promise(resolve => { release = resolve; });
+    return { token: 'token-b2', profile: profile('b') }; };
+  const pending = f.controller.switchTo(f.second.id); assert.deepEqual(events, ['begin']); await entered;
+  assert.deepEqual(events, ['begin', 'reauth']); release(); await pending; assert.deepEqual(events, ['begin', 'reauth', 'end']);
+  const bad = await fixture({ failActivation: true }); const failed = [];
+  bad.environment.beginSessionTransition = () => { failed.push('begin'); return () => failed.push('end'); };
+  await assert.rejects(bad.controller.switchTo(bad.second.id), /activation failed/); assert.deepEqual(failed, ['begin', 'end']);
+});
+
+test('selecting the current account remains a no-op; witness observers conservatively invalidate', async () => {
+  const f = await fixture(), notifications = [];
+  f.environment.beginSessionTransition = () => { notifications.push('begin'); return () => notifications.push('end'); };
+  const result = await f.controller.switchTo(f.first.id);
+  assert.equal(result.ref, 'a'); assert.equal(f.current().token, 'token-a'); assert.equal(f.store.activeAccountId, f.first.id);
+  assert.deepEqual(f.events, []); assert.deepEqual(notifications, ['begin', 'end']);
+});
+
+test('a rejected overlapping switch ends only its own observer, preserving the first transition', async () => {
+  const f = await fixture(), notifications = []; let resume, entered;
+  const waiting = new Promise(resolve => { resume = resolve; }), started = new Promise(resolve => { entered = resolve; });
+  let id = 0; f.environment.beginSessionTransition = () => { const n = ++id; notifications.push(`begin-${n}`); return () => notifications.push(`end-${n}`); };
+  f.environment.unregisterCurrentPush = async () => { entered(); await waiting; };
+  const first = f.controller.switchTo(f.second.id); await started;
+  await assert.rejects(new AccountSwitchController(f.store, f.environment).switchTo(f.second.id), /already in progress/);
+  assert.deepEqual(notifications, ['begin-1', 'begin-2', 'end-2']); resume(); await first;
+  assert.deepEqual(notifications, ['begin-1', 'begin-2', 'end-2', 'end-1']);
+});

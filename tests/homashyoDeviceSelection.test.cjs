@@ -5,7 +5,7 @@ function load(file, mocks = {}) { const filename = path.resolve(__dirname, `../s
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return m.exports; }
 const discovery = load('gscale/gscaleDiscovery');
-const printRuntime = load('homashyo/rawSplitPrintRuntime', { 'react-native': { Platform: { OS: 'android' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
+const printRuntime = load('homashyo/rawSplitPrintRuntime', { './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, 'react-native': { Platform: { OS: 'android' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
 const { rawSplitDeviceSelection, validateRawSplitDeviceSelection } = load('homashyo/rawSplitDeviceSelection',
   { '../gscale/gscaleDiscovery': discovery, './rawSplitPrintRuntime': printRuntime });
 function server(ref, name = 'Scale', port = 39117) { return { endpoint: { host: '192.168.1.10', port, baseUrl: `http://192.168.1.10:${port}` },
@@ -51,7 +51,7 @@ test('GoDEX, unknown and Zebra USB keep the picker open; Bluetooth remains selec
 });
 
 test('iOS rejects Bluetooth before picker selection while Android Bluetooth remains available', () => {
-  const iosPrint = load('homashyo/rawSplitPrintRuntime', { 'react-native': { Platform: { OS: 'ios' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
+  const iosPrint = load('homashyo/rawSplitPrintRuntime', { './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, 'react-native': { Platform: { OS: 'ios' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
   const iosSelection = load('homashyo/rawSplitDeviceSelection', { '../gscale/gscaleDiscovery': discovery, './rawSplitPrintRuntime': iosPrint });
   assert.throws(() => iosSelection.validateRawSplitDeviceSelection({ transport: 'bluetooth', bluetoothPrinter: { address: 'A' } }), /iOS Bluetooth/);
   assert.doesNotThrow(() => validateRawSplitDeviceSelection({ transport: 'bluetooth', bluetoothPrinter: { address: 'A' } }));

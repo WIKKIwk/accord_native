@@ -13,10 +13,12 @@ function decodeObject(body: string): Obj {
   } catch { return {}; }
 }
 
-async function request(session: Session, path: string, fallbackCode: string, fallbackMessage: string, body?: object): Promise<Obj> {
-  const response = await authorizedFetch(session, path, body === undefined ? {} : {
+async function request(session: Session, path: string, fallbackCode: string, fallbackMessage: string, body?: object,
+  beforeSend?: () => void): Promise<Obj> {
+  const init = body === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
+  };
+  const response = beforeSend ? await authorizedFetch(session, path, init, beforeSend) : await authorizedFetch(session, path, init);
   const payload = decodeObject(await response.text());
   if (response.status !== 200) throw new MobileApiException({ code: text(payload.error, fallbackCode),
     message: text(payload.detail, text(payload.message, fallbackMessage)), statusCode: response.status });
@@ -47,12 +49,12 @@ export async function gscaleMaterialTasks(session: Session, orderIds: string[]):
 }
 
 /** @v2 gscaleRpsBatchStart */
-export async function gscaleRpsBatchStart(session: Session, data: GScaleBatchStart) {
-  return batchResponseFromJson(await request(session, '/v1/mobile/rps/batch/start', 'rps_batch_start_failed', 'RPS batch start failed', batchStartBody(data)));
+export async function gscaleRpsBatchStart(session: Session, data: GScaleBatchStart, beforeSend?: () => void) {
+  return batchResponseFromJson(await request(session, '/v1/mobile/rps/batch/start', 'rps_batch_start_failed', 'RPS batch start failed', batchStartBody(data), beforeSend));
 }
 /** @v2 gscaleRpsBatchUpdate */
-export async function gscaleRpsBatchUpdate(session: Session, data: GScaleBatchUpdate) {
-  return batchResponseFromJson(await request(session, '/v1/mobile/rps/batch/update', 'rps_batch_update_failed', 'RPS batch update failed', batchUpdateBody(data)));
+export async function gscaleRpsBatchUpdate(session: Session, data: GScaleBatchUpdate, beforeSend?: () => void) {
+  return batchResponseFromJson(await request(session, '/v1/mobile/rps/batch/update', 'rps_batch_update_failed', 'RPS batch update failed', batchUpdateBody(data), beforeSend));
 }
 /** @v2 gscaleRpsBatchState */
 export async function gscaleRpsBatchState(session: Session) {
@@ -67,20 +69,20 @@ export async function gscaleRpsBatchHistory(session: Session, limit = 50) {
   return payload.batches.filter(v => v && typeof v === 'object' && !Array.isArray(v)).map(batchSessionFromJson);
 }
 /** @v2 gscaleRpsBatchStop */
-export async function gscaleRpsBatchStop(session: Session, batchId: string, revision: number) {
-  return batchResponseFromJson(await request(session, '/v1/mobile/rps/batch/stop', 'rps_batch_stop_failed', 'RPS batch stop failed', batchStopBody(batchId, revision)));
+export async function gscaleRpsBatchStop(session: Session, batchId: string, revision: number, beforeSend?: () => void) {
+  return batchResponseFromJson(await request(session, '/v1/mobile/rps/batch/stop', 'rps_batch_stop_failed', 'RPS batch stop failed', batchStopBody(batchId, revision), beforeSend));
 }
 /** @v2 gscaleRpsBatchPrint */
-export async function gscaleRpsBatchPrint(session: Session, data: GScaleBatchPrint) {
-  return materialReceiptPrintResponseFromJson(await request(session, '/v1/mobile/rps/batch/print', 'rps_batch_print_failed', 'RPS batch print failed', batchPrintBody(data)));
+export async function gscaleRpsBatchPrint(session: Session, data: GScaleBatchPrint, beforeSend?: () => void) {
+  return materialReceiptPrintResponseFromJson(await request(session, '/v1/mobile/rps/batch/print', 'rps_batch_print_failed', 'RPS batch print failed', batchPrintBody(data), beforeSend));
 }
 /** @v2 gscaleRpsBatchClientPrintPrepare */
-export async function gscaleRpsBatchClientPrintPrepare(session: Session, data: GScaleBatchPrint) {
+export async function gscaleRpsBatchClientPrintPrepare(session: Session, data: GScaleBatchPrint, beforeSend?: () => void) {
   const code = 'rps_batch_client_print_prepare_failed';
-  return materialReceiptPrintResponseFromJson(await request(session, '/v1/mobile/rps/batch/client-print/prepare', code, code, batchPrintBody(data)));
+  return materialReceiptPrintResponseFromJson(await request(session, '/v1/mobile/rps/batch/client-print/prepare', code, code, batchPrintBody(data), beforeSend));
 }
 /** @v2 gscaleRpsBatchClientPrintConfirm */
-export async function gscaleRpsBatchClientPrintConfirm(session: Session, data: GScaleBatchPrint, epc: string) {
+export async function gscaleRpsBatchClientPrintConfirm(session: Session, data: GScaleBatchPrint, epc: string, beforeSend?: () => void) {
   const code = 'rps_batch_client_print_confirm_failed';
-  return materialReceiptPrintResponseFromJson(await request(session, '/v1/mobile/rps/batch/client-print/confirm', code, code, { ...batchPrintBody(data), epc: epc.trim() }));
+  return materialReceiptPrintResponseFromJson(await request(session, '/v1/mobile/rps/batch/client-print/confirm', code, code, { ...batchPrintBody(data), epc: epc.trim() }, beforeSend));
 }

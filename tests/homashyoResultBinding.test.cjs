@@ -8,11 +8,12 @@ function bind(state, calls) {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) }, './RawSplitDetails': { RawSplitDetails: 'RawSplitDetails' } };
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, file);
-  const controller = { subscribe: () => () => {}, getSnapshot: () => state, setWifiPrinter: value => calls.push(['wifi', value]),
+  const controller = { capturePrinterLease: () => () => true, subscribe: () => () => {}, getSnapshot: () => state, setWifiPrinter: value => calls.push(['wifi', value]),
     reprint: async (result, output) => calls.push(['print', result, output]) };
   const result = { id: 'r', outputs: [{ barcode: 'a' }, { barcode: 'b' }] };
   const onSelectPrinterAfterDismiss = () => calls.push('picker-after-dismiss'), onError = error => calls.push(['error', error]);
-  return { tree: mod.exports.RawSplitResultBinding({ controller, result, onSelectPrinterAfterDismiss, onError }), result, onSelectPrinterAfterDismiss, onError };
+  const pendingController = { subscribe: () => () => {}, getSnapshot: () => ({ pendingCheck: 'ready', busy: false }) };
+  return { tree: mod.exports.RawSplitResultBinding({ controller, pendingController, result, onSelectPrinterAfterDismiss, onError }), result, onSelectPrinterAfterDismiss, onError };
 }
 test('history result binds existing details to exact print operations and dismiss-before-picker callback', async () => {
   const calls = [], h = bind({ printer: null, wifiPrinter: 'godex' }, calls), props = h.tree.props;

@@ -18,7 +18,7 @@ export function RawSplitDrawer({ children }: { children: ReactNode }) {
     else if (id === 'profile') router.navigate(`${root}/profile` as Href);
     else if (id === 'home') router.dismissTo(root as Href);
   };
-  return <RoleDrawer {...state} title={t('Bo‘limlar')} items={rawSplitDrawerItems(t)} active={active} onSelect={select}
+  return <RoleDrawer {...state} title={t('Rezka')} items={rawSplitDrawerItems(t)} active={active} onSelect={select}
     closeAccessibilityLabel={t('Menyuni yopish')} footerAction={{ id: 'logout', label: t('Chiqish'), destructive: true,
       symbol: { ios: 'rectangle.portrait.and.arrow.right', android: 'logout' } }}>{children}</RoleDrawer>;
 }

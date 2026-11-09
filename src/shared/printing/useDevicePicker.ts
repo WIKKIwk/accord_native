@@ -6,6 +6,13 @@ import { NativeBluetoothPrinter, type BluetoothPrinterProfile } from '../../prin
 import { PrintService } from '../../printing/printService';
 import type { DevicePickerAdapter } from './devicePickerTypes';
 
+function selectionGuard(operator: DevicePickerAdapter): () => boolean {
+  try {
+    const token = operator.selectionToken?.();
+    return () => { try { return token === undefined || operator.isSelectionCurrent?.(token) === true; } catch { return false; } };
+  } catch { return () => false; }
+}
+
 export function useDevicePicker(operator: DevicePickerAdapter, close: () => void, safe = false) {
   const device = useSyncExternalStore(operator.subscribe, operator.getSnapshot, operator.getSnapshot).device;
   const [printers, setPrinters] = useState<BluetoothPrinterProfile[]>([]), [scanning, setScanning] = useState(false);
@@ -14,45 +21,48 @@ export function useDevicePicker(operator: DevicePickerAdapter, close: () => void
   useEffect(() => { operator.selectConnection(null); }, [operator]);
   useEffect(() => {
     if (device.connection !== 'bluetooth') return;
+    const stillCurrent = safe ? selectionGuard(operator) : () => true;
+    if (!stillCurrent() || (safe && operator.getSnapshot().device.connection !== 'bluetooth')) return;
     let active = true, stop: (() => void) | undefined;
     void watchGScaleBluetoothDevices(Platform.OS, NativeBluetoothPrinter, event => {
-      if (!active) return;
+      if (!active || !stillCurrent()) return;
       if (event.complete) setScanning(false);
       if (event.paired) setPrinters(event.paired);
       if (event.printer) { const printer = event.printer; setPrinters(old => old.some(value => value.address === printer.address)
         ? old.map(value => value.address === printer.address ? printer : value) : [...old, printer]); }
-    }).then(dispose => { if (active) stop = dispose; else dispose(); })
-      .catch(reason => { if (active) { setScanning(false); setError(reason instanceof Error ? reason.message : String(reason)); } });
+    }).then(dispose => { if (active && stillCurrent()) stop = dispose; else dispose(); })
+      .catch(reason => { if (active && stillCurrent()) { setScanning(false); setError(reason instanceof Error ? reason.message : String(reason)); } });
     return () => { active = false; stop?.(); };
-  }, [operator, device.connection, scanVersion]);
-  const tokenState = () => {
-    const token = operator.selectionToken?.();
-    return () => token === undefined || operator.isSelectionCurrent?.(token) === true;
-  };
+  }, [operator, device.connection, scanVersion, safe]);
   const errorText = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
   const completeSelection = () => { if (operator.completeSelection) operator.completeSelection(close); else close(); };
   const selectServer = async (server: DiscoveredServer) => {
-    if (!safe) { await operator.selectDevice({ transport: 'wifi', server }); close(); return; }
-    const stillCurrent = tokenState(); setError('');
+    if (!safe) { if (await operator.selectDevice({ transport: 'wifi', server }) !== false) close(); return; }
+    const stillCurrent = selectionGuard(operator); if (!stillCurrent()) return; setError('');
     try { if (await operator.selectDevice({ transport: 'wifi', server }) !== false && stillCurrent()) completeSelection(); }
     catch (reason) { if (stillCurrent()) setError(errorText(reason)); }
   };
   const selectBluetooth = async (printer: BluetoothPrinterProfile) => {
-    if (!safe) { await operator.selectDevice({ transport: 'bluetooth', bluetoothPrinter: printer }); close(); return; }
-    const stillCurrent = tokenState(); setError('');
+    if (!safe) { if (await operator.selectDevice({ transport: 'bluetooth', bluetoothPrinter: printer }) !== false) close(); return; }
+    const stillCurrent = selectionGuard(operator); if (!stillCurrent()) return; setError('');
     try { if (await operator.selectDevice({ transport: 'bluetooth', bluetoothPrinter: printer }) !== false && stillCurrent()) completeSelection(); }
     catch (reason) { if (stillCurrent()) setError(errorText(reason)); }
   };
   const selectUsb = async () => {
     if (!safe) {
+      const token = operator.selectionToken?.();
+      const stillCurrent = () => token === undefined || operator.isSelectionCurrent?.(token) === true;
       setError(''); setScanning(true);
-      try { const offlinePrinter = await PrintService.detectOfflinePrinter(); await operator.selectDevice({ transport: 'offline', offlinePrinter }); close(); }
-      catch (reason) { setError(errorText(reason)); }
-      finally { setScanning(false); }
+      try {
+        const offlinePrinter = await PrintService.detectOfflinePrinter();
+        if (stillCurrent() && await operator.selectDevice({ transport: 'offline', offlinePrinter }) !== false) close();
+      } catch (reason) { if (stillCurrent()) setError(reason instanceof Error ? reason.message : String(reason)); }
+      finally { if (stillCurrent()) setScanning(false); }
       return;
     }
-    const stillCurrent = tokenState(); setError(''); setScanning(true);
+    const stillCurrent = selectionGuard(operator); if (!stillCurrent()) return; setError(''); setScanning(true);
     try {
+      if (!stillCurrent()) return;
       const offlinePrinter = await PrintService.detectOfflinePrinter();
       if (stillCurrent() && await operator.selectDevice({ transport: 'offline', offlinePrinter }) !== false && stillCurrent()) completeSelection();
     } catch (reason) { if (stillCurrent()) setError(errorText(reason)); }
@@ -60,19 +70,20 @@ export function useDevicePicker(operator: DevicePickerAdapter, close: () => void
   };
   const checkAddress = async () => {
     if (!safe) { const server = await operator.checkDeviceAddress(address); if (server) await selectServer(server); return; }
-    const stillCurrent = tokenState();
+    const stillCurrent = selectionGuard(operator);
     try { const server = await operator.checkDeviceAddress(address); if (server && stillCurrent()) await selectServer(server); }
     catch (reason) { if (stillCurrent()) setError(errorText(reason)); }
   };
   const scan = async () => {
-    const stillCurrent = tokenState();
+    const stillCurrent = selectionGuard(operator);
     try { await operator.scanDevices(); } catch (reason) { if (stillCurrent()) setError(errorText(reason)); }
   };
   return { device, printers, scanning, error, address, setAddress, selectServer, selectBluetooth, selectUsb, checkAddress,
     choose: (connection: 'wifi' | 'bluetooth' | 'usb' | null) => {
+      if (safe && !selectionGuard(operator)()) return;
       setError(''); setScanning(connection === 'bluetooth'); if (connection === 'bluetooth') setPrinters([]);
       operator.selectConnection(connection);
     },
-    rescanBluetooth: () => { setError(''); setPrinters([]); setScanning(true); setScanVersion(value => value + 1); },
+    rescanBluetooth: () => { if (safe && !selectionGuard(operator)()) return; setError(''); setPrinters([]); setScanning(true); setScanVersion(value => value + 1); },
     scan: () => { if (safe) void scan(); else void operator.scanDevices(); } };
 }
