@@ -16,7 +16,7 @@ export function WerkaBatchReviewContent(props: WerkaBatchReviewContentProps) {
       {view.rows.map((row, index) => <HStack key={`${row.localID}:${index}`}>
         <VStack alignment="leading" spacing={4}><Text>{row.customer}</Text><Text>{row.item}</Text><Text>{row.detail}</Text></VStack><Spacer />
         <Button onPress={() => { if (view.canRemove) props.onRemove(row.localID); }}
-          modifiers={[disabled(!view.canRemove), accessibilityLabel(props.deleteLabel)]}><Image systemName="trash" /></Button>
+          modifiers={[disabled(!view.canRemove), accessibilityLabel(view.deleteTooltip)]}><Image systemName="trash" /></Button>
       </HStack>)}
     </Section></PreparationList>
     <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 20 }}>

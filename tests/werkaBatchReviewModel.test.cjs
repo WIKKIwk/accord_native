@@ -62,3 +62,13 @@ test('review quantity formats negative zero, non-finite values and rounding like
   assert.deepEqual([-0, -0.4, 0.5, 1.5, -1.5, 1e21, NaN, Infinity, -Infinity].map(model.werkaBatchReviewQuantity),
     ['-0', '-0', '1', '2', '-2', '1e+21', 'NaN', 'Infinity', '-Infinity']);
 });
+
+test('review delete tooltip matches declared Flutter Material source data for resolved app locales', () => {
+  const fixture = require('./contracts/f11910bb/werka_material_delete_tooltip_oracle.json');
+  for (const [locale, expected] of Object.entries(fixture.values)) {
+    assert.equal(model.werkaBatchReviewDeleteTooltip(locale), expected);
+    assert.equal(model.werkaBatchReviewPresentation([], false, locale).deleteTooltip, expected);
+  }
+  assert.equal(model.werkaBatchReviewDeleteTooltip('UR_pk'), fixture.values['ur-PK']);
+  for (const locale of ['', 'fr', 'constructor']) assert.throws(() => model.werkaBatchReviewDeleteTooltip(locale), RangeError);
+});

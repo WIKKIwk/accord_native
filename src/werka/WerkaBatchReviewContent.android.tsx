@@ -21,7 +21,7 @@ export function WerkaBatchReviewContent(props: WerkaBatchReviewContentProps) {
           <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{row.detail}</Text>
         </Column>
         <IconButton enabled={view.canRemove} onClick={() => { if (view.canRemove) props.onRemove(row.localID); }}
-          modifiers={[semantics({ contentDescription: props.deleteLabel })]}>
+          modifiers={[semantics({ contentDescription: view.deleteTooltip })]}>
           <RNHostView matchContents><SymbolView name={{ android: 'delete_outline' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView>
         </IconButton>
       </Row>

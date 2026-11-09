@@ -11,11 +11,17 @@ export type WerkaBatchReviewContentProps = {
   lines: readonly WerkaBatchReviewLine[];
   submitting: boolean;
   locale: string;
-  /** Declared-SDK MaterialLocalizations.deleteButtonTooltip, supplied by the owner. */
-  deleteLabel: string;
   /** The owner must verify current account/scope before changing its drafts. */
   onRemove: (localID: string) => void;
 };
+
+const deleteTooltips = { uz: 'Olib tashlash', en: 'Delete', ru: 'Удалить', ur: 'حذف کریں' } as const;
+/** Flutter 3.47.8 MaterialLocalizations for the app's four resolved locales. */
+export function werkaBatchReviewDeleteTooltip(locale: string): string {
+  const code = locale.toLowerCase().split(/[-_]/, 1)[0];
+  if (code !== 'uz' && code !== 'en' && code !== 'ru' && code !== 'ur') throw new RangeError();
+  return deleteTooltips[code];
+}
 
 /** Source review uses toStringAsFixed(0), including negative zero. */
 export function werkaBatchReviewQuantity(value: number): string {
@@ -27,6 +33,7 @@ export function werkaBatchReviewPresentation(lines: readonly WerkaBatchReviewLin
   return {
     title: localizedGetter('batchReviewTitle', locale),
     customerCount: customers, draftCount: count,
+    deleteTooltip: werkaBatchReviewDeleteTooltip(locale),
     customers: localizedMethod('batchCustomerCountLabel', locale, { count: customers }),
     drafts: localizedMethod('batchDraftCountLabel', locale, { count }),
     rows: lines.map(line => ({ localID: line.localID, customer: line.customer.name, item: line.item.name,

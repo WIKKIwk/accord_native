@@ -36,7 +36,7 @@ function make(platform, overrides = {}) {
     '../preparation/PreparationUI.ios': { PreparationList: 'PreparationList' }, './werkaBatchReviewModel': model };
   const component = compile(`werka/WerkaBatchReviewContent.${platform}.tsx`, mocks).WerkaBatchReviewContent;
   const removed = [], props = { lines: [line('same', 'A', 'Alice', 'A', 1.5), line('same', 'B', 'Bob', 'B', 2)],
-    submitting: false, locale: 'en', deleteLabel: 'Delete', onRemove: id => removed.push(id), ...overrides };
+    submitting: false, locale: 'en', onRemove: id => removed.push(id), ...overrides };
   const tree = component(props), deletes = platform === 'ios' ? node(tree, 'Button').filter(button => node(button, 'Image').length) : node(tree, 'IconButton');
   const confirm = platform === 'ios' ? node(tree, 'Button').find(button => button.props.label) : node(tree, 'Button')[0];
   return { tree, props, removed, deletes, confirm };
@@ -52,7 +52,8 @@ for (const platform of ['ios', 'android']) {
     view.deletes[1].props[platform === 'ios' ? 'onPress' : 'onClick']();
     assert.deepEqual(view.removed, ['same']);
     const modifiers = view.deletes[0].props.modifiers;
-    assert.ok(modifiers.some(value => value.name === (platform === 'ios' ? 'accessibilityLabel' : 'semantics')));
+    const label = modifiers.find(value => value.name === (platform === 'ios' ? 'accessibilityLabel' : 'semantics'));
+    assert.deepEqual(label.args[0], platform === 'ios' ? 'Delete' : { contentDescription: 'Delete' });
   });
 
   test(`${platform} review leaves submit unbound even when source would enable it`, () => {
@@ -72,5 +73,14 @@ for (const platform of ['ios', 'android']) {
       assert.ok(view.deletes[0].props.modifiers.some(value => value.name === 'disabled' && value.args[0] === true));
     } else { assert.ok(text.includes('Sending...')); assert.equal(view.deletes[0].props.enabled, false); }
     view.deletes[0].props[platform === 'ios' ? 'onPress' : 'onClick'](); assert.deepEqual(view.removed, []);
+  });
+
+  test(`${platform} delete accessibility label follows the resolved locale`, () => {
+    const fixture = require('./contracts/f11910bb/werka_material_delete_tooltip_oracle.json');
+    for (const [locale, expected] of Object.entries(fixture.values)) {
+      const view = make(platform, { locale }), modifiers = view.deletes[0].props.modifiers;
+      const label = modifiers.find(value => value.name === (platform === 'ios' ? 'accessibilityLabel' : 'semantics'));
+      assert.deepEqual(label.args[0], platform === 'ios' ? expected : { contentDescription: expected });
+    }
   });
 }
