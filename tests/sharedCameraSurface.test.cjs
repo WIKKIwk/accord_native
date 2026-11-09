@@ -35,6 +35,12 @@ test('surface passes the original complete barcode event and controlled camera o
   assert.equal(h.events[0][1], event); assert.equal(h.events[0][1].raw, ''); assert.equal(h.events[0][1].data, event.data);
   assert.equal(h.events[0][1].bounds, event.bounds); assert.equal(h.events[0][1].cornerPoints, event.cornerPoints);
 });
+test('the opt-in native ref is forwarded without changing default camera ownership', () => {
+  const h = harness(), cameraRef = { current: null };
+  assert.equal(h.render({ cameraRef }).props.ref, cameraRef);
+  assert.equal(h.render({ cameraRef: undefined }).props.ref, undefined);
+  h.unmount();
+});
 test('inactive or denied camera unmounts and rejects late ready, error and detection events', () => {
   for (const patch of [{ active: false }, { permission: { granted: false, canAskAgain: true } }]) {
     const h = harness(), old = h.render(); assert.equal(h.render(patch), null);
