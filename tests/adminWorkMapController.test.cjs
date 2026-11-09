@@ -219,3 +219,16 @@ test('a reentrant account witness cannot start either inner or outer window read
     request: { view: 'orders' }, read: () => { sends++; return new Promise(() => {}); } });
   c.start(); assert.equal(attempted, true); assert.equal(sends, 0); c.dispose();
 });
+for (const source of ['constructor', 'configure']) test(`mutating a caller-owned ${source} request cannot preserve a stale window witness`, () => {
+  const request = { view: 'orders' }, reads = [], c = new Controller({ isCurrent: () => true,
+    request: source === 'constructor' ? request : null, read: (value, witness) => { reads.push({ value, witness }); return new Promise(() => {}); } });
+  c.start(); if (source === 'configure') c.configure(request); assert.equal(reads.length, 1); assert.equal(reads[0].value.view, 'orders');
+  request.view = 'audit'; c.configure(request); assert.equal(reads[0].witness(), false);
+  assert.equal(reads.length, 2); assert.equal(reads[1].value.view, 'audit'); c.dispose();
+});
+test('detail authority is issued only for the exact current row and an immutable issued ticket', async () => {
+  const c = new Controller({ isCurrent: () => true, request: { view: 'orders' }, read: async () => summary() }); c.start(); await tick();
+  const row = c.getSnapshot().rows[0]; assert.equal(c.detailTicket({ ...row }), null);
+  const ticket = c.detailTicket(row); assert.ok(ticket); assert.equal(Object.isFrozen(ticket), true);
+  assert.equal(c.detailIsCurrent({ ...ticket }), false); assert.equal(c.detailIsCurrent(ticket), true); c.dispose();
+});

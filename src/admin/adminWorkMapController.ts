@@ -93,28 +93,33 @@ export class AdminWorkMapController {
   private state = emptyState();
   private pages: AdminWorkMapPage[] = [];
   private listeners = new Set<() => void>();
+  private detailTickets = new WeakSet<object>();
   private generation = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
   private invalidating = false;
   private started = false;
   private request: AdminWorkMapRequest | null;
-  constructor(private readonly deps: Dependencies) { this.request = deps.request === undefined ? { view: 'orders' } : deps.request; }
+  constructor(private readonly deps: Dependencies) { this.request = deps.request === undefined ? { view: 'orders' } : deps.request ? { ...deps.request } : null; }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private publish(patch: Partial<AdminWorkMapState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()); }
   private localCurrent(ticket: number) { return !this.disposed && !this.invalidating && ticket === this.generation; }
   private current(ticket: number) { return this.localCurrent(ticket) && adminWorkMapCurrent(this.deps.isCurrent) && this.localCurrent(ticket); }
   detailTicket(row: AdminWorkMapRow): AdminWorkMapDetailTicket | null {
-    if (this.request?.view === 'move' || !this.current(this.generation) || !this.state.rows.some(item => item.id === row.id && item.kind === row.kind)) return null;
+    if (this.request?.view === 'move' || !this.current(this.generation) || !this.state.rows.includes(row)) return null;
     const first = this.pages[0];
     const source = this.pages.find(page => row.kind === 'order' && page.order_ids.includes(row.id));
-    return first ? { generation: this.generation, id: row.id, kind: row.kind, epoch: first.epoch, revision: first.revision,
+    if (!first) return null;
+    const ticket = Object.freeze({ generation: this.generation, id: row.id, kind: row.kind, epoch: first.epoch, revision: first.revision,
       ...(this.request?.view === 'orders' && source?.projection === 'orders_list_v1' ? { ordersSummary: true as const } : {}),
-      ...(this.request?.view === 'sequence' ? { apparatus: this.request.apparatus } : {}) } : null;
+      ...(this.request?.view === 'sequence' ? { apparatus: this.request.apparatus } : {}) });
+    this.detailTickets.add(ticket);
+    return ticket;
   }
   detailIsCurrent(ticket: AdminWorkMapDetailTicket): boolean {
-    return this.current(ticket.generation) && this.state.rows.some(item => item.id === ticket.id && item.kind === ticket.kind);
+    return !!ticket && this.detailTickets.has(ticket) && this.current(ticket.generation) &&
+      this.state.rows.some(item => item.id === ticket.id && item.kind === ticket.kind);
   }
   /** Membership authority only; the history owner must separately supply the original raw account witness. */
   closedHistoryTicket(order: Pick<AdminWorkMapClosedOrder, 'order_id' | 'history_version'>): AdminClosedHistoryTicket | null {
@@ -128,11 +133,12 @@ export class AdminWorkMapController {
   configure(request: AdminWorkMapRequest | null) {
     if (!this.current(this.generation)) return;
     if (this.request?.view === request?.view && this.request?.apparatus === request?.apparatus && this.request?.target === request?.target) return;
-    this.request = request;
+    const next = request ? { ...request } : null;
+    this.request = next;
     const generation = ++this.generation; this.pages = [];
     if (this.timer) clearTimeout(this.timer); this.timer = null;
-    this.publish({ ...emptyState(), query: this.state.query, loading: request != null });
-    if (this.started && request && this.request === request && this.current(generation)) void this.reload();
+    this.publish({ ...emptyState(), query: this.state.query, loading: next != null });
+    if (this.started && next && this.request === next && this.current(generation)) void this.reload();
   }
   start() { if (!this.started && !this.disposed) { this.started = true; void this.reload(); } }
   invalidate() {
