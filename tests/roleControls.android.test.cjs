@@ -52,7 +52,11 @@ test('shared navigation fills only the selected Google icon and keeps all destin
     '@expo/ui/jetpack-compose': { Host: 'Host', Icon: 'Icon', NavigationBar: 'NavigationBar', NavigationBarItem: item,
       RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => ({ onSecondaryContainer: 'selected', onSurfaceVariant: 'outline' }) },
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}), testID: value => value },
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { View: 'View', StyleSheet: { create: value => value } },
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    react: { useEffect() {} },
+    'react-native': { View: 'View', Keyboard: { metrics: () => undefined }, StyleSheet: { create: value => value } },
+    'react-native-reanimated': { __esModule: true, default: { View: 'AnimatedView' },
+      useSharedValue: value => ({ get: () => value, set: next => { value = next; } }), useAnimatedStyle: fn => fn() },
   });
   const items = [{ id: 'home', label: 'Tayyorlov', icon: 'home' }, { id: 'chat', label: 'Chat', icon: 'chat_bubble' },
     { id: 'profile', label: 'Profil', icon: 'person' }];

@@ -1,7 +1,9 @@
 import { Badge, BadgedBox, Host, Icon, NavigationBar, NavigationBarItem, RNHostView, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView, type AndroidSymbol } from 'expo-symbols';
-import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { useEffect } from 'react';
+import { Keyboard, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 export type RoleNavigationItem = { id: string; label: string; icon: AndroidSymbol; testID?: string; showBadge?: boolean };
 type Props = { active: string; items: readonly RoleNavigationItem[]; onSelect: (id: string) => void; bottomInset?: number };
@@ -32,13 +34,29 @@ function NavItem({ item, active, onSelect }: { item: RoleNavigationItem; active:
 
 export function RoleBottomBar({ active, items, onSelect, bottomInset = 0 }: Props) {
   const colors = useMaterialColors();
-  return <View style={[styles.root, { backgroundColor: colors.surfaceContainerLow, paddingBottom: bottomInset }]}>
-    <Host matchContents={{ vertical: true }} style={styles.navHost}>
-      <NavigationBar containerColor={colors.surfaceContainerLow} tonalElevation={0} modifiers={[fillMaxWidth()]}>
-        {items.map(item => <NavItem key={item.id} item={item} active={active} onSelect={onSelect} />)}
-      </NavigationBar>
-    </Host>
-  </View>;
+  const keyboardHeight = useSharedValue(Keyboard.metrics()?.height ?? 0);
+  const barHeight = useSharedValue(80 + bottomInset);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', event => keyboardHeight.set(event.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => keyboardHeight.set(0));
+    return () => { show.remove(); hide.remove(); };
+  }, [keyboardHeight]);
+  const keyboardOverlay = useAnimatedStyle(() => {
+    const height = Math.max(0, keyboardHeight.get());
+    // Keep the mounted bar at the window bottom behind the IME, while the
+    // resized content uses the space that the keyboard now covers.
+    return { height: Math.max(0, barHeight.get() - height), transform: [{ translateY: Math.max(0, height - barHeight.get()) }] };
+  });
+  return <Animated.View style={[styles.root, keyboardOverlay]}>
+    <View onLayout={event => barHeight.set(event.nativeEvent.layout.height)}
+      style={[styles.bar, { backgroundColor: colors.surfaceContainerLow, paddingBottom: bottomInset }]}>
+      <Host matchContents={{ vertical: true }} style={styles.navHost}>
+        <NavigationBar containerColor={colors.surfaceContainerLow} tonalElevation={0} modifiers={[fillMaxWidth()]}>
+          {items.map(item => <NavItem key={item.id} item={item} active={active} onSelect={onSelect} />)}
+        </NavigationBar>
+      </Host>
+    </View>
+  </Animated.View>;
 }
 
-const styles = StyleSheet.create({ root: { width: '100%' }, navHost: { width: '100%' } });
+const styles = StyleSheet.create({ root: { width: '100%' }, bar: { position: 'absolute', top: 0, left: 0, right: 0 }, navHost: { width: '100%' } });
