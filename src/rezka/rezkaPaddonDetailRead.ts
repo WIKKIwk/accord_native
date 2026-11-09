@@ -10,6 +10,8 @@ export { createRezkaPaddonDetailOwner } from './rezkaPaddonDetailLifetime';
 
 type Detail = ReturnType<typeof paddonSnapshotFromJson>;
 export type RezkaPaddonDetailBinding = Readonly<{ owner: RezkaSessionSnapshot; data: Detail; catalog: readonly AdminApparatus[] }>;
+/** Optional per-attempt gate for a future owner that supports suspend and refresh generations. */
+export type RezkaPaddonDetailReadControl = Readonly<{ isCurrent(): boolean; canSend(): boolean; waitForSend(): Promise<void> }>;
 const issued = new WeakMap<object, RezkaPaddonDetailOwner>();
 
 /** Internal rejection; a future host must map this to V2's ordinary load-failure state. */
@@ -44,20 +46,33 @@ function freezeGraph<T>(value: T): T {
   return value;
 }
 
+// A role-local gate must return true synchronously. A rejected async callback
+// cannot authorize a send or leave an unhandled rejection.
+function syncTrue(check: () => boolean): boolean {
+  try {
+    const result: unknown = check();
+    if (result === true) return true;
+    if (result && (typeof result === 'object' || typeof result === 'function')) void Promise.resolve(result).catch(() => {});
+  } catch { /* Fail closed. */ }
+  return false;
+}
+
 /** Unconnected read-only adapter. It never opens a route or invokes a Paddon mutation. */
-export async function readRezkaPaddonDetail(view: RezkaPaddonDetailOwner): Promise<RezkaPaddonDetailBinding> {
+export async function readRezkaPaddonDetail(view: RezkaPaddonDetailOwner, control?: RezkaPaddonDetailReadControl): Promise<RezkaPaddonDetailBinding> {
   const input = rezkaPaddonDetailOwnerInput(view);
   if (!input) throw new RezkaScopeChanged(false);
   const { snapshot, apparatusId: apparatus, code: normalizedCode } = input;
-  const current = () => rezkaPaddonDetailOwnerInput(view) === input && isRezkaSessionCurrent(snapshot, 'master') &&
+  const ownerCurrent = () => rezkaPaddonDetailOwnerInput(view) === input && isRezkaSessionCurrent(snapshot, 'master') &&
     canOpenRoute(snapshot.session, appRoutes.apparatusPaddonDetail) && !!apparatus &&
     snapshot.session.assigned_apparatus.some(id => id.trim() === apparatus);
+  const current = () => ownerCurrent() && (!control || syncTrue(() => control.isCurrent())) && ownerCurrent();
+  const canSend = () => current() && (!control || syncTrue(() => control.canSend())) && current();
   if (!apparatus || !normalizedCode) throw new RezkaPaddonDetailUnavailable();
   if (!current()) throw new RezkaScopeChanged(false);
   const read = async <T>(send: (beforeSend: () => void) => Promise<T>): Promise<T> => {
     try {
       const value = await guardedRezkaRequest(snapshot.session, 'master', snapshot, false, beforeSend => send(() => {
-        if (!current()) throw new RezkaScopeChanged(false);
+        if (!canSend()) throw new RezkaScopeChanged(false);
         beforeSend();
       }));
       if (!current()) throw new RezkaScopeChanged(false);
@@ -68,6 +83,11 @@ export async function readRezkaPaddonDetail(view: RezkaPaddonDetailOwner): Promi
     }
   };
   const catalog = await read(beforeSend => adminApparatus(snapshot.session, { limit: 10000, beforeSend }));
+  if (control) {
+    try { await control.waitForSend(); }
+    catch (error) { if (!current()) throw new RezkaScopeChanged(false); throw error; }
+  }
+  if (!current()) throw new RezkaScopeChanged(false);
   if (!assignedPaddonApparatus(catalog, snapshot.session.assigned_apparatus).some(row => row.id === apparatus))
     throw new RezkaPaddonDetailUnavailable();
   const data = await read(beforeSend => adminPaddonDetail(snapshot.session, normalizedCode, { beforeSend }));

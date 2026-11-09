@@ -5,7 +5,7 @@ const path = require('node:path'), test = require('node:test'), ts = require('ty
 const jsx = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 test('passive detail body composes only the bound header and assigned section with source padding', () => {
   const snapshot = { session: {} }, binding = { owner: snapshot }; let allowed = true, issued = true;
-  const mocks = { 'react/jsx-runtime': jsx, 'react-native': { ScrollView: 'ScrollView', View: 'View' },
+  const mocks = { 'react/jsx-runtime': jsx, 'react-native': { ScrollView: 'ScrollView', View: 'View', RefreshControl: 'RefreshControl' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 34 }) },
     './RezkaPaddonDetailHeader': { RezkaPaddonDetailHeader: 'Header' },
     './RezkaPaddonWipSection': { RezkaPaddonWipSection: 'Section' },
@@ -22,5 +22,10 @@ test('passive detail body composes only the bound header and assigned section wi
   assert.deepEqual(spacer.props.style, { height: 12 });
   for (const child of [header, section]) { assert.equal(child.props.snapshot, snapshot); assert.equal(child.props.binding, binding); }
   assert.equal(body.props.refreshControl, undefined); assert.equal(body.props.onRefresh, undefined);
+  let refreshes = 0;
+  const refreshing = mod.exports.RezkaPaddonDetailBody({ snapshot, binding, refreshing: true, onRefresh: () => { refreshes++; } });
+  assert.equal(refreshing.props.alwaysBounceVertical, true); assert.equal(refreshing.props.refreshControl.type, 'RefreshControl');
+  assert.equal(refreshing.props.refreshControl.props.refreshing, true); refreshing.props.refreshControl.props.onRefresh(); assert.equal(refreshes, 1);
+  issued = false; refreshing.props.refreshControl.props.onRefresh(); assert.equal(refreshes, 1); issued = true;
   allowed = false; assert.equal(render(), null); allowed = true; issued = false; assert.equal(render(), null);
 });

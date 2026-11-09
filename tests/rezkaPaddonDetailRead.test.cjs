@@ -31,11 +31,13 @@ function setup() {
     return mod.exports;
   }
   const guard = load('rezka/rezkaSessionGuard'), reader = load('rezka/rezkaPaddonDetailRead'), shared = load('paddonManagementApi');
+  const lifetime = load('rezka/rezkaPaddonDetailLifetime'), { RezkaPaddonDetailController } = load('rezka/rezkaPaddonDetailController');
   const snapshot = guard.captureRezkaSession(session);
   const newOwner = (apparatus = 'apparatus:default:a', code = 'P1') => reader.createRezkaPaddonDetailOwner(snapshot, apparatus, code);
   const owner = newOwner();
   const original = global.fetch; global.fetch = async (...args) => { calls++; return transport(...args); };
-  return { session, snapshot, owner, newOwner, reader, shared, calls: () => calls, catalogCalls: () => catalogCalls, catalogGuard: () => catalogGuard,
+  return { session, snapshot, owner, newOwner, reader, shared, lifetime, RezkaPaddonDetailController,
+    calls: () => calls, catalogCalls: () => catalogCalls, catalogGuard: () => catalogGuard,
     setCatalog: value => { catalog = value; }, setTransport: fn => { transport = fn; }, setRefresh: fn => { refresh = fn; },
     loseAccount: () => { active = false; }, loseRoute: () => { route = false; }, loseAssignment: () => { session.assigned_apparatus = ['apparatus:default:b']; },
     restore: () => { global.fetch = original; } };
@@ -87,6 +89,75 @@ test('a catalog error after view closure is redacted and never starts a detail r
     const pending = h.reader.readRezkaPaddonDetail(h.owner); h.owner.close(); reject(Error('old catalog error'));
     await assert.rejects(pending, e => e.name === 'RezkaScopeChanged'); assert.equal(h.calls(), 0);
   } finally { h.restore(); }
+});
+test('a suspended attempt waits after the catalog before sending detail, then resumes once', async () => {
+  const h = setup(); let release, entered; let sending = true;
+  const waiting = new Promise(resolve => { entered = resolve; });
+  const control = { isCurrent: () => true, canSend: () => sending,
+    waitForSend: () => { sending = false; entered(); return new Promise(resolve => { release = resolve; }); } };
+  h.setTransport(async () => response(200, async () => detail()));
+  try {
+    const pending = h.reader.readRezkaPaddonDetail(h.owner, control); await waiting; assert.equal(h.calls(), 0);
+    sending = true; release(); const binding = await pending; assert.equal(h.calls(), 1);
+    assert.equal(h.reader.isRezkaPaddonDetailBinding(binding, h.snapshot), true);
+  } finally { h.restore(); }
+});
+test('the real adapter and controller pause between reads and never send after disposal', async () => {
+  for (const action of ['resume', 'dispose']) {
+    const h = setup(); let release; h.setCatalog(new Promise(resolve => { release = resolve; }));
+    h.setTransport(async () => response(200, async () => detail()));
+    const controller = new h.RezkaPaddonDetailController({ isCurrent: () => true, createOwner: () => h.owner,
+      ownerCurrent: owner => !!h.lifetime.rezkaPaddonDetailOwnerInput(owner), subscribeOwner: h.lifetime.subscribeRezkaPaddonDetailOwner,
+      load: h.reader.readRezkaPaddonDetail, accept: binding => h.reader.isRezkaPaddonDetailBinding(binding, h.snapshot) });
+    try {
+      controller.resume(); const pending = controller.start(); await new Promise(resolve => setImmediate(resolve)); controller.suspend();
+      release([{ id: 'apparatus:default:a', name: 'A', operation: 'cut', lifecycle_state: 'active', sort_order: 1 }]);
+      await new Promise(resolve => setImmediate(resolve)); assert.equal(h.calls(), 0);
+      if (action === 'resume') controller.resume(); else controller.dispose();
+      await pending; assert.equal(h.calls(), action === 'resume' ? 1 : 0);
+      assert.equal(controller.getSnapshot().phase, action === 'resume' ? 'ready' : 'invalid');
+    } finally { controller.dispose(); h.restore(); }
+  }
+});
+test('a superseded or closed attempt cannot publish a stale wait error or send detail', async () => {
+  for (const reason of ['generation', 'view']) {
+    const h = setup(); let reject, entered, current = true;
+    const waiting = new Promise(resolve => { entered = resolve; });
+    const control = { isCurrent: () => current, canSend: () => true,
+      waitForSend: () => { entered(); return new Promise((_resolve, fail) => { reject = fail; }); } };
+    h.setTransport(async () => { throw Error('unexpected detail request'); });
+    try {
+      const pending = h.reader.readRezkaPaddonDetail(h.owner, control); await waiting;
+      if (reason === 'generation') current = false; else h.owner.close(); reject(Error('old wait error'));
+      await assert.rejects(pending, e => e.name === 'RezkaScopeChanged'); assert.equal(h.calls(), 0);
+    } finally { h.restore(); }
+  }
+});
+test('a superseded attempt cannot publish even if a newer attempt uses the same view owner', async () => {
+  const h = setup(); let release, entered, oldCurrent = true;
+  const waiting = new Promise(resolve => { entered = resolve; });
+  const oldControl = { isCurrent: () => oldCurrent, canSend: () => true,
+    waitForSend: () => { entered(); return new Promise(resolve => { release = resolve; }); } };
+  h.setTransport(async () => response(200, async () => detail()));
+  try {
+    const old = h.reader.readRezkaPaddonDetail(h.owner, oldControl); await waiting; oldCurrent = false;
+    const newer = await h.reader.readRezkaPaddonDetail(h.owner, { isCurrent: () => true, canSend: () => true, waitForSend: async () => {} });
+    release(); await assert.rejects(old, e => e.name === 'RezkaScopeChanged'); assert.equal(h.calls(), 1);
+    assert.equal(h.reader.isRezkaPaddonDetailBinding(newer, h.snapshot), true);
+  } finally { h.restore(); }
+});
+test('throwing, asynchronous or reentrant attempt guards cannot authorize a send', async () => {
+  for (const kind of ['throw', 'async-current', 'async-send', 'reentrant-close']) {
+    const h = setup(); h.setTransport(async () => { throw Error('unexpected detail request'); });
+    const control = { isCurrent: kind === 'throw' ? () => { throw Error('stop'); }
+      : kind === 'async-current' ? async () => { throw Error('late'); } : () => true,
+    canSend: kind === 'async-send' ? async () => { throw Error('late'); }
+      : kind === 'reentrant-close' ? () => { h.owner.close(); return true; } : () => true,
+    waitForSend: async () => {} };
+    try { await assert.rejects(h.reader.readRezkaPaddonDetail(h.owner, control), e => e.name === 'RezkaScopeChanged');
+      await new Promise(resolve => setImmediate(resolve)); assert.equal(h.calls(), 0); }
+    finally { h.restore(); }
+  }
 });
 test('a closed or forged view cannot read or revive an old binding under the same account', async () => {
   const h = setup(); h.setTransport(async () => response(200, async () => detail())); let notifications = 0;
