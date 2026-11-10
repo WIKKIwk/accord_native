@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import type { ComponentRef, ReactNode, RefObject } from 'react';
+import type { ScrollView } from 'react-native';
 
 export type WorkerAlertData = { title: string; message: string; confirmLabel?: string; cancelLabel?: string; onConfirm?: () => void };
 export type WorkerAlertProps = { alert: WorkerAlertData | null; onDismiss: () => void; onCancel?: () => void };
@@ -6,7 +7,8 @@ export type WorkerAlertProps = { alert: WorkerAlertData | null; onDismiss: () =>
 export type WorkerFormDialogProps = {
   visible: boolean; title: string; children: ReactNode;
   confirmLabel: string; onConfirm: () => void; confirmDisabled?: boolean;
-  cancelLabel?: string; onCancel: () => void; cancelDisabled?: boolean; preventDismiss?: boolean; onDismiss?: () => void;
+  cancelLabel?: string; onCancel: () => void; cancelDisabled?: boolean; preventDismiss?: boolean; onDismiss?: () => void; onShow?: () => void;
+  scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null>;
 };
 
 export type WorkerRadioChoiceProps = { label: string; selected: boolean; disabled?: boolean; onPress: () => void };

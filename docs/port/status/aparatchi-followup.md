@@ -23,14 +23,15 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Apparatusda qoldirilgan laminate/glue WIP uchun Continue / Detach menyusi va guarded detach report | `_laminatsiyaWorkerHandoffBatch`, `_runInitialResumeFlow`, `_runInitialRollRemovalFlow` | WorkerHandoff, native menu, OrderScreen | Actual native submit path tested for exact metrics, missing/changed WIP, changed stage and expired account; no printer for detach |
 | Android report Back-dismiss block honors the existing preventDismiss contract | `_ProgressQtyDialogState.build` (`PopScope(canPop: false)`) | WorkerFormDialog.android and fallback | Native Compose dialog property/event tests; explicit Cancel remains available |
 | Work, long-press and scan entry follows assignment for all operations; completed tab never silently falls back to another apparatus | `_isAssignedWatchApparatus`, `_openWorkerQrScanner` | WorkerApi, WorkerScreen | Assignment / selected-tab tests; mutations still require authoritative server controls |
+| Cut multi-frame output: immutable saved slots, serial save/print queue, issue/peremotka, autofill/deviation approval, scoped report fallback and final print-only retries | `_ProgressQtyDialogState`, `_RezkaFramePrint`, `_RezkaDeviationWarning` | WorkerRezkaOutputWorkflow/Model, WorkerRezkaOutputReport, native fields/print controls and report modal event handoff | Focused domain, API, native event-harness tests; exact wire guards, lost responses, competing writers and account changes covered |
 
 ## Open items
 
 | Flow | Confirmed difference / next step |
 |---|---|
 | General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
-| Cut | Multi-frame Rezka output qolgan; laminate atomic Astatka/full completion, glue legacy reports, handed-off roll continue/detach va Rezka waste-only Astatka ulandi. Cut quick settings V2’da `rezka_master` roliga cheklangan (`_canEditRezkaPrintSide`), shuning uchun aparatchi uchun gap emas |
-| Paddons | Worker navigation placeholder. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak |
+| Cut | Multi-frame output ulandi. Worker active-Paddon picker hali ulanmagan; server tanlangan active Paddon talab qilsa, ishlab chiqarish shu xato bilan bloklanadi. V2’dan shu tanlovni ham port qilish kerak. Cut quick settings V2’da `rezka_master` roliga cheklangan (`_canEditRezkaPrintSide`), shuning uchun aparatchi uchun gap emas |
+| Paddons | Worker navigation placeholder va active selector. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak; master read-only controllerining ruxsatini ko‘r-ko‘rona kengaytirmaslik kerak |
 
 ## Verification and limits
 
@@ -41,9 +42,20 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 - Handoff-roll checkpoint: **95/95** focused tests, both native typechecks exit 0, lint 0 errors / the same 1 existing warning; ledger resolves 1107 `@v2` and 99 `@v2-test` tags. Native form submission is exercised in a Node mock harness; physical/native rendering was not exercised.
 - Report dismissal / shared instructions checkpoint: **20/20** focused tests; both native typechecks exit 0; lint 0 errors / the same 1 existing warning; ledger resolves 1107 `@v2` and 99 `@v2-test` tags. The screen harness now renders the shared instructions view before checking its actual text, order, loading and empty states.
 - Apparatus-entry checkpoint: **83/83** focused tests; both platform typechecks exit 0; lint 0 errors / the same 1 existing warning; ledger check exit 0. V2's assignment guard has no print-only restriction; server controls remain the authority for each available action.
+- Cut multi-frame checkpoint: **116/116** focused workflow / native event-harness / report / queue-action / printing tests. Both native typechecks exit 0; lint 0 errors / the same existing admin hook warning; ledger check exit 0 (1117 `@v2`, 102 `@v2-test` tags resolve), role ledger generated, `git diff --check` exit 0. Acknowledged output printing uses only saved QR identities, and a stale report cannot erase saved slots or regress below the write receipt's revision. Native modal timing/focus is tested with event mocks, not a phone.
+- Full-tree cut checkpoint: **5365 pass, 11 fail, 12 todo / 5388 total**, log `/tmp/accord-rezka-output-final-all-tests.log`. Failure names were compared programmatically to the pre-audit log: no new or resolved failures; all eleven are the known native-module Node harness imports. The final added iOS form event/scroll-ref test is included in the 116/116 focused result.
 - Full-tree checkpoint after report dismissal and instructions: **5292 pass, 11 fail, 12 todo / 5315 total**. The eleven failing cases are the same native-module Node import failures present before this audit; the two newly detected instructions harness failures were fixed. Log: `/tmp/accord-worker-audit2-final-all-tests.log`.
 - Bluetooth printing checkpoint: **366/366** focused tests; both platform typechecks exit 0, lint 0 errors / the same 1 existing warning. USB/Wi-Fi printing choices are temporarily hidden by explicit user request. The multi-purpose GScale chooser retains its scale transports.
 - Full tree suite before changes: **5196 pass, 11 fail, 12 todo / 5219 total**. Eleven failures are Node harness imports into native Expo/Reanimated ESM modules, not confirmed device failures. Log: `/tmp/accord-worker-audit2-full-tests.log`.
 - Ledger check: exit 0, 1083 `@v2` and 91 `@v2-test` tags resolve. Eleven existing dynamic endpoint diagnostics remain.
-- Whole-role text gate remains open: iOS 280 missing / 99 added; Android 280 missing / 108 added. This diagnostic is not a functional bug count.
+- Whole-role text gate remains open: iOS 280 missing / 102 added; Android 280 missing / 110 added. This diagnostic is not a functional bug count; no text exception was added merely to turn the gate green.
 - No physical device, simulator, emulator or printer was exercised. No external API writes or print jobs were sent. Earlier welcome/account changes remain untouched. The previous worker material/report implementation is intentionally checkpointed separately, because the next printing integration depends on it.
+
+## Surface audit — cut report
+
+| V2 surface and location | V4 | iOS | Android | What differs / limits |
+|---|---|---|---|---|
+| `_ProgressQtyDialogState._submit/build`, `admin_production_map_orders_progress_qty.dart:748,1726,1900` | WorkerRezkaOutputModel/Workflow and report | compared | compared | Waste/frame order, validation, issue reveal, freeze safe-stop and final report branches checked in source and event tests. Active-Paddon selector remains open. |
+| `_rezkaFrameSection`, `_RezkaFramePrint`, `progress_qty.dart:1211`, `rezka_frame_print.dart:190,465` | Native report fields/print button and serial queue | compared | compared | Native controls replace Flutter controls. Saved-slot, held-roll, issue, uncertainty, retry and duplicate-label behavior checked. Physical printing/gesture precedence unverified. |
+| `_confirmRezkaOutputDeviations`, `_confirmFreshRezkaFrame`, `rezka_deviation.dart:155,290` | Shared deviation model, native warning panel and focus/scroll target | compared | compared | Exact measurement approvals and refreshed-reference warnings tested; native warning dismissal precedes correction focus. Device keyboard behavior unverified. |
+| `_cancelProgressQtyDialog`, `progress_qty.dart:383` | Queue discard panel | compared | compared | Paused queue asks before closing; cancel preserves the queue. iOS transitions await native onShow/onDismiss and do not briefly re-present the main modal on discard. |

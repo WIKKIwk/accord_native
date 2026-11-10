@@ -26,6 +26,7 @@ import { WorkerOrderIdentity } from './components/WorkerOrderIdentity';
 import { WorkerScannedWipHistory } from './components/WorkerScannedWipHistory';
 import { WorkerLaminationReport } from './components/WorkerLaminationReport';
 import { WorkerRezkaAstatkaReport } from './components/WorkerRezkaAstatkaReport';
+import { WorkerRezkaOutputReport } from './components/WorkerRezkaOutputReport';
 import { usesIntegratedLaminationReport } from './workerLaminationWorkflow';
 import { canReadScannedWips, scannedWipStage } from './workerScannedWips';
 import { workerQrPayload, WorkerInitialQr } from './workerQr';
@@ -725,6 +726,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
     testMode: session.token === 'test-mode-token', fullReport: control.complete_requires_full_report !== false,
     freezeRequested: bootstrap?.control_state?.order_control === 'freeze_requested' || control.stage_control_state === 'freeze_requested' || !!runningFreezeRequest(bootstrap?.control_state, apparatusId) });
   const rezkaAstatkaReport = operation === 'cut' && selected === 'astatka' && !isTrainingOrder && session.token !== 'test-mode-token';
+  const rezkaOutputReport = operation === 'cut' && ['pause', 'detach_roll', 'roll_complete', 'complete'].includes(selected) && !isTrainingOrder && session.token !== 'test-mode-token';
   const rows: Obj[] | null = scanningRequired
     ? (Array.isArray(materialRequirements.assignments) ? materialRequirements.assignments.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)) : null)
     : attachedReadKey === materialReadKey ? attachedMaterials : null;
@@ -936,7 +938,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       title={String(order.title || preview?.title || '')}
       detail={detail ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </ScrollView>
-    <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport} onDismiss={() => {
+    <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
       reportDismissed.current?.(); reportDismissed.current = null;
       if (closeAfterProgress.current && isCurrent()) { closeAfterProgress.current = false; closeSheet(); }
     }} title={selected === 'detach_roll' ? p('worker.handoff.detach') : t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
@@ -960,6 +962,17 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
         </>}
     </WorkerFormDialog>
     {printerSelector.dialogs}
+    {rezkaOutputReport ? <WorkerRezkaOutputReport key={selected} session={session} apparatus={apparatusId} orderId={orderId}
+      stage={String(control.stage_node_id ?? '')} action={selected} map={order} getCursor={() => latestCursor.current}
+      onAttempted={() => { operationReportAttempted.current = true; actionInFlight.current = true; setBusy(true); loadVersion.current++; setControlRetired(true); }}
+      onCommitted={() => { operationReportAttempted.current = true; loadVersion.current++; setControlRetired(true); }}
+      onClose={completed => {
+        const closeInitial = completed && initialAction === selected;
+        setSelected(''); actionInFlight.current = false; setBusy(false);
+        if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
+        operationReportAttempted.current = false;
+        if (closeInitial) closeSheet();
+      }} /> : null}
     {integratedLaminationReport ? <WorkerLaminationReport key={selected} session={session}
       context={{ apparatus: apparatusId, orderId, stage: String(control.stage_node_id ?? ''), complete: selected === 'complete', fullReport: control.complete_requires_full_report !== false }}
       onAttempted={() => { operationReportAttempted.current = true; actionInFlight.current = true; setBusy(true); loadVersion.current++; setControlRetired(true); }}

@@ -31,3 +31,11 @@ test('reprint validates identity and bounds printer options', async () => {
   assert.deepEqual(body, { progress_batch_id: 'id', driver_url: 'https://print', printer: 'p', print_mode: 'label', print_count: 100, automatic_rezka_labels: true });
   assert.equal(result.print_job, null);
 });
+test('optional print owner guards the first send, authentication replay and returned label', async () => {
+  let current = false, calls = 0;
+  const client = api(async (_s, _p, _init, guard) => { calls++; guard(); current = false; guard(); assert.fail('stale replay'); });
+  const run = () => client.adminProgressQrReprint({}, { qr_payload: 'QR' }, () => current);
+  await assert.rejects(run()); assert.equal(calls, 0); current = true; await assert.rejects(run()); assert.equal(calls, 1);
+  const late = api(async () => ({ status: 200, json: async () => { current = false; return { ok: true, batch: {} }; } }));
+  current = true; await assert.rejects(late.adminProgressQrReprint({}, { qr_payload: 'QR' }, () => current));
+});

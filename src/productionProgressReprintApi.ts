@@ -17,7 +17,7 @@ export interface ProgressQrReprintInput {
 }
 
 /** @v2 adminProgressQrReprint */
-export async function adminProgressQrReprint(session: Session, input: ProgressQrReprintInput) {
+export async function adminProgressQrReprint(session: Session, input: ProgressQrReprintInput, current?: () => boolean) {
   const qr = input.qr_payload.trim(), batchId = (input.progress_batch_id ?? '').trim();
   if (!qr && !batchId) throw new WorkerControlException('progress_batch_not_found', 'Progress QR topilmadi');
   const body: Obj = {};
@@ -31,7 +31,7 @@ export async function adminProgressQrReprint(session: Session, input: ProgressQr
   body.print_count = Math.trunc(Math.max(1, Math.min(100, input.print_count ?? 1)));
   if (input.automatic_rezka_labels) body.automatic_rezka_labels = true;
   const payload = object(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/progress-qr/reprint', body,
-    null, false, 'progress_qr_reprint'));
+    null, !!current, 'progress_qr_reprint', current));
   if (!object(payload?.batch)) throw new WorkerControlException('progress_batch_not_found', 'Progress QR topilmadi');
   const batch = progressBatchFromJson(payload!.batch), print = object(payload!.print) ?? {};
   return { ok: payload!.ok === true, batch,

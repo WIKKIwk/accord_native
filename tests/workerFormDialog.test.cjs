@@ -10,8 +10,10 @@ function load(platform) {
   const filename = path.resolve(__dirname, `../src/components/WorkerFormDialog${platform ? `.${platform}` : ''}.tsx`), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
   const native = { AlertDialog, Button: 'Button', Host: 'Host', RNHostView: 'RNHostView', Text: 'Text', TextButton: 'TextButton' };
-  const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': native, '@expo/ui/jetpack-compose': native,
-    'react-native': { Modal: 'Modal', View: 'View', Text: 'Text', ScrollView: 'ScrollView', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
+  const modifiers = Object.fromEntries(['buttonBorderShape', 'buttonStyle', 'controlSize', 'disabled', 'font', 'frame'].map(name => [name, value => ({ [name]: value })]));
+  const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': native, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
+    './BaseHost': { BaseHost: 'Host' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 20 }) },
+    'react-native': { Platform: { Version: '26' }, KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', View: 'View', Text: 'Text', ScrollView: 'ScrollView', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
     './useWorkerOrderText': { useWorkerOrderText: () => ({ t: key => key }) }, './useWorkerColors': { useWorkerColors: () => ({ surface: 'white', text: 'black' }) } };
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
@@ -41,4 +43,12 @@ test('fallback report also honors preventDismiss and forwards the actual native 
   const render = load(); let cancels = 0, dismissals = 0;
   const tree = render({ visible: true, title: 'Report', preventDismiss: true, onCancel: () => cancels++, onDismiss: () => dismissals++, confirmLabel: 'Save', onConfirm() {} });
   tree.props.onRequestClose(); assert.equal(cancels, 0); tree.props.onDismiss(); assert.equal(dismissals, 1);
+});
+test('iOS native form forwards presentation/dismissal events and shares its scroll target with correction fields', () => {
+  let shown = 0, dismissed = 0, cancelled = 0; const scrollRef = { current: null };
+  const tree = load('ios')({ visible: true, title: 'Report', preventDismiss: true, scrollRef,
+    onShow: () => shown++, onDismiss: () => dismissed++, onCancel: () => cancelled++, confirmLabel: 'Save', onConfirm() {} });
+  tree.props.onRequestClose(); assert.equal(cancelled, 0); tree.props.onShow(); tree.props.onDismiss(); assert.equal(shown, 1); assert.equal(dismissed, 1);
+  assert.equal(nodes(tree, node => node.type === 'ScrollView')[0].props.ref, scrollRef);
+  assert.equal(nodes(tree, node => node.type === 'Button').length, 2);
 });

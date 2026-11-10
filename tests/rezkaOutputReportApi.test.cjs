@@ -22,3 +22,20 @@ for (const record of loadContract(stem)) test(record.test, async () => {
   else await assert.rejects(read());
   replay.assertDone();
 });
+test('output report rejects an expired owner before the first request or a reauthentication replay', async () => {
+  let current = false, calls = 0;
+  const client = load('rezkaOutputReportApi', { './authorizedFetch': { authorizedFetch: async (_s, _p, _init, guard) => {
+    calls++; guard(); current = false; guard(); assert.fail('stale retry was allowed');
+  } } });
+  await assert.rejects(client.adminRezkaOutputReport({}, 'apparatus:default:asset-010', 'order', () => current), /worker.error.sync/);
+  assert.equal(calls, 0); current = true;
+  await assert.rejects(client.adminRezkaOutputReport({}, 'apparatus:default:asset-010', 'order', () => current), /worker.error.sync/);
+  assert.equal(calls, 1);
+});
+test('a late output-report response is not installed after the owner expires', async () => {
+  let current = true;
+  const client = load('rezkaOutputReportApi', { './authorizedFetch': { authorizedFetch: async (_s, _p, init, guard) => {
+    assert(init.signal instanceof AbortSignal); guard(); return { status: 404, text: async () => { current = false; return ''; } };
+  } } });
+  await assert.rejects(client.adminRezkaOutputReport({}, 'apparatus:default:asset-010', 'order', () => current), /worker.error.sync/);
+});
