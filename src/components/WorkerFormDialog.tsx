@@ -3,9 +3,9 @@ import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { WorkerFormDialogProps } from './workerDialogTypes';
 import { useWorkerColors } from './useWorkerColors';
 
-export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled }: WorkerFormDialogProps) {
+export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, onDismiss }: WorkerFormDialogProps) {
   const colors = useWorkerColors();
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => { if (!cancelDisabled) onCancel(); }}>
+  return <Modal visible={visible} transparent animationType="fade" onDismiss={onDismiss} onRequestClose={() => { if (!cancelDisabled && !preventDismiss) onCancel(); }}>
     <View style={styles.backdrop}><View style={[styles.dialog, { backgroundColor: colors.surface }]}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       {children}
