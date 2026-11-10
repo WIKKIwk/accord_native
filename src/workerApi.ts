@@ -15,7 +15,7 @@ const string = (value: unknown) => typeof value === 'string' ? value.trim() : ''
 export type Apparatus = { id: string; name: string; operation: string; worker_material_assignment_allowed?: boolean };
 export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
-export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown>; assignedIds: string[]; assignedLabels: string[] };
+export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown>; catalog?: Apparatus[]; assignedIds: string[]; assignedLabels: string[] };
 export type WorkerOrderDetail = {
   map: RecordValue;
   customer: string;
@@ -157,7 +157,7 @@ export async function loadWorkerQueue(session: Session, search = '', queueLimit:
   const assignedIds = assignments?.ids ?? session.assigned_apparatus;
   const assignedLabels = assignments?.labels ?? session.assigned_apparatus_labels;
   const machines = workerMachinesFromSnapshot(catalog, snapshot, assignedIds);
-  return queueFromSnapshot(machines, snapshot, assignedIds, assignedLabels);
+  return queueFromSnapshot(machines, snapshot, assignedIds, assignedLabels, workerApparatusCatalog(catalog));
 }
 
 /** Accept assignment changes only from the active account's current profile. */
@@ -176,21 +176,26 @@ export function workerAssignmentsFromProfile(session: Session, value: unknown): 
 export function workerMachinesFromSnapshot(catalog: unknown[], snapshot: RecordValue, assignedIds: readonly string[]): Apparatus[] {
   const assigned = new Set(assignedIds);
   const showAll = snapshot.worker_show_all_apparatus_tabs === true;
-  const machines = catalog.flatMap((item): Apparatus[] => {
-    const outer = object(item);
-    const projection = Object.keys(object(outer.runtime_projection)).length ? object(outer.runtime_projection) : outer;
-    const id = string(projection.apparatus_id) || string(outer.id);
-    const name = string(object(projection.display).display_name) || string(outer.name);
-    const operation = string(object(projection.execution_profile).operation) || string(outer.operation);
-    if (!id || !name || (!showAll && !assigned.has(id))) return [];
-    return [{ id, name, operation, ...(projection.worker_material_assignment_allowed === true || outer.worker_material_assignment_allowed === true ? { worker_material_assignment_allowed: true } : {}) }];
-  });
+  const machines = workerApparatusCatalog(catalog).filter(machine => showAll || assigned.has(machine.id));
   const firstAssigned = assignedIds.map(id => machines.findIndex(machine => machine.id === id)).find(index => index >= 0) ?? -1;
   if (firstAssigned > 0) machines.unshift(...machines.splice(firstAssigned, 1));
   return machines;
 }
 
-export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string, unknown>, assignedIds: readonly string[], assignedLabels: readonly string[] = []): WorkerQueue {
+/** Keep catalog labels for QR guidance without changing which tabs can be watched. */
+export function workerApparatusCatalog(catalog: unknown[]): Apparatus[] {
+  return catalog.flatMap((item): Apparatus[] => {
+    const outer = object(item);
+    const projection = Object.keys(object(outer.runtime_projection)).length ? object(outer.runtime_projection) : outer;
+    const id = string(projection.apparatus_id) || string(outer.id);
+    const name = string(object(projection.display).display_name) || string(outer.name);
+    const operation = string(object(projection.execution_profile).operation) || string(outer.operation);
+    if (!id || !name) return [];
+    return [{ id, name, operation, ...(projection.worker_material_assignment_allowed === true || outer.worker_material_assignment_allowed === true ? { worker_material_assignment_allowed: true } : {}) }];
+  });
+}
+
+export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string, unknown>, assignedIds: readonly string[], assignedLabels: readonly string[] = [], catalog?: Apparatus[]): WorkerQueue {
   const rows = object(snapshot.worker_list_rows);
   const visible = object(snapshot.visible_order_ids);
   const sequences = object(snapshot.sequences);
@@ -233,5 +238,5 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
       issueNote: string(item.issue_note),
     });
   }
-  return { machines, orders, completed, snapshot, assignedIds: [...assignedIds], assignedLabels: [...assignedLabels] };
+  return { machines, orders, completed, snapshot, ...(catalog ? { catalog } : {}), assignedIds: [...assignedIds], assignedLabels: [...assignedLabels] };
 }

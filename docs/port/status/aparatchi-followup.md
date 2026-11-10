@@ -1,7 +1,7 @@
 # Aparatchi — navbatdagi tekshiruv va tuzatishlar
 
 Status: in progress.
-Stopped at: busy-apparatus QR handoff va full worker Paddon management’ni V2 bilan tekshirish.
+Stopped at: full worker Paddon management’ni V2 bilan tekshirish.
 
 Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va `test/` bilan bir xil. V2 va Mini ERP read-only. Wikki `main`da ishlash va har tekshirilgan o‘zgarishni commit qilishni aniq so‘radi. USB va Wi-Fi chop etish tanlovlari hozircha chiqariladi; Bluetooth qoladi. Bu foydalanuvchi qabul qilgan V2 farqi, yashirin parity da’vosi emas.
 
@@ -31,7 +31,7 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 
 | Flow | Confirmed difference / next step |
 |---|---|
-| General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
+| General QR | Busy-apparatus switching checkpoint completed below; native presentation and physical scanner verification remain device checks |
 | Paddons | Active selector va header peremotka queue ulandi. Full worker Paddon management/navigation hali ochiq. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak; master read-only controllerining ruxsatini ko‘r-ko‘rona kengaytirmaslik kerak |
 
 ## Verification and limits
@@ -82,3 +82,15 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 
 - Peremotka checkpoint: **74/74** focused tests; both native typechecks exit 0; lint 0 errors / the existing admin hook warning; ledger check exit 0 (1121 `@v2`, 104 `@v2-test` tags resolve). V2 has no separate recorded contract for this header preview; the exact query was checked from its source and exercised against mocked transport. No real read/write, printer, physical device or simulator was used.
 - The remaining shared WIP-consumer suite, `tests/workerOrderParity.test.cjs`, also passed **46/46**. The most recent full-tree run is the active-Paddon checkpoint above; it was not repeated for this read-only preview after all four directly affected WIP consumer test files passed.
+
+
+## Surface audit — busy-apparatus FAB QR
+
+| V2 surface and location | V4 | iOS | Android | What differs / limits |
+|---|---|---|---|---|
+| `_handleWorkerFabQr`, `screen_state.dart:1526`; `_loadWorkerFabBootstrap`, `worker_qr_context.dart` | WorkerQrScanner, workerFabQr/Reads and guarded lookup/bootstrap/sequence APIs | compared | compared | Progress/opening identification, selected assignment, route alternatives, proof identity and cursor consistency, explicit legacy fallback, current-order discovery and V2 guidance. No Start command is sent by scanning. |
+| `_workerCurrentOrderForApparatus`, `screen_state.dart:2051`; `_workerQrLoadedRollText`, `:1941` | WorkerFabQr and queue catalog labels | compared | compared | Fresh scoped occupancy, compact pending reports and full unfinished Astatka history; loaded-roll active/resume guidance only with full consistent control. Tab visibility still follows the server flag. |
+| `_confirmAndSwitchToScannedOrder`, `read_only_sheet.dart:2569`; `_eligibleWorkerTemporaryPause` | WorkerInitialOrderSwitch and native WorkerSwitchPrompt | compared | compared | Native temporary-pause sheet and confirmation dialog retain V2 action order. Rechecks the current pause session/token; cancellation and stale account/tab callbacks cannot write. An uncertain response refreshes without replay or output fallback. |
+| `_runInitialOrderSwitchFlow`, `read_only_sheet.dart:3076`; `_showWatchOrderDetail`, `screen_state.dart:1445` | OrderScreen report result callbacks and WorkerScreen dismissal replay | compared | compared | Measured completion/Astatka must be acknowledged; approval/cancellation/print failure cannot auto-advance. Actual camera/manual/report/order dismissals precede the next presentation. QR replay reloads the contract and never automatically starts the next order. Device presentation timing remains unverified. |
+
+- QR checkpoint: **303/303** focused tests passed, including actual native prompt callbacks, root camera/order dismissal, unfinished reports, scope retirement before/after transport decoding, aggregate fallback and uncertain temporary pause. Both native TypeScript checks and Expo lint exited 0. No new text exceptions were added. Full-tree rerun: **5478 pass, 11 fail, 12 todo / 5501 total**, log `/tmp/accord-fab-qr-final-all-tests.log`; failing case names exactly match the active-Paddon baseline (the same eleven pre-existing Node/native imports). Ledger check exits 0 with 1133 `@v2` / 106 `@v2-test`; role report regenerated. Whole-role text gate still has iOS 280 missing / 102 added and Android 280 missing / 110 added, 158 surfaces; it is not marked complete. Lint retains the existing admin hook warning. No device or real printer was used.

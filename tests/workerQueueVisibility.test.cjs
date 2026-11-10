@@ -55,6 +55,7 @@ test('the current account profile refreshes stale login assignments for the queu
   });
   const session = { profile: { role: 'aparatchi', ref: 'worker' }, assigned_apparatus: ['press'], assigned_apparatus_labels: ['Bosma'] };
   const fresh = await api.loadWorkerQueue(session);
+  assert.deepEqual(fresh.catalog.map(item => item.id), ['cut', 'press', 'press2']);
   assert.deepEqual(fresh.machines.map(item => item.id), ['press', 'cut', 'press2']);
   assert.deepEqual(fresh.assignedIds, ['press', 'press2', 'cut']);
   assert.deepEqual(fresh.assignedLabels, ['Bosma', 'Bosma 2', 'Kesish']);

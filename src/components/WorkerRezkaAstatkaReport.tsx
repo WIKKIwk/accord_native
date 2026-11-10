@@ -13,7 +13,7 @@ import { WorkerFormField } from './WorkerFormField';
 import { useWorkerColors } from './useWorkerColors';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-type Props = { session: Session; apparatus: string; orderId: string; getCursor(): QueueCursor | null; onAttempted(): void; onCommitted(): void; onClose(): void };
+type Props = { session: Session; apparatus: string; orderId: string; getCursor(): QueueCursor | null; onAttempted(): void; onCommitted(): void; onClose(completed: boolean): void };
 function createOwner(session: Session, apparatus: string, orderId: string) {
   let mounted = false, callbacks: Props | null = null;
   const scope = sessionReadScope(session), current = () => mounted && !!activeSessionToken(session) && scope === sessionReadScope(session);
@@ -28,7 +28,7 @@ function createOwner(session: Session, apparatus: string, orderId: string) {
     },
     save: (request, guard) => adminRezkaAstatkaReport(session, request, guard), store: workerReportPendingStore,
     attempted: () => callbacks?.onAttempted(), committed: () => callbacks?.onCommitted() });
-  return { workflow, current, close: () => callbacks?.onClose(), update: (next: Props) => { callbacks = next; }, mount: (value: boolean) => { mounted = value; } };
+  return { workflow, current, close: () => callbacks?.onClose(current() && workflow.getSnapshot().phase === 'done'), update: (next: Props) => { callbacks = next; }, mount: (value: boolean) => { mounted = value; } };
 }
 
 /** @v2 _ReadOnlyOrderDetailSheetState._runRezkaAstatkaReport */

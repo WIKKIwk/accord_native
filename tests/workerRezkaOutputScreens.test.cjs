@@ -19,7 +19,7 @@ function hooks() {
     useEffect: effect, useLayoutEffect: effect, useSyncExternalStore: (_sub, get) => get(),
     begin: () => { index = 0; }, flush: () => { while (scheduled.length) scheduled.shift()(); }, dispose: () => slots.forEach(slot => slot?.cleanup?.()) };
 }
-function setup(platform) {
+function setup(platform, options = {}) {
   const react = hooks(), modal = compile('workerReportModalFlow.ts', {}), report = compile('workerRezkaReport.ts', {});
   const h = { valid: true, scope: 'scope-1', events: [], picks: 0, closes: [], posts: [], reads: 0 };
   h.snapshot = { epoch: 'epoch', revision: 5, kadr_counts: [1, 2], report: { cycle_id: 'cycle', frames: [], reference_frame_index: null,
@@ -55,6 +55,7 @@ function setup(platform) {
     './useWorkerOrderText': { useWorkerOrderText: () => ({ p: (key, values) => values ? `${key}:${JSON.stringify(values)}` : key, t: key => key }) } };
   const Component = compile('components/WorkerRezkaOutputReport.tsx', mocks).WorkerRezkaOutputReport;
   const props = { session, apparatus: session.assigned_apparatus[0], orderId: 'order', stage: 'cut', action: 'complete', map: { products: [] },
+    fullCompletionReportRequired: options.fullCompletionReportRequired,
     getCursor: () => h.cursor ?? { epoch: 'epoch', rev: 5 }, onClose: value => h.closes.push(value), onAttempted() {}, onCommitted() {} };
   h.render = () => { react.begin(); h.tree = Component(props); react.flush(); h.dialog = nodes(h.tree, value => value.type === 'Dialog')[0]; return h.tree; };
   h.all = type => nodes(h.tree, value => value.type === type); h.dispose = react.dispose; h.render(); return h;
@@ -62,6 +63,14 @@ function setup(platform) {
 
 // @v2-test test/admin_production_map_rezka_deviation_warning_test_part.dart
 for (const platform of ['ios', 'android']) {
+  test(`${platform}: QR handoff forces measured completion but preserves the server total-waste-only contract`, async () => {
+    const h = setup(platform, { fullCompletionReportRequired: true });
+    h.data.control_state.control.complete_requires_full_report = false;
+    assert.equal((await h.deps.control()).fullReport, true);
+    h.data.control_state.control.complete_requires_rezka_total_waste_only = true;
+    const control = await h.deps.control();
+    assert.equal(control.fullReport, false); assert.equal(control.totalWasteOnly, true); h.dispose();
+  });
   test(`${platform}: native report keeps V2 waste-before-frame order, layout title, duplicate labels and readonly saved cards`, () => {
     const h = setup(platform), fields = h.all('Field'); assert.equal(fields.length, 13);
     assert.equal(fields[0].props.label, 'worker.daily.field.total_waste (kg)'); assert.equal(fields[3].props.label, 'worker.daily.field.edge_waste (kg)');

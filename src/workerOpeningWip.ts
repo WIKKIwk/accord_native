@@ -33,12 +33,12 @@ export function openingWipBatch(raw: unknown): Obj {
 
 /** @v2 adminLookupOpeningWip */
 export async function adminLookupOpeningWip(session: Session, input: { apparatus: string; orderId: string; qrPayload: string;
-  batchId?: string }): Promise<Obj> {
+  batchId?: string; current?: () => boolean }): Promise<Obj> {
   const batchId = input.batchId?.trim() ?? '';
   const response = object(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/opening-wip/lookup', {
     apparatus: input.apparatus.trim(), order_id: input.orderId.trim(), qr_payload: input.qrPayload.trim(),
     ...(batchId ? { batch_id: batchId } : {}),
-  }, null, false, 'opening_wip_lookup'));
+  }, null, !!input.current, 'opening_wip_lookup', input.current));
   if (!object(response?.batch)) throw new WorkerControlException('opening_wip_lookup', 'Opening WIP QR tasdiqlanmadi');
   return openingWipBatch(response!.batch);
 }

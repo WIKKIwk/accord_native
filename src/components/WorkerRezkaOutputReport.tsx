@@ -21,7 +21,7 @@ import { useWorkerPrinterSelector } from './useWorkerPrinterSelector';
 import { useWorkerColors } from './useWorkerColors';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-type Props = { session: Session; apparatus: string; orderId: string; stage: string; action: string; map: Record<string, any>; getCursor(): QueueCursor | null;
+type Props = { session: Session; apparatus: string; orderId: string; stage: string; action: string; map: Record<string, any>; fullCompletionReportRequired?: boolean; getCursor(): QueueCursor | null;
   onAttempted(): void; onCommitted(final: boolean): void; onClose(completed: boolean): void };
 type Panel = { kind: 'main' } | { kind: 'discard' } | { kind: 'choice'; index: number } | { kind: 'reason'; index: number; peremotka: boolean } | { kind: 'deviation'; value: RezkaOutputDeviation };
 type Bridge = { printer(): Promise<WorkerPrinter>; confirm(deviation: RezkaOutputDeviation): Promise<boolean> };
@@ -55,7 +55,8 @@ function createOwner(props: Props) {
     },
     control: async (): Promise<RezkaOutputControl> => {
       const data = await controlData(), control = data.control_state.control;
-      return { stage: control.stage_node_id, allowed: control.allowed_actions, fullReport: control.complete_requires_full_report !== false,
+      return { stage: control.stage_node_id, allowed: control.allowed_actions,
+        fullReport: (props.fullCompletionReportRequired === true || control.complete_requires_full_report !== false) && control.complete_requires_rezka_total_waste_only !== true,
         totalWasteOnly: control.complete_requires_rezka_total_waste_only === true, freezeRequest: runningFreezeRequest(data.control_state, apparatus) ?? undefined };
     },
     save: (body, guard) => adminApparatusQueueActionResult(session, body, guard),

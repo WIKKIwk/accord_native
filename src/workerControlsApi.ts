@@ -150,11 +150,11 @@ async function postControl(session: Session, path: string, body: JsonObject, sco
 
 /** @v2 adminTemporarilyPauseWork */
 export async function adminTemporarilyPauseWork(session: Session, apparatus: string, orderId: string,
-  control: AdminTemporaryPauseControl): Promise<void> {
+  control: AdminTemporaryPauseControl, current?: () => boolean): Promise<void> {
   const scope = sessionReadScope(session), machine = requireApparatus(apparatus), order = orderId.trim();
   if (!order || order.startsWith('training-') || !temporaryPauseControl(control)) throw denied();
   await postControl(session, '/v1/mobile/admin/production-maps/temporary-pause',
-    { apparatus: machine, order_id: order, session_id: control.session_id, token: control.token }, scope, true);
+    { apparatus: machine, order_id: order, session_id: control.session_id, token: control.token }, scope, true, current);
 }
 
 /** @v2 adminCancelStartedWork */

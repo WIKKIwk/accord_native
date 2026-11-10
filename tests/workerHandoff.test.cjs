@@ -42,7 +42,7 @@ function removalHarness(options = {}) {
   const no = () => {};
   const context = { ...state, synchronized: true, canOpenInitialAstatka: false, allowed: ['detach_roll'], laminationReport: true, isCurrent: () => h.current,
     control: { stage_node_id: 'stage' }, interaction: { resume_input_required: options.inputRequired === true }, bootstrap: {}, latestCursor: { current: { epoch: 'epoch', rev: 1 } }, scanBootstrapUnsupported: {},
-    selected: options.action === 'resume' ? '' : 'detach_roll', initialAction: options.action ?? 'detach_roll', session: {}, apparatusId: apparatus, orderId: order, order: {}, preview: {},
+    selected: options.action === 'resume' ? '' : 'detach_roll', initialAction: options.action ?? 'detach_roll', initialSwitchQr: '', switchProgress: null, setSwitchProgress: no, session: {}, apparatusId: apparatus, orderId: order, order: {}, preview: {},
     kg: '10', meter: '100', bobina: '1', waste: '', freezeNote: '', completionNote: '', leftoverWip: '', leftoverFilm: '', safeStopRequest: null,
     materials: [], effectiveQolips: [], paint: {}, paintDynamic: {}, paintImageId: '', materialState: { ready: true },
     automaticQolip: false, automaticConfirmation: null, qolipRequired: false, inputBatch: null,

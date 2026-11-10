@@ -1,11 +1,13 @@
 import { ListItem, Spacer } from '@expo/ui';
 import { useFonts } from 'expo-font';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { router, type Href } from 'expo-router';
 import { Modal, Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
-import { activeSessionToken, updateSessionAssignments, type Session } from './auth';
+import { activeSessionToken, captureSessionWitness, isSessionWitnessCurrent, updateSessionAssignments, type Session, type SessionWitness } from './auth';
+import { prepareWorkerFabQr, workerFabErrorText } from './workerFabQr';
+import { workerFabQrReads } from './workerFabQrReads';
 import { sessionReadScope } from './sessionReadScope';
 import { canWorkOnApparatus, loadWorkerQueue, queueFromSnapshot, workerOrderIsFrozen, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
 import { useNativeSheet } from './nativeSheet';
@@ -45,7 +47,7 @@ import { WorkerCutToolbar } from './components/WorkerCutToolbar';
 import { openWorkerCutPanel } from './workerPeremotka';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
-type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string };
+type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string };
 type ActionScope = { window: string; scope: string };
 type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean };
 const statusLabel: Record<string, string> = {
@@ -81,7 +83,9 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const [section, setSection] = useState<'home' | 'profile' | 'daily' | 'instructions'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
-  const pendingScannedOrder = useRef<{ target: ActiveOrder; scope: string } | null>(null);
+  const pendingScannedOrder = useRef<{ target: ActiveOrder; scope: string; witness: SessionWitness | null; window: string } | null>(null);
+  const pendingQrSwitch = useRef<{ apparatusId: string; qr: string; scope: string; window: string; witness: SessionWitness | null; committed: boolean } | null>(null);
+  const qrLocation = useRef({ machine: '', window: '' });
   const [navBarHeight, setNavBarHeight] = useState(80);
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
@@ -139,13 +143,15 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const latestReload = useRef(reload);
   useEffect(() => { latestReload.current = reload; }, [reload]);
   useEffect(() => { screenMounted.current = true; return () => { screenMounted.current = false; }; }, []);
+  useLayoutEffect(() => { qrLocation.current = { machine: machineId, window: windowScope }; }, [machineId, windowScope]);
   const renderOrderRoute = useCallback((target: ActiveOrder, onClose = orderRoute.close) => {
     if (target.readOnly && target.preview) return <WorkerOrderDetails session={session}
       apparatusId={target.apparatusId}
       order={target.preview} queueCursor={queueRef.current?.snapshot ?? null} onClose={onClose} />;
     return <OrderScreen key={`${target.apparatusId}:${target.orderId}`} session={session} apparatusId={target.apparatusId} orderId={target.orderId} preview={target.preview}
-      initialScanQr={target.initialScanQr}
-      queueCursor={queueRef.current?.snapshot ?? null} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction}
+      initialScanQr={target.initialScanQr} initialSwitchQr={target.initialSwitchQr}
+      onSwitchCommitted={() => { const pending = pendingQrSwitch.current; if (pending && isSessionWitnessCurrent(pending.witness)) pending.committed = true; }}
+      queueCursor={queueRef.current?.snapshot ?? null} apparatusCatalog={queueRef.current?.catalog} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction}
       onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
   }, [session, orderRoute]);
   useEffect(() => {
@@ -165,6 +171,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       nativeOrder.current = null;
       setNativeOverlayOpen(false);
       preflightCheck.current++;
+      finishQrOrderDismissal();
     } });
   }
   function openHistory(order: CompletedOrder) {
@@ -199,7 +206,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       snapshot => {
         const current = queueRef.current;
         if (!current) return;
-        const updated = queueFromSnapshot(current.machines, snapshot, current.assignedIds, current.assignedLabels);
+        const updated = queueFromSnapshot(current.machines, snapshot, current.assignedIds, current.assignedLabels, current.catalog);
         requestGeneration.current++;
         queueRef.current = updated;
         setQueue(updated);
@@ -219,19 +226,35 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     cutVisible && peremotka.state.phase === 'closed',
     JSON.stringify([queue?.snapshot.epoch, queue?.snapshot.rev, queue?.snapshot.scope]));
   useEffect(() => { preflightCheck.current++; }, [activePaddon.state.busy]);
-  function finishQrScan(apparatusId: string, orderId: string, qr: string) {
-    const target: ActiveOrder = { apparatusId, orderId, initialScanQr: qr };
+  function finishQrScan(apparatusId: string, orderId: string, qr: string, switching = false, cameraDismissed = false) {
+    const target: ActiveOrder = { apparatusId, orderId, ...(switching ? { initialSwitchQr: qr } : { initialScanQr: qr }) };
+    pendingQrSwitch.current = switching ? { apparatusId, qr, scope: sessionReadScope(session), window: windowScope, witness: captureSessionWitness(session), committed: false } : null;
     setMachineId(apparatusId);
-    if (nativeNavigation && Platform.OS === 'ios') pendingScannedOrder.current = { target, scope: sessionReadScope(session) };
+    if (!cameraDismissed && nativeNavigation && Platform.OS === 'ios') pendingScannedOrder.current = { target, scope: sessionReadScope(session), witness: captureSessionWitness(session), window: windowScope };
     else openOrder(target);
     setScannerOpen(false);
   }
   function scannerDismissed() {
     const pending = pendingScannedOrder.current;
     pendingScannedOrder.current = null;
-    if (pending && screenMounted.current && activeSessionToken(session) && pending.scope === sessionReadScope(session)) openOrder(pending.target);
+    if (pending && screenMounted.current && activeSessionToken(session) && pending.scope === sessionReadScope(session) && isSessionWitnessCurrent(pending.witness) &&
+        pending.window === qrLocation.current.window && pending.target.apparatusId === qrLocation.current.machine) openOrder(pending.target);
   }
-  const scanner = scannerOpen ? <WorkerQrScanner key={scannerMachineId} session={session} apparatusId={scannerMachineId} onClose={() => setScannerOpen(false)} onOrder={finishQrScan} /> : null;
+  function finishQrOrderDismissal() {
+    const pending = pendingQrSwitch.current;
+    pendingQrSwitch.current = null;
+    if (!pending?.committed) return;
+    const current = () => screenMounted.current && isSessionWitnessCurrent(pending.witness) &&
+      pending.scope === sessionReadScope(session) && qrLocation.current.machine === pending.apparatusId && qrLocation.current.window === pending.window;
+    if (!current()) return;
+    const apparatus = queueRef.current?.machines.find(machine => machine.id === pending.apparatusId);
+    if (!apparatus) return;
+    const reads = workerFabQrReads(session, apparatus.id, () => queueRef.current?.snapshot ?? null, current);
+    void prepareWorkerFabQr(session, apparatus, pending.qr, reads, p, id => (queueRef.current?.catalog ?? queueRef.current?.machines)?.find(machine => machine.id === id)?.name ?? id)
+      .then(target => { if (reads.current()) finishQrScan(apparatus.id, target.orderId, pending.qr, target.switching, true); })
+      .catch(error => { if (reads.current()) setAlert({ title: p('worker.qr.guidance.title'), message: workerFabErrorText(error, p), confirmLabel: p('worker.action.close') }); });
+  }
+  const scanner = scannerOpen ? <WorkerQrScanner key={scannerMachineId} session={session} apparatusId={scannerMachineId} apparatus={selectedMachine} getSnapshot={() => queueRef.current?.snapshot ?? null} apparatusLabel={id => (queueRef.current?.catalog ?? queueRef.current?.machines)?.find(machine => machine.id === id)?.name ?? id} onClose={() => setScannerOpen(false)} onOrder={finishQrScan} /> : null;
   if (scannerOpen && !nativeNavigation) return scanner;
   function selectDestination(id: string) {
     if (id === 'home' || id === 'queue') { setSection('home'); return; }
@@ -418,7 +441,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
       </View>}
       {section !== 'daily' && section !== 'instructions' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
-      {activeOrder ? <WorkerOrderSheet onClose={() => setActiveOrder(null)}>
+      {activeOrder ? <WorkerOrderSheet onClose={() => { setActiveOrder(null); finishQrOrderDismissal(); }}>
         {renderOrderRoute(activeOrder, () => setActiveOrder(null))}
       </WorkerOrderSheet> : null}
       {Platform.OS !== 'android' && <WorkerWipHistorySheet ref={historySheet} session={session} onDismiss={() => { setNativeOverlayOpen(false); preflightCheck.current++; }} />}

@@ -23,7 +23,7 @@ import { useWorkerPrinterSelector } from './useWorkerPrinterSelector';
 
 type Remainder = ReturnType<typeof layerRemainderFromJson>;
 Object.assign(qrFactory, { stringToBytes: (text: string) => Array.from(new TextEncoder().encode(text)) });
-type Props = { session: Session; context: LaminationReportContext; onAttempted(): void; onCommitted(): void; onClose(): void };
+type Props = { session: Session; context: LaminationReportContext; onAttempted(): void; onCommitted(): void; onClose(completed: boolean): void };
 
 function createOwner(session: Session, apparatus: string, orderId: string, stage: string, complete: boolean, fullReport: boolean) {
   let mounted = false, callbacks: Props | null = null;
@@ -35,7 +35,7 @@ function createOwner(session: Session, apparatus: string, orderId: string, stage
     save: (request, guard) => adminSubmitLaminationAstatka(session, request, guard), store: workerReportPendingStore,
     freeze: (note, guard) => adminApparatusQueueActionResult(session, { apparatus, order_id: orderId, action: 'freeze', freeze_with_issue: true, issue_note: note, include_control: true }, guard),
     attempted: () => callbacks?.onAttempted(), committed: () => callbacks?.onCommitted() });
-  return { workflow, current, close: () => callbacks?.onClose(), update: (next: Props) => { callbacks = next; }, mount: (value: boolean) => { mounted = value; } };
+  return { workflow, current, close: () => callbacks?.onClose(current() && workflow.getSnapshot().phase === 'receipt'), update: (next: Props) => { callbacks = next; }, mount: (value: boolean) => { mounted = value; } };
 }
 
 function LabelQr({ payload }: { payload: string }) {

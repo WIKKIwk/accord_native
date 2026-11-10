@@ -22,6 +22,7 @@ import { workerProductionOrderDetail } from './workerDetailApi';
 import { useNativeSheet } from './nativeSheet';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerOrderImage } from './components/WorkerOrderHeader';
+import { WorkerInitialOrderSwitch } from './components/WorkerInitialOrderSwitch';
 import { WorkerOrderIdentity } from './components/WorkerOrderIdentity';
 import { WorkerScannedWipHistory } from './components/WorkerScannedWipHistory';
 import { WorkerLaminationReport } from './components/WorkerLaminationReport';
@@ -60,7 +61,7 @@ import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartRea
 import { workerOrderDetailFromSnapshot, type Apparatus, type QueueOrder } from './workerApi';
 
 type Obj = Record<string, any>;
-type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; onClose: () => void; onChanged: () => void };
+type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onClose: () => void; onChanged: () => void };
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
 }
@@ -93,7 +94,7 @@ async function scanBootstrap(session: Session, input: Parameters<typeof adminOrd
   return input.includeSections === false ? result : completeWorkerScanSections(session, result, input.materialBarcodes ?? []);
 }
 
-export function OrderScreen({ session, apparatusId, apparatus, orderId, preview, queueCursor, initialAction, initialScanQr = '', onClose, onChanged }: Props) {
+export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog, orderId, preview, queueCursor, initialAction, initialScanQr = '', initialSwitchQr = '', onSwitchCommitted, onClose, onChanged }: Props) {
   const { t, p, locale } = useWorkerOrderText();
   const colors = useWorkerColors();
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
@@ -120,6 +121,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const camera = useRef<CameraView>(null);
   const [permission, askPermission] = useCameraPermissions();
   const [selected, setSelected] = useState('');
+  const [switchProgress, setSwitchProgress] = useState<'complete' | 'astatka' | null>(null);
   const [kg, setKg] = useState('');
   const [meter, setMeter] = useState('');
   const [bobina, setBobina] = useState('');
@@ -599,7 +601,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       description: action === 'pause' ? freezeNote : completionNote, kg, meter, bobina, waste, additionalOutput: laminationReport ? [leftoverWip, leftoverFilm] : [] });
     const { safeStopIssue, completionIssue, needsOutput } = completion;
     if (completion.needsIssueOrOutput) { setDescriptionRevealed(true); setError(p('worker.freeze.safe_stop.output_or_issue_required')); return; }
-    const fullReport = !completionIssue && !safeStopIssue && (isAstatka || (action === 'complete' && (control.complete_requires_full_report !== false || !!closingOutputId)));
+    const fullReport = !completionIssue && !safeStopIssue && (isAstatka || (action === 'complete' && (switchProgress === 'complete' || control.complete_requires_full_report !== false || !!closingOutputId)));
     const fields = [kg, meter, bobina];
     if (needsOutput && fields.some(x => !x.trim() || !Number.isFinite(numberValue(x)) || numberValue(x) <= 0)) { setDescriptionRevealed(true); setError('Metr, vazn va bobina uchun noldan katta qiymatlarni kiriting.'); return; }
     const returnedPaintItems = returnedPaintItemsFromDraft(paint, paintDynamic);
@@ -656,7 +658,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
           : await adminBosmaAstatkaReport(session, { apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote }) }
         : await adminApparatusQueueActionResult(session, body, isCurrent);
       if (!isCurrent()) return;
-      if (result.completion_request) { setSelected(''); setSuccess(p('worker.notice.completion_request_sent')); return; }
+      if (result.completion_request) { setSwitchProgress(null); setSelected(''); setSuccess(p('worker.notice.completion_request_sent')); return; }
       let printFailed = false;
       if (printer) {
         try { await printWorkerJobs(result, printer, isCurrent); }
@@ -673,10 +675,13 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       if (printFailed) setError('Amal bajarildi, lekin rulon yorlig‘i chop etilmadi.');
       else setSuccess(isAstatka ? 'Order astatkasi qayd qilindi.' : qr ? `Amal bajarildi. Rulon QR: ${qr}` : 'Amal bajarildi.');
       setSelectedQolipSet('');
-      if (initialAction === action && !printFailed) {
+      const switchCompleted = !!initialSwitchQr && switchProgress === action && !printFailed;
+      setSwitchProgress(null);
+      if (switchCompleted) onSwitchCommitted?.();
+      if ((initialAction === action || switchCompleted) && !printFailed) {
         if (Platform.OS === 'ios' && selected) closeAfterProgress.current = true; else closeSheet();
       }
-    } catch (e) { if (isCurrent() && !(e instanceof WorkerPrintCancelled)) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
+    } catch (e) { setSwitchProgress(null); if (isCurrent() && !(e instanceof WorkerPrintCancelled)) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
     finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
   }
   async function selectOutputPrinter() {
@@ -721,9 +726,9 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   }
   const code = String(preview?.code || order.order_number || order.code || orderId);
   const closingOutput = selected === 'complete' && typeof control.closing_output_batch_id === 'string' && !!control.closing_output_batch_id.trim();
-  const showFullReport = selected === 'astatka' || (selected === 'complete' && (control.complete_requires_full_report !== false || closingOutput));
+  const showFullReport = selected === 'astatka' || (selected === 'complete' && (switchProgress === 'complete' || control.complete_requires_full_report !== false || closingOutput));
   const integratedLaminationReport = usesIntegratedLaminationReport({ operation, action: selected, training: isTrainingOrder,
-    testMode: session.token === 'test-mode-token', fullReport: control.complete_requires_full_report !== false,
+    testMode: session.token === 'test-mode-token', fullReport: switchProgress === 'complete' || control.complete_requires_full_report !== false,
     freezeRequested: bootstrap?.control_state?.order_control === 'freeze_requested' || control.stage_control_state === 'freeze_requested' || !!runningFreezeRequest(bootstrap?.control_state, apparatusId) });
   const rezkaAstatkaReport = operation === 'cut' && selected === 'astatka' && !isTrainingOrder && session.token !== 'test-mode-token';
   const rezkaOutputReport = operation === 'cut' && ['pause', 'detach_roll', 'roll_complete', 'complete'].includes(selected) && !isTrainingOrder && session.token !== 'test-mode-token';
@@ -938,11 +943,22 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       title={String(order.title || preview?.title || '')}
       detail={detail ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </ScrollView>
+    {!!initialSwitchQr && apparatus && <WorkerInitialOrderSwitch session={session} apparatus={apparatus} apparatusCatalog={apparatusCatalog} orderId={orderId}
+      orderLabel={[code, String(order.title || preview?.title || '')].filter(Boolean).join(' • ')} qr={initialSwitchQr}
+      ready={synchronized && !busy} data={bootstrap} current={isCurrent} snapshot={() => latestCursor.current as Obj | null}
+      onError={setError} onReport={action => { setSwitchProgress(action); selectProgressAction(action); }}
+      onProceed={() => { if (isCurrent()) { onSwitchCommitted?.(); closeSheet(); } }}
+      onPauseStart={() => { actionInFlight.current = true; loadVersion.current++; setControlRetired(true); setBusy(true); setError(''); }}
+      onPauseEnd={completed => {
+        actionInFlight.current = false; setBusy(false); onChanged(); setRefresh(value => value + 1);
+        if (completed) { onSwitchCommitted?.(); closeSheet(); }
+        else setError(p('worker.temporary_pause.failed'));
+      }} />}
     <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
       reportDismissed.current?.(); reportDismissed.current = null;
       if (closeAfterProgress.current && isCurrent()) { closeAfterProgress.current = false; closeSheet(); }
     }} title={selected === 'detach_roll' ? p('worker.handoff.detach') : t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
-      cancelLabel={t(inlinePaint ? 'Orqaga' : 'Bekor qilish')} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
+      cancelLabel={t(inlinePaint ? 'Orqaga' : 'Bekor qilish')} onCancel={() => { setSwitchProgress(null); cancelProgressDialog(); }} cancelDisabled={busy || photoBusy}
       preventDismiss
       confirmLabel={t(inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash')}
       confirmDisabled={busy || photoBusy || (!inlinePaint && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && !laminationReport && loadedDraftScope !== draftScope)))}
@@ -963,32 +979,39 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
     </WorkerFormDialog>
     {printerSelector.dialogs}
     {rezkaOutputReport ? <WorkerRezkaOutputReport key={selected} session={session} apparatus={apparatusId} orderId={orderId}
-      stage={String(control.stage_node_id ?? '')} action={selected} map={order} getCursor={() => latestCursor.current}
+      stage={String(control.stage_node_id ?? '')} action={selected} map={order} fullCompletionReportRequired={switchProgress === 'complete'} getCursor={() => latestCursor.current}
       onAttempted={() => { operationReportAttempted.current = true; actionInFlight.current = true; setBusy(true); loadVersion.current++; setControlRetired(true); }}
       onCommitted={() => { operationReportAttempted.current = true; loadVersion.current++; setControlRetired(true); }}
       onClose={completed => {
-        const closeInitial = completed && initialAction === selected;
+        const switched = completed && switchProgress === selected;
+        const closeInitial = completed && (initialAction === selected || switched);
+        setSwitchProgress(null);
+        if (switched) onSwitchCommitted?.();
         setSelected(''); actionInFlight.current = false; setBusy(false);
         if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
         operationReportAttempted.current = false;
         if (closeInitial) closeSheet();
       }} /> : null}
     {integratedLaminationReport ? <WorkerLaminationReport key={selected} session={session}
-      context={{ apparatus: apparatusId, orderId, stage: String(control.stage_node_id ?? ''), complete: selected === 'complete', fullReport: control.complete_requires_full_report !== false }}
+      context={{ apparatus: apparatusId, orderId, stage: String(control.stage_node_id ?? ''), complete: selected === 'complete', fullReport: switchProgress === 'complete' || control.complete_requires_full_report !== false }}
       onAttempted={() => { operationReportAttempted.current = true; actionInFlight.current = true; setBusy(true); loadVersion.current++; setControlRetired(true); }}
       onCommitted={() => { operationReportAttempted.current = true; loadVersion.current++; setControlRetired(true); setInputBatch(null); setMaterials([]); }}
-      onClose={() => {
-        setSelected(''); actionInFlight.current = false; setBusy(false);
+      onClose={completed => {
+        const switched = completed && switchProgress === selected;
+        setSwitchProgress(null); setSelected(''); actionInFlight.current = false; setBusy(false);
         if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
         operationReportAttempted.current = false;
+        if (switched) { onSwitchCommitted?.(); closeSheet(); }
       }} /> : null}
     {rezkaAstatkaReport ? <WorkerRezkaAstatkaReport session={session} apparatus={apparatusId} orderId={orderId} getCursor={() => latestCursor.current}
       onAttempted={() => { operationReportAttempted.current = true; actionInFlight.current = true; setBusy(true); loadVersion.current++; setControlRetired(true); }}
       onCommitted={() => { operationReportAttempted.current = true; loadVersion.current++; setControlRetired(true); setInputBatch(null); setMaterials([]); }}
-      onClose={() => {
-        setSelected(''); actionInFlight.current = false; setBusy(false);
+      onClose={completed => {
+        const switched = completed && switchProgress === selected;
+        setSwitchProgress(null); setSelected(''); actionInFlight.current = false; setBusy(false);
         if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
         operationReportAttempted.current = false;
+        if (switched) { onSwitchCommitted?.(); closeSheet(); }
       }} /> : null}
     {!!scannedWipsStage && <WorkerScannedWipHistory session={session} apparatus={apparatusId} orderId={orderId} stage={scannedWipsStage}
       onClose={() => setScannedWipsStage('')} onMutationAttempted={() => {

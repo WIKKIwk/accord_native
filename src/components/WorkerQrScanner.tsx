@@ -1,68 +1,22 @@
 import { Button, Column, Host, Text } from '@expo/ui';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { authorizedFetch } from '../authorizedFetch';
-import { activeSessionToken, type Session } from '../auth';
+import { activeSessionToken, captureSessionWitness, isSessionWitnessCurrent, type Session, type SessionWitness } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { workerQrPayload } from '../workerQr';
+import type { Apparatus } from '../workerApi';
+import { prepareWorkerFabQr, WorkerFabGuidance, workerFabErrorText } from '../workerFabQr';
+import { workerFabQrReads } from '../workerFabQrReads';
+import { useWorkerOrderText } from './useWorkerOrderText';
+import { WorkerAlert } from './WorkerAlert';
 import { WorkerFormDialog } from './WorkerFormDialog';
 import { WorkerFormField } from './WorkerFormField';
 
-type Props = { session: Session; apparatusId: string; onClose: () => void; onOrder: (apparatusId: string, orderId: string, qr: string) => void };
-type JsonObject = Record<string, unknown>;
-const object = (value: unknown): JsonObject => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {};
-const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
-
-class QrLookupError extends Error {
-  constructor(readonly code: string, message: string) { super(message); }
-}
-
-async function post(session: Session, path: string, body: JsonObject, signal: AbortSignal): Promise<JsonObject> {
-  const response = await authorizedFetch(session, path, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal,
-  });
-  let result: JsonObject;
-  try { result = object(await response.json()); }
-  catch { throw new QrLookupError('invalid_response', 'Server javobini o‘qib bo‘lmadi.'); }
-  if (!response.ok || result.ok !== true) {
-    const code = string(result.error);
-    throw new QrLookupError(code, string(result.detail) || code || `Server xatosi (${response.status})`);
-  }
-  return result;
-}
-
-async function findOrder(session: Session, apparatus: string, qr: string, signal: AbortSignal): Promise<string> {
-  const base = '/v1/mobile/admin/production-maps';
-  let batch: JsonObject;
-  let opening = false;
-  try {
-    const result = await post(session, `${base}/progress-qr/lookup`, { qr_payload: qr, require_active_order: true }, signal);
-    batch = object(result.batch);
-  } catch (error) {
-    if (!(error instanceof QrLookupError) || !['progress_batch_not_found', 'progress_qr_not_found'].includes(error.code)) throw error;
-    const result = await post(session, `${base}/opening-wip/qr/report`, { qr_payload: qr }, signal);
-    const record = object(result.record);
-    const intake = object(record.intake);
-    const batches = Array.isArray(record.batches) ? record.batches.map(object) : [];
-    batch = batches.find(item => string(item.qr_payload).toUpperCase() === qr.toUpperCase() || string(item.batch_id) === qr) ?? {};
-    if (string(intake.status).toLowerCase() !== 'confirmed' || string(intake.order_id) !== string(batch.order_id)) {
-      throw new QrLookupError('invalid_response', 'QR ma’lumoti mos kelmadi.');
-    }
-    opening = true;
-  }
-  const orderId = string(batch.order_id);
-  if (!orderId) throw new QrLookupError('invalid_response', 'QR uchun buyurtma topilmadi.');
-  const status = string(batch.wip_status).toLowerCase();
-  if (status !== 'waiting') throw new QrLookupError('not_waiting', status === 'in_use' ? 'Bu rulon hozir ishlatilmoqda.' : 'Bu rulon allaqachon ishlatilgan yoki bekor qilingan.');
-  const scope = { apparatus, order_id: orderId, qr_payload: qr };
-  await post(session, `${base}/${opening ? 'opening-wip/lookup' : 'progress-qr/lookup'}`,
-    opening ? scope : { ...scope, require_active_order: true }, signal);
-  return orderId;
-}
-
-export function WorkerQrScanner({ session, apparatusId, onClose, onOrder }: Props) {
+type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; getSnapshot: () => Record<string, any> | null; apparatusLabel: (id: string) => string; onClose: () => void; onOrder: (apparatusId: string, orderId: string, qr: string, switching?: boolean) => void };
+export function WorkerQrScanner({ session, apparatusId, apparatus, getSnapshot, apparatusLabel, onClose, onOrder }: Props) {
+  const { p } = useWorkerOrderText();
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -71,6 +25,7 @@ export function WorkerQrScanner({ session, apparatusId, onClose, onOrder }: Prop
   const active = useRef(true);
   const scanLock = useRef(false);
   const request = useRef<AbortController | null>(null);
+  const pendingManual = useRef<{ qr: string; witness: SessionWitness | null } | null>(null);
   useEffect(() => {
     active.current = true;
     return () => { active.current = false; request.current?.abort(); };
@@ -81,16 +36,29 @@ export function WorkerQrScanner({ session, apparatusId, onClose, onOrder }: Prop
     scanLock.current = true; setBusy(true); setError('');
     const scope = sessionReadScope(session);
     const controller = new AbortController(); request.current = controller;
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const current = () => active.current && !controller.signal.aborted && !!activeSessionToken(session) && scope === sessionReadScope(session);
+    const reads = workerFabQrReads(session, apparatusId, getSnapshot, current);
     try {
-      const id = await findOrder(session, apparatusId, qr, controller.signal);
-      if (active.current && activeSessionToken(session) && scope === sessionReadScope(session)) onOrder(apparatusId, id, qr);
+      if (!apparatus) throw new WorkerFabGuidance(p('worker.qr.select_apparatus'));
+      const target = await prepareWorkerFabQr(session, apparatus, qr, reads, p, apparatusLabel);
+      if (reads.current()) onOrder(apparatusId, target.orderId, qr, target.switching);
     } catch (error) {
-      if (active.current) setError(error instanceof Error ? error.message : 'QR kodni tekshirib bo‘lmadi.');
+      if (reads.current()) setError(workerFabErrorText(error, p));
     } finally {
-      clearTimeout(timer); request.current = null; scanLock.current = false;
+      request.current = null; scanLock.current = false;
       if (active.current) setBusy(false);
     }
+  }
+  function manualDismissed() {
+    const pending = pendingManual.current; pendingManual.current = null;
+    if (pending && active.current && isSessionWitnessCurrent(pending.witness)) void scan(pending.qr);
+  }
+  function confirmManual() {
+    const qr = workerQrPayload(manual);
+    if (!qr || scanLock.current) return;
+    pendingManual.current = { qr, witness: captureSessionWitness(session) };
+    setManualOpen(false);
+    if (Platform.OS !== 'ios') manualDismissed();
   }
   return <SafeAreaView style={styles.screen}>
     <Host matchContents={{ vertical: true }} style={styles.header} colorScheme="light" seedColor="#285140">
@@ -104,13 +72,10 @@ export function WorkerQrScanner({ session, apparatusId, onClose, onOrder }: Prop
       : permission?.granted ? <CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }} onBarcodeScanned={busy || manualOpen || !!error ? undefined : ({ data }) => { void scan(data); }} />
       : <View style={styles.message}><Host matchContents colorScheme="light"><Button label="Kameraga ruxsat berish" onPress={() => { void requestPermission(); }} /></Host></View>}
     {busy ? <ActivityIndicator size="large" color="#285140" style={styles.status} /> : null}
-    {error ? <Host matchContents={{ vertical: true }} style={styles.message} colorScheme="light" seedColor="#285140"><Column spacing={8}>
-      <Text textStyle={{ color: '#a62727', fontSize: 14 }}>{error}</Text>
-      <Button label="Qayta skanerlash" variant="outlined" onPress={() => setError('')} />
-    </Column></Host> : null}
+    <WorkerAlert alert={error ? { title: p('worker.qr.guidance.title'), message: error, confirmLabel: p('worker.action.close') } : null} onDismiss={() => setError('')} />
     <Host matchContents={{ vertical: true }} style={styles.message} colorScheme="light"><Button label="Kodni qo‘lda kiritish" variant="text" disabled={busy} onPress={() => setManualOpen(true)} /></Host>
     <WorkerFormDialog visible={manualOpen} title="Kodni qo‘lda kiritish" cancelLabel="Bekor qilish" onCancel={() => setManualOpen(false)}
-      confirmLabel="Tekshirish" confirmDisabled={busy || !manual.trim()} onConfirm={() => { setManualOpen(false); void scan(manual); }}>
+      confirmLabel="Tekshirish" confirmDisabled={busy || !manual.trim()} onConfirm={confirmManual} onDismiss={manualDismissed}>
       <WorkerFormField label="QR" initialValue={manual} onChangeText={setManual} />
     </WorkerFormDialog>
   </SafeAreaView>;

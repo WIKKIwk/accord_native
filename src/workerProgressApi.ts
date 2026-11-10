@@ -8,8 +8,8 @@ import { adminProductionMapQueueSnapshot } from './productionMapQueueSnapshotApi
 type Obj = Record<string, any>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
 
-async function requireActiveOrder(session: Session, orderId: string): Promise<void> {
-  const snapshot = await adminProductionMapQueueSnapshot(session, { fresh: true });
+async function requireActiveOrder(session: Session, orderId: string, current?: () => boolean): Promise<void> {
+  const snapshot = await adminProductionMapQueueSnapshot(session, { fresh: true, ...(current ? { current } : {}) });
   const control = snapshot.order_controls[orderId];
   const rawState = typeof control === 'string' ? control : object(control)?.state;
   const orderState = typeof rawState === 'string' ? rawState : 'active';
@@ -24,15 +24,17 @@ async function requireActiveOrder(session: Session, orderId: string): Promise<vo
 
 /** @v2 adminProgressQrLookup */
 export async function adminProgressQrLookup(session: Session, qrPayload: string, options: { apparatus?: string; orderId?: string;
-  requireActiveOrder?: boolean } = {}): Promise<Obj> {
+  requireActiveOrder?: boolean; current?: () => boolean } = {}): Promise<Obj> {
   const station = (options.apparatus ?? '').trim(), order = (options.orderId ?? '').trim(), scoped = !!station || !!order;
   const invalid = (message = 'Server QR ma’lumotlarini to‘liq qaytarmadi') => new WorkerControlException('progress_qr_invalid_response', message);
+  const scope = sessionReadScope(session);
+  const guard = options.current ? () => scope === sessionReadScope(session) && options.current!() : undefined;
   let response: unknown;
   try {
     response = await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/progress-qr/lookup', {
       qr_payload: qrPayload.trim(), ...(options.requireActiveOrder ? { require_active_order: true } : {}),
       ...(scoped ? { apparatus: station, order_id: order } : {}),
-    }, null, false, 'progress_qr_lookup_failed');
+    }, guard ? scope : null, !!guard, 'progress_qr_lookup_failed', guard);
   } catch (error) {
     if (error instanceof SyntaxError) throw invalid();
     throw error;
@@ -43,7 +45,7 @@ export async function adminProgressQrLookup(session: Session, qrPayload: string,
       typeof batch.order_id !== 'string' || !batch.order_id.trim() || !['waiting', 'in_use', 'processed'].includes(batch.wip_status))) {
     throw invalid('Server QR ruloni yoki buyurtma holatini to‘liq qaytarmadi');
   }
-  if (options.requireActiveOrder && payload.active_order_validated !== true) await requireActiveOrder(session, String(batch.order_id).trim());
+  if (options.requireActiveOrder && payload.active_order_validated !== true) await requireActiveOrder(session, String(batch.order_id).trim(), guard);
   if (scoped && (payload.validated_apparatus !== station || payload.validated_order_id !== order)) {
     throw new WorkerControlException('progress_qr_validation_missing', 'Server QR yo‘nalishini tasdiqlamadi');
   }

@@ -1,15 +1,19 @@
 import { activeSessionToken, type Session } from './auth';
 import { authorizedFetch, currentQueueSnapshotReadEpoch, invalidateQueueSnapshotReads } from './authorizedFetch';
-import { productionMapResponseError } from './workerControlsApi';
+import { productionMapResponseError, WorkerControlException } from './workerControlsApi';
+import { sessionReadScope } from './sessionReadScope';
 import { decodeCanonicalProductionMapSnapshot } from './productionMapSnapshot';
 
 type Obj = Record<string, any>;
 type SnapshotOptions = { apparatus?: string; order_id?: string; fresh?: boolean; worker_scope?: boolean; queue_limit?: number | null;
-  queue_search?: string; since?: Obj | null; wait_for_changes?: boolean };
+  queue_search?: string; since?: Obj | null; wait_for_changes?: boolean; current?: () => boolean };
 const reads = new Map<string, Promise<Obj>>();
 
 /** @v2 adminProductionMapQueueSnapshot */
 export function adminProductionMapQueueSnapshot(session: Session, input: SnapshotOptions = {}): Promise<Obj> {
+  const scope = sessionReadScope(session);
+  const guard = () => { if (scope !== sessionReadScope(session) || input.current?.() === false) throw new WorkerControlException('session_scope_changed', ''); };
+  if (input.current) guard();
   if (input.fresh) invalidateQueueSnapshotReads();
   const apparatus = input.apparatus?.trim() ?? '', order = input.order_id?.trim() ?? '';
   const workerScope = input.worker_scope === true || session.profile?.role === 'rezka_master';
@@ -19,7 +23,7 @@ export function adminProductionMapQueueSnapshot(session: Session, input: Snapsho
   const key = JSON.stringify([session.baseUrl, token, currentQueueSnapshotReadEpoch(), apparatus, order, workerScope,
     input.queue_limit ?? null, input.queue_search ?? '', cursor?.epoch ?? null, cursor?.revision ?? null, cursor?.scope ?? null,
     input.wait_for_changes === true]);
-  const existing = reads.get(key); if (existing) return existing;
+  const existing = input.current ? undefined : reads.get(key); if (existing) return existing;
   const pending = (async () => {
     const query = new URLSearchParams();
     if (apparatus) { query.set('apparatus', apparatus); query.set('order_id', order); }
@@ -35,15 +39,18 @@ export function adminProductionMapQueueSnapshot(session: Session, input: Snapsho
     }
     const search = query.toString();
     const path = '/v1/mobile/admin/production-maps/sequence';
-    const response = await authorizedFetch(session, search ? `${path}?${search}` : path);
+    const response = await authorizedFetch(session, search ? `${path}?${search}` : path, undefined, input.current ? guard : undefined);
+    if (input.current) guard();
     if (response.status === 304 && cursor) return cursor;
     if (response.status !== 200) {
       let payload: unknown;
       try { payload = await response.json(); } catch { payload = null; }
       throw productionMapResponseError(response.status, payload, 'production_map_sequence');
     }
-    return decodeCanonicalProductionMapSnapshot(await response.json(), false, session);
+    const payload = await response.json();
+    if (input.current) guard();
+    return decodeCanonicalProductionMapSnapshot(payload, false, session);
   })().finally(() => { if (reads.get(key) === pending) reads.delete(key); });
-  reads.set(key, pending);
+  if (!input.current) reads.set(key, pending);
   return pending;
 }

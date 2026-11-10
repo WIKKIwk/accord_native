@@ -45,6 +45,32 @@ export function workerWipConsumerIds(map: Record<string, unknown>, nextApparatus
   const candidates = [...new Set(stages.filter(node => node.id === target.id || (!!alternatives && group(node) === alternatives)).map(apparatus).filter(Boolean))];
   return station && !candidates.includes(station) ? [] : candidates;
 }
+/** @v2 productionMapNextWorkStagesForNode */
+export function workerNextWorkStages(map: Record<string, unknown>, source: string): { id: string; apparatus: string }[] {
+  const stages = workStages(map), nodes = objects(map.nodes), edges = objects(map.edges);
+  if (!stages.some(node => node.id === source.trim())) return [];
+  const successors = (id: string) => {
+    const node = nodes.find(candidate => candidate.id === id);
+    if (!node) return [];
+    const operation = group(node) ? nodes.filter(candidate => group(candidate) === group(node)) : [node];
+    const ids = new Set(operation.map(candidate => candidate.id));
+    return edges.filter(edge => ids.has(edge.from) && !ids.has(edge.to) && (node.kind !== 'condition' ||
+      ['ha', 'yes', 'true', '1', "yo'q", 'yoq', 'no', 'false', '0'].includes(text(edge.branch).toLowerCase()))).map(edge => text(edge.to));
+  };
+  const pending = successors(source.trim()), seen = new Set<string>(), found = new Set<string>(), result: { id: string; apparatus: string }[] = [];
+  for (let index = 0; index < pending.length; index++) {
+    const id = pending[index], node = nodes.find(candidate => candidate.id === id);
+    if (!node || seen.has(id) || node.kind === 'end') continue;
+    seen.add(id);
+    if (stages.some(candidate => candidate.id === id)) {
+      for (const candidate of stages.filter(candidate => candidate.id === id || (!!group(node) && group(candidate) === group(node)))) {
+        const key = text(candidate.id);
+        if (!found.has(key)) { found.add(key); result.push({ id: key, apparatus: apparatus(candidate) }); }
+      }
+    } else pending.push(...successors(id));
+  }
+  return result;
+}
 /** @v2 _workerOrderPlannedMeters */
 export function workerOrderPlannedMeters(base: unknown): number | null {
   return typeof base === 'number' && Number.isFinite(base) && base > 0 ? Math.ceil(base / 500) * 500 : null;

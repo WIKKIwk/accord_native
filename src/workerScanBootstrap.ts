@@ -1,4 +1,5 @@
 import type { Session } from './auth';
+import { sessionReadScope } from './sessionReadScope';
 import { authorizedFetch } from './authorizedFetch';
 import { isCanonicalApparatusId, productionMapResponseError, WorkerControlException } from './workerControlsApi';
 import { rawMaterialAssignment } from './workerRawMaterials';
@@ -235,9 +236,12 @@ export function parseWorkerScanBootstrap(raw: unknown, apparatus: string, orderI
 /** @v2 adminOrderScanBootstrap */
 export async function adminOrderScanBootstrap(session: Session, input: {
   apparatus: string; orderId: string; materialBarcodes?: string[]; includeSections?: boolean; includeContext?: boolean;
-  automaticQolipConfirmation?: boolean; qrPayload?: string;
+  automaticQolipConfirmation?: boolean; qrPayload?: string; current?: () => boolean;
 }): Promise<Obj | null> {
   const station = input.apparatus.trim(), order = input.orderId.trim(), qr = input.qrPayload?.trim() ?? '';
+  const scope = sessionReadScope(session);
+  const guard = () => { if (scope !== sessionReadScope(session) || input.current?.() === false) throw new WorkerControlException('session_scope_changed', ''); };
+  if (input.current) guard();
   if (!isCanonicalApparatusId(station)) throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
   const query = new URLSearchParams({ apparatus: station, order_id: order });
   if (input.includeSections === false) query.set('include_sections', 'false');
@@ -247,8 +251,10 @@ export async function adminOrderScanBootstrap(session: Session, input: {
   if (input.materialBarcodes?.length) query.set('material_barcodes', input.materialBarcodes.join(','));
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 10_000);
   try {
-    const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/order-scan-bootstrap?${query}`, { signal: controller.signal });
+    const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/order-scan-bootstrap?${query}`, { signal: controller.signal }, input.current ? guard : undefined);
+    if (input.current) guard();
     const body = await response.text();
+    if (input.current) guard();
     if ((response.status === 404 || response.status === 405) && !body.trim()) return null;
     if (response.status !== 200) {
       let payload: unknown; try { payload = JSON.parse(body); } catch { payload = null; }
