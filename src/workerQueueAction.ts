@@ -240,8 +240,8 @@ export function parseQueueActionResponse(raw: unknown, input: Obj = {}, session?
 }
 
 /** @v2 adminApparatusQueueActionResult */
-export async function adminApparatusQueueActionResult(session: Session, input: Obj): Promise<Obj> {
+export async function adminApparatusQueueActionResult(session: Session, input: Obj, current?: () => boolean): Promise<Obj> {
   const body = queueActionBody(input);
   return parseQueueActionResponse(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/queue-action',
-    body, null, false, 'queue_action_not_allowed'), input, session);
+    body, null, !!current, 'queue_action_not_allowed', current), input, session);
 }

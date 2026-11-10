@@ -23,7 +23,7 @@ type ReprintInput = { apparatus: string; order_id: string; operation_id: string;
   printer?: string; print_mode?: string; print_transport?: 'wifi' | 'offline' | 'bluetooth' };
 
 /** @v2 adminLayerRemainderReprint */
-export async function adminLayerRemainderReprint(session: Session, input: ReprintInput) {
+export async function adminLayerRemainderReprint(session: Session, input: ReprintInput, current?: () => boolean) {
   validateLayerRemainderContext(input.apparatus, input.order_id);
   if (!input.operation_id.trim()) throw new WorkerControlException('layer_remainder_not_found', 'Qavat astatkasi topilmadi');
   const body: Obj = { apparatus: input.apparatus.trim(), order_id: input.order_id.trim(), operation_id: input.operation_id.trim() };
@@ -32,13 +32,15 @@ export async function adminLayerRemainderReprint(session: Session, input: Reprin
   if (input.print_mode?.trim()) body.print_mode = input.print_mode.trim();
   if (input.print_transport === 'offline' || input.print_transport === 'bluetooth') body.print_transport = 'offline';
   body.print_count = 1;
+  const guard = () => { if (current && !current()) throw new Error('Session scope changed'); };
   const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/layer-remainders/reprint', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
+  }, guard);
+  guard();
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'layer_remainder_failed');
   }
-  return layerRemainderResultFromJson(await response.json());
+  const result = layerRemainderResultFromJson(await response.json()); guard(); return result;
 }

@@ -6,7 +6,7 @@ import { laminationAstatkaResultFromJson } from './workerLaminationRemainders';
 type Obj = Record<string, unknown>;
 const text = (value: unknown) => value == null ? '' : String(value);
 /** @v2 adminSubmitLaminationAstatka */
-export async function adminSubmitLaminationAstatka(session: Session, request: Obj) {
+export async function adminSubmitLaminationAstatka(session: Session, request: Obj, current?: () => boolean) {
   validateLayerRemainderContext(text(request.apparatus), text(request.order_id));
   const weights = request.layer_remainder_weights;
   if (!text(request.request_id).trim() || !text(request.session_id).trim() ||
@@ -14,6 +14,6 @@ export async function adminSubmitLaminationAstatka(session: Session, request: Ob
     throw new WorkerControlException('laminatsiya_astatka_metrics_required', 'Astatka hisobotini to‘liq kiriting');
   }
   const result = await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/laminatsiya-astatka', request,
-    null, false, 'laminatsiya_astatka_report_failed');
+    null, !!current, 'laminatsiya_astatka_report_failed', current);
   return laminationAstatkaResultFromJson(result);
 }

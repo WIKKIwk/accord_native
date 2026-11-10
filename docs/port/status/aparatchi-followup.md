@@ -17,13 +17,14 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | FAB QR payload va URL normalizatsiyasi saqlandi; dastlabki input kamera qayta ochilmasdan tekshiriladi; manual entry va iOS dismissal handshake | `_extractQrPayload`, `_loadInitialInteractionAndScan` | `workerQr.ts`, WorkerQrScanner, WorkerScreen, OrderScreen | QR/progress/bootstrap focused suite 55/55 |
 | Worker yo‘riqnomasi placeholder o‘rniga biriktirilgan apparatlarga mos V2 matni, locale va native UI bilan ochiladi | `AparatchiWorkInstructionsScreen` | Shared work-instructions controller/views, guarded worker hook, iOS route / Android section | 12/12 focused tests; both typechecks exit 0, lint 0 errors / 1 existing warning |
 | Daily work waiting WIP correction va majburiy reason, native maydonlar va QR long-press/reprint | `_AparatchiDailyWorkScreenState._editWip`, `_DailyWorkWipEditDialogState` | Daily work model/controller, shared dialogs and both platform screens | Focused correction/history/API tests, native typechecks and lint |
+| Laminate atomic Astatka / full completion, source revisions, pending request reconciliation va post-save native printer flow | `_IntegratedLaminationAstatka._runIntegratedLaminationAstatka` | WorkerLaminationWorkflow, native form/history/QR, SQLite pending store and guarded APIs | Atomic workflow / API / queue-action focused tests |
 
 ## Open items
 
 | Flow | Confirmed difference / next step |
 |---|---|
 | General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
-| Lamination / cut | Bosma formasi bilan aralashtirilgan conditional report/handoff branchlarini ajratish |
+| Glue / cut / handoff | Glue/cut conditional completion, multi-frame Rezka output va non-print handoff branchlarini ajratish; laminate atomic Astatka/full completion ulandi |
 | Paddons | Worker navigation placeholder. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak |
 
 ## Verification and limits
