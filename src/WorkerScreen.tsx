@@ -5,7 +5,8 @@ import { router, type Href } from 'expo-router';
 import { Modal, Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
-import { updateSessionAssignments, type Session } from './auth';
+import { activeSessionToken, updateSessionAssignments, type Session } from './auth';
+import { sessionReadScope } from './sessionReadScope';
 import { canWorkOnApparatus, loadWorkerQueue, queueFromSnapshot, workerOrderIsFrozen, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
 import { useNativeSheet } from './nativeSheet';
 import { OrderScreen } from './OrderScreen';
@@ -33,7 +34,7 @@ import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } 
 import { workerQueueSearch } from './workerQueueWindow';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
-type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' };
+type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka'; initialScanQr?: string };
 type ActionScope = { window: string; scope: string };
 type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean };
 const statusLabel: Record<string, string> = {
@@ -67,6 +68,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const [section, setSection] = useState<'home' | 'profile' | 'daily'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const pendingScannedOrder = useRef<{ target: ActiveOrder; scope: string } | null>(null);
   const [navBarHeight, setNavBarHeight] = useState(80);
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
@@ -128,7 +130,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (target.readOnly && target.preview) return <WorkerOrderDetails session={session}
       apparatusId={target.apparatusId}
       order={target.preview} queueCursor={queueRef.current?.snapshot ?? null} onClose={onClose} />;
-    return <OrderScreen session={session} apparatusId={target.apparatusId} orderId={target.orderId} preview={target.preview}
+    return <OrderScreen key={`${target.apparatusId}:${target.orderId}`} session={session} apparatusId={target.apparatusId} orderId={target.orderId} preview={target.preview}
+      initialScanQr={target.initialScanQr}
       queueCursor={queueRef.current?.snapshot ?? null} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction}
       onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
   }, [session, orderRoute]);
@@ -193,7 +196,19 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const completed = queueLimit === 0 ? completedMatches : completedMatches.slice(0, queueLimit);
   const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
   const scannerMachineId = selectedMachine ? (canWorkMachine(selectedMachine.id) ? selectedMachine.id : '') : queue?.machines.find(machine => canWorkMachine(machine.id))?.id ?? '';
-  const scanner = scannerOpen ? <WorkerQrScanner session={session} apparatusId={scannerMachineId} onClose={() => setScannerOpen(false)} onOrder={(apparatusId, orderId) => { setScannerOpen(false); setMachineId(apparatusId); openOrder({ apparatusId, orderId }); }} /> : null;
+  function finishQrScan(apparatusId: string, orderId: string, qr: string) {
+    const target: ActiveOrder = { apparatusId, orderId, initialScanQr: qr };
+    setMachineId(apparatusId);
+    if (nativeNavigation && Platform.OS === 'ios') pendingScannedOrder.current = { target, scope: sessionReadScope(session) };
+    else openOrder(target);
+    setScannerOpen(false);
+  }
+  function scannerDismissed() {
+    const pending = pendingScannedOrder.current;
+    pendingScannedOrder.current = null;
+    if (pending && screenMounted.current && activeSessionToken(session) && pending.scope === sessionReadScope(session)) openOrder(pending.target);
+  }
+  const scanner = scannerOpen ? <WorkerQrScanner key={scannerMachineId} session={session} apparatusId={scannerMachineId} onClose={() => setScannerOpen(false)} onOrder={finishQrScan} /> : null;
   if (scannerOpen && !nativeNavigation) return scanner;
   function selectDestination(id: string) {
     if (id === 'home' || id === 'queue') { setSection('home'); return; }
@@ -375,7 +390,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
         <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} />
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
-      {nativeNavigation && scannerOpen && <Modal visible presentationStyle="fullScreen" animationType="slide" onRequestClose={() => setScannerOpen(false)}>{scanner}</Modal>}
+      {nativeNavigation && <Modal visible={scannerOpen} presentationStyle="fullScreen" animationType="slide" onDismiss={scannerDismissed} onRequestClose={() => setScannerOpen(false)}>{scanner}</Modal>}
     </SafeAreaView>
   );
   if (nativeNavigation) return content;

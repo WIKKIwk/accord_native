@@ -25,6 +25,7 @@ import { WorkerOrderImage } from './components/WorkerOrderHeader';
 import { WorkerOrderIdentity } from './components/WorkerOrderIdentity';
 import { WorkerScannedWipHistory } from './components/WorkerScannedWipHistory';
 import { canReadScannedWips, scannedWipStage } from './workerScannedWips';
+import { workerQrPayload, WorkerInitialQr } from './workerQr';
 import { WorkerOrderOverview } from './components/WorkerOrderOverview';
 import { WorkerPaintPalette } from './components/WorkerPaintPalette';
 import { WorkerOutputProgress } from './components/WorkerOutputProgress';
@@ -51,7 +52,7 @@ import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartRea
 import { workerOrderDetailFromSnapshot, type Apparatus, type QueueOrder } from './workerApi';
 
 type Obj = Record<string, any>;
-type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka'; onClose: () => void; onChanged: () => void };
+type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka'; initialScanQr?: string; onClose: () => void; onChanged: () => void };
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
 }
@@ -84,7 +85,7 @@ async function scanBootstrap(session: Session, input: Parameters<typeof adminOrd
   return input.includeSections === false ? result : completeWorkerScanSections(session, result, input.materialBarcodes ?? []);
 }
 
-export function OrderScreen({ session, apparatusId, apparatus, orderId, preview, queueCursor, initialAction, onClose, onChanged }: Props) {
+export function OrderScreen({ session, apparatusId, apparatus, orderId, preview, queueCursor, initialAction, initialScanQr = '', onClose, onChanged }: Props) {
   const { t, p, locale } = useWorkerOrderText();
   const colors = useWorkerColors();
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
@@ -165,6 +166,9 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const isCurrent = () => screenMounted.current && !!activeSessionToken(session) && latestPrintingIdentity.current === printingIdentity;
   const printerSelector = useWorkerPrinterSelector(isCurrent);
   const initialActionHandled = useRef(false);
+  const initialQr = useRef(new WorkerInitialQr(initialScanQr));
+  const validateInitialQr = useRef<(qr: string) => void>(() => {});
+  useLayoutEffect(() => { validateInitialQr.current = qr => { void onScan(qr, 'input'); }; });
   const workerRole = String(session.profile?.role ?? '').trim();
   const workerRef = String(session.profile?.ref ?? '').trim();
   const draftScope = JSON.stringify([session.baseUrl, workerRole, workerRef, workerRole && workerRef ? '' : session.imageCacheScope, orderId, apparatusId]) + (selected === 'astatka' ? ':astatka' : '');
@@ -225,6 +229,10 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   }, [load, refresh, busy]);
 
   const synchronized = !loading && !busy && !controlRetired && validOrderControl(bootstrap, apparatusId, orderId, queueCursor);
+  useEffect(() => {
+    const timer = setTimeout(() => initialQr.current.run(synchronized, qr => validateInitialQr.current(qr)), 0);
+    return () => clearTimeout(timer);
+  }, [synchronized]);
   const control: Obj = bootstrap?.control_state?.control ?? {};
   const interaction: Obj = control.interaction ?? {};
   const controlEpoch = bootstrap?.control_state?.epoch, controlRevision = bootstrap?.control_state?.rev;
@@ -386,7 +394,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   }
   async function onScan(value: string, kind: ScanKind | null = scanner) {
     if (kind === 'input') {
-      const qr = value.trim();
+      const qr = workerQrPayload(value);
       setScanner(null);
       if (!qr || !synchronized || scanInFlight.current) return;
       scanInFlight.current = true;

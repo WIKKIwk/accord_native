@@ -50,3 +50,10 @@ GoDEX and deferred test mode remain excluded by the port decisions. No backend c
 - Expose the header action only for an assigned laminate/glue/cut apparatus, an operator with queue-read permission and a loaded order with a confirmed stage (or exactly one matching map node). Capture the stage at opening.
 - The native 76% sheet shows loading, error/retry, empty, localized state, worker, linked time and blocked-return reason. Long press requests return only for unused active/unprocessed WIP with a server return token and queue-manage permission.
 - Confirm natively, recheck identity/permission/item, lock dismissal and concurrent writes while saving, and reconcile after any attempted write including a lost response. Opening, reading, retrying, cancelling or dismissing history never retires order control. An account change clears data and blocks the old write.
+
+## General QR handoff
+
+- Preserve the scanned QR when opening an order. Normalize HTTP(S) path/query payloads with V2's `qr_payload`, `progress_qr`, `epc` precedence, retaining leading zeroes and the final decoded path segment. The root-path behavior is checked against Dart's [URI implementation](https://github.com/dart-lang/sdk/blob/main/sdk/lib/core/uri.dart).
+- Load authoritative order control and validate that initial input once, without a second camera and without automatically submitting Start. Manual entry uses the same path. Account changes discard late results.
+- On iOS await the full-screen camera modal's actual `onDismiss` before presenting the order sheet. Android transfers directly. An order identity change mounts fresh state.
+- Busy-apparatus switch/report/handoff remains an open follow-up; QR handoff alone does not claim to complete that flow.

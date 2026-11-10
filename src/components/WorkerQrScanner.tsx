@@ -4,9 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authorizedFetch } from '../authorizedFetch';
-import type { Session } from '../auth';
+import { activeSessionToken, type Session } from '../auth';
+import { sessionReadScope } from '../sessionReadScope';
+import { workerQrPayload } from '../workerQr';
+import { WorkerFormDialog } from './WorkerFormDialog';
+import { WorkerFormField } from './WorkerFormField';
 
-type Props = { session: Session; apparatusId: string; onClose: () => void; onOrder: (apparatusId: string, orderId: string) => void };
+type Props = { session: Session; apparatusId: string; onClose: () => void; onOrder: (apparatusId: string, orderId: string, qr: string) => void };
 type JsonObject = Record<string, unknown>;
 const object = (value: unknown): JsonObject => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {};
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
@@ -62,6 +66,8 @@ export function WorkerQrScanner({ session, apparatusId, onClose, onOrder }: Prop
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manual, setManual] = useState('');
   const active = useRef(true);
   const scanLock = useRef(false);
   const request = useRef<AbortController | null>(null);
@@ -70,14 +76,15 @@ export function WorkerQrScanner({ session, apparatusId, onClose, onOrder }: Prop
     return () => { active.current = false; request.current?.abort(); };
   }, []);
   async function scan(raw: string) {
-    const qr = raw.trim();
+    const qr = workerQrPayload(raw);
     if (!qr || scanLock.current) return;
     scanLock.current = true; setBusy(true); setError('');
+    const scope = sessionReadScope(session);
     const controller = new AbortController(); request.current = controller;
     const timer = setTimeout(() => controller.abort(), 15000);
     try {
       const id = await findOrder(session, apparatusId, qr, controller.signal);
-      if (active.current) onOrder(apparatusId, id);
+      if (active.current && activeSessionToken(session) && scope === sessionReadScope(session)) onOrder(apparatusId, id, qr);
     } catch (error) {
       if (active.current) setError(error instanceof Error ? error.message : 'QR kodni tekshirib bo‘lmadi.');
     } finally {
@@ -94,14 +101,18 @@ export function WorkerQrScanner({ session, apparatusId, onClose, onOrder }: Prop
       </Column>
     </Host>
     {!apparatusId ? <View style={styles.message}><Host matchContents colorScheme="light"><Text>Avval aparatni tanlang.</Text></Host></View>
-      : permission?.granted ? <CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }} onBarcodeScanned={busy || !!error ? undefined : ({ data }) => { void scan(data); }} />
+      : permission?.granted ? <CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix'] }} onBarcodeScanned={busy || manualOpen || !!error ? undefined : ({ data }) => { void scan(data); }} />
       : <View style={styles.message}><Host matchContents colorScheme="light"><Button label="Kameraga ruxsat berish" onPress={() => { void requestPermission(); }} /></Host></View>}
     {busy ? <ActivityIndicator size="large" color="#285140" style={styles.status} /> : null}
     {error ? <Host matchContents={{ vertical: true }} style={styles.message} colorScheme="light" seedColor="#285140"><Column spacing={8}>
       <Text textStyle={{ color: '#a62727', fontSize: 14 }}>{error}</Text>
       <Button label="Qayta skanerlash" variant="outlined" onPress={() => setError('')} />
     </Column></Host> : null}
-    <Host matchContents={{ vertical: true }} style={styles.message} colorScheme="light"><Text textStyle={{ color: '#52635a', fontSize: 13 }}>QR buyurtmani topadi. Rulonni ishga qo‘shish oqimi hali tayyor emas.</Text></Host>
+    <Host matchContents={{ vertical: true }} style={styles.message} colorScheme="light"><Button label="Kodni qo‘lda kiritish" variant="text" disabled={busy} onPress={() => setManualOpen(true)} /></Host>
+    <WorkerFormDialog visible={manualOpen} title="Kodni qo‘lda kiritish" cancelLabel="Bekor qilish" onCancel={() => setManualOpen(false)}
+      confirmLabel="Tekshirish" confirmDisabled={busy || !manual.trim()} onConfirm={() => { setManualOpen(false); void scan(manual); }}>
+      <WorkerFormField label="QR" initialValue={manual} onChangeText={setManual} />
+    </WorkerFormDialog>
   </SafeAreaView>;
 }
 
