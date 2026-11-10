@@ -16,6 +16,7 @@ import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerOrderSheet } from './WorkerOrderSheet';
 import { loadWorkerWipBatches, wipBatchKind, wipBatchRows, wipBatchStatus, wipBatchWeights, wipMeters, wipText, type WipApparatusNames, type WipBatch, type WipOrder } from '../workerWip';
 import { WorkerWipBatchDetails } from './WorkerWipBatchDetails';
+import { WorkerOrderFreezeDetails } from './WorkerOrderDetails';
 
 type Props = { session: Session; order: WipOrder; onClose: () => void; stageHistory?: boolean; apparatusNames?: WipApparatusNames };
 export type WorkerWipHistorySheetHandle = { open: (order: CompletedOrder) => void };
@@ -32,8 +33,10 @@ export function WorkerWipHistorySheet({ ref, session, onDismiss }: {
     setOrder(null);
     onDismiss();
   };
-  return <WorkerOrderSheet key={JSON.stringify([order.apparatusId, order.id])} dismissible onClose={close}>
-    <WorkerWipHistory session={session} order={order} onClose={close} />
+  return <WorkerOrderSheet key={JSON.stringify([order.apparatusId, order.id])} dismissible compact={!!order.issueNote} onClose={close}>
+    {order.issueNote
+      ? <WorkerOrderFreezeDetails order={order} apparatusName={order.apparatusId} onClose={close} />
+      : <WorkerWipHistory session={session} order={order} onClose={close} />}
   </WorkerOrderSheet>;
 }
 
