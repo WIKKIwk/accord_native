@@ -9,7 +9,7 @@ import { useDevicePicker } from './useDevicePicker';
 type LabelProps = { children: string };
 type ActionProps = { label: string; detail?: string; onPress(): void; disabled?: boolean; id?: string };
 type DeviceSheetProps = { operator: DevicePickerAdapter; close(): void; useText: DevicePickerTextHook;
-  Label: ComponentType<LabelProps>; Action: ComponentType<ActionProps>; safe?: boolean };
+  Label: ComponentType<LabelProps>; Action: ComponentType<ActionProps>; safe?: boolean; printerOnly?: boolean };
 const icons = {
   usb: require('../../../assets/icons/gscale/usb.xml'), bluetooth: require('../../../assets/icons/gscale/bluetooth.xml'),
   wifi: require('../../../assets/icons/gscale/wifi.xml'), back: require('../../../assets/icons/gscale/arrow_back.xml'),
@@ -32,8 +32,8 @@ function DeviceRow({ title, detail, icon, first, last, onPress }: {
   </WorkerQueueCard>;
 }
 
-export function DeviceSheet({ operator, close, useText, Label, safe }: DeviceSheetProps) {
-  const picker = useDevicePicker(operator, close, safe), address = useNativeState(picker.address), t = useText();
+export function DeviceSheet({ operator, close, useText, Label, safe, printerOnly = false }: DeviceSheetProps) {
+  const picker = useDevicePicker(operator, close, safe, printerOnly), address = useNativeState(picker.address), t = useText();
   const colors = useMaterialColors(), { height } = useWindowDimensions(), connection = picker.device.connection;
   const listLimit = Math.max(88, Math.min(400, height * 0.7 - (connection === 'wifi' ? 240 : 144)));
   const title = connection === 'bluetooth' ? 'Bluetooth printer' : connection === 'wifi' ? 'Wi-Fi qurilma'
@@ -53,7 +53,7 @@ export function DeviceSheet({ operator, close, useText, Label, safe }: DeviceShe
     </Host>
     {connection === null ? <Host matchContents={{ vertical: true }} style={styles.full}>
       <Row horizontalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
-        {connections.map(option => <TextButton key={option.id} onClick={() => picker.choose(option.id)} contentPadding={{ start: 0, end: 0 }}
+        {connections.filter(option => !printerOnly || option.id === 'bluetooth').map(option => <TextButton key={option.id} onClick={() => picker.choose(option.id)} contentPadding={{ start: 0, end: 0 }}
           modifiers={[weight(1), defaultMinSize({ minHeight: 116 }), testID(`device-picker-${option.id}`), semantics({ contentDescription: option.label })]}>
           <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
             <Box contentAlignment="center" modifiers={[size(64, 64), clip(Shapes.RoundedCorner(32)), background(colors.secondaryContainer)]}>

@@ -8,7 +8,7 @@ function compile(file, mocks = {}, isJsx = false) { const filename = path.resolv
   m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.endsWith('.xml') ? id : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS,
     ...(isJsx ? { jsx: ts.JsxEmit.ReactJSX } : {}) } }).outputText, filename); return m.exports; }
-function hookHarness(connection = null) {
+function hookHarness(connection = null, printerOnly = false) {
   const calls = [], effects = [], state = { device: { connection, scanning: false, scanResult: null, checkingAddress: false, addressError: '' } };
   const operator = { subscribe: () => () => {}, getSnapshot: () => state, selectConnection: value => calls.push(['connection', value]),
     scanDevices: async () => calls.push('scan'), checkDeviceAddress: async raw => { calls.push(['address', raw]); return null; },
@@ -21,7 +21,7 @@ function hookHarness(connection = null) {
     '../../printing/nativePrinter': { NativeBluetoothPrinter: {} },
     '../../printing/printService': { PrintService: { detectOfflinePrinter: async () => ({ kind: 'zebra', deviceName: 'USB' }) } } };
   const { useDevicePicker } = compile('shared/printing/useDevicePicker.ts', mocks);
-  const picker = useDevicePicker(operator, () => calls.push('close')); const cleanup = effects.map(effect => effect());
+  const picker = useDevicePicker(operator, () => calls.push('close'), false, printerOnly); const cleanup = effects.map(effect => effect());
   return { picker, calls, operator, cleanup: async () => { await new Promise(resolve => setImmediate(resolve)); cleanup.forEach(fn => fn?.()); }, stopped: () => stopped };
 }
 test('extracted hook retains GScale selection objects, ordering and USB detection', async () => {
@@ -36,7 +36,7 @@ test('extracted hook retains GScale selection objects, ordering and USB detectio
 test('Bluetooth discovery subscription is stopped on unmount', async () => {
   const h = hookHarness('bluetooth'); await h.cleanup(); assert.equal(h.stopped(), 1);
 });
-function sheet(platform, connection = null, error = '', safe = false) {
+function sheet(platform, connection = null, error = '', safe = false, printerOnly = false) {
   const calls = [], server = { endpoint: { baseUrl: 'http://scale' }, handshake: { serverName: 'Scale' } }, printer = { address: 'aa', displayName: 'XP' };
   const picker = { device: { connection, checkingAddress: false, addressError: '', scanning: false, scanResult: { servers: [server] } },
     address: 'http://gscale.local:39117', setAddress: value => calls.push(['address', value]), printers: [printer], scanning: false, error,
@@ -54,10 +54,28 @@ function sheet(platform, connection = null, error = '', safe = false) {
     './useDevicePicker': { useDevicePicker: () => picker } };
   compose.OutlinedTextField = Object.assign('OutlinedTextField', { Label: 'OutlinedTextField.Label' });
   const { DeviceSheet } = compile(`shared/printing/DeviceSheet.${platform}.tsx`, mocks, true);
-  const tree = DeviceSheet({ operator: {}, close: () => calls.push('close'), useText: () => x => x, Label: 'Label', Action: 'Action', safe });
+  const tree = DeviceSheet({ operator: {}, close: () => calls.push('close'), useText: () => x => x, Label: 'Label', Action: 'Action', safe, printerOnly });
   return { tree, calls, server, printer };
 }
 const withId = (tree, id) => find(tree, n => n.props.modifiers?.some(modifier => modifier.testID === id))[0];
+test('print-only picker blocks disabled transport methods without affecting GScale choices', async () => {
+  const h = hookHarness(null, true);
+  h.picker.choose('usb'); h.picker.choose('wifi'); await h.picker.selectUsb(); await h.picker.selectServer({});
+  assert.deepEqual(h.calls, [['connection', null]]);
+  h.picker.choose('bluetooth'); await h.picker.selectBluetooth({ address: 'aa' });
+  assert.ok(h.calls.some(call => Array.isArray(call) && call[0] === 'select' && call[1].transport === 'bluetooth'));
+});
+for (const platform of ['ios', 'android']) test(`${platform} print-only sheet hides Wi-Fi and USB`, () => {
+  const { tree } = sheet(platform, null, '', false, true);
+  if (platform === 'ios') {
+    const labels = find(tree, node => node.type === 'Button').map(node => node.props.label);
+    assert.equal(labels.includes('Wi-Fi qurilma'), false); assert.equal(labels.includes('USB printer'), false);
+    assert.equal(labels.includes('Bluetooth printer'), true);
+  } else {
+    assert.equal(withId(tree, 'device-picker-wifi'), undefined); assert.equal(withId(tree, 'device-picker-usb'), undefined);
+    assert.ok(withId(tree, 'device-picker-bluetooth'));
+  }
+});
 test('Android standalone safe picker keeps cancellation available before a connection is chosen', () => {
   const h = sheet('android', null, '', true);
   withId(h.tree, 'device-picker-close').props.onClick(); assert.equal(h.calls.at(-1), 'close');

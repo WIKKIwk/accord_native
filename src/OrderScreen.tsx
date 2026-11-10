@@ -34,7 +34,8 @@ import { WorkerOrderAlertButton } from './components/WorkerOrderAlertButton';
 import { useWorkerOrderText } from './components/useWorkerOrderText';
 import { workerCompletionMode } from './workerCompletion';
 import type { MaterialRow } from './workerMaterialPresentation';
-import { connectedPrinter } from './workerPrinter';
+import { pickWorkerPrinter, printWorkerJobs, workerPrinterFields, WorkerPrintCancelled } from './workerPrinting';
+import { useWorkerPrinterSelector } from './components/useWorkerPrinterSelector';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerSheetCloseContext } from './components/workerSheetContext';
 import { WorkerFormDialog } from './components/WorkerFormDialog';
@@ -125,7 +126,6 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const newPaintFieldValue = useNativeState('');
   const [loadedDraftScope, setLoadedDraftScope] = useState('');
   const [paint, setPaint] = useState<Record<string, string>>({});
-  const [printerUrl, setPrinterUrl] = useState('');
   const [selectedQolipSet, setSelectedQolipSet] = useState('');
   const [materialsExpanded, setMaterialsExpanded] = useState(false);
   const [qolipsExpanded, setQolipsExpanded] = useState(false);
@@ -154,6 +154,13 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const scanBootstrapUnsupported = useRef(false);
   const recentQuickScan = useRef<{ value: string; at: number } | null>(null);
   const screenMounted = useRef(true);
+  const [printerDialogHidden, setPrinterDialogHidden] = useState(false);
+  const reportDismissed = useRef<(() => void) | null>(null);
+  const printingIdentity = JSON.stringify([sessionReadScope(session), apparatusId, orderId]);
+  const latestPrintingIdentity = useRef(printingIdentity);
+  useLayoutEffect(() => { latestPrintingIdentity.current = printingIdentity; }, [printingIdentity]);
+  const isCurrent = () => screenMounted.current && !!activeSessionToken(session) && latestPrintingIdentity.current === printingIdentity;
+  const printerSelector = useWorkerPrinterSelector(isCurrent);
   const initialActionHandled = useRef(false);
   const workerRole = String(session.profile?.role ?? '').trim();
   const workerRef = String(session.profile?.ref ?? '').trim();
@@ -166,7 +173,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   useEffect(() => {
     const mounted = screenMounted;
     mounted.current = true;
-    return () => { mounted.current = false; };
+    return () => { mounted.current = false; reportDismissed.current?.(); reportDismissed.current = null; };
   }, []);
   useEffect(() => {
     let current = true;
@@ -572,7 +579,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
     loadVersion.current++;
     setControlRetired(true); setBusy(true); setError(''); setSuccess('');
     try {
-      const printer = needsOutput ? await connectedPrinter(printerUrl) : null;
+      const printer = needsOutput ? await selectOutputPrinter() : null;
       if (!screenMounted.current) return;
       if (!validOrderControl(bootstrap, apparatusId, orderId, latestCursor.current)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
       const body: Obj = { apparatus: apparatusId, order_id: orderId, action: completionIssue ? 'freeze' : action, include_control: true };
@@ -583,7 +590,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       if (isStarting && automaticConfirmation) body.qolip_confirmation = automaticConfirmation;
       if (inputRequired && inputBatch) Object.assign(body, { qr_payload: inputBatch.qr, progress_batch_id: inputBatch.id });
       if (action === 'start' && validPreflight && preflight.status === 'passed') body.print_preflight_hold_id = preflight.hold_id;
-      if (needsOutput) Object.assign(body, { finished_goods_kg: numberValue(kg), finished_goods_meter: numberValue(meter), bobina_kg: numberValue(bobina), uom: 'm', ...printer });
+      if (needsOutput && printer) Object.assign(body, { finished_goods_kg: numberValue(kg), finished_goods_meter: numberValue(meter), bobina_kg: numberValue(bobina), uom: 'm', ...workerPrinterFields(printer) });
       if (closingOutputId) Object.assign(body, { complete_without_output: true, progress_batch_id: closingOutputId });
       if (safeStopRequest && action === 'pause') body.freeze_request_id = safeStopRequest;
       if (safeStopIssue) body.completion_request_note = completion.note;
@@ -597,20 +604,34 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       const result = isAstatka
         ? { report: await adminBosmaAstatkaReport(session, { apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote }) }
         : await adminApparatusQueueActionResult(session, body);
-      if (!screenMounted.current) return;
+      if (!isCurrent()) return;
+      if (result.completion_request) { setSelected(''); setSuccess(p('worker.notice.completion_request_sent')); return; }
+      let printFailed = false;
+      if (printer) {
+        try { await printWorkerJobs(result, printer, isCurrent); }
+        catch { printFailed = true; }
+      }
+      if (!isCurrent()) return;
       selectProgressAction(''); setMaterials([]); setQolips([]); setQolipsReset(false); setInputBatch(null); setFreezeNote(''); setCompletionNote(''); setKg(''); setMeter(''); setBobina('');
       if (action === 'complete' || isAstatka) {
         void saveReturnedPaintDraft(draftScope, { values: {}, fields: {}, usage: 'rasxot', imageId: '' }).catch(() => {});
         setWaste(''); setAstatkaNote(''); setPaintImageId(''); setPaint({}); setPaintColor(''); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintEditor(false);
       }
       const qr = result.progress_batch?.qr_payload;
-      const printFailed = needsOutput && ((Array.isArray(result.prints) && result.prints.some((job: Obj) => job?.ok === false)) || result.print?.ok === false);
       if (printFailed) setError('Amal bajarildi, lekin rulon yorlig‘i chop etilmadi.');
       else setSuccess(isAstatka ? 'Order astatkasi qayd qilindi.' : qr ? `Amal bajarildi. Rulon QR: ${qr}` : 'Amal bajarildi.');
       setSelectedQolipSet('');
-      if (initialAction === action) closeSheet();
-    } catch (e) { if (screenMounted.current) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
+      if (initialAction === action && !printFailed) closeSheet();
+    } catch (e) { if (isCurrent() && !(e instanceof WorkerPrintCancelled)) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
     finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
+  }
+  async function selectOutputPrinter() {
+    // UIKit must finish dismissing the report Modal before the native picker
+    // can be presented. Use its dismissal event, never a timing delay.
+    if (Platform.OS === 'ios') await new Promise<void>(resolve => { reportDismissed.current = resolve; setPrinterDialogHidden(true); });
+    else setPrinterDialogHidden(true);
+    try { return await pickWorkerPrinter({ current: isCurrent, selectDevice: printerSelector.selectDevice }); }
+    finally { if (isCurrent()) setPrinterDialogHidden(false); }
   }
   async function runPreflight(action: 'hold' | 'passed' | 'failed') {
     if (!synchronized || actionInFlight.current || (action === 'hold' ? !showPreflightHold : !showPreflightOutcome)) return;
@@ -857,7 +878,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       title={String(order.title || preview?.title || '')}
       detail={detail ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </ScrollView>
-    <WorkerFormDialog visible={!!selected} title={t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
+    <WorkerFormDialog visible={!!selected && !printerDialogHidden} onDismiss={() => { reportDismissed.current?.(); reportDismissed.current = null; }} title={t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
       cancelLabel={t(inlinePaint ? 'Orqaga' : 'Bekor qilish')} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
       preventDismiss
       confirmLabel={t(inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash')}
@@ -868,12 +889,12 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
         <Text style={[styles.muted, { color: colors.muted }]}>{t(selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting')}</Text>
         {selected === 'pause' && safeStopRequest && descriptionRevealed && <Field label={p('worker.freeze.safe_stop.issue_note')} initialValue={freezeNote} onChangeText={setFreezeNote} />}
         {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.standard')}</Text><Field label={`${p('worker.daily.field.roll')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.finished_goods')}</Text><Field label={`${p('worker.daily.field.length')}, ${p('worker.progress.qty.unit.meter')}`} initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label={`${p('worker.daily.field.weight')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
-        {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <Field label={t("Wi-Fi printer server manzili")} initialValue={printerUrl} onChangeText={setPrinterUrl} />}
         {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.returned_paint_and_waste')}</Text><Field label={`${p('worker.daily.field.total_waste')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} /><NativeButton label={p('worker.daily.field.returned_ink')} variant="filled" disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} /></>}
         {selected === 'astatka' && <Field label={p('worker.progress.qty.optional_note')} initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
         {selected === 'complete' && descriptionRevealed && <Field label={p(closingOutput ? 'worker.progress.qty.optional_note' : 'worker.progress.qty.reason')} initialValue={completionNote} onChangeText={setCompletionNote} />}
         </>}
     </WorkerFormDialog>
+    {printerSelector.dialogs}
     <WorkerDeliveryDialog visible={!!delivery} name={String(delivery?.material.item_name || delivery?.material.item_code || '')} barcode={String(delivery?.material.barcode || '')}
       choices={(delivery?.deliverers ?? []).map(person => ({ key: `${person.role}:${person.ref}`, label: String(person.name || person.ref) }))}
       selected={deliveryChoice} error={error} busy={deliveryBusy} canConfirm={!!deliveryChoice && !deliveryBusy && synchronized}

@@ -17,6 +17,6 @@ export function RawSplitPickerOverlay({ request, owner }: { request: Request; ow
   const colors = useMaterialColors(), close = useRawSplitPickerOverlay(request, owner);
   return <View accessibilityViewIsModal style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: colors.surface }}>
     <SafeAreaView style={{ flex: 1 }}><DeviceSheet operator={request.adapter} close={close} useText={usePreparationText}
-      Label={PreparationText} Action={Action} safe /></SafeAreaView>
+      Label={PreparationText} Action={Action} safe printerOnly /></SafeAreaView>
   </View>;
 }

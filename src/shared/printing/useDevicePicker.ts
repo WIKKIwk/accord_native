@@ -13,7 +13,7 @@ function selectionGuard(operator: DevicePickerAdapter): () => boolean {
   } catch { return () => false; }
 }
 
-export function useDevicePicker(operator: DevicePickerAdapter, close: () => void, safe = false) {
+export function useDevicePicker(operator: DevicePickerAdapter, close: () => void, safe = false, printerOnly = false) {
   const device = useSyncExternalStore(operator.subscribe, operator.getSnapshot, operator.getSnapshot).device;
   const [printers, setPrinters] = useState<BluetoothPrinterProfile[]>([]), [scanning, setScanning] = useState(false);
   const [scanVersion, setScanVersion] = useState(0);
@@ -37,6 +37,7 @@ export function useDevicePicker(operator: DevicePickerAdapter, close: () => void
   const errorText = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
   const completeSelection = () => { if (operator.completeSelection) operator.completeSelection(close); else close(); };
   const selectServer = async (server: DiscoveredServer) => {
+    if (printerOnly) return;
     if (!safe) { if (await operator.selectDevice({ transport: 'wifi', server }) !== false) close(); return; }
     const stillCurrent = selectionGuard(operator); if (!stillCurrent()) return; setError('');
     try { if (await operator.selectDevice({ transport: 'wifi', server }) !== false && stillCurrent()) completeSelection(); }
@@ -49,6 +50,7 @@ export function useDevicePicker(operator: DevicePickerAdapter, close: () => void
     catch (reason) { if (stillCurrent()) setError(errorText(reason)); }
   };
   const selectUsb = async () => {
+    if (printerOnly) return;
     if (!safe) {
       const token = operator.selectionToken?.();
       const stillCurrent = () => token === undefined || operator.isSelectionCurrent?.(token) === true;
@@ -80,6 +82,7 @@ export function useDevicePicker(operator: DevicePickerAdapter, close: () => void
   };
   return { device, printers, scanning, error, address, setAddress, selectServer, selectBluetooth, selectUsb, checkAddress,
     choose: (connection: 'wifi' | 'bluetooth' | 'usb' | null) => {
+      if (printerOnly && connection !== null && connection !== 'bluetooth') return;
       if (safe && !selectionGuard(operator)()) return;
       setError(''); setScanning(connection === 'bluetooth'); if (connection === 'bluetooth') setPrinters([]);
       operator.selectConnection(connection);

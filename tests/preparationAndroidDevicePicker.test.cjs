@@ -19,16 +19,16 @@ function setup(scan, paired = async () => [{ displayName: 'BT', address: 'AB' }]
   return loaded.exports;
 }
 
-test('printer picker discovers Wi-Fi servers and returns the selected server and driver', async () => {
-  const server = { name: 'Printer', endpoint: { baseUrl: 'http://192.168.1.2:39117' }, driver: 'http://driver:39117' };
-  const { selectPreparationDevice: select, selectPreparationInventoryDevice: selectInventory } = setup(async () => ({ servers: [server] }));
-  const choices = ['wifi', 'server:0'], shown = [];
-  const dialogs = { choose: async (_title, options) => { shown.push(options); return choices.shift(); } };
-  assert.deepEqual(await select(dialogs, () => true), { transport: 'wifi', serverBaseUrl: server.endpoint.baseUrl, driverBaseUrl: server.driver });
-  assert.equal(shown[1][0].label, 'Printer');
-  assert.ok(shown[1].some(option => option.value === 'manual'));
-  choices.push('wifi', 'server:0');
-  assert.deepEqual(await selectInventory(dialogs, () => true), { transport: 'wifi', serverBaseUrl: server.endpoint.baseUrl });
+test('user-disabled Wi-Fi and USB cannot trigger discovery or selection', async () => {
+  let scans = 0;
+  const api = setup(async () => { scans++; return { servers: [] }; });
+  for (const mode of ['wifi', 'usb', null]) {
+    const shown = [], dialogs = { choose: async (_title, options) => { shown.push(options); return mode; } };
+    assert.equal(await api.selectPreparationDevice(dialogs, () => true), null);
+    assert.equal(await api.selectPreparationInventoryDevice(dialogs, () => true), null);
+    assert.deepEqual(shown[0], [{ label: 'Bluetooth printer', value: 'bluetooth' }]);
+  }
+  assert.equal(scans, 0);
 });
 
 test('empty Bluetooth discovery offers the V2 retry before selecting a paired printer', async () => {
@@ -42,11 +42,10 @@ test('empty Bluetooth discovery offers the V2 retry before selecting a paired pr
   assert.equal(shown[1].message, 'Printerni Android Bluetooth sozlamalarida avval bog‘lang (pair).');
 });
 
-test('printer picker retains manual entry after discovery failure and cancels after scope change', async () => {
-  const { selectPreparationDevice: select } = setup(async () => { throw Error('network unavailable'); });
-  const choices = ['wifi', 'manual'], dialogs = { choose: async () => choices.shift(), input: async () => 'http://printer:39117' };
-  assert.deepEqual(await select(dialogs, () => true), { transport: 'wifi', serverBaseUrl: 'http://printer:39117' });
+test('printer picker cancels if the scope changes while reading paired devices', async () => {
   let active = true;
-  const { selectPreparationDevice: changed } = setup(async () => { active = false; return { servers: [] }; });
-  assert.equal(await changed({ choose: async () => 'wifi' }, () => active), null);
+  const { selectPreparationDevice: changed } = setup(async () => ({ servers: [] }), async () => { active = false; return [{ address: 'AB' }]; });
+  let choices = 0;
+  assert.equal(await changed({ choose: async () => { choices++; return 'bluetooth'; } }, () => active), null);
+  assert.equal(choices, 1);
 });

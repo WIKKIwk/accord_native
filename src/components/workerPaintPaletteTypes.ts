@@ -4,4 +4,3 @@ export type WorkerPaintPaletteProps = {
   onUsage: (value: PaintUsage) => void;
   onSelect: (name: string) => void;
 };
-

@@ -1,14 +1,14 @@
 import { Button, Column, Host, ListItem } from '@expo/ui';
 import { Image } from 'expo-image';
 import qrFactory from 'qrcode-generator';
-import { useContext, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from '../auth';
-import { authorizedFetch } from '../authorizedFetch';
-import { connectedPrinter } from '../workerPrinter';
+import { reprintWorkerWip, WorkerPrintCancelled } from '../workerPrinting';
+import { sessionReadScope } from '../sessionReadScope';
 import { wipAmount, wipBatchRows, wipBatchStatus, wipBatchWeights, wipText, type WipApparatusNames, type WipBatch, type WipOrder } from '../workerWip';
 import { useWorkerColors } from './useWorkerColors';
-import { WorkerFormField } from './WorkerFormField';
+import { useWorkerPrinterSelector } from './useWorkerPrinterSelector';
 import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
 import { WorkerSheetCloseContext } from './workerSheetContext';
@@ -28,11 +28,13 @@ export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, o
 }) {
   const colors = useWorkerColors();
   const close = useContext(WorkerSheetCloseContext) ?? onClose;
-  const [printerOpen, setPrinterOpen] = useState(false);
-  const [printerUrl, setPrinterUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const printing = useRef(false);
+  const mounted = useRef(true), scope = useRef(sessionReadScope(session));
+  const current = () => mounted.current && !!activeSessionToken(session) && scope.current === sessionReadScope(session);
+  const printer = useWorkerPrinterSelector(current);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const payload = wipText(batch.qr_payload);
   const qrImage = useMemo(() => {
     try {
@@ -57,18 +59,10 @@ export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, o
     setBusy(true);
     setMessage('');
     try {
-      const printer = await connectedPrinter(printerUrl);
-      if (!activeSessionToken(session)) return;
-      const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/progress-qr/reprint', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ progress_batch_id: batch.batch_id, qr_payload: payload, print_count: 1, ...printer }),
-      });
-      const result = await response.json();
-      if (!response.ok || result.ok !== true) throw new Error(wipText(result.print_status) || 'WIP QR kodi chop etilmadi.');
-      setMessage('WIP QR kodi qayta chop etildi.');
-      setPrinterOpen(false);
-    } catch (reason) { setMessage(reason instanceof Error ? reason.message : 'WIP QR kodi chop etilmadi.'); }
-    finally { printing.current = false; setBusy(false); }
+      await reprintWorkerWip(session, { batch_id: wipText(batch.batch_id), qr_payload: payload }, { current, selectDevice: printer.selectDevice });
+      if (current()) setMessage('WIP QR kodi qayta chop etildi.');
+    } catch (reason) { if (current() && !(reason instanceof WorkerPrintCancelled)) setMessage(reason instanceof Error ? reason.message : 'WIP QR kodi chop etilmadi.'); }
+    finally { printing.current = false; if (current()) setBusy(false); }
   }
 
   return <View style={styles.fill}>
@@ -88,17 +82,14 @@ export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, o
         <Column>{rows.map(([label, value]) => <ListItem key={label} supportingText={value}>{label}</ListItem>)}</Column>
       </Host>
       {canReprint(session, batch) && <>
-        {printerOpen && <WorkerFormField label="Wi-Fi printer server manzili" initialValue={printerUrl} onChangeText={setPrinterUrl} />}
         <Host matchContents={{ vertical: true }} style={styles.host}>
           <Column spacing={8}>
-            <Button label={busy ? 'Chop etilmoqda…' : 'QR kodni qayta chop etish'} disabled={busy || (printerOpen && !printerUrl.trim())}
-              onPress={() => { if (printerOpen) void reprint(); else setPrinterOpen(true); }} />
-            {printerOpen && <Button variant="text" label="Bekor qilish" disabled={busy} onPress={() => setPrinterOpen(false)} />}
+            <Button label={busy ? 'Chop etilmoqda…' : 'QR kodni qayta chop etish'} disabled={busy} onPress={() => { void reprint(); }} />
           </Column>
         </Host>
       </>}
       {!!message && <Text accessibilityRole="alert" style={{ color: colors.text }}>{message}</Text>}
-    </ScrollView>
+    </ScrollView>{printer.dialogs}
   </View>;
 }
 

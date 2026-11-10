@@ -31,3 +31,11 @@ Specification: Accord V2 baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`. Th
 - Previously requested design changes remain: native iOS glass controls, completion above roll removal, and the sheet safe-area/background fix. They are user-authorized presentation changes.
 
 GoDEX and deferred test mode remain excluded by the port decisions. No backend contracts, production data, dependencies, branches or signing configuration change in this scope.
+
+## Follow-up printing contract
+
+- Wikki temporarily excludes USB and Wi-Fi **printing choices**. Output, WIP reprint, raw split and preparation printing select a Bluetooth printer. Transport implementations remain available for later; GScale's scale selection is unchanged.
+- Use the V2 offline wire contract and execute each returned local print job once. A cancelled selection or changed session cannot submit the report/reprint. Printing failure after a committed report reports that failure and does not resubmit the production action.
+- On iOS dismiss the report modal and await its actual dismissal before presenting the native printer sheet. Do not introduce a timer to hide presentation races.
+- A server `completion_request` acknowledgement displays the pending-request notice and preserves the returned-paint draft; it is not a completed production report.
+- Real printer delivery remains unverified until tested on hardware.
