@@ -18,7 +18,7 @@ Specification: immutable V2 baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`,
 
 ## List
 
-- Entry points: one drawer item per assigned cut (`worker.paddon.apparatus`, apparatus name) and the existing Paddon FAB destination.
+- Entry points: one drawer item per assigned cut (`worker.paddon.apparatus`, apparatus name).
 - Title `worker.paddons`, or `worker.paddon.apparatus` when scoped. Subtitle `worker.paddon.subtitle`.
   Apparatus summary uses `worker.paddon.location.title`, `worker.paddon.location.subtitle`, Paddon and WIP counts.
 - Initial/pull loading; `worker.paddon.load_failed` plus retry on failure; unselected apparatus chooser; `worker.paddon.empty.title/body` when empty.
@@ -30,7 +30,7 @@ Specification: immutable V2 baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`,
 
 ## Detail and edits
 
-- Header: code, peremotka, resolved apparatus/location, creator (`worker.paddon.creator.unspecified` fallback), gross/net totals,
+- Header: code, peremotka, resolved apparatus/location, creator (`adminText('wip.unspecified')` fallback), gross/net totals,
   locked state and unlock action, WIP count, pending-QR count, bobina summary, note.
 - Bobina groups come from assigned WIP, use integer microkilogram grouping, positive ascending values then unknown.
   Selecting/unselecting a bobina or changing edit mode clears selection.
@@ -49,7 +49,8 @@ Specification: immutable V2 baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`,
 - Pending chip opens the review dialog (height 45%, clamped 160–400): removable WIP cards, Close then Confirm(count).
   Review blocks camera detections; confirmation is disabled while empty, resolving, saving or no longer manageable.
 - Closing scan or backing out with staged/outstanding items asks the V2 Yes/No discard dialog. Rejecting keeps the scan.
-  Confirming invalidates the queue before leaving. Back during a mutation is blocked. Old camera callbacks never write into a restarted scan.
+  Confirming invalidates the queue before leaving. Scan-mode back is blocked while saving or reviewing; normal detail back remains available as in V2.
+  Old camera callbacks never write into a restarted scan. Android scrolls to the inline scanner; the iOS SwiftUI List scroll limitation is recorded in the follow-up status.
 
 ## Printing
 
@@ -67,7 +68,7 @@ Specification: immutable V2 baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`,
   Each picker is a bottom sheet, excludes the other side and rereads the selected snapshot before accepting editability.
 - Rows preserve V2 order/WIP details and show unavailable/received items as nonmovable.
   Selection belongs to one side; choosing on the opposite side clears it. Move(count) and long-press drag between zones share one guarded confirmation.
-- Confirmation uses `worker.paddon.transfer.title/body` with count/source/target, Cancel before Move(count).
+- Confirmation uses `worker.paddon.transfer.title` and `worker.paddon.transfer.confirm` with count/source/target, Cancel before Move(count).
   Saving blocks back/refresh/actions. Success uses `worker.paddon.transfer.success`; forbidden and other failures retain V2 messages.
 
 Native controls/layout differ by platform; content, surface kinds, action order, defaults, validations and state transitions do not.

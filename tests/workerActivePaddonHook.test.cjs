@@ -23,6 +23,7 @@ function setup() {
     'react-native': { AppState: { currentState: 'active', addEventListener: (_name, fn) => { h.app = fn; return { remove() {} }; } }, Platform: { OS: 'ios' }, ToastAndroid: {} },
     '../auth': { captureSessionWitness: () => ({}), isSessionWitnessCurrent: () => h.valid, subscribeSessionWitness: fn => { h.witness = fn; return () => {}; } },
     '../sessionReadScope': { sessionReadScope }, '../workerActivePaddon': { WorkerActivePaddon },
+    '../workerPaddonRevision': { workerPaddonRevision: { subscribe: fn => { h.paddonNotify = fn; return () => {}; } } },
     '../paddonsApi': { activeRezkaPaddon: async (session, id, guard) => { assert(guard()); h.events.push(['GET', id]); return h.code; } },
     '../paddonManagementApi': { adminPaddons: async (session, options) => { options.beforeSend(); h.events.push(['LIST', options]); return [{ apparatus_id: apparatus, code: '00001', locked_at_unix: null, contains_peremotka: false, item_count: 2 }]; } },
     '../activePaddonSetApi': { setActiveRezkaPaddon: async (_session, id, code, guard) => { assert(guard()); h.events.push(['PUT', id, code]); h.code = code; return code; } },
@@ -51,4 +52,10 @@ test('in-place assignment loss changes the owner and prevents an old queued choi
   const h = setup(); await h.model.controller.open(); const previous = h.model.controller;
   h.session.assigned_apparatus = []; h.render(); assert.notEqual(previous, h.model.controller); await previous.choose('00001');
   assert.equal(previous.getSnapshot().picker, 'closed'); assert.equal(h.events.some(event => event[0] === 'PUT'), false); h.dispose();
+});
+
+test('a scoped membership or print-lock notification refreshes the active Paddon authority', async () => {
+  const h = setup(); await tick(); const before = h.events.length;
+  h.paddonNotify('another account'); await tick(); assert.equal(h.events.length, before);
+  h.paddonNotify(sessionReadScope(h.session)); await tick(); assert.equal(h.events.length, before + 1); h.dispose();
 });

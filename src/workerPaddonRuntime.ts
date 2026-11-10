@@ -13,8 +13,8 @@ import { WorkerPaddonTransfer } from './workerPaddonTransfer';
 import { workerPaddonRevision } from './workerPaddonRevision';
 
 /** One account/assignment witness for the lifetime of this route, including 401 retries. */
-export function workerPaddonOwner(session: Session, apparatus: string) {
-  const scope = sessionReadScope(session), witness = captureSessionWitness(session);
+export function workerPaddonOwner(session: Session, apparatus: string, scope = sessionReadScope(session)) {
+  const witness = captureSessionWitness(session);
   let mounted = false;
   const current = () => mounted && isSessionWitnessCurrent(witness) && scope === sessionReadScope(session) &&
     session.profile.role === 'aparatchi' && (!apparatus || session.assigned_apparatus.includes(apparatus));

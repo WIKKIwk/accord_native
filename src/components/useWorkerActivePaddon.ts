@@ -8,6 +8,7 @@ import { adminPaddons } from '../paddonManagementApi';
 import { sessionReadScope } from '../sessionReadScope';
 import { productionDataRevision } from '../shared/productionDataRevisionRuntime';
 import { WorkerActivePaddon } from '../workerActivePaddon';
+import { workerPaddonRevision } from '../workerPaddonRevision';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
 function createOwner(session: Session, apparatus: string, scope: string) {
@@ -47,8 +48,9 @@ export function useWorkerActivePaddon(session: Session, apparatus: string, visib
     const app = AppState.addEventListener('change', status => controller.setForeground(status === 'active'));
     controller.setForeground(!AppState.currentState || AppState.currentState === 'active');
     const unsubscribe = productionDataRevision.subscribe(() => { if (productionDataRevision.isCurrentScope) controller.notify(); });
-    return () => { owner.mount(false); controller.invalidate(); unwatch(); app.remove(); unsubscribe(); };
-  }, [owner, controller]);
+    const paddons = workerPaddonRevision.subscribe(changedScope => { if (changedScope === scope && owner.current()) controller.notify(); });
+    return () => { owner.mount(false); controller.invalidate(); unwatch(); app.remove(); unsubscribe(); paddons(); };
+  }, [owner, controller, scope]);
   useFocusEffect(useCallback(() => { controller.setVisible(visible); return () => controller.setVisible(false); }, [controller, visible]));
   useEffect(() => { owner.revision(revision); }, [owner, revision]);
   const label = state.selection === 'error' ? p('worker.paddon.active.load_failed') : state.code === null

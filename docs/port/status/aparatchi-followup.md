@@ -1,7 +1,7 @@
 # Aparatchi — navbatdagi tekshiruv va tuzatishlar
 
 Status: in progress.
-Stopped at: full worker Paddon management native screens, dialogs and navigation integration (shared domain checkpoint completed).
+Stopped at: worker Paddon native integration verified; continue the remaining worker surface/text audit and the capability-gated inventory-movements destination. iOS inline scanner auto-scroll remains open below.
 
 Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va `test/` bilan bir xil. V2 va Mini ERP read-only. Wikki `main`da ishlash va har tekshirilgan o‘zgarishni commit qilishni aniq so‘radi. USB va Wi-Fi chop etish tanlovlari hozircha chiqariladi; Bluetooth qoladi. Bu foydalanuvchi qabul qilgan V2 farqi, yashirin parity da’vosi emas.
 
@@ -32,8 +32,12 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 
 | Flow | Confirmed difference / next step |
 |---|---|
-| General QR | Busy-apparatus switching checkpoint completed below; native presentation and physical scanner verification remain device checks |
-| Paddons | Active selector va header peremotka queue ulandi. Full worker Paddon management/navigation hali ochiq. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak; master read-only controllerining ruxsatini ko‘r-ko‘rona kengaytirmaslik kerak |
+| Paddon inline camera on iOS | V2 `aparatchi_paddon_qr_addition.dart:24` calls `Scrollable.ensureVisible` at alignment .08. Android now scrolls on layout. The installed Expo SwiftUI List exposes no ScrollViewReader/scrollTo; its generic scrollPosition modifier documents ScrollView + target-layout usage, which has not been verified for List. Keep native List/swipe controls; a supported List scroll bridge or a verified native alternative is still needed. Camera is usable by manual scrolling, so this is not marked 1:1 complete |
+| Inventory movements destination | V2 drawer `widgets/aparatchi_navigation_drawer.dart:143` conditionally opens the general InventoryMovementsScreen. WorkerScreen and the iOS worker layout still show the placeholder for `transfer`. Preparation's implementation explicitly rejects non-preparation sessions (`preparationInventory.ts:17`), and its raw-material-only owner must not be relabeled as the general worker flow. Audit/port that shared module separately before wiring this destination |
+
+## Test mode pending
+
+- Real camera permission/background/resume, SwiftUI swipe precedence, cross-zone long-press drag, native modal timing, light/dark appearance and Bluetooth label output have not been exercised on a phone. No simulator or physical device was used.
 
 ## Verification and limits
 
@@ -103,3 +107,23 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 - Existing Paddon APIs accept an optional route/session guard without changing their wire payloads. Guards cover initial dispatch, 401 retry and decoded acknowledgements. Print interlock excludes membership edits and scanning. Retirement changes snapshot identity and rejects old callbacks.
 - **84/84** focused domain/API/guard tests pass (`/tmp/accord-worker-paddon-domain-final-tests.log`); iOS typecheck exit 0; lint 0 errors / the existing admin hook dependency warning. Two old guard-count assertions were updated for the added post-body witness checks; mutation wire contract tests remain unchanged and pass.
 - This checkpoint does not claim native screen, camera, swipe/drag, navigation or hardware-print completion. Those remain the next integration work. No network, physical printer, device, simulator or external mutation was used.
+
+## Worker Paddon native checkpoint
+
+- Connected the worker-owned list/detail/transfer controllers to separate SwiftUI and Compose screens and real iOS stack routes. The drawer inserts one entry per active assigned cut apparatus, after Daily Work; create opens the returned code, returning reloads the list, and Android's order FAB/bottom bar no longer overlap the Paddon dock.
+- Native dialogs/sheets preserve the separate delete, membership, QR-review/discard, unlock, print/next-Paddon and transfer decisions. iOS continuations await actual modal/sheet dismissal; Android continues after removing the Compose dialog. QR discard also suspends new detections while an older lookup is pending.
+- Implemented single-row swipe removal, QR review/removal, WIP detail/reprint, and selected/single long-press transfer through a guarded opposite-zone drop. Print taps share an imperative interlock so a duplicate tap cannot unlock the first print operation. Scope retirement hides old account content and prevents delayed dialogs/measurements/reprints from writing. Active-Paddon headers receive the scoped membership/unlock/print/transfer revision.
+- **205/205** Paddon, transport, active-Paddon, printing and order-parity tests pass (`/tmp/accord-paddon-final-focused.log`), plus **14/14** shared drawer tests (`/tmp/accord-paddon-drawer-final.log`). New event harnesses exercise actual platform button, review, swipe, dialog-dismissal and long-press callbacks with the real shared controllers; they do not claim native rendering or hardware verification.
+- Both platform TypeScript checks exit 0; Expo lint exits 0 with the existing `AdminClosedHistoryOwner.tsx:36` hook warning. Expo export produced both Hermes bundles successfully at `/tmp/accord-paddon-native-export`. `git diff --check` passes. Ledger check exits 0: **1150 @v2 / 108 @v2-test** tags resolve; the existing eleven dynamic-endpoint diagnostics remain.
+- Final full-tree suite: **5544 pass, 11 fail, 12 todo / 5567 total** (`/tmp/accord-worker-paddon-final-all-tests.log`). The eleven failing names match `/tmp/accord-fab-qr-final-all-tests.log` exactly. The two newly exposed shared-drawer harness imports were mocked at their native boundary, and the tests now also assert Paddon ordering and actual route dispatch. No production assertions were removed.
+- Whole-role text report remains open at iOS **280 missing / 102 added**, Android **280 missing / 110 added**, 158 surfaces. No exception was added to make it green. The role is not marked complete. All source comparison used the frozen V2 export; the original checkout HEAD was `44396752396b69bc5ba9198a9352b71848b3b86a` and was clean when checked. Welcome/account/theme changes already present in the working tree are excluded from this checkpoint.
+
+## Surface audit — worker Paddon management
+
+| V2 surface and location | V4 | iOS | Android | What differs / limits |
+|---|---|---|---|---|
+| `AparatchiPaddonsScreen`, `aparatchi_paddons_screen.dart:29`; drawer `aparatchi_navigation_drawer.dart:123` | WorkerPaddonList, useWorkerPaddonNavigation and worker routes | compared | compared | Assigned cut scope, server order/counts, empty/error/retry, create-to-detail, delete sheet then dialog, transfer before Create. Native rendering unverified. |
+| Detail header/items/dock, `aparatchi_paddon_detail_screen__AparatchiPaddonDetailScreenState_methods_02.dart:6,259` | WorkerPaddonDetail, WorkerPaddonWip and shared header/content models | compared | compared | Creator, weights, bobina groups/filter, locked/unlock, normal/peremotka, free-movement hint, selection and single swipe removal retain V2 state/permission rules. |
+| QR review/discard, `aparatchi_paddon_qr_addition.dart:3,210,366` | WorkerPaddonCamera, controller and native WorkerPaddonDialog | open scroll item | compared | Serial scan queue/review removal/counts/empty confirm/back discard tested. Android scrolls to the inline camera; iOS auto-scroll remains explicitly open above. |
+| Print/unlock/next decisions, `aparatchi_paddon_print_workflow.dart:3` | useWorkerPaddonDetail, WorkerPaddonPrint and existing native printer selector | compared | compared | Actual local print precedes lock; fresh authority precedes the separate next dialog and apparatus options. USB/Wi-Fi hidden by the user; physical Bluetooth output unverified. |
+| Transfer picker/confirmation/drag, `aparatchi_paddon_transfer_screen.dart:106,160,199`; actions `:85,153` | WorkerPaddonTransfer and useWorkerPaddonDrag | compared | compared | Scoped unlocked lists, fresh picker authority, one-sided selection, exact confirmation, duplicate guard, drop bounds and post-measurement retirement checked. Gesture arbitration still needs a phone. |

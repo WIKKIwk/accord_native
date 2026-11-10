@@ -242,6 +242,8 @@ for (const platform of ['ios', 'android']) {
     const api = load(`components/WorkerDrawer.${platform}.tsx`, {
       '../shared/navigation/RoleDrawer': { RoleDrawer: 'SharedRoleDrawer' },
       '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: callback => calls.push(callback) },
+      './useWorkerPaddonNavigation': { useWorkerPaddonNavigation: () => [{ id: 'paddons:cut', label: 'Paddon · Cut' }] },
+      'expo-router': { router: { push: route => calls.push(['push', route]) } },
     });
     const tree = api.WorkerDrawer({ visible: true, onOpen() {}, onClose() {}, onSelect: id => calls.push(id),
       displayName: 'Worker', canTransfer: true, active: 'queue', children: 'worker screens' });
@@ -253,5 +255,10 @@ for (const platform of ['ios', 'android']) {
     assert.equal(typeof calls[1], 'function');
     calls[1]();
     assert.equal(calls[2], 'logout');
+    const ids = tree.props.items.map(item => item.id);
+    assert(ids.indexOf('daily') < ids.indexOf('paddons:cut') && ids.indexOf('paddons:cut') < ids.indexOf('instructions'));
+    tree.props.onSelect('paddons:cut');
+    if (platform === 'ios') assert.match(calls.at(-1)[1], /^\/ios-worker\/paddons\?apparatus=cut/);
+    else assert.equal(calls.at(-1), 'paddons:cut');
   });
 }

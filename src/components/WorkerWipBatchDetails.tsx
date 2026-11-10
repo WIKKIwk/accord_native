@@ -24,8 +24,8 @@ function canReprint(session: Session, batch: WipBatch) {
     wipText(batch.payload_json?.input_wip_source_kind).toLowerCase() !== 'opening_wip';
 }
 
-export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, onClose, onEdit, allowReprint }: {
-  session: Session; order: WipOrder; batch: WipBatch; apparatusNames: WipApparatusNames; onClose: () => void; onEdit?: () => void; allowReprint?: boolean;
+export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, onClose, onEdit, allowReprint, isCurrent }: {
+  session: Session; order: WipOrder; batch: WipBatch; apparatusNames: WipApparatusNames; onClose: () => void; onEdit?: () => void; allowReprint?: boolean; isCurrent?: () => boolean;
 }) {
   const colors = useWorkerColors();
   const close = useContext(WorkerSheetCloseContext) ?? onClose;
@@ -34,7 +34,7 @@ export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, o
   const [message, setMessage] = useState('');
   const printing = useRef(false);
   const mounted = useRef(true), scope = useRef(sessionReadScope(session));
-  const current = () => mounted.current && !!activeSessionToken(session) && scope.current === sessionReadScope(session);
+  const current = () => mounted.current && !!activeSessionToken(session) && scope.current === sessionReadScope(session) && (isCurrent?.() ?? true);
   const printer = useWorkerPrinterSelector(current);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const payload = wipText(batch.qr_payload);

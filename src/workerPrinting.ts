@@ -40,7 +40,7 @@ export async function reprintWorkerWip(session: Session, batch: { batch_id: stri
   const printer = await pickWorkerPrinter(options);
   if (!options.current()) throw new WorkerPrintCancelled();
   const prepared = await adminProgressQrReprint(session, { progress_batch_id: batch.batch_id,
-    qr_payload: batch.qr_payload, print_count: 1, ...workerPrinterFields(printer) });
+    qr_payload: batch.qr_payload, print_count: 1, ...workerPrinterFields(printer) }, options.current);
   if (!options.current()) throw new WorkerPrintCancelled();
   if (!prepared.ok) throw new Error(prepared.print_status.trim() || 'WIP QR kodini chop etib bo‘lmadi');
   if (!prepared.print_job) throw new Error('WIP QR uchun local print ma’lumoti kelmadi');

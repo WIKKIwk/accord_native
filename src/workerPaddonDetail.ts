@@ -81,7 +81,7 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
     if (!this.current() || this.state.busy || this.state.printing || !this.state.snapshot?.can_manage_items) return;
     this.scanGeneration++; this.update({ scanning: true, mode: null, bobina: null, selected: [], feedback: '', feedbackKind: null });
   }
-  setReview(review: boolean) { if (this.current() && !this.state.busy && this.state.pending === 0) this.update({ review }); }
+  setReview(review: boolean) { if (this.current() && !this.state.busy) this.update({ review }); }
   unstage(id: string) { if (this.current() && this.state.review && !this.state.busy) {
     this.update({ scanned: this.state.scanned.filter(row => row.batch_id !== id) }); for (const [key, value] of this.known) if (value === id) this.known.delete(key);
   } }
