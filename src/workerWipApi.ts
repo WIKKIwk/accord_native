@@ -15,12 +15,13 @@ function optionalStation(value: string): string {
 export async function adminWipBatches(session: Session, options: {
   status?: string; apparatus?: string; nextApparatus?: string; currentLocation?: string; orderId?: string;
   producerApparatus?: string; ownWorkerOnly?: boolean; limit?: number; signal?: AbortSignal;
+  current?: () => boolean;
 } = {}): Promise<Obj[]> {
   const scope = sessionReadScope(session), producer = optionalStation(options.producerApparatus ?? ''),
     apparatus = optionalStation(options.apparatus ?? ''), next = optionalStation(options.nextApparatus ?? ''),
     status = (options.status ?? '').trim(), location = (options.currentLocation ?? '').trim(), order = (options.orderId ?? '').trim();
   const limit = Math.max(1, Math.min(500, Math.trunc(options.limit ?? 100)));
-  const guard = () => { if (scope !== sessionReadScope(session)) throw new WorkerControlException('session_scope_changed', ''); };
+  const guard = () => { if (scope !== sessionReadScope(session) || options.current && options.current() !== true) throw new WorkerControlException('session_scope_changed', ''); };
   const batches: Obj[] = [], cursors = new Set<string>();
   let cursor = '';
   await Promise.resolve();

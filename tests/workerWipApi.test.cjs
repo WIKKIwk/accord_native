@@ -46,3 +46,18 @@ test('WIP cursor pagination applies only to producer-scoped reads and rejects re
   assert.equal(queries[1].get('limit'), '500');
   assert.equal(queries[2].get('before_batch_id'), 'same');
 });
+
+test('peremotka reads use the V2 apparatus/status/limit query with a scoped before-send guard', async () => {
+  const requests = []; let current = true;
+  const api = apiWith(async (_session, path, _init, guard) => {
+    guard(); requests.push(path); return { status: 200, json: async () => ({ batches: [] }) };
+  });
+  assert.deepEqual(await api.adminWipBatches({}, { apparatus: 'apparatus:default:cut', status: 'peremotka', limit: 500, current: () => current }), []);
+  assert.deepEqual(Object.fromEntries(new URL(requests[0], 'https://example.test').searchParams), { apparatus: 'apparatus:default:cut', status: 'peremotka', limit: '500' });
+  current = false; await assert.rejects(api.adminWipBatches({}, { current: () => current }), error => error.code === 'session_scope_changed'); assert.equal(requests.length, 1);
+});
+test('closing a scoped WIP reader during response decoding discards its result', async () => {
+  let current = true;
+  const api = apiWith(async (_session, _path, _init, guard) => { guard(); return { status: 200, json: async () => { current = false; return { batches: [] }; } }; });
+  await assert.rejects(api.adminWipBatches({}, { current: () => current }), error => error.code === 'session_scope_changed');
+});

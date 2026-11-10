@@ -6,8 +6,8 @@ import type { WorkerActivePaddonProps } from './workerActivePaddonProps';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
 /** Native SwiftUI content, hosted by the worker queue's toolbar. */
-export function WorkerActivePaddonButton({ state, controller, label }: WorkerActivePaddonProps) {
-  return <Button onPress={() => { void controller.open(); }} modifiers={[labelStyle('iconOnly'), accessibilityLabel(label), disabled(state.busy)]}>
+export function WorkerActivePaddonButton({ state, controller, label, onOpen }: WorkerActivePaddonProps) {
+  return <Button onPress={onOpen ?? (() => { void controller.open(); })} modifiers={[labelStyle('iconOnly'), accessibilityLabel(label), disabled(state.busy)]}>
     <ZStack alignment="topTrailing">
       <Image systemName="shippingbox" size={22} />
       {state.selection === 'error' ? <Image systemName="exclamationmark.circle.fill" size={12} color={PlatformColor('systemRed')} />

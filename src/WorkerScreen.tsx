@@ -39,6 +39,10 @@ import { useWorkerActivePaddon } from './components/useWorkerActivePaddon';
 import { WorkerActivePaddonButton, WorkerActivePaddonPicker } from './components/WorkerActivePaddon';
 import { WorkerPaddonFeedback } from './components/WorkerPaddonFeedback';
 import { OrdersHeader } from './shared/orders/OrdersHeader';
+import { WorkerPeremotkaButton, WorkerPeremotkaSheet } from './components/WorkerPeremotka';
+import { useWorkerPeremotka } from './components/useWorkerPeremotka';
+import { WorkerCutToolbar } from './components/WorkerCutToolbar';
+import { openWorkerCutPanel } from './workerPeremotka';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
 type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string };
@@ -209,8 +213,10 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
   const scannerMachineId = selectedMachine && canWorkMachine(selectedMachine.id) ? selectedMachine.id : '';
   const paddonMachine = workerPaddonApparatus(queue?.machines ?? [], machineId, session.assigned_apparatus);
+  const cutVisible = section === 'home' && loadedScope === windowScope && !drawerOpen && !scannerOpen && !activeOrder && !actionOrder && !nativeOverlayOpen;
+  const peremotka = useWorkerPeremotka(session, paddonMachine?.id ?? '', cutVisible);
   const activePaddon = useWorkerActivePaddon(session, paddonMachine?.id ?? '',
-    section === 'home' && loadedScope === windowScope && !drawerOpen && !scannerOpen && !activeOrder && !actionOrder && !nativeOverlayOpen,
+    cutVisible && peremotka.state.phase === 'closed',
     JSON.stringify([queue?.snapshot.epoch, queue?.snapshot.rev, queue?.snapshot.scope]));
   useEffect(() => { preflightCheck.current++; }, [activePaddon.state.busy]);
   function finishQrScan(apparatusId: string, orderId: string, qr: string) {
@@ -344,12 +350,16 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     else void run();
   }
   const openDrawer = onOpenDrawer ?? (() => setDrawerOpen(true));
+  const cutActions = paddonMachine && section === 'home' ? <WorkerCutToolbar>
+    <WorkerPeremotkaButton {...peremotka} disabled={activePaddon.state.busy} onOpen={() => openWorkerCutPanel('peremotka', activePaddon.controller, peremotka.controller)} />
+    <WorkerActivePaddonButton {...activePaddon} onOpen={() => openWorkerCutPanel('paddon', activePaddon.controller, peremotka.controller)} />
+  </WorkerCutToolbar> : undefined;
   const header = <View onLayout={event => {
     const height = event.nativeEvent.layout.height;
     if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
   }}>
     {Platform.OS === 'android' ? <OrdersHeader search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
-      actions={paddonMachine && section === 'home' ? <WorkerActivePaddonButton {...activePaddon} /> : undefined} />
+      actions={cutActions} />
       : <WorkerHeader search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')} />}
   </View>;
   const content = (
@@ -358,7 +368,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       {section === 'instructions' ? <WorkerWorkInstructions session={session} onBack={() => setSection('home')} /> : section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => setSection('daily')} /> : section === 'daily'
         ? <DailyWorkScreen session={session} onOpenDrawer={openDrawer} onBack={() => setSection('home')} /> : <>
       <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
-        toolbarActions={paddonMachine ? <WorkerActivePaddonButton {...activePaddon} /> : undefined}>
+        toolbarActions={cutActions}>
         {(tabId, pagerGesture, machinePicker) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const canWork = canWorkMachine(tabId);
@@ -417,6 +427,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
       <WorkerActivePaddonPicker {...activePaddon} />
+      <WorkerPeremotkaSheet {...peremotka} />
       <WorkerPaddonFeedback message={activePaddon.notice} />
       {nativeNavigation && <Modal visible={scannerOpen} presentationStyle="fullScreen" animationType="slide" onDismiss={scannerDismissed} onRequestClose={() => setScannerOpen(false)}>{scanner}</Modal>}
     </SafeAreaView>

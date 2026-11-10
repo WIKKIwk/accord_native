@@ -1,7 +1,7 @@
 # Aparatchi — navbatdagi tekshiruv va tuzatishlar
 
 Status: in progress.
-Stopped at: navbat, QR, printer, kunlik ish va shartli apparat oqimlarini V2 bilan tekshirish.
+Stopped at: busy-apparatus QR handoff va full worker Paddon management’ni V2 bilan tekshirish.
 
 Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va `test/` bilan bir xil. V2 va Mini ERP read-only. Wikki `main`da ishlash va har tekshirilgan o‘zgarishni commit qilishni aniq so‘radi. USB va Wi-Fi chop etish tanlovlari hozircha chiqariladi; Bluetooth qoladi. Bu foydalanuvchi qabul qilgan V2 farqi, yashirin parity da’vosi emas.
 
@@ -25,13 +25,14 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Work, long-press and scan entry follows assignment for all operations; completed tab never silently falls back to another apparatus | `_isAssignedWatchApparatus`, `_openWorkerQrScanner` | WorkerApi, WorkerScreen | Assignment / selected-tab tests; mutations still require authoritative server controls |
 | Cut multi-frame output: immutable saved slots, serial save/print queue, issue/peremotka, autofill/deviation approval, scoped report fallback and final print-only retries | `_ProgressQtyDialogState`, `_RezkaFramePrint`, `_RezkaDeviationWarning` | WorkerRezkaOutputWorkflow/Model, WorkerRezkaOutputReport, native fields/print controls and report modal event handoff | Focused domain, API, native event-harness tests; exact wire guards, lost responses, competing writers and account changes covered |
 | Worker active-Paddon selector: assigned selected cut tab only, server-owned choice, scoped selectable rows, None, live/focus/resume refresh and verified save | `ActiveRezkaPaddonAction`, `_workerPaddonApparatus` | WorkerActivePaddon/controller/hook, native SwiftUI toolbar/sheet and Compose icon button/sheet | Controller, native event harness, hook lifecycle, 401 retry guards and existing V2 contract replay tests |
+| Rezka header peremotka queue: one-shot scoped read, raw quantities and read-only roll details | `_showRezkaPeremotkaQueue`, `screen_state.dart:952` | WorkerPeremotka model/controller/hook and both native sheets; serial native header launchers | 74/74 peremotka, active-Paddon and WIP focused tests; native typechecks and lint |
 
 ## Open items
 
 | Flow | Confirmed difference / next step |
 |---|---|
 | General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
-| Paddons | Active selector ulandi. Full worker Paddon management/navigation va header peremotka queue hali ochiq. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak; master read-only controllerining ruxsatini ko‘r-ko‘rona kengaytirmaslik kerak |
+| Paddons | Active selector va header peremotka queue ulandi. Full worker Paddon management/navigation hali ochiq. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak; master read-only controllerining ruxsatini ko‘r-ko‘rona kengaytirmaslik kerak |
 
 ## Verification and limits
 
@@ -55,7 +56,7 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 
 | V2 surface and location | V4 | iOS | Android | What differs / limits |
 |---|---|---|---|---|
-| `_ProgressQtyDialogState._submit/build`, `admin_production_map_orders_progress_qty.dart:748,1726,1900` | WorkerRezkaOutputModel/Workflow and report | compared | compared | Waste/frame order, validation, issue reveal, freeze safe-stop and final report branches checked in source and event tests. Active-Paddon selector remains open. |
+| `_ProgressQtyDialogState._submit/build`, `admin_production_map_orders_progress_qty.dart:748,1726,1900` | WorkerRezkaOutputModel/Workflow and report | compared | compared | Waste/frame order, validation, issue reveal, freeze safe-stop and final report branches checked in source and event tests. Full worker Paddon management remains open. |
 | `_rezkaFrameSection`, `_RezkaFramePrint`, `progress_qty.dart:1211`, `rezka_frame_print.dart:190,465` | Native report fields/print button and serial queue | compared | compared | Native controls replace Flutter controls. Saved-slot, held-roll, issue, uncertainty, retry and duplicate-label behavior checked. Physical printing/gesture precedence unverified. |
 | `_confirmRezkaOutputDeviations`, `_confirmFreshRezkaFrame`, `rezka_deviation.dart:155,290` | Shared deviation model, native warning panel and focus/scroll target | compared | compared | Exact measurement approvals and refreshed-reference warnings tested; native warning dismissal precedes correction focus. Device keyboard behavior unverified. |
 | `_cancelProgressQtyDialog`, `progress_qty.dart:383` | Queue discard panel | compared | compared | Paused queue asks before closing; cancel preserves the queue. iOS transitions await native onShow/onDismiss and do not briefly re-present the main modal on discard. |
@@ -71,3 +72,13 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 - Active-Paddon checkpoint: **99/99** focused tests; both native typechecks exit 0; lint 0 errors / the existing admin hook warning; ledger check exit 0. Shared `OrdersHeader`, `OrdersWorkspace.ios` and their props receive optional action slots solely to connect the worker's native header; other callers keep their previous defaults. Full worker Paddon CRUD/print and peremotka queue remain open.
 - Active-Paddon full-tree checkpoint: **5420 pass, 11 fail, 12 todo / 5443 total**, log `/tmp/accord-active-paddon-all-tests.log`. The failing case names were compared to the cut checkpoint: no new or resolved failures; all eleven remain the pre-existing Node/native harness imports. Ledger resolves 1119 `@v2` and 104 `@v2-test` tags, role ledger regenerated. Whole-role text gate remains open with the same iOS 280 missing / 102 added and Android 280 missing / 110 added; no exception rows were added.
 - Cut quick settings are restricted to `rezka_master` by V2 `_canEditRezkaPrintSide`; they are not an aparatchi omission. Native rendering and physical taps/gestures still require phone verification. No external writes, hardware printing, simulator or device launch was performed.
+
+## Surface audit — peremotka queue
+
+| V2 surface and location | V4 | iOS | Android | What differs / limits |
+|---|---|---|---|---|
+| Header replay action before active Paddon, `screen_state.dart:496` | WorkerScreen, native WorkerCutToolbar and WorkerPeremotkaButton | compared | compared | Same selected assigned cut scope as active Paddon. Native toolbar row/Compose header buttons; queued taps share one presentation owner. |
+| `_showRezkaPeremotkaQueue`, `screen_state.dart:952` | WorkerPeremotka controller/hook and native sheet | compared | compared | One read on opening: apparatus, status `peremotka`, limit 500. Loading/error/empty and non-interactive rows retain V2 texts/order, untrimmed typed reason, integer frame and full raw quantity. Dismiss aborts the owned read; route/account/assignment changes discard late responses. |
+
+- Peremotka checkpoint: **74/74** focused tests; both native typechecks exit 0; lint 0 errors / the existing admin hook warning; ledger check exit 0 (1121 `@v2`, 104 `@v2-test` tags resolve). V2 has no separate recorded contract for this header preview; the exact query was checked from its source and exercised against mocked transport. No real read/write, printer, physical device or simulator was used.
+- The remaining shared WIP-consumer suite, `tests/workerOrderParity.test.cjs`, also passed **46/46**. The most recent full-tree run is the active-Paddon checkpoint above; it was not repeated for this read-only preview after all four directly affected WIP consumer test files passed.

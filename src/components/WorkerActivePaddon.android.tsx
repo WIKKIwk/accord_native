@@ -8,10 +8,10 @@ import { BaseHost } from './BaseHost';
 import type { WorkerActivePaddonProps } from './workerActivePaddonProps';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-export function WorkerActivePaddonButton({ state, controller, label }: WorkerActivePaddonProps) {
+export function WorkerActivePaddonButton({ state, controller, label, onOpen }: WorkerActivePaddonProps) {
   const colors = useMaterialColors();
   return <BaseHost matchContents style={{ width: 44, height: 48 }}>
-    <IconButton enabled={!state.busy} onClick={() => { void controller.open(); }} modifiers={[size(44, 48), semantics({ contentDescription: label })]}>
+    <IconButton enabled={!state.busy} onClick={onOpen ?? (() => { void controller.open(); })} modifiers={[size(44, 48), semantics({ contentDescription: label })]}>
       <BadgedBox><RNHostView matchContents><SymbolView name={{ android: 'pallet' }} size={22} tintColor={state.code === null ? colors.onSurfaceVariant : colors.primary} /></RNHostView>
         {state.code !== null || state.selection === 'error' ? <BadgedBox.Badge><Badge containerColor={state.selection === 'error' ? colors.error : colors.primary}>
           {state.selection === 'error' ? <Text>!</Text> : null}
