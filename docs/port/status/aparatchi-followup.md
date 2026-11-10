@@ -10,6 +10,7 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Change | V2 reference | V4 | Verification |
 |---|---|---|---|
 | iOS tugallangan buyurtmada issue note bo‘lsa muzlatish tafsiloti ochiladi; oddiy order WIP tarixiga boradi | `lib/src/features/admin/presentation/admin_production_map_orders_screen_state.dart:2899` | `src/components/WorkerWipHistory.tsx` | `tests/workerCompletedHistory.test.cjs`: render, branch, close |
+| Oldingi F01–F11 homashyo/progress/hisobot portining checkpoint’i | `aparatchi-order-sheet.md` | OrderScreen, worker material/progress/native components and their dependencies | Worker focused suite 340/340, both typechecks exit 0 |
 
 ## Open items
 
@@ -30,4 +31,4 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 - Full tree suite before changes: **5196 pass, 11 fail, 12 todo / 5219 total**. Eleven failures are Node harness imports into native Expo/Reanimated ESM modules, not confirmed device failures. Log: `/tmp/accord-worker-audit2-full-tests.log`.
 - Ledger check: exit 0, 1083 `@v2` and 91 `@v2-test` tags resolve. Eleven existing dynamic endpoint diagnostics remain.
 - Whole-role text gate remains open: iOS 280 missing / 99 added; Android 280 missing / 108 added. This diagnostic is not a functional bug count.
-- No physical device, simulator, emulator or printer was exercised. No external API writes or print jobs were sent. Earlier uncommitted welcome/account/material changes are preserved and are not silently included in new commits.
+- No physical device, simulator, emulator or printer was exercised. No external API writes or print jobs were sent. Earlier welcome/account changes remain untouched. The previous worker material/report implementation is intentionally checkpointed separately, because the next printing integration depends on it.

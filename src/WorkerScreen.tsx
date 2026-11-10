@@ -129,7 +129,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       apparatusId={target.apparatusId}
       order={target.preview} queueCursor={queueRef.current?.snapshot ?? null} onClose={onClose} />;
     return <OrderScreen session={session} apparatusId={target.apparatusId} orderId={target.orderId} preview={target.preview}
-      queueCursor={queueRef.current?.snapshot ?? null} initialAction={target.initialAction}
+      queueCursor={queueRef.current?.snapshot ?? null} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction}
       onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
   }, [session, orderRoute]);
   useEffect(() => {

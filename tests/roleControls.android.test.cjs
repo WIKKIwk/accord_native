@@ -79,6 +79,7 @@ test('shared header button keeps the worker menu icon and callback', () => {
   const { RoleHeaderButton } = load('shared/navigation/RoleHeaderButton.tsx', {
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { Pressable: 'Pressable', StyleSheet: { create: styles => styles } },
+    '../../components/useAccountSwitcherLauncher': { useAccountSwitcherLauncher: onPress => ({ onPress }) },
   });
   const button = RoleHeaderButton({ icon: 'menu', label: 'Bo‘limlar', onPress: () => calls.push('menu'), tintColor: 'ink' });
   assert.equal(button.props.accessibilityRole, 'button');

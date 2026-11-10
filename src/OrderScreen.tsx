@@ -2,6 +2,8 @@ import { Host, TextInput as NativeInput, useNativeState } from '@expo/ui';
 import { Image } from 'expo-image';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
+import type { ComponentProps } from 'react';
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
@@ -19,11 +21,19 @@ import { adminLookupOpeningWip } from './workerOpeningWip';
 import { workerProductionOrderDetail } from './workerDetailApi';
 import { useNativeSheet } from './nativeSheet';
 import { authorizedFetch } from './authorizedFetch';
-import { WorkerOrderHeader, WorkerOrderImage } from './components/WorkerOrderHeader';
+import { WorkerOrderImage } from './components/WorkerOrderHeader';
+import { WorkerOrderIdentity } from './components/WorkerOrderIdentity';
 import { WorkerOrderOverview } from './components/WorkerOrderOverview';
 import { WorkerPaintPalette } from './components/WorkerPaintPalette';
 import { WorkerOutputProgress } from './components/WorkerOutputProgress';
-import { WorkerSheetButton as NativeButton } from './components/WorkerSheetButton';
+import { WorkerOrderButton as PlatformButton, WorkerOrderActionGroup } from './components/WorkerOrderControls';
+import { WorkerMaterialList } from './components/WorkerMaterialList';
+import { WorkerAssignedMaterialQr } from './components/WorkerAssignedMaterialQr';
+import { MaterialLinkRequestPanel, WorkerMaterialUsePanel } from './components/WorkerMaterialPanels';
+import { WorkerOrderAlertButton } from './components/WorkerOrderAlertButton';
+import { useWorkerOrderText } from './components/useWorkerOrderText';
+import { workerCompletionMode } from './workerCompletion';
+import type { MaterialRow } from './workerMaterialPresentation';
 import { connectedPrinter } from './workerPrinter';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerSheetCloseContext } from './components/workerSheetContext';
@@ -31,14 +41,20 @@ import { WorkerFormDialog } from './components/WorkerFormDialog';
 import { WorkerDeliveryDialog } from './components/WorkerDeliveryDialog';
 import { WorkerIconButton } from './components/WorkerIconButton';
 import { WorkerPreflightButton } from './components/WorkerPreflightButton';
-import { WorkerFormField as Field } from './components/WorkerFormField';
+import { WorkerFormField as PlatformField } from './components/WorkerFormField';
 import { WorkerExpansion as Expansion } from './components/WorkerExpansion';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
 import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, returnedPaintItemsFromDraft, runningFreezeRequest, validOrderControl, type QueueCursor } from './workerOrderLogic';
-import { workerOrderDetailFromSnapshot, type QueueOrder } from './workerApi';
+import { workerOrderDetailFromSnapshot, type Apparatus, type QueueOrder } from './workerApi';
 
 type Obj = Record<string, any>;
-type Props = { session: Session; apparatusId: string; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka'; onClose: () => void; onChanged: () => void };
+type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka'; onClose: () => void; onChanged: () => void };
+function NativeButton(props: ComponentProps<typeof PlatformButton>) {
+  const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
+}
+function Field(props: ComponentProps<typeof PlatformField>) {
+  const { t } = useWorkerOrderText(); return <PlatformField {...props} label={t(props.label)} />;
+}
 type ScanKind = 'material' | 'qolip' | 'input' | 'paintPhoto';
 const numberValue = (v: string) => Number(v.trim().replace(',', '.'));
 function barcodeFromQr(raw: string) {
@@ -65,7 +81,8 @@ async function scanBootstrap(session: Session, input: Parameters<typeof adminOrd
   return input.includeSections === false ? result : completeWorkerScanSections(session, result, input.materialBarcodes ?? []);
 }
 
-export function OrderScreen({ session, apparatusId, orderId, preview, queueCursor, initialAction, onClose, onChanged }: Props) {
+export function OrderScreen({ session, apparatusId, apparatus, orderId, preview, queueCursor, initialAction, onClose, onChanged }: Props) {
+  const { t, p, locale } = useWorkerOrderText();
   const colors = useWorkerColors();
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
   const sheetCard = Platform.OS === 'ios' ? PlatformColor('secondarySystemGroupedBackground') : colors.surface;
@@ -95,6 +112,9 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const [bobina, setBobina] = useState('');
   const [waste, setWaste] = useState('');
   const [freezeNote, setFreezeNote] = useState('');
+  const [completionNote, setCompletionNote] = useState('');
+  const [descriptionRevealed, setDescriptionRevealed] = useState(false);
+  function selectProgressAction(action: string) { setCompletionNote(''); setDescriptionRevealed(false); setSelected(action); }
   const [astatkaNote, setAstatkaNote] = useState('');
   const [paintColor, setPaintColor] = useState('');
   const [paintEditor, setPaintEditor] = useState(false);
@@ -114,12 +134,20 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const manualScanValue = useNativeState('');
   const [attachedMaterials, setAttachedMaterials] = useState<Obj[] | null>(null);
   const [attachedMaterialsError, setAttachedMaterialsError] = useState('');
-  const [intakeCandidates, setIntakeCandidates] = useState<Obj[]>([]);
+  const [intakeCandidatesState, setIntakeCandidates] = useState<Obj[]>([]);
+  const [attachedReadKey, setAttachedReadKey] = useState('');
+  const [intakeReadKey, setIntakeReadKey] = useState('');
+  const [intakeError, setIntakeError] = useState('');
+  const [intakeExpanded, setIntakeExpanded] = useState(false);
+  const materialQrSheet = useNativeSheet();
   const [intakeMode, setIntakeMode] = useState(false);
   const [delivery, setDelivery] = useState<{ material: Obj; deliverers: Obj[]; purpose: 'start' | 'intake' } | null>(null);
   const [deliveryChoice, setDeliveryChoice] = useState('');
   const [deliveryBusy, setDeliveryBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const isTrainingOrder = orderId.startsWith('training-');
+  const operation = apparatus?.operation.trim().toLowerCase() ?? '';
+  const directMaterialUse = !!apparatus && apparatus.worker_material_assignment_allowed === true && !isTrainingOrder;
   const loadVersion = useRef(0);
   const actionInFlight = useRef(false);
   const scanInFlight = useRef(false);
@@ -189,6 +217,10 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const synchronized = !loading && !busy && !controlRetired && validOrderControl(bootstrap, apparatusId, orderId, queueCursor);
   const control: Obj = bootstrap?.control_state?.control ?? {};
   const interaction: Obj = control.interaction ?? {};
+  const controlEpoch = bootstrap?.control_state?.epoch, controlRevision = bootstrap?.control_state?.rev;
+  const materialReadKey = JSON.stringify([sessionReadScope(session), apparatusId, orderId, controlEpoch, controlRevision, refresh]);
+  const intakeCandidates = intakeReadKey === materialReadKey ? intakeCandidatesState : [];
+  const intakeLoading = intakeReadKey !== materialReadKey;
   const isActiveOrder = bootstrap?.control_state?.order_control === 'active' && !['frozen', 'freeze_requested'].includes(control.stage_control_state);
   const safeStopRequest = synchronized ? runningFreezeRequest(bootstrap?.control_state, apparatusId) : null;
   const allowed: string[] = synchronized && (isActiveOrder || !!safeStopRequest) && Array.isArray(control.allowed_actions) ? control.allowed_actions : [];
@@ -259,33 +291,34 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     if (!initialAction || initialActionHandled.current || !synchronized) return;
     const timer = setTimeout(() => {
       initialActionHandled.current = true;
-      if ((initialAction === 'complete' && canOpenInitialComplete) || (initialAction === 'astatka' && canOpenInitialAstatka)) setSelected(initialAction);
+      if ((initialAction === 'complete' && canOpenInitialComplete) || (initialAction === 'astatka' && canOpenInitialAstatka)) selectProgressAction(initialAction);
       else setError('Buyurtma holati o‘zgardi. Qayta urining.');
     }, 0);
     return () => clearTimeout(timer);
   }, [initialAction, synchronized, canOpenInitialComplete, canOpenInitialAstatka]);
-  const controlEpoch = bootstrap?.control_state?.epoch;
-  const controlRevision = bootstrap?.control_state?.rev;
   useEffect(() => {
     if (!controlEpoch || scanningRequired) return;
     let current = true;
+    const scope = sessionReadScope(session);
     adminRawMaterialAssignments(session, orderId, apparatusId).then(data => {
-      if (!current) return;
+      if (!current || !activeSessionToken(session) || scope !== sessionReadScope(session)) return;
       if (!Array.isArray(data)) throw new Error('Homashyolar yuklanmadi.');
       setAttachedMaterials(data.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)));
-      setAttachedMaterialsError('');
-    }).catch(() => { if (current) setAttachedMaterialsError('Homashyolar yuklanmadi.'); });
+      setAttachedMaterialsError(''); setAttachedReadKey(materialReadKey);
+    }).catch(() => { if (current && activeSessionToken(session) && scope === sessionReadScope(session)) { setAttachedMaterialsError('Homashyolar yuklanmadi.'); setAttachedReadKey(materialReadKey); } });
     return () => { current = false; };
-  }, [session, apparatusId, orderId, scanningRequired, controlEpoch, controlRevision]);
+  }, [session, apparatusId, orderId, scanningRequired, controlEpoch, controlRevision, materialReadKey]);
   useEffect(() => {
-    if (!controlEpoch || scanningRequired || interaction.material_intake_allowed !== true) return;
+    if (!controlEpoch || scanningRequired || operation === 'cut' || interaction.material_intake_allowed !== true) return;
     let current = true;
+    const scope = sessionReadScope(session);
     adminRawMaterialIntakeCandidates(session, orderId, apparatusId).then(data => {
-      if (!current || !Array.isArray(data)) return;
-      setIntakeCandidates(data.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)));
-    }).catch(() => { if (current) setIntakeCandidates([]); });
+      if (!current || !activeSessionToken(session) || scope !== sessionReadScope(session)) return;
+      if (!Array.isArray(data)) throw new TypeError('Invalid materials');
+      setIntakeCandidates(data.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId))); setIntakeError(''); setIntakeReadKey(materialReadKey);
+    }).catch(() => { if (current && activeSessionToken(session) && scope === sessionReadScope(session)) { setIntakeCandidates([]); setIntakeError('Homashyolar yuklanmadi.'); setIntakeReadKey(materialReadKey); } });
     return () => { current = false; };
-  }, [session, apparatusId, orderId, scanningRequired, interaction.material_intake_allowed, controlEpoch, controlRevision]);
+  }, [session, apparatusId, orderId, scanningRequired, operation, interaction.material_intake_allowed, controlEpoch, controlRevision, materialReadKey]);
 
   async function openScanner(kind: ScanKind) {
     const result = permission?.granted ? permission : await askPermission();
@@ -522,17 +555,19 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
     if (isStarting && qolipRequired && !automaticQolip && (sections.qolips?.status !== 'ready' || !moldsSatisfied)) { setError('Boshlash uchun bitta to‘liq qolip to‘plamini skanerlang.'); return; }
     if (action === 'start' && preflight && (!validPreflight || preflight.status !== 'passed')) { setError('Avval rang chiqarish natijasini tasdiqlang.'); return; }
     const closingOutputId = action === 'complete' && typeof control.closing_output_batch_id === 'string' ? control.closing_output_batch_id.trim() : '';
-    const fullReport = isAstatka || (action === 'complete' && (control.complete_requires_full_report !== false || !!closingOutputId));
-    const safeStopIssue = action === 'pause' && !!safeStopRequest && !!freezeNote.trim() && ![kg, meter, bobina].some(value => value.trim());
-    const needsOutput = !safeStopIssue && (action === 'pause' || action === 'roll_complete' || (action === 'complete' && !closingOutputId));
+    const completion = workerCompletionMode({ action, orderId, closingOutputId, safeStopRequest,
+      description: action === 'pause' ? freezeNote : completionNote, kg, meter, bobina, waste });
+    const { safeStopIssue, completionIssue, needsOutput } = completion;
+    if (completion.needsIssueOrOutput) { setDescriptionRevealed(true); setError(p('worker.freeze.safe_stop.output_or_issue_required')); return; }
+    const fullReport = !completionIssue && !safeStopIssue && (isAstatka || (action === 'complete' && (control.complete_requires_full_report !== false || !!closingOutputId)));
     const fields = [kg, meter, bobina];
-    if (needsOutput && fields.some(x => !x.trim() || !Number.isFinite(numberValue(x)) || numberValue(x) <= 0)) { setError('Metr, vazn va bobina uchun noldan katta qiymatlarni kiriting.'); return; }
+    if (needsOutput && fields.some(x => !x.trim() || !Number.isFinite(numberValue(x)) || numberValue(x) <= 0)) { setDescriptionRevealed(true); setError('Metr, vazn va bobina uchun noldan katta qiymatlarni kiriting.'); return; }
     const returnedPaintItems = returnedPaintItemsFromDraft(paint, paintDynamic);
     const imageOnly = !!paintImageId && returnedPaintItems.length === 0;
     if (fullReport && (!waste.trim() || !Number.isFinite(numberValue(waste)) || numberValue(waste) < 0 || (!closingOutputId && !isAstatka && numberValue(waste) === 0) || (!imageOnly && ['rasxot','astatka'].some(usage => {
       const values = returnedPaintItems.filter(item => item.usage === usage).flatMap(item => Object.values(item.values));
       return values.length < 3 || values.some(value => !Number.isFinite(numberValue(value)) || numberValue(value) < 0);
-    })))) { setError('Chiqindi va bo‘yoq rasmini yoki har bir bo‘lim uchun kamida uchta to‘g‘ri qiymatni kiriting.'); return; }
+    })))) { setDescriptionRevealed(true); setError('Chiqindi va bo‘yoq rasmini yoki har bir bo‘lim uchun kamida uchta to‘g‘ri qiymatni kiriting.'); return; }
     actionInFlight.current = true;
     loadVersion.current++;
     setControlRetired(true); setBusy(true); setError(''); setSuccess('');
@@ -540,7 +575,9 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       const printer = needsOutput ? await connectedPrinter(printerUrl) : null;
       if (!screenMounted.current) return;
       if (!validOrderControl(bootstrap, apparatusId, orderId, latestCursor.current)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
-      const body: Obj = { apparatus: apparatusId, order_id: orderId, action, include_control: true };
+      const body: Obj = { apparatus: apparatusId, order_id: orderId, action: completionIssue ? 'freeze' : action, include_control: true };
+      if (completionIssue) Object.assign(body, { freeze_with_issue: true, issue_note: completion.note });
+      else if (completion.note && !safeStopIssue) body.completion_request_note = completion.note;
       if (materials.length && materialScan) body.material_barcodes = materials;
       if (effectiveQolips.length && isStarting && !automaticQolip) body.qolip_codes = effectiveQolips;
       if (isStarting && automaticConfirmation) body.qolip_confirmation = automaticConfirmation;
@@ -549,7 +586,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       if (needsOutput) Object.assign(body, { finished_goods_kg: numberValue(kg), finished_goods_meter: numberValue(meter), bobina_kg: numberValue(bobina), uom: 'm', ...printer });
       if (closingOutputId) Object.assign(body, { complete_without_output: true, progress_batch_id: closingOutputId });
       if (safeStopRequest && action === 'pause') body.freeze_request_id = safeStopRequest;
-      if (safeStopIssue) body.completion_request_note = freezeNote.trim();
+      if (safeStopIssue) body.completion_request_note = completion.note;
       if (fullReport) {
         const returnInk = returnedPaintItems.filter(item => item.usage === 'astatka').flatMap(item => Object.values(item.values)).reduce((sum, value) => sum + numberValue(value), 0);
         Object.assign(body, { total_waste: numberValue(waste), full_completion_report_required: true, returned_paint_items: returnedPaintItems });
@@ -561,7 +598,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
         ? { report: await adminBosmaAstatkaReport(session, { apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote }) }
         : await adminApparatusQueueActionResult(session, body);
       if (!screenMounted.current) return;
-      setSelected(''); setMaterials([]); setQolips([]); setQolipsReset(false); setInputBatch(null); setFreezeNote(''); setKg(''); setMeter(''); setBobina('');
+      selectProgressAction(''); setMaterials([]); setQolips([]); setQolipsReset(false); setInputBatch(null); setFreezeNote(''); setCompletionNote(''); setKg(''); setMeter(''); setBobina('');
       if (action === 'complete' || isAstatka) {
         void saveReturnedPaintDraft(draftScope, { values: {}, fields: {}, usage: 'rasxot', imageId: '' }).catch(() => {});
         setWaste(''); setAstatkaNote(''); setPaintImageId(''); setPaint({}); setPaintColor(''); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintEditor(false);
@@ -612,10 +649,31 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   const showFullReport = selected === 'astatka' || (selected === 'complete' && (control.complete_requires_full_report !== false || closingOutput));
   const rows: Obj[] | null = scanningRequired
     ? (Array.isArray(materialRequirements.assignments) ? materialRequirements.assignments.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)) : null)
-    : attachedMaterials;
+    : attachedReadKey === materialReadKey ? attachedMaterials : null;
   const requiredMaterialCount = Number(materialRequirements.required_scan_count ?? 0);
   const matchedMaterialCount = Number(materialRequirements.matched_scan_count ?? materials.length);
-  const showMaterials = preparationVisible || interaction.assigned_materials_display_only === true;
+  // V2 keeps assigned material information visible after start, pause and completion.
+  const showMaterials = !!bootstrap;
+  const showIntakeCandidates = synchronized && !scanningRequired && operation !== 'cut' && interaction.material_intake_allowed === true;
+  const showLinkRequests = !!apparatus && !directMaterialUse && scanningRequired && !isTrainingOrder;
+  const allowNewMaterialRequests = sections.materials?.status === 'ready' && materialRequirements.assignments_satisfied === false;
+  const canSendOrderAlert = operation === 'print' && synchronized && bootstrap?.control_state?.order_control === 'active' && !isTrainingOrder &&
+    (allowed.includes('start') || !!String(interaction.blocking_reason_code ?? '').trim() || showPreflightHold || showPreflightOutcome);
+  const materialsError = scanningRequired && sections.materials?.status === 'error' ? String(sections.materials?.error || 'Homashyolar yuklanmadi.') : attachedReadKey === materialReadKey ? attachedMaterialsError : '';
+  const materialLoading = scanningRequired ? sections.materials?.status === 'loading' || rows === null : rows === null && !materialsError;
+  function materialsChanged(barcode?: string) {
+    if (barcode) setMaterials(previous => previous.some(value => normalizeCode(value) === normalizeCode(barcode)) ? previous : [...previous, barcode]);
+    onChanged(); setRefresh(value => value + 1);
+  }
+  function openMaterialQr(row: MaterialRow) {
+    if (!row.barcode?.trim()) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    materialQrSheet.open(<WorkerAssignedMaterialQr session={session} row={row} onClose={materialQrSheet.close} />, { dismissible: true });
+  }
+  function materialCount(count: number) {
+    const code = locale.split(/[-_]/)[0];
+    return `${count} ${code === 'uz' ? 'ta' : code === 'ru' ? 'материалов' : code === 'ur' ? 'مواد' : `material${count === 1 ? '' : 's'}`}`;
+  }
   const showMolds = (preparationVisible || ['fresh_start_blocked', 'requeued_waiting', 'waiting_previous_stage'].includes(interaction.mode)) && qolipRequired;
   const showOutputProgress = !!detail && ['pause', 'complete', 'resume'].some(action => allowed.includes(action));
   function cancelProgressDialog() {
@@ -627,7 +685,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       return;
     }
     const closeInitial = !!initialAction && selected === initialAction;
-    setSelected('');
+    selectProgressAction('');
     if (closeInitial) closeSheet();
   }
   function addPaintField(target: string) {
@@ -641,7 +699,7 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   }
 
   const inlinePaint = Platform.OS !== 'android' && paintEditor;
-  const paintCamera = <View style={styles.cameraScreen}><CameraView ref={camera} style={styles.camera} mode="picture" onCameraReady={() => setCameraReady(true)} /><Text style={styles.cameraText}>Bo‘yoq hisobotini suratga oling</Text><NativeButton label={photoBusy ? 'Yuklanmoqda…' : 'Suratga olish'} disabled={photoBusy || !cameraReady} variant="filled" onPress={() => { void takePaintPhoto(); }} /><NativeButton label="Bekor qilish" disabled={photoBusy} onPress={() => setScanner(null)} /></View>;
+  const paintCamera = <View style={styles.cameraScreen}><CameraView ref={camera} style={styles.camera} mode="picture" onCameraReady={() => setCameraReady(true)} /><Text style={styles.cameraText}>{t("Bo‘yoq hisobotini suratga oling")}</Text><NativeButton label={t(photoBusy ? 'Yuklanmoqda…' : 'Suratga olish')} disabled={photoBusy || !cameraReady} variant="filled" onPress={() => { void takePaintPhoto(); }} /><NativeButton label={t("Bekor qilish")} disabled={photoBusy} onPress={() => setScanner(null)} /></View>;
   const paintToken = paintEditor ? activeSessionToken(session) : null;
   const paintPhoto = paintImageId && paintToken ? {
     uri: new URL(`/v1/mobile/returned-paint/images/view?id=${encodeURIComponent(paintImageId)}`, session.baseUrl).toString(),
@@ -659,38 +717,38 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
               <Image source={paintPhoto} style={styles.paintPreview} contentFit="contain" />
             </Pressable>
             <View style={styles.actionRow}>
-              <View style={styles.flex}><NativeButton label="Almashtirish" disabled={photoBusy} onPress={pickPaintImage} /></View>
-              <View style={styles.flex}><NativeButton label="Olib tashlash" disabled={photoBusy} onPress={() => { void removePaintPhoto(); }} /></View>
+              <View style={styles.flex}><NativeButton label={t("Almashtirish")} disabled={photoBusy} onPress={pickPaintImage} /></View>
+              <View style={styles.flex}><NativeButton label={t("Olib tashlash")} disabled={photoBusy} onPress={() => { void removePaintPhoto(); }} /></View>
             </View>
           </>}
-          {inlinePaint && !paintPhoto && <NativeButton label="Rasm qo‘shish" disabled={photoBusy} onPress={pickPaintImage} />}
+          {inlinePaint && !paintPhoto && <NativeButton label={t("Rasm qo‘shish")} disabled={photoBusy} onPress={pickPaintImage} />}
           {!paintColor && <WorkerPaintPalette usage={paintUsage} onUsage={setPaintUsage} onSelect={setPaintColor} />}
           {!!paintColor && <View style={styles.sectionGroup}>
             {[...(paintOptions.find(option => option.name === paintColor)?.fields ?? []), ...(paintDynamic[`${paintUsage}:${paintColor}`] ?? [])].map(label => <Field key={`${paintUsage}:${paintColor}:${label}`} label={label} initialValue={paint[`${paintUsage}:${paintColor}:${label}`] ?? ''} keyboardType="decimal-pad" onChangeText={value => setPaint(old => ({ ...old, [`${paintUsage}:${paintColor}:${label}`]: value }))} />)}
             {paintColor === 'Pantone' && (paintDynamic[`${paintUsage}:Pantone Mix`] ?? []).map(label => <Field key={`${paintUsage}:Pantone Mix:${label}`} label={label} initialValue={paint[`${paintUsage}:Pantone Mix:${label}`] ?? ''} keyboardType="decimal-pad" onChangeText={value => setPaint(old => ({ ...old, [`${paintUsage}:Pantone Mix:${label}`]: value }))} />)}
             {!['Lak', 'Spirtlar'].includes(paintColor) && <>
-              <Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={newPaintFieldValue} placeholder="Maydon nomi" onChangeText={setNewPaintField} /></Host>
-              <NativeButton label={paintColor === 'Mix' ? 'Mix+' : 'Pantone+'} onPress={() => addPaintField(paintColor)} />
-              {paintColor === 'Pantone' && <NativeButton label="Mix+" onPress={() => addPaintField('Pantone Mix')} />}
+              <Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={newPaintFieldValue} placeholder={t("Maydon nomi")} onChangeText={setNewPaintField} /></Host>
+              <NativeButton label={t(paintColor === 'Mix' ? 'Mix+' : 'Pantone+')} onPress={() => addPaintField(paintColor)} />
+              {paintColor === 'Pantone' && <NativeButton label={t("Mix+")} onPress={() => addPaintField('Pantone Mix')} />}
             </>}
           </View>}
         </> : null;
   const paintContent = paintEditor && !inlinePaint ? (
     scanner === 'paintPhoto' ? paintCamera : <View style={styles.screen}>
       <View style={styles.paintHeader}>
-        <WorkerIconButton icon="back" label="Orqaga" onPress={() => {
+        <WorkerIconButton icon="back" label={t("Orqaga")} onPress={() => {
           if (photoBusy) return;
           if (paintImageExpanded) setPaintImageExpanded(false);
           else if (paintColor) setPaintColor('');
           else paintSheet.close();
         }} />
-        <Text style={[styles.expansionTitle, { color: colors.text }]}>Qaytarilgan bo‘yoq</Text>
-        <WorkerIconButton icon="photo" label={paintPhoto ? 'Rasmni almashtirish' : 'Rasm qo‘shish'}
+        <Text style={[styles.expansionTitle, { color: colors.text }]}>{t("Qaytarilgan bo‘yoq")}</Text>
+        <WorkerIconButton icon="photo" label={t(paintPhoto ? 'Rasmni almashtirish' : 'Rasm qo‘shish')}
           onPress={() => { if (!photoBusy) pickPaintImage(); }} />
       </View>
       {paintImageExpanded && paintPhoto ? <Image source={paintPhoto} style={styles.flex} contentFit="contain" /> :
       <ScrollView nestedScrollEnabled contentContainerStyle={styles.paintContent} keyboardShouldPersistTaps="handled">
-        {!!error && <Text style={styles.error}>{error}</Text>}
+        {!!error && <Text style={styles.error}>{t(error)}</Text>}
         {paintBody}
       </ScrollView>}
     </View>
@@ -708,97 +766,112 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
   });
 
   if (inlinePaint && scanner === 'paintPhoto') return paintCamera;
-  if (scanner && scanner !== 'paintPhoto') return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang'}</Text><NativeButton label="Bekor qilish" onPress={() => setScanner(null)} /></View>;
+  if (scanner && scanner !== 'paintPhoto') return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{t(scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang')}</Text><NativeButton label={t("Bekor qilish")} onPress={() => setScanner(null)} /></View>;
   const imageId = String(order.image_id || preview?.imageId || '');
   if (imageOpen) return <WorkerOrderImage session={session} orderId={orderId} imageId={imageId} onClose={() => setImageOpen(false)} />;
 
-  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps="handled">
-    <WorkerOrderHeader session={session} orderId={orderId} imageId={imageId} code={code}
+  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps="handled">
+    <WorkerOrderIdentity session={session} orderId={orderId} imageId={imageId} code={code} title={String(order.title || preview?.title || '')}
       onOpenImage={() => setImageOpen(true)} onClose={closeSheet} />
     {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }]}>
       {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
-        <NativeButton label="Kameraga ruxsat berish" onPress={() => { void askPermission(); }} />}
-      <Text style={[styles.scannerText, { color: colors.muted }]}>Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling</Text>
+        <NativeButton label={t("Kameraga ruxsat berish")} onPress={() => { void askPermission(); }} />}
+      <Text style={[styles.scannerText, { color: colors.muted }]}>{t("Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling")}</Text>
       {interaction.opening_wip_mode !== 'scan_required' && <>
-        <View style={styles.manualToggle}><WorkerIconButton icon="edit" label="Kodni qo‘lda kiritish" onPress={() => setManualScanVisible(value => !value)} /></View>
+        <View style={styles.manualToggle}><WorkerIconButton icon="edit" label={t("Kodni qo‘lda kiritish")} onPress={() => setManualScanVisible(value => !value)} /></View>
         {manualScanVisible && <View style={styles.manualRow}>
-          <View style={styles.flex}><Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={manualScanValue} placeholder="QR / barcode" onChangeText={setManualScan} autoCapitalize="none" /></Host></View>
-          <WorkerIconButton icon="check" label="Kodni tekshirish" onPress={() => { void quickScan(manualScan); manualScanValue.set(''); setManualScan(''); }} />
+          <View style={styles.flex}><Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={manualScanValue} placeholder={t("QR / barcode")} onChangeText={setManualScan} autoCapitalize="none" /></Host></View>
+          <WorkerIconButton icon="check" label={t("Kodni tekshirish")} onPress={() => { void quickScan(manualScan); manualScanValue.set(''); setManualScan(''); }} />
         </View>}
       </>}
     </View>}
-    <View style={[styles.card, { backgroundColor: sheetCard }]}>
+    <View style={[styles.card, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.actionCard]}>
     {loading && <ActivityIndicator color={colors.icon} />}
-    {synchronized && control.temporarily_paused === true && <Text style={[styles.detailText, { color: colors.muted }]}>Vaqtincha yechilgan</Text>}
-    {bootstrap?.control_state?.order_control === 'frozen' && <Text style={styles.error}>
-      Buyurtma muzlatilgan. Ishni davom ettirish uchun, iltimos, adminga xabar bering va buyurtmani muzdan ochishini so‘rang.
-    </Text>}
-    {!!error && !selected && !delivery && <Text style={styles.error}>{error}</Text>}
-    {!!success && <Text style={styles.success}>{success}</Text>}
+    {synchronized && control.temporarily_paused === true && <Text style={[styles.detailText, { color: colors.muted }]}>{t("Vaqtincha yechilgan")}</Text>}
+    {bootstrap?.control_state?.order_control === 'frozen' && <Text style={styles.error}>{t("Buyurtma muzlatilgan. Ishni davom ettirish uchun, iltimos, adminga xabar bering va buyurtmani muzdan ochishini so‘rang.")}</Text>}
+    {!!error && !selected && !delivery && <Text style={styles.error}>{t(error)}</Text>}
+    {!!success && <Text style={styles.success}>{t(success)}</Text>}
     {!!bootstrap && <>
+      {showIntakeCandidates && <View style={styles.sectionGroup}>
+        <Expansion title={p(intakeLoading || intakeError || intakeCandidates.length ? 'worker.materials.pending' : 'worker.materials.pending.empty')}
+          count={intakeLoading ? '..' : intakeCandidates.length ? materialCount(intakeCandidates.length) : ''} expanded={intakeExpanded}
+          onPress={() => { if (intakeLoading || intakeError || intakeCandidates.length) setIntakeExpanded(value => !value); }} />
+        {intakeExpanded && <>
+          {intakeLoading && <Text style={[styles.muted, { color: colors.muted }]}>{t('Yuklanmoqda...')}</Text>}
+          {!!intakeError && <Text style={styles.error}>{t(intakeError)}</Text>}
+          {!intakeLoading && !intakeError && <WorkerMaterialList rows={intakeCandidates} scanned={[]} onLongPress={openMaterialQr} showBalances={false} />}
+        </>}
+      </View>}
       {showMaterials && <View style={styles.sectionGroup}>
-        {rows === null ? <Text style={[styles.muted, { color: colors.muted }]}>{attachedMaterialsError || 'Homashyolar yuklanmoqda…'}</Text> : rows.length === 0 ?
-          <Text style={[styles.expansionTitle, { color: colors.text }]}>Ushbu buyurtma uchun homashyo biriktirilmagan</Text> : <>
-            <Expansion title={rows.every(row => row.execution_status === 'awaiting_delivery') ? 'Apparat oldiga homashyo olib kelinmagan' : 'Biriktirilgan homashyolar'} count={`${rows.length} ta`} expanded={materialsExpanded} onPress={() => setMaterialsExpanded(value => !value)} />
-            {materialsExpanded && rows.map((row, index) => <View key={String(row.id ?? row.barcode ?? index)} style={[styles.detailRow, { backgroundColor: colors.field }]}>
-              <Text style={[styles.detailText, { color: colors.text }]}>{String(row.item_name || row.material_name || row.item_code || row.barcode || '')}</Text>
-              <Text style={[styles.small, { color: colors.muted }]}>{String(row.barcode ?? '')}{materials.some(value => normalizeCode(value) === normalizeCode(row.barcode)) ? ' ✓' : ''}</Text>
-            </View>)}
-          </>}
-        {scanningRequired && requiredMaterialCount > 0 && <View style={styles.expansion}><Text style={[styles.expansionTitle, { color: colors.text }]}>Homashyo QR tasdiqlari</Text><Text style={[styles.muted, { color: colors.muted }]}>{matchedMaterialCount}/{requiredMaterialCount}</Text></View>}
-        {materialState.unavailable && materialState.reason !== 'Apparat oldiga homashyo olib kelinmagan' && <Text style={styles.error}>{materialState.reason}</Text>}
+        <Expansion title={t(scanningRequired && rows?.length && rows.every(row => row.execution_status === 'awaiting_delivery') ? 'Apparat oldiga homashyo olib kelinmagan' : p(rows?.length || materialLoading || materialsError || showLinkRequests ? 'worker.materials.attached' : 'worker.materials.attached.empty'))}
+          count={materialLoading ? '..' : rows?.length ? materialCount(rows.length) : ''} expanded={materialsExpanded}
+          onPress={() => { if (rows?.length || materialLoading || materialsError || showLinkRequests) setMaterialsExpanded(value => !value); }} />
+        {materialsExpanded && <>
+          {materialLoading && <Text style={[styles.muted, { color: colors.muted }]}>{t('Yuklanmoqda...')}</Text>}
+          {!!materialsError && <Text style={styles.error}>{t(materialsError)}</Text>}
+          {!materialLoading && !materialsError && !!rows?.length && <WorkerMaterialList rows={rows} scanned={materials} onLongPress={openMaterialQr} />}
+        </>}
+        {canSendOrderAlert && scanningRequired && !materialLoading && !materialsError && rows?.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="rawMaterial" enabled={!busy} />}
+        {scanningRequired && requiredMaterialCount > 0 && <View style={styles.expansion}><Text style={[styles.expansionTitle, { color: colors.text }]}>{t('Homashyo QR tasdiqlari')}</Text><Text style={[styles.muted, { color: colors.muted }]}>{matchedMaterialCount}/{requiredMaterialCount}</Text></View>}
+        {scanningRequired && materialState.unavailable && materialState.reason !== 'Apparat oldiga homashyo olib kelinmagan' && <Text style={styles.error}>{t(materialState.reason)}</Text>}
+        {showLinkRequests && <View style={!scanningRequired && !materialsExpanded ? { display: 'none' } : undefined}>
+          <MaterialLinkRequestPanel session={session} orderId={orderId} apparatusId={apparatusId} actionsEnabled={synchronized} allowNewRequests={allowNewMaterialRequests} onChanged={materialsChanged} />
+        </View>}
+        {directMaterialUse && <WorkerMaterialUsePanel session={session} orderId={orderId} apparatusId={apparatusId} actionsEnabled={synchronized} onChanged={materialsChanged} />}
       </View>}
       {showMolds && <View style={styles.sectionGroup}>
-        <Expansion title={moldSets.size > 1 ? 'Muqobil qoliplar' : 'Qoliplar'} count={`${automaticQolip && automaticConfirmation ? requiredQolips.length : effectiveQolips.length}/${requiredQolips.length} ta`} expanded={qolipsExpanded} onPress={() => setQolipsExpanded(value => !value)} />
+        <Expansion title={t(moldSets.size > 1 ? 'Muqobil qoliplar' : 'Qoliplar')} count={`${automaticQolip && automaticConfirmation ? requiredQolips.length : effectiveQolips.length}/${requiredQolips.length} ta`} expanded={qolipsExpanded} onPress={() => setQolipsExpanded(value => !value)} />
         {automaticQolip && automaticSets.length > 1 && automaticSets.map(set => <NativeButton key={String(set.set_id)} label={String(set.set_id)} disabled={!synchronized} variant={selectedQolipSet === set.set_id ? 'filled' : 'outlined'} onPress={() => setSelectedQolipSet(String(set.set_id))} />)}
-        {qolipsExpanded && requiredQolips.map((mold, index) => <View key={String(mold.qolip_code || index)} style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{String(mold.qolip_code ?? '')}{mold.color ? ` · ${mold.color}` : ''}{scannedMolds.has(normalizeCode(mold.qolip_code)) ? ' ✓' : ''}</Text></View>)}
-        {!automaticQolip && moldSets.size > 1 && effectiveQolips.length > 0 && <NativeButton label="Komplektni almashtirish" variant="text" onPress={() => { setQolipsReset(true); setQolips([]); }} />}
-        {sections.qolips?.status === 'error' && <Text style={styles.error}>Qoliplar yuklanmadi</Text>}
+        {canSendOrderAlert && sections.qolips?.status === 'ready' && requiredQolips.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="qolip" enabled={!busy} />}
+        {qolipsExpanded && requiredQolips.map((mold, index) => <View key={String(mold.qolip_code || index)} style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{String(mold.qolip_code ?? '')}{t(mold.color ? ` · ${mold.color}` : '')}{t(scannedMolds.has(normalizeCode(mold.qolip_code)) ? ' ✓' : '')}</Text></View>)}
+        {!automaticQolip && moldSets.size > 1 && effectiveQolips.length > 0 && <NativeButton label={t("Komplektni almashtirish")} variant="text" onPress={() => { setQolipsReset(true); setQolips([]); }} />}
+        {sections.qolips?.status === 'error' && <Text style={styles.error}>{t("Qoliplar yuklanmadi")}</Text>}
       </View>}
       {preparationVisible && previousRequired && <View style={[styles.detailRow, { backgroundColor: colors.field }]}>
-        <Text style={[styles.expansionTitle, { color: colors.text }]}>{inputBatch ? (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP ruloni tasdiqlandi' : 'Oldingi bosqich tasdiqlandi') : (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP QR ni skan qiling' : 'Oldingi bosqich QR')}</Text>
+        <Text style={[styles.expansionTitle, { color: colors.text }]}>{t(inputBatch ? (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP ruloni tasdiqlandi' : 'Oldingi bosqich tasdiqlandi') : (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP QR ni skan qiling' : 'Oldingi bosqich QR'))}</Text>
         {!!inputBatch && <Text style={[styles.small, { color: colors.muted }]}>{inputBatch.qr}</Text>}
       </View>}
       <View style={styles.sectionGroup}>
-        {interaction.material_intake_allowed === true && intakeCandidates.length > 0 && <NativeButton label={intakeMode ? 'Scannerni yopish' : 'Homashyo ulash'} height={52} disabled={!synchronized || deliveryBusy} onPress={() => setIntakeMode(value => !value)} />}
-        {showPreflightFreeze && <NativeButton label="Rang chiqarishni to‘xtatib muzlatish" height={58} variant="filled" onPress={() => { void freezePreflight(); }} />}
+        {showIntakeCandidates && !directMaterialUse && intakeCandidates.length > 0 && <NativeButton label={t(intakeMode ? 'Scannerni yopish' : 'Homashyo ulash')} height={52} disabled={!synchronized || deliveryBusy} onPress={() => setIntakeMode(value => !value)} />}
+        {showPreflightFreeze && <NativeButton label={t("Rang chiqarishni to‘xtatib muzlatish")} height={58} variant="filled" onPress={() => { void freezePreflight(); }} />}
         {showPreflightOutcome && <View style={[styles.actionRow, Platform.OS === 'ios' && iosStyles.outcomeActions]}>
-          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label="Rang chiqdi" onPress={() => { void runPreflight('passed'); }} /> : <NativeButton label="Rang chiqdi" height={58} variant="filled" icon={{ android: 'check_circle', ios: 'checkmark.circle' }} onPress={() => { void runPreflight('passed'); }} />}</View>
-          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label="Chiqmadi" outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label="Chiqmadi" height={58} icon={{ android: 'cancel', ios: 'xmark.circle' }} onPress={() => { void runPreflight('failed'); }} />}</View>
+          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Rang chiqdi")} onPress={() => { void runPreflight('passed'); }} /> : <NativeButton label={t("Rang chiqdi")} height={58} variant="filled" icon={{ android: 'check_circle', ios: 'checkmark.circle' }} onPress={() => { void runPreflight('passed'); }} />}</View>
+          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Chiqmadi")} outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label={t("Chiqmadi")} height={58} icon={{ android: 'cancel', ios: 'xmark.circle' }} onPress={() => { void runPreflight('failed'); }} />}</View>
         </View>}
         {showPreflightHold && <WorkerPreflightButton onPress={() => { void runPreflight('hold'); }} />}
-        {!showPreflightHold && !showPreflightOutcome && allowed.includes('start') && <NativeButton label="Boshlash" height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || busy} onPress={() => { void submit('start'); }} />}
+        {!showPreflightHold && !showPreflightOutcome && allowed.includes('start') && <NativeButton label={t("Boshlash")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || busy} onPress={() => { void submit('start'); }} />}
         {showOutputProgress && <WorkerOutputProgress session={session} orderId={orderId} apparatusId={apparatusId}
-          stageId={String(control.stage_node_id ?? '')} map={order} />}
-        {(allowed.includes('pause') || allowed.includes('complete')) && <View style={styles.actionRow}>
-          {allowed.includes('pause') && <View style={styles.flex}><NativeButton label={safeStopRequest ? 'Rulonni yechib muzlatish' : 'Rulonni yechish'} height={58} disabled={busy} onPress={() => { setError(''); setSelected('pause'); }} /></View>}
-          {allowed.includes('complete') && <View style={styles.flex}><NativeButton label="Tugatish" height={58} variant="filled" disabled={busy} onPress={() => { setError(''); setSelected('complete'); }} /></View>}
-        </View>}
-        {allowed.includes('resume') && <NativeButton label="Davom ettirish" height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || busy} onPress={() => { void submit('resume'); }} />}
-        {synchronized && !showPreflightHold && !showPreflightOutcome && !showPreflightFreeze && !allowed.length && <Text style={[styles.muted, { color: colors.muted }]}>{interaction.mode === 'waiting_previous_stage' ? 'Oldingi bosqich tugallanguncha kutilmoqda' : interaction.mode === 'requeued_waiting' ? 'Buyurtma apparat navbatidagi o‘z vaqtini kutmoqda' : 'Hozir bajarish mumkin bo‘lgan amal yo‘q.'}</Text>}
-        {!synchronized && <Text style={[styles.muted, { color: colors.muted }]}>Buyurtma holati tekshirilmoqda…</Text>}
+          stageId={String(control.stage_node_id ?? '')} map={order} operation={operation} outputRevision={`${controlEpoch}:${controlRevision}:${refresh}`} />}
+        {(allowed.includes('pause') || allowed.includes('complete')) && <WorkerOrderActionGroup>
+          {allowed.includes('pause') && <NativeButton label={t(safeStopRequest ? 'Rulonni yechib muzlatish' : 'Rulonni yechish')} height={58} disabled={busy} onPress={() => { setError(''); selectProgressAction('pause'); }} />}
+          {allowed.includes('complete') && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={busy} onPress={() => { setError(''); selectProgressAction('complete'); }} />}
+        </WorkerOrderActionGroup>}
+        {allowed.includes('resume') && <NativeButton label={t("Davom ettirish")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || busy} onPress={() => { void submit('resume'); }} />}
+        {synchronized && !showPreflightHold && !showPreflightOutcome && !showPreflightFreeze && !allowed.length && <Text style={[styles.muted, { color: colors.muted }]}>{t(interaction.mode === 'waiting_previous_stage' ? 'Oldingi bosqich tugallanguncha kutilmoqda' : interaction.mode === 'requeued_waiting' ? 'Buyurtma apparat navbatidagi o‘z vaqtini kutmoqda' : 'Hozir bajarish mumkin bo‘lgan amal yo‘q.')}</Text>}
+        {!synchronized && <Text style={[styles.muted, { color: colors.muted }]}>{t("Buyurtma holati tekshirilmoqda…")}</Text>}
       </View>
     </>}
-    {!loading && !bootstrap && <NativeButton label="Qayta urinish" onPress={() => { setError(''); void load(); }} disabled={busy} />}
+    {!loading && !bootstrap && <NativeButton label={t("Qayta urinish")} onPress={() => { setError(''); void load(); }} disabled={busy} />}
     </View>
     <WorkerOrderOverview session={session} orderId={orderId} code={code} imageId={imageId}
       title={String(order.title || preview?.title || '')}
       detail={detail ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </ScrollView>
-    <WorkerFormDialog visible={!!selected} title={inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori'}
-      cancelLabel={inlinePaint ? 'Orqaga' : 'Bekor qilish'} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
-      preventDismiss={inlinePaint}
-      confirmLabel={inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash'}
+    <WorkerFormDialog visible={!!selected} title={t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
+      cancelLabel={t(inlinePaint ? 'Orqaga' : 'Bekor qilish')} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
+      preventDismiss
+      confirmLabel={t(inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash')}
       confirmDisabled={busy || photoBusy || (!inlinePaint && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && loadedDraftScope !== draftScope)))}
       onConfirm={() => { if (inlinePaint) { setError(''); setPaintEditor(false); } else void submit(selected); }}>
-        {!!error && <Text style={styles.error}>{error}</Text>}
+        {!!error && <Text style={styles.error}>{t(error)}</Text>}
         {inlinePaint ? paintBody : <>
-        <Text style={[styles.muted, { color: colors.muted }]}>{selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting'}</Text>
-        {selected === 'pause' && safeStopRequest && <Field label="Natija bo‘lmasa, sababini kiriting" initialValue={freezeNote} onChangeText={setFreezeNote} />}
-        {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Standart miqdor</Text><Field label="Babina, kg" initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Tayyor mahsulot</Text><Field label="Metraj, m" initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label="Og‘irlik, kg" initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
-        {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <Field label="Wi-Fi printer server manzili" initialValue={printerUrl} onChangeText={setPrinterUrl} />}
-        {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>Qaytim va chiqindi</Text><Field label="Jami chiqindi, kg" initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} /><NativeButton label="Qaytarilgan bo‘yoq" variant="filled" disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} /></>}
-        {selected === 'astatka' && <Field label="Izoh" initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
+        <Text style={[styles.muted, { color: colors.muted }]}>{t(selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting')}</Text>
+        {selected === 'pause' && safeStopRequest && descriptionRevealed && <Field label={p('worker.freeze.safe_stop.issue_note')} initialValue={freezeNote} onChangeText={setFreezeNote} />}
+        {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.standard')}</Text><Field label={`${p('worker.daily.field.roll')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.finished_goods')}</Text><Field label={`${p('worker.daily.field.length')}, ${p('worker.progress.qty.unit.meter')}`} initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label={`${p('worker.daily.field.weight')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
+        {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <Field label={t("Wi-Fi printer server manzili")} initialValue={printerUrl} onChangeText={setPrinterUrl} />}
+        {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.returned_paint_and_waste')}</Text><Field label={`${p('worker.daily.field.total_waste')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} /><NativeButton label={p('worker.daily.field.returned_ink')} variant="filled" disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} /></>}
+        {selected === 'astatka' && <Field label={p('worker.progress.qty.optional_note')} initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
+        {selected === 'complete' && descriptionRevealed && <Field label={p(closingOutput ? 'worker.progress.qty.optional_note' : 'worker.progress.qty.reason')} initialValue={completionNote} onChangeText={setCompletionNote} />}
         </>}
     </WorkerFormDialog>
     <WorkerDeliveryDialog visible={!!delivery} name={String(delivery?.material.item_name || delivery?.material.item_code || '')} barcode={String(delivery?.material.barcode || '')}
@@ -807,5 +880,5 @@ export function OrderScreen({ session, apparatusId, orderId, preview, queueCurso
       onChoose={setDeliveryChoice} onCancel={() => setDelivery(null)} onConfirm={() => { void confirmMaterialDelivery(); }} />
   </View>;
 }
-const iosStyles = StyleSheet.create({ content: { paddingHorizontal: 16, paddingTop: 8 }, outcomeActions: { gap: 24 } });
+const iosStyles = StyleSheet.create({ content: { paddingHorizontal: 16, paddingTop: 16, gap: 16 }, actionCard: { padding: 16, borderRadius: 22, gap: 16 }, outcomeActions: { gap: 24 } });
 const styles = StyleSheet.create({ screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},scannerPanel:{borderRadius:18,padding:12,alignItems:'center',gap:10},quickCamera:{width:218,height:218,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},paintHeader:{flexDirection:'row',alignItems:'center',padding:8,gap:6},paintPreview:{height:170,borderRadius:12},paintContent:{padding:14,gap:12,paddingBottom:24},flex:{flex:1}});

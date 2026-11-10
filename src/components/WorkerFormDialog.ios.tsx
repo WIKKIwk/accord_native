@@ -1,34 +1,30 @@
-import { Button as UniversalButton, Host as UniversalHost } from '@expo/ui';
-import { BottomSheet, Group, Host, RNHostView } from '@expo/ui/swift-ui';
-import { buttonBorderShape, buttonStyle, controlSize, interactiveDismissDisabled, presentationDetents, presentationDragIndicator } from '@expo/ui/swift-ui/modifiers';
-import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Button, Text as NativeText } from '@expo/ui/swift-ui';
+import { buttonBorderShape, buttonStyle, controlSize, disabled, font, frame } from '@expo/ui/swift-ui/modifiers';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { WorkerFormDialogProps } from './workerDialogTypes';
+import { BaseHost } from './BaseHost';
 import { useWorkerColors } from './useWorkerColors';
+import { useWorkerOrderText } from './useWorkerOrderText';
 
+/** V2 showDialog: tapping outside never dismisses; only explicit actions close it. */
 export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss }: WorkerFormDialogProps) {
-  const { width, height } = useWindowDimensions();
-  const colors = useWorkerColors();
-  const glass = Number(Platform.Version) >= 26;
-  return <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
-    <BottomSheet isPresented={visible} onIsPresentedChange={presented => { if (!presented && !cancelDisabled) onCancel(); }}>
-      <Group modifiers={[presentationDetents(['large']), presentationDragIndicator(cancelDisabled || preventDismiss ? 'hidden' : 'visible'), interactiveDismissDisabled(!!cancelDisabled || !!preventDismiss)]}>
-        <RNHostView><View style={[styles.content, { flex: 1, backgroundColor: colors.surface }]}>
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={styles.body}>{children}</ScrollView>
-          <View style={styles.actions}>
-            <View style={styles.action}><UniversalHost matchContents={{ vertical: true }} style={styles.host}>
-              <UniversalButton label={cancelLabel} disabled={cancelDisabled} onPress={onCancel} style={{ width: '100%' }}
-                modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('capsule'), controlSize('large')]} />
-            </UniversalHost></View>
-            <View style={styles.action}><UniversalHost matchContents={{ vertical: true }} style={styles.host}>
-              <UniversalButton label={confirmLabel} disabled={confirmDisabled} onPress={onConfirm} style={{ width: '100%' }}
-                modifiers={[buttonStyle(glass ? 'glassProminent' : 'borderedProminent'), buttonBorderShape('capsule'), controlSize('large')]} />
-            </UniversalHost></View>
-          </View>
-        </View></RNHostView>
-      </Group>
-    </BottomSheet>
-  </Host>;
+  const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), colors = useWorkerColors();
+  const { t } = useWorkerOrderText();
+  const glass = parseInt(String(Platform.Version), 10) >= 26;
+  return <Modal visible={visible} transparent animationType="fade" presentationStyle="overFullScreen" statusBarTranslucent
+    onRequestClose={() => { if (!cancelDisabled && !preventDismiss) onCancel(); }}>
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0007', paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}>
+      <View accessibilityViewIsModal style={{ flexShrink: 1, width: Math.min(width - 32, 560), maxHeight: height - insets.top - insets.bottom - 24, backgroundColor: colors.surface, borderRadius: 26, padding: 20, gap: 16 }}>
+        <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><NativeText modifiers={[font({ size: 22, weight: 'semibold' }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>{t(title)}</NativeText></BaseHost>
+        <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 14, paddingBottom: 8 }}>{children}</ScrollView>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <BaseHost matchContents={{ vertical: true }} style={{ flex: 1 }}><Button label={t(cancelLabel)} onPress={onCancel}
+            modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('capsule'), controlSize('large'), disabled(!!cancelDisabled), frame({ maxWidth: Infinity })]} /></BaseHost>
+          <BaseHost matchContents={{ vertical: true }} style={{ flex: 1 }}><Button label={t(confirmLabel)} onPress={onConfirm}
+            modifiers={[buttonStyle(glass ? 'glassProminent' : 'borderedProminent'), buttonBorderShape('capsule'), controlSize('large'), disabled(!!confirmDisabled), frame({ maxWidth: Infinity })]} /></BaseHost>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>;
 }
-
-const styles = StyleSheet.create({ content: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 16, gap: 16 }, title: { fontSize: 22, fontWeight: '600' }, body: { gap: 14, paddingBottom: 20 }, actions: { flexDirection: 'row', gap: 12 }, action: { flex: 1 }, host: { width: '100%' } });

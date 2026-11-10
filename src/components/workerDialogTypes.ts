@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 export type WorkerAlertData = { title: string; message: string; confirmLabel?: string; cancelLabel?: string; onConfirm?: () => void };
-export type WorkerAlertProps = { alert: WorkerAlertData | null; onDismiss: () => void };
+export type WorkerAlertProps = { alert: WorkerAlertData | null; onDismiss: () => void; onCancel?: () => void };
 
 export type WorkerFormDialogProps = {
   visible: boolean; title: string; children: ReactNode;

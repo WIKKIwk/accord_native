@@ -9,8 +9,8 @@ import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
 
 type Identity = { session: Session; orderId: string; imageId: string };
 
-export function WorkerOrderHeader({ session, orderId, imageId, code, onOpenImage, onClose }: Identity & {
-  code: string; onOpenImage: () => void; onClose: () => void;
+export function WorkerOrderHeader({ session, orderId, imageId, code, title, onOpenImage, onClose }: Identity & {
+  code: string; title?: string; onOpenImage: () => void; onClose: () => void;
 }) {
   const colors = useWorkerColors();
   return <View style={styles.header}>
@@ -21,6 +21,7 @@ export function WorkerOrderHeader({ session, orderId, imageId, code, onOpenImage
     <View style={styles.fill}>
       <Text style={[styles.label, { color: colors.muted }]}>Buyurtma raqami:</Text>
       <Text numberOfLines={1} style={[styles.code, { color: colors.text }]}>{code}</Text>
+      {title ? <Text numberOfLines={2} style={[styles.label, { color: colors.muted }]}>{title}</Text> : null}
     </View>
     <WorkerIconButton icon="close" label="Yopish" onPress={onClose} tonal />
   </View>;

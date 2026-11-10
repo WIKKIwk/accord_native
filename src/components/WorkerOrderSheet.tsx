@@ -4,12 +4,12 @@ import { View } from 'react-native';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 
-type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean; fitContent?: boolean };
+type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean; fitContent?: boolean; heightFraction?: number };
 
-export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false }: Props) {
+export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false, heightFraction }: Props) {
   const sheet = useRef<BottomSheetMethods>(null);
   const colors = useWorkerColors();
-  return <BottomSheet ref={sheet} index={0} snapPoints={compact ? ['65%'] : ['86%']} enablePanDownToClose={dismissible}
+  return <BottomSheet ref={sheet} index={0} snapPoints={heightFraction == null ? compact ? ['65%'] : ['86%'] : [`${heightFraction * 100}%`]} enablePanDownToClose={dismissible}
     handleComponent={dismissible ? undefined : null} backgroundStyle={{ backgroundColor: colors.field }} onClose={onClose}>
     <View style={{ flex: 1 }}><WorkerSheetCloseContext.Provider value={() => sheet.current?.close()}>{children}</WorkerSheetCloseContext.Provider></View>
   </BottomSheet>;

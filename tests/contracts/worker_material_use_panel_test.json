@@ -1,0 +1,281 @@
+{
+  "source": "test/worker_material_use_panel_test.dart",
+  "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+  "records": [
+    {
+      "test": "no button without eligible material, permission=false (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":false,\"candidates\":[{\"barcode\":\"R1\",\"placement_version\":1}]}"
+      }
+    },
+    {
+      "test": "no button without eligible material, permission=true (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: confirm (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: confirm (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: confirm (variant: TargetPlatform.linux)",
+      "method": "POST",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token",
+        "Content-Type": "application/json"
+      },
+      "requestBody": {
+        "text": "{\"order_id\":\"zakaz-1\",\"apparatus\":\"apparatus:test:print\",\"barcode\":\"R1\",\"placement_version\":7}"
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"ok\":true,\"barcode\":\"R1\",\"in_use\":true}"
+      }
+    },
+    {
+      "test": "precomputed material scan: confirm (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: cancel (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: cancel (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: wrong (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: wrong (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: changed (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: changed (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "precomputed material scan: changed (variant: TargetPlatform.linux)",
+      "method": "POST",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token",
+        "Content-Type": "application/json"
+      },
+      "requestBody": {
+        "text": "{\"order_id\":\"zakaz-1\",\"apparatus\":\"apparatus:test:print\",\"barcode\":\"R1\",\"placement_version\":7}"
+      },
+      "status": 409,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"error\":\"raw_material_stock_unavailable\"}"
+      }
+    },
+    {
+      "test": "precomputed material scan: changed (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"PET 1000/12\",\"placement_version\":7}]}"
+      }
+    },
+    {
+      "test": "switching accounts while confirmation is open cannot use old material (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"placement_version\":1}]}"
+      }
+    },
+    {
+      "test": "switching accounts while confirmation is open cannot use old material (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer worker-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"placement_version\":1}]}"
+      }
+    },
+    {
+      "test": "switching accounts while confirmation is open cannot use old material (variant: TargetPlatform.linux)",
+      "method": "GET",
+      "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/worker-material-use?order_id=zakaz-1&apparatus=apparatus%3Atest%3Aprint",
+      "requestHeaders": {
+        "Authorization": "Bearer other-token"
+      },
+      "requestBody": {
+        "text": ""
+      },
+      "status": 200,
+      "responseHeaders": {},
+      "responseBody": {
+        "text": "{\"enabled\":true,\"candidates\":[{\"barcode\":\"R1\",\"placement_version\":1}]}"
+      }
+    }
+  ],
+  "recordingNote": "Baseline lib is unmodified. In the temporary test export, synchronous expectSync replaces expect inside MockClient callbacks to avoid the recording await crossing Flutter TestAsyncUtils guards. Original unmodified tests also pass (7/7)."
+}

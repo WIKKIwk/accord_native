@@ -1,0 +1,33 @@
+# Aparatchi — order detail parity contract
+
+Scope: the eleven differences F01–F11 in `../status/aparatchi-audit.md`: the operator order sheet, its material panels, output progress, issue completion and directly opened dialogs/sheets. Both iOS and Android are included. This is not a declaration that the entire aparatchi role's 29 surfaces have been ported.
+
+Specification: Accord V2 baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`. The checked-out V2 HEAD `44396752396b69bc5ba9198a9352b71848b3b86a` has identical `lib/` and `test/` content. V2 and Mini ERP remain read-only. Work stays on `main`, as explicitly requested by Wikki.
+
+## Material visibility and actions
+
+- Keep assigned materials visible after start, including a running order whose actions are pause/complete. Do not use `assigned_materials_display_only` as a visibility requirement.
+- Pending intake and attached assignments have independent expandable lists, counts, loading/error/empty states. Intake requires the synchronized server `material_intake_allowed` flag and is excluded for cutting.
+- Assignment rows retain the V2 title/code deduplication, group, barcode, execution status and scanned state. Balance totals group case-insensitive UOMs, sum finite positive received/consumed quantities and clamp remaining to zero.
+- Preserve `worker_material_assignment_allowed` from the apparatus catalog. With this permission, expose the precomputed material-use panel; otherwise expose the link-request panel during required start-material scanning. Exclude training orders from these real material mutations.
+- Direct use performs GET `/v1/mobile/worker-material-use`, requires an eligible barcode with a positive `placement_version`, asks for explicit confirmation and POSTs that same version. Cancel, wrong barcode, expired permission or changed account/order cannot send the mutation. A failed permission read clears stale eligibility. A successful response requires `ok=true` and the matching barcode.
+- Link requests use GET/POST `/v1/mobile/material-link-requests`. Creation requires explicit selected barcodes; nothing is preselected. Recheck permission and assignments after preflight and after the picker. Track the latest request per mover, prevent duplicate pending creation, allow pending cancellation, and refresh material assignments once per approved/stale request ID. An ambiguous creation response triggers verification without automatically repeating POST.
+- Keep refresh notifications queued while confirming, picking or saving. Hidden/background panels resume their refresh on return. Reads issued before a mutation cannot overwrite post-mutation verification. Session/order identity and active-session guards apply before writes and async updates; token refresh within the same active login does not change the read scope.
+
+## Progress and completion
+
+- Print/laminate progress is available on both platforms for pause/complete/resume states. Resolve the current occurrence, including alternative apparatus groups. Fetch all producer WIP batches with `status=all`, `limit=500`; preserve duplicate IDs until the highest revision is selected.
+- Count the same V2 output action/status pairs. Exclude another order/occurrence, void/peremotka outputs and layer remainders. Sum meters in micro-units, retain missing-measurement counts, round planned length upward to 500 m, clamp the visual bar and remaining quantity, and retain V2's unclamped percentage text.
+- Refresh progress on entry, output revision, active production updates and a 30-second foreground timer. Keep the previous totals visible during refresh; report loading, failure and unknown meters separately.
+- A non-training ordinary completion with an issue note sends `action=freeze`, `freeze_with_issue=true`, `issue_note`; it bypasses output printing and full-report validation. A closing-output completion stays a report. Safe-stop pause requires output or an issue note and retains `freeze_request_id` and `completion_request_note`. Any partially entered output, including waste, prevents the empty-output safe-stop shortcut.
+- Optional ordinary/closing report notes serialize through `completion_request_note`; the queue serializer does not accept a generic `description` field. Existing output, returned-paint, report and server control guards remain in force.
+
+## Linked surfaces and platform controls
+
+- Long-press a material row: medium haptic, QR sheet, barcode and stock details, existing-printer selection and reprint. Prepare/validate the same stock barcode and print payload before printing; confirm that same reprint ID afterward. Cancellation is not success. Failed confirmation after a successful print shows the V2 warning and success snackbar.
+- Missing material/mold alerts retain V2's print-apparatus, active-order, synchronized-control and training guards. Disable concurrent sends; retry the same request ID after failure; show success only after server acknowledgement.
+- Reuse recorded V2 translations for actions, material headers, balances, progress, report labels, delivery confirmation, QR details and stage status. Preserve literal V2 text where it uses Urdu-aware literals.
+- Roll selection remains a dismissible 70% bottom sheet with empty initial selection. Quantity/report remains a dialog, with no outside-tap dismissal; saving blocks cancellation. iOS uses an RN modal dialog with native SwiftUI action buttons and a scrollable keyboard-aware form; Android uses Compose `AlertDialog`. Confirmation alerts are native SwiftUI/Compose alerts. Existing order buttons remain actual SwiftUI/Compose controls.
+- Previously requested design changes remain: native iOS glass controls, completion above roll removal, and the sheet safe-area/background fix. They are user-authorized presentation changes.
+
+GoDEX and deferred test mode remain excluded by the port decisions. No backend contracts, production data, dependencies, branches or signing configuration change in this scope.

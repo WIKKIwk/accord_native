@@ -12,7 +12,7 @@ type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
-export type Apparatus = { id: string; name: string; operation: string };
+export type Apparatus = { id: string; name: string; operation: string; worker_material_assignment_allowed?: boolean };
 export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
 export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown>; assignedIds: string[]; assignedLabels: string[] };
@@ -181,7 +181,7 @@ export function workerMachinesFromSnapshot(catalog: unknown[], snapshot: RecordV
     const name = string(object(projection.display).display_name) || string(outer.name);
     const operation = string(object(projection.execution_profile).operation) || string(outer.operation);
     if (!id || !name || (!showAll && !assigned.has(id))) return [];
-    return [{ id, name, operation }];
+    return [{ id, name, operation, ...(projection.worker_material_assignment_allowed === true || outer.worker_material_assignment_allowed === true ? { worker_material_assignment_allowed: true } : {}) }];
   });
   const firstAssigned = assignedIds.map(id => machines.findIndex(machine => machine.id === id)).find(index => index >= 0) ?? -1;
   if (firstAssigned > 0) machines.unshift(...machines.splice(firstAssigned, 1));

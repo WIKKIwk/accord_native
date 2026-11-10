@@ -3,15 +3,15 @@ import { Modal, StyleSheet, Text, View } from 'react-native';
 import type { WorkerAlertProps } from './workerDialogTypes';
 import { useWorkerColors } from './useWorkerColors';
 
-export function WorkerAlert({ alert, onDismiss }: WorkerAlertProps) {
+export function WorkerAlert({ alert, onDismiss, onCancel }: WorkerAlertProps) {
   const colors = useWorkerColors();
   if (!alert) return null;
-  return <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
+  return <Modal visible transparent animationType="fade" onRequestClose={onCancel ?? onDismiss}>
     <View style={styles.backdrop}><View style={[styles.dialog, { backgroundColor: colors.surface }]}>
       <Text style={[styles.title, { color: colors.text }]}>{alert.title}</Text>
       <Text style={{ color: colors.muted }}>{alert.message}</Text>
       <View style={styles.actions}>
-        {alert.onConfirm && <Host matchContents={{ vertical: true }} style={styles.action}><Button variant="text" label={alert.cancelLabel ?? 'Bekor qilish'} onPress={onDismiss} /></Host>}
+        {alert.onConfirm && <Host matchContents={{ vertical: true }} style={styles.action}><Button variant="text" label={alert.cancelLabel ?? 'Bekor qilish'} onPress={onCancel ?? onDismiss} /></Host>}
         <Host matchContents={{ vertical: true }} style={styles.action}><Button variant="text" label={alert.confirmLabel ?? 'OK'} onPress={() => { onDismiss(); alert.onConfirm?.(); }} /></Host>
       </View>
     </View></View>

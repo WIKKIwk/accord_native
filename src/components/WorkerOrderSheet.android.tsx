@@ -5,14 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 
-type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean; fitContent?: boolean;
+type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean; fitContent?: boolean; heightFraction?: number;
   sheetRef?: Ref<ModalBottomSheetRef> };
 
-export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false, fitContent = false, sheetRef }: Props) {
+export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false, fitContent = false, heightFraction, sheetRef }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const colors = useWorkerColors();
-  const sheetHeight = Math.round((height - insets.top) * (compact ? 0.65 : 0.86));
+  const sheetHeight = Math.round((height - insets.top) * (heightFraction ?? (compact ? 0.65 : 0.86)));
 
   return <Host style={{ position: 'absolute', top: 0, bottom: 0, width }} pointerEvents="none">
     <ModalBottomSheet ref={sheetRef} onDismissRequest={onClose} skipPartiallyExpanded

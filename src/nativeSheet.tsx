@@ -7,6 +7,7 @@ export type NativeSheetOptions = {
   compact?: boolean;
   fitContent?: boolean;
   dismissible?: boolean;
+  heightFraction?: number;
 };
 
 type SheetSnapshot = {

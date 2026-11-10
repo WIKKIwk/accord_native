@@ -1,0 +1,877 @@
+{
+ "source": "test/material_link_request_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "satisfied assignments hide new linking and refresh on live revisions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "satisfied assignments hide new linking and refresh on live revisions",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "satisfied assignments retain pending tracking and approval refresh",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312109,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "satisfied assignments retain pending tracking and approval refresh",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312109,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}]}"
+   }
+  },
+  {
+   "test": "satisfied assignments retain pending tracking and approval refresh",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312109,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}]}"
+   }
+  },
+  {
+   "test": "assignments satisfied during preflight prevent a new request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "assignments satisfied during preflight prevent a new request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "assignments satisfied during picker prevent a new request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "assignments satisfied during picker prevent a new request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "worker panel defers hidden and background live updates until return",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker panel defers hidden and background live updates until return",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}]}"
+   }
+  },
+  {
+   "test": "worker panel defers hidden and background live updates until return",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}]}"
+   }
+  },
+  {
+   "test": "late response for old order cannot notify or overwrite new order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=new-order&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "late response for old order cannot notify or overwrite new order",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=old-order&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"requests\":[{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}]}"
+   }
+  },
+  {
+   "test": "late live refresh cannot overwrite post-mutation verification",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "late live refresh cannot overwrite post-mutation verification",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "late live refresh cannot overwrite post-mutation verification",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"action\":\"create\",\"order_id\":\"order-1\",\"apparatus\":\"apparatus:test:film\",\"barcodes\":[\"R2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "late live refresh cannot overwrite post-mutation verification",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "late live refresh cannot overwrite post-mutation verification",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"requests\":[{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}]}"
+   }
+  },
+  {
+   "test": "account switch while roll picker is open cannot create request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "account switch while roll picker is open cannot create request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "account switch while roll picker is open cannot create request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "same-account token refresh preserves material request preflight",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "same-account token refresh preserves material request preflight",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "same-account token refresh preserves material request preflight",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests",
+   "requestHeaders": {
+    "Authorization": "Bearer refreshed-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"action\":\"create\",\"order_id\":\"order-1\",\"apparatus\":\"apparatus:test:film\",\"barcodes\":[\"R2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true}"
+   }
+  },
+  {
+   "test": "same-account token refresh preserves material request preflight",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer refreshed-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "approval sends only explicit selected barcode and bearer token",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"link-1\",\"action\":\"approve\",\"barcodes\":[\"R2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"request\":{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}}"
+   }
+  },
+  {
+   "test": "structured chat card submits selection and handles an external assignment",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?request_id=link-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"request\":{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}}"
+   }
+  },
+  {
+   "test": "structured chat card submits selection and handles an external assignment",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"link-1\",\"action\":\"approve\",\"barcodes\":[\"R2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"request\":{\"request_id\":\"link-1\",\"status\":\"stale\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"Rulon boshqa orderga ulangan\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}}"
+   }
+  },
+  {
+   "test": "worker selects requested rolls and admin approves only a subset",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":3,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "worker selects requested rolls and admin approves only a subset",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":3,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "worker selects requested rolls and admin approves only a subset",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":3,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "worker selects requested rolls and admin approves only a subset",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"action\":\"create\",\"order_id\":\"order-1\",\"apparatus\":\"apparatus:test:film\",\"barcodes\":[\"R2\",\"R3\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker selects requested rolls and admin approves only a subset",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":3,\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker selects requested rolls and admin approves only a subset",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?request_id=link-1",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"request\":{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}}"
+   }
+  },
+  {
+   "test": "worker selects requested rolls and admin approves only a subset",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"link-1\",\"action\":\"approve\",\"barcodes\":[\"R2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"request\":{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312110,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}}"
+   }
+  },
+  {
+   "test": "roll linked while worker picks is refreshed without pending loop",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "roll linked while worker picks is refreshed without pending loop",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "roll linked while worker picks is refreshed without pending loop",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"action\":\"create\",\"order_id\":\"order-1\",\"apparatus\":\"apparatus:test:film\",\"barcodes\":[\"R2\"]}"
+   },
+   "status": 400,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"material_link_candidates_changed\"}"
+   }
+  },
+  {
+   "test": "roll linked while worker picks is refreshed without pending loop",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":1,\"candidates\":[{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "roll linked while worker picks is refreshed without pending loop",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":1,\"candidates\":[{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after cancelled and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after cancelled and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"cancelled\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after cancelled and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"cancelled\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after stale and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after stale and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"stale\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"Rulon boshqa orderga ulangan\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after stale and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"stale\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"Rulon boshqa orderga ulangan\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after expired and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after expired and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"expired\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after expired and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"expired\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after approved and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"pending\",\"event_sequence\":1,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after approved and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}]}"
+   }
+  },
+  {
+   "test": "worker leaves pending after approved and refreshes changed materials",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":2,\"candidates\":[{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"requests\":[{\"request_id\":\"link-1\",\"status\":\"approved\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[\"R2\"]}]}"
+   }
+  },
+  {
+   "test": "stale with no remaining rolls does not offer another doomed request",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/material-link-requests?order_id=order-1&apparatus=apparatus%3Atest%3Afilm",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"available_count\":0,\"requests\":[{\"request_id\":\"link-1\",\"status\":\"stale\",\"event_sequence\":2,\"order_id\":\"order-1\",\"order_number\":\"001\",\"apparatus_id\":\"apparatus:test:film\",\"apparatus_name\":\"Machine\",\"requester_ref\":\"worker\",\"requester_display_name\":\"Worker\",\"mover_ref\":\"mover\",\"mover_display_name\":\"Mover\",\"expires_at_unix\":1794312111,\"reason\":\"Rulon boshqa orderga ulangan\",\"candidates\":[{\"barcode\":\"R1\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R2\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"},{\"barcode\":\"R3\",\"item_name\":\"Film\",\"qty\":15.0,\"uom\":\"kg\",\"location_name\":\"State\"}],\"selected_barcodes\":[]}]}"
+   }
+  }
+ ]
+}

@@ -1,7 +1,7 @@
 import { Button, Column, Host, Row, SegmentedButton, SingleChoiceSegmentedButtonRow, Spacer, Text } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, height, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { paintOptions } from '../workerOrderLogic';
-import type { PaintUsage, WorkerPaintPaletteProps } from './WorkerPaintPalette';
+import type { PaintUsage, WorkerPaintPaletteProps } from './workerPaintPaletteTypes';
 
 const groups = [
   { id: 'colors', title: 'Ranglar' }, { id: 'lacquers', title: 'Laklar' },

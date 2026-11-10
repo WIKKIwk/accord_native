@@ -1,12 +1,8 @@
 import { Button, Column, Host } from '@expo/ui';
 import { paintOptions } from '../workerOrderLogic';
 
-export type PaintUsage = 'rasxot' | 'astatka';
-export type WorkerPaintPaletteProps = {
-  usage: PaintUsage;
-  onUsage: (value: PaintUsage) => void;
-  onSelect: (name: string) => void;
-};
+import type { WorkerPaintPaletteProps } from './workerPaintPaletteTypes';
+export type { PaintUsage, WorkerPaintPaletteProps } from './workerPaintPaletteTypes';
 
 export function WorkerPaintPalette({ usage, onUsage, onSelect }: WorkerPaintPaletteProps) {
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
