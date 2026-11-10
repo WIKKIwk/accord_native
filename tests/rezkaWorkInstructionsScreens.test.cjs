@@ -26,7 +26,12 @@ for (const platform of ['ios', 'android']) {
       '../components/WorkerQueueCard.android': { WorkerQueueCard: 'Card' }, '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
       '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
       './useRezkaWorkInstructions': { useRezkaWorkInstructions: value => { assert.equal(value, snapshot); return { state, content, isCurrent: () => current }; } } });
-    const render = () => RezkaWorkInstructionsScreen({ snapshot, navigation });
+    const render = () => {
+      const entry = RezkaWorkInstructionsScreen({ snapshot, navigation });
+      assert.equal(entry.type.name, 'WorkInstructionsView');
+      assert.equal(entry.props.navigation, navigation);
+      return entry.type(entry.props);
+    };
     const flattenSection = value => [value.title, ...value.items];
     const expected = [content.intro, ...content.common.flatMap(flattenSection), 'Mine', 'Cutting', ...content.guides[0].sections.flatMap(flattenSection)];
     const page = render(); assert.deepEqual(nodes(page, node => node.type === 'Text').map(node => node.props.children), expected);
