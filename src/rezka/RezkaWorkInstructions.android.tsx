@@ -16,7 +16,11 @@ function InstructionsSection({ section }: { section: RezkaInstructionSection }) 
 
 // @v2 AparatchiWorkInstructionsScreen
 export function RezkaWorkInstructionsScreen({ snapshot, navigation }: RezkaInstructionsScreenProps) {
-  const { state, content, isCurrent } = useRezkaWorkInstructions(snapshot), colors = useMaterialColors(), insets = useSafeAreaInsets();
+  return <WorkInstructionsView model={useRezkaWorkInstructions(snapshot)} navigation={navigation} />;
+}
+
+export function WorkInstructionsView({ model, navigation }: { model: ReturnType<typeof useRezkaWorkInstructions>; navigation?: RezkaInstructionsScreenProps['navigation'] }) {
+  const { state, content, isCurrent } = model, colors = useMaterialColors(), insets = useSafeAreaInsets();
   if (!isCurrent() || state.phase === 'invalid') return null;
   return <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
     <Stack.Screen options={{ headerShown: false }} /><RoleHeader title={content.title} subtitle={content.subtitle} navigation={navigation ?? undefined} />

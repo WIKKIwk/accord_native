@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Redirect, router, ThemeProvider, usePathname } from 'expo-router';
+import { DarkTheme, DefaultTheme, Redirect, router, ThemeProvider, usePathname, type Href } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, useColorScheme, View } from 'react-native';
@@ -35,6 +35,7 @@ export default function IosWorkerLayout() {
   const selectDestination = (id: string) => {
     if (id === 'queue') { router.navigate('/ios-worker'); return; }
     if (id === 'daily') { router.navigate('/ios-worker/daily'); return; }
+    if (id === 'instructions') { router.navigate('/ios-worker/instructions' as Href); return; }
     if (id === 'profile') { router.navigate('/ios-worker/profile'); return; }
     if (id === 'logout') { onLogout(); return; }
     const labels: Record<string, string> = { instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };

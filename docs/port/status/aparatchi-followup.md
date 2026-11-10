@@ -15,6 +15,7 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Cancel-start menyu entry, native confirmation, owner/operation/cursor/token qayta tekshiruvi | `admin_production_map_orders_cancel_start.dart` | `workerLongPress.ts`, `WorkerLongPressActions.tsx`, WorkerScreen | 54/54 menu/control tests; both typechecks exit 0, lint 0 errors / 1 existing warning |
 | Scanned WIP tarixini o‘qish va unused WIPni native tasdiq bilan qaytarish | `admin_production_map_orders_scanned_wip.dart` | `workerScannedWips.ts`, shared hook, native iOS/Android sheets and order header | 14/14 initial focused tests; wider suite found one missing localization mock, fixed and focused presentation/history/API suite passed; both typechecks exit 0, lint 0 errors / 1 existing warning |
 | FAB QR payload va URL normalizatsiyasi saqlandi; dastlabki input kamera qayta ochilmasdan tekshiriladi; manual entry va iOS dismissal handshake | `_extractQrPayload`, `_loadInitialInteractionAndScan` | `workerQr.ts`, WorkerQrScanner, WorkerScreen, OrderScreen | QR/progress/bootstrap focused suite 55/55 |
+| Worker yo‘riqnomasi placeholder o‘rniga biriktirilgan apparatlarga mos V2 matni, locale va native UI bilan ochiladi | `AparatchiWorkInstructionsScreen` | Shared work-instructions controller/views, guarded worker hook, iOS route / Android section | 12/12 focused tests; both typechecks exit 0, lint 0 errors / 1 existing warning |
 
 ## Open items
 
@@ -23,7 +24,7 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
 | Daily work | Waiting WIP correction, reason va QR/reprint entry’lari ulanmagan |
 | Lamination / cut | Bosma formasi bilan aralashtirilgan conditional report/handoff branchlarini ajratish |
-| Instructions / paddons | Worker navigation placeholder. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak |
+| Paddons | Worker navigation placeholder. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak |
 
 ## Verification and limits
 

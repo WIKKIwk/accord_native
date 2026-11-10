@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { registerSessionResetHook, subscribeSessionWitness } from '../auth';
-import { adminApparatus } from '../apparatusApi';
+import { registerSessionResetHook, subscribeSessionWitness, type Session } from '../auth';
+import { adminApparatus, type AdminApparatus } from '../apparatusApi';
 import { productionText } from '../shared/localization';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { guardedRezkaRequest, isRezkaSessionCurrent, type RezkaSessionSnapshot } from './rezkaSessionGuard';
@@ -11,11 +11,15 @@ import { useRezkaLocale } from './useRezkaShell';
 export function useRezkaWorkInstructions(snapshot: RezkaSessionSnapshot) {
   const isCurrent = useCallback(() => isRezkaSessionCurrent(snapshot, 'master') &&
     canOpenRoute(snapshot.session, appRoutes.apparatusWorkInstructions), [snapshot]);
+  const load = useCallback(() => guardedRezkaRequest(snapshot.session, 'master', snapshot, false,
+    beforeSend => adminApparatus(snapshot.session, { limit: 300, beforeSend })), [snapshot]);
+  return useApparatusWorkInstructions(snapshot.session, isCurrent, load);
+}
+
+export function useApparatusWorkInstructions(session: Session, isCurrent: () => boolean, load: () => Promise<AdminApparatus[]>) {
   const controller = useMemo(() => new RezkaWorkInstructionsController({ isCurrent,
-    assigned: [...snapshot.session.assigned_apparatus],
-    load: () => guardedRezkaRequest(snapshot.session, 'master', snapshot, false,
-      beforeSend => adminApparatus(snapshot.session, { limit: 300, beforeSend })),
-  }), [snapshot, isCurrent]);
+    assigned: [...session.assigned_apparatus], load,
+  }), [session, isCurrent, load]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const owners = useRef(new Map<RezkaWorkInstructionsController, number>());
   useEffect(() => {

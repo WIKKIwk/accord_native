@@ -18,6 +18,7 @@ import { WorkerTabs } from './components/WorkerTabs';
 import { WorkerBottomBar } from './components/WorkerBottomBar';
 import { WorkerFab } from './components/WorkerFab';
 import { WorkerQrScanner } from './components/WorkerQrScanner';
+import { WorkerWorkInstructions } from './components/WorkerWorkInstructions';
 import { ProfileScreen } from './components/ProfileScreen';
 import { DailyWorkScreen } from './components/DailyWorkScreen';
 import { WorkerOrderListItem } from './components/WorkerOrderListItem';
@@ -65,7 +66,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const actionsRoute = useNativeSheet();
   const nativeOrder = useRef<ActiveOrder | null>(null);
   const nativeActions = useRef<ActionOrder | null>(null);
-  const [section, setSection] = useState<'home' | 'profile' | 'daily'>('home');
+  const [section, setSection] = useState<'home' | 'profile' | 'daily' | 'instructions'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const pendingScannedOrder = useRef<{ target: ActiveOrder; scope: string } | null>(null);
@@ -220,6 +221,10 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       return;
     }
     if (id === 'logout') { onLogout(); return; }
+    if (id === 'instructions') {
+      if (nativeNavigation) router.push('/ios-worker/instructions' as Href); else setSection('instructions');
+      return;
+    }
     const labels: Record<string, string> = { chat: 'Chat', paddons: 'Paddonlar', instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
     setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
   }
@@ -329,8 +334,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   </View>;
   const content = (
     <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
-      {!nativeNavigation && section !== 'daily' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
-      {section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => setSection('daily')} /> : section === 'daily'
+      {!nativeNavigation && section !== 'daily' && section !== 'instructions' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
+      {section === 'instructions' ? <WorkerWorkInstructions session={session} onBack={() => setSection('home')} /> : section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => setSection('daily')} /> : section === 'daily'
         ? <DailyWorkScreen session={session} onOpenDrawer={openDrawer} onBack={() => setSection('home')} /> : <>
       <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
         {(tabId, pagerGesture, machinePicker) => {
@@ -381,7 +386,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       {!nativeNavigation && <View onLayout={event => setNavBarHeight(event.nativeEvent.layout.height)}>
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
       </View>}
-      {section !== 'daily' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
+      {section !== 'daily' && section !== 'instructions' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
       {activeOrder ? <WorkerOrderSheet onClose={() => setActiveOrder(null)}>
         {renderOrderRoute(activeOrder, () => setActiveOrder(null))}
       </WorkerOrderSheet> : null}

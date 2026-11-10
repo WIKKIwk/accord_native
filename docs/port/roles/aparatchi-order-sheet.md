@@ -57,3 +57,9 @@ GoDEX and deferred test mode remain excluded by the port decisions. No backend c
 - Load authoritative order control and validate that initial input once, without a second camera and without automatically submitting Start. Manual entry uses the same path. Account changes discard late results.
 - On iOS await the full-screen camera modal's actual `onDismiss` before presenting the order sheet. Android transfers directly. An order identity change mounts fresh state.
 - Busy-apparatus switch/report/handoff remains an open follow-up; QR handoff alone does not claim to complete that flow.
+
+## Work instructions
+
+- Both worker drawer/FAB entries open the actual instructions. iOS uses its existing Expo Router home stack; Android retains the existing worker shell/section and its app-lock owner. Reuse the existing Rezka implementation of the same V2 `AparatchiWorkInstructionsScreen` rather than maintaining a second guide.
+- Read apparatus once with limit 300, restrict to assigned IDs with V2's case-insensitive deduplication followed by exact ID matching, and retain print/flexo/laminate/glue/cut/generic guide sections and all four translations.
+- Preserve V2 loading and empty behavior (including a failed apparatus read), current-session/capability guards, native iOS/Android views, back navigation and the app-lock boundary.

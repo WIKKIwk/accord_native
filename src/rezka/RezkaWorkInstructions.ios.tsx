@@ -15,7 +15,11 @@ function InstructionsSection({ section }: { section: RezkaInstructionSection }) 
 
 // @v2 AparatchiWorkInstructionsScreen
 export function RezkaWorkInstructionsScreen({ snapshot, navigation }: RezkaInstructionsScreenProps) {
-  const { state, content, isCurrent } = useRezkaWorkInstructions(snapshot);
+  return <WorkInstructionsView model={useRezkaWorkInstructions(snapshot)} navigation={navigation} />;
+}
+
+export function WorkInstructionsView({ model, navigation }: { model: ReturnType<typeof useRezkaWorkInstructions>; navigation?: RezkaInstructionsScreenProps['navigation'] }) {
+  const { state, content, isCurrent } = model;
   if (!isCurrent() || state.phase === 'invalid') return null;
   return <View style={{ flex: 1, backgroundColor: PlatformColor('systemGroupedBackground') }}>
     <Stack.Screen options={{ title: content.title, headerTitle: () => <Host matchContents><VStack spacing={2}>
