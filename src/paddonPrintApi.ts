@@ -43,10 +43,11 @@ export function paddonBluetoothLabelLines(paddon: Obj, rawItems: unknown): strin
 }
 
 type PrintInput = { code: string; driver_url?: string; printer?: string; print_mode?: string; print_count?: number;
-  print_transport?: 'wifi' | 'offline' | 'bluetooth' };
+  print_transport?: 'wifi' | 'offline' | 'bluetooth'; beforeSend?: () => void };
 
 /** @v2 adminPaddonPrintQr */
 export async function adminPaddonPrintQr(session: Session, input: PrintInput) {
+  const guard = input.beforeSend; guard?.();
   const code = input.code.trim();
   if (!code) throw new WorkerControlException('paddon_not_found', 'Paddon topilmadi');
   const driver = input.driver_url?.trim().replace(/\/+$/, '') ?? '';
@@ -58,13 +59,14 @@ export async function adminPaddonPrintQr(session: Session, input: PrintInput) {
   body.print_count = Math.max(1, Math.min(100, Math.trunc(input.print_count ?? 1)));
   const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/paddons/qr/print', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
+  }, guard); guard?.();
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'paddon_qr_print');
   }
   const payload = object(await response.json());
+  guard?.();
   if (!payload) throw new TypeError('Invalid paddon print response');
   const paddon = object(payload.paddon);
   if (!paddon) throw new WorkerControlException('paddon_not_found', 'Paddon topilmadi');

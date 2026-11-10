@@ -1,7 +1,7 @@
 # Aparatchi — navbatdagi tekshiruv va tuzatishlar
 
 Status: in progress.
-Stopped at: full worker Paddon management’ni V2 bilan tekshirish.
+Stopped at: full worker Paddon management native screens, dialogs and navigation integration (shared domain checkpoint completed).
 
 Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va `test/` bilan bir xil. V2 va Mini ERP read-only. Wikki `main`da ishlash va har tekshirilgan o‘zgarishni commit qilishni aniq so‘radi. USB va Wi-Fi chop etish tanlovlari hozircha chiqariladi; Bluetooth qoladi. Bu foydalanuvchi qabul qilgan V2 farqi, yashirin parity da’vosi emas.
 
@@ -95,3 +95,11 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | `_runInitialOrderSwitchFlow`, `read_only_sheet.dart:3076`; `_showWatchOrderDetail`, `screen_state.dart:1445` | OrderScreen report result callbacks and WorkerScreen dismissal replay | compared | compared | Measured completion/Astatka must be acknowledged; approval/cancellation/print failure cannot auto-advance. Actual camera/manual/report/order dismissals precede the next presentation. QR replay reloads the contract and never automatically starts the next order. Device presentation timing remains unverified. |
 
 - QR checkpoint: **303/303** focused tests passed, including actual native prompt callbacks, root camera/order dismissal, unfinished reports, scope retirement before/after transport decoding, aggregate fallback and uncertain temporary pause. Both native TypeScript checks and Expo lint exited 0. No new text exceptions were added. Full-tree rerun: **5478 pass, 11 fail, 12 todo / 5501 total**, log `/tmp/accord-fab-qr-final-all-tests.log`; failing case names exactly match the active-Paddon baseline (the same eleven pre-existing Node/native imports). Ledger check exits 0 with 1133 `@v2` / 106 `@v2-test`; role report regenerated. Whole-role text gate still has iOS 280 missing / 102 added and Android 280 missing / 110 added, 158 surfaces; it is not marked complete. Lint retains the existing admin hook warning. No device or real printer was used.
+
+## Worker Paddon domain checkpoint
+
+- Compared all V2 Paddon list/detail parts, bobina/swipe helper, QR addition, print workflow, scope and transfer actions against the immutable baseline; backend Paddon handlers were inspected read-only for the response authority.
+- Added scoped list/detail/transfer/print state machines and the UI contract `aparatchi-paddon.md`. Preserved per-apparatus lists, normal/peremotka selection, integer bobina groups, serial 500-item scan queue and deduplication, one-shot uncertain-write reconciliation, transfer editability, and local print before server lock/optional successor.
+- Existing Paddon APIs accept an optional route/session guard without changing their wire payloads. Guards cover initial dispatch, 401 retry and decoded acknowledgements. Print interlock excludes membership edits and scanning. Retirement changes snapshot identity and rejects old callbacks.
+- **84/84** focused domain/API/guard tests pass (`/tmp/accord-worker-paddon-domain-final-tests.log`); iOS typecheck exit 0; lint 0 errors / the existing admin hook dependency warning. Two old guard-count assertions were updated for the added post-body witness checks; mutation wire contract tests remain unchanged and pass.
+- This checkpoint does not claim native screen, camera, swipe/drag, navigation or hardware-print completion. Those remain the next integration work. No network, physical printer, device, simulator or external mutation was used.

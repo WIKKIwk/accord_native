@@ -5,10 +5,10 @@ import { paddonFromJson, paddonIsLocked } from './paddonModels';
 type Obj = Record<string, any>;
 const object = (v: unknown): Obj | null => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Obj : null;
 /** @v2 confirmPaddonPrint */
-export async function confirmPaddonPrint(session: Session, code: string) {
+export async function confirmPaddonPrint(session: Session, code: string, current?: () => boolean) {
   const normalized = code.trim();
   const payload = object(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/paddons/qr/confirm',
-    { code: normalized }, null, false, 'paddon_print_confirm'));
+    { code: normalized }, null, !!current, 'paddon_print_confirm', current));
   if (!payload) throw new TypeError('Invalid paddon print confirmation');
   const paddon = paddonFromJson(payload.paddon);
   if (payload.ok !== true || paddon.code !== normalized || !paddonIsLocked(paddon))

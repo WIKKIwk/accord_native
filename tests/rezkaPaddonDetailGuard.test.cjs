@@ -17,7 +17,7 @@ test('detail reader preserves legacy two-argument fetch and adds an optional che
   await h.api.adminPaddonDetail(session, ' P1 '); assert.equal(h.calls[0].length, 2);
   assert.equal(h.calls[0][1], '/v1/mobile/admin/production-maps/paddons/detail?code=P1');
   await h.api.adminPaddonDetail(session, 'P1', { beforeSend: () => { checks++; } });
-  assert.equal(h.calls[1].length, 4); assert.equal(checks, 1);
+  assert.equal(h.calls[1].length, 4); assert.equal(checks, 2);
 });
 test('the legacy detail call does not consult an inherited options guard', async () => {
   const h = setup(); let reads = 0;

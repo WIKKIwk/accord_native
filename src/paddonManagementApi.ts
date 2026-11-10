@@ -7,28 +7,35 @@ type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
 
 /** @v2 adminPaddonCreate */
-export async function adminPaddonCreate(session: Session, input: { location?: string; note?: string; apparatus?: string } = {}) {
+export async function adminPaddonCreate(session: Session, input: { location?: string; note?: string; apparatus?: string; beforeSend?: () => void } = {}) {
+  const guard = input.beforeSend ? checkedPaddonReadGuard(input.beforeSend) : undefined;
+  guard?.();
   const body: Obj = { location: input.location?.trim() ?? '', note: input.note?.trim() ?? '' };
   if (input.apparatus?.trim()) body.apparatus = input.apparatus.trim();
   const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/paddons/create', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
+  }, guard);
+  guard?.();
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'paddon_create');
   }
   const payload = object(await response.json());
+  guard?.();
   if (!payload) throw new TypeError('Invalid paddon create response');
   if (!object(payload.paddon)) throw new WorkerControlException('paddon_create', 'Paddon yaratilmadi');
   return paddonFromJson(payload.paddon);
 }
 
 /** @v2 adminPaddonDelete */
-export async function adminPaddonDelete(session: Session, code: string): Promise<void> {
+export async function adminPaddonDelete(session: Session, code: string, beforeSend?: () => void): Promise<void> {
+  const guard = beforeSend ? checkedPaddonReadGuard(beforeSend) : undefined;
+  guard?.();
   const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/paddons/delete', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim() }),
-  });
+  }, guard);
+  guard?.();
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
@@ -60,21 +67,28 @@ export async function adminPaddonDetail(session: Session, code: string, options:
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'paddon_not_found');
   }
-  return paddonSnapshotFromJson(await response.json());
+  const payload: unknown = await response.json();
+  beforeSend?.();
+  return paddonSnapshotFromJson(payload);
 }
 
 /** @v2 adminPaddonQrReport */
-export async function adminPaddonQrReport(session: Session, code: string) {
+export async function adminPaddonQrReport(session: Session, code: string, options?: { beforeSend?: () => void }) {
   const normalized = code.trim();
   if (!normalized) throw new WorkerControlException('paddon_not_found', 'Paddon topilmadi');
   const query = new URLSearchParams({ code: normalized });
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons/qr/report?${query}`);
+  const guard = options?.beforeSend ? checkedPaddonReadGuard(options.beforeSend) : undefined;
+  guard?.();
+  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/paddons/qr/report?${query}`, {}, guard);
+  guard?.();
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'paddon_not_found');
   }
-  return paddonSnapshotFromJson(await response.json());
+  const payload: unknown = await response.json();
+  guard?.();
+  return paddonSnapshotFromJson(payload);
 }
 
 /** @v2 adminPaddons */
@@ -96,6 +110,7 @@ export async function adminPaddons(session: Session, input: { limit?: number; se
     throw productionMapResponseError(response.status, payload, 'paddons_list');
   }
   const payload = object(await response.json());
+  checkedGuard?.();
   if (!payload) throw new TypeError('Invalid paddon list response');
   return Array.isArray(payload.paddons) ? payload.paddons.filter(item => object(item)).map(paddonFromJson) : [];
 }

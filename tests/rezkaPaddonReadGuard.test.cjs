@@ -46,7 +46,7 @@ test('same scope permits token refresh while checking the original guard before 
   const h = setup();
   try {
     assert.deepEqual(await h.api.adminPaddons(h.session, { apparatus: ' apparatus:default:a ', beforeSend: h.beforeSend }), []);
-    assert.deepEqual(h.counts(), { sends: 2, guards: 2 });
+    assert.deepEqual(h.counts(), { sends: 2, guards: 3 });
     for (const request of h.requests) {
       const url = new URL(request.url);
       assert.equal(url.pathname, '/v1/mobile/admin/production-maps/paddons');
