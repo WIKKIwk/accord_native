@@ -1,16 +1,24 @@
 import { Button, DatePicker, DisclosureGroup, Host, HStack, Image, List, NavigationStack, ProgressView, Section, Text, Toolbar, ToolbarItem, VStack } from '@expo/ui/swift-ui';
-import { buttonStyle, contentShape, datePickerStyle, font, foregroundStyle, frame, labelStyle, lineLimit, listStyle, navigationBarTitleDisplayMode, navigationTitle, padding, refreshable, scrollEdgeEffectStyle, shapes } from '@expo/ui/swift-ui/modifiers';
+import { buttonStyle, contentShape, datePickerStyle, font, foregroundStyle, frame, labelStyle, lineLimit, listStyle, navigationBarTitleDisplayMode, navigationTitle, onLongPressGesture, padding, refreshable, scrollEdgeEffectStyle, shapes } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { Session } from '../auth';
 import { dailyWorkDate, dailyWorkLocation, dailyWorkQuantity, dailyWorkStatus, type DailyWorkBatch, type DailyWorkGroup } from '../dailyWork';
 import { useDailyWork } from './useDailyWork';
 import { WorkerOrderSheet } from './WorkerOrderSheet';
 import { WorkerSheetCloseContext } from './workerSheetContext';
+import { useDailyWorkActions } from './useDailyWorkActions';
+import { DailyWorkDialogs } from './DailyWorkDialogs';
+import { useWorkerOrderText } from './useWorkerOrderText';
 
 type Props = { session: Session; onOpenDrawer?: () => void; onBack: () => void };
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
+
+function createLongPressGate() {
+  const held = new Set<string>();
+  return { mark: (id: string) => { held.add(id); }, take: (id: string) => held.delete(id), reset: () => held.clear() };
+}
 
 function Metric({ label, value }: { label: string; value: number }) {
   return <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
@@ -19,8 +27,11 @@ function Metric({ label, value }: { label: string; value: number }) {
   </VStack>;
 }
 
-function BatchGroup({ group, onOpen }: { group: DailyWorkGroup; onOpen: (batch: DailyWorkBatch) => void }) {
+function BatchGroup({ group, onOpen, actions }: { group: DailyWorkGroup; onOpen: (batch: DailyWorkBatch) => void; actions: ReturnType<typeof useDailyWorkActions> }) {
   const [expanded, setExpanded] = useState(false);
+  const held = useMemo(() => createLongPressGate(), []);
+  useEffect(() => { if (!actions.qrBatch && !actions.alert) held.reset(); }, [actions.qrBatch, actions.alert, held]);
+  const { p } = useWorkerOrderText();
   return <DisclosureGroup isExpanded={expanded} onIsExpandedChange={setExpanded}>
     <DisclosureGroup.Label>
       <HStack spacing={12}>
@@ -32,7 +43,8 @@ function BatchGroup({ group, onOpen }: { group: DailyWorkGroup; onOpen: (batch: 
         <Text modifiers={[font({ textStyle: 'subheadline' }), secondary]}>{`${group.batches.length} WIP`}</Text>
       </HStack>
     </DisclosureGroup.Label>
-    {expanded ? group.batches.map((batch, index) => <Button key={`${batch.id}:${index}`} onPress={() => onOpen(batch)} modifiers={[buttonStyle('plain')]}>
+    {expanded ? group.batches.map((batch, index) => <HStack key={`${batch.id}:${index}`} spacing={8}>
+      <Button onPress={() => { if (!held.take(batch.id)) onOpen(batch); }} modifiers={[buttonStyle('plain'), frame({ maxWidth: Infinity }), onLongPressGesture(() => { held.mark(batch.id); actions.showQr(batch); }, 0.5)]}>
       <HStack spacing={10} modifiers={[frame({ maxWidth: Infinity }), padding({ vertical: 7 }), contentShape(shapes.rectangle())]}>
         <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
           <Text modifiers={[font({ textStyle: 'body' }), lineLimit(1)]}>{`WIP ${index + 1}`}</Text>
@@ -41,7 +53,10 @@ function BatchGroup({ group, onOpen }: { group: DailyWorkGroup; onOpen: (batch: 
         <Text modifiers={[font({ textStyle: 'subheadline' }), secondary]}>{dailyWorkQuantity(batch)}</Text>
         <Image systemName="chevron.right" size={12} modifiers={[secondary]} />
       </HStack>
-    </Button>) : null}
+    </Button>
+      {actions.canEdit(batch) ? <Button label={p('worker.daily.edit_wip')} systemImage="pencil" modifiers={[labelStyle('iconOnly'), buttonStyle('borderless')]}
+        onPress={() => actions.edit(batch)} /> : null}
+    </HStack>) : null}
   </DisclosureGroup>;
 }
 
@@ -83,7 +98,9 @@ function BatchDetail({ batch, names, onClose }: { batch: DailyWorkBatch; names: 
 }
 
 export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
-  const { day, setDay, batches, apparatusNames, groups, totals, error, refresh } = useDailyWork(session);
+  const model = useDailyWork(session);
+  const { day, setDay, batches, apparatusNames, groups, totals, error, refresh } = model;
+  const actions = useDailyWorkActions(session, model);
   const [selected, setSelected] = useState<DailyWorkBatch | null>(null);
   const now = new Date();
   const maxDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
@@ -111,7 +128,7 @@ export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
               <Button label="Qayta urinish" onPress={() => { void refresh(); }} />
             </VStack></Section> : null}
             {batches !== null ? <Section title="Ishlab chiqarilgan WIP">
-              {groups.length ? groups.map(group => <BatchGroup key={group.key} group={group} onOpen={setSelected} />)
+              {groups.length ? groups.map(group => <BatchGroup key={group.key} group={group} onOpen={setSelected} actions={actions} />)
                 : <Text modifiers={[secondary]}>Bu kunda ishlar topilmadi.</Text>}
             </Section> : null}
             {batches && batches.length >= 200 ? <Section><Text modifiers={[font({ textStyle: 'caption' }), secondary]}>So‘nggi 200 ta yozuv ko‘rsatilmoqda.</Text></Section> : null}
@@ -126,6 +143,7 @@ export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
     {selected ? <WorkerOrderSheet dismissible onClose={() => setSelected(null)}>
       <BatchDetail batch={selected} names={apparatusNames} onClose={() => setSelected(null)} />
     </WorkerOrderSheet> : null}
+    <DailyWorkDialogs session={session} model={model} actions={actions} />
   </View>;
 }
 

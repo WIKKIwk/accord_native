@@ -23,7 +23,7 @@ export interface ProgressBatchCorrectionInput {
 }
 
 /** @v2 adminProgressBatchCorrect */
-export async function adminProgressBatchCorrect(session: Session, input: ProgressBatchCorrectionInput) {
+export async function adminProgressBatchCorrect(session: Session, input: ProgressBatchCorrectionInput, current?: () => boolean) {
   if (!input.batch_id.trim() || input.expected_revision <= 0 || !Number.isFinite(input.produced_qty) || input.produced_qty <= 0 ||
       !input.uom.trim() || !input.reason.trim()) {
     throw new WorkerControlException('progress_input_invalid', 'WIP o‘zgartirish ma’lumoti to‘liq emas');
@@ -36,7 +36,7 @@ export async function adminProgressBatchCorrect(session: Session, input: Progres
   }
   body.description = (input.description ?? '').trim(); body.reason = input.reason.trim();
   const payload = await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/progress-qr/correct', body,
-    null, false, 'progress_batch_correction_failed') as Record<string, unknown>;
+    null, !!current, 'progress_batch_correction_failed', current) as Record<string, unknown>;
   if (!payload.batch || typeof payload.batch !== 'object' || Array.isArray(payload.batch)) {
     throw new WorkerControlException('progress_batch_correction_failed', 'Yangilangan WIP ma’lumoti kelmadi');
   }

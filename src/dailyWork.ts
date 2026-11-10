@@ -1,5 +1,5 @@
 import type { Session } from './auth';
-import { adminApparatus } from './apparatusApi';
+import { adminApparatus, type AdminApparatus } from './apparatusApi';
 import { progressBatchStatusDetail } from './workerProgressModel';
 import { adminProgressQrHistory } from './workerProgressApi';
 import { WorkerControlException } from './workerControlsApi';
@@ -10,6 +10,7 @@ const text = (value: unknown): string => typeof value === 'string' ? value.trim(
 const number = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : null;
 
 export type DailyWorkBatch = {
+  source: RecordValue;
   id: string;
   orderId: string;
   title: string;
@@ -53,6 +54,7 @@ export function parseDailyWorkHistory(value: unknown): DailyWorkBatch[] {
     const title = [payload.order_title, payload.orderTitle, payload.order_name, payload.orderName,
       row.label_item_name, row.label_item_code, row.description].map(value => cleanTitle(text(value))).find(Boolean) ?? '';
     return [{
+      source: { ...row, payload_json: { ...payload } },
       id: text(row.batch_id) || `missing-${index}`,
       orderId: text(row.order_id), title, code: text(row.label_item_code), qr: text(row.qr_payload),
       apparatus: text(row.apparatus), location: text(row.current_location) || text(row.current_apparatus),
@@ -136,7 +138,14 @@ export function dailyWorkLocation(value: string, names: Record<string, string>):
 }
 
 export async function loadDailyWorkApparatus(session: Session, signal: AbortSignal): Promise<Record<string, string>> {
-  const rows = await adminApparatus(session, { limit: 300, signal });
+  return dailyWorkApparatusNames(await loadDailyWorkCatalog(session, signal));
+}
+
+export function loadDailyWorkCatalog(session: Session, signal: AbortSignal) {
+  return adminApparatus(session, { limit: 300, signal });
+}
+
+export function dailyWorkApparatusNames(rows: readonly AdminApparatus[]): Record<string, string> {
   const names: Record<string, string> = {};
   for (const item of rows) {
     for (const id of [item.id, item.physical_asset_id, item.work_unit_id]) {
@@ -144,4 +153,16 @@ export async function loadDailyWorkApparatus(session: Session, signal: AbortSign
     }
   }
   return names;
+}
+
+/** @v2 _AparatchiDailyWorkScreenState._canonicalApparatus */
+export function dailyWorkApparatus(rows: readonly AdminApparatus[], id: string): AdminApparatus | undefined {
+  const normalized = id.trim();
+  if (!normalized) return undefined;
+  const aliases = (item: AdminApparatus) => [item.id, item.physical_asset_id, item.work_unit_id].filter(Boolean);
+  const exact = rows.find(item => aliases(item).some(alias => alias.trim() === normalized));
+  if (exact) return exact;
+  const suffix = (value: string) => value.trim().toLowerCase().split(/[:/_-]+/).filter(Boolean).at(-1) ?? '';
+  const token = suffix(normalized);
+  return token ? rows.find(item => item.name.trim() && aliases(item).some(alias => suffix(alias) === token)) : undefined;
 }

@@ -31,3 +31,8 @@ test('invalid correction is rejected before transport', async () => {
 test('correction refuses a response without a batch', async () => {
   await assert.rejects(api(async () => ({})).adminProgressBatchCorrect({}, base), e => e.code === 'progress_batch_correction_failed');
 });
+test('correction carries the captured edit guard through the transport and response', async () => {
+  let args; const current = () => true;
+  await api(async (...value) => { args = value; return { batch: { batch_id: 'batch-1', revision: 4 } }; }).adminProgressBatchCorrect({}, base, current);
+  assert.equal(args[4], true); assert.equal(args[6], current);
+});

@@ -16,13 +16,13 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Scanned WIP tarixini o‘qish va unused WIPni native tasdiq bilan qaytarish | `admin_production_map_orders_scanned_wip.dart` | `workerScannedWips.ts`, shared hook, native iOS/Android sheets and order header | 14/14 initial focused tests; wider suite found one missing localization mock, fixed and focused presentation/history/API suite passed; both typechecks exit 0, lint 0 errors / 1 existing warning |
 | FAB QR payload va URL normalizatsiyasi saqlandi; dastlabki input kamera qayta ochilmasdan tekshiriladi; manual entry va iOS dismissal handshake | `_extractQrPayload`, `_loadInitialInteractionAndScan` | `workerQr.ts`, WorkerQrScanner, WorkerScreen, OrderScreen | QR/progress/bootstrap focused suite 55/55 |
 | Worker yo‘riqnomasi placeholder o‘rniga biriktirilgan apparatlarga mos V2 matni, locale va native UI bilan ochiladi | `AparatchiWorkInstructionsScreen` | Shared work-instructions controller/views, guarded worker hook, iOS route / Android section | 12/12 focused tests; both typechecks exit 0, lint 0 errors / 1 existing warning |
+| Daily work waiting WIP correction va majburiy reason, native maydonlar va QR long-press/reprint | `_AparatchiDailyWorkScreenState._editWip`, `_DailyWorkWipEditDialogState` | Daily work model/controller, shared dialogs and both platform screens | Focused correction/history/API tests, native typechecks and lint |
 
 ## Open items
 
 | Flow | Confirmed difference / next step |
 |---|---|
 | General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
-| Daily work | Waiting WIP correction, reason va QR/reprint entry’lari ulanmagan |
 | Lamination / cut | Bosma formasi bilan aralashtirilgan conditional report/handoff branchlarini ajratish |
 | Paddons | Worker navigation placeholder. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak |
 

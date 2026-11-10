@@ -12,6 +12,7 @@ import { useWorkerPrinterSelector } from './useWorkerPrinterSelector';
 import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
 import { WorkerSheetCloseContext } from './workerSheetContext';
+import { useWorkerOrderText } from './useWorkerOrderText';
 
 Object.assign(qrFactory, { stringToBytes: (text: string) => Array.from(new TextEncoder().encode(text)) });
 
@@ -23,11 +24,12 @@ function canReprint(session: Session, batch: WipBatch) {
     wipText(batch.payload_json?.input_wip_source_kind).toLowerCase() !== 'opening_wip';
 }
 
-export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, onClose }: {
-  session: Session; order: WipOrder; batch: WipBatch; apparatusNames: WipApparatusNames; onClose: () => void;
+export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, onClose, onEdit, allowReprint }: {
+  session: Session; order: WipOrder; batch: WipBatch; apparatusNames: WipApparatusNames; onClose: () => void; onEdit?: () => void; allowReprint?: boolean;
 }) {
   const colors = useWorkerColors();
   const close = useContext(WorkerSheetCloseContext) ?? onClose;
+  const { p, t } = useWorkerOrderText();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const printing = useRef(false);
@@ -54,21 +56,21 @@ export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, o
   ].filter(([, value]) => value);
 
   async function reprint() {
-    if (printing.current || !activeSessionToken(session) || !canReprint(session, batch)) return;
+    if (printing.current || !current() || !(allowReprint ?? canReprint(session, batch))) return;
     printing.current = true;
     setBusy(true);
     setMessage('');
     try {
       await reprintWorkerWip(session, { batch_id: wipText(batch.batch_id), qr_payload: payload }, { current, selectDevice: printer.selectDevice });
-      if (current()) setMessage('WIP QR kodi qayta chop etildi.');
+      if (current()) setMessage(p('worker.daily.wip_qr.reprinted'));
     } catch (reason) { if (current() && !(reason instanceof WorkerPrintCancelled)) setMessage(reason instanceof Error ? reason.message : 'WIP QR kodi chop etilmadi.'); }
     finally { printing.current = false; if (current()) setBusy(false); }
   }
 
   return <View style={styles.fill}>
     <View style={styles.header}>
-      <Text style={[styles.title, styles.fill, { color: colors.text }]}>WIP tafsilotlari</Text>
-      <WorkerIconButton icon="close" label="Yopish" onPress={close} tonal />
+      <Text style={[styles.title, styles.fill, { color: colors.text }]}>{t('WIP tafsilotlari')}</Text>
+      <WorkerIconButton icon="close" label={t('Yopish')} onPress={close} tonal />
     </View>
     <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -79,15 +81,16 @@ export function WorkerWipBatchDetails({ session, order, batch, apparatusNames, o
       {qrImage ? <Image source={{ uri: qrImage }} style={styles.qr} contentFit="contain" cachePolicy="none" accessibilityLabel="WIP QR kodi" /> :
         <Text selectable style={{ color: colors.text }}>{payload}</Text>}
       <Host matchContents={{ vertical: true }} style={styles.host}>
-        <Column>{rows.map(([label, value]) => <ListItem key={label} supportingText={value}>{label}</ListItem>)}</Column>
+        <Column>{rows.map(([label, value]) => <ListItem key={label} supportingText={value}>{t(label)}</ListItem>)}</Column>
       </Host>
-      {canReprint(session, batch) && <>
+      {(allowReprint ?? canReprint(session, batch)) && <>
         <Host matchContents={{ vertical: true }} style={styles.host}>
           <Column spacing={8}>
-            <Button label={busy ? 'Chop etilmoqda…' : 'QR kodni qayta chop etish'} disabled={busy} onPress={() => { void reprint(); }} />
+            <Button label={t(busy ? 'Chop etilmoqda…' : 'QR kodni qayta chop etish')} disabled={busy} onPress={() => { void reprint(); }} />
           </Column>
         </Host>
       </>}
+      {onEdit ? <Host matchContents={{ vertical: true }} style={styles.host}><Button label={p('worker.daily.edit_wip')} disabled={busy} onPress={() => { if (!busy) { onEdit(); close(); } }} /></Host> : null}
       {!!message && <Text accessibilityRole="alert" style={{ color: colors.text }}>{message}</Text>}
     </ScrollView>{printer.dialogs}
   </View>;

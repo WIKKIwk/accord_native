@@ -54,6 +54,15 @@ function load(fetch = async () => { throw new Error('unexpected request'); }) {
 const model = load();
 const unix = value => Math.floor(value.getTime() / 1000);
 
+test('history retains revision and all report metrics for correction and resolves legacy apparatus aliases', () => {
+  const [row] = model.parseDailyWorkHistory({ batches: [{ batch_id: 'b', revision: 3, worker_ref: 'me', return_ink_kg: 2, payload_json: { gross_qty: 12 } }] });
+  assert.equal(row.source.revision, 3); assert.equal(row.source.worker_ref, 'me'); assert.equal(row.source.return_ink_kg, 2);
+  const catalog = [{ id: 'apparatus:default:asset-010', physical_asset_id: 'physical:10', work_unit_id: 'work:10', name: 'Rezka', operation: 'cut' }];
+  assert.equal(model.dailyWorkApparatus(catalog, 'work:10').operation, 'cut');
+  assert.equal(model.dailyWorkApparatus(catalog, 'apparatus:default:asset:010').operation, 'cut');
+  assert.equal(model.dailyWorkApparatus(catalog, ''), undefined);
+});
+
 test('history uses the signed-in worker scope and the V2 limit', async () => {
   let received;
   const api = load(async (session, url, options) => {

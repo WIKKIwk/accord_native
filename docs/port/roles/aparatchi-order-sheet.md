@@ -63,3 +63,10 @@ GoDEX and deferred test mode remain excluded by the port decisions. No backend c
 - Both worker drawer/FAB entries open the actual instructions. iOS uses its existing Expo Router home stack; Android retains the existing worker shell/section and its app-lock owner. Reuse the existing Rezka implementation of the same V2 `AparatchiWorkInstructionsScreen` rather than maintaining a second guide.
 - Read apparatus once with limit 300, restrict to assigned IDs with V2's case-insensitive deduplication followed by exact ID matching, and retain print/flexo/laminate/glue/cut/generic guide sections and all four translations.
 - Preserve V2 loading and empty behavior (including a failed apparatus read), current-session/capability guards, native iOS/Android views, back navigation and the app-lock boundary.
+
+## Daily work corrections and QR
+
+- Retain the full history batch and revision. Only waiting WIP can be corrected; a Rezka master can correct its own output. Resolve the apparatus operation by V2's canonical/physical/work-unit IDs and legacy suffix fallback.
+- Prefill the editor and preserve hidden metrics. Match print/laminate/glue/cut weights, core-in-net exception, diameter, returned ink, leftover rolls and conditional waste fields. Require positive visible quantities and compare bobina against measured gross at six-decimal precision, retaining measured gross for tare-only edits.
+- Require a separate reason step before one revisioned correction. Use native fields/buttons on both platforms, block repeated taps while saving, discard stale account results, replace the acknowledged server batch and reconcile after an uncertain failure without retrying the write.
+- Long press opens the WIP QR/reprint sheet with the same Bluetooth printing path. A sheet edit waits for the sheet's actual dismissal before presenting the editor. Missing QR has the V2 notice. Correction notices render after the form instead of trying to present a second native modal during dismissal.

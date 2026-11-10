@@ -5,12 +5,18 @@ import type { Session } from '../auth';
 import { dailyWorkDate, dailyWorkLocation, dailyWorkQuantity, dailyWorkStatus, type DailyWorkBatch } from '../dailyWork';
 import { useDailyWork } from './useDailyWork';
 import { useWorkerColors } from './useWorkerColors';
+import { useDailyWorkActions } from './useDailyWorkActions';
+import { DailyWorkDialogs } from './DailyWorkDialogs';
+import { WorkerIconButton } from './WorkerIconButton';
+import { useWorkerOrderText } from './useWorkerOrderText';
 
 type Props = { session: Session; onOpenDrawer?: () => void; onBack: () => void };
 
 export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
   const colors = useWorkerColors();
-  const { day, setDay, batches, apparatusNames, groups, totals, error, refreshing, refresh } = useDailyWork(session);
+  const model = useDailyWork(session);
+  const { day, setDay, batches, apparatusNames, groups, totals, error, refreshing, refresh } = model;
+  const actions = useDailyWorkActions(session, model), { p } = useWorkerOrderText();
   const [showDate, setShowDate] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   useEffect(() => {
@@ -70,15 +76,20 @@ export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
             {group.title && group.orderId && group.title !== group.orderId ? <Text style={{ color: colors.muted }}>{group.orderId}</Text> : null}</View>
           <Text style={{ color: colors.muted }}>{group.batches.length} WIP {expanded[group.key] ? '⌃' : '⌄'}</Text>
         </Pressable>
-        {expanded[group.key] ? group.batches.map((batch, index) => <Pressable accessibilityRole="button" key={`${batch.id}:${index}`} onPress={() => showDetails(batch)} style={styles.batch}>
+        {expanded[group.key] ? group.batches.map((batch, index) => <View key={`${batch.id}:${index}`} style={styles.batch}>
+          <Pressable accessibilityRole="button" style={[styles.batch, styles.flex]} accessibilityHint={p('worker.daily.card.expand_hint')}
+            onPress={() => showDetails(batch)} onLongPress={() => actions.showQr(batch)} delayLongPress={500}>
           <View style={styles.flex}><Text style={{ color: colors.text }}>WIP {index + 1}</Text><Text style={{ color: colors.muted }}>{dailyWorkStatus(batch)}</Text></View>
           <Text style={{ color: colors.muted }}>{dailyWorkQuantity(batch)} ›</Text>
-        </Pressable>) : null}
+          </Pressable>
+          {actions.canEdit(batch) ? <WorkerIconButton icon="edit" label={p('worker.daily.edit_wip')} onPress={() => actions.edit(batch)} /> : null}
+        </View>) : null}
       </View>)}
       {batches && batches.length >= 200 ? <Text style={{ color: colors.muted }}>So‘nggi 200 ta yozuv ko‘rsatilmoqda.</Text> : null}
     </ScrollView>
     {showDate ? <DateTimePicker value={day} mode="date" minimumDate={new Date(2020, 0, 1)} maximumDate={new Date()}
       onValueChange={(_event, date) => { setDay(date); setShowDate(false); }} onDismiss={() => setShowDate(false)} /> : null}
+    <DailyWorkDialogs session={session} model={model} actions={actions} />
   </View>;
 }
 
