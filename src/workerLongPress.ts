@@ -10,8 +10,8 @@ import { adminOrderScanBootstrap } from './workerScanBootstrap';
 import { legacyWorkerScanControl } from './workerLegacyScan';
 
 type Obj = Record<string, any>;
-export type WorkerMenuAction = 'temporary_pause' | 'cancel_start' | 're_pause' | 'reclose' | 'astatka' | 'finish' | 'reopen';
-export type WorkerMenu = { kind: 'none' | 'bosma' | 'report' | 'astatka' | 'reopen'; actions: WorkerMenuAction[]; control: Obj; readScope: string; operation: string };
+export type WorkerMenuAction = 'temporary_pause' | 'cancel_start' | 're_pause' | 'reclose' | 'astatka' | 'finish' | 'reopen' | 'resume' | 'detach_roll';
+export type WorkerMenu = { kind: 'none' | 'bosma' | 'report' | 'astatka' | 'reopen' | 'handoff'; actions: WorkerMenuAction[]; control: Obj; readScope: string; operation: string };
 export type ReactivationTarget = AdminWorkReactivationTarget;
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 

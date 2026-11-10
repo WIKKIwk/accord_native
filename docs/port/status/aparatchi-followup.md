@@ -20,13 +20,14 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Laminate atomic Astatka / full completion, source revisions, pending request reconciliation va post-save native printer flow | `_IntegratedLaminationAstatka._runIntegratedLaminationAstatka` | WorkerLaminationWorkflow, native form/history/QR, SQLite pending store and guarded APIs | Atomic workflow / API / queue-action focused tests |
 | Rezka Astatka waste-only native form, session/stage binding va exact pending request reconciliation | `_ReadOnlyOrderDetailSheetState._runRezkaAstatkaReport` | WorkerRezkaAstatkaWorkflow, WorkerRezkaAstatkaReport, guarded Rezka API | Workflow / API tests cover zero waste, total-only cut, uncertain responses, explicit retry and stale account; iOS modal closes after native dismissal |
 | Glue legacy Astatka va full completion uchun alohida layer remainder/waste talablari; non-print long-press finish Astatka’ga boradi | `_ProgressQtyDialogState._submit`, `_showWorkerOrderLongPressActions` | WorkerLegacyLaminationReport, OrderScreen, WorkerLongPressActions | Focused metric/API/menu tests and native typechecks; glue hisobotida bo‘yoq talab qilinmaydi |
+| Apparatusda qoldirilgan laminate/glue WIP uchun Continue / Detach menyusi va guarded detach report | `_laminatsiyaWorkerHandoffBatch`, `_runInitialResumeFlow`, `_runInitialRollRemovalFlow` | WorkerHandoff, native menu, OrderScreen | Actual native submit path tested for exact metrics, missing/changed WIP, changed stage and expired account; no printer for detach |
 
 ## Open items
 
 | Flow | Confirmed difference / next step |
 |---|---|
 | General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
-| Cut / handoff | Multi-frame Rezka output, non-print handoff va cut quick settings branchlari qolgan; laminate atomic Astatka/full completion, glue legacy reports va Rezka waste-only Astatka ulandi |
+| Cut | Multi-frame Rezka output va cut quick settings branchlari qolgan; laminate atomic Astatka/full completion, glue legacy reports, handed-off roll continue/detach va Rezka waste-only Astatka ulandi |
 | Paddons | Worker navigation placeholder. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak |
 
 ## Verification and limits
@@ -35,6 +36,7 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 - Completed-history checkpoint: **5/5** targeted tests, both platform typechecks exit 0, lint 0 errors / the same 1 existing warning, `git diff --check` exit 0.
 - Rezka Astatka checkpoint: **45/45** workflow / API / pending-store / lamination / long-press tests; iOS and Android typechecks exit 0; lint 0 errors / the same 1 existing warning; ledger resolves 1105 `@v2` and 98 `@v2-test` tags. Lamination close now also waits for the real iOS modal dismissal and blocks a competing auto-print handoff.
 - Glue / non-print menu checkpoint: **99/99** focused tests; both native typechecks exit 0; lint 0 errors / the same 1 existing warning; ledger resolves 1106 `@v2` and 99 `@v2-test` tags. Safe-stop classification includes partially entered layer remainders, so they cannot silently become a no-output issue report.
+- Handoff-roll checkpoint: **95/95** focused tests, both native typechecks exit 0, lint 0 errors / the same 1 existing warning; ledger resolves 1107 `@v2` and 99 `@v2-test` tags. Native form submission is exercised in a Node mock harness; physical/native rendering was not exercised.
 - Bluetooth printing checkpoint: **366/366** focused tests; both platform typechecks exit 0, lint 0 errors / the same 1 existing warning. USB/Wi-Fi printing choices are temporarily hidden by explicit user request. The multi-purpose GScale chooser retains its scale transports.
 - Full tree suite before changes: **5196 pass, 11 fail, 12 todo / 5219 total**. Eleven failures are Node harness imports into native Expo/Reanimated ESM modules, not confirmed device failures. Log: `/tmp/accord-worker-audit2-full-tests.log`.
 - Ledger check: exit 0, 1083 `@v2` and 91 `@v2-test` tags resolve. Eleven existing dynamic endpoint diagnostics remain.

@@ -88,6 +88,11 @@ test('native finish selection opens astatka for laminate/glue/cut and complete o
     choose('finish'); assert.equal(choice, operation === 'print' ? 'complete' : 'astatka');
     choose('astatka'); assert.equal(choice, 'astatka');
   }
+  for (const action of ['resume', 'detach_roll']) {
+    let choice;
+    const choose = new Function('menu', 'pick', compiled)({ operation: 'glue', actions: [action] }, value => { choice = value; });
+    choose(action); assert.equal(choice, action);
+  }
 });
 
 test('temporary pause is revalidated and never sent for an outdated token', async () => {

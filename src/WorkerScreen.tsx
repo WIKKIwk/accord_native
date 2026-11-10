@@ -35,7 +35,7 @@ import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } 
 import { workerQueueSearch } from './workerQueueWindow';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
-type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka'; initialScanQr?: string };
+type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string };
 type ActionScope = { window: string; scope: string };
 type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean };
 const statusLabel: Record<string, string> = {

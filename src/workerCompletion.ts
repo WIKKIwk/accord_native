@@ -7,5 +7,5 @@ export function workerCompletionMode(input: { action: string; orderId: string; c
   const safeStopIssue = safeStop && !hasRawOutput && !!note;
   const completionIssue = input.action === 'complete' && !input.closingOutputId && !!note && !input.orderId.startsWith('training-');
   return { note, safeStopIssue, completionIssue, needsIssueOrOutput: safeStop && !hasRawOutput && !note,
-    needsOutput: !safeStopIssue && !completionIssue && (input.action === 'pause' || input.action === 'roll_complete' || (input.action === 'complete' && !input.closingOutputId)) };
+    needsOutput: !safeStopIssue && !completionIssue && (input.action === 'pause' || input.action === 'detach_roll' || input.action === 'roll_complete' || (input.action === 'complete' && !input.closingOutputId)) };
 }

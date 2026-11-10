@@ -4,7 +4,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { adminBosmaAstatkaReport } from './workerControlsApi';
@@ -41,6 +41,8 @@ import { useWorkerOrderText } from './components/useWorkerOrderText';
 import { workerCompletionMode } from './workerCompletion';
 import { legacyLaminationReportMetrics } from './workerLegacyLaminationReport';
 import { adminLaminatsiyaAstatkaReport } from './workerLaminationReportApi';
+import { adminWipBatches } from './workerWipApi';
+import { workerHandoffBatch } from './workerHandoff';
 import type { MaterialRow } from './workerMaterialPresentation';
 import { pickWorkerPrinter, printWorkerJobs, workerPrinterFields, WorkerPrintCancelled } from './workerPrinting';
 import { useWorkerPrinterSelector } from './components/useWorkerPrinterSelector';
@@ -57,7 +59,7 @@ import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartRea
 import { workerOrderDetailFromSnapshot, type Apparatus, type QueueOrder } from './workerApi';
 
 type Obj = Record<string, any>;
-type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka'; initialScanQr?: string; onClose: () => void; onChanged: () => void };
+type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; onClose: () => void; onChanged: () => void };
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
 }
@@ -168,10 +170,11 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const screenMounted = useRef(true);
   const [printerDialogHidden, setPrinterDialogHidden] = useState(false);
   const reportDismissed = useRef<(() => void) | null>(null);
-  const printingIdentity = JSON.stringify([sessionReadScope(session), apparatusId, orderId]);
+  const closeAfterProgress = useRef(false);
+  const printingScope = sessionReadScope(session), printingIdentity = JSON.stringify([printingScope, apparatusId, orderId]);
   const latestPrintingIdentity = useRef(printingIdentity);
   useLayoutEffect(() => { latestPrintingIdentity.current = printingIdentity; }, [printingIdentity]);
-  const isCurrent = () => screenMounted.current && !!activeSessionToken(session) && latestPrintingIdentity.current === printingIdentity;
+  const isCurrent = () => screenMounted.current && !!activeSessionToken(session) && printingScope === sessionReadScope(session) && latestPrintingIdentity.current === printingIdentity;
   const printerSelector = useWorkerPrinterSelector(isCurrent);
   const initialActionHandled = useRef(false);
   const initialQr = useRef(new WorkerInitialQr(initialScanQr));
@@ -315,15 +318,22 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   }, [showQuickScanner, permission?.status, askPermission]);
   const canOpenInitialComplete = allowed.includes('complete');
   const canOpenInitialAstatka = isActiveOrder && (control.stage_work?.astatka_available === true || ['in_progress', 'paused', 'completed'].includes(control.state));
+  const canResume = allowed.includes('resume'), canDetachRoll = laminationReport && allowed.includes('detach_roll');
+  const resumeNeedsInput = interaction.resume_input_required === true || interaction.material_scan_required === true || interaction.qolip_mode === 'scan_required';
+  const resumeOnOpen = useEffectEvent(() => { void submit('resume'); });
   useEffect(() => {
     if (!initialAction || initialActionHandled.current || !synchronized) return;
+    if (initialAction === 'resume' && canResume && !resumeNeedsInput && !resumeReady) return;
     const timer = setTimeout(() => {
       initialActionHandled.current = true;
-      if ((initialAction === 'complete' && canOpenInitialComplete) || (initialAction === 'astatka' && canOpenInitialAstatka)) selectProgressAction(initialAction);
+      if (initialAction === 'resume' && canResume) {
+        if (resumeNeedsInput) setSuccess(p('worker.lamination_astatka.resume_scan'));
+        else resumeOnOpen();
+      } else if ((initialAction === 'complete' && canOpenInitialComplete) || (initialAction === 'astatka' && canOpenInitialAstatka) || (initialAction === 'detach_roll' && canDetachRoll)) selectProgressAction(initialAction);
       else setError('Buyurtma holati o‘zgardi. Qayta urining.');
     }, 0);
     return () => clearTimeout(timer);
-  }, [initialAction, synchronized, canOpenInitialComplete, canOpenInitialAstatka]);
+  }, [initialAction, synchronized, canOpenInitialComplete, canOpenInitialAstatka, canResume, canDetachRoll, resumeNeedsInput, resumeReady, p]);
   useEffect(() => {
     if (!controlEpoch || scanningRequired) return;
     let current = true;
@@ -568,6 +578,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   }
   async function submit(action: string) {
     const isAstatka = action === 'astatka';
+    const removingHandoffRoll = laminationReport && action === 'detach_roll';
     if (!synchronized || (isAstatka ? !canOpenInitialAstatka : !allowed.includes(action)) || actionInFlight.current ||
         (isAstatka && !laminationReport && loadedDraftScope !== draftScope)) return;
     const isStarting = action === 'start' || action === 'resume';
@@ -605,9 +616,16 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
     loadVersion.current++;
     setControlRetired(true); setBusy(true); setError(''); setSuccess('');
     try {
-      const printer = needsOutput ? await selectOutputPrinter() : null;
-      if (!screenMounted.current) return;
+      const printer = needsOutput && !removingHandoffRoll ? await selectOutputPrinter() : null;
+      if (!isCurrent()) return;
       if (!validOrderControl(bootstrap, apparatusId, orderId, latestCursor.current)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+      if (removingHandoffRoll) {
+        const current = await scanBootstrap(session, { apparatus: apparatusId, orderId, includeSections: false, automaticQolipConfirmation: true }, scanBootstrapUnsupported);
+        if (!isCurrent() || !validOrderControl(current, apparatusId, orderId, latestCursor.current) || current.control_state?.control?.state !== 'paused' ||
+            current.control_state.control.stage_node_id !== control.stage_node_id || !current.control_state.control.allowed_actions?.includes('detach_roll')) throw new Error(p('worker.error.sync'));
+        const batches = await adminWipBatches(session, { status: 'all', apparatus: apparatusId, orderId, limit: 250 });
+        if (!isCurrent() || !workerHandoffBatch(batches, apparatusId, orderId)) throw new Error(p('worker.error.machine_roll'));
+      }
       const body: Obj = { apparatus: apparatusId, order_id: orderId, action: completionIssue ? 'freeze' : action, include_control: true };
       if (completionIssue) Object.assign(body, { freeze_with_issue: true, issue_note: completion.note });
       else if (completion.note && !safeStopIssue) body.completion_request_note = completion.note;
@@ -616,7 +634,8 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       if (isStarting && automaticConfirmation) body.qolip_confirmation = automaticConfirmation;
       if (inputRequired && inputBatch) Object.assign(body, { qr_payload: inputBatch.qr, progress_batch_id: inputBatch.id });
       if (action === 'start' && validPreflight && preflight.status === 'passed') body.print_preflight_hold_id = preflight.hold_id;
-      if (needsOutput && printer) Object.assign(body, { finished_goods_kg: numberValue(kg), finished_goods_meter: numberValue(meter), bobina_kg: numberValue(bobina), uom: 'm', ...workerPrinterFields(printer) });
+      if (needsOutput) Object.assign(body, { finished_goods_kg: numberValue(kg), finished_goods_meter: numberValue(meter), bobina_kg: numberValue(bobina), uom: 'm', ...(printer ? workerPrinterFields(printer) : {}) });
+      if (removingHandoffRoll) body.remove_roll_from_apparatus = true;
       if (closingOutputId) Object.assign(body, { complete_without_output: true, progress_batch_id: closingOutputId });
       if (safeStopRequest && action === 'pause') body.freeze_request_id = safeStopRequest;
       if (safeStopIssue) body.completion_request_note = completion.note;
@@ -653,7 +672,9 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       if (printFailed) setError('Amal bajarildi, lekin rulon yorlig‘i chop etilmadi.');
       else setSuccess(isAstatka ? 'Order astatkasi qayd qilindi.' : qr ? `Amal bajarildi. Rulon QR: ${qr}` : 'Amal bajarildi.');
       setSelectedQolipSet('');
-      if (initialAction === action && !printFailed) closeSheet();
+      if (initialAction === action && !printFailed) {
+        if (Platform.OS === 'ios' && selected) closeAfterProgress.current = true; else closeSheet();
+      }
     } catch (e) { if (isCurrent() && !(e instanceof WorkerPrintCancelled)) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
     finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
   }
@@ -915,7 +936,10 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       title={String(order.title || preview?.title || '')}
       detail={detail ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </ScrollView>
-    <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport} onDismiss={() => { reportDismissed.current?.(); reportDismissed.current = null; }} title={t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
+    <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport} onDismiss={() => {
+      reportDismissed.current?.(); reportDismissed.current = null;
+      if (closeAfterProgress.current && isCurrent()) { closeAfterProgress.current = false; closeSheet(); }
+    }} title={selected === 'detach_roll' ? p('worker.handoff.detach') : t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
       cancelLabel={t(inlinePaint ? 'Orqaga' : 'Bekor qilish')} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
       preventDismiss
       confirmLabel={t(inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash')}
@@ -925,7 +949,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
         {inlinePaint ? paintBody : <>
         <Text style={[styles.muted, { color: colors.muted }]}>{t(selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting')}</Text>
         {selected === 'pause' && safeStopRequest && descriptionRevealed && <Field label={p('worker.freeze.safe_stop.issue_note')} initialValue={freezeNote} onChangeText={setFreezeNote} />}
-        {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.standard')}</Text><Field label={`${p('worker.daily.field.roll')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.finished_goods')}</Text><Field label={`${p('worker.daily.field.length')}, ${p('worker.progress.qty.unit.meter')}`} initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label={`${p('worker.daily.field.weight')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
+        {['pause','detach_roll','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.standard')}</Text><Field label={`${p('worker.daily.field.roll')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.finished_goods')}</Text><Field label={`${p('worker.daily.field.length')}, ${p('worker.progress.qty.unit.meter')}`} initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label={`${p('worker.daily.field.weight')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
         {showFullReport && laminationReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.excess_rolls')}</Text>
           <Field label={`${p('worker.daily.field.print_leftover')} (kg)`} initialValue={leftoverWip} keyboardType="decimal-pad" onChangeText={setLeftoverWip} />
           <Field label={`${p('worker.daily.field.film_leftover')} (kg)`} initialValue={leftoverFilm} keyboardType="decimal-pad" onChangeText={setLeftoverFilm} /></>}

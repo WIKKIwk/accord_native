@@ -13,19 +13,23 @@ import type { WorkerAlertData } from './workerDialogTypes';
 import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerSheetButton, type WorkerSheetIcon } from './WorkerSheetButton';
 import { useWorkerOrderText } from './useWorkerOrderText';
+import { adminWipBatches } from '../workerWipApi';
+import { workerHandoffBatch } from '../workerHandoff';
+import { sessionReadScope } from '../sessionReadScope';
 
-export type WorkerActionChoice = 'astatka' | 'complete' | {
+export type WorkerActionChoice = 'astatka' | 'complete' | 'resume' | 'detach_roll' | {
   run: (readCursor: () => QueueCursor | null) => Promise<string>;
   confirmation?: Omit<WorkerAlertData, 'onConfirm'>;
 };
 type Props = { session: Session; apparatusId: string; apparatusName: string; operation: string; order: QueueOrder; completed: boolean; getCursor: () => QueueCursor | null; onChoose: (action: WorkerActionChoice) => void };
 type Reactivation = { target: ReactivationTarget | null; reason: string; stage: string };
-const labels: Record<WorkerMenuAction, string> = { cancel_start: '', temporary_pause: 'Buyurtmani yechib turish', re_pause: 'Qayta pauza qilish', reclose: 'Qayta yopish', astatka: 'Astatka hisobotini topshirish', finish: 'Ishimni tugatish', reopen: 'Rang chiqarilyapti holatiga qaytarish' };
+const labels: Record<WorkerMenuAction, string> = { cancel_start: '', temporary_pause: 'Buyurtmani yechib turish', re_pause: 'Qayta pauza qilish', reclose: 'Qayta yopish', astatka: 'Astatka hisobotini topshirish', finish: 'Ishimni tugatish', reopen: 'Rang chiqarilyapti holatiga qaytarish', resume: '', detach_roll: '' };
 const icons: Record<WorkerMenuAction, WorkerSheetIcon> = {
   temporary_pause: { android: 'pause_circle', ios: 'pause.circle' }, re_pause: { android: 'pause', ios: 'pause' },
   cancel_start: { android: 'undo', ios: 'arrow.uturn.backward' },
   reclose: { android: 'lock', ios: 'lock' }, astatka: { android: 'assignment', ios: 'doc.text' },
   finish: { android: 'logout', ios: 'rectangle.portrait.and.arrow.right' }, reopen: { android: 'colorize', ios: 'eyedropper' },
+  resume: { android: 'play_arrow', ios: 'play.fill' }, detach_roll: { android: 'unarchive', ios: 'archivebox' },
 };
 const denial: Record<string, string> = {
   apparatus_busy: 'Apparatda boshqa ish yoki ish boshlash jarayoni bor. U tugamaguncha qayta faollashtirish mumkin emas.',
@@ -67,8 +71,13 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
         } else {
           const data = await readWorkerActionControl(session, apparatusId, order.id, getCursor);
           if (!current || !activeSessionToken(session)) return;
-          const result = workerLongPressMenu(data, session, apparatusId, order.id, getCursor(), operation);
+          let result = workerLongPressMenu(data, session, apparatusId, order.id, getCursor(), operation);
           if (result.kind === 'none') { close?.(); return; }
+          if (['laminate', 'glue'].includes(operation) && result.control.state === 'paused' && !result.actions.includes('reclose')) {
+            const batches = await adminWipBatches(session, { status: 'all', apparatus: apparatusId, orderId: order.id, limit: 250 });
+            if (!current || !activeSessionToken(session) || result.readScope !== sessionReadScope(session)) return;
+            if (workerHandoffBatch(batches, apparatusId, order.id)) result = { ...result, kind: 'handoff', actions: ['resume', 'detach_roll', ...(operation === 'laminate' ? ['astatka' as const] : [])] };
+          }
           if (result.kind === 'astatka') { onChoose('astatka'); close?.(); return; }
           setMenu(result);
         }
@@ -87,6 +96,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
 
   function choose(action: WorkerMenuAction) {
     if (!menu) return;
+    if (action === 'resume' || action === 'detach_roll') { pick(action); return; }
     if (action === 'astatka' || (action === 'finish' && !menu.actions.includes('reclose'))) {
       pick(action === 'astatka' || menu.operation !== 'print' ? 'astatka' : 'complete');
       return;
@@ -147,6 +157,13 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
       {!reactivation.target && ['final_stage_closed', 'order_closed'].includes(reactivation.reason) && <Host matchContents={{ vertical: true }} style={styles.host}><Button label="Sababini ko‘rish" variant="text" onPress={() => setAlert({ title: 'Bu bosqich uchun buyurtmani qayta faollashtirish', message: denial[reactivation.reason] ?? denial.unavailable })} /></Host>}
     </>}
     {menu?.kind === 'reopen' && actionButton('reopen')}
+    {menu?.kind === 'handoff' && <>
+      <Text style={[styles.title, { color: colors.text }]}>{p('worker.handoff.title')}</Text>
+      <Text style={[styles.body, { color: colors.muted }]}>{p('worker.handoff.description')}</Text>
+      <WorkerSheetButton label={p('worker.handoff.continue')} variant="filled" icon={icons.resume} onPress={() => choose('resume')} />
+      <WorkerSheetButton label={p('worker.handoff.detach')} icon={icons.detach_roll} onPress={() => choose('detach_roll')} />
+      {menu.actions.includes('astatka') && actionButton('astatka')}
+    </>}
     {menu?.kind === 'report' && <>
       <Text style={[styles.title, { color: colors.text }]}>{p(operation === 'cut' ? 'worker.rezka.astatka.title' : 'worker.laminatsiya.astatka.title')}</Text>
       <Text style={[styles.body, { color: colors.muted }]}>{p(operation === 'laminate' ? 'worker.lamination_astatka.description' : 'worker.finish.description')}</Text>
