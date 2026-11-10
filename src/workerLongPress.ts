@@ -11,7 +11,7 @@ import { legacyWorkerScanControl } from './workerLegacyScan';
 
 type Obj = Record<string, any>;
 export type WorkerMenuAction = 'temporary_pause' | 'cancel_start' | 're_pause' | 'reclose' | 'astatka' | 'finish' | 'reopen';
-export type WorkerMenu = { kind: 'none' | 'bosma' | 'astatka' | 'reopen'; actions: WorkerMenuAction[]; control: Obj; readScope: string; operation: string };
+export type WorkerMenu = { kind: 'none' | 'bosma' | 'report' | 'astatka' | 'reopen'; actions: WorkerMenuAction[]; control: Obj; readScope: string; operation: string };
 export type ReactivationTarget = AdminWorkReactivationTarget;
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
@@ -40,7 +40,7 @@ export function workerLongPressMenu(data: Obj, session: Session, apparatus: stri
   const control = data?.control_state?.control ?? {};
   const readScope = sessionReadScope(session);
   const none: WorkerMenu = { kind: 'none', actions: [], control, readScope, operation };
-  if (!cursor || !session.assigned_apparatus.includes(apparatus) || !validOrderControl(data, apparatus, orderId, cursor) ||
+  if (!['print', 'laminate', 'glue', 'cut'].includes(operation) || !cursor || !session.assigned_apparatus.includes(apparatus) || !validOrderControl(data, apparatus, orderId, cursor) ||
       data.control_state.order_control !== 'active' || ['frozen', 'freeze_requested'].includes(control.stage_control_state)) return none;
   const role = text(session.profile.role), ref = text(session.profile.ref);
   const allowed = Array.isArray(control.allowed_actions) ? control.allowed_actions : [];
@@ -66,18 +66,18 @@ export function workerLongPressMenu(data: Obj, session: Session, apparatus: stri
   const canCancel = (apparatusUsesLaminationWorkflow(operation) || operation === 'cut') &&
     ['aparatchi', 'rezka_master'].includes(role) && !!ref && !orderId.startsWith('training-') &&
     session.capabilities.includes('apparatus.queue.manage') && control.state === 'in_progress' && cancel?.worker_ref === ref;
-  if (control.stage_work?.astatka_available === true && !canTemporary && !canRePause && !canReclose && !canCancel) {
+  if (operation !== 'laminate' && control.stage_work?.astatka_available === true && !canTemporary && !canRePause && !canReclose && !canCancel) {
     return { kind: 'astatka', actions: ['astatka'], control, readScope, operation };
   }
-  if (!['in_progress', 'paused', 'completed'].includes(control.state)) return none;
+  if (!['in_progress', 'paused', 'completed'].includes(control.state) && !(operation !== 'print' && control.stage_work?.astatka_available === true)) return none;
   const actions: WorkerMenuAction[] = [];
   if (canCancel) actions.push('cancel_start');
   if (canTemporary) actions.push('temporary_pause');
   if (canRePause) actions.push('re_pause');
   if (canReclose) actions.push('reclose');
-  actions.push('astatka');
-  if (allowed.includes('complete') || canReclose) actions.push('finish');
-  return { kind: 'bosma', actions, control, readScope, operation };
+  if (operation === 'print') actions.push('astatka');
+  if (operation !== 'print' || allowed.includes('complete') || canReclose) actions.push('finish');
+  return { kind: operation === 'print' ? 'bosma' : 'report', actions, control, readScope, operation };
 }
 
 export async function runWorkerMenuAction(session: Session, apparatus: string, orderId: string, action: WorkerMenuAction, previous: WorkerMenu, getCursor: () => QueueCursor | null) {

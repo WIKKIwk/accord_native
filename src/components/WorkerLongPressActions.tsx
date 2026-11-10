@@ -88,7 +88,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
   function choose(action: WorkerMenuAction) {
     if (!menu) return;
     if (action === 'astatka' || (action === 'finish' && !menu.actions.includes('reclose'))) {
-      pick(action === 'astatka' ? 'astatka' : 'complete');
+      pick(action === 'astatka' || menu.operation !== 'print' ? 'astatka' : 'complete');
       return;
     }
     pick({
@@ -147,6 +147,13 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
       {!reactivation.target && ['final_stage_closed', 'order_closed'].includes(reactivation.reason) && <Host matchContents={{ vertical: true }} style={styles.host}><Button label="Sababini ko‘rish" variant="text" onPress={() => setAlert({ title: 'Bu bosqich uchun buyurtmani qayta faollashtirish', message: denial[reactivation.reason] ?? denial.unavailable })} /></Host>}
     </>}
     {menu?.kind === 'reopen' && actionButton('reopen')}
+    {menu?.kind === 'report' && <>
+      <Text style={[styles.title, { color: colors.text }]}>{p(operation === 'cut' ? 'worker.rezka.astatka.title' : 'worker.laminatsiya.astatka.title')}</Text>
+      <Text style={[styles.body, { color: colors.muted }]}>{p(operation === 'laminate' ? 'worker.lamination_astatka.description' : 'worker.finish.description')}</Text>
+      {menu.actions.filter(action => ['cancel_start', 'temporary_pause', 're_pause', 'reclose'].includes(action)).map(action => actionButton(action))}
+      <WorkerSheetButton label={p(menu.actions.includes('reclose') ? 'worker.action.complete' : operation === 'cut' ? 'worker.rezka.astatka.title' : 'worker.laminatsiya.astatka.title')}
+        variant="filled" icon={icons.finish} onPress={() => choose('finish')} />
+    </>}
     {menu?.kind === 'bosma' && <>
       <Text style={[styles.title, { color: colors.text }]}>Astatka hisobotini topshirish</Text>
       <Text style={[styles.body, { color: colors.muted }]}>Bu amal faqat buyurtma bo‘yicha qoldiqni qayd etadi. Ish jarayoni to‘xtatilmaydi yoki yakunlanmaydi, navbat va WIP holati o‘zgarishsiz qoladi.</Text>

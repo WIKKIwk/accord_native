@@ -61,6 +61,35 @@ test('V2 menu exposes only actions authorized for the current worker and control
   assert.equal(menu(data).kind, 'none');
 });
 
+test('non-print long press offers a report even when complete is not allowed and hides print-only actions', () => {
+  const data = bootstrap('paused', 'paused', ['resume']);
+  for (const operation of ['laminate', 'glue', 'cut']) {
+    const menu = workerLongPressMenu(data, session, 'apparatus:default:p', 'o', cursor, operation);
+    assert.equal(menu.kind, 'report'); assert.deepEqual(menu.actions, ['finish']);
+  }
+  for (const operation of ['', 'package', 'unknown']) assert.equal(workerLongPressMenu(data, session, 'apparatus:default:p', 'o', cursor, operation).kind, 'none');
+});
+
+test('laminate prior remainder keeps its report menu, while a cut prior remainder opens astatka directly', () => {
+  const data = bootstrap('pending', 'fresh_start', ['start']); data.control_state.control.stage_work = { astatka_available: true };
+  assert.equal(workerLongPressMenu(data, session, 'apparatus:default:p', 'o', cursor, 'laminate').kind, 'report');
+  assert.equal(workerLongPressMenu(data, session, 'apparatus:default:p', 'o', cursor, 'cut').kind, 'astatka');
+});
+
+// @v2-test test/admin_production_map_test_screen_test.dart
+test('native finish selection opens astatka for laminate/glue/cut and complete only for print', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../src/components/WorkerLongPressActions.tsx'), 'utf8');
+  const ast = ts.createSourceFile('menu.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let declaration; const visit = node => { if (ts.isFunctionDeclaration(node) && node.name?.text === 'choose') declaration = node; ts.forEachChild(node, visit); }; visit(ast);
+  const compiled = ts.transpileModule(`const choose = ${declaration.getText(ast)}; return choose;`, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  for (const operation of ['print', 'laminate', 'glue', 'cut']) {
+    let choice;
+    const choose = new Function('menu', 'pick', compiled)({ operation, actions: ['finish'] }, value => { choice = value; });
+    choose('finish'); assert.equal(choice, operation === 'print' ? 'complete' : 'astatka');
+    choose('astatka'); assert.equal(choice, 'astatka');
+  }
+});
+
 test('temporary pause is revalidated and never sent for an outdated token', async () => {
   const data = bootstrap();
   data.control_state.control.temporary_pause = { session_id: 'session', token };

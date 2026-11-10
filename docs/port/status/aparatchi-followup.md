@@ -19,13 +19,14 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Daily work waiting WIP correction va majburiy reason, native maydonlar va QR long-press/reprint | `_AparatchiDailyWorkScreenState._editWip`, `_DailyWorkWipEditDialogState` | Daily work model/controller, shared dialogs and both platform screens | Focused correction/history/API tests, native typechecks and lint |
 | Laminate atomic Astatka / full completion, source revisions, pending request reconciliation va post-save native printer flow | `_IntegratedLaminationAstatka._runIntegratedLaminationAstatka` | WorkerLaminationWorkflow, native form/history/QR, SQLite pending store and guarded APIs | Atomic workflow / API / queue-action focused tests |
 | Rezka Astatka waste-only native form, session/stage binding va exact pending request reconciliation | `_ReadOnlyOrderDetailSheetState._runRezkaAstatkaReport` | WorkerRezkaAstatkaWorkflow, WorkerRezkaAstatkaReport, guarded Rezka API | Workflow / API tests cover zero waste, total-only cut, uncertain responses, explicit retry and stale account; iOS modal closes after native dismissal |
+| Glue legacy Astatka va full completion uchun alohida layer remainder/waste talablari; non-print long-press finish Astatka’ga boradi | `_ProgressQtyDialogState._submit`, `_showWorkerOrderLongPressActions` | WorkerLegacyLaminationReport, OrderScreen, WorkerLongPressActions | Focused metric/API/menu tests and native typechecks; glue hisobotida bo‘yoq talab qilinmaydi |
 
 ## Open items
 
 | Flow | Confirmed difference / next step |
 |---|---|
 | General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
-| Glue / cut / handoff | Glue/cut conditional completion, multi-frame Rezka output va non-print handoff branchlarini ajratish; laminate atomic Astatka/full completion va Rezka waste-only Astatka ulandi |
+| Cut / handoff | Multi-frame Rezka output, non-print handoff va cut quick settings branchlari qolgan; laminate atomic Astatka/full completion, glue legacy reports va Rezka waste-only Astatka ulandi |
 | Paddons | Worker navigation placeholder. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak |
 
 ## Verification and limits
@@ -33,6 +34,7 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 - Before these fixes: worker-focused suite **338/338**, both platform typechecks exit 0; lint 0 errors / 1 existing admin hook warning.
 - Completed-history checkpoint: **5/5** targeted tests, both platform typechecks exit 0, lint 0 errors / the same 1 existing warning, `git diff --check` exit 0.
 - Rezka Astatka checkpoint: **45/45** workflow / API / pending-store / lamination / long-press tests; iOS and Android typechecks exit 0; lint 0 errors / the same 1 existing warning; ledger resolves 1105 `@v2` and 98 `@v2-test` tags. Lamination close now also waits for the real iOS modal dismissal and blocks a competing auto-print handoff.
+- Glue / non-print menu checkpoint: **99/99** focused tests; both native typechecks exit 0; lint 0 errors / the same 1 existing warning; ledger resolves 1106 `@v2` and 99 `@v2-test` tags. Safe-stop classification includes partially entered layer remainders, so they cannot silently become a no-output issue report.
 - Bluetooth printing checkpoint: **366/366** focused tests; both platform typechecks exit 0, lint 0 errors / the same 1 existing warning. USB/Wi-Fi printing choices are temporarily hidden by explicit user request. The multi-purpose GScale chooser retains its scale transports.
 - Full tree suite before changes: **5196 pass, 11 fail, 12 todo / 5219 total**. Eleven failures are Node harness imports into native Expo/Reanimated ESM modules, not confirmed device failures. Log: `/tmp/accord-worker-audit2-full-tests.log`.
 - Ledger check: exit 0, 1083 `@v2` and 91 `@v2-test` tags resolve. Eleven existing dynamic endpoint diagnostics remain.

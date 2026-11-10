@@ -54,3 +54,14 @@ test('lamination report validates all metrics and sends positive optional fields
   assert.equal(sent.finished_goods_meter, 3);
   assert.equal(report.bobina_kg, 4);
 });
+
+test('guarded glue report is stopped before transport and refuses stale responses', async () => {
+  const input = { apparatus: 'apparatus:default:holodniy_kley', order_id: 'order', lamination_print_leftover_rolls: 0,
+    lamination_film_leftover_rolls: 0, total_waste: 0 };
+  let current = false, sends = 0;
+  const client = api(async (_session, _url, _init, guard) => {
+    guard(); sends++; current = false; return new Response(JSON.stringify({ report: { ...input, report_id: 'saved' } }), { status: 200 });
+  });
+  await assert.rejects(client.adminLaminatsiyaAstatkaReport({}, input, () => current), /scope/i); assert.equal(sends, 0);
+  current = true; await assert.rejects(client.adminLaminatsiyaAstatkaReport({}, input, () => current), /scope/i); assert.equal(sends, 1);
+});

@@ -39,6 +39,8 @@ import { MaterialLinkRequestPanel, WorkerMaterialUsePanel } from './components/W
 import { WorkerOrderAlertButton } from './components/WorkerOrderAlertButton';
 import { useWorkerOrderText } from './components/useWorkerOrderText';
 import { workerCompletionMode } from './workerCompletion';
+import { legacyLaminationReportMetrics } from './workerLegacyLaminationReport';
+import { adminLaminatsiyaAstatkaReport } from './workerLaminationReportApi';
 import type { MaterialRow } from './workerMaterialPresentation';
 import { pickWorkerPrinter, printWorkerJobs, workerPrinterFields, WorkerPrintCancelled } from './workerPrinting';
 import { useWorkerPrinterSelector } from './components/useWorkerPrinterSelector';
@@ -119,6 +121,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const [meter, setMeter] = useState('');
   const [bobina, setBobina] = useState('');
   const [waste, setWaste] = useState('');
+  const [leftoverWip, setLeftoverWip] = useState(''), [leftoverFilm, setLeftoverFilm] = useState('');
   const [freezeNote, setFreezeNote] = useState('');
   const [completionNote, setCompletionNote] = useState('');
   const [descriptionRevealed, setDescriptionRevealed] = useState(false);
@@ -155,6 +158,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const [refresh, setRefresh] = useState(0);
   const isTrainingOrder = orderId.startsWith('training-');
   const operation = apparatus?.operation.trim().toLowerCase() ?? '';
+  const laminationReport = operation === 'laminate' || operation === 'glue';
   const directMaterialUse = !!apparatus && apparatus.worker_material_assignment_allowed === true && !isTrainingOrder;
   const loadVersion = useRef(0);
   const actionInFlight = useRef(false);
@@ -565,7 +569,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   async function submit(action: string) {
     const isAstatka = action === 'astatka';
     if (!synchronized || (isAstatka ? !canOpenInitialAstatka : !allowed.includes(action)) || actionInFlight.current ||
-        (isAstatka && loadedDraftScope !== draftScope)) return;
+        (isAstatka && !laminationReport && loadedDraftScope !== draftScope)) return;
     const isStarting = action === 'start' || action === 'resume';
     if (isStarting && !materialState.ready) { setError(materialState.reason); return; }
     if (isStarting && automaticQolip && qolipRequired && !automaticConfirmation) { setError('Boshlash uchun tayyor qolip to‘plamini tanlang.'); return; }
@@ -580,7 +584,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
     if (action === 'start' && preflight && (!validPreflight || preflight.status !== 'passed')) { setError('Avval rang chiqarish natijasini tasdiqlang.'); return; }
     const closingOutputId = action === 'complete' && typeof control.closing_output_batch_id === 'string' ? control.closing_output_batch_id.trim() : '';
     const completion = workerCompletionMode({ action, orderId, closingOutputId, safeStopRequest,
-      description: action === 'pause' ? freezeNote : completionNote, kg, meter, bobina, waste });
+      description: action === 'pause' ? freezeNote : completionNote, kg, meter, bobina, waste, additionalOutput: laminationReport ? [leftoverWip, leftoverFilm] : [] });
     const { safeStopIssue, completionIssue, needsOutput } = completion;
     if (completion.needsIssueOrOutput) { setDescriptionRevealed(true); setError(p('worker.freeze.safe_stop.output_or_issue_required')); return; }
     const fullReport = !completionIssue && !safeStopIssue && (isAstatka || (action === 'complete' && (control.complete_requires_full_report !== false || !!closingOutputId)));
@@ -588,7 +592,12 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
     if (needsOutput && fields.some(x => !x.trim() || !Number.isFinite(numberValue(x)) || numberValue(x) <= 0)) { setDescriptionRevealed(true); setError('Metr, vazn va bobina uchun noldan katta qiymatlarni kiriting.'); return; }
     const returnedPaintItems = returnedPaintItemsFromDraft(paint, paintDynamic);
     const imageOnly = !!paintImageId && returnedPaintItems.length === 0;
-    if (fullReport && (!waste.trim() || !Number.isFinite(numberValue(waste)) || numberValue(waste) < 0 || (!closingOutputId && !isAstatka && numberValue(waste) === 0) || (!imageOnly && ['rasxot','astatka'].some(usage => {
+    let laminationMetrics: ReturnType<typeof legacyLaminationReportMetrics> | null = null;
+    if (fullReport && laminationReport) {
+      try { laminationMetrics = legacyLaminationReportMetrics(isAstatka, { wip: leftoverWip, film: leftoverFilm, waste }); }
+      catch (reason) { setDescriptionRevealed(true); setError(p(reason instanceof Error ? reason.message : 'worker.daily.invalid_number')); return; }
+    }
+    if (fullReport && !laminationReport && (!waste.trim() || !Number.isFinite(numberValue(waste)) || numberValue(waste) < 0 || (!closingOutputId && !isAstatka && numberValue(waste) === 0) || (!imageOnly && ['rasxot','astatka'].some(usage => {
       const values = returnedPaintItems.filter(item => item.usage === usage).flatMap(item => Object.values(item.values));
       return values.length < 3 || values.some(value => !Number.isFinite(numberValue(value)) || numberValue(value) < 0);
     })))) { setDescriptionRevealed(true); setError('Chiqindi va bo‘yoq rasmini yoki har bir bo‘lim uchun kamida uchta to‘g‘ri qiymatni kiriting.'); return; }
@@ -611,7 +620,8 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       if (closingOutputId) Object.assign(body, { complete_without_output: true, progress_batch_id: closingOutputId });
       if (safeStopRequest && action === 'pause') body.freeze_request_id = safeStopRequest;
       if (safeStopIssue) body.completion_request_note = completion.note;
-      if (fullReport) {
+      if (fullReport && laminationMetrics) Object.assign(body, laminationMetrics, { full_completion_report_required: true });
+      else if (fullReport) {
         const returnInk = returnedPaintItems.filter(item => item.usage === 'astatka').flatMap(item => Object.values(item.values)).reduce((sum, value) => sum + numberValue(value), 0);
         Object.assign(body, { total_waste: numberValue(waste), full_completion_report_required: true, returned_paint_items: returnedPaintItems });
         if (paintImageId) body.returned_paint_image_id = paintImageId;
@@ -619,8 +629,12 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       }
       if (preview?.customer || order.customer_name) body.customer_name = preview?.customer || order.customer_name;
       const result = isAstatka
-        ? { report: await adminBosmaAstatkaReport(session, { apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote }) }
-        : await adminApparatusQueueActionResult(session, body);
+        ? { report: laminationReport && laminationMetrics
+          ? await adminLaminatsiyaAstatkaReport(session, { apparatus: apparatusId, order_id: orderId,
+            lamination_print_leftover_rolls: laminationMetrics.lamination_print_leftover_rolls ?? null,
+            lamination_film_leftover_rolls: laminationMetrics.lamination_film_leftover_rolls ?? null, total_waste: laminationMetrics.total_waste, description: astatkaNote }, isCurrent)
+          : await adminBosmaAstatkaReport(session, { apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote }) }
+        : await adminApparatusQueueActionResult(session, body, isCurrent);
       if (!isCurrent()) return;
       if (result.completion_request) { setSelected(''); setSuccess(p('worker.notice.completion_request_sent')); return; }
       let printFailed = false;
@@ -631,6 +645,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       if (!isCurrent()) return;
       selectProgressAction(''); setMaterials([]); setQolips([]); setQolipsReset(false); setInputBatch(null); setFreezeNote(''); setCompletionNote(''); setKg(''); setMeter(''); setBobina('');
       if (action === 'complete' || isAstatka) {
+        setLeftoverWip(''); setLeftoverFilm('');
         void saveReturnedPaintDraft(draftScope, { values: {}, fields: {}, usage: 'rasxot', imageId: '' }).catch(() => {});
         setWaste(''); setAstatkaNote(''); setPaintImageId(''); setPaint({}); setPaintColor(''); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintEditor(false);
       }
@@ -904,14 +919,18 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       cancelLabel={t(inlinePaint ? 'Orqaga' : 'Bekor qilish')} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
       preventDismiss
       confirmLabel={t(inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash')}
-      confirmDisabled={busy || photoBusy || (!inlinePaint && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && loadedDraftScope !== draftScope)))}
+      confirmDisabled={busy || photoBusy || (!inlinePaint && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && !laminationReport && loadedDraftScope !== draftScope)))}
       onConfirm={() => { if (inlinePaint) { setError(''); setPaintEditor(false); } else void submit(selected); }}>
         {!!error && <Text style={styles.error}>{t(error)}</Text>}
         {inlinePaint ? paintBody : <>
         <Text style={[styles.muted, { color: colors.muted }]}>{t(selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting')}</Text>
         {selected === 'pause' && safeStopRequest && descriptionRevealed && <Field label={p('worker.freeze.safe_stop.issue_note')} initialValue={freezeNote} onChangeText={setFreezeNote} />}
         {['pause','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.standard')}</Text><Field label={`${p('worker.daily.field.roll')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.finished_goods')}</Text><Field label={`${p('worker.daily.field.length')}, ${p('worker.progress.qty.unit.meter')}`} initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label={`${p('worker.daily.field.weight')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
-        {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.returned_paint_and_waste')}</Text><Field label={`${p('worker.daily.field.total_waste')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} /><NativeButton label={p('worker.daily.field.returned_ink')} variant="filled" disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} /></>}
+        {showFullReport && laminationReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.excess_rolls')}</Text>
+          <Field label={`${p('worker.daily.field.print_leftover')} (kg)`} initialValue={leftoverWip} keyboardType="decimal-pad" onChangeText={setLeftoverWip} />
+          <Field label={`${p('worker.daily.field.film_leftover')} (kg)`} initialValue={leftoverFilm} keyboardType="decimal-pad" onChangeText={setLeftoverFilm} /></>}
+        {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p(laminationReport ? 'worker.progress.qty.waste' : 'worker.progress.qty.returned_paint_and_waste')}</Text><Field label={`${p('worker.daily.field.total_waste')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} />
+          {!laminationReport && <NativeButton label={p('worker.daily.field.returned_ink')} variant="filled" disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} />}</>}
         {selected === 'astatka' && <Field label={p('worker.progress.qty.optional_note')} initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
         {selected === 'complete' && descriptionRevealed && <Field label={p(closingOutput ? 'worker.progress.qty.optional_note' : 'worker.progress.qty.reason')} initialValue={completionNote} onChangeText={setCompletionNote} />}
         </>}

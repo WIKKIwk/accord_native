@@ -37,7 +37,7 @@ type Metrics = { apparatus: string; order_id: string; lamination_print_leftover_
   finished_goods_meter?: number | null; finished_goods_kg?: number | null; bobina_kg?: number | null; description?: string };
 
 /** @v2 adminLaminatsiyaAstatkaReport */
-export async function adminLaminatsiyaAstatkaReport(session: Session, input: Metrics) {
+export async function adminLaminatsiyaAstatkaReport(session: Session, input: Metrics, current?: () => boolean) {
   const apparatus = input.apparatus.trim(), orderId = input.order_id.trim();
   const nonnegative = (value: number | null | undefined): boolean => value != null && Number.isFinite(value) && value >= 0;
   const optionalPositive = (value: number | null | undefined): boolean => value == null || (Number.isFinite(value) && value > 0);
@@ -52,15 +52,17 @@ export async function adminLaminatsiyaAstatkaReport(session: Session, input: Met
   if (input.finished_goods_kg != null) body.finished_goods_kg = input.finished_goods_kg;
   if (input.bobina_kg != null) body.bobina_kg = input.bobina_kg;
   if (input.description?.trim()) body.description = input.description.trim();
+  const guard = () => { if (current && !current()) throw new Error('Session scope changed'); };
   const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/laminatsiya-astatka', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
+  }, guard);
+  guard();
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'laminatsiya_astatka_report_failed');
   }
-  const payload = object(await response.json());
+  const payload = object(await response.json()); guard();
   if (!payload) throw new TypeError('Invalid lamination astatka response');
   if (!object(payload.report)) throw new WorkerControlException('laminatsiya_astatka_invalid_response', 'Astatka qaydi javobi noto‘g‘ri');
   return laminatsiyaAstatkaReportFromJson(payload.report);
