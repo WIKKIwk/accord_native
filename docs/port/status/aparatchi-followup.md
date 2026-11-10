@@ -13,6 +13,7 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Oldingi F01–F11 homashyo/progress/hisobot portining checkpoint’i | `aparatchi-order-sheet.md` | OrderScreen, worker material/progress/native components and their dependencies | Worker focused suite 340/340, both typechecks exit 0 |
 | Output / WIP reprint Bluetooth printer tanlovi va local print-job execution bilan ulandi; iOS report modal dismissal yakunini kutadi; completion request draftni tozalamaydi | `_pickProgressPrinter`, `_ReadOnlyOrderDetailSheetState._runQueueAction`, `_WorkerWipHistorySheetState._reprintWip` | `workerPrinting.ts`, OrderScreen, WIP details, shared printer pickers | Worker/printer suite 366/366, both typechecks exit 0; cancellation, stale session, print failure and modal dismissal covered |
 | Cancel-start menyu entry, native confirmation, owner/operation/cursor/token qayta tekshiruvi | `admin_production_map_orders_cancel_start.dart` | `workerLongPress.ts`, `WorkerLongPressActions.tsx`, WorkerScreen | 54/54 menu/control tests; both typechecks exit 0, lint 0 errors / 1 existing warning |
+| Scanned WIP tarixini o‘qish va unused WIPni native tasdiq bilan qaytarish | `admin_production_map_orders_scanned_wip.dart` | `workerScannedWips.ts`, shared hook, native iOS/Android sheets and order header | 14/14 initial focused tests; wider suite found one missing localization mock, fixed and focused presentation/history/API suite passed; both typechecks exit 0, lint 0 errors / 1 existing warning |
 
 ## Open items
 
@@ -21,7 +22,6 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | General QR | FAB QR qiymati orderga uzatilmaydi; URL QR normalizatsiyasi va band apparatdagi order-switch oqimi yetishmaydi |
 | Daily work | Waiting WIP correction, reason va QR/reprint entry’lari ulanmagan |
 | Lamination / cut | Bosma formasi bilan aralashtirilgan conditional report/handoff branchlarini ajratish |
-| Scanned WIP | Tarix va return API bor, worker oynasida entry yo‘q |
 | Instructions / paddons | Worker navigation placeholder. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak |
 
 ## Verification and limits

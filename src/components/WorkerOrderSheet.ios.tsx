@@ -6,11 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 import { useBaseTheme } from './useBaseTheme';
 
-type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; compact?: boolean; fitContent?: boolean; heightFraction?: number };
+type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; preventDismiss?: boolean; compact?: boolean; fitContent?: boolean; heightFraction?: number };
 const scrollContext = (ScrollView as unknown as { Context?: Context<unknown> }).Context;
 const listContext = (VirtualizedList as unknown as { contextType?: Context<unknown> }).contextType;
 
-export function WorkerOrderSheet({ children, onClose, dismissible = false, compact = false, fitContent = false, heightFraction }: Props) {
+export function WorkerOrderSheet({ children, onClose, dismissible = false, preventDismiss = false, compact = false, fitContent = false, heightFraction }: Props) {
   const fraction = heightFraction ?? (compact ? 0.5 : 0.9);
   const [presented, setPresented] = useState(true);
   const [detent, setDetent] = useState<PresentationDetent>({ fraction });
@@ -37,7 +37,7 @@ export function WorkerOrderSheet({ children, onClose, dismissible = false, compa
     seedColor={theme.colors.primary ?? theme.seed} layoutDirection={theme.direction}>
     <BottomSheet isPresented={presented} onIsPresentedChange={setPresented} onDismiss={dismiss} fitToContents={fitContent}>
       <Group modifiers={[
-        presentationBackground(backgroundColor), presentationDragIndicator(dismissible ? 'visible' : 'hidden'), interactiveDismissDisabled(!dismissible),
+        presentationBackground(backgroundColor), presentationDragIndicator(dismissible ? 'visible' : 'hidden'), interactiveDismissDisabled(preventDismiss || !dismissible),
         ...(fitContent ? [presentationSizing('automatic', { fitted: { horizontal: false, vertical: true } })]
           : [presentationDetents(compact && heightFraction == null ? [{ fraction: 0.5 }, { fraction: 0.9 }] : [{ fraction }], { selection: detent, onSelectionChange: setDetent })]),
       ]}>

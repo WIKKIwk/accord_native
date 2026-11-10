@@ -13,7 +13,7 @@ export function WorkerIconButton({ icon, label, onPress, tonal }: WorkerIconButt
         modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('circle'), controlSize('large'), labelStyle('iconOnly'), accessibilityLabel(label)]} />
     </Host>;
   }
-  const symbol = icon === 'edit' ? 'pencil' : icon === 'back' ? 'arrow.left' : icon === 'photo' ? 'photo.badge.plus' : 'checkmark';
+  const symbol = icon === 'edit' ? 'pencil' : icon === 'back' ? 'arrow.left' : icon === 'photo' ? 'photo.badge.plus' : icon === 'scannedWips' ? 'qrcode.viewfinder' : 'checkmark';
   return <Host matchContents>
     <Button onPress={onPress} modifiers={[frame({ width: 44, height: 44 }), buttonStyle(tonal ? Number(Platform.Version) >= 26 ? 'glass' : 'bordered' : 'plain'), buttonBorderShape('circle'), accessibilityLabel(label)]}>
       <Image systemName={symbol} size={17} color={colors.icon} />

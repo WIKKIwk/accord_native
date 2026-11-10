@@ -23,6 +23,8 @@ import { useNativeSheet } from './nativeSheet';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerOrderImage } from './components/WorkerOrderHeader';
 import { WorkerOrderIdentity } from './components/WorkerOrderIdentity';
+import { WorkerScannedWipHistory } from './components/WorkerScannedWipHistory';
+import { canReadScannedWips, scannedWipStage } from './workerScannedWips';
 import { WorkerOrderOverview } from './components/WorkerOrderOverview';
 import { WorkerPaintPalette } from './components/WorkerPaintPalette';
 import { WorkerOutputProgress } from './components/WorkerOutputProgress';
@@ -101,6 +103,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const [inputBatch, setInputBatch] = useState<{ id: string; qr: string; stage: string } | null>(null);
   const [scanner, setScanner] = useState<ScanKind | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
+  const [scannedWipsStage, setScannedWipsStage] = useState('');
   const [paintImageId, setPaintImageId] = useState('');
   const [paintImageExpanded, setPaintImageExpanded] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -232,6 +235,8 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const safeStopRequest = synchronized ? runningFreezeRequest(bootstrap?.control_state, apparatusId) : null;
   const allowed: string[] = synchronized && (isActiveOrder || !!safeStopRequest) && Array.isArray(control.allowed_actions) ? control.allowed_actions : [];
   const order = detail?.maps?.[0]?.map ?? {};
+  const scannedStage = scannedWipStage(control, order, apparatusId);
+  const canOpenScannedWips = !busy && canReadScannedWips(session, apparatusId, operation, scannedStage, loading || !detail);
   const sections: Obj = bootstrap?.sections ?? {};
   const scanningRequired = interaction.start_materials_mode === 'scan_required';
   const qolipRequired = interaction.qolip_mode === 'scan_required';
@@ -793,6 +798,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
 
   return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps="handled">
     <WorkerOrderIdentity session={session} orderId={orderId} imageId={imageId} code={code} title={String(order.title || preview?.title || '')}
+      onScannedWips={canOpenScannedWips ? () => setScannedWipsStage(scannedStage) : undefined}
       onOpenImage={() => setImageOpen(true)} onClose={closeSheet} />
     {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }]}>
       {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
@@ -895,6 +901,12 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
         </>}
     </WorkerFormDialog>
     {printerSelector.dialogs}
+    {!!scannedWipsStage && <WorkerScannedWipHistory session={session} apparatus={apparatusId} orderId={orderId} stage={scannedWipsStage}
+      onClose={() => setScannedWipsStage('')} onMutationAttempted={() => {
+        if (!isCurrent()) return;
+        loadVersion.current++; setBootstrap(null); setControlRetired(true); setInputBatch(null); recentQuickScan.current = null;
+        setScanner(null); setRefresh(value => value + 1); onChanged();
+      }} />}
     <WorkerDeliveryDialog visible={!!delivery} name={String(delivery?.material.item_name || delivery?.material.item_code || '')} barcode={String(delivery?.material.barcode || '')}
       choices={(delivery?.deliverers ?? []).map(person => ({ key: `${person.role}:${person.ref}`, label: String(person.name || person.ref) }))}
       selected={deliveryChoice} error={error} busy={deliveryBusy} canConfirm={!!deliveryChoice && !deliveryBusy && synchronized}

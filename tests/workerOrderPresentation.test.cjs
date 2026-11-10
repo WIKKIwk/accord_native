@@ -162,6 +162,7 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
 test('native order identity keeps image preview and close actions with the cached thumbnail', () => {
   const h = harness(), calls = [];
   const { WorkerOrderIdentity } = load('components/WorkerOrderIdentity.ios.tsx', { ...mocks,
+    './useWorkerOrderText': { useWorkerOrderText: () => ({ p: key => key }) },
     './WorkerOrderThumbnail': { WorkerOrderThumbnail: 'Thumbnail' }, './useWorkerColors': { useWorkerColors: () => ({ surface: 'surface', icon: 'icon' }) } });
   const tree = WorkerOrderIdentity({ ...h.props, onOpenImage: () => calls.push('image'), onClose: () => calls.push('close') });
   byId(tree, 'worker-order-image').props.onPress(); byId(tree, 'worker-order-close').props.onPress();
@@ -170,4 +171,7 @@ test('native order identity keeps image preview and close actions with the cache
   const thumbnail = nodes(tree, item => item.type === 'Thumbnail')[0];
   assert.equal(thumbnail.props.session, h.props.session); assert.equal(thumbnail.props.imageId, 'image');
   assert.equal(text(tree).includes('0337'), true); assert.equal(text(tree).includes('Tea'), true);
+  const withHistory = WorkerOrderIdentity({ ...h.props, onScannedWips: () => calls.push('scanned') });
+  nodes(withHistory, item => item.props.systemImage === 'qrcode.viewfinder')[0].props.onPress();
+  assert.equal(calls.at(-1), 'scanned');
 });

@@ -6,9 +6,11 @@ import { BaseHost as Host } from './BaseHost';
 import type { WorkerOrderHeader } from './WorkerOrderHeader';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
 import { useWorkerColors } from './useWorkerColors';
+import { useWorkerOrderText } from './useWorkerOrderText';
 
-export function WorkerOrderIdentity({ session, orderId, imageId, code, title, onOpenImage, onClose }: ComponentProps<typeof WorkerOrderHeader>) {
+export function WorkerOrderIdentity({ session, orderId, imageId, code, title, onOpenImage, onClose, onScannedWips }: ComponentProps<typeof WorkerOrderHeader>) {
   const colors = useWorkerColors();
+  const { p } = useWorkerOrderText();
   const glass = parseInt(String(Platform.Version), 10) >= 26;
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
     <HStack spacing={14} modifiers={[frame({ maxWidth: Infinity })]}>
@@ -21,6 +23,8 @@ export function WorkerOrderIdentity({ session, orderId, imageId, code, title, on
         <Text modifiers={[font({ textStyle: 'title2', weight: 'bold' })]}>{code}</Text>
         {title ? <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle({ type: 'hierarchical', style: 'secondary' }), lineLimit(2)]}>{title}</Text> : null}
       </VStack>
+      {onScannedWips && <Button label={p('worker.scanned_wip.title')} systemImage="qrcode.viewfinder" onPress={onScannedWips}
+        modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), accessibilityLabel(p('worker.scanned_wip.title'))]} />}
       <Button {...(glass ? { role: 'close' as const } : { label: 'Yopish', systemImage: 'xmark' as const })} onPress={onClose}
         modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('circle'), controlSize('large'), labelStyle('iconOnly'),
           accessibilityLabel('Yopish'), accessibilityIdentifier('worker-order-close')]} />

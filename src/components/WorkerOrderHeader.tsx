@@ -6,13 +6,15 @@ import { adminProductionMapOrderImageUrl } from '../orderImageUri';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
+import { useWorkerOrderText } from './useWorkerOrderText';
 
 type Identity = { session: Session; orderId: string; imageId: string };
 
-export function WorkerOrderHeader({ session, orderId, imageId, code, title, onOpenImage, onClose }: Identity & {
-  code: string; title?: string; onOpenImage: () => void; onClose: () => void;
+export function WorkerOrderHeader({ session, orderId, imageId, code, title, onOpenImage, onClose, onScannedWips }: Identity & {
+  code: string; title?: string; onOpenImage: () => void; onClose: () => void; onScannedWips?: () => void;
 }) {
   const colors = useWorkerColors();
+  const { p } = useWorkerOrderText();
   return <View style={styles.header}>
     <Pressable accessibilityRole="button" accessibilityLabel="Buyurtma rasmini ochish" onPress={onOpenImage}>
       <WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active size={44}
@@ -23,6 +25,7 @@ export function WorkerOrderHeader({ session, orderId, imageId, code, title, onOp
       <Text numberOfLines={1} style={[styles.code, { color: colors.text }]}>{code}</Text>
       {title ? <Text numberOfLines={2} style={[styles.label, { color: colors.muted }]}>{title}</Text> : null}
     </View>
+    {onScannedWips && <WorkerIconButton icon="scannedWips" label={p('worker.scanned_wip.title')} onPress={onScannedWips} />}
     <WorkerIconButton icon="close" label="Yopish" onPress={onClose} tonal />
   </View>;
 }

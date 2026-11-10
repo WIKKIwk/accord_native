@@ -44,3 +44,9 @@ GoDEX and deferred test mode remain excluded by the port decisions. No backend c
 
 - Show undo-start for an assigned laminate/glue/cut apparatus only with synchronized active in-progress control, queue-manage permission, operator role, own worker reference and a valid server cancel token. Training orders are excluded.
 - Ask the V2 localized native confirmation before sending anything. Re-read control and compare session ID, token, worker and previous state immediately before POST. A lost or rejected response triggers authoritative queue refresh without an automatic retry or invented rollback.
+
+## Scanned WIP history
+
+- Expose the header action only for an assigned laminate/glue/cut apparatus, an operator with queue-read permission and a loaded order with a confirmed stage (or exactly one matching map node). Capture the stage at opening.
+- The native 76% sheet shows loading, error/retry, empty, localized state, worker, linked time and blocked-return reason. Long press requests return only for unused active/unprocessed WIP with a server return token and queue-manage permission.
+- Confirm natively, recheck identity/permission/item, lock dismissal and concurrent writes while saving, and reconcile after any attempted write including a lost response. Opening, reading, retrying, cancelling or dismissing history never retires order control. An account change clears data and blocks the old write.

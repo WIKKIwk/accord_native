@@ -16,7 +16,7 @@ export function WorkerIconButton({ icon, label, onPress, tonal }: WorkerIconButt
   const Component = tonal ? FilledTonalIconButton : IconButton;
   return <Host matchContents style={{ width: 40, height: 40 }}>
     <Component onClick={onPress} modifiers={[size(40, 40), semantics({ contentDescription: label })]}>
-      <RNHostView matchContents><SymbolView name={{ android: icon === 'back' ? 'arrow_back' : icon === 'photo' ? 'add_photo_alternate' : icon }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView>
+      <RNHostView matchContents><SymbolView name={{ android: icon === 'back' ? 'arrow_back' : icon === 'photo' ? 'add_photo_alternate' : icon === 'scannedWips' ? 'qr_code_scanner' : icon }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView>
     </Component>
   </Host>;
 }
