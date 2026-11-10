@@ -112,9 +112,15 @@ export function canWorkOnApparatus(machine: Apparatus | undefined, assignedIds: 
   return !!id && assignedIds.some(assigned => assigned.trim() === id);
 }
 
+const workerOrderControl = (snapshot: RecordValue | undefined, orderId: string): string => {
+  const value = object(snapshot?.order_controls)[orderId.trim()];
+  return string(typeof value === 'string' ? value : object(value).state);
+};
+
+/** @v2 _workerOrderIsFrozen */
 export function workerOrderIsFrozen(snapshot: RecordValue | undefined, orderId: string): boolean {
-  const orderControl = object(object(snapshot?.order_controls)[orderId]);
-  return string(orderControl.state).toLowerCase() === 'frozen';
+  return workerOrderControl(snapshot, orderId).toLowerCase() === 'frozen' ||
+    string(object(object(snapshot?.order_statuses)[orderId.trim()]).order_status).toLowerCase() === 'frozen';
 }
 
 async function getJson(session: Session, path: string, resource: 'queue' | 'profile'): Promise<unknown> {
@@ -201,7 +207,6 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
   const sequences = object(snapshot.sequences);
   const states = object(snapshot.worker_display_states);
   const fallbackStates = object(snapshot.queue_states);
-  const orderControls = object(snapshot.order_controls);
   const orders: Record<string, QueueOrder[]> = {};
   for (const machine of machines) {
     const ids = Array.isArray(visible[machine.id]) ? visible[machine.id] : sequences[machine.id];
@@ -214,7 +219,7 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
       const displayState = string(machineStates[id]);
       const queueState = string(fallback[id]);
       const state = displayState === 'in_progress' && queueState === 'paused' ? queueState : displayState || queueState;
-      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state, imageId: string(row.image_id), cardTone: workerOrderTone(displayState, queueState, string(object(orderControls[id]).state)) }];
+      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state, imageId: string(row.image_id), cardTone: workerOrderTone(displayState, queueState, workerOrderControl(snapshot, id)) }];
     });
   }
   const assigned = new Set(assignedIds);
@@ -226,7 +231,7 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
     const id = string(item.order_id);
     const key = JSON.stringify([apparatusId, id]);
     const state = string(item.status) || 'completed';
-    if (!id || !assigned.has(apparatusId) || seen.has(key) || state.toLowerCase() === 'frozen' || string(object(orderControls[id]).state).toLowerCase() === 'frozen') continue;
+    if (!id || !assigned.has(apparatusId) || seen.has(key) || state.toLowerCase() === 'frozen' || workerOrderIsFrozen(snapshot, id)) continue;
     const row = object(rows[id]);
     if (!Object.keys(row).length) continue;
     seen.add(key);

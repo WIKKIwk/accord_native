@@ -21,7 +21,7 @@ const controls = load('workerControlsApi', { './authorizedFetch': {}, './session
 const models = load('workerQueueModels', { './workerControlsApi': controls });
 const decisions = load('productionCompletionApi', { './workerControlsApi': controls, './workerQueueModels': models, './authorizedFetch': {} });
 const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls, './workerQueueModels': models, './productionCompletionApi': decisions });
-const { workerMachinesFromSnapshot, queueFromSnapshot, canWorkOnApparatus, workerOrderDetailFromSnapshot } = load('workerApi', {
+const { workerMachinesFromSnapshot, queueFromSnapshot, canWorkOnApparatus, workerOrderDetailFromSnapshot, workerOrderIsFrozen } = load('workerApi', {
   './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, './workerSnapshot': snapshotDecoder,
   './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {},
 });
@@ -92,6 +92,25 @@ test('watchable machine queues do not add other workers completed history', () =
   const queue = queueFromSnapshot(machines, snapshot, assigned);
   assert.deepEqual(queue.orders.cut.map(order => order.id), ['two']);
   assert.deepEqual(queue.completed.map(order => order.id), ['one']);
+});
+
+// @v2-test test/admin_production_map_test_screen_test.dart
+test('frozen checks and completed history accept raw, decoded and order-status snapshots', () => {
+  for (const fields of [{ order_controls: { one: { state: 'frozen' } } }, { order_controls: { one: 'frozen' } },
+    { order_controls: { one: 'active' }, order_statuses: { one: { order_status: ' Frozen ' } } }]) {
+    const snapshot = { ...fields, worker_list_rows: { one: { title: 'One' } },
+      completed_orders: [{ apparatus: 'press', order_id: 'one', status: 'completed' }] };
+    assert.equal(workerOrderIsFrozen(snapshot, ' one '), true);
+    assert.deepEqual(queueFromSnapshot([{ id: 'press' }], snapshot, ['press']).completed, []);
+  }
+  assert.equal(workerOrderIsFrozen(undefined, 'one'), false);
+  assert.equal(workerOrderIsFrozen({ order_controls: { one: 'freeze_requested' } }, 'one'), false);
+  assert.equal(workerOrderIsFrozen({ queue_states: { press: { one: 'frozen' } } }, 'one'), false);
+});
+test('decoded freeze-requested order control keeps the existing queue-card tone', () => {
+  const queue = queueFromSnapshot([{ id: 'press' }], { worker_list_rows: { one: { title: 'One' } },
+    visible_order_ids: { press: ['one'] }, queue_states: { press: { one: 'pending' } }, order_controls: { one: 'freeze_requested' } }, ['press']);
+  assert.equal(queue.orders.press[0].cardTone, 'frozen');
 });
 
 test('order detail follows the assigned V2 display path and prefers occurrence status', () => {
