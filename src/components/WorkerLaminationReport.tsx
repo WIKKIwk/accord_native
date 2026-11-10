@@ -55,7 +55,7 @@ export function WorkerLaminationReport(props: Props) {
   const state = useSyncExternalStore(workflow.subscribe, workflow.getSnapshot, workflow.getSnapshot);
   const [hidden, setHidden] = useState(false), [printing, setPrinting] = useState(false), [printStatus, setPrintStatus] = useState('');
   const [history, setHistory] = useState<Remainder[]>([]), [historyError, setHistoryError] = useState('');
-  const printBusy = useRef(false), dismissed = useRef<(() => void) | null>(null), automaticReceipt = useRef<object | null>(null);
+  const printBusy = useRef(false), closing = useRef(false), dismissed = useRef<(() => void) | null>(null), automaticReceipt = useRef<object | null>(null);
   const selector = useWorkerPrinterSelector(owner.current);
   useEffect(() => {
     owner.mount(true); void workflow.load();
@@ -69,7 +69,7 @@ export function WorkerLaminationReport(props: Props) {
   }, [session, context.apparatus, context.orderId, owner]);
   useEffect(() => { if (state.phase === 'receipt' && !state.issueNotice) void Promise.resolve().then(loadHistory); }, [state.phase, state.issueNotice, loadHistory]);
   const chooseAndPrint = useCallback(async (print: (printer: Awaited<ReturnType<typeof pickWorkerPrinter>>) => Promise<void>) => {
-    if (printBusy.current || !owner.current()) return;
+    if (printBusy.current || closing.current || !owner.current()) return;
     printBusy.current = true; setPrinting(true); setPrintStatus('');
     try {
       if (Platform.OS === 'ios') await new Promise<void>(resolve => { dismissed.current = resolve; setHidden(true); }); else setHidden(true);
@@ -91,17 +91,24 @@ export function WorkerLaminationReport(props: Props) {
     });
   }, [state.phase, state.receipt, chooseAndPrint, owner]);
   const receipt = state.phase === 'receipt', edit = state.phase === 'edit', pending = state.phase === 'pending', saving = state.phase === 'saving';
+  async function close() {
+    if (closing.current || printBusy.current || workflow.getSnapshot().phase === 'saving') return;
+    closing.current = true;
+    if (Platform.OS === 'ios') await new Promise<void>(resolve => { dismissed.current = resolve; setHidden(true); });
+    else setHidden(true);
+    if (owner.current()) owner.close();
+  }
   const output = context.complete || state.snapshot?.session_status === 'active';
   const valueField = (key: keyof typeof state.values, label: string, unit = 'kg') => <WorkerFormField key={key} label={`${p(label)}${unit ? ` (${unit})` : ''}`} initialValue={state.values[key]}
     keyboardType={key === 'note' ? 'default' : 'decimal-pad'} onChangeText={value => workflow.change(key, value)} />;
   const rows = history.length ? history : state.receipt?.remainders ?? [];
   return <>
     <WorkerFormDialog visible={!hidden} title={p(context.complete ? 'worker.progress.qty.title.complete' : 'worker.laminatsiya.astatka.title')}
-      cancelLabel={p('worker.action.close')} onCancel={props.onClose} cancelDisabled={saving || printing} preventDismiss
+      cancelLabel={p('worker.action.close')} onCancel={() => { void close(); }} cancelDisabled={saving || printing} preventDismiss
       confirmLabel={receipt ? p('worker.action.close') : state.phase === 'error' ? t('Qayta urinish') : pending ? p('worker.layer_remainder.retry') : t('Saqlash')}
       confirmDisabled={state.phase === 'loading' || saving || printing}
       onDismiss={() => { dismissed.current?.(); dismissed.current = null; }}
-      onConfirm={() => { if (receipt) props.onClose(); else if (state.phase === 'error') void workflow.load(); else void workflow.submit(); }}>
+      onConfirm={() => { if (receipt) void close(); else if (state.phase === 'error') void workflow.load(); else void workflow.submit(); }}>
       {state.phase === 'loading' ? <ActivityIndicator /> : null}
       {state.error ? <Text accessibilityRole="alert" style={{ color: colors.error }}>{p(state.error)}</Text> : null}
       {pending ? <Text style={{ color: colors.text }}>{p(context.complete ? 'worker.lamination_complete.pending' : 'worker.lamination_astatka.pending')}</Text> : null}

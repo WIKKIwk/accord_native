@@ -25,6 +25,7 @@ import { WorkerOrderImage } from './components/WorkerOrderHeader';
 import { WorkerOrderIdentity } from './components/WorkerOrderIdentity';
 import { WorkerScannedWipHistory } from './components/WorkerScannedWipHistory';
 import { WorkerLaminationReport } from './components/WorkerLaminationReport';
+import { WorkerRezkaAstatkaReport } from './components/WorkerRezkaAstatkaReport';
 import { usesIntegratedLaminationReport } from './workerLaminationWorkflow';
 import { canReadScannedWips, scannedWipStage } from './workerScannedWips';
 import { workerQrPayload, WorkerInitialQr } from './workerQr';
@@ -121,7 +122,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const [freezeNote, setFreezeNote] = useState('');
   const [completionNote, setCompletionNote] = useState('');
   const [descriptionRevealed, setDescriptionRevealed] = useState(false);
-  const laminationAttempted = useRef(false);
+  const operationReportAttempted = useRef(false);
   function selectProgressAction(action: string) { setCompletionNote(''); setDescriptionRevealed(false); setSelected(action); }
   const [astatkaNote, setAstatkaNote] = useState('');
   const [paintColor, setPaintColor] = useState('');
@@ -687,6 +688,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
   const integratedLaminationReport = usesIntegratedLaminationReport({ operation, action: selected, training: isTrainingOrder,
     testMode: session.token === 'test-mode-token', fullReport: control.complete_requires_full_report !== false,
     freezeRequested: bootstrap?.control_state?.order_control === 'freeze_requested' || control.stage_control_state === 'freeze_requested' || !!runningFreezeRequest(bootstrap?.control_state, apparatusId) });
+  const rezkaAstatkaReport = operation === 'cut' && selected === 'astatka' && !isTrainingOrder && session.token !== 'test-mode-token';
   const rows: Obj[] | null = scanningRequired
     ? (Array.isArray(materialRequirements.assignments) ? materialRequirements.assignments.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)) : null)
     : attachedReadKey === materialReadKey ? attachedMaterials : null;
@@ -898,7 +900,7 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
       title={String(order.title || preview?.title || '')}
       detail={detail ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </ScrollView>
-    <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport} onDismiss={() => { reportDismissed.current?.(); reportDismissed.current = null; }} title={t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
+    <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport} onDismiss={() => { reportDismissed.current?.(); reportDismissed.current = null; }} title={t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
       cancelLabel={t(inlinePaint ? 'Orqaga' : 'Bekor qilish')} onCancel={cancelProgressDialog} cancelDisabled={busy || photoBusy}
       preventDismiss
       confirmLabel={t(inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash')}
@@ -917,12 +919,20 @@ export function OrderScreen({ session, apparatusId, apparatus, orderId, preview,
     {printerSelector.dialogs}
     {integratedLaminationReport ? <WorkerLaminationReport key={selected} session={session}
       context={{ apparatus: apparatusId, orderId, stage: String(control.stage_node_id ?? ''), complete: selected === 'complete', fullReport: control.complete_requires_full_report !== false }}
-      onAttempted={() => { laminationAttempted.current = true; actionInFlight.current = true; setBusy(true); loadVersion.current++; setControlRetired(true); }}
-      onCommitted={() => { laminationAttempted.current = true; loadVersion.current++; setControlRetired(true); setInputBatch(null); setMaterials([]); }}
+      onAttempted={() => { operationReportAttempted.current = true; actionInFlight.current = true; setBusy(true); loadVersion.current++; setControlRetired(true); }}
+      onCommitted={() => { operationReportAttempted.current = true; loadVersion.current++; setControlRetired(true); setInputBatch(null); setMaterials([]); }}
       onClose={() => {
         setSelected(''); actionInFlight.current = false; setBusy(false);
-        if (laminationAttempted.current) { setRefresh(value => value + 1); onChanged(); }
-        laminationAttempted.current = false;
+        if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
+        operationReportAttempted.current = false;
+      }} /> : null}
+    {rezkaAstatkaReport ? <WorkerRezkaAstatkaReport session={session} apparatus={apparatusId} orderId={orderId} getCursor={() => latestCursor.current}
+      onAttempted={() => { operationReportAttempted.current = true; actionInFlight.current = true; setBusy(true); loadVersion.current++; setControlRetired(true); }}
+      onCommitted={() => { operationReportAttempted.current = true; loadVersion.current++; setControlRetired(true); setInputBatch(null); setMaterials([]); }}
+      onClose={() => {
+        setSelected(''); actionInFlight.current = false; setBusy(false);
+        if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
+        operationReportAttempted.current = false;
       }} /> : null}
     {!!scannedWipsStage && <WorkerScannedWipHistory session={session} apparatus={apparatusId} orderId={orderId} stage={scannedWipsStage}
       onClose={() => setScannedWipsStage('')} onMutationAttempted={() => {

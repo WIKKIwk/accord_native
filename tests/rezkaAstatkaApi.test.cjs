@@ -36,3 +36,18 @@ test('snapshot binds a session and reconciles a saved receipt', async () => {
   assert.equal((await client.adminRezkaAstatkaSnapshot(session, input)).request_result.report_id, 'saved-a');
   replay.assertDone();
 });
+
+test('guarded report cannot send after an account or sheet scope expires', async () => {
+  let sends = 0;
+  const client = load('rezkaAstatkaApi', { './authorizedFetch': { authorizedFetch: () => { sends++; throw new Error('unexpected'); } } });
+  await assert.rejects(client.adminRezkaAstatkaReport({}, { apparatus: 'apparatus:default:asset-010', order_id: 'order', request_id: 'request-a',
+    session_id: 'session', total_waste: 0, total_waste_only: true }, () => false), error => error.code === 'session_scope_changed');
+  assert.equal(sends, 0);
+});
+test('snapshot refuses a late response once its account scope is no longer current', async () => {
+  let current = true;
+  const client = load('rezkaAstatkaApi', { './authorizedFetch': { authorizedFetch: async (_s, _p, _init, guard) => {
+    guard(); current = false; return { status: 200, json: async () => ({ session_id: 's', stage_node_id: 'stage' }) };
+  } } });
+  await assert.rejects(client.adminRezkaAstatkaSnapshot({}, { apparatus: 'apparatus:default:asset-010', order_id: 'order' }, () => current), /scope/i);
+});

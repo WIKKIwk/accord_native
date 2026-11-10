@@ -32,7 +32,7 @@ export interface RezkaAstatkaInput {
   bobina_kg?: number | null; description?: string;
 }
 /** @v2 adminRezkaAstatkaReport */
-export async function adminRezkaAstatkaReport(session: Session, input: RezkaAstatkaInput) {
+export async function adminRezkaAstatkaReport(session: Session, input: RezkaAstatkaInput, current?: () => boolean) {
   const apparatus = input.apparatus.trim(), order = input.order_id.trim(), request = input.request_id.trim(), sessionId = input.session_id.trim();
   const nonnegative = (v: number | null | undefined) => v != null && Number.isFinite(v) && v >= 0;
   const positive = (v: number | null | undefined) => v == null || (Number.isFinite(v) && v > 0);
@@ -47,7 +47,7 @@ export async function adminRezkaAstatkaReport(session: Session, input: RezkaAsta
   for (const key of ['rezka_bosma_waste', 'rezka_lamination_waste', 'rezka_edge_waste', 'finished_goods_meter', 'finished_goods_kg', 'bobina_kg'] as const)
     if (input[key] != null) body[key] = input[key];
   if (input.description?.trim()) body.description = input.description.trim();
-  const payload = object(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/rezka-astatka', body, null, false, 'rezka_astatka_report_failed'));
+  const payload = object(await postWorkerApiRequest(session, '/v1/mobile/admin/production-maps/rezka-astatka', body, null, !!current, 'rezka_astatka_report_failed', current));
   const report = object(payload?.report);
   if (!report || !str(report.report_id).trim() || report.order_id !== order || report.apparatus !== apparatus)
     throw new WorkerControlException('rezka_astatka_invalid_response', 'Rezka astatka javobi noto‘g‘ri');
@@ -55,17 +55,19 @@ export async function adminRezkaAstatkaReport(session: Session, input: RezkaAsta
 }
 
 /** @v2 adminRezkaAstatkaSnapshot */
-export async function adminRezkaAstatkaSnapshot(session: Session, input: { apparatus: string; order_id: string; request_id?: string }) {
+export async function adminRezkaAstatkaSnapshot(session: Session, input: { apparatus: string; order_id: string; request_id?: string }, current?: () => boolean) {
   const apparatus = input.apparatus.trim(), order = input.order_id.trim(), request = (input.request_id ?? '').trim();
   if (!isCanonicalApparatusId(apparatus) || !order) throw new WorkerControlException('progress_input_invalid', '');
   const query = new URLSearchParams({ apparatus, order_id: order });
   if (request) query.set('request_id', request);
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/rezka-astatka?${query}`);
+  const guard = () => { if (current && !current()) throw new Error('Session scope changed'); };
+  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/rezka-astatka?${query}`, {}, guard);
+  guard();
   if (response.status !== 200) {
     let data: unknown; try { data = await response.json(); } catch { data = null; }
     throw productionMapResponseError(response.status, data, 'rezka_astatka_report_failed');
   }
-  const payload = object(await response.json()); if (!payload) throw new TypeError('Invalid astatka snapshot');
+  const payload = object(await response.json()); guard(); if (!payload) throw new TypeError('Invalid astatka snapshot');
   const result = object(payload.request_result), rawReport = object(result?.report);
   const sessionId = str(payload.session_id).trim(), stageId = str(payload.stage_node_id).trim();
   if (!rawReport && (!sessionId || !stageId)) throw new WorkerControlException('rezka_astatka_invalid_response', '');
