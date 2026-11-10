@@ -2,15 +2,16 @@ import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { validOrderControl, type QueueCursor } from './workerOrderLogic';
 import { sessionReadScope } from './sessionReadScope';
-import { adminRecloseReactivatedWork, adminRePauseResumedWork, adminTemporarilyPauseWork,
-  reactivationRecloseControl, resumePauseControl, temporaryPauseControl, type AdminWorkReactivationTarget } from './workerControlsApi';
+import { adminCancelStartedWork, adminRecloseReactivatedWork, adminRePauseResumedWork, adminTemporarilyPauseWork,
+  cancelStartControl, reactivationRecloseControl, resumePauseControl, temporaryPauseControl, type AdminWorkReactivationTarget } from './workerControlsApi';
+import { apparatusUsesLaminationWorkflow } from './apparatusApi';
 import { adminPrintPreflight } from './workerPrintPreflight';
 import { adminOrderScanBootstrap } from './workerScanBootstrap';
 import { legacyWorkerScanControl } from './workerLegacyScan';
 
 type Obj = Record<string, any>;
-export type WorkerMenuAction = 'temporary_pause' | 're_pause' | 'reclose' | 'astatka' | 'finish' | 'reopen';
-export type WorkerMenu = { kind: 'none' | 'bosma' | 'astatka' | 'reopen'; actions: WorkerMenuAction[]; control: Obj; readScope: string };
+export type WorkerMenuAction = 'temporary_pause' | 'cancel_start' | 're_pause' | 'reclose' | 'astatka' | 'finish' | 'reopen';
+export type WorkerMenu = { kind: 'none' | 'bosma' | 'astatka' | 'reopen'; actions: WorkerMenuAction[]; control: Obj; readScope: string; operation: string };
 export type ReactivationTarget = AdminWorkReactivationTarget;
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
@@ -35,10 +36,10 @@ export async function readWorkerActionControl(session: Session, apparatus: strin
   return data;
 }
 
-export function workerLongPressMenu(data: Obj, session: Session, apparatus: string, orderId: string, cursor: QueueCursor | null): WorkerMenu {
+export function workerLongPressMenu(data: Obj, session: Session, apparatus: string, orderId: string, cursor: QueueCursor | null, operation = 'print'): WorkerMenu {
   const control = data?.control_state?.control ?? {};
   const readScope = sessionReadScope(session);
-  const none: WorkerMenu = { kind: 'none', actions: [], control, readScope };
+  const none: WorkerMenu = { kind: 'none', actions: [], control, readScope, operation };
   if (!cursor || !session.assigned_apparatus.includes(apparatus) || !validOrderControl(data, apparatus, orderId, cursor) ||
       data.control_state.order_control !== 'active' || ['frozen', 'freeze_requested'].includes(control.stage_control_state)) return none;
   const role = text(session.profile.role), ref = text(session.profile.ref);
@@ -47,7 +48,7 @@ export function workerLongPressMenu(data: Obj, session: Session, apparatus: stri
   if (!orderId.startsWith('training-') && control.state === 'print_preflight' && hold?.status === 'passed' &&
       hold.order_id === orderId && hold.apparatus === apparatus &&
       ['admin.access', 'production.map.manage', 'apparatus.queue.manage'].some(capability => session.capabilities.includes(capability))) {
-    return { kind: 'reopen', actions: ['reopen'], control, readScope };
+    return { kind: 'reopen', actions: ['reopen'], control, readScope, operation };
   }
   const ownedWorker = role === 'aparatchi' && !!ref && !orderId.startsWith('training-');
   const temporary = temporaryPauseControl(control.temporary_pause);
@@ -60,27 +61,38 @@ export function workerLongPressMenu(data: Obj, session: Session, apparatus: stri
   const canReclose = ownedWorker && control.state === 'paused' && reclose?.worker_role === 'aparatchi' && reclose.worker_ref === ref &&
     reclose.stage_node_id === control.stage_node_id && !!text(reclose.stage_node_id) && text(reclose.stage_node_id).length <= 512 &&
     !!text(reclose.session_id) && text(reclose.session_id).length <= 4096 && typeof reclose.token === 'string' && /^[a-f0-9]{64}$/.test(reclose.token);
-  if (control.stage_work?.astatka_available === true && !canTemporary && !canRePause && !canReclose) {
-    return { kind: 'astatka', actions: ['astatka'], control, readScope };
+  // @v2 _AdminProductionMapOrdersScreenState._workerCancelStartControl
+  const cancel = cancelStartControl(control.cancel_start);
+  const canCancel = (apparatusUsesLaminationWorkflow(operation) || operation === 'cut') &&
+    ['aparatchi', 'rezka_master'].includes(role) && !!ref && !orderId.startsWith('training-') &&
+    session.capabilities.includes('apparatus.queue.manage') && control.state === 'in_progress' && cancel?.worker_ref === ref;
+  if (control.stage_work?.astatka_available === true && !canTemporary && !canRePause && !canReclose && !canCancel) {
+    return { kind: 'astatka', actions: ['astatka'], control, readScope, operation };
   }
   if (!['in_progress', 'paused', 'completed'].includes(control.state)) return none;
   const actions: WorkerMenuAction[] = [];
+  if (canCancel) actions.push('cancel_start');
   if (canTemporary) actions.push('temporary_pause');
   if (canRePause) actions.push('re_pause');
   if (canReclose) actions.push('reclose');
   actions.push('astatka');
   if (allowed.includes('complete') || canReclose) actions.push('finish');
-  return { kind: 'bosma', actions, control, readScope };
+  return { kind: 'bosma', actions, control, readScope, operation };
 }
 
 export async function runWorkerMenuAction(session: Session, apparatus: string, orderId: string, action: WorkerMenuAction, previous: WorkerMenu, getCursor: () => QueueCursor | null) {
   if (previous.readScope !== sessionReadScope(session)) throw new Error('Buyurtma holati o‘zgardi. Qayta urining.');
   const current = await readWorkerActionControl(session, apparatus, orderId, getCursor);
   if (previous.readScope !== sessionReadScope(session)) throw new Error('Buyurtma holati o‘zgardi. Qayta urining.');
-  const menu = workerLongPressMenu(current, session, apparatus, orderId, getCursor());
+  const menu = workerLongPressMenu(current, session, apparatus, orderId, getCursor(), previous.operation);
   if (!menu.actions.includes(action)) throw new Error('Buyurtma holati o‘zgardi. Qayta urining.');
   const old = previous.control, next = menu.control;
-  if (action === 'temporary_pause') {
+  if (action === 'cancel_start') {
+    const before = cancelStartControl(old.cancel_start), after = cancelStartControl(next.cancel_start);
+    if (!before || !after || before.token !== after.token || before.session_id !== after.session_id ||
+        before.worker_ref !== after.worker_ref || before.previous_state !== after.previous_state) throw new Error('Buyurtma holati o‘zgardi. Qayta urining.');
+    return adminCancelStartedWork(session, apparatus, orderId, after);
+  } else if (action === 'temporary_pause') {
     if (old.temporary_pause?.session_id !== next.temporary_pause?.session_id || old.temporary_pause?.token !== next.temporary_pause?.token) throw new Error('Buyurtma holati o‘zgardi. Qayta urining.');
     const control = temporaryPauseControl(next.temporary_pause);
     if (!control) throw new Error('Buyurtma holati o‘zgardi. Qayta urining.');

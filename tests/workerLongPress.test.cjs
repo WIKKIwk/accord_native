@@ -129,3 +129,53 @@ test('completed work can reopen only an exact, current server target', () => {
   detail.maps[0].map.nodes[0].apparatus_id = 'other';
   assert.equal(reactivationTarget({ available: true, target }, detail, 'apparatus:default:p', 'o', cursor).reason, 'stale_target');
 });
+
+// @v2-test test/cancel_start_api_test.dart
+test('undo start is limited to assigned laminate/glue/cut apparatus, current owner and authoritative control', () => {
+  const data = bootstrap();
+  data.control_state.control.cancel_start = { session_id: 'started', token, worker_ref: 'worker', previous_state: 'pending' };
+  const get = (account = session, value = data, operation = 'laminate', order = 'o', current = cursor) =>
+    workerLongPressMenu(value, account, 'apparatus:default:p', order, current, operation);
+  for (const operation of ['laminate', 'glue', 'cut']) assert.equal(get(session, data, operation).actions.includes('cancel_start'), true);
+  for (const operation of ['print', 'package', '']) assert.equal(get(session, data, operation).actions.includes('cancel_start'), false);
+  for (const account of [{ ...session, assigned_apparatus: [] }, { ...session, capabilities: [] },
+    { ...session, profile: { role: 'admin', ref: 'worker' } }, { ...session, profile: { role: 'aparatchi', ref: 'other' } }])
+    assert.equal(get(account).actions.includes('cancel_start'), false);
+  assert.equal(get(session, data, 'laminate', 'training-o').actions.includes('cancel_start'), false);
+  assert.equal(get(session, data, 'laminate', 'o', { epoch: 'e', rev: 4 }).actions.includes('cancel_start'), false);
+  for (const patch of [{ state: 'paused' }, { cancel_start: { session_id: 'started', token: 'invalid', worker_ref: 'worker', previous_state: 'pending' } }]) {
+    const invalid = structuredClone(data); Object.assign(invalid.control_state.control, patch);
+    assert.equal(get(session, invalid).actions.includes('cancel_start'), false);
+  }
+});
+
+test('undo start revalidates the token and sends one exact cancel-start command', async () => {
+  const data = bootstrap();
+  data.control_state.control.cancel_start = { session_id: 'started', token, worker_ref: 'worker', previous_state: 'completed' };
+  const previous = workerLongPressMenu(data, session, 'apparatus:default:p', 'o', cursor, 'cut');
+  responseControl = structuredClone(data); requests = [];
+  await runWorkerMenuAction(session, 'apparatus:default:p', 'o', 'cancel_start', previous, () => cursor);
+  assert.equal(requests.filter(item => item.body).length, 1);
+  assert.deepEqual(requests[1].body, { apparatus: 'apparatus:default:p', order_id: 'o', session_id: 'started', token });
+  assert.match(requests[1].url, /cancel-start$/);
+  for (const patch of [{ token: 'b'.repeat(64) }, { session_id: 'replacement' }, { worker_ref: 'other' }, { previous_state: 'pending' }]) {
+    responseControl = structuredClone(data); Object.assign(responseControl.control_state.control.cancel_start, patch); requests = [];
+    await assert.rejects(runWorkerMenuAction(session, 'apparatus:default:p', 'o', 'cancel_start', previous, () => cursor));
+    assert.equal(requests.filter(item => item.body).length, 0);
+  }
+});
+
+test('native menu requires confirmation before undo and reports an uncertain response without retrying', async () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../src/components/WorkerLongPressActions.tsx'), 'utf8');
+  const ast = ts.createSourceFile('menu.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let declaration; const visit = node => { if (ts.isFunctionDeclaration(node) && node.name?.text === 'choose') declaration = node; ts.forEachChild(node, visit); }; visit(ast);
+  const compiled = ts.transpileModule(`const choose = ${declaration.getText(ast)}; return choose;`, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  let choice, calls = 0, fails = false;
+  const choose = new Function('menu', 'pick', 'p', 'runWorkerMenuAction', 'session', 'apparatusId', 'order', 'labels', compiled)(
+    { actions: ['cancel_start'] }, item => { choice = item; }, key => key,
+    async () => { calls++; if (fails) throw new Error('network'); }, session, 'apparatus:default:p', { id: 'o' }, {});
+  choose('cancel_start'); assert.equal(calls, 0);
+  assert.deepEqual(choice.confirmation, { title: 'worker.cancel_start.title', message: 'worker.cancel_start.message', confirmLabel: 'worker.cancel_start.confirm', cancelLabel: 'worker.cancel_start.back' });
+  assert.equal(await choice.run(() => cursor), 'worker.cancel_start.success'); assert.equal(calls, 1);
+  fails = true; assert.equal(await choice.run(() => cursor), 'worker.cancel_start.failed'); assert.equal(calls, 2);
+});

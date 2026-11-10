@@ -39,3 +39,8 @@ GoDEX and deferred test mode remain excluded by the port decisions. No backend c
 - On iOS dismiss the report modal and await its actual dismissal before presenting the native printer sheet. Do not introduce a timer to hide presentation races.
 - A server `completion_request` acknowledgement displays the pending-request notice and preserves the returned-paint draft; it is not a completed production report.
 - Real printer delivery remains unverified until tested on hardware.
+
+## Cancel started work
+
+- Show undo-start for an assigned laminate/glue/cut apparatus only with synchronized active in-progress control, queue-manage permission, operator role, own worker reference and a valid server cancel token. Training orders are excluded.
+- Ask the V2 localized native confirmation before sending anything. Re-read control and compare session ID, token, worker and previous state immediately before POST. A lost or rejected response triggers authoritative queue refresh without an automatic retry or invented rollback.

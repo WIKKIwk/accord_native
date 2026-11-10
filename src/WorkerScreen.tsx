@@ -260,6 +260,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (Platform.OS === 'android') {
       nativeActions.current = target;
       actionsRoute.open(<WorkerLongPressActions session={session} apparatusId={apparatusId}
+        operation={queue?.machines.find(machine => machine.id === apparatusId)?.operation ?? ''}
         apparatusName={queue?.machines.find(machine => machine.id === apparatusId)?.name ?? apparatusId}
         order={order} completed={isCompleted} getCursor={getActionCursor}
         onChoose={chooseOrderAction} />,
@@ -371,7 +372,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       </WorkerOrderSheet> : null}
       {Platform.OS !== 'android' && <WorkerWipHistorySheet ref={historySheet} session={session} onDismiss={() => { preflightCheck.current++; }} />}
       {actionOrder ? <WorkerOrderSheet dismissible compact onClose={closeOrderActions}>
-        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} />
+        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} />
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
       {nativeNavigation && scannerOpen && <Modal visible presentationStyle="fullScreen" animationType="slide" onRequestClose={() => setScannerOpen(false)}>{scanner}</Modal>}

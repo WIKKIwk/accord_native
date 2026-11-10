@@ -12,16 +12,18 @@ import { WorkerAlert } from './WorkerAlert';
 import type { WorkerAlertData } from './workerDialogTypes';
 import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerSheetButton, type WorkerSheetIcon } from './WorkerSheetButton';
+import { useWorkerOrderText } from './useWorkerOrderText';
 
 export type WorkerActionChoice = 'astatka' | 'complete' | {
   run: (readCursor: () => QueueCursor | null) => Promise<string>;
   confirmation?: Omit<WorkerAlertData, 'onConfirm'>;
 };
-type Props = { session: Session; apparatusId: string; apparatusName: string; order: QueueOrder; completed: boolean; getCursor: () => QueueCursor | null; onChoose: (action: WorkerActionChoice) => void };
+type Props = { session: Session; apparatusId: string; apparatusName: string; operation: string; order: QueueOrder; completed: boolean; getCursor: () => QueueCursor | null; onChoose: (action: WorkerActionChoice) => void };
 type Reactivation = { target: ReactivationTarget | null; reason: string; stage: string };
-const labels: Record<WorkerMenuAction, string> = { temporary_pause: 'Buyurtmani yechib turish', re_pause: 'Qayta pauza qilish', reclose: 'Qayta yopish', astatka: 'Astatka hisobotini topshirish', finish: 'Ishimni tugatish', reopen: 'Rang chiqarilyapti holatiga qaytarish' };
+const labels: Record<WorkerMenuAction, string> = { cancel_start: '', temporary_pause: 'Buyurtmani yechib turish', re_pause: 'Qayta pauza qilish', reclose: 'Qayta yopish', astatka: 'Astatka hisobotini topshirish', finish: 'Ishimni tugatish', reopen: 'Rang chiqarilyapti holatiga qaytarish' };
 const icons: Record<WorkerMenuAction, WorkerSheetIcon> = {
   temporary_pause: { android: 'pause_circle', ios: 'pause.circle' }, re_pause: { android: 'pause', ios: 'pause' },
+  cancel_start: { android: 'undo', ios: 'arrow.uturn.backward' },
   reclose: { android: 'lock', ios: 'lock' }, astatka: { android: 'assignment', ios: 'doc.text' },
   finish: { android: 'logout', ios: 'rectangle.portrait.and.arrow.right' }, reopen: { android: 'colorize', ios: 'eyedropper' },
 };
@@ -36,8 +38,9 @@ const denial: Record<string, string> = {
   unavailable: 'Qayta faollashtirish hozir mumkin emas.',
 };
 
-export function WorkerLongPressActions({ session, apparatusId, apparatusName, order, completed, getCursor, onChoose }: Props) {
+export function WorkerLongPressActions({ session, apparatusId, apparatusName, operation, order, completed, getCursor, onChoose }: Props) {
   const colors = useWorkerColors();
+  const { p } = useWorkerOrderText();
   const close = useContext(WorkerSheetCloseContext);
   const [loading, setLoading] = useState(true);
   const [menu, setMenu] = useState<WorkerMenu | null>(null);
@@ -64,7 +67,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
         } else {
           const data = await readWorkerActionControl(session, apparatusId, order.id, getCursor);
           if (!current || !activeSessionToken(session)) return;
-          const result = workerLongPressMenu(data, session, apparatusId, order.id, getCursor());
+          const result = workerLongPressMenu(data, session, apparatusId, order.id, getCursor(), operation);
           if (result.kind === 'none') { close?.(); return; }
           if (result.kind === 'astatka') { onChoose('astatka'); close?.(); return; }
           setMenu(result);
@@ -73,7 +76,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
       finally { if (current) setLoading(false); }
     })();
     return () => { current = false; };
-  }, [completed, session, apparatusId, order.id, getCursor, loadReactivation, close, onChoose]);
+  }, [completed, session, apparatusId, order.id, operation, getCursor, loadReactivation, close, onChoose]);
 
   function pick(choice: WorkerActionChoice) {
     if (chosen.current || !activeSessionToken(session)) return;
@@ -89,8 +92,14 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
       return;
     }
     pick({
-      confirmation: action === 'reopen' ? { title: labels.reopen, message: 'Rostdan ham rang chiqarilyapti holatiga qaytarmoqchimisiz?', confirmLabel: 'Ruxsat' } : undefined,
+      confirmation: action === 'cancel_start' ? { title: p('worker.cancel_start.title'), message: p('worker.cancel_start.message'),
+        confirmLabel: p('worker.cancel_start.confirm'), cancelLabel: p('worker.cancel_start.back') }
+        : action === 'reopen' ? { title: labels.reopen, message: 'Rostdan ham rang chiqarilyapti holatiga qaytarmoqchimisiz?', confirmLabel: 'Ruxsat' } : undefined,
       run: async readCursor => {
+        if (action === 'cancel_start') {
+          try { await runWorkerMenuAction(session, apparatusId, order.id, action, menu, readCursor); return p('worker.cancel_start.success'); }
+          catch { return p('worker.cancel_start.failed'); }
+        }
         await runWorkerMenuAction(session, apparatusId, order.id, action, menu, readCursor);
         if (action === 'temporary_pause') return 'Buyurtma vaqtincha yechildi. Keyin shu rulonni davom ettirishingiz mumkin.';
         if (action === 're_pause') return 'Ish qayta pauzaga o‘tkazildi.';
@@ -118,7 +127,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
     });
   }
   const actionButton = (action: WorkerMenuAction, variant: 'filled' | 'outlined' = 'outlined') =>
-    <WorkerSheetButton key={action} label={labels[action]} variant={variant} icon={icons[action]} onPress={() => choose(action)} />;
+    <WorkerSheetButton key={action} label={action === 'cancel_start' ? p('worker.cancel_start.action') : labels[action]} variant={variant} icon={icons[action]} onPress={() => choose(action)} />;
 
   return <View style={styles.content}>
     {Platform.OS === 'ios' && <View style={styles.header}>
@@ -141,7 +150,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, or
     {menu?.kind === 'bosma' && <>
       <Text style={[styles.title, { color: colors.text }]}>Astatka hisobotini topshirish</Text>
       <Text style={[styles.body, { color: colors.muted }]}>Bu amal faqat buyurtma bo‘yicha qoldiqni qayd etadi. Ish jarayoni to‘xtatilmaydi yoki yakunlanmaydi, navbat va WIP holati o‘zgarishsiz qoladi.</Text>
-      {menu.actions.filter(action => ['temporary_pause', 're_pause', 'reclose'].includes(action)).map(action => actionButton(action))}
+      {menu.actions.filter(action => ['cancel_start', 'temporary_pause', 're_pause', 'reclose'].includes(action)).map(action => actionButton(action))}
       {actionButton('astatka')}
       {menu.actions.includes('finish') && <><Text style={[styles.body, { color: colors.muted }]}>Bu amal buyurtmaning bosma uskunasidagi ish jarayonini yakunlaydi.</Text>{actionButton('finish', 'filled')}</>}
     </>}
