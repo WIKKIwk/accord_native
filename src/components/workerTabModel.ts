@@ -18,6 +18,7 @@ export type WorkerTabsProps = {
   onSearchChange?: (value: string) => void;
   onMenu?: () => void;
   onProfile?: () => void;
+  toolbarActions?: ReactNode;
   children: (id: string, pagerGesture?: PanGesture, machinePicker?: ReactNode) => ReactNode;
 };
 

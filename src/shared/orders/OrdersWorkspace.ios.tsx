@@ -5,7 +5,7 @@ import { ActivityIndicator, PlatformColor, StyleSheet, View } from 'react-native
 import { WorkerProfileButton } from '../../components/WorkerProfileButton.ios';
 import { visibleOrdersTabs, type OrdersWorkspaceProps } from './ordersWorkspaceTypes';
 
-export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, loading, search, onSearchChange, onMenu, onBack, onProfile, children, title = 'Buyurtmalar', searchPlaceholder = 'Buyurtmani izlash' }: OrdersWorkspaceProps & { onBack?: () => void }) {
+export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, loading, search, onSearchChange, onMenu, onBack, onProfile, toolbarActions, children, title = 'Buyurtmalar', searchPlaceholder = 'Buyurtmani izlash' }: OrdersWorkspaceProps & { onBack?: () => void }) {
   const query = useNativeState(search ?? '');
   const tabs = visibleOrdersTabs(tabsInput);
   const selectedTab = tabs.find(tab => tab.id === selected) ?? tabs[0];
@@ -37,6 +37,7 @@ export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, 
               {onBack && onMenu ? <ToolbarItem placement="topBarLeading">
                 <Button systemImage="line.3.horizontal" label="Bo‘limlar" modifiers={[labelStyle('iconOnly')]} onPress={onMenu} />
               </ToolbarItem> : null}
+              {toolbarActions ? <ToolbarItem placement="topBarTrailing">{toolbarActions}</ToolbarItem> : null}
               <ToolbarItem placement="topBarTrailing">
                 <WorkerProfileButton key={session.imageCacheScope} session={session} onPress={onProfile} />
               </ToolbarItem>

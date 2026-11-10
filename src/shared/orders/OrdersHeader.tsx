@@ -11,11 +11,12 @@ type Props = {
   onProfile?: () => void;
   showProfile?: boolean;
   trailing?: ReactNode;
+  actions?: ReactNode;
   onSearchFocus?: () => void; onSearchBlur?: () => void;
 } & ({ onMenu: () => void; onBack?: never } | { onMenu?: never; onBack: () => void });
 
 /** The worker queue uses the same menu and search layout as V2. */
-export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, trailing, onSearchFocus, onSearchBlur, searchPlaceholder = 'Buyurtmani izlash' }: Props) {
+export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, trailing, actions, onSearchFocus, onSearchBlur, searchPlaceholder = 'Buyurtmani izlash' }: Props) {
   const colors = useWorkerColors();
   const nativeSearch = useNativeState(search);
   useEffect(() => {
@@ -51,6 +52,7 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile
           </Pressable>
         )}
       </View>
+      {actions}
       {trailing ?? (showProfile && onProfile ? <RoleHeaderButton icon="profile" label="Profil" onPress={onProfile} tintColor={colors.icon} /> : null)}
     </View>
   );

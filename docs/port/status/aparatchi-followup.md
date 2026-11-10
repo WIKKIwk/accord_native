@@ -24,14 +24,14 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | Android report Back-dismiss block honors the existing preventDismiss contract | `_ProgressQtyDialogState.build` (`PopScope(canPop: false)`) | WorkerFormDialog.android and fallback | Native Compose dialog property/event tests; explicit Cancel remains available |
 | Work, long-press and scan entry follows assignment for all operations; completed tab never silently falls back to another apparatus | `_isAssignedWatchApparatus`, `_openWorkerQrScanner` | WorkerApi, WorkerScreen | Assignment / selected-tab tests; mutations still require authoritative server controls |
 | Cut multi-frame output: immutable saved slots, serial save/print queue, issue/peremotka, autofill/deviation approval, scoped report fallback and final print-only retries | `_ProgressQtyDialogState`, `_RezkaFramePrint`, `_RezkaDeviationWarning` | WorkerRezkaOutputWorkflow/Model, WorkerRezkaOutputReport, native fields/print controls and report modal event handoff | Focused domain, API, native event-harness tests; exact wire guards, lost responses, competing writers and account changes covered |
+| Worker active-Paddon selector: assigned selected cut tab only, server-owned choice, scoped selectable rows, None, live/focus/resume refresh and verified save | `ActiveRezkaPaddonAction`, `_workerPaddonApparatus` | WorkerActivePaddon/controller/hook, native SwiftUI toolbar/sheet and Compose icon button/sheet | Controller, native event harness, hook lifecycle, 401 retry guards and existing V2 contract replay tests |
 
 ## Open items
 
 | Flow | Confirmed difference / next step |
 |---|---|
 | General QR | Band apparatdagi order-switch, joriy ishni report/temporary-pause qilib keyin QRni qayta uzatish oqimi qolgan |
-| Cut | Multi-frame output ulandi. Worker active-Paddon picker hali ulanmagan; server tanlangan active Paddon talab qilsa, ishlab chiqarish shu xato bilan bloklanadi. V2’dan shu tanlovni ham port qilish kerak. Cut quick settings V2’da `rezka_master` roliga cheklangan (`_canEditRezkaPrintSide`), shuning uchun aparatchi uchun gap emas |
-| Paddons | Worker navigation placeholder va active selector. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak; master read-only controllerining ruxsatini ko‘r-ko‘rona kengaytirmaslik kerak |
+| Paddons | Active selector ulandi. Full worker Paddon management/navigation va header peremotka queue hali ochiq. Paddon faqat biriktirilgan cut apparatus uchun bo‘lishi kerak; master read-only controllerining ruxsatini ko‘r-ko‘rona kengaytirmaslik kerak |
 
 ## Verification and limits
 
@@ -59,3 +59,15 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 | `_rezkaFrameSection`, `_RezkaFramePrint`, `progress_qty.dart:1211`, `rezka_frame_print.dart:190,465` | Native report fields/print button and serial queue | compared | compared | Native controls replace Flutter controls. Saved-slot, held-roll, issue, uncertainty, retry and duplicate-label behavior checked. Physical printing/gesture precedence unverified. |
 | `_confirmRezkaOutputDeviations`, `_confirmFreshRezkaFrame`, `rezka_deviation.dart:155,290` | Shared deviation model, native warning panel and focus/scroll target | compared | compared | Exact measurement approvals and refreshed-reference warnings tested; native warning dismissal precedes correction focus. Device keyboard behavior unverified. |
 | `_cancelProgressQtyDialog`, `progress_qty.dart:383` | Queue discard panel | compared | compared | Paused queue asks before closing; cancel preserves the queue. iOS transitions await native onShow/onDismiss and do not briefly re-present the main modal on discard. |
+
+## Surface audit — active Paddon
+
+| V2 surface and location | V4 | iOS | Android | What differs / limits |
+|---|---|---|---|---|
+| `_workerPaddonApparatus`, `admin_production_map_orders_screen_state.dart:947`; multi-apparatus widget tests | WorkerScreen, workerPaddonApparatus, shared optional toolbar/action slots | compared | compared | Only the selected assigned cut tab shows the action; completed and watch-only tabs never fall back to another machine. Existing profile/menu actions stay present. |
+| `ActiveRezkaPaddonAction._choose/build`, `active_rezka_paddon_action.dart:190,305` | WorkerActivePaddon and native platform picker/button | compared | compared | Native 65% sheet, identical production text keys, None before server-ordered rows, roll count/check, loading/error/empty states and dismiss behavior. Locked, peremotka and cross-apparatus rows are excluded. No local selection fallback. |
+| `_refresh/_readSelection/_resetScope`, `active_rezka_paddon_action.dart:90,138,155` | useWorkerActivePaddon and controller | compared | compared | Coalesced focus/foreground/live-revision refresh, owned picker refreshes while open; late scope/account/assignment results and queued old taps cannot send PUT. Same-account 401 refresh stays valid; post-save GET is the selection authority. |
+
+- Active-Paddon checkpoint: **99/99** focused tests; both native typechecks exit 0; lint 0 errors / the existing admin hook warning; ledger check exit 0. Shared `OrdersHeader`, `OrdersWorkspace.ios` and their props receive optional action slots solely to connect the worker's native header; other callers keep their previous defaults. Full worker Paddon CRUD/print and peremotka queue remain open.
+- Active-Paddon full-tree checkpoint: **5420 pass, 11 fail, 12 todo / 5443 total**, log `/tmp/accord-active-paddon-all-tests.log`. The failing case names were compared to the cut checkpoint: no new or resolved failures; all eleven remain the pre-existing Node/native harness imports. Ledger resolves 1119 `@v2` and 104 `@v2-test` tags, role ledger regenerated. Whole-role text gate remains open with the same iOS 280 missing / 102 added and Android 280 missing / 110 added; no exception rows were added.
+- Cut quick settings are restricted to `rezka_master` by V2 `_canEditRezkaPrintSide`; they are not an aparatchi omission. Native rendering and physical taps/gestures still require phone verification. No external writes, hardware printing, simulator or device launch was performed.

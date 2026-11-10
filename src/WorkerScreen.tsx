@@ -34,6 +34,11 @@ import type { WorkerAlertData } from './components/workerDialogTypes';
 import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 import { workerQueueSearch } from './workerQueueWindow';
 import { useWorkerOrderText } from './components/useWorkerOrderText';
+import { workerPaddonApparatus } from './workerActivePaddon';
+import { useWorkerActivePaddon } from './components/useWorkerActivePaddon';
+import { WorkerActivePaddonButton, WorkerActivePaddonPicker } from './components/WorkerActivePaddon';
+import { WorkerPaddonFeedback } from './components/WorkerPaddonFeedback';
+import { OrdersHeader } from './shared/orders/OrdersHeader';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
 type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string };
@@ -61,6 +66,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const [queue, setQueue] = useState<WorkerQueue | null>(null);
   const [machineId, setMachineId] = useState('');
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
+  const [nativeOverlayOpen, setNativeOverlayOpen] = useState(false);
   const historySheet = useRef<WorkerWipHistorySheetHandle>(null);
   const [actionOrder, setActionOrder] = useState<ActionOrder | null>(null);
   const orderRoute = useNativeSheet();
@@ -150,23 +156,26 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (orderRoute.isOpen()) return;
     preflightCheck.current++;
     nativeOrder.current = target;
+    setNativeOverlayOpen(true);
     orderRoute.open(renderOrderRoute(target), { onDismiss: () => {
       nativeOrder.current = null;
+      setNativeOverlayOpen(false);
       preflightCheck.current++;
     } });
   }
   function openHistory(order: CompletedOrder) {
     preflightCheck.current++;
-    if (Platform.OS !== 'android') { historySheet.current?.open(order); return; }
+    if (Platform.OS !== 'android') { setNativeOverlayOpen(true); historySheet.current?.open(order); return; }
     if (workerOrderIsFrozen(queueRef.current?.snapshot, order.id)) return;
+    setNativeOverlayOpen(true);
     const apparatusNames = Object.fromEntries(queueRef.current?.machines.map(machine => [machine.id, machine.name]) ?? []);
     if (order.issueNote) {
       historyRoute.open(<WorkerOrderFreezeDetails order={order} apparatusName={apparatusNames[order.apparatusId] ?? ''} onClose={historyRoute.close} />,
-        { dismissible: true, compact: true, onDismiss: () => { preflightCheck.current++; } });
+        { dismissible: true, compact: true, onDismiss: () => { setNativeOverlayOpen(false); preflightCheck.current++; } });
       return;
     }
     historyRoute.open(<WorkerWipHistory session={session} order={order} apparatusNames={apparatusNames} onClose={historyRoute.close} />,
-      { dismissible: true, onDismiss: () => { preflightCheck.current++; } });
+      { dismissible: true, onDismiss: () => { setNativeOverlayOpen(false); preflightCheck.current++; } });
   }
   const scopedCursor = useCallback((expected: ActionScope | null) => {
     const snapshot = queueRef.current?.snapshot;
@@ -199,6 +208,11 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const completed = queueLimit === 0 ? completedMatches : completedMatches.slice(0, queueLimit);
   const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
   const scannerMachineId = selectedMachine && canWorkMachine(selectedMachine.id) ? selectedMachine.id : '';
+  const paddonMachine = workerPaddonApparatus(queue?.machines ?? [], machineId, session.assigned_apparatus);
+  const activePaddon = useWorkerActivePaddon(session, paddonMachine?.id ?? '',
+    section === 'home' && loadedScope === windowScope && !drawerOpen && !scannerOpen && !activeOrder && !actionOrder && !nativeOverlayOpen,
+    JSON.stringify([queue?.snapshot.epoch, queue?.snapshot.rev, queue?.snapshot.scope]));
+  useEffect(() => { preflightCheck.current++; }, [activePaddon.state.busy]);
   function finishQrScan(apparatusId: string, orderId: string, qr: string) {
     const target: ActiveOrder = { apparatusId, orderId, initialScanQr: qr };
     setMachineId(apparatusId);
@@ -281,6 +295,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     const target = { apparatusId, order, completed: isCompleted };
     if (Platform.OS === 'android') {
       nativeActions.current = target;
+      setNativeOverlayOpen(true);
       actionsRoute.open(<WorkerLongPressActions session={session} apparatusId={apparatusId}
         operation={queue?.machines.find(machine => machine.id === apparatusId)?.operation ?? ''}
         apparatusName={queue?.machines.find(machine => machine.id === apparatusId)?.name ?? apparatusId}
@@ -294,6 +309,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     const action = pendingAction.current;
     const expected = actionScope.current;
     nativeActions.current = null;
+    setNativeOverlayOpen(false);
     actionScope.current = null;
     pendingAction.current = null;
     if (!screenMounted.current) return;
@@ -332,14 +348,17 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     const height = event.nativeEvent.layout.height;
     if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
   }}>
-    <WorkerHeader search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')} />
+    {Platform.OS === 'android' ? <OrdersHeader search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
+      actions={paddonMachine && section === 'home' ? <WorkerActivePaddonButton {...activePaddon} /> : undefined} />
+      : <WorkerHeader search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')} />}
   </View>;
   const content = (
     <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
       {!nativeNavigation && section !== 'daily' && section !== 'instructions' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
       {section === 'instructions' ? <WorkerWorkInstructions session={session} onBack={() => setSection('home')} /> : section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => setSection('daily')} /> : section === 'daily'
         ? <DailyWorkScreen session={session} onOpenDrawer={openDrawer} onBack={() => setSection('home')} /> : <>
-      <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}>
+      <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
+        toolbarActions={paddonMachine ? <WorkerActivePaddonButton {...activePaddon} /> : undefined}>
         {(tabId, pagerGesture, machinePicker) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const canWork = canWorkMachine(tabId);
@@ -392,11 +411,13 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       {activeOrder ? <WorkerOrderSheet onClose={() => setActiveOrder(null)}>
         {renderOrderRoute(activeOrder, () => setActiveOrder(null))}
       </WorkerOrderSheet> : null}
-      {Platform.OS !== 'android' && <WorkerWipHistorySheet ref={historySheet} session={session} onDismiss={() => { preflightCheck.current++; }} />}
+      {Platform.OS !== 'android' && <WorkerWipHistorySheet ref={historySheet} session={session} onDismiss={() => { setNativeOverlayOpen(false); preflightCheck.current++; }} />}
       {actionOrder ? <WorkerOrderSheet dismissible compact onClose={closeOrderActions}>
         <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} />
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
+      <WorkerActivePaddonPicker {...activePaddon} />
+      <WorkerPaddonFeedback message={activePaddon.notice} />
       {nativeNavigation && <Modal visible={scannerOpen} presentationStyle="fullScreen" animationType="slide" onDismiss={scannerDismissed} onRequestClose={() => setScannerOpen(false)}>{scanner}</Modal>}
     </SafeAreaView>
   );

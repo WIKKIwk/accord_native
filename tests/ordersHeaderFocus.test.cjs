@@ -80,4 +80,13 @@ for (const platform of ['ios', 'android']) {
     nodes(tree, node => node.type === 'ComposeButton')[0].props.onPress();
     assert.deepEqual(calls, ['next', 'compose']);
   });
+
+  test(`${platform}: optional worker actions precede the existing profile without replacing it`, () => {
+    const OrdersHeader = loadHeader(platform), calls = [];
+    const tree = OrdersHeader({ search: '', onSearchChange() {}, onMenu() {}, onProfile: () => calls.push('profile'),
+      actions: jsx.jsx('PaddonAction', { onPress: () => calls.push('paddon') }) });
+    const actions = tree.props.children.filter(node => node?.type === 'PaddonAction' || node?.type === 'RoleHeaderButton');
+    assert.deepEqual(actions.map(node => node.type === 'PaddonAction' ? 'paddon' : node.props.icon), ['menu', 'paddon', 'profile']);
+    actions[1].props.onPress(); actions[2].props.onPress(); assert.deepEqual(calls, ['paddon', 'profile']);
+  });
 }
