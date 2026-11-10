@@ -64,11 +64,17 @@ test('the current account profile refreshes stale login assignments for the queu
   assert.deepEqual(rejected.assignedIds, ['press']);
 });
 
-test('watching another machine never enables print work actions or scanning', () => {
+// @v2-test test/admin_production_map_test_screen_test.dart
+test('work and scan access follows assignments for every apparatus operation', () => {
   const machines = workerMachinesFromSnapshot(catalog, { worker_show_all_apparatus_tabs: true }, assigned);
   assert.equal(canWorkOnApparatus(machines.find(item => item.id === 'press'), assigned), true);
   assert.equal(canWorkOnApparatus(machines.find(item => item.id === 'press2'), assigned), false);
-  assert.equal(canWorkOnApparatus(machines.find(item => item.id === 'cut'), ['cut']), false);
+  for (const operation of ['print', 'laminate', 'glue', 'cut', 'package', 'other']) {
+    assert.equal(canWorkOnApparatus({ id: 'apparatus', operation }, [' apparatus ']), true, operation);
+    assert.equal(canWorkOnApparatus({ id: 'apparatus', operation }, ['another']), false, operation);
+  }
+  assert.equal(canWorkOnApparatus(machines.find(item => item.id === 'cut'), ['cut']), true);
+  assert.equal(canWorkOnApparatus({ id: '   ', operation: 'print' }, [' ']), false);
   assert.equal(canWorkOnApparatus(undefined, assigned), false);
 });
 

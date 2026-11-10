@@ -50,6 +50,18 @@ test('Android camera handoff passes QR directly to the order', () => {
   h.finishQrScan('apparatus', 'order', 'QR'); assert.equal(opened[0].initialScanQr, 'QR');
 });
 
+test('completed or unassigned tab cannot silently scan into a different apparatus', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../src/WorkerScreen.tsx'), 'utf8');
+  const ast = ts.createSourceFile('WorkerScreen.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let expression;
+  const visit = node => { if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'scannerMachineId') expression = node.initializer.getText(ast); ts.forEachChild(node, visit); };
+  visit(ast); assert.ok(expression);
+  const selected = (selectedMachine, allowed) => new Function('selectedMachine', 'canWorkMachine', 'queue', `return ${expression};`)(selectedMachine, id => allowed.includes(id), { machines: [{ id: 'assigned' }] });
+  assert.equal(selected(undefined, ['assigned']), '');
+  assert.equal(selected({ id: 'foreign' }, ['assigned']), '');
+  assert.equal(selected({ id: 'cut' }, ['cut']), 'cut');
+});
+
 test('camera lookup returns the normalized QR and suppresses stale-account results', async () => {
   let scope = 'first', lookup; const orders = [];
   const scan = functions('components/WorkerQrScanner.tsx', ['scan'], { workerQrPayload, scanLock: { current: false },

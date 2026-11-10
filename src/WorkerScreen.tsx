@@ -33,6 +33,7 @@ import { WorkerAlert } from './components/WorkerAlert';
 import type { WorkerAlertData } from './components/workerDialogTypes';
 import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 import { workerQueueSearch } from './workerQueueWindow';
+import { useWorkerOrderText } from './components/useWorkerOrderText';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
 type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string };
@@ -47,6 +48,7 @@ const statusLabel: Record<string, string> = {
 
 export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer }: Props) {
   const colors = useWorkerColors();
+  const { p } = useWorkerOrderText();
   const headerOffset = useSharedValue(0);
   const headerHeight = useSharedValue(70);
   const [headerSize, setHeaderSize] = useState(70);
@@ -196,7 +198,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const completedMatches = (queue?.completed ?? []).filter(order => !searchScope || [order.code, order.title, order.customer].some(value => value.toLocaleLowerCase().includes(searchScope.toLocaleLowerCase())));
   const completed = queueLimit === 0 ? completedMatches : completedMatches.slice(0, queueLimit);
   const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
-  const scannerMachineId = selectedMachine ? (canWorkMachine(selectedMachine.id) ? selectedMachine.id : '') : queue?.machines.find(machine => canWorkMachine(machine.id))?.id ?? '';
+  const scannerMachineId = selectedMachine && canWorkMachine(selectedMachine.id) ? selectedMachine.id : '';
   function finishQrScan(apparatusId: string, orderId: string, qr: string) {
     const target: ActiveOrder = { apparatusId, orderId, initialScanQr: qr };
     setMachineId(apparatusId);
@@ -229,7 +231,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
   }
   function openScanner() {
-    if (!scannerMachineId) { setAlert({ title: 'QR skanerlash', message: 'Avval o‘zingizga biriktirilgan bosma aparatni tanlang.' }); return; }
+    if (!scannerMachineId) { setAlert({ title: 'QR skanerlash', message: p('worker.qr.select_apparatus') }); return; }
     setScannerOpen(true);
   }
   async function openPreflightConfirmation(apparatusId: string, orderId: string, scope: string) {

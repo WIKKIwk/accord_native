@@ -106,8 +106,10 @@ export async function readWorkerOrderDetail(session: Session, apparatusId: strin
   }
 }
 
+/** @v2 _isAssignedWatchApparatus */
 export function canWorkOnApparatus(machine: Apparatus | undefined, assignedIds: readonly string[]): boolean {
-  return !!machine && machine.operation === 'print' && assignedIds.includes(machine.id);
+  const id = machine?.id.trim();
+  return !!id && assignedIds.some(assigned => assigned.trim() === id);
 }
 
 export function workerOrderIsFrozen(snapshot: RecordValue | undefined, orderId: string): boolean {
