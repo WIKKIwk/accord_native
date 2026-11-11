@@ -52,14 +52,14 @@ test('worker overview retries a stale detail and rejects a changed session scope
   let count = 0;
   const session = { baseUrl: 'https://example.test', profile: { role: 'aparatchi', ref: 'worker' } };
   const workerApi = load('workerApi', { './authorizedFetch': {}, './workerOrderAppearance': load('workerOrderAppearance'),
-    './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerSnapshot': {}, './sessionReadScope': scope, './apparatusApi': {},
+    './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': {}, './sessionReadScope': scope, './apparatusApi': {},
     './workerDetailApi': { workerProductionOrderDetail: async () => ({ epoch: 'e', rev: ++count === 1 ? 2 : 4,
       maps: [{ map: { id: order, nodes: [], edges: [] } }], stage_states: {}, queue_states: {} }) } });
   const detail = await workerApi.readWorkerOrderDetail(session, station, order, { epoch: 'e', rev: 3 }, new AbortController().signal);
   assert.equal(count, 2);
   assert.equal(detail.map.id, order);
   const stale = load('workerApi', { './authorizedFetch': {}, './workerOrderAppearance': load('workerOrderAppearance'),
-    './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerSnapshot': {}, './sessionReadScope': scope, './apparatusApi': {},
+    './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': {}, './sessionReadScope': scope, './apparatusApi': {},
     './workerDetailApi': { workerProductionOrderDetail: async () => { session.profile.ref = 'other'; return { epoch: 'e', rev: 4 }; } } });
   await assert.rejects(stale.readWorkerOrderDetail(session, station, order, { epoch: 'e', rev: 3 }, new AbortController().signal), /Sessiya/);
 });
@@ -105,7 +105,7 @@ test('worker overview shares one five-second deadline across a stale response re
   let count = 0, retrySignal;
   const session = { baseUrl: 'https://example.test', profile: { role: 'aparatchi', ref: 'worker' } };
   const workerApi = load('workerApi', { './authorizedFetch': {}, './workerOrderAppearance': load('workerOrderAppearance'),
-    './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerSnapshot': {}, './sessionReadScope': scope, './apparatusApi': {},
+    './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': {}, './sessionReadScope': scope, './apparatusApi': {},
     './workerDetailApi': { workerProductionOrderDetail: async (_session, _station, _order, signal) => {
       if (++count === 1) return { epoch: 'e', rev: 2 };
       retrySignal = signal;

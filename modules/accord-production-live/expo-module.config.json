@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["AccordProductionLiveModule"] },
+  "android": { "modules": ["expo.modules.accordproductionlive.AccordProductionLiveModule"] }
+}

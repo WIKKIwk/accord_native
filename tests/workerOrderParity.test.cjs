@@ -107,7 +107,7 @@ test('retired control while confirming prevents material mutation', async () => 
 });
 test('worker machine projection retains the direct material assignment permission', () => {
   const { workerMachinesFromSnapshot } = loader({ ...noNetwork, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 },
-    './workerSnapshot': {}, './workerDetailApi': {}, './apparatusApi': {} })('workerApi.ts');
+    './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': {}, './workerDetailApi': {}, './apparatusApi': {} })('workerApi.ts');
   const machines = workerMachinesFromSnapshot([
     { id: 'apparatus:test:print', name: 'Bosma', operation: 'print', worker_material_assignment_allowed: true },
     { id: 'apparatus:test:film', name: 'Laminatsiya', operation: 'laminate', worker_material_assignment_allowed: false },

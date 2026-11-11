@@ -22,7 +22,7 @@ const models = load('workerQueueModels', { './workerControlsApi': controls });
 const decisions = load('productionCompletionApi', { './workerControlsApi': controls, './workerQueueModels': models, './authorizedFetch': {} });
 const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls, './workerQueueModels': models, './productionCompletionApi': decisions });
 const { workerMachinesFromSnapshot, queueFromSnapshot, canWorkOnApparatus, workerOrderDetailFromSnapshot, workerOrderIsFrozen } = load('workerApi', {
-  './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, './workerSnapshot': snapshotDecoder,
+  './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': snapshotDecoder,
   './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {},
 });
 
@@ -43,7 +43,7 @@ test('the current account profile refreshes stale login assignments for the queu
   const api = load('workerApi', {
     './workerOrderAppearance': appearance,
     './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 },
-    './workerSnapshot': snapshotDecoder,
+    './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': snapshotDecoder,
     './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': { adminApparatus: async () => catalog },
     './authorizedFetch': { authorizedFetch: async (_session, url) => ({ ok: true, json: async () =>
       url === '/v1/mobile/profile' ? profile : url.includes('/apparatus?') ? catalog : {

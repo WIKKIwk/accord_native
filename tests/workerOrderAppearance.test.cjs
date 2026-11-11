@@ -22,8 +22,8 @@ const models = load('workerQueueModels', { './workerControlsApi': controls });
 const decisions = load('productionCompletionApi', { './workerControlsApi': controls, './workerQueueModels': models, './authorizedFetch': {} });
 const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls, './workerQueueModels': models, './productionCompletionApi': decisions });
 const { queueFromSnapshot } = load('workerApi', { './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 0 },
-  './authorizedFetch': {}, './workerSnapshot': snapshotDecoder, './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {} });
-const { applyWorkerDelta } = load('workerDelta', { './workerSnapshot': snapshotDecoder });
+  './authorizedFetch': {}, './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': snapshotDecoder, './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {} });
+const { applyWorkerDelta } = load('workerDelta', { './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': snapshotDecoder });
 
 test('queue cards use the selected apparatus and update from live display states', () => {
   const press1 = 'apparatus:default:press1', press2 = 'apparatus:default:press2';

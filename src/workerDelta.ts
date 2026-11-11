@@ -10,7 +10,8 @@ const validInt = (x: unknown): x is number => typeof x === 'number' && Number.is
 export function workerSnapshotCursor(value: unknown): {epoch: string; scope: string; rev: number} | null {
   try {
     const s = object(value);
-    if (s.projection !== 'worker_list_v1' || typeof s.epoch !== 'string' || !s.epoch || typeof s.scope !== 'string' || !s.scope || !validInt(s.rev)) return null;
+    if (typeof s.epoch !== 'string' || !s.epoch || typeof s.scope !== 'string' ||
+        (s.projection === 'worker_list_v1' && !s.scope) || !validInt(s.rev)) return null;
     return {epoch:s.epoch, scope:s.scope, rev:s.rev};
   } catch { return null; }
 }
@@ -75,7 +76,7 @@ const replacements = ['completed_orders','completion_requests','completion_reque
 export function applyWorkerDelta(snapshot: unknown, event: unknown): Obj | null {
   try {
     const s=object(snapshot), e=object(event), cursor=workerSnapshotCursor(s);
-    if (!cursor || e.ok !== true || e.type !== 'state_delta' || e.protocol !== 'state_delta_v2' || e.epoch !== cursor.epoch || e.scope !== cursor.scope || e.base_rev !== cursor.rev || !validInt(e.rev) || e.rev < cursor.rev) throw new Error('cursor mismatch');
+    if (s.projection !== 'worker_list_v1' || !cursor || e.ok !== true || e.type !== 'state_delta' || e.protocol !== 'state_delta_v2' || e.epoch !== cursor.epoch || e.scope !== cursor.scope || e.base_rev !== cursor.rev || !validInt(e.rev) || e.rev < cursor.rev) throw new Error('cursor mismatch');
     const patch=object(e.patch), next:Obj={...s};
     ownKeys(patch,[...maps,...nested,...sequences,...replacements,'queue_policies']);
     for (const key of maps) if (patch[key] != null) next[key] = patchMap(s[key] ?? {},patch[key], value => {

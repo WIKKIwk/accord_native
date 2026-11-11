@@ -7,6 +7,9 @@ import { decodeWorkerListSnapshot } from './workerSnapshot';
 import { workerProductionOrderDetail } from './workerDetailApi';
 import { sessionReadScope } from './sessionReadScope';
 import { adminApparatus } from './apparatusApi';
+import { loadWorkerQueueSnapshot } from './workerQueueReadApi';
+import { workerQueueReadError } from './workerQueueReadError';
+export { loadWorkerQueueSnapshot } from './workerQueueReadApi';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -140,18 +143,34 @@ async function getJson(session: Session, path: string, resource: 'queue' | 'prof
       signal: controller.signal,
     });
     if (!response.ok) {
-      if (response.status === 401) throw new Error('Sessiya tugagan. Qayta kiring.');
-      if (response.status === 403) {
-        if (resource === 'queue' && !session.assigned_apparatus.length) {
-          throw new Error('Hisobingizga aparat biriktirilmagan. Administratordan bosma aparatini biriktirishni so‘rang va qayta kiring.');
-        }
-        throw new Error(resource === 'profile' ? 'Profilni yangilab bo‘lmadi.'
-          : 'Server bu hisobga aparat navbatini ko‘rishga ruxsat bermadi. Hisob ruxsatlari va aparat biriktirilishini tekshiring.');
-      }
-      throw new Error(`Server xatosi (${response.status})`);
+      let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
+      throw workerQueueReadError(response.status, payload, resource);
     }
     return await response.json();
   } finally { clearTimeout(timeout); }
+}
+
+/** @v2 _readOrdersApparatus */
+export async function loadWorkerQueueCatalog(session: Session): Promise<Apparatus[]> {
+  const scope = sessionReadScope(session);
+  const catalog = await adminApparatus(session, { limit: 200 });
+  if (scope !== sessionReadScope(session)) throw new Error('Session changed');
+  return workerApparatusCatalog(catalog);
+}
+
+/** @v2 _refreshCanonicalInitialOnce */
+export async function loadWorkerQueueBaseline(session: Session, search = '', queueLimit: QueueLimit = DEFAULT_QUEUE_LIMIT): Promise<WorkerQueue> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => { timer = setTimeout(() => {
+    const error = new Error('Worker queue initial load timed out'); error.name = 'TimeoutError'; reject(error);
+  }, 10_000); });
+  try {
+    const [snapshot, catalog] = await Promise.race([
+      Promise.all([loadWorkerQueueSnapshot(session, search, queueLimit), loadWorkerQueueCatalog(session)]), deadline,
+    ]);
+    const assignedIds = session.assigned_apparatus, assignedLabels = session.assigned_apparatus_labels;
+    return queueFromSnapshot(workerMachinesFromSnapshot(catalog, snapshot, assignedIds), snapshot, assignedIds, assignedLabels, catalog);
+  } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
 export async function loadWorkerQueue(session: Session, search = '', queueLimit: QueueLimit = DEFAULT_QUEUE_LIMIT): Promise<WorkerQueue> {
@@ -211,7 +230,13 @@ export function workerApparatusCatalog(catalog: unknown[]): Apparatus[] {
 }
 
 export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string, unknown>, assignedIds: readonly string[], assignedLabels: readonly string[] = [], catalog?: Apparatus[]): WorkerQueue {
-  const rows = object(snapshot.worker_list_rows);
+  const rows = snapshot.projection === 'worker_list_v1' || snapshot.worker_list_rows ? object(snapshot.worker_list_rows)
+    : Object.fromEntries((Array.isArray(snapshot.maps) ? snapshot.maps : []).flatMap(raw => {
+      const saved = object(raw), map = object(saved.map), id = string(map.id);
+      return id ? [[id, { id, code: string(map.order_code) || string(map.code), title: string(map.title),
+        customer_name: string(object(snapshot.order_customers)[id]) || string(map.customer_name),
+        image_id: string(map.image_id) || string(map.id) }]] : [];
+    }));
   const visible = object(snapshot.visible_order_ids);
   const sequences = object(snapshot.sequences);
   const states = object(snapshot.worker_display_states);
