@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { subscribeSessionWitness, type Session } from '../auth';
 import { dailyWorkApparatus, type DailyWorkBatch } from '../dailyWork';
@@ -44,7 +45,10 @@ export function useDailyWorkActions(session: Session, model: ReturnType<typeof u
     if (!batch.qr.trim()) setMissingQr(true);
     else {
       const presentationId = qrPresentation.current.open();
-      if (presentationId !== null) setQrSelection({ batch, presentationId });
+      if (presentationId !== null) {
+        setQrSelection({ batch, presentationId });
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
     }
   };
   const qrClosed = () => {

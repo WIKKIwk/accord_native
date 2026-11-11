@@ -23,7 +23,7 @@ function nodes(tree, predicate) {
 }
 const find = (tree, predicate) => nodes(tree, predicate)[0];
 const modifiers = new Proxy({}, { get: (_, name) => name === 'shapes' ? { rectangle: () => 'rectangle' } : (...args) => ({ name, args }) });
-const iosUi = Object.fromEntries(['Button','DatePicker','Divider','Host','HStack','Image','List','NavigationStack','ProgressView','RNHostView','ScrollView','Section','Spacer','Text','Toolbar','ToolbarItem','VStack'].map(x => [x,x]));
+const iosUi = Object.fromEntries(['Button','DatePicker','Divider','Host','HStack','Image','List','NavigationStack','ProgressView','RNHostView','ScrollView','Section','Spacer','Text','TextField','Toolbar','ToolbarItem','VStack'].map(x => [x,x]));
 const modifier = (node, name) => node?.props.modifiers?.find(value => value.name === name)?.args[0];
 
 // @v2-test test/aparatchi_daily_work_test.dart
@@ -137,23 +137,30 @@ test('iOS scanned-WIP close requests native dismissal before releasing its paren
   assert.equal(tree.props.modifiers.find(mod => mod.name === 'disabled').args[0], false);
 });
 
-test('daily QR presentations serialize rapid opens, ignore retired closes and defer editing until native dismissal', () => {
+test('daily QR presentations haptic once per accepted open, serialize rapid opens and defer editing until native dismissal', async () => {
   const runner = hooks(), row = batch({ revision: 2 }), other = batch({ batch_id: 'other', qr_payload: 'OTHER', revision: 2 });
+  const haptics = [];
   const correction = load('dailyWorkCorrection.ts'), sheets = load('workerSheetPresentation.ts');
   const modelValue = { current: () => true, batches: [row, other], catalog: [], replaceBatch() {}, refresh() {} };
   const { useDailyWorkActions } = load('components/useDailyWorkActions.ts', {
     react: runner.react, '../auth': { subscribeSessionWitness: () => () => {} }, '../dailyWork': model,
     '../dailyWorkCorrection': correction, '../productionProgressCorrectionApi': {}, '../workerSheetPresentation': sheets,
+    'expo-haptics': { ImpactFeedbackStyle: { Medium: 'medium' }, impactAsync: style => { haptics.push(style); return Promise.reject(new Error('unavailable')); } },
     './useWorkerOrderText': { useWorkerOrderText: () => ({ p }) },
   });
   const session = { profile: { role: 'aparatchi', ref: 'worker' } };
   const render = () => { runner.begin(); const value = useDailyWorkActions(session, modelValue); runner.flush(); return value; };
   let actions = render();
+  actions.showQr(batch({ qr_payload: '' })); actions = render();
+  assert.ok(actions.alert); assert.deepEqual(haptics, []);
+  actions.dismissAlert(); actions = render();
   actions.showQr(row); actions.showQr(other); actions = render();
   assert.equal(actions.qrBatch.id, row.id);
+  assert.deepEqual(haptics, ['medium']);
   const firstClose = actions.qrClosed, firstQueueEdit = actions.queueEdit, firstKey = actions.qrPresentationId;
   // The sheet remains selected while the native dismissal animation is running.
   actions.showQr(other); actions = render(); assert.equal(actions.qrPresentationId, firstKey);
+  assert.equal(haptics.length, 1);
   firstClose(); actions = render(); assert.equal(actions.qrBatch, null);
   actions.showQr(other); actions = render();
   assert.notEqual(actions.qrPresentationId, firstKey);
@@ -162,6 +169,8 @@ test('daily QR presentations serialize rapid opens, ignore retired closes and de
   actions.queueEdit(other); actions = render(); assert.equal(actions.state.edit, null);
   actions.qrClosed(); actions = render();
   assert.equal(actions.qrBatch, null); assert.equal(actions.state.edit.batch.id, other.id);
+  actions.showQr(row); assert.deepEqual(haptics, ['medium', 'medium']);
+  await new Promise(setImmediate); // An unsupported haptics engine must not reject or block presentation.
   runner.dispose();
 });
 
@@ -171,7 +180,7 @@ test('daily QR sheet retains source detail order without generic history fields'
   assert.deepEqual(rows.map(([label]) => label), ['worker.daily.order', 'worker.wip.info.qr', 'worker.daily.field.length', 'worker.daily.field.weight', 'worker.daily.field.roll', 'worker.daily.field.diameter', 'worker.daily.status', 'worker.wip.info.source', 'worker.wip.info.location']);
   const { DailyWorkDialogs } = load('components/DailyWorkDialogs.tsx', {
     react: { useEffect() {} }, './WorkerPaddonFeedback': { WorkerPaddonFeedback: 'Feedback' },
-    'react-native': { Text: 'Text' }, './WorkerFormDialog': { WorkerFormDialog: 'Form' }, './WorkerFormField': {}, './WorkerOrderSheet': { WorkerOrderSheet: 'Sheet' },
+    'react-native': { Text: 'Text' }, './WorkerFormDialog': { WorkerFormDialog: 'Form' }, './DailyWorkCorrectionFields': {}, './WorkerOrderSheet': { WorkerOrderSheet: 'Sheet' },
     './WorkerWipBatchDetails': { WorkerWipBatchDetails: 'Details' }, './WorkerAlert': { WorkerAlert: 'Alert' }, './useWorkerColors': { useWorkerColors: () => ({}) },
     './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: p }) }, '../dailyWorkPresentation': presentation,
   });
@@ -250,6 +259,62 @@ test('iOS WIP QR uses aligned label/value rows in a native scroll, with large vi
   const restricted = WorkerWipBatchDetailsView({ ...props, onEdit: undefined, canReprint: false });
   assert.equal(find(restricted, node => modifier(node, 'accessibilityIdentifier') === 'worker-wip-qr-edit'), undefined);
   assert.equal(find(restricted, node => modifier(node, 'accessibilityIdentifier') === 'worker-wip-qr-reprint'), undefined);
+});
+
+test('native daily correction fields retain prefilled values, units, callbacks and the revisioned save/reason flow', async () => {
+  const { DailyWorkCorrectionController } = load('dailyWorkCorrection.ts');
+  const row = batch({ revision: 7 }), saves = [];
+  const controller = new DailyWorkCorrectionController({ current: () => true, canEdit: () => true, latest: () => row, operation: () => 'print',
+    save: async input => { saves.push(input); return row.source; }, replace() {}, reconcile() {} });
+  controller.open(row);
+  const { DailyWorkCorrectionFields } = load('components/DailyWorkCorrectionFields.ios.tsx', {
+    '@expo/ui/swift-ui': iosUi, '@expo/ui/swift-ui/modifiers': modifiers, react: {}, 'react-native': { PlatformColor: name => name },
+    './BaseHost': { BaseHost: 'Host' }, './useWorkerOrderText': { useWorkerOrderText: () => ({ p }) },
+  });
+  const render = () => DailyWorkCorrectionFields({ edit: controller.getSnapshot().edit, controller });
+  const fields = nodes(render(), node => node.type?.name === 'CorrectionField');
+  assert.deepEqual(fields.map(field => [field.props.label, field.props.value, !!field.props.decimal]), [
+    ['worker.daily.field.length (m)', '123.4567', true], ['worker.daily.field.weight (kg)', '4.5678', true],
+    ['worker.daily.field.roll (kg)', '1', true], ['worker.daily.field.note', '', false],
+  ]);
+  for (const [index, value] of ['8000', '12', '2', 'checked'].entries()) fields[index].props.change(value);
+  controller.next(); assert.equal(controller.getSnapshot().edit.step, 'reason');
+  const reason = find(render(), node => node.type?.name === 'CorrectionField');
+  assert.equal(reason.props.label, 'worker.daily.correction.hint'); reason.props.change('Correct measurement');
+  await controller.confirm();
+  assert.equal(saves.length, 1);
+  assert.deepEqual([saves[0].expected_revision, saves[0].produced_qty, saves[0].finished_goods_kg, saves[0].bobina_kg,
+    saves[0].description, saves[0].reason], [7, 8000, 12, 2, 'checked', 'Correct measurement']);
+});
+
+test('native correction TextFields have no boxed wrapper, sync corrected text and retain numeric/text keyboard behavior', () => {
+  const runner = hooks(), changes = [];
+  const useNativeState = initial => runner.react.useMemo(() => {
+    let current = initial;
+    return { get: () => current, set: value => { current = value; } };
+  }, []);
+  const { CorrectionField } = load('components/DailyWorkCorrectionFields.ios.tsx', {
+    '@expo/ui/swift-ui': { ...iosUi, useNativeState }, '@expo/ui/swift-ui/modifiers': modifiers, react: runner.react,
+    'react-native': { PlatformColor: name => name }, './BaseHost': {}, './useWorkerOrderText': {},
+  }, '\nexport { CorrectionField };');
+  let props = { label: 'Metraj (m)', value: '8000', decimal: true, change: value => changes.push(value) };
+  const render = () => { runner.begin(); const tree = CorrectionField(props); runner.flush(); return tree; };
+  let tree = render(), input = find(tree, node => node.type === 'TextField');
+  assert.equal(input.props.text.get(), '8000');
+  assert.equal(tree.type, 'HStack'); assert.equal(modifier(tree, 'frame').minHeight, 52);
+  assert.equal(modifier(input, 'frame').minHeight, 44);
+  assert.equal(modifier(input, 'textFieldStyle'), 'plain'); assert.equal(modifier(input, 'keyboardType'), 'decimal-pad');
+  assert.equal(modifier(input, 'accessibilityLabel'), props.label);
+  input.props.text.set('12a,5'); input.props.onTextChange('12a,5');
+  assert.deepEqual(changes, ['12a,5']);
+  props = { ...props, value: '12,5' }; tree = render(); input = find(tree, node => node.type === 'TextField');
+  assert.equal(input.props.text.get(), '12,5', 'controller-normalized value must be reflected in the native field');
+  props = { ...props, label: 'WIP izohi', value: 'note', decimal: false }; tree = render(); input = find(tree, node => node.type === 'TextField');
+  assert.equal(input.props.axis, 'vertical'); assert.equal(modifier(input, 'keyboardType'), undefined);
+  assert.equal(input.props.text.get(), 'note');
+  props = { ...props, saving: true }; tree = render();
+  assert.equal(modifier(find(tree, node => node.type === 'TextField'), 'disabled'), true);
+  runner.dispose();
 });
 
 test('iOS daily date changes remain a bounded draft until Select and Cancel keeps the original day', () => {

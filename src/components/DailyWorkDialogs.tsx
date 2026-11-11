@@ -4,7 +4,7 @@ import type { Session } from '../auth';
 import type { useDailyWork } from './useDailyWork';
 import type { useDailyWorkActions } from './useDailyWorkActions';
 import { WorkerFormDialog } from './WorkerFormDialog';
-import { WorkerFormField } from './WorkerFormField';
+import { DailyWorkCorrectionFields } from './DailyWorkCorrectionFields';
 import { WorkerOrderSheet } from './WorkerOrderSheet';
 import { WorkerWipBatchDetails } from './WorkerWipBatchDetails';
 import { WorkerAlert } from './WorkerAlert';
@@ -35,11 +35,7 @@ export function DailyWorkDialogs({ session, model, actions }: { session: Session
     <WorkerFormDialog visible={!!edit} title={p(edit?.step === 'edit' ? 'worker.daily.edit.title' : 'worker.daily.correction.title')}
       confirmLabel={t('Saqlash')} onConfirm={() => { if (edit?.step === 'edit') controller.next(); else void controller.confirm(); }}
       confirmDisabled={edit?.step === 'saving'} cancelDisabled={edit?.step === 'saving'} preventDismiss onCancel={controller.cancel}>
-      {edit?.step === 'edit' ? <>
-        {edit.fields.map(field => <WorkerFormField key={`${edit.batch.id}:${field.key}`} label={`${p(`worker.daily.field.${field.label}`)} (${field.unit})`}
-          initialValue={edit.values[field.key]} keyboardType="decimal-pad" onChangeText={value => controller.change(field.key, value)} />)}
-        <WorkerFormField key={`${edit.batch.id}:description`} label={p('worker.daily.field.note')} initialValue={edit.values.description} onChangeText={value => controller.change('description', value)} />
-      </> : edit ? <WorkerFormField key={`${edit.batch.id}:reason`} label={p('worker.daily.correction.hint')} initialValue={edit.reason} onChangeText={controller.reason} /> : null}
+      {edit ? <DailyWorkCorrectionFields edit={edit} controller={controller} /> : null}
       {error ? <Text accessibilityRole="alert" style={{ color: colors.error }}>{p(error.key, errorValues)}</Text> : null}
     </WorkerFormDialog>
     <WorkerPaddonFeedback message={state.notice ? p(state.notice) : ''} />
