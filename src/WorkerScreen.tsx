@@ -2,7 +2,7 @@ import { workerPaddonListRoute } from './workerPaddonNavigation';
 import { ListItem, Spacer } from '@expo/ui';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { Modal, Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
@@ -17,7 +17,11 @@ import { workerOrderBusyTitle } from './workerOrderBlocking';
 import { useWorkerQueue } from './components/useWorkerQueue';
 import { workerQueueReadCanRetry } from './workerQueueReadError';
 import { WorkerQueueConnectionProgress } from './components/WorkerQueueConnectionProgress';
-import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu } from './workerLongPress';
+import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu, type WorkerMenu } from './workerLongPress';
+import { prepareWorkerLongPress, type WorkerPreparedActionSheet } from './workerLongPressPreparation';
+import { workerLongPressFeedback } from './workerLongPressFeedback';
+import { MobileApiException } from './shared/mobileApiException';
+import { WorkerControlException } from './workerControlsApi';
 import { WorkerHeader } from './components/WorkerHeader';
 import { WorkerDrawer } from './components/WorkerDrawer';
 import { WorkerTabs } from './components/WorkerTabs';
@@ -58,7 +62,7 @@ import { WorkerInventoryScreen } from './components/WorkerInventoryScreen';
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
 type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; presentationId?: number; onClose?: () => void };
 type ActionScope = { window: string; scope: string; readScope: string; witness: SessionWitness | null };
-type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean; presentationId?: number; onChoose: (action: WorkerActionChoice) => void };
+type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean; prepared: WorkerPreparedActionSheet; presentationId?: number; onChoose: (action: WorkerActionChoice) => void };
 
 export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer }: Props) {
   const colors = useWorkerColors();
@@ -118,6 +122,15 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const pendingAction = useRef<WorkerActionChoice | null>(null);
   const actionWrites = useRef(new Set<string>());
   const actionScope = useRef<ActionScope | null>(null);
+  const actionOpening = useRef<{ controller: AbortController; presentationId?: number } | null>(null);
+  const cancelActionOpening = useCallback(() => {
+    const pending = actionOpening.current;
+    actionOpening.current = null;
+    if (!pending) return;
+    pending.controller.abort();
+    if (pending.presentationId !== undefined) sheetPresentation.current.dismiss(pending.presentationId);
+  }, []);
+  useFocusEffect(useCallback(() => cancelActionOpening, [cancelActionOpening]));
   const preflightCheck = useRef(0);
   const preflightReopenBusy = useRef(false);
   const queueScopeRef = useRef<string | null>(null);
@@ -149,6 +162,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   useEffect(() => { latestReload.current = reload; }, [reload]);
   const onWritePending = useCallback((pending: boolean) => queueState.controller.setWritePending(pending), [queueState.controller]);
   const readScope = sessionReadScope(session), previousReadScope = useRef(readScope);
+  useLayoutEffect(() => () => cancelActionOpening(),
+    [session, readScope, windowScope, machineId, section, scannerOpen, drawerOpen, cancelActionOpening]);
   useEffect(() => {
     if (previousReadScope.current === readScope) return;
     previousReadScope.current = readScope;
@@ -174,6 +189,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (nativeOrder.current) orderRoute.update(renderOrderRoute(nativeOrder.current));
   }, [queue, orderRoute, renderOrderRoute]);
   function openOrder(target: ActiveOrder) {
+    if (actionOpening.current) return;
     if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     if (workerOrderIsFrozen(queueRef.current?.snapshot, target.orderId)) {
       setOrderNotice('Buyurtma muzlatilgan. Adminga xabar bering.');
@@ -202,6 +218,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     finishQrOrderDismissal();
   }
   function openHistory(order: CompletedOrder) {
+    if (actionOpening.current) return;
     if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     preflightCheck.current++;
     if (Platform.OS !== 'android') {
@@ -236,10 +253,6 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const actionContextCurrent = useCallback((expected: ActionScope | null) => !!expected && screenMounted.current &&
     !!activeSessionToken(session) && isSessionWitnessCurrent(expected.witness) && expected.readScope === sessionReadScope(session) &&
     currentWindow.current === expected.window, [session]);
-  const getActionCursor = useCallback(() => {
-    if (!actionContextCurrent(actionScope.current)) throw new Error(synchronizationError);
-    return scopedCursor(actionScope.current);
-  }, [actionContextCurrent, scopedCursor, synchronizationError]);
   const chooseOrderAction = useCallback((action: WorkerActionChoice) => { pendingAction.current = action; }, []);
 
   const selectedMachine = queue?.machines.find(machine => machine.id === machineId);
@@ -315,7 +328,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (!scannerMachineId) { setAlert({ title: 'QR skanerlash', message: p('worker.qr.select_apparatus') }); return; }
     setScannerOpen(true);
   }
-  async function openPreflightConfirmation(apparatusId: string, orderId: string, scope: string) {
+  async function openPreflightConfirmation(apparatusId: string, orderId: string, scope: string, prepared?: WorkerMenu) {
     if (preflightReopenBusy.current) return;
     const generation = ++preflightCheck.current;
     const expectedWindow = windowScope;
@@ -327,9 +340,9 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       return synchronizedQueue.current && currentWindow.current === expectedWindow && queueScopeRef.current === expectedWindow && snapshot?.scope === scope ? snapshot : null;
     };
     try {
-      const data = await readWorkerActionControl(session, apparatusId, orderId, getCursor);
+      const data = prepared ? null : await readWorkerActionControl(session, apparatusId, orderId, getCursor);
       if (!screenMounted.current || generation !== preflightCheck.current) return;
-      const menu = workerLongPressMenu(data, session, apparatusId, orderId, getCursor());
+      const menu = prepared ?? workerLongPressMenu(data!, session, apparatusId, orderId, getCursor());
       if (menu.kind !== 'reopen') { void latestReload.current(); return; }
       setAlert({ title: 'Rang chiqarilyapti holatiga qaytarish', message: 'Rostdan ham rang chiqarilyapti holatiga qaytarmoqchimisiz?', confirmLabel: 'Ruxsat', onConfirm: () => {
         if (preflightReopenBusy.current) return;
@@ -354,33 +367,67 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       }
     }
   }
-  function openOrderActions(apparatusId: string, order: QueueOrder, isCompleted: boolean) {
+  async function openOrderActions(apparatusId: string, order: QueueOrder, isCompleted: boolean) {
+    workerLongPressFeedback();
     if (!canWorkMachine(apparatusId) || actionWrites.current.has(JSON.stringify([apparatusId, order.id]))) return;
-    if (Platform.OS === 'android' && actionsRoute.isOpen()) return;
+    if (actionOpening.current) return;
+    if (Platform.OS === 'android' && (actionsRoute.isOpen() || orderRoute.isOpen() || historyRoute.isOpen())) return;
     if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     preflightCheck.current++;
     const snapshotScope = queueRef.current?.snapshot.scope;
     const scope = typeof snapshotScope === 'string' ? snapshotScope : '';
-    if (!isCompleted && order.state === 'print_preflight_passed') { void openPreflightConfirmation(apparatusId, order.id, scope); return; }
     const presentationId = Platform.OS !== 'android' ? sheetPresentation.current.open() : undefined;
     if (presentationId === null) return;
-    actionScope.current = { window: windowScope, scope, readScope: sessionReadScope(session), witness: captureSessionWitness(session) };
-    pendingAction.current = null;
-    const target: ActionOrder = { apparatusId, order, completed: isCompleted, presentationId,
-      onChoose: presentationId === undefined ? chooseOrderAction : action => {
-        if (sheetPresentation.current.isCurrent(presentationId)) chooseOrderAction(action);
-      },
+    const expected: ActionScope = { window: windowScope, scope, readScope: sessionReadScope(session), witness: captureSessionWitness(session) };
+    const opening = { controller: new AbortController(), presentationId };
+    actionOpening.current = opening;
+    const current = () => !opening.controller.signal.aborted && actionContextCurrent(expected);
+    const getCursor = () => {
+      if (!current()) throw new Error(synchronizationError);
+      return scopedCursor(expected);
     };
-    if (Platform.OS === 'android') {
-      nativeActions.current = target;
-      setNativeOverlayOpen(true);
-      actionsRoute.open(<WorkerLongPressActions session={session} apparatusId={apparatusId}
-        operation={queue?.machines.find(machine => machine.id === apparatusId)?.operation ?? ''}
-        apparatusName={queue?.machines.find(machine => machine.id === apparatusId)?.name ?? apparatusId}
-        order={order} completed={isCompleted} getCursor={getActionCursor}
-        onChoose={chooseOrderAction} />,
-      { dismissible: true, compact: true, onDismiss: closeOrderActions });
-    } else setActionOrder(target);
+    const apparatus = queueRef.current?.machines.find(machine => machine.id === apparatusId);
+    let presented = false;
+    try {
+      if (!apparatus) return;
+      const prepared = await prepareWorkerLongPress(session, apparatus, order, isCompleted, getCursor, current,
+        opening.controller.signal, p, message => { if (current()) setOrderNotice(message); });
+      if (!current() || prepared.kind === 'none') return;
+      actionOpening.current = null;
+      if (prepared.kind === 'astatka') {
+        if (presentationId !== undefined) sheetPresentation.current.dismiss(presentationId);
+        openOrder({ apparatusId, orderId: order.id, preview: order, initialAction: 'astatka' });
+        return;
+      }
+      if (prepared.kind === 'menu' && prepared.menu.kind === 'reopen' && order.state === 'print_preflight_passed') {
+        if (presentationId !== undefined) sheetPresentation.current.dismiss(presentationId);
+        void openPreflightConfirmation(apparatusId, order.id, scope, prepared.menu);
+        return;
+      }
+      actionScope.current = expected;
+      pendingAction.current = null;
+      const target: ActionOrder = { apparatusId, order, completed: isCompleted, prepared, presentationId,
+        onChoose: presentationId === undefined ? chooseOrderAction : action => {
+          if (sheetPresentation.current.isCurrent(presentationId)) chooseOrderAction(action);
+        },
+      };
+      if (Platform.OS === 'android') {
+        nativeActions.current = target;
+        setNativeOverlayOpen(true);
+        actionsRoute.open(<WorkerLongPressActions session={session} apparatusId={apparatusId} operation={apparatus.operation}
+          order={order} prepared={prepared} onChoose={chooseOrderAction} />,
+        { dismissible: true, compact: true, onDismiss: closeOrderActions });
+      } else setActionOrder(target);
+      presented = true;
+    } catch (error) {
+      if (current()) setOrderNotice(error instanceof MobileApiException || error instanceof WorkerControlException ? error.message : p('worker.error.sync'));
+    } finally {
+      if (actionOpening.current === opening) actionOpening.current = null;
+      if (!presented) {
+        opening.controller.abort();
+        if (presentationId !== undefined) sheetPresentation.current.dismiss(presentationId);
+      }
+    }
   }
   function closeOrderActions(presentationId = actionOrder?.presentationId) {
     if (Platform.OS !== 'android' && (presentationId === undefined || !sheetPresentation.current.dismiss(presentationId))) return;
@@ -504,7 +551,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
         setNativeOverlayOpen(false); preflightCheck.current++;
       }} />}
       {actionOrder ? <WorkerOrderSheet key={actionOrder.presentationId} dismissible compact fitContent measureContent heightFraction={0.86} onClose={() => closeOrderActions(actionOrder.presentationId)}>
-        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={actionOrder.onChoose} />
+        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} order={actionOrder.order} prepared={actionOrder.prepared} onChoose={actionOrder.onChoose} />
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
       <WorkerActivePaddonPicker {...activePaddon} />
