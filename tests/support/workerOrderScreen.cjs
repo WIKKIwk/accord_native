@@ -62,7 +62,7 @@ function harness(platform, input = {}, locale = 'uz') {
         if (!deps || !previous || deps.some((value, index) => !Object.is(value, previous[index]))) { layoutDeps[index] = deps; layouts.push(callback); }
       }, useEffectEvent: callback => callback },
     'react-native': { ...native, ActivityIndicator: 'ActivityIndicator', Alert: { alert: (...args) => alerts.push(args) }, AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) }, Platform: { OS: platform, Version: 26 },
-      PlatformColor: value => value, StyleSheet: { create: value => value }, View: 'View', Text: 'Text', ScrollView: 'ScrollView', Pressable: 'Pressable' },
+      PlatformColor: value => value, DynamicColorIOS: value => ({ dynamic: value }), StyleSheet: { create: value => value }, View: 'View', Text: 'Text', ScrollView: 'ScrollView', Pressable: 'Pressable' },
     '@expo/ui': { Host: 'Host', TextInput: 'NativeInput', useNativeState: initial => ({ value: initial, set() {} }) },
     'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })] },
     'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },

@@ -3,7 +3,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
 import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
-import { Alert, AppState, Platform, PlatformColor, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, DynamicColorIOS, Platform, PlatformColor, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { adminBosmaAstatkaReport } from './workerControlsApi';
 import { MobileApiException } from './shared/mobileApiException';
@@ -1065,7 +1065,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     </View>}
     <View style={[styles.card, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.actionCard]}>
     <WorkerOrderSyncProgress pending={loading || (!synchronized && !busy && !presentationDenied)} color={colors.icon} />
-    {view.temporarilyPaused && <Text style={[styles.detailText, { color: colors.muted }]}>{t("Vaqtincha yechilgan")}</Text>}
+    {view.temporarilyPaused && <Text style={[styles.detailText, { color: colors.muted }, Platform.OS === 'ios' && iosStyles.temporaryPause]}>{t("Vaqtincha yechilgan")}</Text>}
     {['frozen', 'freeze_requested'].includes(effectiveOrderControl) && <Text style={errorTextStyle}>{p(effectiveOrderControl === 'frozen' ? 'worker.freeze.active' : 'worker.freeze.requested')}</Text>}
     {!!error && !selected && !delivery && <Text style={errorTextStyle}>{t(error)}</Text>}
     {!!success && <Text style={successTextStyle}>{t(success)}</Text>}
@@ -1234,6 +1234,10 @@ const iosStyles = StyleSheet.create({
   sectionGroup: { paddingTop: GRID.sectionGap, paddingBottom: GRID.sectionGap, gap: GRID.rowGap },
   separatedSection: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: PlatformColor('separator') },
   outcomeActions: { gap: GRID.rowGap },
+  temporaryPause: {
+    alignSelf: 'stretch', textAlign: 'center', fontSize: 17, lineHeight: 24, fontWeight: '600', paddingVertical: 12,
+    color: Platform.OS === 'ios' ? DynamicColorIOS({ light: '#975916', dark: '#E9B472' }) : '#975916',
+  },
   scannerPanel: { padding: GRID.cardInset, borderRadius: GRID.cardRadius, gap: GRID.sectionGap },
   quickCamera: { width: '100%', height: 'auto', aspectRatio: 1, maxWidth: 224, borderRadius: 12 },
   scannerText: { fontSize: 14, lineHeight: 20 },
