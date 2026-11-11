@@ -38,7 +38,8 @@ for (const platform of ['ios', 'android']) test(`${platform}: busy paused 0198 r
   h.bootstrap.control_state.control.allowed_actions = ['resume']; h.bootstrap.control_state.control.interaction.blocking_reason_code = '';
   assert.ok(buttons(h.render()).some(button => button.props.label === h.p('worker.action.resume')));
   h.setFresh(false);
-  assert.equal(buttons(h.render()).length, 0);
+  const retained = buttons(h.render());
+  assert.ok(retained.length > 0); assert.ok(retained.every(button => button.props.disabled));
 });
 for (const platform of ['ios', 'android']) test(`${platform}: no candidates/cut suppress intake; direct material-use permission does not replace the V2 intake action`, () => {
   for (const extra of [{ states: { intakeCandidatesState: [] } }, { apparatus: { operation: 'cut' } }]) {
@@ -114,4 +115,34 @@ for (const platform of ['ios', 'android']) test(`${platform}: preflight hold/out
     freeze_request: { request_id: 'freeze', status: 'pending', target_apparatus: hold.apparatus, target_session_id: 'running' } },
     controlState: { order_control: 'freeze_requested' }, interaction: { mode: 'freeze_requested', blocking_reason_code: 'order_freeze_requested', material_intake_allowed: false } });
   assert.deepEqual(buttons(stopping.render()).map(button => button.props.label), ['Rulonni yechib muzlatish']);
+});
+
+const tick = () => new Promise(resolve => setImmediate(resolve));
+const preflightHold = { order_id: '0198', apparatus: 'apparatus:default:bosma_8', hold_id: 'hold', revision: 1, status: 'held' };
+function preflightOptions(extra = {}) {
+  return { control: { state: 'print_preflight', print_preflight: preflightHold },
+    interaction: { mode: 'fresh_start_blocked', blocking_reason_code: 'print_preflight_active', material_intake_allowed: false }, ...extra };
+}
+for (const platform of ['ios', 'android']) test(`${platform}: preflight acknowledgement clears the retired display and cannot leave its old outcome actions`, async () => {
+  const h = harness(platform, preflightOptions());
+  buttons(h.render()).find(button => button.props.label === 'Rang chiqdi').props.onPress(); await tick();
+  assert.deepEqual(h.preflights, [{ apparatus: preflightHold.apparatus, order_id: '0198', action: 'passed', hold_id: 'hold', expected_revision: 1 }]);
+  assert.equal(h.values.get('success'), 'Rang chiqdi.'); assert.equal(buttons(h.render()).length, 0);
+});
+for (const platform of ['ios', 'android']) for (const rejects of [false, true]) test(`${platform}: late preflight ${rejects ? 'failure' : 'success'} cannot update a different account`, async () => {
+  let settle;
+  const pending = new Promise((resolve, reject) => { settle = () => rejects ? reject(Error('late')) : resolve({}); });
+  const h = harness(platform, preflightOptions({ runPreflight: () => pending }));
+  buttons(h.render()).find(button => button.props.label === 'Rang chiqdi').props.onPress();
+  h.setScope('different-account'); settle(); await tick();
+  assert.equal(h.values.get('success'), ''); assert.equal(h.values.get('error'), ''); assert.equal(h.values.get('refresh'), 0);
+});
+for (const platform of ['ios', 'android']) for (const acknowledged of [false, true]) test(`${platform}: freezing held preflight reports success only with queue acknowledgement (${acknowledged})`, async () => {
+  const h = harness(platform, preflightOptions({ control: { state: 'print_preflight', allowed_actions: ['freeze'], print_preflight: preflightHold,
+    freeze_request: { request_id: 'freeze', status: 'pending', target_apparatus: preflightHold.apparatus } },
+    controlState: { order_control: 'freeze_requested' }, interaction: { mode: 'freeze_requested', blocking_reason_code: 'order_freeze_requested', material_intake_allowed: false },
+    runQueueAction: async () => ({ has_states: acknowledged }) }));
+  buttons(h.render()).find(button => button.props.label === 'Rang chiqarishni to‘xtatib muzlatish').props.onPress(); await tick();
+  assert.deepEqual(h.actions, [{ apparatus: preflightHold.apparatus, order_id: '0198', action: 'freeze', freeze_request_id: 'freeze', include_control: true }]);
+  assert.equal(!!h.values.get('success'), acknowledged);
 });

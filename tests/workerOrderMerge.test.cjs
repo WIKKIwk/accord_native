@@ -24,7 +24,7 @@ function fixture() {
   const target = { apparatus: station, order: '0198', orderLabel: 'mofun keks', apparatusLabel: 'Rezka', label: id => id };
   const deps = { current: reads.current, available: () => available && current, target: () => target, reads: () => reads, p: text,
     changed: state => changes.push(state), notice: message => notices.push(message),
-    write: async (qr, proof, guard) => { assert.equal(guard(), true); calls.push(['write', qr, proof.stage]); } };
+    write: async (qr, proof, guard) => { assert.equal(guard(), true); calls.push(['write', qr, proof.stage]); return true; } };
   const flow = new merge.WorkerOrderMergeFlow(deps);
   assert.equal(rules.validOrderControl(context.bootstrap, station, '0198', context.snapshot), true);
   return { flow, deps, context, control, wip, reads, calls, notices, changes, p: text, target,
@@ -75,6 +75,14 @@ test('a rejected mutation shows the exact V2 guidance and never reports success 
   h.flow.toggle(); await h.flow.scan('ROLL-002'); await h.flow.confirm(); await h.flow.confirm();
   assert.equal(h.flow.state.phase, 'guidance'); assert.equal(h.flow.state.message, h.p('worker.error.merge_input_already_used'));
   assert.equal(h.notices.length, 0); assert.equal(h.calls.filter(call => call[0] === 'write').length, 1);
+});
+test('a non-acknowledged write returns to the V2 scan prompt without success or a mutation retry', async () => {
+  const h = fixture(); h.deps.write = async () => { h.calls.push(['write']); return false; };
+  h.flow.toggle(); await h.flow.scan('ROLL-002'); await h.flow.confirm(); await h.flow.confirm();
+  assert.equal(h.flow.state.phase, 'scanning'); assert.equal(h.notices.length, 0); assert.equal(h.calls.filter(call => call[0] === 'write').length, 1);
+  const reads = h.calls.filter(call => call[0] === 'identify').length;
+  h.setAvailable(false); await h.flow.scan('third-roll');
+  assert.equal(h.flow.state.phase, 'scanning'); assert.equal(h.calls.filter(call => call[0] === 'identify').length, reads);
 });
 for (const advanced of [false, true]) test(`timeout is reconciled by a read, never by replaying the merge (advanced=${advanced})`, async () => {
   const h = fixture();
@@ -143,6 +151,18 @@ for (const platform of ['ios', 'android']) test(`${platform}: the real order she
   assert.deepEqual(h.actions, [{ apparatus: station, order_id: '0198', action: 'merge', qr_payload: 'ROLL-002', include_control: true }]);
   assert.deepEqual(h.notices, ['2-rulon 1-rulonning davomiga ulandi.']);
   tree = h.render(); assert.equal(nodes(tree, node => node.type === 'CameraView').length, 0);
+  assert.equal(buttons(tree).length, 0, 'an acknowledged mutation retires the old presentation until fresh controls arrive');
+});
+for (const platform of ['ios', 'android']) test(`${platform}: a missing queue acknowledgement shows no merge success and waits for fresh authority before scanning`, async () => {
+  const f = fixture(), h = harness(platform, { apparatus: { operation: 'cut' }, control: structuredClone(f.control),
+    interaction: structuredClone(f.control.interaction), mergeReads: f.reads, runMerge: async () => ({ has_states: false }) });
+  buttons(h.render()).find(button => button.props.label === h.p('worker.action.merge')).props.onPress();
+  nodes(h.render(), node => node.type === 'CameraView')[0].props.onBarcodeScanned({ data: 'ROLL-002' }); await tick();
+  nodes(h.render(), node => node.type === 'WorkerOrderMergeDialog')[0].props.onConfirm(); await tick();
+  const tree = h.render();
+  assert.equal(h.actions.length, 1); assert.deepEqual(h.notices, []);
+  assert.equal(nodes(tree, node => node.type === 'WorkerOrderMergeDialog')[0].props.state.phase, 'scanning');
+  assert.equal(nodes(tree, node => node.type === 'CameraView').length, 0);
 });
 for (const locale of ['uz', 'en', 'ru', 'ur']) test(`${locale}: confirmation preserves V2 title, body order, QR and No/Yes labels`, async () => {
   const h = fixture(), p = harness('ios', {}, locale).p;

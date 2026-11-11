@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
 import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { adminBosmaAstatkaReport } from './workerControlsApi';
 import { adminPrintPreflight } from './workerPrintPreflight';
@@ -67,6 +67,10 @@ import { workerFabQrReads } from './workerFabQrReads';
 import { workerMergeStateLines } from './workerOrderMerge';
 import { useWorkerOrderMerge } from './components/useWorkerOrderMerge';
 import { WorkerOrderMergeDialog } from './components/WorkerOrderMergeDialog';
+import { workerOrderPresentationDenied } from './workerOrderPresentation';
+import { useWorkerOrderPresentation } from './components/useWorkerOrderPresentation';
+import { WorkerOrderSyncProgress } from './components/WorkerOrderSyncProgress';
+import { workerOrderRezkaInstructions } from './workerOrderRezkaInstructions';
 
 type Obj = Record<string, any>;
 type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onNotice?: (message: string) => void; onClose: () => void; onChanged: () => void };
@@ -109,6 +113,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const sheetCard = Platform.OS === 'ios' ? PlatformColor('secondarySystemGroupedBackground') : colors.surface;
   const closeSheet = useContext(WorkerSheetCloseContext) ?? onClose;
   const [detail, setDetail] = useState<Obj | null>(null);
+  const [detailReadScope, setDetailReadScope] = useState('');
+  const [presentationDenied, setPresentationDenied] = useState(false);
   const [bootstrap, setBootstrap] = useState<Obj | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -232,16 +238,16 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           scanBootstrap(session, { apparatus: apparatusId, orderId, materialBarcodes: materials, automaticQolipConfirmation: true }, scanBootstrapUnsupported),
         ]);
         if (version !== loadVersion.current) return;
-        if (scope !== sessionReadScope(session)) { setBootstrap(null); setControlRetired(true); return; }
+        if (scope !== sessionReadScope(session)) { setDetailReadScope(''); setBootstrap(null); setControlRetired(true); return; }
         const maps = snapshot.maps;
         accepted = Array.isArray(maps) && maps.length === 1 && maps[0]?.map?.id === orderId &&
           (!snapshot.projection || snapshot.projection === 'worker_detail_v1') && typeof snapshot.scope === 'string' && !!snapshot.scope && typeof snapshot.epoch === 'string' && !!snapshot.epoch &&
           Number.isInteger(snapshot.rev) && snapshot.rev >= 0 && snapshot.epoch === scan.control_state?.epoch &&
           scan.control_state?.rev >= snapshot.rev && validOrderControl(scan, apparatusId, orderId, { epoch: queueEpoch, rev: queueRevision });
-        if (accepted) { setDetail(snapshot); setBootstrap(scan); setControlRetired(false); }
+        if (accepted) { setDetail(snapshot); setDetailReadScope(scope); setPresentationDenied(false); setBootstrap(scan); setControlRetired(false); }
       }
       if (!accepted) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
-    } catch (e) { if (version === loadVersion.current) { setBootstrap(null); setControlRetired(true); setError(e instanceof Error ? e.message : 'Buyurtmani yuklab bo‘lmadi'); } }
+    } catch (e) { if (version === loadVersion.current) { setBootstrap(null); setControlRetired(true); if (workerOrderPresentationDenied(e)) setPresentationDenied(true); setError(e instanceof Error ? e.message : 'Buyurtmani yuklab bo‘lmadi'); } }
     finally { if (version === loadVersion.current) setLoading(false); }
   }, [session, apparatusId, orderId, materials, queueEpoch, queueRevision]);
   useEffect(() => {
@@ -250,7 +256,9 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     return () => { clearTimeout(timer); generation.current++; };
   }, [load, refresh, busy]);
 
-  const synchronized = !loading && !busy && !controlRetired && validOrderControl(bootstrap, apparatusId, orderId, queueCursor);
+  const synchronized = !loading && !busy && !controlRetired && detailReadScope === printingScope && !!activeSessionToken(session) &&
+    session.capabilities.includes('apparatus.queue.manage') && session.assigned_apparatus.includes(apparatusId) &&
+    validOrderControl(bootstrap, apparatusId, orderId, queueCursor);
   useEffect(() => {
     const timer = setTimeout(() => initialQr.current.run(synchronized, qr => validateInitialQr.current(qr)), 0);
     return () => clearTimeout(timer);
@@ -287,7 +295,11 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       if (!writeCurrent() || actionInFlight.current || scanInFlight.current) throw new Error(p('worker.error.sync'));
       actionInFlight.current = true; loadVersion.current++;
       setControlRetired(true); setBusy(true); setError(''); setSuccess('');
-      try { await adminApparatusQueueActionResult(session, { apparatus: apparatusId, order_id: orderId, action: 'merge', qr_payload: qr, include_control: true }, writeCurrent); }
+      try {
+        const result = await adminApparatusQueueActionResult(session, { apparatus: apparatusId, order_id: orderId, action: 'merge', qr_payload: qr, include_control: true }, writeCurrent);
+        if (isCurrent() && result.has_states === true) presentation.clear();
+        return result.has_states === true;
+      }
       finally {
         actionInFlight.current = false;
         if (isCurrent()) { onChanged(); setRefresh(value => value + 1); setBusy(false); }
@@ -714,6 +726,10 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           : await adminBosmaAstatkaReport(session, { apparatus: apparatusId, order_id: orderId, total_waste: numberValue(waste), returned_paint_items: returnedPaintItems, returned_paint_image_id: paintImageId, description: astatkaNote }) }
         : await adminApparatusQueueActionResult(session, body, isCurrent);
       if (!isCurrent()) return;
+      if (!isAstatka) {
+        if (result.has_states !== true) return;
+        presentation.clear();
+      }
       if (result.completion_request) { setSwitchProgress(null); setSelected(''); setSuccess(p('worker.notice.completion_request_sent')); return; }
       let printFailed = false;
       if (printer) {
@@ -757,10 +773,10 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     try {
       await adminPrintPreflight(session, { apparatus: apparatusId, order_id: orderId, action, hold_id: holdId,
         ...(action === 'hold' ? { idempotency_key: holdId } : { expected_revision: preflight.revision }) });
-      if (!screenMounted.current) return;
+      if (!isCurrent()) return;
       setSuccess(action === 'hold' ? 'Rang chiqarish boshlandi.' : action === 'passed' ? 'Rang chiqdi.' : 'Rang chiqmagani qayd etildi.');
-    } catch (e) { if (screenMounted.current) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
-    finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
+    } catch (e) { if (isCurrent()) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
+    finally { actionInFlight.current = false; if (isCurrent()) { presentation.clear(); onChanged(); setRefresh(value => value + 1); setBusy(false); } }
   }
   async function freezePreflight() {
     if (!showPreflightFreeze || actionInFlight.current) return;
@@ -771,14 +787,15 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     try {
       const current = await scanBootstrap(session, { apparatus: apparatusId, orderId, includeSections: false,
         automaticQolipConfirmation: true }, scanBootstrapUnsupported);
-      if (!screenMounted.current) return;
+      if (!isCurrent()) return;
       const requestId = preflightFreezeRequest(current.control_state, apparatusId, orderId);
       if (!validOrderControl(current, apparatusId, orderId, latestCursor.current) || !requestId || requestId !== initialRequest) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
-      await adminApparatusQueueActionResult(session, { apparatus: apparatusId, order_id: orderId, action: 'freeze', freeze_request_id: requestId, include_control: true });
-      if (!screenMounted.current) return;
+      const result = await adminApparatusQueueActionResult(session, { apparatus: apparatusId, order_id: orderId, action: 'freeze', freeze_request_id: requestId, include_control: true }, isCurrent);
+      if (!isCurrent() || result.has_states !== true) return;
+      presentation.clear();
       setSuccess('Buyurtma to‘xtatildi.');
-    } catch (e) { if (screenMounted.current) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
-    finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
+    } catch (e) { if (isCurrent()) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
+    finally { actionInFlight.current = false; if (isCurrent()) { onChanged(); setRefresh(value => value + 1); setBusy(false); } }
   }
   const code = String(preview?.code || order.order_number || order.code || orderId);
   const closingOutput = selected === 'complete' && typeof control.closing_output_batch_id === 'string' && !!control.closing_output_batch_id.trim();
@@ -788,30 +805,56 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     freezeRequested: bootstrap?.control_state?.order_control === 'freeze_requested' || control.stage_control_state === 'freeze_requested' || !!runningFreezeRequest(bootstrap?.control_state, apparatusId) });
   const rezkaAstatkaReport = operation === 'cut' && selected === 'astatka' && !isTrainingOrder && session.token !== 'test-mode-token';
   const rezkaOutputReport = operation === 'cut' && ['pause', 'detach_roll', 'roll_complete', 'complete'].includes(selected) && !isTrainingOrder && session.token !== 'test-mode-token';
-  const rows: Obj[] | null = scanningRequired
+  const currentRows: Obj[] | null = scanningRequired
     ? (Array.isArray(materialRequirements.assignments) ? materialRequirements.assignments.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)) : null)
     : attachedReadKey === materialReadKey ? attachedMaterials : null;
   const requiredMaterialCount = Number(materialRequirements.required_scan_count ?? 0);
   const matchedMaterialCount = Number(materialRequirements.matched_scan_count ?? materials.length);
   // V2 keeps assigned material information visible after start, pause and completion.
-  const showMaterials = !!bootstrap;
   const allowNewMaterialRequests = sections.materials?.status === 'ready' && materialRequirements.assignments_satisfied === false;
   const canSendOrderAlert = operation === 'print' && synchronized && bootstrap?.control_state?.order_control === 'active' && !isTrainingOrder &&
     (allowed.includes('start') || !!String(interaction.blocking_reason_code ?? '').trim() || showPreflightHold || showPreflightOutcome);
-  const materialsError = scanningRequired && sections.materials?.status === 'error' ? String(sections.materials?.error || 'Homashyolar yuklanmadi.') : attachedReadKey === materialReadKey ? attachedMaterialsError : '';
-  const materialLoading = scanningRequired ? sections.materials?.status === 'loading' || rows === null : rows === null && !materialsError;
-  const materialBlockingText = (allowed.includes('start') || allowed.includes('resume')) && !materialLoading && materialState.unavailable ? materialState.reason : '';
-  const cardState = workerOrderCardState({ synchronized, activeOrder: isActiveOrder, allowed, interaction, operation,
+  const currentMaterialsError = scanningRequired && sections.materials?.status === 'error' ? String(sections.materials?.error || 'Homashyolar yuklanmadi.') : attachedReadKey === materialReadKey ? attachedMaterialsError : '';
+  const currentMaterialLoading = scanningRequired ? sections.materials?.status === 'loading' || currentRows === null : currentRows === null && !currentMaterialsError;
+  const currentMaterialBlockingText = (allowed.includes('start') || allowed.includes('resume')) && !currentMaterialLoading && materialState.unavailable ? materialState.reason : '';
+  const currentCardState = workerOrderCardState({ synchronized, activeOrder: isActiveOrder, allowed, interaction, operation,
     previousStage: String(control.previous_stage ?? ''), automaticQolip, preflightHold: showPreflightHold,
-    preflightOutcome: !!showPreflightOutcome, preflightFreeze: showPreflightFreeze, materialLoading,
-    materialError: materialsError, assignedCount: rows?.length ?? 0, materialBlockingText, intakeCount: intakeCandidates.length, reclose: !!finishReclose });
+    preflightOutcome: !!showPreflightOutcome, preflightFreeze: showPreflightFreeze, materialLoading: currentMaterialLoading,
+    materialError: currentMaterialsError, assignedCount: currentRows?.length ?? 0, materialBlockingText: currentMaterialBlockingText, intakeCount: intakeCandidates.length, reclose: !!finishReclose });
+  const effectiveOrderControl = bootstrap?.control_state?.order_control === 'active' && ['frozen', 'freeze_requested'].includes(control.stage_control_state)
+    ? control.stage_control_state : bootstrap?.control_state?.order_control;
+  const presentation = useWorkerOrderPresentation({
+    scope: JSON.stringify([printingIdentity, queueEpoch ?? detail?.epoch ?? controlEpoch ?? '']), synchronized,
+    eligible: !!detail && detailReadScope === printingScope && !presentationDenied &&
+      ['aparatchi', 'rezka_master'].includes(workerRole) && session.capabilities.includes('apparatus.queue.manage') &&
+      session.assigned_apparatus.includes(apparatusId) && (!bootstrap || effectiveOrderControl === 'active') &&
+      (!queueEpoch || !detail?.epoch || queueEpoch === detail.epoch),
+  }, {
+    cardState: currentCardState, showPreflightHold, showPreflightOutcome: !!showPreflightOutcome, showPreflightFreeze,
+    temporarilyPaused: synchronized && control.temporarily_paused === true,
+    pauseLabel: safeStopRequest ? 'Rulonni yechib muzlatish' : 'Rulonni yechish',
+    blockingNotice: currentCardState.showBackendBlockingNotice ? workerOrderBlockingText(interaction.blocking_reason_code, apparatus?.name ?? '', busyOrderTitle, p) : '',
+    previousStageLabel: apparatusCatalog?.find(row => row.id === control.previous_stage)?.name ?? String(control.previous_stage ?? ''),
+    rows: currentRows, materialLoading: currentMaterialLoading, materialsError: currentMaterialsError, materialBlockingText: currentMaterialBlockingText,
+    intakeCandidates, intakeLoading, intakeError, requiredMaterialCount, matchedMaterialCount,
+    requiredQolips, effectiveQolips, automaticQolip, automaticSets, automaticConfirmed: !!automaticConfirmation, moldSetCount: moldSets.size, moldStatus: sections.qolips?.status,
+    stageId: String(control.stage_node_id ?? ''), mergeLines: workerMergeStateLines(control.rezka_input_lineage ?? [], p),
+    rezkaInstructions: workerOrderRezkaInstructions(order, apparatusId, String(control.stage_node_id ?? ''), control.rezka_output_kadr_counts ?? [], p),
+    inputVisible: preparationVisible && previousRequired,
+    inputLabel: t(inputBatch ? (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP ruloni tasdiqlandi' : 'Oldingi bosqich tasdiqlandi') : (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP QR ni skan qiling' : 'Oldingi bosqich QR')),
+    inputQr: inputBatch?.qr ?? '',
+  });
+  const view = presentation.data, cardState = view.cardState;
+  const actionsEnabled = synchronized && !busy && !merge.pending;
+  const rows = view.rows, materialLoading = view.materialLoading, materialsError = view.materialsError, materialBlockingText = view.materialBlockingText;
   const showIntakeCandidates = cardState.showIntakeCandidates;
   const showLinkRequests = !!apparatus && !directMaterialUse && cardState.showStartMaterials && !isTrainingOrder;
-  const intakeSection = materialSectionExpansion({ loading: intakeLoading, error: intakeError, count: intakeCandidates.length, expanded: intakeExpanded });
+  const showMaterials = !!bootstrap || presentation.retaining;
+  const intakeSection = materialSectionExpansion({ loading: view.intakeLoading, error: view.intakeError, count: view.intakeCandidates.length, expanded: intakeExpanded });
   const attachedSection = materialSectionExpansion({ loading: materialLoading, error: materialsError, count: rows?.length ?? 0, expanded: materialsExpanded });
   const startMaterialStatus = workerStartMaterialStatus(rows ?? [], materialBlockingText, p('worker.error.material_not_at_machine'), p('worker.error.no_materials'));
   const allMaterialsAwaitingDelivery = cardState.showStartMaterials && startMaterialStatus.allAwaiting;
-  const mergeLines = workerMergeStateLines(control.rezka_input_lineage ?? [], p);
+  const displayScannedMolds = new Set(view.effectiveQolips.map(normalizeCode));
   function materialsChanged(barcode?: string) {
     if (barcode) setMaterials(previous => previous.some(value => normalizeCode(value) === normalizeCode(barcode)) ? previous : [...previous, barcode]);
     onChanged(); setRefresh(value => value + 1);
@@ -827,11 +870,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   }
   const showMolds = cardState.showMolds;
   const showOutputProgress = !!detail && cardState.showOutputProgress;
-  const blockingNotice = cardState.showBackendBlockingNotice
-    ? workerOrderBlockingText(interaction.blocking_reason_code, apparatus?.name ?? '', busyOrderTitle, p) : '';
-  const previousStageLabel = apparatusCatalog?.find(row => row.id === control.previous_stage)?.name ?? String(control.previous_stage ?? '');
-  const effectiveOrderControl = bootstrap?.control_state?.order_control === 'active' && ['frozen', 'freeze_requested'].includes(control.stage_control_state)
-    ? control.stage_control_state : bootstrap?.control_state?.order_control;
+  const blockingNotice = view.blockingNotice;
+  const previousStageLabel = view.previousStageLabel;
   function cancelProgressDialog() {
     if (busy || photoBusy) return;
     if (paintEditor) {
@@ -943,21 +983,21 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       </>}
     </View>}
     <View style={[styles.card, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.actionCard]}>
-    {loading && <ActivityIndicator color={colors.icon} />}
-    {synchronized && control.temporarily_paused === true && <Text style={[styles.detailText, { color: colors.muted }]}>{t("Vaqtincha yechilgan")}</Text>}
+    <WorkerOrderSyncProgress pending={loading || (!synchronized && !busy && !presentationDenied)} color={colors.icon} />
+    {view.temporarilyPaused && <Text style={[styles.detailText, { color: colors.muted }]}>{t("Vaqtincha yechilgan")}</Text>}
     {['frozen', 'freeze_requested'].includes(effectiveOrderControl) && <Text style={styles.error}>{p(effectiveOrderControl === 'frozen' ? 'worker.freeze.active' : 'worker.freeze.requested')}</Text>}
     {!!error && !selected && !delivery && <Text style={styles.error}>{t(error)}</Text>}
     {!!success && <Text style={styles.success}>{t(success)}</Text>}
     {!!blockingNotice && <WorkerOrderBlockingNotice message={blockingNotice} />}
-    {!!bootstrap && <>
+    {(!!bootstrap || presentation.retaining) && <>
       {showIntakeCandidates && <View style={styles.sectionGroup}>
         <Expansion title={p(intakeSection.hasContent ? 'worker.materials.pending' : 'worker.materials.pending.empty')}
-          count={intakeLoading ? '..' : intakeCandidates.length ? materialCount(intakeCandidates.length) : ''} expanded={intakeSection.expanded}
+          count={view.intakeLoading ? '..' : view.intakeCandidates.length ? materialCount(view.intakeCandidates.length) : ''} expanded={intakeSection.expanded}
           onPress={intakeSection.canToggle ? () => setIntakeExpanded(value => !value) : undefined} />
         {intakeSection.expanded && <>
-          {intakeLoading && <Text style={[styles.muted, { color: colors.muted }]}>{t('Yuklanmoqda...')}</Text>}
-          {!!intakeError && <Text style={styles.error}>{t(intakeError)}</Text>}
-          {!intakeLoading && !intakeError && <WorkerMaterialList rows={intakeCandidates} scanned={[]} onLongPress={openMaterialQr} showBalances={false} />}
+          {view.intakeLoading && <Text style={[styles.muted, { color: colors.muted }]}>{t('Yuklanmoqda...')}</Text>}
+          {!!view.intakeError && <Text style={styles.error}>{t(view.intakeError)}</Text>}
+          {!view.intakeLoading && !view.intakeError && <WorkerMaterialList rows={view.intakeCandidates} scanned={[]} onLongPress={openMaterialQr} showBalances={false} />}
         </>}
       </View>}
       {showMaterials && <View style={styles.sectionGroup}>
@@ -972,7 +1012,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           {!materialLoading && !materialsError && !!rows?.length && <WorkerMaterialList rows={rows} scanned={materials} orderId={orderId} onLongPress={openMaterialQr} />}
         </>}
         {canSendOrderAlert && scanningRequired && !materialLoading && !materialsError && rows?.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="rawMaterial" enabled={!busy} />}
-        {cardState.showStartMaterials && !!rows?.length && !materialLoading && !materialsError && requiredMaterialCount > 0 && <View style={styles.expansion}><Text style={[styles.expansionTitle, { color: colors.text }]}>{p('worker.materials.scan_progress')}</Text><Text style={[styles.muted, { color: colors.muted }]}>{matchedMaterialCount}/{requiredMaterialCount}</Text></View>}
+        {cardState.showStartMaterials && !!rows?.length && !materialLoading && !materialsError && view.requiredMaterialCount > 0 && <View style={styles.expansion}><Text style={[styles.expansionTitle, { color: colors.text }]}>{p('worker.materials.scan_progress')}</Text><Text style={[styles.muted, { color: colors.muted }]}>{view.matchedMaterialCount}/{view.requiredMaterialCount}</Text></View>}
         {cardState.showStartMaterials && !!rows?.length && !materialLoading && !materialsError && startMaterialStatus.showBlockingReason && <Text style={styles.error}>{t(materialBlockingText)}</Text>}
         {showLinkRequests && <View style={!scanningRequired && !materialsExpanded ? { display: 'none' } : undefined}>
           <MaterialLinkRequestPanel session={session} orderId={orderId} apparatusId={apparatusId} actionsEnabled={synchronized} allowNewRequests={allowNewMaterialRequests} onChanged={materialsChanged} />
@@ -980,41 +1020,42 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {directMaterialUse && <WorkerMaterialUsePanel session={session} orderId={orderId} apparatusId={apparatusId} actionsEnabled={synchronized} onChanged={materialsChanged} />}
       </View>}
       {showMolds && <View style={styles.sectionGroup}>
-        <Expansion title={t(moldSets.size > 1 ? 'Muqobil qoliplar' : 'Qoliplar')} count={requiredQolips.length ? `${automaticQolip && automaticConfirmation ? requiredQolips.length : effectiveQolips.length}/${requiredQolips.length} ta` : ''}
-          expanded={requiredQolips.length > 0 && qolipsExpanded} onPress={requiredQolips.length && sections.qolips?.status !== 'loading' ? () => setQolipsExpanded(value => !value) : undefined} />
-        {automaticQolip && automaticSets.length > 1 && automaticSets.map(set => <NativeButton key={String(set.set_id)} label={String(set.set_id)} disabled={!synchronized} variant={selectedQolipSet === set.set_id ? 'filled' : 'outlined'} onPress={() => setSelectedQolipSet(String(set.set_id))} />)}
+        <Expansion title={t(view.moldSetCount > 1 ? 'Muqobil qoliplar' : 'Qoliplar')} count={view.requiredQolips.length ? `${view.automaticQolip && view.automaticConfirmed ? view.requiredQolips.length : view.effectiveQolips.length}/${view.requiredQolips.length} ta` : ''}
+          expanded={view.requiredQolips.length > 0 && qolipsExpanded} onPress={view.requiredQolips.length && view.moldStatus !== 'loading' ? () => setQolipsExpanded(value => !value) : undefined} />
+        {view.automaticQolip && view.automaticSets.length > 1 && view.automaticSets.map(set => <NativeButton key={String(set.set_id)} label={String(set.set_id)} disabled={!actionsEnabled} variant={selectedQolipSet === set.set_id ? 'filled' : 'outlined'} onPress={() => { if (actionsEnabled) setSelectedQolipSet(String(set.set_id)); }} />)}
         {canSendOrderAlert && sections.qolips?.status === 'ready' && requiredQolips.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="qolip" enabled={!busy} />}
-        {qolipsExpanded && requiredQolips.map((mold, index) => <View key={String(mold.qolip_code || index)} style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{String(mold.qolip_code ?? '')}{t(mold.color ? ` · ${mold.color}` : '')}{t(scannedMolds.has(normalizeCode(mold.qolip_code)) ? ' ✓' : '')}</Text></View>)}
-        {!automaticQolip && moldSets.size > 1 && effectiveQolips.length > 0 && <NativeButton label={t("Komplektni almashtirish")} variant="text" onPress={() => { setQolipsReset(true); setQolips([]); }} />}
-        {sections.qolips?.status === 'error' && <Text style={styles.error}>{t("Qoliplar yuklanmadi")}</Text>}
+        {qolipsExpanded && view.requiredQolips.map((mold, index) => <View key={String(mold.qolip_code || index)} style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{String(mold.qolip_code ?? '')}{t(mold.color ? ` · ${mold.color}` : '')}{t(displayScannedMolds.has(normalizeCode(mold.qolip_code)) ? ' ✓' : '')}</Text></View>)}
+        {!view.automaticQolip && view.moldSetCount > 1 && view.effectiveQolips.length > 0 && <NativeButton label={t("Komplektni almashtirish")} variant="text" disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled) return; setQolipsReset(true); setQolips([]); }} />}
+        {view.moldStatus === 'error' && <Text style={styles.error}>{t("Qoliplar yuklanmadi")}</Text>}
       </View>}
-      {preparationVisible && previousRequired && <View style={[styles.detailRow, { backgroundColor: colors.field }]}>
-        <Text style={[styles.expansionTitle, { color: colors.text }]}>{t(inputBatch ? (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP ruloni tasdiqlandi' : 'Oldingi bosqich tasdiqlandi') : (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP QR ni skan qiling' : 'Oldingi bosqich QR'))}</Text>
-        {!!inputBatch && <Text style={[styles.small, { color: colors.muted }]}>{inputBatch.qr}</Text>}
+      {view.inputVisible && <View style={[styles.detailRow, { backgroundColor: colors.field }]}>
+        <Text style={[styles.expansionTitle, { color: colors.text }]}>{view.inputLabel}</Text>
+        {!!view.inputQr && <Text style={[styles.small, { color: colors.muted }]}>{view.inputQr}</Text>}
       </View>}
       {cardState.hasActions && <View style={styles.sectionGroup}>
-        {cardState.showMaterialIntakeAction && <NativeButton label={p(intakeMode ? 'worker.action.close_scanner' : 'worker.action.receive_material')} height={52} disabled={!synchronized || deliveryBusy || merge.pending} onPress={() => { merge.flow.cancel(); setIntakeMode(value => !value); }} />}
-        {!!mergeLines.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.merge_state.title')}</Text>{mergeLines.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
-        {showPreflightFreeze && <NativeButton label={t("Rang chiqarishni to‘xtatib muzlatish")} height={58} variant="filled" onPress={() => { void freezePreflight(); }} />}
-        {showPreflightOutcome && <View style={[styles.actionRow, Platform.OS === 'ios' && iosStyles.outcomeActions]}>
-          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Rang chiqdi")} onPress={() => { void runPreflight('passed'); }} /> : <NativeButton label={t("Rang chiqdi")} height={58} variant="filled" icon={{ android: 'check_circle', ios: 'checkmark.circle' }} onPress={() => { void runPreflight('passed'); }} />}</View>
-          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Chiqmadi")} outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label={t("Chiqmadi")} height={58} icon={{ android: 'cancel', ios: 'xmark.circle' }} onPress={() => { void runPreflight('failed'); }} />}</View>
+        {cardState.showMaterialIntakeAction && <NativeButton label={p(intakeMode ? 'worker.action.close_scanner' : 'worker.action.receive_material')} height={52} disabled={!actionsEnabled || deliveryBusy} onPress={() => { if (!actionsEnabled) return; merge.flow.cancel(); setIntakeMode(value => !value); }} />}
+        {!!view.rezkaInstructions.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.map.cutting')}</Text>{view.rezkaInstructions.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
+        {!!view.mergeLines.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.merge_state.title')}</Text>{view.mergeLines.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
+        {view.showPreflightFreeze && <NativeButton label={t("Rang chiqarishni to‘xtatib muzlatish")} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { void freezePreflight(); }} />}
+        {view.showPreflightOutcome && <View style={[styles.actionRow, Platform.OS === 'ios' && iosStyles.outcomeActions]}>
+          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Rang chiqdi")} disabled={!actionsEnabled} onPress={() => { void runPreflight('passed'); }} /> : <NativeButton label={t("Rang chiqdi")} height={58} variant="filled" disabled={!actionsEnabled} icon={{ android: 'check_circle', ios: 'checkmark.circle' }} onPress={() => { void runPreflight('passed'); }} />}</View>
+          <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Chiqmadi")} disabled={!actionsEnabled} outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label={t("Chiqmadi")} height={58} disabled={!actionsEnabled} icon={{ android: 'cancel', ios: 'xmark.circle' }} onPress={() => { void runPreflight('failed'); }} />}</View>
         </View>}
-        {showPreflightHold && <WorkerPreflightButton label={p('worker.action.print_preflight')} onPress={() => { void runPreflight('hold'); }} />}
-        {!showPreflightHold && !showPreflightOutcome && allowed.includes('start') && <NativeButton label={t("Boshlash")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || busy} onPress={() => { void submit('start'); }} />}
+        {view.showPreflightHold && <WorkerPreflightButton label={p('worker.action.print_preflight')} disabled={!actionsEnabled} onPress={() => { void runPreflight('hold'); }} />}
+        {!view.showPreflightHold && !view.showPreflightOutcome && cardState.showStart && <NativeButton label={t("Boshlash")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || !actionsEnabled} onPress={() => { void submit('start'); }} />}
         {showOutputProgress && <WorkerOutputProgress session={session} orderId={orderId} apparatusId={apparatusId}
-          stageId={String(control.stage_node_id ?? '')} map={order} operation={operation} outputRevision={`${controlEpoch}:${controlRevision}:${refresh}`} />}
+          stageId={view.stageId} map={order} operation={operation} outputRevision={`${controlEpoch}:${controlRevision}:${refresh}`} />}
         {(cardState.showPause || cardState.showComplete) && <WorkerOrderActionGroup>
-          {allowed.includes('pause') && <NativeButton label={t(safeStopRequest ? 'Rulonni yechib muzlatish' : 'Rulonni yechish')} height={58} disabled={busy || merge.pending} onPress={() => { if (merge.pending) return; setError(''); selectProgressAction('pause'); }} />}
-          {cardState.showComplete && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={busy || merge.pending} onPress={() => { if (!merge.pending) void beginCompletion(); }} />}
+          {cardState.showPause && <NativeButton label={t(view.pauseLabel)} height={58} disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled) return; setError(''); selectProgressAction('pause'); }} />}
+          {cardState.showComplete && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { if (actionsEnabled) void beginCompletion(); }} />}
         </WorkerOrderActionGroup>}
-        {cardState.showMerge && <NativeButton label={p('worker.action.merge')} height={58} disabled={!synchronized || busy || scanInFlight.current || merge.pending} onPress={() => { setIntakeMode(false); merge.flow.toggle(); }} />}
-        {allowed.includes('resume') && <NativeButton label={t("Davom ettirish")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || busy} onPress={() => { void submit('resume'); }} />}
+        {cardState.showMerge && <NativeButton label={p('worker.action.merge')} height={58} disabled={!actionsEnabled || scanInFlight.current} onPress={() => { if (!actionsEnabled) return; setIntakeMode(false); merge.flow.toggle(); }} />}
+        {cardState.showResume && <NativeButton label={t("Davom ettirish")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || !actionsEnabled} onPress={() => { void submit('resume'); }} />}
         {cardState.showWaitingForPrevious && <WorkerOrderBlockingNotice message={p('worker.waiting.previous', { stage: previousStageLabel })} />}
         {cardState.showWaitingForSequence && <WorkerOrderBlockingNotice message={p('worker.waiting.sequence')} />}
       </View>}
     </>}
-    {!loading && !bootstrap && <NativeButton label={t("Qayta urinish")} onPress={() => { setError(''); void load(); }} disabled={busy} />}
+    {!loading && !bootstrap && !presentation.retaining && <NativeButton label={t("Qayta urinish")} onPress={() => { setError(''); void load(); }} disabled={busy} />}
     </View>
     <WorkerOrderOverview session={session} orderId={orderId} code={code} imageId={imageId}
       title={String(order.title || preview?.title || '')}

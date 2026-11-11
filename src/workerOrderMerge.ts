@@ -100,7 +100,7 @@ export async function prepareWorkerOrderMerge(target: WorkerMergeTarget, qr: str
 
 type Dependencies = {
   current(): boolean; available(): boolean; target(): WorkerMergeTarget; reads(): WorkerFabReads; p: Text;
-  write(qr: string, proof: WorkerMergeProof, current: () => boolean): Promise<void>;
+  write(qr: string, proof: WorkerMergeProof, current: () => boolean): Promise<boolean>;
   changed(state: WorkerMergeState): void; notice(message: string): void;
 };
 
@@ -147,7 +147,11 @@ export class WorkerOrderMergeFlow {
           !sameWorkerMergeLineage(before.lineage, proof.lineage)) throw new WorkerFabGuidance(this.deps.p('worker.qr.merge_changed'));
       this.set({ phase: 'saving' });
       writeAttempted = true;
-      try { await this.deps.write(qr!, proof, () => this.current(generation)); }
+      try {
+        const acknowledged = await this.deps.write(qr!, proof, () => this.current(generation));
+        if (!this.current(generation)) return;
+        if (!acknowledged) { this.proof = null; this.set({ phase: 'scanning' }); return; }
+      }
       catch (error) {
         if (!this.current(generation)) return;
         if (!['AbortError', 'TimeoutError'].includes((error as Obj)?.name)) throw error;

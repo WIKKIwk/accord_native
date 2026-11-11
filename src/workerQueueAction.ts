@@ -205,6 +205,7 @@ export function parseQueueActionResponse(raw: unknown, input: Obj = {}, session?
   const rawOrderControl = object(payload.order_control), rawState = trimmed(rawOrderControl?.state);
   const orderControl = rawOrderControl ? { state: ['frozen', 'freeze_requested'].includes(rawState) ? rawState : 'active' } : null;
   const result: Obj = {
+    has_states: states !== null,
     states: states ? Object.fromEntries(Object.entries(states).map(([key, value]) => [key, String(value)])) : {},
     rev: states && Number.isInteger(payload.rev) && payload.rev >= 0 ? payload.rev : null,
     epoch: states && typeof payload.epoch === 'string' ? payload.epoch.trim() : '',

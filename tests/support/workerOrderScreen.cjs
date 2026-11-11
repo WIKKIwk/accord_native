@@ -26,11 +26,15 @@ const card = load('workerOrderCardState.ts'), blocking = load('workerOrderBlocki
 const fab = load('workerFabQr.ts', { './workerControlsApi': controls, './workerOrderLogic': rules,
   './workerOutputProgress': { workerNextWorkStages: map => map.nodes ?? [], workerWipConsumerIds: map => map.consumers ?? [] } });
 const merge = load('workerOrderMerge.ts', { './workerControlsApi': controls, './workerOrderLogic': rules, './workerFabQr': fab });
+const presentation = load('workerOrderPresentation.ts');
+const api = load('workerApi.ts', { './authorizedFetch': {}, './workerQueueLimit': {}, './workerOrderAppearance': {}, './workerSnapshot': {},
+  './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {} });
+const instructions = load('workerOrderRezkaInstructions.ts', { './workerApi': api, './workerControlsApi': controls, './workerPeremotka': load('workerPeremotka.ts') });
 const native = new Proxy({}, { get: (_target, key) => String(key) });
 const row = barcode => ({ barcode, order_id: '0198', apparatus: 'apparatus:default:bosma_8', execution_status: 'ready' });
 function harness(platform, input = {}, locale = 'uz') {
-  const station = 'apparatus:default:bosma_8', values = new Map(), effects = [], actions = [], notices = [], closed = [];
-  let cursor = 0, refCursor = 0, fresh = input.fresh !== false, mergeOptions, mergeFlow;
+  const station = 'apparatus:default:bosma_8', values = new Map(), effects = [], actions = [], notices = [], closed = [], preflights = [];
+  let cursor = 0, refCursor = 0, fresh = input.fresh !== false, mergeOptions, mergeFlow, savedPresentation = null, readScope = 'scope';
   const refs = [], layouts = [];
   const p = (key, parameters) => localize.productionText(key, locale, parameters);
   const text = { locale, p, t: value => wording.workerOrderText(value, locale) };
@@ -42,7 +46,7 @@ function harness(platform, input = {}, locale = 'uz') {
     materials: { status: 'ready', data: { requires_material: false, assignments_satisfied: true, scan_satisfied: true,
       assignments: [row('A')], assigned_barcodes: [], staged_barcodes: [], ...input.requirements } },
     qolips: { status: 'ready', data: { qolip: { required_qolips: [] } } }, ...input.sections } };
-  const overrides = { detail: { maps: [{ map: { id: '0198', order_number: '0198', title: 'mofun keks' } }] }, bootstrap,
+  const overrides = { detail: { epoch: 'epoch', rev: 1, maps: [{ map: { id: '0198', order_number: '0198', title: 'mofun keks' } }] }, bootstrap, detailReadScope: 'scope',
     loading: false, attachedMaterials: [row('A')], attachedReadKey: JSON.stringify(['scope', station, '0198', 'epoch', 1, 0]),
     intakeCandidatesState: [row('B'), row('C'), row('D'), row('E')], intakeReadKey: JSON.stringify(['scope', station, '0198', 'epoch', 1, 0]), ...input.states };
   const mocks = {
@@ -55,10 +59,18 @@ function harness(platform, input = {}, locale = 'uz') {
     '@expo/ui': { Host: 'Host', TextInput: 'NativeInput', useNativeState: initial => ({ value: initial, set() {} }) },
     'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })] },
     'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },
-    './sessionReadScope': { sessionReadScope: () => 'scope' }, './nativeSheet': { useNativeSheet: () => ({ open() {}, close() {}, update() {}, isOpen: () => false }) },
+    './sessionReadScope': { sessionReadScope: () => readScope }, './nativeSheet': { useNativeSheet: () => ({ open() {}, close() {}, update() {}, isOpen: () => false }) },
     './workerOrderLogic': { ...rules, validOrderControl: () => fresh }, './workerOrderCardState': card, './workerOrderBlocking': blocking,
     './workerOrderMerge': merge, './workerFabQrReads': { workerFabQrReads: () => input.mergeReads },
-    './workerQueueAction': { adminApparatusQueueActionResult: async (_session, body, current) => { if (!current()) throw new Error('stale'); actions.push(body); await input.runMerge?.(); } },
+    './workerOrderPresentation': presentation,
+    './workerOrderRezkaInstructions': instructions,
+    './components/useWorkerOrderPresentation': { useWorkerOrderPresentation(input, data) {
+      const result = presentation.workerOrderPresentationFor(savedPresentation, input, data); savedPresentation = result.next;
+      return { ...result, clear: () => { savedPresentation = null; } };
+    } },
+    './workerQueueAction': { adminApparatusQueueActionResult: async (_session, body, current) => { if (!current()) throw new Error('stale'); actions.push(body); return input.runQueueAction ? await input.runQueueAction(body) : input.runMerge ? await input.runMerge() : { has_states: true }; } },
+    './workerPrintPreflight': { adminPrintPreflight: async (_session, body) => { preflights.push(body); return input.runPreflight ? await input.runPreflight(body) : {}; } },
+    './workerScanBootstrap': { adminOrderScanBootstrap: async () => input.readBootstrap ? await input.readBootstrap() : structuredClone(bootstrap) },
     './components/useWorkerOrderMerge': { useWorkerOrderMerge(options) {
       mergeOptions = options;
       if (!mergeFlow) mergeFlow = new merge.WorkerOrderMergeFlow({ available: () => mergeOptions.available, current: () => mergeOptions.current(),
@@ -84,7 +96,7 @@ function harness(platform, input = {}, locale = 'uz') {
     apparatus: { id: station, name: '8 ta rangli bosma apparat', operation: 'print', ...input.apparatus },
     apparatusCatalog: [{ id: 'upstream', name: 'Upstream' }], queueCursor: { epoch: 'epoch', rev: 1 }, busyOrderTitle: 'shashoqcha',
     onNotice: message => notices.push(message), onClose: () => closed.push(true), onChanged() {} };
-  return { p, values, props, bootstrap, effects, actions, notices, closed, setFresh: value => { fresh = value; },
+  return { p, values, props, bootstrap, effects, actions, notices, closed, preflights, setFresh: value => { fresh = value; }, setScope: value => { readScope = value; },
     render: () => { cursor = 0; refCursor = 0; effects.length = 0; layouts.length = 0; const tree = mod.exports.OrderScreen(props); layouts.forEach(effect => effect()); return tree; } };
 }
 function nodes(tree, predicate) {
@@ -94,4 +106,4 @@ function nodes(tree, predicate) {
 }
 function main(tree) { return nodes(tree, node => node.type === 'ScrollView')[0]; }
 const buttons = tree => nodes(main(tree), node => node.type?.name === 'NativeButton' || node.type === 'WorkerPreflightButton');
-module.exports = { harness, nodes, main, buttons, load, card, blocking, reclose, row, merge, fab, rules };
+module.exports = { harness, nodes, main, buttons, load, card, blocking, reclose, row, merge, fab, rules, presentation, api, instructions };

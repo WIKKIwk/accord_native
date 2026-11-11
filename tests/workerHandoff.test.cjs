@@ -37,10 +37,10 @@ function removalHarness(options = {}) {
   const source = ts.createSourceFile('OrderScreen.tsx', fs.readFileSync(path.resolve(__dirname, '../src/OrderScreen.tsx'), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   let fn; const visit = node => { if (ts.isFunctionDeclaration(node) && node.name?.text === 'submit') fn = node.getText(source); ts.forEachChild(node, visit); }; visit(source);
   assert.ok(fn);
-  const h = { writes: [], printers: 0, errors: [], closed: 0, current: true, reads: 0 };
+  const h = { writes: [], printers: 0, errors: [], closed: 0, current: true, reads: 0, retired: 0 };
   const state = { actionInFlight: { current: false }, loadVersion: { current: 0 }, closeAfterProgress: { current: false }, screenMounted: { current: true } };
   const no = () => {};
-  const context = { ...state, synchronized: true, canOpenInitialAstatka: false, allowed: ['detach_roll'], laminationReport: true, isCurrent: () => h.current,
+  const context = { ...state, synchronized: true, merge: { pending: options.mergePending === true }, canOpenInitialAstatka: false, allowed: ['detach_roll'], laminationReport: true, isCurrent: () => h.current,
     control: { stage_node_id: 'stage' }, interaction: { resume_input_required: options.inputRequired === true }, bootstrap: {}, latestCursor: { current: { epoch: 'epoch', rev: 1 } }, scanBootstrapUnsupported: {},
     selected: options.action === 'resume' ? '' : 'detach_roll', initialAction: options.action ?? 'detach_roll', initialSwitchQr: '', switchProgress: null, setSwitchProgress: no, session: {}, apparatusId: apparatus, orderId: order, order: {}, preview: {},
     kg: '10', meter: '100', bobina: '1', waste: '', freezeNote: '', completionNote: '', leftoverWip: '', leftoverFilm: '', safeStopRequest: null,
@@ -50,7 +50,8 @@ function removalHarness(options = {}) {
     p: key => key, selectOutputPrinter: async () => { h.printers++; throw new Error('Must not select a printer'); },
     validOrderControl: () => true, scanBootstrap: async () => { h.reads++; return { control_state: { control: { state: 'paused', stage_node_id: options.stage ?? 'stage', allowed_actions: ['detach_roll'] } } }; },
     adminWipBatches: async () => { if (options.expire) h.current = false; return options.batches ?? [valid]; },
-    adminApparatusQueueActionResult: async (_session, body, guard) => { assert(guard()); h.writes.push(body); return {}; },
+    adminApparatusQueueActionResult: async (_session, body, guard) => { assert(guard()); h.writes.push(body); return { has_states: options.acknowledged !== false }; },
+    presentation: { clear: () => h.retired++ },
     WorkerPrintCancelled: class extends Error {}, Platform: { OS: options.platform ?? 'ios' },
     setError: value => { if (value) h.errors.push(value); }, closeSheet: () => h.closed++,
     setDescriptionRevealed: no, setControlRetired: no, setBusy: no, setSuccess: no, selectProgressAction: no, setMaterials: no, setQolips: no,
@@ -72,6 +73,19 @@ test('native roll removal submits exact detach metrics without a printer and wai
 test('native removal refuses a changed stage, missing handoff roll or expired account before mutation', async () => {
   for (const options of [{ stage: 'new-stage' }, { batches: [] }, { expire: true }]) {
     const h = removalHarness(options); await h.submit('detach_roll'); assert.equal(h.writes.length, 0); assert.equal(h.printers, 0); assert.equal(h.closed, 0);
+  }
+});
+test('a pending merge blocks competing handoff removal and resume before reads or writes', async () => {
+  for (const action of ['detach_roll', 'resume']) {
+    const h = removalHarness({ action, mergePending: true }); await h.submit(action);
+    assert.equal(h.reads, 0); assert.equal(h.writes.length, 0); assert.equal(h.printers, 0); assert.equal(h.closed, 0);
+  }
+});
+test('a missing queue acknowledgement cannot close a handoff report or erase its presentation', async () => {
+  for (const action of ['detach_roll', 'resume']) {
+    const h = removalHarness({ action, acknowledged: false }); await h.submit(action);
+    assert.equal(h.writes.length, 1); assert.equal(h.closed, 0); assert.equal(h.retired, 0);
+    assert.equal(h.state.closeAfterProgress.current, false);
   }
 });
 test('native resume sends no invented QR or output and closes on acknowledgment; required input blocks it', async () => {

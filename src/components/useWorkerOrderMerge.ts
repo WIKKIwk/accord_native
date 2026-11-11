@@ -5,7 +5,7 @@ import type { WorkerFabReads } from '../workerFabQr';
 type Options = {
   identity: string; available: boolean; current(): boolean; target: WorkerMergeTarget;
   reads(): WorkerFabReads; p(key: string, values?: Record<string, unknown>): string;
-  write(qr: string, proof: WorkerMergeProof, current: () => boolean): Promise<void>;
+  write(qr: string, proof: WorkerMergeProof, current: () => boolean): Promise<boolean>;
   notice(message: string): void;
 };
 

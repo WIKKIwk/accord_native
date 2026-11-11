@@ -22,7 +22,8 @@ export type WorkerOrderDetail = {
   stages: { id: string; apparatusId: string; title: string; state: string }[];
 };
 
-function orderDisplayPath(map: RecordValue) {
+/** @v2 productionMapDisplayPath */
+export function orderDisplayPath(map: RecordValue) {
   const nodes = Array.isArray(map.nodes) ? map.nodes.map(object) : [];
   const start = nodes.find(node => node.kind === 'start' && string(node.id));
   if (!start) return nodes;
@@ -48,13 +49,21 @@ function orderDisplayPath(map: RecordValue) {
   }
   const path: RecordValue[] = [];
   const seen = new Set<RecordValue>();
-  let current: RecordValue | undefined = start;
+  let current: RecordValue | undefined = byId.get(string(start.id));
   while (current && !seen.has(current)) {
     path.push(current);
     seen.add(current);
     const candidates: RecordValue[] = successors.get(string(current.id)) ?? [];
-    current = candidates.find(node => node.kind === 'apparatus' &&
-      assigned.get(string(node.alternative_group_id))?.has(string(node.apparatus_id))) ?? candidates[0];
+    let preferred: RecordValue | undefined;
+    const groups = new Set(candidates.filter(node => node.kind === 'apparatus' && string(node.alternative_group_id)).map(node => string(node.alternative_group_id)));
+    for (const group of groups) {
+      for (const apparatus of assigned.get(group) ?? []) {
+        preferred = candidates.find(node => node.kind === 'apparatus' && string(node.alternative_group_id) === group && string(node.apparatus_id) === apparatus);
+        if (preferred) break;
+      }
+      if (preferred) break;
+    }
+    current = preferred ?? candidates[0];
   }
   return path;
 }

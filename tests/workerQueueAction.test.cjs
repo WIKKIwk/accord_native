@@ -45,6 +45,7 @@ for (const name of testNames('admin_queue_action_cursor_test').filter(name => na
       const body = JSON.parse(record.requestBody.text), payload = JSON.parse(record.responseBody.text);
       const result = await api.adminApparatusQueueActionResult(session, body);
       assert.equal(result.states[order], 'in_progress');
+      assert.equal(result.has_states, true);
       assert.equal(result.has_snapshot_cursor, Number.isInteger(payload.rev) && payload.rev >= 0 && typeof payload.epoch === 'string' && !!payload.epoch.trim());
       assert.equal(result.has_order_status, false);
       if (name.includes('opt-in')) assert.equal(result.control_state !== null, payload.control_state?.queue_state === 'pending');
@@ -90,8 +91,21 @@ test('a response without states keeps only V2 acknowledged status fields', () =>
   const result = api.parseQueueActionResponse({ rev: 9, epoch: 'server', progress_batch: { batch_id: 'roll' }, order_control: { state: 'active' } });
   assert.deepEqual(result.states, {});
   assert.equal(result.has_snapshot_cursor, false);
+  assert.equal(result.has_states, false);
   assert.equal(result.progress_batch, null);
   assert.equal(result.order_control.state, 'active');
+});
+
+test('queue acknowledgement distinguishes an empty states map from absent or invalid states', () => {
+  const { api } = setup('admin_queue_action_cursor_test', 'queue ACK optional cursor {} preserves committed payload');
+  const acknowledged = api.parseQueueActionResponse({ states: {}, rev: 9, epoch: 'server' });
+  assert.equal(acknowledged.has_states, true);
+  assert.equal(acknowledged.has_snapshot_cursor, true);
+  for (const states of [undefined, null, [], false, 'in_progress']) {
+    const result = api.parseQueueActionResponse({ states, rev: 9, epoch: 'server' });
+    assert.equal(result.has_states, false);
+    assert.equal(result.has_snapshot_cursor, false);
+  }
 });
 
 test('queue activity and completion models follow the V2 ownership and defaults', () => {
