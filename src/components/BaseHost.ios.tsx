@@ -1,10 +1,10 @@
 import { Host } from '@expo/ui/swift-ui';
 import type { ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import { PlatformColor, type StyleProp, type ViewStyle } from 'react-native';
 import { useBaseTheme } from './useBaseTheme';
 
 type Props = { children: ReactNode; style?: StyleProp<ViewStyle>; matchContents?: boolean | { vertical?: boolean; horizontal?: boolean } };
 export function BaseHost(props: Props) {
   const theme = useBaseTheme();
-  return <Host {...props} colorScheme={theme.mode} seedColor={theme.colors.primary ?? theme.seed} layoutDirection={theme.direction} />;
+  return <Host {...props} colorScheme={theme.mode} seedColor={PlatformColor('systemBlue')} layoutDirection={theme.direction} />;
 }
