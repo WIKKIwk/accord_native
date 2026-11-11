@@ -1,8 +1,13 @@
 import { Button, Column, Host, ListItem } from '@expo/ui';
-import { useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { Session } from '../auth';
-import { readWorkerOrderDetail, type CompletedOrder, type QueueOrder, type WorkerOrderDetail } from '../workerApi';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { activeSessionToken, type Session } from '../auth';
+import { sessionReadScope } from '../sessionReadScope';
+import { WorkerDetailRecovery } from '../workerDetailRecovery';
+import { readWorkerDetailSnapshot } from '../workerDetailRecoveryRead';
+import { workerOrderPresentationDenied } from '../workerOrderPresentation';
+import { WorkerOrderSyncProgress } from './WorkerOrderSyncProgress';
+import { workerOrderDetailFromSnapshot, type CompletedOrder, type QueueOrder, type WorkerOrderDetail } from '../workerApi';
 import type { QueueCursor } from '../workerOrderLogic';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerOrderHeader, WorkerOrderImage } from './WorkerOrderHeader';
@@ -10,30 +15,60 @@ import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerOrderOverview } from './WorkerOrderOverview';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 
-type Props = { session: Session; apparatusId: string; order: QueueOrder; queueCursor: QueueCursor | null; onClose: () => void };
-type DetailResult = { key: string; detail: WorkerOrderDetail | null; error: string };
+type Props = { session: Session; apparatusId: string; order: QueueOrder; queueCursor: QueueCursor | null; queueWindow?: string; onClose: () => void };
+type DetailResult = { key: string; detail: WorkerOrderDetail | null; error: string; loading: boolean; denied: boolean };
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
-export function WorkerOrderDetails({ session, apparatusId, order, queueCursor, onClose }: Props) {
+export function WorkerOrderDetails({ session, apparatusId, order, queueCursor, queueWindow = '', onClose }: Props) {
   const colors = useWorkerColors();
   const close = useContext(WorkerSheetCloseContext) ?? onClose;
   const [result, setResult] = useState<DetailResult | null>(null);
-  const [retry, setRetry] = useState(0);
   const [imageOpen, setImageOpen] = useState(false);
-  const epoch = queueCursor?.epoch;
-  const rev = queueCursor?.rev;
-  const requestKey = JSON.stringify([session.imageCacheScope, apparatusId, order.id, epoch, rev, retry]);
-  const current = result?.key === requestKey ? result : null;
+  const epoch = queueCursor?.epoch, rev = queueCursor?.rev;
+  const identity = JSON.stringify([sessionReadScope(session), apparatusId, order.id]);
+  const current = result?.key === identity ? result : null;
+  const hydrated = useRef(false), mounted = useRef(true), previousIdentity = useRef(identity);
+  const latest = useRef({ identity, session, apparatusId, orderId: order.id, queueCursor });
+  useLayoutEffect(() => { latest.current = { identity, session, apparatusId, orderId: order.id, queueCursor }; },
+    [identity, session, apparatusId, order.id, queueCursor]);
+  const owner = useRef<WorkerDetailRecovery | null>(null);
   useEffect(() => {
-    const controller = new AbortController();
-    void readWorkerOrderDetail(session, apparatusId, order.id, { epoch, rev }, controller.signal).then(detail => {
-      if (!controller.signal.aborted) setResult({ key: requestKey, detail, error: '' });
-    }, reason => {
-      if (controller.signal.aborted) return;
-      const error = reason instanceof Error ? reason.message : 'Buyurtmani yuklab bo‘lmadi.';
-      setResult({ key: requestKey, detail: null, error });
+    const recovery = new WorkerDetailRecovery({
+    current: () => mounted.current && !!activeSessionToken(latest.current.session),
+    hydrated: () => hydrated.current,
+    invalidate: () => {
+      const key = latest.current.identity;
+      setResult(previous => ({ key, detail: previous?.key === key ? previous.detail : null, error: '', loading: true, denied: false }));
+    },
+    load: async valid => {
+      const input = latest.current;
+      const isCurrent = () => valid() && input.identity === latest.current.identity &&
+        sessionReadScope(input.session) === sessionReadScope(latest.current.session);
+      const snapshot = await readWorkerDetailSnapshot(input.session, input.apparatusId, input.orderId,
+        () => latest.current.queueCursor, isCurrent);
+      if (!isCurrent()) return;
+      hydrated.current = true;
+      setResult({ key: input.identity, detail: workerOrderDetailFromSnapshot(snapshot, input.orderId), error: '', loading: false, denied: false });
+    },
+    failed: (error, initial) => {
+      const key = latest.current.identity;
+      setResult(previous => ({ key, detail: previous?.key === key ? previous.detail : null, loading: false,
+        denied: workerOrderPresentationDenied(error), error: initial ? error instanceof Error ? error.message : 'Buyurtmani yuklab bo‘lmadi.' : '' }));
+    }, denied: workerOrderPresentationDenied,
     });
-    return () => controller.abort();
-  }, [session, apparatusId, order.id, epoch, rev, requestKey]);
+    owner.current = recovery;
+    return () => recovery.dispose();
+  }, []);
+  useEffect(() => {
+    if (previousIdentity.current !== identity) { previousIdentity.current = identity; hydrated.current = false; owner.current!.reset(); }
+    owner.current!.invalidate();
+  }, [identity, epoch, rev, queueWindow]);
+  useEffect(() => {
+    const recovery = owner.current!;
+    mounted.current = true; recovery.activate();
+    recovery.setForeground(AppState.currentState == null || AppState.currentState === 'active');
+    const subscription = AppState.addEventListener('change', state => recovery.setForeground(state === 'active'));
+    return () => { mounted.current = false; subscription.remove(); recovery.dispose(); };
+  }, []);
 
   const detail = current?.detail;
   const map = detail?.map ?? {};
@@ -44,10 +79,10 @@ export function WorkerOrderDetails({ session, apparatusId, order, queueCursor, o
     <ScrollView nestedScrollEnabled contentContainerStyle={styles.content}>
       <WorkerOrderHeader session={session} orderId={order.id} imageId={imageId} code={code}
         onOpenImage={() => setImageOpen(true)} onClose={close} />
-      {!current && <ActivityIndicator color={colors.icon} />}
+      {<WorkerOrderSyncProgress pending={!current || current.loading && !current.denied} color={colors.icon} />}
       {!!current?.error && <View style={styles.card}>
         <Text style={styles.error}>{current.error}</Text>
-        <Host matchContents={{ vertical: true }}><Button variant="text" label="Qayta urinish" onPress={() => setRetry(value => value + 1)} /></Host>
+        <Host matchContents={{ vertical: true }}><Button variant="text" label="Qayta urinish" onPress={() => owner.current?.retry()} /></Host>
       </View>}
       <WorkerOrderOverview session={session} orderId={order.id} code={code} imageId={imageId}
         title={text(map.title) || order.title} detail={detail ?? null} />

@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
 import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
-import { Alert, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { adminBosmaAstatkaReport } from './workerControlsApi';
 import { adminPrintPreflight } from './workerPrintPreflight';
@@ -18,7 +18,8 @@ import { completeWorkerScanSections } from './workerScanSections';
 import { legacyWorkerScanControl } from './workerLegacyScan';
 import { adminProgressQrLookup } from './workerProgressApi';
 import { adminLookupOpeningWip } from './workerOpeningWip';
-import { workerProductionOrderDetail } from './workerDetailApi';
+import { WorkerDetailRecovery } from './workerDetailRecovery';
+import { readWorkerDetailSnapshot, workerDetailInitialBootstrap, workerDetailSectionRetryable } from './workerDetailRecoveryRead';
 import { useNativeSheet } from './nativeSheet';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerOrderImage } from './components/WorkerOrderHeader';
@@ -73,7 +74,7 @@ import { WorkerOrderSyncProgress } from './components/WorkerOrderSyncProgress';
 import { workerOrderRezkaInstructions } from './workerOrderRezkaInstructions';
 
 type Obj = Record<string, any>;
-type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onNotice?: (message: string) => void; onClose: () => void; onChanged: () => void };
+type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; queueWindow?: string; onWritePending?: (pending: boolean) => void; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onNotice?: (message: string) => void; onClose: () => void; onChanged: () => void };
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
 }
@@ -106,7 +107,7 @@ async function scanBootstrap(session: Session, input: Parameters<typeof adminOrd
   return input.includeSections === false ? result : completeWorkerScanSections(session, result, input.materialBarcodes ?? []);
 }
 
-export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog, orderId, preview, queueCursor, busyOrderTitle = '', initialAction, initialScanQr = '', initialSwitchQr = '', onSwitchCommitted, onNotice, onClose, onChanged }: Props) {
+export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog, orderId, preview, queueCursor, queueWindow = '', onWritePending, busyOrderTitle = '', initialAction, initialScanQr = '', initialSwitchQr = '', onSwitchCommitted, onNotice, onClose, onChanged }: Props) {
   const { t, p, locale } = useWorkerOrderText();
   const colors = useWorkerColors();
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
@@ -114,10 +115,19 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const closeSheet = useContext(WorkerSheetCloseContext) ?? onClose;
   const [detail, setDetail] = useState<Obj | null>(null);
   const [detailReadScope, setDetailReadScope] = useState('');
+  const [detailWindow, setDetailWindow] = useState(queueWindow);
   const [presentationDenied, setPresentationDenied] = useState(false);
   const [bootstrap, setBootstrap] = useState<Obj | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusyState] = useState(false);
+  const writePendingCallback = useRef(onWritePending);
+  useLayoutEffect(() => { writePendingCallback.current = onWritePending; }, [onWritePending]);
+  const writePendingState = useRef(false);
+  const notifyWritePending = useCallback((pending: boolean) => {
+    if (writePendingState.current === pending) return;
+    writePendingState.current = pending; writePendingCallback.current?.(pending);
+  }, []);
+  const setBusy = useCallback((pending: boolean) => { notifyWritePending(pending); setBusyState(pending); }, [notifyWritePending]);
   const [controlRetired, setControlRetired] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -175,6 +185,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const [deliveryChoice, setDeliveryChoice] = useState('');
   const [deliveryBusy, setDeliveryBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [sectionReadVersion, setSectionReadVersion] = useState(0);
   const isTrainingOrder = orderId.startsWith('training-');
   const operation = apparatus?.operation.trim().toLowerCase() ?? '';
   const laminationReport = operation === 'laminate' || operation === 'glue';
@@ -191,20 +202,34 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const printingScope = sessionReadScope(session), printingIdentity = JSON.stringify([printingScope, apparatusId, orderId]);
   const latestPrintingIdentity = useRef(printingIdentity);
   useLayoutEffect(() => { latestPrintingIdentity.current = printingIdentity; }, [printingIdentity]);
-  const isCurrent = () => screenMounted.current && !!activeSessionToken(session) && printingScope === sessionReadScope(session) && latestPrintingIdentity.current === printingIdentity;
+  const isCurrent = useCallback(() => screenMounted.current && !!activeSessionToken(session) && printingScope === sessionReadScope(session) && latestPrintingIdentity.current === printingIdentity,
+    [session, printingScope, printingIdentity]);
   const printerSelector = useWorkerPrinterSelector(isCurrent);
   const initialActionHandled = useRef(false);
   const initialQr = useRef(new WorkerInitialQr(initialScanQr));
   const validateInitialQr = useRef<(qr: string) => void>(() => {});
-  useLayoutEffect(() => { validateInitialQr.current = qr => { void onScan(qr, 'input'); }; });
   const workerRole = String(session.profile?.role ?? '').trim();
   const workerRef = String(session.profile?.ref ?? '').trim();
   const draftScope = JSON.stringify([session.baseUrl, workerRole, workerRef, workerRole && workerRef ? '' : session.imageCacheScope, orderId, apparatusId]) + (selected === 'astatka' ? ':astatka' : '');
   const queueEpoch = queueCursor?.epoch;
   const queueRevision = queueCursor?.rev;
   const latestCursor = useRef(queueCursor);
+  const detailHydrated = useRef(false);
+  const detailRecovery = useRef<WorkerDetailRecovery | null>(null);
+  const sectionRecoveryNeeded = useRef({ bootstrap: false, assignments: false, intake: false });
+  const latestDetailWindow = useRef(queueWindow);
+  const liveDetailAuthority = useRef(!!bootstrap && !controlRetired);
+  const detailIdentity = useRef(printingIdentity);
+  const authorityContext = JSON.stringify([printingIdentity, queueWindow, queueEpoch, queueRevision]);
+  const previousAuthorityContext = useRef(authorityContext);
+  useLayoutEffect(() => {
+    if (previousAuthorityContext.current !== authorityContext) {
+      previousAuthorityContext.current = authorityContext; liveDetailAuthority.current = false;
+    }
+  }, [authorityContext]);
   useEffect(() => { scanBootstrapUnsupported.current = false; }, [session, apparatusId, orderId]);
-  useEffect(() => { latestCursor.current = queueCursor; }, [queueCursor]);
+  useLayoutEffect(() => { latestCursor.current = queueCursor; }, [queueCursor]);
+  useLayoutEffect(() => { latestDetailWindow.current = queueWindow; }, [queueWindow]);
   useEffect(() => {
     const mounted = screenMounted;
     mounted.current = true;
@@ -226,37 +251,63 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       .catch(() => { if (screenMounted.current) setError('Bo‘yoq hisobotini qurilmada saqlab bo‘lmadi.'); });
   }, [draftScope, loadedDraftScope, paint, paintDynamic, paintUsage, paintImageId]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (ownerCurrent: () => boolean) => {
     const version = ++loadVersion.current;
     const scope = sessionReadScope(session);
+    const window = latestDetailWindow.current;
+    const current = () => ownerCurrent() && version === loadVersion.current && isCurrent() && scope === sessionReadScope(session) && window === latestDetailWindow.current;
     setLoading(true);
-    try {
-      let accepted = false;
-      for (let attempt = 0; attempt < 2 && !accepted; attempt++) {
-        const [snapshot, scan] = await Promise.all([
-          workerProductionOrderDetail(session, apparatusId, orderId),
-          scanBootstrap(session, { apparatus: apparatusId, orderId, materialBarcodes: materials, automaticQolipConfirmation: true }, scanBootstrapUnsupported),
-        ]);
-        if (version !== loadVersion.current) return;
-        if (scope !== sessionReadScope(session)) { setDetailReadScope(''); setBootstrap(null); setControlRetired(true); return; }
-        const maps = snapshot.maps;
-        accepted = Array.isArray(maps) && maps.length === 1 && maps[0]?.map?.id === orderId &&
-          (!snapshot.projection || snapshot.projection === 'worker_detail_v1') && typeof snapshot.scope === 'string' && !!snapshot.scope && typeof snapshot.epoch === 'string' && !!snapshot.epoch &&
-          Number.isInteger(snapshot.rev) && snapshot.rev >= 0 && snapshot.epoch === scan.control_state?.epoch &&
-          scan.control_state?.rev >= snapshot.rev && validOrderControl(scan, apparatusId, orderId, { epoch: queueEpoch, rev: queueRevision });
-        if (accepted) { setDetail(snapshot); setDetailReadScope(scope); setPresentationDenied(false); setBootstrap(scan); setControlRetired(false); }
-      }
-      if (!accepted) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
-    } catch (e) { if (version === loadVersion.current) { setBootstrap(null); setControlRetired(true); if (workerOrderPresentationDenied(e)) setPresentationDenied(true); setError(e instanceof Error ? e.message : 'Buyurtmani yuklab bo‘lmadi'); } }
-    finally { if (version === loadVersion.current) setLoading(false); }
-  }, [session, apparatusId, orderId, materials, queueEpoch, queueRevision]);
+    sectionRecoveryNeeded.current = { bootstrap: false, assignments: false, intake: false };
+    setSectionReadVersion(value => value + 1);
+    // The first frame is the row preview. Full map hydration precedes section loading,
+    // and a section read never makes opening the sheet depend on a second request.
+    const snapshot = await readWorkerDetailSnapshot(session, apparatusId, orderId, () => latestCursor.current, current);
+    if (!current()) return;
+    detailHydrated.current = true;
+    setDetail(snapshot); setDetailReadScope(scope); setDetailWindow(window); setPresentationDenied(false);
+    const initial = workerDetailInitialBootstrap(snapshot, apparatusId, orderId);
+    if (initial && validOrderControl(initial, apparatusId, orderId, latestCursor.current)) {
+      liveDetailAuthority.current = true; setBootstrap(initial); setControlRetired(false); setLoading(false);
+    }
+    const scan = await scanBootstrap(session, { apparatus: apparatusId, orderId, materialBarcodes: materials, automaticQolipConfirmation: true }, scanBootstrapUnsupported);
+    if (!current()) return;
+    if (snapshot.epoch !== scan.control_state?.epoch || scan.control_state?.rev < snapshot.rev ||
+        !validOrderControl(scan, apparatusId, orderId, latestCursor.current)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+    liveDetailAuthority.current = true; setBootstrap(scan); setControlRetired(false); setLoading(false);
+    sectionRecoveryNeeded.current.bootstrap = scan.sections?.materials?.status === 'error' && workerDetailSectionRetryable(scan.sections.materials.readError);
+  }, [session, apparatusId, orderId, materials, isCurrent]);
+  const recoveryOptions = useRef({ load, current: isCurrent });
+  useLayoutEffect(() => { recoveryOptions.current = { load, current: isCurrent }; }, [load, isCurrent]);
+  if (detailRecovery.current === null) detailRecovery.current = new WorkerDetailRecovery({
+    load: current => recoveryOptions.current.load(current), current: () => recoveryOptions.current.current(),
+    hydrated: () => detailHydrated.current,
+    sectionsNeedRecovery: () => Object.values(sectionRecoveryNeeded.current).some(Boolean),
+    invalidate: () => { loadVersion.current++; liveDetailAuthority.current = false; setControlRetired(true); setLoading(true); },
+    failed: (failure, initial) => {
+      liveDetailAuthority.current = false; setControlRetired(true); setLoading(false);
+      if (workerOrderPresentationDenied(failure)) { setPresentationDenied(true); setBootstrap(null); }
+      if (initial) setError(failure instanceof Error ? failure.message : 'Buyurtmani yuklab bo‘lmadi');
+    }, denied: workerOrderPresentationDenied,
+  });
   useEffect(() => {
-    const generation = loadVersion;
-    const timer = setTimeout(() => { if (!busy) void load(); }, 0);
-    return () => { clearTimeout(timer); generation.current++; };
-  }, [load, refresh, busy]);
+    const recovery = detailRecovery.current!;
+    if (detailIdentity.current !== printingIdentity) {
+      detailIdentity.current = printingIdentity; detailHydrated.current = false;
+      setDetail(null); setDetailReadScope(''); setBootstrap(null); setPresentationDenied(false); setError('');
+      recovery.reset();
+    }
+    recovery.invalidate(busy);
+  }, [load, refresh, busy, queueEpoch, queueRevision, queueWindow, printingIdentity]);
+  useEffect(() => {
+    const recovery = detailRecovery.current!;
+    recovery.activate();
+    recovery.setForeground(AppState.currentState == null || AppState.currentState === 'active');
+    const subscription = AppState.addEventListener('change', state => recovery.setForeground(state === 'active'));
+    return () => { subscription.remove(); recovery.dispose(); };
+  }, []);
 
-  const synchronized = !loading && !busy && !controlRetired && detailReadScope === printingScope && !!activeSessionToken(session) &&
+  const authorityCurrent = () => liveDetailAuthority.current && isCurrent();
+  const synchronized = !loading && !busy && !controlRetired && detailReadScope === printingScope && detailWindow === queueWindow && !!activeSessionToken(session) &&
     session.capabilities.includes('apparatus.queue.manage') && session.assigned_apparatus.includes(apparatusId) &&
     validOrderControl(bootstrap, apparatusId, orderId, queueCursor);
   useEffect(() => {
@@ -266,14 +317,14 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const control: Obj = bootstrap?.control_state?.control ?? {};
   const interaction: Obj = control.interaction ?? {};
   const controlEpoch = bootstrap?.control_state?.epoch, controlRevision = bootstrap?.control_state?.rev;
-  const materialReadKey = JSON.stringify([sessionReadScope(session), apparatusId, orderId, controlEpoch, controlRevision, refresh]);
+  const materialReadKey = JSON.stringify([sessionReadScope(session), apparatusId, orderId, controlEpoch, controlRevision, refresh]) + (sectionReadVersion ? `:${sectionReadVersion}` : '');
   const intakeCandidates = intakeReadKey === materialReadKey ? intakeCandidatesState : [];
   const intakeLoading = intakeReadKey !== materialReadKey;
   const isActiveOrder = bootstrap?.control_state?.order_control === 'active' && !['frozen', 'freeze_requested'].includes(control.stage_control_state);
   const safeStopRequest = synchronized ? runningFreezeRequest(bootstrap?.control_state, apparatusId) : null;
   const allowed: string[] = synchronized && (isActiveOrder || !!safeStopRequest) && Array.isArray(control.allowed_actions) ? control.allowed_actions : [];
   const finishReclose = workerOrderReclose(session, bootstrap, apparatusId, orderId, synchronized);
-  const order = detail?.maps?.[0]?.map ?? {};
+  const order = detailReadScope === printingScope ? detail?.maps?.[0]?.map ?? {} : {};
   const merge = useWorkerOrderMerge({ identity: printingIdentity, available: synchronized && allowed.includes('merge') && !delivery && !deliveryBusy,
     current: () => isCurrent() && session.capabilities.includes('apparatus.queue.manage') && session.assigned_apparatus.includes(apparatusId),
     target: { apparatus: apparatusId, order: orderId, orderLabel: String(order.title || preview?.title || orderId),
@@ -301,7 +352,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         return result.has_states === true;
       }
       finally {
-        actionInFlight.current = false;
+        actionInFlight.current = false; notifyWritePending(false);
         if (isCurrent()) { onChanged(); setRefresh(value => value + 1); setBusy(false); }
       }
     },
@@ -391,7 +442,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   }, [initialAction, synchronized, canOpenInitialComplete, canOpenInitialAstatka, canResume, canDetachRoll, resumeNeedsInput, resumeReady, p]);
 
   async function beginCompletion() {
-    if (!synchronized || actionInFlight.current) return;
+    if (!synchronized || !authorityCurrent() || actionInFlight.current) return;
     if (!finishReclose) { if (allowed.includes('complete')) { setError(''); selectProgressAction('complete'); } return; }
     const previous = workerLongPressMenu(bootstrap!, session, apparatusId, orderId, latestCursor.current, operation);
     if (!previous.actions.includes('reclose')) return;
@@ -402,7 +453,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       if (!isCurrent()) return;
       onNotice?.(p('worker.reclose.success')); closeSheet();
     } catch { if (isCurrent()) { onNotice?.(p('worker.reclose.failed')); setError(p('worker.reclose.failed')); } }
-    finally { actionInFlight.current = false; if (isCurrent()) { setBusy(false); setRefresh(value => value + 1); onChanged(); } }
+    finally { actionInFlight.current = false; notifyWritePending(false); if (isCurrent()) { setBusy(false); setRefresh(value => value + 1); onChanged(); } }
   }
   useEffect(() => {
     if (!controlEpoch || scanningRequired) return;
@@ -413,7 +464,12 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       if (!Array.isArray(data)) throw new Error('Homashyolar yuklanmadi.');
       setAttachedMaterials(data.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)));
       setAttachedMaterialsError(''); setAttachedReadKey(materialReadKey);
-    }).catch(() => { if (current && activeSessionToken(session) && scope === sessionReadScope(session)) { setAttachedMaterialsError('Homashyolar yuklanmadi.'); setAttachedReadKey(materialReadKey); } });
+      sectionRecoveryNeeded.current.assignments = false;
+    }).catch(error => { if (current && activeSessionToken(session) && scope === sessionReadScope(session)) {
+      setAttachedMaterialsError('Homashyolar yuklanmadi.'); setAttachedReadKey(materialReadKey);
+      sectionRecoveryNeeded.current.assignments = workerDetailSectionRetryable(error);
+      if (sectionRecoveryNeeded.current.assignments) detailRecovery.current?.recover();
+    } });
     return () => { current = false; };
   }, [session, apparatusId, orderId, scanningRequired, controlEpoch, controlRevision, materialReadKey]);
   useEffect(() => {
@@ -424,7 +480,12 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       if (!current || !activeSessionToken(session) || scope !== sessionReadScope(session)) return;
       if (!Array.isArray(data)) throw new TypeError('Invalid materials');
       setIntakeCandidates(data.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId))); setIntakeError(''); setIntakeReadKey(materialReadKey);
-    }).catch(() => { if (current && activeSessionToken(session) && scope === sessionReadScope(session)) { setIntakeCandidates([]); setIntakeError('Homashyolar yuklanmadi.'); setIntakeReadKey(materialReadKey); } });
+      sectionRecoveryNeeded.current.intake = false;
+    }).catch(error => { if (current && activeSessionToken(session) && scope === sessionReadScope(session)) {
+      setIntakeCandidates([]); setIntakeError('Homashyolar yuklanmadi.'); setIntakeReadKey(materialReadKey);
+      sectionRecoveryNeeded.current.intake = workerDetailSectionRetryable(error);
+      if (sectionRecoveryNeeded.current.intake) detailRecovery.current?.recover();
+    } });
     return () => { current = false; };
   }, [session, apparatusId, orderId, scanningRequired, operation, interaction.material_intake_allowed, controlEpoch, controlRevision, materialReadKey]);
 
@@ -484,7 +545,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     if (kind === 'input') {
       const qr = workerQrPayload(value);
       setScanner(null);
-      if (!qr || !synchronized || scanInFlight.current) return;
+      if (!qr || !synchronized || !authorityCurrent() || scanInFlight.current) return;
       scanInFlight.current = true;
       const version = loadVersion.current;
       const scanScope = sessionReadScope(session);
@@ -546,6 +607,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     }
     setError('');
   }
+  useLayoutEffect(() => { validateInitialQr.current = qr => { void onScan(qr, 'input'); }; });
   async function finishMaterialReceipt(material: Obj, purpose: 'start' | 'intake', version: number) {
     const barcode = String(material.barcode ?? '').trim();
     const current = await scanBootstrap(session, { apparatus: apparatusId, orderId, materialBarcodes: materials,
@@ -587,7 +649,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     }
   }
   async function receiveScannedMaterial(material: Obj, purpose: 'start' | 'intake') {
-    if (scanInFlight.current || !synchronized) return;
+    if (scanInFlight.current || !synchronized || !authorityCurrent()) return;
     scanInFlight.current = true;
     const version = loadVersion.current;
     setDeliveryBusy(true); setError('');
@@ -609,7 +671,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     finally { scanInFlight.current = false; if (screenMounted.current) setDeliveryBusy(false); }
   }
   async function confirmMaterialDelivery() {
-    if (!delivery || !deliveryChoice || scanInFlight.current || !synchronized) return;
+    if (!delivery || !deliveryChoice || scanInFlight.current || !synchronized || !authorityCurrent()) return;
     const person = delivery.deliverers.find(value => `${value.role}:${value.ref}` === deliveryChoice);
     if (!person) return;
     scanInFlight.current = true;
@@ -627,7 +689,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   }
   async function quickScan(raw: string) {
     const value = raw.trim();
-    if (!value || !showQuickScanner || scanInFlight.current) return;
+    if (!value || !showQuickScanner || !authorityCurrent() || scanInFlight.current) return;
     if (merge.scanning) { await merge.flow.scan(value, barcodeFromQr(value)); return; }
     const now = Date.now();
     if (recentQuickScan.current?.value === value && now - recentQuickScan.current.at < 1500) return;
@@ -650,7 +712,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   async function submit(action: string) {
     const isAstatka = action === 'astatka';
     const removingHandoffRoll = laminationReport && action === 'detach_roll';
-    if (!synchronized || merge.pending || (isAstatka ? !canOpenInitialAstatka : !allowed.includes(action)) || actionInFlight.current ||
+    if (!synchronized || !authorityCurrent() || merge.pending || (isAstatka ? !canOpenInitialAstatka : !allowed.includes(action)) || actionInFlight.current ||
         (isAstatka && !laminationReport && loadedDraftScope !== draftScope)) return;
     const isStarting = action === 'start' || action === 'resume';
     if (isStarting && !materialState.ready) { setError(materialState.reason); return; }
@@ -754,7 +816,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         if (Platform.OS === 'ios' && selected) closeAfterProgress.current = true; else closeSheet();
       }
     } catch (e) { setSwitchProgress(null); if (isCurrent() && !(e instanceof WorkerPrintCancelled)) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
-    finally { actionInFlight.current = false; onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
+    finally { actionInFlight.current = false; notifyWritePending(false); onChanged(); if (screenMounted.current) { setRefresh(value => value + 1); setBusy(false); } }
   }
   async function selectOutputPrinter() {
     // UIKit must finish dismissing the report Modal before the native picker
@@ -765,7 +827,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     finally { if (isCurrent()) setPrinterDialogHidden(false); }
   }
   async function runPreflight(action: 'hold' | 'passed' | 'failed') {
-    if (!synchronized || actionInFlight.current || (action === 'hold' ? !showPreflightHold : !showPreflightOutcome)) return;
+    if (!synchronized || !authorityCurrent() || actionInFlight.current || (action === 'hold' ? !showPreflightHold : !showPreflightOutcome)) return;
     const holdId = action === 'hold' ? `print-preflight:${orderId}:${apparatusId}:${Date.now()}-${Math.random().toString(36).slice(2)}` : preflight.hold_id;
     actionInFlight.current = true;
     loadVersion.current++;
@@ -776,10 +838,10 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       if (!isCurrent()) return;
       setSuccess(action === 'hold' ? 'Rang chiqarish boshlandi.' : action === 'passed' ? 'Rang chiqdi.' : 'Rang chiqmagani qayd etildi.');
     } catch (e) { if (isCurrent()) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
-    finally { actionInFlight.current = false; if (isCurrent()) { presentation.clear(); onChanged(); setRefresh(value => value + 1); setBusy(false); } }
+    finally { actionInFlight.current = false; notifyWritePending(false); if (isCurrent()) { presentation.clear(); onChanged(); setRefresh(value => value + 1); setBusy(false); } }
   }
   async function freezePreflight() {
-    if (!showPreflightFreeze || actionInFlight.current) return;
+    if (!showPreflightFreeze || !authorityCurrent() || actionInFlight.current) return;
     const initialRequest = preflightFreezeRequest(bootstrap?.control_state, apparatusId, orderId);
     actionInFlight.current = true;
     loadVersion.current++;
@@ -795,7 +857,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       presentation.clear();
       setSuccess('Buyurtma to‘xtatildi.');
     } catch (e) { if (isCurrent()) setError(e instanceof Error ? e.message : 'Amal bajarilmadi'); }
-    finally { actionInFlight.current = false; if (isCurrent()) { onChanged(); setRefresh(value => value + 1); setBusy(false); } }
+    finally { actionInFlight.current = false; notifyWritePending(false); if (isCurrent()) { onChanged(); setRefresh(value => value + 1); setBusy(false); } }
   }
   const code = String(preview?.code || order.order_number || order.code || orderId);
   const closingOutput = selected === 'complete' && typeof control.closing_output_batch_id === 'string' && !!control.closing_output_batch_id.trim();
@@ -1022,10 +1084,10 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       {showMolds && <View style={styles.sectionGroup}>
         <Expansion title={t(view.moldSetCount > 1 ? 'Muqobil qoliplar' : 'Qoliplar')} count={view.requiredQolips.length ? `${view.automaticQolip && view.automaticConfirmed ? view.requiredQolips.length : view.effectiveQolips.length}/${view.requiredQolips.length} ta` : ''}
           expanded={view.requiredQolips.length > 0 && qolipsExpanded} onPress={view.requiredQolips.length && view.moldStatus !== 'loading' ? () => setQolipsExpanded(value => !value) : undefined} />
-        {view.automaticQolip && view.automaticSets.length > 1 && view.automaticSets.map(set => <NativeButton key={String(set.set_id)} label={String(set.set_id)} disabled={!actionsEnabled} variant={selectedQolipSet === set.set_id ? 'filled' : 'outlined'} onPress={() => { if (actionsEnabled) setSelectedQolipSet(String(set.set_id)); }} />)}
+        {view.automaticQolip && view.automaticSets.length > 1 && view.automaticSets.map(set => <NativeButton key={String(set.set_id)} label={String(set.set_id)} disabled={!actionsEnabled} variant={selectedQolipSet === set.set_id ? 'filled' : 'outlined'} onPress={() => { if (actionsEnabled && authorityCurrent()) setSelectedQolipSet(String(set.set_id)); }} />)}
         {canSendOrderAlert && sections.qolips?.status === 'ready' && requiredQolips.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="qolip" enabled={!busy} />}
         {qolipsExpanded && view.requiredQolips.map((mold, index) => <View key={String(mold.qolip_code || index)} style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{String(mold.qolip_code ?? '')}{t(mold.color ? ` · ${mold.color}` : '')}{t(displayScannedMolds.has(normalizeCode(mold.qolip_code)) ? ' ✓' : '')}</Text></View>)}
-        {!view.automaticQolip && view.moldSetCount > 1 && view.effectiveQolips.length > 0 && <NativeButton label={t("Komplektni almashtirish")} variant="text" disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled) return; setQolipsReset(true); setQolips([]); }} />}
+        {!view.automaticQolip && view.moldSetCount > 1 && view.effectiveQolips.length > 0 && <NativeButton label={t("Komplektni almashtirish")} variant="text" disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setQolipsReset(true); setQolips([]); }} />}
         {view.moldStatus === 'error' && <Text style={styles.error}>{t("Qoliplar yuklanmadi")}</Text>}
       </View>}
       {view.inputVisible && <View style={[styles.detailRow, { backgroundColor: colors.field }]}>
@@ -1033,7 +1095,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {!!view.inputQr && <Text style={[styles.small, { color: colors.muted }]}>{view.inputQr}</Text>}
       </View>}
       {cardState.hasActions && <View style={styles.sectionGroup}>
-        {cardState.showMaterialIntakeAction && <NativeButton label={p(intakeMode ? 'worker.action.close_scanner' : 'worker.action.receive_material')} height={52} disabled={!actionsEnabled || deliveryBusy} onPress={() => { if (!actionsEnabled) return; merge.flow.cancel(); setIntakeMode(value => !value); }} />}
+        {cardState.showMaterialIntakeAction && <NativeButton label={p(intakeMode ? 'worker.action.close_scanner' : 'worker.action.receive_material')} height={52} disabled={!actionsEnabled || deliveryBusy} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; merge.flow.cancel(); setIntakeMode(value => !value); }} />}
         {!!view.rezkaInstructions.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.map.cutting')}</Text>{view.rezkaInstructions.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
         {!!view.mergeLines.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.merge_state.title')}</Text>{view.mergeLines.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
         {view.showPreflightFreeze && <NativeButton label={t("Rang chiqarishni to‘xtatib muzlatish")} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { void freezePreflight(); }} />}
@@ -1046,20 +1108,20 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {showOutputProgress && <WorkerOutputProgress session={session} orderId={orderId} apparatusId={apparatusId}
           stageId={view.stageId} map={order} operation={operation} outputRevision={`${controlEpoch}:${controlRevision}:${refresh}`} />}
         {(cardState.showPause || cardState.showComplete) && <WorkerOrderActionGroup>
-          {cardState.showPause && <NativeButton label={t(view.pauseLabel)} height={58} disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled) return; setError(''); selectProgressAction('pause'); }} />}
-          {cardState.showComplete && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { if (actionsEnabled) void beginCompletion(); }} />}
+          {cardState.showPause && <NativeButton label={t(view.pauseLabel)} height={58} disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setError(''); selectProgressAction('pause'); }} />}
+          {cardState.showComplete && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { if (actionsEnabled && authorityCurrent()) void beginCompletion(); }} />}
         </WorkerOrderActionGroup>}
-        {cardState.showMerge && <NativeButton label={p('worker.action.merge')} height={58} disabled={!actionsEnabled || scanInFlight.current} onPress={() => { if (!actionsEnabled) return; setIntakeMode(false); merge.flow.toggle(); }} />}
+        {cardState.showMerge && <NativeButton label={p('worker.action.merge')} height={58} disabled={!actionsEnabled || scanInFlight.current} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setIntakeMode(false); merge.flow.toggle(); }} />}
         {cardState.showResume && <NativeButton label={t("Davom ettirish")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || !actionsEnabled} onPress={() => { void submit('resume'); }} />}
         {cardState.showWaitingForPrevious && <WorkerOrderBlockingNotice message={p('worker.waiting.previous', { stage: previousStageLabel })} />}
         {cardState.showWaitingForSequence && <WorkerOrderBlockingNotice message={p('worker.waiting.sequence')} />}
       </View>}
     </>}
-    {!loading && !bootstrap && !presentation.retaining && <NativeButton label={t("Qayta urinish")} onPress={() => { setError(''); void load(); }} disabled={busy} />}
+    {!loading && !detail && !bootstrap && !presentation.retaining && <NativeButton label={t("Qayta urinish")} onPress={() => { setError(''); detailRecovery.current?.retry(); }} disabled={busy} />}
     </View>
     <WorkerOrderOverview session={session} orderId={orderId} code={code} imageId={imageId}
       title={String(order.title || preview?.title || '')}
-      detail={detail ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
+      detail={detail && detailReadScope === printingScope ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </ScrollView>
     {!!initialSwitchQr && apparatus && <WorkerInitialOrderSwitch session={session} apparatus={apparatus} apparatusCatalog={apparatusCatalog} orderId={orderId}
       orderLabel={[code, String(order.title || preview?.title || '')].filter(Boolean).join(' • ')} qr={initialSwitchQr}
@@ -1068,7 +1130,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       onProceed={() => { if (isCurrent()) { onSwitchCommitted?.(); closeSheet(); } }}
       onPauseStart={() => { actionInFlight.current = true; loadVersion.current++; setControlRetired(true); setBusy(true); setError(''); }}
       onPauseEnd={completed => {
-        actionInFlight.current = false; setBusy(false); onChanged(); setRefresh(value => value + 1);
+        actionInFlight.current = false; notifyWritePending(false); setBusy(false); onChanged(); setRefresh(value => value + 1);
         if (completed) { onSwitchCommitted?.(); closeSheet(); }
         else setError(p('worker.temporary_pause.failed'));
       }} />}
@@ -1106,7 +1168,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         const closeInitial = completed && (initialAction === selected || switched);
         setSwitchProgress(null);
         if (switched) onSwitchCommitted?.();
-        setSelected(''); actionInFlight.current = false; setBusy(false);
+        setSelected(''); actionInFlight.current = false; notifyWritePending(false); setBusy(false);
         if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
         operationReportAttempted.current = false;
         if (closeInitial) closeSheet();
@@ -1117,7 +1179,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       onCommitted={() => { operationReportAttempted.current = true; loadVersion.current++; setControlRetired(true); setInputBatch(null); setMaterials([]); }}
       onClose={completed => {
         const switched = completed && switchProgress === selected;
-        setSwitchProgress(null); setSelected(''); actionInFlight.current = false; setBusy(false);
+        setSwitchProgress(null); setSelected(''); actionInFlight.current = false; notifyWritePending(false); setBusy(false);
         if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
         operationReportAttempted.current = false;
         if (switched) { onSwitchCommitted?.(); closeSheet(); }
@@ -1127,7 +1189,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       onCommitted={() => { operationReportAttempted.current = true; loadVersion.current++; setControlRetired(true); setInputBatch(null); setMaterials([]); }}
       onClose={completed => {
         const switched = completed && switchProgress === selected;
-        setSwitchProgress(null); setSelected(''); actionInFlight.current = false; setBusy(false);
+        setSwitchProgress(null); setSelected(''); actionInFlight.current = false; notifyWritePending(false); setBusy(false);
         if (operationReportAttempted.current) { setRefresh(value => value + 1); onChanged(); }
         operationReportAttempted.current = false;
         if (switched) { onSwitchCommitted?.(); closeSheet(); }

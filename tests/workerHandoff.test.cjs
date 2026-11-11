@@ -40,7 +40,8 @@ function removalHarness(options = {}) {
   const h = { writes: [], printers: 0, errors: [], closed: 0, current: true, reads: 0, retired: 0 };
   const state = { actionInFlight: { current: false }, loadVersion: { current: 0 }, closeAfterProgress: { current: false }, screenMounted: { current: true } };
   const no = () => {};
-  const context = { ...state, synchronized: true, merge: { pending: options.mergePending === true }, canOpenInitialAstatka: false, allowed: ['detach_roll'], laminationReport: true, isCurrent: () => h.current,
+  const context = { ...state, synchronized: true, authorityCurrent: () => h.current && options.authority !== false,
+    merge: { pending: options.mergePending === true }, canOpenInitialAstatka: false, allowed: ['detach_roll'], laminationReport: true, isCurrent: () => h.current,
     control: { stage_node_id: 'stage' }, interaction: { resume_input_required: options.inputRequired === true }, bootstrap: {}, latestCursor: { current: { epoch: 'epoch', rev: 1 } }, scanBootstrapUnsupported: {},
     selected: options.action === 'resume' ? '' : 'detach_roll', initialAction: options.action ?? 'detach_roll', initialSwitchQr: '', switchProgress: null, setSwitchProgress: no, session: {}, apparatusId: apparatus, orderId: order, order: {}, preview: {},
     kg: '10', meter: '100', bobina: '1', waste: '', freezeNote: '', completionNote: '', leftoverWip: '', leftoverFilm: '', safeStopRequest: null,
@@ -54,7 +55,7 @@ function removalHarness(options = {}) {
     presentation: { clear: () => h.retired++ },
     WorkerPrintCancelled: class extends Error {}, Platform: { OS: options.platform ?? 'ios' },
     setError: value => { if (value) h.errors.push(value); }, closeSheet: () => h.closed++,
-    setDescriptionRevealed: no, setControlRetired: no, setBusy: no, setSuccess: no, selectProgressAction: no, setMaterials: no, setQolips: no,
+    notifyWritePending: no, setDescriptionRevealed: no, setControlRetired: no, setBusy: no, setSuccess: no, selectProgressAction: no, setMaterials: no, setQolips: no,
     setQolipsReset: no, setInputBatch: no, setFreezeNote: no, setCompletionNote: no, setKg: no, setMeter: no, setBobina: no, setSelectedQolipSet: no, onChanged: no, setRefresh: no,
   };
   if (options.action === 'resume') context.allowed = ['resume'];
@@ -78,6 +79,12 @@ test('native removal refuses a changed stage, missing handoff roll or expired ac
 test('a pending merge blocks competing handoff removal and resume before reads or writes', async () => {
   for (const action of ['detach_roll', 'resume']) {
     const h = removalHarness({ action, mergePending: true }); await h.submit(action);
+    assert.equal(h.reads, 0); assert.equal(h.writes.length, 0); assert.equal(h.printers, 0); assert.equal(h.closed, 0);
+  }
+});
+test('a retained handoff or resume callback cannot read or write after its detail authority is retired', async () => {
+  for (const action of ['detach_roll', 'resume']) {
+    const h = removalHarness({ action, authority: false }); await h.submit(action);
     assert.equal(h.reads, 0); assert.equal(h.writes.length, 0); assert.equal(h.printers, 0); assert.equal(h.closed, 0);
   }
 });

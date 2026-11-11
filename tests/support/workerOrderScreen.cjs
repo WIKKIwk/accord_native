@@ -27,8 +27,9 @@ const fab = load('workerFabQr.ts', { './workerControlsApi': controls, './workerO
   './workerOutputProgress': { workerNextWorkStages: map => map.nodes ?? [], workerWipConsumerIds: map => map.consumers ?? [] } });
 const merge = load('workerOrderMerge.ts', { './workerControlsApi': controls, './workerOrderLogic': rules, './workerFabQr': fab });
 const presentation = load('workerOrderPresentation.ts');
+const detailRecovery = load('workerDetailRecovery.ts');
 const api = load('workerApi.ts', { './authorizedFetch': {}, './workerQueueLimit': {}, './workerOrderAppearance': {}, './workerSnapshot': {},
-  './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {} });
+  './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {}, './workerQueueReadApi': {}, './workerQueueReadError': {} });
 const instructions = load('workerOrderRezkaInstructions.ts', { './workerApi': api, './workerControlsApi': controls, './workerPeremotka': load('workerPeremotka.ts') });
 const native = new Proxy({}, { get: (_target, key) => String(key) });
 const row = barcode => ({ barcode, order_id: '0198', apparatus: 'apparatus:default:bosma_8', execution_status: 'ready' });
@@ -54,7 +55,7 @@ function harness(platform, input = {}, locale = 'uz') {
       return [values.get(name), value => values.set(name, typeof value === 'function' ? value(values.get(name)) : value)]; },
       useRef: value => refs[refCursor++] ?? (refs[refCursor - 1] = { current: value }), useContext: () => null, useCallback: callback => callback,
       useEffect: callback => effects.push(callback), useLayoutEffect: callback => layouts.push(callback), useEffectEvent: callback => callback },
-    'react-native': { ...native, ActivityIndicator: 'ActivityIndicator', Alert: { alert() {} }, Platform: { OS: platform, Version: 26 },
+    'react-native': { ...native, ActivityIndicator: 'ActivityIndicator', Alert: { alert() {} }, AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) }, Platform: { OS: platform, Version: 26 },
       PlatformColor: value => value, StyleSheet: { create: value => value }, View: 'View', Text: 'Text', ScrollView: 'ScrollView', Pressable: 'Pressable' },
     '@expo/ui': { Host: 'Host', TextInput: 'NativeInput', useNativeState: initial => ({ value: initial, set() {} }) },
     'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })] },
@@ -63,6 +64,12 @@ function harness(platform, input = {}, locale = 'uz') {
     './workerOrderLogic': { ...rules, validOrderControl: () => fresh }, './workerOrderCardState': card, './workerOrderBlocking': blocking,
     './workerOrderMerge': merge, './workerFabQrReads': { workerFabQrReads: () => input.mergeReads },
     './workerOrderPresentation': presentation,
+    './workerDetailRecovery': detailRecovery,
+    './workerDetailRecoveryRead': {
+      readWorkerDetailSnapshot: (...args) => input.readDetail ? input.readDetail(...args) : Promise.resolve(overrides.detail),
+      // Existing presentation fixtures contain no full snapshot action controls.
+      workerDetailInitialBootstrap: () => null,
+    },
     './workerOrderRezkaInstructions': instructions,
     './components/useWorkerOrderPresentation': { useWorkerOrderPresentation(input, data) {
       const result = presentation.workerOrderPresentationFor(savedPresentation, input, data); savedPresentation = result.next;
@@ -71,6 +78,7 @@ function harness(platform, input = {}, locale = 'uz') {
     './workerQueueAction': { adminApparatusQueueActionResult: async (_session, body, current) => { if (!current()) throw new Error('stale'); actions.push(body); return input.runQueueAction ? await input.runQueueAction(body) : input.runMerge ? await input.runMerge() : { has_states: true }; } },
     './workerPrintPreflight': { adminPrintPreflight: async (_session, body) => { preflights.push(body); return input.runPreflight ? await input.runPreflight(body) : {}; } },
     './workerScanBootstrap': { adminOrderScanBootstrap: async () => input.readBootstrap ? await input.readBootstrap() : structuredClone(bootstrap) },
+    './workerScanSections': { completeWorkerScanSections: async (_session, value) => value },
     './components/useWorkerOrderMerge': { useWorkerOrderMerge(options) {
       mergeOptions = options;
       if (!mergeFlow) mergeFlow = new merge.WorkerOrderMergeFlow({ available: () => mergeOptions.available, current: () => mergeOptions.current(),

@@ -63,6 +63,7 @@ for (const platform of ['ios', 'android']) test(`${platform}: an authenticated w
     '../shared/notificationStoresRuntime': { notificationUnreadStore: { load() {} } },
     '../shared/basePreferences': {}, '../shared/securityUnlockRuntime': {},
     '../shared/productionSnapshotRuntime': {}, '../preparation/preparationRuntime': { usePreparationRuntime() {} },
+    '../workerQueueRuntime': { useWorkerQueueRuntime() {} },
   });
   react.render(Index); await new Promise(resolve => setImmediate(resolve));
   const tree = react.render(Index);
