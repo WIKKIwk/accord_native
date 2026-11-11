@@ -50,11 +50,12 @@ import { WorkerPeremotkaButton, WorkerPeremotkaSheet } from './components/Worker
 import { useWorkerPeremotka } from './components/useWorkerPeremotka';
 import { WorkerCutToolbar } from './components/WorkerCutToolbar';
 import { openWorkerCutPanel } from './workerPeremotka';
+import { WorkerSheetPresentation } from './workerSheetPresentation';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
-type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string };
+type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; presentationId?: number; onClose?: () => void };
 type ActionScope = { window: string; scope: string };
-type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean };
+type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean; presentationId?: number; onChoose: (action: WorkerActionChoice) => void };
 const statusLabel: Record<string, string> = {
   pending: 'Kutilmoqda', waiting: 'Kutilmoqda', in_progress: 'Ish jarayonida',
   paused: 'To‘xtatilgan', completed: 'Yakunlangan', frozen: 'Muzlatilgan',
@@ -85,6 +86,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const [nativeOverlayOpen, setNativeOverlayOpen] = useState(false);
   const historySheet = useRef<WorkerWipHistorySheetHandle>(null);
   const [actionOrder, setActionOrder] = useState<ActionOrder | null>(null);
+  const sheetPresentation = useRef(new WorkerSheetPresentation());
+  const [historyPresentation, setHistoryPresentation] = useState<number | null>(null);
   const orderRoute = useNativeSheet();
   const historyRoute = useNativeSheet();
   const actionsRoute = useNativeSheet();
@@ -144,6 +147,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     previousReadScope.current = readScope;
     setActiveOrder(null); setActionOrder(null); setScannerOpen(false);
     nativeOrder.current = null; nativeActions.current = null;
+    sheetPresentation.current.reset(); setHistoryPresentation(null);
     orderRoute.close(); actionsRoute.close(); historyRoute.close();
   }, [readScope, orderRoute, actionsRoute, historyRoute]);
   useEffect(() => { screenMounted.current = true; return () => { screenMounted.current = false; }; }, []);
@@ -163,11 +167,17 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (nativeOrder.current) orderRoute.update(renderOrderRoute(nativeOrder.current));
   }, [queue, orderRoute, renderOrderRoute]);
   function openOrder(target: ActiveOrder) {
+    if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     if (workerOrderIsFrozen(queueRef.current?.snapshot, target.orderId)) {
       setOrderNotice('Buyurtma muzlatilgan. Adminga xabar bering.');
       return;
     }
-    if (Platform.OS !== 'android') { setActiveOrder(target); return; }
+    if (Platform.OS !== 'android') {
+      const presentationId = sheetPresentation.current.open();
+      if (presentationId === null) return;
+      setActiveOrder({ ...target, presentationId, onClose: () => closeOrder(presentationId) });
+      return;
+    }
     if (orderRoute.isOpen()) return;
     preflightCheck.current++;
     nativeOrder.current = target;
@@ -179,9 +189,23 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       finishQrOrderDismissal();
     } });
   }
+  function closeOrder(presentationId: number) {
+    if (!sheetPresentation.current.dismiss(presentationId)) return;
+    setActiveOrder(current => current?.presentationId === presentationId ? null : current);
+    finishQrOrderDismissal();
+  }
   function openHistory(order: CompletedOrder) {
+    if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     preflightCheck.current++;
-    if (Platform.OS !== 'android') { setNativeOverlayOpen(true); historySheet.current?.open(order); return; }
+    if (Platform.OS !== 'android') {
+      if (!historySheet.current) return;
+      const presentationId = sheetPresentation.current.open();
+      if (presentationId === null) return;
+      setHistoryPresentation(presentationId);
+      setNativeOverlayOpen(true);
+      historySheet.current.open(order);
+      return;
+    }
     if (workerOrderIsFrozen(queueRef.current?.snapshot, order.id)) return;
     setNativeOverlayOpen(true);
     const apparatusNames = Object.fromEntries(queueRef.current?.machines.map(machine => [machine.id, machine.name]) ?? []);
@@ -308,13 +332,20 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   function openOrderActions(apparatusId: string, order: QueueOrder, isCompleted: boolean) {
     if (!canWorkMachine(apparatusId) || actionWrites.current.has(JSON.stringify([apparatusId, order.id]))) return;
     if (Platform.OS === 'android' && actionsRoute.isOpen()) return;
+    if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     preflightCheck.current++;
     const scope = queueRef.current?.snapshot.scope;
     if (loadedScope !== windowScope || typeof scope !== 'string' || !scope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; }
     if (!isCompleted && order.state === 'print_preflight_passed') { void openPreflightConfirmation(apparatusId, order.id, scope); return; }
+    const presentationId = Platform.OS !== 'android' ? sheetPresentation.current.open() : undefined;
+    if (presentationId === null) return;
     actionScope.current = { window: windowScope, scope };
     pendingAction.current = null;
-    const target = { apparatusId, order, completed: isCompleted };
+    const target: ActionOrder = { apparatusId, order, completed: isCompleted, presentationId,
+      onChoose: presentationId === undefined ? chooseOrderAction : action => {
+        if (sheetPresentation.current.isCurrent(presentationId)) chooseOrderAction(action);
+      },
+    };
     if (Platform.OS === 'android') {
       nativeActions.current = target;
       setNativeOverlayOpen(true);
@@ -326,7 +357,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       { dismissible: true, compact: true, onDismiss: closeOrderActions });
     } else setActionOrder(target);
   }
-  function closeOrderActions() {
+  function closeOrderActions(presentationId = actionOrder?.presentationId) {
+    if (Platform.OS !== 'android' && (presentationId === undefined || !sheetPresentation.current.dismiss(presentationId))) return;
     const target = Platform.OS === 'android' ? nativeActions.current : actionOrder;
     const action = pendingAction.current;
     const expected = actionScope.current;
@@ -430,12 +462,17 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
       </View>}
       {section !== 'daily' && section !== 'instructions' && section !== 'paddons' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
-      {activeOrder ? <WorkerOrderSheet onClose={() => { setActiveOrder(null); finishQrOrderDismissal(); }}>
-        {renderOrderRoute(activeOrder, () => setActiveOrder(null))}
+      {activeOrder ? <WorkerOrderSheet key={activeOrder.presentationId} onClose={activeOrder.onClose!}>
+        {renderOrderRoute(activeOrder, activeOrder.onClose)}
       </WorkerOrderSheet> : null}
-      {Platform.OS !== 'android' && <WorkerWipHistorySheet ref={historySheet} session={session} onDismiss={() => { setNativeOverlayOpen(false); preflightCheck.current++; }} />}
-      {actionOrder ? <WorkerOrderSheet dismissible compact onClose={closeOrderActions}>
-        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} />
+      {Platform.OS !== 'android' && <WorkerWipHistorySheet key={readScope} ref={historySheet} session={session} presentationId={historyPresentation ?? undefined} onDismiss={() => {
+        const id = historyPresentation;
+        if (id === null || !sheetPresentation.current.dismiss(id)) return;
+        setHistoryPresentation(null);
+        setNativeOverlayOpen(false); preflightCheck.current++;
+      }} />}
+      {actionOrder ? <WorkerOrderSheet key={actionOrder.presentationId} dismissible compact onClose={() => closeOrderActions(actionOrder.presentationId)}>
+        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={actionOrder.onChoose} />
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
       <WorkerActivePaddonPicker {...activePaddon} />

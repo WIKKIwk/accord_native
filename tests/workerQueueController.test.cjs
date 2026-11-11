@@ -166,7 +166,7 @@ test('pending writes prevent a successful-looking row snapshot from being handed
 });
 
 function workerScreenHarness(platform) {
-  const hooks = [], effects = [], opened = []; let cursor = 0;
+  const hooks = [], effects = [], opened = [], historyOpened = []; let cursor = 0;
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
     useState(initial) { const id = cursor++; if (!hooks[id]) hooks[id] = { value: typeof initial === 'function' ? initial() : initial }; return [hooks[id].value, value => { hooks[id].value = typeof value === 'function' ? value(hooks[id].value) : value; }]; },
@@ -181,7 +181,10 @@ function workerScreenHarness(platform) {
   currentQueue.snapshot.order_controls['work-1'] = { state: 'active' };
   const queueState = { queue: currentQueue, synchronized: false, loadedWindow: 'previous-query-window', loading: false,
     error: new Error('Connection reset'), reload: async () => {}, controller: { setWritePending() {} } };
-  const jsx = (type, props) => ({ type, props: props ?? {} });
+  const jsx = (type, props, key) => {
+    if (type === 'WorkerWipHistorySheet' && props?.ref) props.ref.current = { open: (...args) => historyOpened.push(args) };
+    return { type, props: props ?? {}, key };
+  };
   const mocks = {
     react, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'react-native': { Platform: { OS: platform }, View: 'View', Modal: 'Modal', StyleSheet: { create: value => value } },
@@ -201,6 +204,7 @@ function workerScreenHarness(platform) {
     './workerQueueWindow': { workerQueueSearch: value => value.trim() },
     './workerActivePaddon': { workerPaddonApparatus: () => null },
     './workerOrderBlocking': { workerOrderBusyTitle: () => '' },
+    './workerSheetPresentation': load('workerSheetPresentation'),
     './sessionReadScope': scope,
   };
   const filename = path.resolve(__dirname, '../src/WorkerScreen.tsx'), mod = new Module(filename, module);
@@ -208,7 +212,8 @@ function workerScreenHarness(platform) {
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : new Proxy({}, { get: (_value, name) => name });
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const s = session();
-  return { opened, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation: true, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
+  s.capabilities.push('apparatus.queue.manage');
+  return { opened, historyOpened, queueState, session: s, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation: true, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
 }
 function nodes(tree, type, result = []) {
   if (!tree) return result;
@@ -229,6 +234,141 @@ for (const platform of ['ios', 'android']) test(`${platform} real WorkerScreen o
   assert.equal(detail.props.preview.id, 'work-1'); assert.equal(detail.props.preview.state, 'in_progress');
   if (platform === 'ios') assert.equal(nodes(tree, 'WorkerOrderSheet').length, 1);
   assert.equal(nodes(tree, 'WorkerAlert')[0].props.alert, null, 'the old Navbat yangilanmoqda global gate must not block detail navigation');
+});
+
+async function readyIosScreen() {
+  const x = workerScreenHarness('ios');
+  x.render(); await flush();
+  x.queueState.synchronized = true;
+  x.queueState.loadedWindow = JSON.stringify(['', 10]);
+  x.queueState.error = null;
+  return x;
+}
+const screenRows = (tree, tab = station) => nodes(nodes(tree, 'WorkerTabs')[0].props.children(tab, undefined, undefined), 'WorkerOrderListItem');
+function onlySheet(tree) {
+  const sheets = nodes(tree, 'WorkerOrderSheet');
+  assert.equal(sheets.length, 1, 'there must be exactly one order presentation');
+  assert.ok(sheets[0].key != null, 'each native presentation needs its own React identity');
+  return sheets[0];
+}
+
+test('iOS same-frame taps across rows keep the first presentation until native dismissal', async () => {
+  const x = await readyIosScreen(); let tree = x.render();
+  const rows = screenRows(tree);
+  assert.ok(rows.length >= 2);
+  rows[0].props.onPress(); rows[0].props.onPress(); rows[1].props.onPress();
+  tree = x.render(); const first = onlySheet(tree);
+  assert.equal(nodes(tree, 'OrderScreen')[0].props.orderId, rows[0].props.orderId);
+  // A native closing animation still owns its presentation until onDismiss/onClose.
+  rows[1].props.onPress(); tree = x.render();
+  assert.equal(onlySheet(tree).key, first.key);
+  first.props.onClose();
+  rows[1].props.onPress(); tree = x.render(); const second = onlySheet(tree);
+  assert.notEqual(second.key, first.key);
+  assert.equal(nodes(tree, 'OrderScreen')[0].props.orderId, rows[1].props.orderId);
+  first.props.onClose(); tree = x.render();
+  assert.equal(onlySheet(tree).key, second.key, 'an old native dismissal cannot clear the new order');
+});
+
+test('iOS tap and long press share one synchronous presentation owner', async () => {
+  const x = await readyIosScreen(); let tree = x.render(); const rows = screenRows(tree);
+  rows[0].props.onPress(); rows[1].props.onLongPress();
+  tree = x.render(); const detail = onlySheet(tree);
+  assert.equal(nodes(tree, 'WorkerLongPressActions').length, 0);
+  detail.props.onClose(); rows[1].props.onLongPress(); rows[0].props.onPress();
+  tree = x.render(); const menu = onlySheet(tree);
+  assert.notEqual(menu.key, detail.key);
+  assert.equal(nodes(tree, 'OrderScreen').length, 0);
+  assert.equal(nodes(tree, 'WorkerLongPressActions')[0].props.order.id, rows[1].props.orderId);
+  detail.props.onClose(); tree = x.render();
+  assert.equal(onlySheet(tree).key, menu.key);
+});
+
+test('iOS twenty mixed detail/menu cycles reject old callbacks without exhausting sheet ownership', async () => {
+  const x = await readyIosScreen(); let tree = x.render(); const rows = screenRows(tree), oldDismissals = [];
+  const identities = new Set();
+  for (let cycle = 0; cycle < 20; cycle++) {
+    const row = rows[cycle % rows.length];
+    const open = cycle % 2 ? row.props.onLongPress : row.props.onPress;
+    open(); tree = x.render(); const current = onlySheet(tree);
+    assert.equal(identities.has(current.key), false, 'a new presentation cannot reuse a dismissed native host');
+    identities.add(current.key);
+    for (const dismiss of oldDismissals) dismiss();
+    tree = x.render(); assert.equal(onlySheet(tree).key, current.key);
+    assert.equal(nodes(tree, 'OrderScreen').length + nodes(tree, 'WorkerLongPressActions').length, 1);
+    current.props.onClose(); oldDismissals.push(current.props.onClose);
+    tree = x.render(); assert.equal(nodes(tree, 'WorkerOrderSheet').length, 0);
+  }
+  rows[0].props.onPress(); tree = x.render();
+  assert.ok(onlySheet(tree));
+  assert.equal(nodes(tree, 'OrderScreen')[0].props.orderId, rows[0].props.orderId);
+});
+
+test('iOS menu selection hands off to detail only after native dismissal and ignores the retired menu', async () => {
+  const x = await readyIosScreen(); let tree = x.render(); const row = screenRows(tree)[0];
+  row.props.onLongPress(); tree = x.render(); const menu = onlySheet(tree);
+  const actions = nodes(tree, 'WorkerLongPressActions')[0];
+  actions.props.onChoose('astatka'); tree = x.render();
+  assert.equal(onlySheet(tree).key, menu.key, 'choosing a destination must not mount it during native dismissal');
+  assert.equal(nodes(tree, 'OrderScreen').length, 0);
+  menu.props.onClose(); tree = x.render(); const detail = onlySheet(tree);
+  assert.notEqual(detail.key, menu.key);
+  assert.equal(nodes(tree, 'WorkerLongPressActions').length, 0);
+  assert.equal(nodes(tree, 'OrderScreen')[0].props.initialAction, 'astatka');
+  assert.equal(nodes(tree, 'OrderScreen')[0].props.orderId, row.props.orderId);
+  menu.props.onClose(); tree = x.render();
+  assert.equal(onlySheet(tree).key, detail.key, 'a duplicated menu dismissal cannot remove its destination');
+  detail.props.onClose();
+  row.props.onLongPress(); tree = x.render(); const nextMenu = onlySheet(tree);
+  actions.props.onChoose('complete');
+  nextMenu.props.onClose(); tree = x.render();
+  assert.equal(nodes(tree, 'WorkerOrderSheet').length, 0, 'a retired menu choice must not enqueue an action on the new menu');
+});
+
+test('iOS completed history holds the shared owner through dismissal and cannot release a later sheet', async () => {
+  const x = await readyIosScreen(); let tree = x.render();
+  const row = screenRows(tree)[0], completed = screenRows(tree, 'completed')[0];
+  assert.ok(completed);
+  completed.props.onPress(); row.props.onPress(); row.props.onLongPress();
+  tree = x.render();
+  assert.equal(x.historyOpened.length, 1);
+  assert.equal(nodes(tree, 'WorkerOrderSheet').length, 0, 'detail and menu cannot overlap completed history');
+  const history = nodes(tree, 'WorkerWipHistorySheet')[0];
+  completed.props.onPress(); assert.equal(x.historyOpened.length, 1);
+  history.props.onDismiss(); row.props.onLongPress(); tree = x.render(); const menu = onlySheet(tree);
+  history.props.onDismiss(); tree = x.render();
+  assert.equal(onlySheet(tree).key, menu.key);
+  row.props.onPress(); tree = x.render();
+  assert.equal(onlySheet(tree).key, menu.key, 'stale history dismissal cannot unlock an active menu');
+});
+
+test('iOS read-scope changes retire detail, menu and history generations without unlocking their replacements', async () => {
+  for (const kind of ['detail', 'menu', 'history']) {
+    const x = await readyIosScreen(); let tree = x.render();
+    const originalHistoryKey = nodes(tree, 'WorkerWipHistorySheet')[0].key;
+    if (kind === 'history') screenRows(tree, 'completed')[0].props.onPress();
+    else screenRows(tree)[0].props[kind === 'detail' ? 'onPress' : 'onLongPress']();
+    tree = x.render();
+    const oldDismiss = kind === 'history' ? nodes(tree, 'WorkerWipHistorySheet')[0].props.onDismiss : onlySheet(tree).props.onClose;
+    const oldChoice = nodes(tree, 'WorkerLongPressActions')[0]?.props.onChoose;
+    const oldPresentationKey = kind === 'history' ? undefined : onlySheet(tree).key;
+
+    x.session.profile.ref = 'replacement-account';
+    x.render(); await flush(); tree = x.render();
+    assert.equal(nodes(tree, 'WorkerOrderSheet').length, 0, `${kind} must leave the new read scope`);
+    assert.notEqual(nodes(tree, 'WorkerWipHistorySheet')[0].key, originalHistoryKey, 'history selection must be remounted at an account boundary');
+    const rows = screenRows(tree);
+    rows[0].props.onLongPress(); tree = x.render(); const replacement = onlySheet(tree);
+    if (oldPresentationKey !== undefined) assert.notEqual(replacement.key, oldPresentationKey, 'reset cannot reuse an old presentation generation');
+    oldChoice?.('astatka'); oldDismiss();
+    rows[1].props.onPress(); tree = x.render();
+    assert.equal(onlySheet(tree).key, replacement.key, `${kind} callbacks cannot unlock a new account's menu`);
+    assert.equal(nodes(tree, 'OrderScreen').length, 0);
+    replacement.props.onClose(); tree = x.render();
+    assert.equal(nodes(tree, 'WorkerOrderSheet').length, 0, 'retired choices cannot create a cross-account handoff');
+    rows[1].props.onPress(); tree = x.render();
+    assert.equal(nodes(tree, 'OrderScreen')[0].props.orderId, rows[1].props.orderId);
+  }
 });
 
 test('safe page disposal flushes its final baseline after cancelling obsolete scheduled saves', async () => {

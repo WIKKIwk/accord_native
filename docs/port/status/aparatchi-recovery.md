@@ -66,6 +66,15 @@ V2 demo fixtures remain deferred under D3. No fake runtime behavior is introduce
 - Reloaded the connected app and confirmed the updated HStack gesture modifiers were mounted. The user then confirmed on the real iPhone that physical long press opens Amallar and an ordinary tap opens order details. No menu mutation or report was submitted.
 - Focused row, long-press rule, and queue/controller tests:35/35 passed. iOS TypeScript passed. Lint passed with the existing AdminClosedHistoryOwner warning. This validates the reported row interactions, not every action's server-side mutation or the pending native transport build.
 
+## Rapid repeated iOS sheet presentation
+
+- Fixed a separate lifetime race after fast open/close cycles: a second row could replace a still-closing detail/menu target, reusing its `presented=false`/`closed=true` native sheet instance. Tap and long press could also mount competing sibling presenters. An old dismissal could then clear a later target.
+- `WorkerSheetPresentation` now synchronously owns one queue detail, action menu or completed-history presentation until the native dismissal callback. Further row activations during that interval are ignored. Each accepted opening has a unique React key, including batched menu-to-detail transitions. Dismissal and menu-selection callbacks must still own their generation before touching the next presentation.
+- Closing an iOS sheet ignores delayed native `isPresented=true` echoes. History dismissal cannot clear a later selection; a read-scope change clears its internal history tree as well as retiring the presentation owner. IDs remain monotonic across scope resets.
+- Regression coverage includes same-frame taps on different orders, tap/long-press overlap, 20 mixed open/close cycles, late and duplicate native dismissal callbacks, retired menu choices, menu-to-detail handoff after actual dismissal, and detail/menu/history across account scope changes.
+- Final focused suite:92/92 passed. Both platform TypeScript checks passed. Lint has zero errors and the existing single AdminClosedHistoryOwner warning. iOS Hermes export passed (`.expo/sheet-reopen-ios`). Full-suite snapshot before the final scope regression:5792 passed,11 failed,12 TODO; the failed names exactly match the unmodified main baseline. The final scope regression also passed separately.
+- The phone was disconnected from Metro during this follow-up, so the new repeated-cycle fix has not been physically exercised. No server mutation, report, printer operation or device installation was performed. Metro remains on8081 serving this branch.
+
 ## Needs from the integrator
 
 None for source integration of this requested scope; the branch remains separate from main.

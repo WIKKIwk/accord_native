@@ -35,7 +35,8 @@ export function WorkerOrderSheet({ children, onClose, dismissible = false, preve
 
   return <Host style={{ position: 'absolute', width }} pointerEvents="none" colorScheme={theme.mode}
     seedColor={theme.colors.primary ?? theme.seed} layoutDirection={theme.direction}>
-    <BottomSheet isPresented={presented} onIsPresentedChange={setPresented} onDismiss={dismiss} fitToContents={fitContent}>
+    {/* Each keyed instance presents once; a late native true echo must not reopen a closing sheet. */}
+    <BottomSheet isPresented={presented} onIsPresentedChange={value => { if (!value) close(); }} onDismiss={dismiss} fitToContents={fitContent}>
       <Group modifiers={[
         presentationBackground(backgroundColor), presentationDragIndicator(dismissible ? 'visible' : 'hidden'), interactiveDismissDisabled(preventDismiss || !dismissible),
         ...(fitContent ? [presentationSizing('automatic', { fitted: { horizontal: false, vertical: true } })]

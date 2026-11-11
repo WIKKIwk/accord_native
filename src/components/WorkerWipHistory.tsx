@@ -21,19 +21,21 @@ import { WorkerOrderFreezeDetails } from './WorkerOrderDetails';
 type Props = { session: Session; order: WipOrder; onClose: () => void; stageHistory?: boolean; apparatusNames?: WipApparatusNames };
 export type WorkerWipHistorySheetHandle = { open: (order: CompletedOrder) => void };
 
-export function WorkerWipHistorySheet({ ref, session, onDismiss }: {
+export function WorkerWipHistorySheet({ ref, session, onDismiss, presentationId }: {
   ref: Ref<WorkerWipHistorySheetHandle>;
   session: Session;
   onDismiss: () => void;
+  presentationId?: number;
 }) {
-  const [order, setOrder] = useState<CompletedOrder | null>(null);
-  useImperativeHandle(ref, () => ({ open: setOrder }), []);
-  if (!order) return null;
+  const [selection, setSelection] = useState<{ order: CompletedOrder } | null>(null);
+  useImperativeHandle(ref, () => ({ open: (order: CompletedOrder) => setSelection({ order }) }), []);
+  if (!selection) return null;
+  const { order } = selection;
   const close = () => {
-    setOrder(null);
+    setSelection(current => current === selection ? null : current);
     onDismiss();
   };
-  return <WorkerOrderSheet key={JSON.stringify([order.apparatusId, order.id])} dismissible compact={!!order.issueNote} onClose={close}>
+  return <WorkerOrderSheet key={JSON.stringify([order.apparatusId, order.id, presentationId])} dismissible compact={!!order.issueNote} onClose={close}>
     {order.issueNote
       ? <WorkerOrderFreezeDetails order={order} apparatusName={order.apparatusId} onClose={close} />
       : <WorkerWipHistory session={session} order={order} onClose={close} />}
