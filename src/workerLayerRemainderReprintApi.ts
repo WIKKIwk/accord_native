@@ -40,7 +40,7 @@ export async function adminLayerRemainderReprint(session: Session, input: Reprin
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    throw productionMapResponseError(response.status, payload, 'layer_remainder_failed');
+    throw productionMapResponseError(response.status, payload, 'layer_remainder_failed', response.headers);
   }
   const result = layerRemainderResultFromJson(await response.json()); guard(); return result;
 }

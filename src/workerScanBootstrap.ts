@@ -258,7 +258,7 @@ export async function adminOrderScanBootstrap(session: Session, input: {
     if ((response.status === 404 || response.status === 405) && !body.trim()) return null;
     if (response.status !== 200) {
       let payload: unknown; try { payload = JSON.parse(body); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, 'order_scan_bootstrap_failed');
+      throw productionMapResponseError(response.status, payload, 'order_scan_bootstrap_failed', response.headers);
     }
     return parseWorkerScanBootstrap(JSON.parse(body), station, order, qr, session);
   } finally { clearTimeout(timer); }

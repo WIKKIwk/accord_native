@@ -61,7 +61,7 @@ function harness(platform, input = {}, locale = 'uz') {
     'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })] },
     'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },
     './sessionReadScope': { sessionReadScope: () => readScope }, './nativeSheet': { useNativeSheet: () => ({ open() {}, close() {}, update() {}, isOpen: () => false }) },
-    './workerOrderLogic': { ...rules, validOrderControl: () => fresh }, './workerOrderCardState': card, './workerOrderBlocking': blocking,
+    './workerOrderLogic': { ...rules, validOrderControl: () => fresh, validWorkerOrderControl: () => fresh }, './workerOrderCardState': card, './workerOrderBlocking': blocking,
     './workerOrderMerge': merge, './workerFabQrReads': { workerFabQrReads: () => input.mergeReads },
     './workerOrderPresentation': presentation,
     './workerDetailRecovery': detailRecovery,

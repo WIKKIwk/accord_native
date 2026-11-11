@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict'), test = require('node:test');
 const fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
 function load(name, mocks = {}, clock) {
+  if (name === 'workerDetailRecoveryRead.ts') mocks = { './shared/mobileApiException': load('shared/mobileApiException.ts'), ...mocks };
   const module = { exports: {} }, source = ts.transpileModule(fs.readFileSync(path.resolve(__dirname, '../src', name), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText;
@@ -93,6 +94,13 @@ test('V2 close/reopen shares only pending scoped GET; settled read does not cert
   await tick(); assert.equal(calls, 1); pending.resolve({ epoch: 'epoch', rev: 2 }); await Promise.all([first, second]);
   await h.readWorkerDetailSnapshot(session, 'press', 'order', () => null, () => true); assert.equal(calls, 2);
 });
+test('two stale scoped details return the V2 page-changed code and message', async () => {
+  let reads = 0;
+  const h = readerFixture(async () => { reads++; return { epoch: 'old', rev: 1 }; });
+  await assert.rejects(h.readWorkerDetailSnapshot({}, 'press', 'order', () => ({ epoch: 'current', rev: 2 }), () => true),
+    { code: 'order_page_changed', message: 'Buyurtma yangilandi. Qayta oching.' });
+  assert.equal(reads, 2);
+});
 test('V2 stale retry and hung scoped GET share one five second deadline; later old completion cannot retire newer lease', async () => {
   const stale = deferred(), hung = deferred(), fresh = deferred(); let calls = 0;
   const h = readerFixture(() => [stale, hung, fresh][calls++].promise);
@@ -113,6 +121,17 @@ test('V2 scope or owner invalidation cannot publish a completed GET', async () =
 
 const { harness, nodes, main } = require('./support/workerOrderScreen.cjs');
 const wait = () => new Promise(resolve => setTimeout(resolve, 5));
+for (const platform of ['ios', 'android']) test(`${platform}: a write receipt blocks unversioned and older controls until matching authority arrives`, () => {
+  const h = harness(platform, { states: { pendingControlReceipt: { epoch: 'epoch', rev: 7 } },
+    controlState: { epoch: '', rev: null }, control: { state: 'pending', allowed_actions: ['start'] },
+    interaction: { mode: 'fresh_start', blocking_reason_code: '', material_intake_allowed: false } });
+  const controls = () => nodes(main(h.render()), node => node.type?.name === 'NativeButton' && node.props.label === h.p('worker.action.start'));
+  assert.equal(controls().length, 0);
+  const install = state => h.values.set('bootstrap', { ...h.bootstrap, control_state: { ...h.bootstrap.control_state, ...state } });
+  install({ epoch: 'epoch', rev: 6 }); assert.equal(controls().length, 0);
+  install({ epoch: 'different', rev: 9 }); assert.equal(controls().length, 0);
+  install({ epoch: 'epoch', rev: 7 }); assert.equal(controls().length, 1);
+});
 for (const platform of ['ios', 'android']) test(`${platform}: actual OrderScreen keeps preview and its form through phased hydration, transient recovery and pending cancellation`, async () => {
   const full = deferred(), sections = deferred();
   const h = harness(platform, { states: { detail: null, bootstrap: null, detailReadScope: '', loading: true },
@@ -158,6 +177,7 @@ test('independent material sections retain original failure identity for safe au
   const original = Object.assign(Error('Unavailable'), { statusCode: 503, code: 'unavailable' }); let reads = 0;
   const sectionApi = load('workerScanSections.ts', { './sessionReadScope': { sessionReadScope: () => 'same' },
     './workerControlsApi': { WorkerControlException: class extends Error {} },
+    './workerOrderLogic': load('workerOrderLogic.ts', { './workerControlsApi': {} }),
     './workerRawMaterials': { adminRawMaterialStartRequirements: async () => { reads++; throw original; } }, './workerQolips': {} });
   const result = await sectionApi.completeWorkerScanSections({}, { control_state: { order_id: 'order', apparatus: 'press',
     control: { interaction: { start_materials_mode: 'scan_required', qolip_mode: 'not_required' } } }, sections: {} }, []);

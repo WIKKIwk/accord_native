@@ -74,7 +74,7 @@ export async function adminMoveProductionMapSequence(session: Session, input: Mo
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    throw productionMapResponseError(response.status, payload, 'production_map_sequence');
+    throw productionMapResponseError(response.status, payload, 'production_map_sequence', response.headers);
   }
   const data = object(await response.json());
   if (!data || data.ok !== true || typeof data.version !== 'string' || !versionPattern.test(data.version) || typeof data.adjusted !== 'boolean') {

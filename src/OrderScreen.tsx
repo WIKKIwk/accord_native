@@ -58,7 +58,7 @@ import { WorkerPreflightButton } from './components/WorkerPreflightButton';
 import { WorkerFormField as PlatformField } from './components/WorkerFormField';
 import { WorkerExpansion as Expansion } from './components/WorkerExpansion';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
-import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, returnedPaintItemsFromDraft, runningFreezeRequest, validOrderControl, type QueueCursor } from './workerOrderLogic';
+import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, returnedPaintItemsFromDraft, runningFreezeRequest, validWorkerOrderControl, workerControlCoversReceipt, workerControlIsUnversioned, type QueueCursor } from './workerOrderLogic';
 import { workerOrderDetailFromSnapshot, type Apparatus, type QueueOrder } from './workerApi';
 import { workerOrderBlockingText } from './workerOrderBlocking';
 import { workerOrderCardState, workerStartMaterialStatus } from './workerOrderCardState';
@@ -118,6 +118,13 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const [detailWindow, setDetailWindow] = useState(queueWindow);
   const [presentationDenied, setPresentationDenied] = useState(false);
   const [bootstrap, setBootstrap] = useState<Obj | null>(null);
+  const [pendingControlReceipt, setPendingControlReceipt] = useState<QueueCursor | null>(null);
+  const latestControlReceipt = useRef<QueueCursor | null>(null);
+  const updateControlReceipt = useCallback((receipt: QueueCursor | null) => {
+    latestControlReceipt.current = receipt; setPendingControlReceipt(receipt);
+  }, []);
+  const validOrderControl = useCallback((data: Obj | null, apparatus: string, order: string, cursor: QueueCursor | null) =>
+    validWorkerOrderControl(data, apparatus, order, cursor) && workerControlCoversReceipt(data, pendingControlReceipt), [pendingControlReceipt]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusyState] = useState(false);
   const writePendingCallback = useRef(onWritePending);
@@ -266,16 +273,20 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     detailHydrated.current = true;
     setDetail(snapshot); setDetailReadScope(scope); setDetailWindow(window); setPresentationDenied(false);
     const initial = workerDetailInitialBootstrap(snapshot, apparatusId, orderId);
-    if (initial && validOrderControl(initial, apparatusId, orderId, latestCursor.current)) {
+    let remainingReceipt = latestControlReceipt.current;
+    if (initial && validWorkerOrderControl(initial, apparatusId, orderId, latestCursor.current) && workerControlCoversReceipt(initial, remainingReceipt)) {
       liveDetailAuthority.current = true; setBootstrap(initial); setControlRetired(false); setLoading(false);
+      remainingReceipt = null; updateControlReceipt(null);
     }
     const scan = await scanBootstrap(session, { apparatus: apparatusId, orderId, materialBarcodes: materials, automaticQolipConfirmation: true }, scanBootstrapUnsupported);
     if (!current()) return;
-    if (snapshot.epoch !== scan.control_state?.epoch || scan.control_state?.rev < snapshot.rev ||
-        !validOrderControl(scan, apparatusId, orderId, latestCursor.current)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+    const unversioned = workerControlIsUnversioned(scan);
+    if ((!unversioned && (snapshot.epoch !== scan.control_state?.epoch || scan.control_state?.rev < snapshot.rev)) ||
+        !validWorkerOrderControl(scan, apparatusId, orderId, latestCursor.current) || !workerControlCoversReceipt(scan, remainingReceipt)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
     liveDetailAuthority.current = true; setBootstrap(scan); setControlRetired(false); setLoading(false);
+    updateControlReceipt(null);
     sectionRecoveryNeeded.current.bootstrap = scan.sections?.materials?.status === 'error' && workerDetailSectionRetryable(scan.sections.materials.readError);
-  }, [session, apparatusId, orderId, materials, isCurrent]);
+  }, [session, apparatusId, orderId, materials, isCurrent, updateControlReceipt]);
   const recoveryOptions = useRef({ load, current: isCurrent });
   useLayoutEffect(() => { recoveryOptions.current = { load, current: isCurrent }; }, [load, isCurrent]);
   if (detailRecovery.current === null) detailRecovery.current = new WorkerDetailRecovery({
@@ -293,11 +304,11 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     const recovery = detailRecovery.current!;
     if (detailIdentity.current !== printingIdentity) {
       detailIdentity.current = printingIdentity; detailHydrated.current = false;
-      setDetail(null); setDetailReadScope(''); setBootstrap(null); setPresentationDenied(false); setError('');
+      setDetail(null); setDetailReadScope(''); setBootstrap(null); updateControlReceipt(null); setPresentationDenied(false); setError('');
       recovery.reset();
     }
     recovery.invalidate(busy);
-  }, [load, refresh, busy, queueEpoch, queueRevision, queueWindow, printingIdentity]);
+  }, [load, refresh, busy, queueEpoch, queueRevision, queueWindow, printingIdentity, updateControlReceipt]);
   useEffect(() => {
     const recovery = detailRecovery.current!;
     recovery.activate();
@@ -790,6 +801,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       if (!isCurrent()) return;
       if (!isAstatka) {
         if (result.has_states !== true) return;
+        if (result.has_snapshot_cursor === true) updateControlReceipt({ epoch: result.epoch, rev: result.rev });
         presentation.clear();
       }
       if (result.completion_request) { setSwitchProgress(null); setSelected(''); setSuccess(p('worker.notice.completion_request_sent')); return; }

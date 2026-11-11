@@ -60,7 +60,7 @@ export async function adminLaminatsiyaAstatkaReport(session: Session, input: Met
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    throw productionMapResponseError(response.status, payload, 'laminatsiya_astatka_report_failed');
+    throw productionMapResponseError(response.status, payload, 'laminatsiya_astatka_report_failed', response.headers);
   }
   const payload = object(await response.json()); guard();
   if (!payload) throw new TypeError('Invalid lamination astatka response');

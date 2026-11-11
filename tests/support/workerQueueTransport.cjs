@@ -3,7 +3,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const ts = require('typescript');
 function loader(mocks = {}) {
-  mocks = { './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, ...mocks };
+  mocks = { './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, ...mocks };
   const cache = new Map();
   return function load(name) {
     const filename = path.resolve(__dirname, '../../src', name.endsWith('.ts') ? name : `${name}.ts`);

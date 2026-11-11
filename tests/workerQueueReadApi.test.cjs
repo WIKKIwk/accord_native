@@ -91,3 +91,41 @@ test('baseline queue loads only catalog and snapshot, fails eagerly without awai
   assert.deepEqual(calls, ['snapshot', 'catalog']);
   gate.resolve([]);
 });
+
+test('queue HTTP errors retain V2 message, diagnostic fields and header-first request ID', async () => {
+  const payload = { error: 'merge_input_frame_count_mismatch', active_kadr_count: 7.9, scanned_kadr_count: 9.9,
+    apparatus_options: [' A ', 'B'], blockers: [{ message: ' Blocked ' }], order_title: ' Order ', request_id: 'body' };
+  const h = harness(async () => new Response(JSON.stringify(payload), { status: 409, headers: { 'x-request-id': 'header' } }));
+  await assert.rejects(h.api.loadWorkerQueueSnapshot(session()), error => {
+    assert.equal(error.message, 'Merge qilinmadi: joriy rulon 7 kadr, scan qilingan WIP 9 kadr. Bir xil kadrli WIPni scan qiling');
+    assert.equal(error.requestId, 'header'); assert.equal(error.orderTitle, 'Order');
+    assert.equal(error.activeKadrCount, 7); assert.equal(error.scannedKadrCount, 9);
+    assert.deepEqual(error.apparatusOptions, ['A', 'B']); assert.deepEqual(error.details, ['Blocked']);
+    assert.deepEqual(error.diagnostics, payload); return true;
+  });
+});
+
+test('queue failures without a domain code use V2 operation text and remain terminal on authorization status', () => {
+  const errors = harness(async () => {}).load('workerQueueReadError');
+  for (const status of [401, 403, 503]) {
+    const value = errors.workerQueueReadError(status, null);
+    assert.equal(value.code, 'production_map_sequence');
+    assert.equal(value.message, `Orderlar ketma-ketligi saqlanmadi${status >= 500
+      ? '. Serverda vaqtinchalik muammo yuz berdi. Keyinroq qayta urinib ko‘ring.' : '. Oynani yangilang va qayta urinib ko‘ring.'}`);
+    assert.equal(errors.workerQueueReadCanRetry(value), status === 503);
+  }
+  assert.equal(errors.workerQueueReadError(403, { error: 'forbidden' }).message, 'Bu amal sizning rolingiz uchun ruxsat etilmagan');
+});
+
+test('profile failure remains the source plain exception and live events retain their separate zero-status wording', () => {
+  const errors = harness(async () => {}).load('workerQueueReadError');
+  const profile = errors.workerQueueReadError(403, { error: 'forbidden' }, 'profile');
+  assert.equal(profile.name, 'Error'); assert.equal(profile.message, 'Profile fetch failed'); assert.equal(profile.code, undefined);
+  for (const [payload, code] of [[{}, ''], [{ error: '\u0085forbidden\u0085' }, 'forbidden'], [{ error: 42 }, '42']]) {
+    const live = errors.workerQueueReadError(503, payload, 'live');
+    assert.equal(live.code, code || 'production_map_live_failed');
+    assert.equal(live.message, `Production map jonli holati olinmadi${code
+      ? `. Server xato kodi: ${code} (HTTP 0). Oynani yangilang va qayta urinib ko‘ring.` : '. Oynani yangilang va qayta urinib ko‘ring.'}`);
+    assert.equal(live.statusCode, null); assert.deepEqual(live.diagnostics, {});
+  }
+});

@@ -26,7 +26,7 @@ export async function adminEarlyCloseProductionOrder(session: Session, input: { 
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    const error = productionMapResponseError(response.status, payload, 'order_control_failed');
+    const error = productionMapResponseError(response.status, payload, 'order_control_failed', response.headers);
     error.message = earlyCloseMessages[error.code.trim().toLowerCase()] ?? error.message;
     throw error;
   }

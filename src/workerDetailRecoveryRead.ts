@@ -2,6 +2,7 @@ import { activeSessionToken, type Session } from './auth';
 import { sessionReadScope } from './sessionReadScope';
 import { workerProductionOrderDetail } from './workerDetailApi';
 import { validOrderControl, type QueueCursor } from './workerOrderLogic';
+import { MobileApiException } from './shared/mobileApiException';
 
 type Obj = Record<string, any>;
 type Pending = { promise: Promise<Obj>; controller: AbortController };
@@ -45,7 +46,7 @@ export async function readWorkerDetailSnapshot(session: Session, apparatus: stri
           (typeof baseline?.rev !== 'number' || snapshot.rev >= baseline.rev)) return snapshot;
       if (pending.get(key) === lease) pending.delete(key);
     }
-    throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+    throw new MobileApiException({ code: 'order_page_changed', message: 'Buyurtma yangilandi. Qayta oching.' });
   } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 

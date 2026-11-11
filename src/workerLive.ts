@@ -91,7 +91,7 @@ export function subscribeWorkerLive(
           if (protocol === 'state_delta_v2' && message.error === 'state_delta_v2_unsupported') {
             protocol = 'state_delta_v1'; detach(); connect(); return;
           }
-          throw workerQueueReadError(typeof message.status === 'number' ? message.status : 0, message);
+          throw workerQueueReadError(0, message, 'live');
         }
         if (protocol === 'state_delta_v2' && (message.protocol !== 'state_delta_v2' ||
           !['state_ready', 'state_resync', 'state_delta'].includes(String(message.type ?? '')))) {

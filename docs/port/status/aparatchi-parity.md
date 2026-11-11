@@ -48,6 +48,7 @@ Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`, read-only clone in the re
 ## Verification
 
 - Inventory checkpoint: expanded agent suite37/37 passed; parent inventory API/controller/render and reused inventory/transfer/reprint sweep29/29 passed. Both platform typechecks passed before the checkpoint. This feature's routes and shell wiring remain in the later integration checkpoint.
+- Scoped-control/error checkpoint:261/261 focused error, legacy, WIP reactivation, preflight, transport, scoped-detail and Rezka report tests passed. The stale-detail exhaustion now retains V2's `order_page_changed` code and `Buyurtma yangilandi. Qayta oching.` message. Both native typechecks passed. Whole-role integration remains pending.
 - Intermediate combined worker/daily/shell suite:1135/1135 passed. Later parent receipt/scoped-menu integration:138/138 passed. Inventory expanded focused suite:32/32 passed. Final consolidated totals are pending.
 - Both platform TypeScript projects and lint have passed at intermediate checkpoints; final consolidated runs pending. Lint retains the pre-existing AdminClosedHistoryOwner ticket-dependency warning.
 - No backend mutation, account login, printer operation, simulator, device installation, main merge or push was performed.

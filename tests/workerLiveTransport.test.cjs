@@ -44,7 +44,8 @@ test('native handshake status is structured so forbidden cannot reconnect indefi
   const h = harness(), socket = h.api.openWorkerLiveSocket(h.session, url); const errors = [];
   socket.onerror = event => errors.push(event.error);
   h.emit({ session: '1', type: 'error', value: '', statusCode: 403 });
-  assert.equal(errors[0].statusCode, 403); assert.equal(errors[0].code, 'forbidden');
+  assert.equal(errors[0].statusCode, 403); assert.equal(errors[0].code, 'production_map_live_failed');
+  assert.equal(loader()('workerQueueReadError').workerQueueReadCanRetry(errors[0]), false);
   socket.close();
 });
 

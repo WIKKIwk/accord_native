@@ -22,7 +22,7 @@ export async function workerProductionOrderDetail(session: Session, apparatus: s
     const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/sequence?${query}`, { signal: controller.signal });
     if (response.status !== 200) {
       let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, 'worker_order_detail');
+      throw productionMapResponseError(response.status, payload, 'worker_order_detail', response.headers);
     }
     const wire = object(await response.json());
     const snapshot = decodeCanonicalProductionMapSnapshot(wire, false, session);

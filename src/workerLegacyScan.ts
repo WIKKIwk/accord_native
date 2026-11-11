@@ -1,8 +1,9 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { sessionReadScope } from './sessionReadScope';
-import { isCanonicalApparatusId, productionMapResponseError, reactivationRecloseControl, WorkerControlException } from './workerControlsApi';
-import { validOrderControl } from './workerOrderLogic';
+import { isCanonicalApparatusId, productionMapResponseError, WorkerControlException } from './workerControlsApi';
+import { registerLegacyWorkerControl } from './workerOrderLogic';
+import { queueActionControlState } from './workerQueueAction';
 import { parseProductionMapSnapshotRevisionFromJson } from './workerQueueModels';
 
 type Obj = Record<string, any>;
@@ -48,20 +49,37 @@ export async function legacyWorkerScanControl(session: Session, apparatus: strin
     guard();
     if (response.status !== 200) {
       let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, 'production_map_sequence');
+      throw productionMapResponseError(response.status, payload, 'production_map_sequence', response.headers);
     }
     const snapshot = validateScopedQueueSnapshot(await response.json());
     guard();
-    const queue = snapshot.queue_states, controls = snapshot.queue_action_controls, orderControls = snapshot.order_controls;
-    const stageStates = object(snapshot.stage_states)?.[order] ?? {};
-    const rawAction = object(object(controls[station])?.[order]);
-    const action = rawAction ? { ...rawAction, reclose: reactivationRecloseControl(rawAction.reclose, session, false) } : null;
-    const queueState = object(queue[station])?.[order];
-    const controlState = { apparatus: station, order_id: order, rev: parseProductionMapSnapshotRevisionFromJson(snapshot), epoch: snapshot.epoch,
-      scope: typeof snapshot.scope === 'string' && snapshot.scope ? snapshot.scope : scope,
-      queue_state: queueState, stage_states: stageStates, order_control: orderControls[order]?.state?.trim() ?? 'active', control: action };
-    const result = { ok: true, control_state: controlState, sections: {} };
-    if (!object(stageStates) || !validOrderControl(result, station, order, null)) throw invalid();
-    return result;
+    const revision = parseProductionMapSnapshotRevisionFromJson(snapshot), epoch = typeof snapshot.epoch === 'string' ? snapshot.epoch : '';
+    const proofScope = typeof snapshot.scope === 'string' && snapshot.scope ? snapshot.scope : scope;
+    const queue = Object.fromEntries(Object.entries(snapshot.queue_states).map(([id, values]) => [id.trim(),
+      Object.fromEntries(Object.entries(values as Obj).map(([order, state]) => [order.trim(), String(state).trim().toLowerCase()]))]));
+    const stageStates = Object.fromEntries(Object.entries(object(snapshot.stage_states) ?? {}).flatMap(([id, values]) =>
+      id.trim() && object(values) ? [[id.trim(), Object.fromEntries(Object.entries(values as Obj).filter(([stage]) => !!stage.trim())
+        .map(([stage, state]) => [stage.trim(), String(state).trim().toLowerCase()]))]] : []));
+    // V2 decodes every action contract in a scoped sequence, not just the target.
+    const controls = Object.fromEntries(Object.entries(snapshot.queue_action_controls).map(([machine, values]) => {
+      const id = machine.trim(), entries = object(values);
+      if (!isCanonicalApparatusId(id) || !entries) throw invalid();
+      return [id, Object.fromEntries(Object.entries(entries).map(([order, rawAction]) => {
+        const target = order.trim(), action = object(rawAction);
+        if (!target || !action) throw invalid();
+        const parsed = queueActionControlState({ apparatus: id, order_id: target, rev: revision, epoch, scope: proofScope,
+          queue_state: queue[id]?.[target] ?? String(action.state ?? '').trim(), stage_states: stageStates[target] ?? {},
+          order_control: 'active', control: action }, true, session, true);
+        if (!parsed) throw invalid();
+        return [target, parsed.control];
+      }))];
+    }));
+    const orderControls = Object.fromEntries(Object.entries(snapshot.order_controls).map(([id, value]) => [id.trim(), (value as Obj).state.trim()]));
+    const result = { ok: true, control_state: { apparatus: station, order_id: order, rev: revision, epoch, scope: proofScope,
+      queue_state: queue[station]?.[order], stage_states: stageStates[order] ?? {}, order_control: orderControls[order] ?? 'active',
+      control: controls[station]?.[order] }, sections: {} };
+    const registered = registerLegacyWorkerControl(result, station, order, () => scope === sessionReadScope(session));
+    if (!registered) throw invalid();
+    return registered;
   } finally { clearTimeout(timer); }
 }

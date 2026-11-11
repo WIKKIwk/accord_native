@@ -93,7 +93,7 @@ export async function adminClosedProductionMapOrders(session: Session) {
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    throw productionMapResponseError(response.status, payload, 'closed_orders');
+    throw productionMapResponseError(response.status, payload, 'closed_orders', response.headers);
   }
   const payload = object(await response.json());
   if (!payload) throw new TypeError('Invalid closed orders response');
@@ -107,7 +107,7 @@ export async function adminClosedProductionOrderDetail(session: Session, id: str
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    throw productionMapResponseError(response.status, payload, 'closed_order_failed');
+    throw productionMapResponseError(response.status, payload, 'closed_order_failed', response.headers);
   }
   return closedProductionOrderFromJson(await response.json());
 }

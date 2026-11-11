@@ -1,6 +1,7 @@
 import type { Session } from './auth';
 import { sessionReadScope } from './sessionReadScope';
 import { WorkerControlException } from './workerControlsApi';
+import { preserveWorkerControlProof } from './workerOrderLogic';
 import { adminRawMaterialStartRequirements } from './workerRawMaterials';
 import { adminProductionMapQolipRequirements } from './workerQolips';
 
@@ -28,5 +29,5 @@ export async function completeWorkerScanSections(session: Session, scan: Obj, ma
   }
   await Promise.all(reads);
   if (scope !== sessionReadScope(session)) throw new WorkerControlException('session_scope_changed', '');
-  return { ...scan, sections };
+  return preserveWorkerControlProof(scan, { ...scan, sections });
 }

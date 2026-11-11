@@ -64,11 +64,21 @@ export function materialStartReadiness(interaction: Obj, section: Obj | undefine
 
 /** Only a scoped, current server control can enable production actions. */
 export function validOrderControl(bootstrap: Obj | null, apparatus: string, orderId: string, baseline: QueueCursor | null, contractOnly = false): boolean {
+  return validOrderControlFields(bootstrap, apparatus, orderId, baseline, contractOnly, true);
+}
+
+/** Decoder-only contract check; this never installs authority on an unversioned object. */
+export function validLegacyWorkerControlFields(bootstrap: Obj | null, apparatus: string, orderId: string, contractOnly = false): boolean {
+  return validOrderControlFields(bootstrap, apparatus, orderId, null, contractOnly, false);
+}
+
+function validOrderControlFields(bootstrap: Obj | null, apparatus: string, orderId: string, baseline: QueueCursor | null,
+  contractOnly: boolean, versioned: boolean): boolean {
   const state = bootstrap?.control_state;
   const control = state?.control;
   if (bootstrap?.ok !== true || !state || state.apparatus !== apparatus || state.order_id !== orderId ||
-      typeof state.epoch !== 'string' || !state.epoch || typeof state.scope !== 'string' || !state.scope ||
-      !Number.isInteger(state.rev) || state.rev < 0 || !control || !control.interaction ||
+      typeof state.epoch !== 'string' || (versioned && !state.epoch) || typeof state.scope !== 'string' || !state.scope ||
+      (versioned ? !Number.isInteger(state.rev) || state.rev < 0 : state.rev != null && !Number.isInteger(state.rev)) || !control || !control.interaction ||
       !Array.isArray(control.allowed_actions) || control.allowed_actions.some((action: unknown) => typeof action !== 'string') ||
       typeof control.state !== 'string' || typeof state.queue_state !== 'string' ||
       typeof control.previous_stage_ready !== 'boolean' || typeof control.complete_requires_full_report !== 'boolean' ||
@@ -164,6 +174,55 @@ export function validOrderControl(bootstrap: Obj | null, apparatus: string, orde
   } else if (orderControl === 'active' && (mode === 'frozen' || control.state === 'frozen' || mode === 'freeze_requested')) return false;
   if (baseline && typeof baseline.epoch === 'string' && baseline.epoch &&
       (baseline.epoch !== state.epoch || (typeof baseline.rev === 'number' && state.rev < baseline.rev))) return false;
+  return true;
+}
+
+type LegacyControlProof = { state: Obj; signature: string; apparatus: string; orderId: string; current: () => boolean };
+const legacyControlProofs = new WeakMap<Obj, LegacyControlProof>();
+
+/** Only the successful legacy sequence reader installs this non-JSON provenance. */
+export function registerLegacyWorkerControl(data: Obj, apparatus: string, orderId: string, current: () => boolean): Obj | null {
+  if (!current() || !validLegacyWorkerControlFields(data, apparatus, orderId)) return null;
+  legacyControlProofs.set(data, { state: data.control_state, signature: JSON.stringify(data.control_state), apparatus, orderId, current });
+  return data;
+}
+function currentLegacyProof(data: Obj | null): LegacyControlProof | null {
+  const proof = data && legacyControlProofs.get(data);
+  return proof && proof.current() && data?.ok === true && data.control_state === proof.state &&
+    JSON.stringify(data.control_state) === proof.signature ? proof : null;
+}
+
+/** Section completion may change sections, but may not replace or mutate proved controls. */
+export function preserveWorkerControlProof(before: Obj, after: Obj): Obj {
+  const proof = currentLegacyProof(before);
+  if (proof && after.ok === true && after.control_state === proof.state) legacyControlProofs.set(after, proof);
+  return after;
+}
+
+export function workerControlIsUnversioned(data: Obj | null): boolean {
+  return !!currentLegacyProof(data) && (data?.control_state.rev == null || !data?.control_state.epoch);
+}
+
+/** A legacy read cannot acknowledge a write that returned a versioned receipt. */
+export function workerControlCoversReceipt(data: Obj | null, pending: QueueCursor | null): boolean {
+  if (!pending) return true;
+  const state = data?.control_state;
+  return typeof pending.epoch === 'string' && !!pending.epoch && Number.isInteger(pending.rev) && (pending.rev as number) >= 0 &&
+    state?.epoch === pending.epoch && Number.isInteger(state.rev) && state.rev >= (pending.rev as number);
+}
+
+/** Modern responses stay strict; only a scoped legacy read may omit its cursor. */
+export function validWorkerOrderControl(data: Obj | null, apparatus: string, orderId: string, baseline: QueueCursor | null,
+  contractOnly = false): boolean {
+  const proof = currentLegacyProof(data);
+  if (data && legacyControlProofs.has(data) && !proof) return false;
+  if (validOrderControl(data, apparatus, orderId, baseline, contractOnly)) return true;
+  if (!proof || proof.apparatus !== apparatus || proof.orderId !== orderId ||
+      !validLegacyWorkerControlFields(data, apparatus, orderId, contractOnly)) return false;
+  const state = data!.control_state;
+  // With both version fields present, legacy transport has the same strict
+  // cursor/epoch contract as a modern response (including negative rev denial).
+  if (state.rev != null && state.epoch) return false;
   return true;
 }
 

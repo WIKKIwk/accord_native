@@ -16,7 +16,7 @@ const object = (value: unknown): RecordValue => value && typeof value === 'objec
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
 export type Apparatus = { id: string; name: string; operation: string; worker_material_assignment_allowed?: boolean };
-export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone };
+export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone; temporarilyPaused?: boolean };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
 export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown>; catalog?: Apparatus[]; assignedIds: string[]; assignedLabels: string[] };
 export type WorkerOrderDetail = {
@@ -144,7 +144,7 @@ async function getJson(session: Session, path: string, resource: 'queue' | 'prof
     });
     if (!response.ok) {
       let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-      throw workerQueueReadError(response.status, payload, resource);
+      throw workerQueueReadError(response.status, payload, resource, response.headers);
     }
     return await response.json();
   } finally { clearTimeout(timeout); }
@@ -253,7 +253,13 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
       const displayState = string(machineStates[id]);
       const queueState = string(fallback[id]);
       const state = displayState === 'in_progress' && queueState === 'paused' ? queueState : displayState || queueState;
-      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state, imageId: string(row.image_id), cardTone: workerOrderTone(displayState, queueState, workerOrderControl(snapshot, id)) }];
+      const control = object(object(object(snapshot.queue_action_controls)[machine.id])[id]);
+      // V2's canonical control proves the marker directly. Compact display rows
+      // prove it only for this apparatus while its actual queue state is paused.
+      const temporarilyPaused = control.temporarily_paused === true || queueState === 'paused' &&
+        Array.isArray(row.temporarily_paused_apparatus) && row.temporarily_paused_apparatus.includes(machine.id);
+      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state, imageId: string(row.image_id),
+        cardTone: workerOrderTone(displayState, queueState, workerOrderControl(snapshot, id)), ...(temporarilyPaused ? { temporarilyPaused: true } : {}) }];
     });
   }
   const assigned = new Set(assignedIds);

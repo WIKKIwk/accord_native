@@ -16,7 +16,7 @@ export function rezkaOutputSnapshotFromJson(value: unknown, apparatus: string, o
       row.order_control !== 'active' || !report || !Array.isArray(counts) || !counts.length ||
       counts.some(value => !Number.isInteger(value) || value <= 0) || report.frames.some(frame => frame.index > counts.length) ||
       !Number.isInteger(revision) || revision < 0 || typeof epoch !== 'string' || !epoch.trim()) {
-    throw new WorkerControlException('production_map_snapshot_contract_invalid', 'Production map navbati server shartnomasiga mos emas');
+    throw new WorkerControlException('production_map_snapshot_contract_invalid', 'Production map navbati server shartnomasiga mos emas: invalid Rezka output report');
   }
   return { report, kadr_counts: counts as number[], revision: revision as number, epoch };
 }
@@ -36,7 +36,7 @@ export async function adminRezkaOutputReport(session: Session, apparatus: string
     if (response.status === 404 && !body.trim()) return null;
     if (response.status !== 200) {
       let data: unknown; try { data = JSON.parse(body); } catch { data = null; }
-      throw productionMapResponseError(response.status, data, 'rezka_output_report_failed');
+      throw productionMapResponseError(response.status, data, 'rezka_output_report_failed', response.headers);
     }
     return rezkaOutputSnapshotFromJson(JSON.parse(body), station, order);
   } finally { clearTimeout(timer); }

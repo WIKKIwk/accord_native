@@ -40,7 +40,7 @@ export function loadWorkerQueueSnapshot(session: Session, search = '', queueLimi
     if (response.status === 304 && cursor) return cursor;
     if (response.status !== 200) {
       let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-      throw workerQueueReadError(response.status, payload);
+      throw workerQueueReadError(response.status, payload, 'queue', response.headers);
     }
     const value = await response.json(); guard();
     try { return value?.projection === 'worker_list_v1' ? decodeWorkerListSnapshot(value) : decodeWorkerLegacySnapshot(value, session); }

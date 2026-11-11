@@ -29,10 +29,9 @@ function setup(stem, name) {
   const models = load('workerQueueModels', { './workerControlsApi': controls });
   const print = load('workerPrintJob', { './workerControlsApi': controls });
   const rezka = load('workerRezkaReport');
-  const preflight = load('workerPrintPreflight', { './workerControlsApi': controls, './workerOrderLogic': logic });
   return { replay, session, api: load('workerQueueAction', { './workerControlsApi': controls, './workerOrderLogic': logic,
     './workerProgressBatch': batch, './workerQueueModels': models, './workerPrintJob': print, './workerRezkaReport': rezka,
-    './workerPrintPreflight': preflight }), models, print, rezka, controls };
+    './workerPrintPreflight': {} }), models, print, rezka, controls };
 }
 const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
 

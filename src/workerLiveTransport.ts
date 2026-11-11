@@ -49,7 +49,7 @@ export function openWorkerLiveSocket(session: Session, rawUrl: string): WorkerLi
     if (value.type === 'open') state = 1;
     else if (value.type === 'message' && state === 1) socket.onmessage?.({ data: value.value });
     else if (value.type === 'error') socket.onerror?.({ error: value.statusCode
-      ? workerQueueReadError(value.statusCode, null) : new Error('Production map live connection failed') });
+      ? workerQueueReadError(value.statusCode, null, 'live-http') : new Error('Production map live connection failed') });
     else if (value.type === 'close') socket.close();
   };
   try {

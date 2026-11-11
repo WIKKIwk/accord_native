@@ -25,7 +25,7 @@ export async function adminPrintOpeningWip(session: Session, input: PrintInput) 
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    throw productionMapResponseError(response.status, payload, 'opening_wip_print');
+    throw productionMapResponseError(response.status, payload, 'opening_wip_print', response.headers);
   }
   const payload = object(await response.json());
   if (!payload) throw new TypeError('Invalid opening WIP print response');

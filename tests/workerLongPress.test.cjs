@@ -108,7 +108,7 @@ test('temporary pause is revalidated and never sent for an outdated token', asyn
   await assert.rejects(runWorkerMenuAction(session, 'apparatus:default:p', 'o', 'temporary_pause', previous, () => cursor));
   assert.equal(requests.length, 1);
   requests = [];
-  await assert.rejects(readWorkerActionControl(session, 'apparatus:default:p', 'o', () => null));
+  assert.equal((await readWorkerActionControl(session, 'apparatus:default:p', 'o', () => null)).control_state.order_id, 'o');
   assert.equal(requests.length, 1);
 });
 
