@@ -1,7 +1,8 @@
-import { Divider, HStack, Text, TextField, useNativeState, VStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, autocorrectionDisabled, background, cornerRadius, disabled, fixedSize, font, foregroundStyle, frame, keyboardType, lineLimit, multilineTextAlignment, padding, textFieldStyle, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
-import { useEffect } from 'react';
+import { Text, TextField, useNativeState, VStack, type TextFieldRef } from '@expo/ui/swift-ui';
+import { accessibilityLabel, autocorrectionDisabled, background, contentShape, cornerRadius, disabled, font, foregroundStyle, frame, keyboardType, lineLimit, multilineTextAlignment, padding, shapes, strokeBorder, textFieldStyle, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
+import { useCallback, useRef } from 'react';
 import { PlatformColor } from 'react-native';
+import { scheduleOnRN } from 'react-native-worklets';
 import { BaseHost } from './BaseHost';
 import type { DailyWorkCorrectionFieldsProps } from './dailyWorkCorrectionFieldsTypes';
 import { useWorkerOrderText } from './useWorkerOrderText';
@@ -9,31 +10,43 @@ import { useWorkerOrderText } from './useWorkerOrderText';
 function CorrectionField({ label, value, change, decimal = false, saving = false }: {
   label: string; value: string; change: (value: string) => void; decimal?: boolean; saving?: boolean;
 }) {
-  const text = useNativeState(value);
-  useEffect(() => { if (text.get() !== value) text.set(value); }, [text, value]);
-  const input = <TextField text={text} placeholder={decimal ? undefined : label} onTextChange={change} axis={decimal ? 'horizontal' : 'vertical'}
-    modifiers={[textFieldStyle('plain'), font({ textStyle: 'body' }), foregroundStyle(PlatformColor('label')), accessibilityLabel(label),
-      disabled(saving), textInputAutocapitalization('never'), ...(decimal ? [keyboardType('decimal-pad'), autocorrectionDisabled(),
-        multilineTextAlignment('trailing'), frame({ minWidth: 90, maxWidth: 140, minHeight: 44 })] : [lineLimit(4), frame({ maxWidth: Infinity, minHeight: 44, alignment: 'leading' })])]} />;
-  return decimal ? <HStack spacing={12} modifiers={[padding({ horizontal: 14, vertical: 4 }), frame({ maxWidth: Infinity, minHeight: 52 })]}>
-    <Text modifiers={[font({ textStyle: 'body' }), frame({ maxWidth: Infinity, alignment: 'leading' }), fixedSize({ horizontal: false, vertical: true })]}>{label}</Text>
-    {input}
-  </HStack> : <VStack alignment="leading" spacing={8} modifiers={[padding({ all: 14 }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-    <Text modifiers={[font({ textStyle: 'footnote' }), foregroundStyle({ type: 'hierarchical', style: 'secondary' })]}>{label}</Text>
-    {input}
+  const text = useNativeState(value), selection = useNativeState({ start: 0, end: 0 }), input = useRef<TextFieldRef>(null);
+  // Keep typing/selection on the UI thread; a JS state echo can overwrite newer keystrokes.
+  const changed = useCallback((incoming: string) => {
+    'worklet';
+    const next = decimal ? incoming.replace(/[^0-9.,]/g, '') : incoming;
+    if (next !== incoming) {
+      text.set(next);
+      selection.set({ start: next.length, end: next.length });
+    }
+    scheduleOnRN(change, next);
+  }, [change, decimal, selection, text]);
+  return <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+    <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle({ type: 'hierarchical', style: 'secondary' })]}>{label}</Text>
+    <TextField ref={input} text={text} selection={selection} onTextChange={changed} axis={decimal ? 'horizontal' : 'vertical'}
+      onFocusChange={focused => {
+        if (focused && decimal) {
+          const end = text.get().length;
+          void input.current?.setSelection(end, end).catch(() => {});
+        }
+      }}
+      modifiers={[textFieldStyle('plain'), font({ textStyle: 'body' }), foregroundStyle(PlatformColor('label')), accessibilityLabel(label),
+        disabled(saving), textInputAutocapitalization('never'), multilineTextAlignment('leading'),
+        ...(decimal ? [keyboardType('decimal-pad'), autocorrectionDisabled()] : [lineLimit({ min: 2, max: 4 })]),
+        padding({ horizontal: 12, vertical: 8 }), frame({ maxWidth: Infinity, minHeight: 48, alignment: 'leading' }),
+        background(PlatformColor('tertiarySystemFill')), cornerRadius(10),
+        strokeBorder({ color: PlatformColor('separator'), shape: 'roundedRectangle', cornerRadius: 10, style: { lineWidth: 0.5 } }),
+        contentShape(shapes.rectangle())]} />
   </VStack>;
 }
 
 export function DailyWorkCorrectionFields({ edit, controller }: DailyWorkCorrectionFieldsProps) {
   const { p } = useWorkerOrderText();
   return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}>
-    <VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity }), background(PlatformColor('tertiarySystemGroupedBackground')), cornerRadius(14)]}>
+    <VStack alignment="leading" spacing={14} modifiers={[frame({ maxWidth: Infinity })]}>
       {edit.step === 'edit' ? <>
-        {edit.fields.map(field => <VStack key={`${edit.batch.id}:${field.key}`} spacing={0}>
-          <CorrectionField label={`${p(`worker.daily.field.${field.label}`)} (${field.unit})`} value={edit.values[field.key]} decimal
-            change={value => controller.change(field.key, value)} />
-          <Divider modifiers={[padding({ leading: 14 })]} />
-        </VStack>)}
+        {edit.fields.map(field => <CorrectionField key={`${edit.batch.id}:${field.key}`} label={`${p(`worker.daily.field.${field.label}`)} (${field.unit})`} value={edit.values[field.key]} decimal
+          change={value => controller.change(field.key, value)} />)}
         <CorrectionField key={`${edit.batch.id}:description`} label={p('worker.daily.field.note')} value={edit.values.description}
           change={value => controller.change('description', value)} />
       </> : <CorrectionField key={`${edit.batch.id}:reason`} label={p('worker.daily.correction.hint')} value={edit.reason} change={controller.reason} saving={edit.step === 'saving'} />}

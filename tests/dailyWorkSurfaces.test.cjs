@@ -269,6 +269,7 @@ test('native daily correction fields retain prefilled values, units, callbacks a
   controller.open(row);
   const { DailyWorkCorrectionFields } = load('components/DailyWorkCorrectionFields.ios.tsx', {
     '@expo/ui/swift-ui': iosUi, '@expo/ui/swift-ui/modifiers': modifiers, react: {}, 'react-native': { PlatformColor: name => name },
+    'react-native-worklets': {},
     './BaseHost': { BaseHost: 'Host' }, './useWorkerOrderText': { useWorkerOrderText: () => ({ p }) },
   });
   const render = () => DailyWorkCorrectionFields({ edit: controller.getSnapshot().edit, controller });
@@ -287,31 +288,52 @@ test('native daily correction fields retain prefilled values, units, callbacks a
     saves[0].description, saves[0].reason], [7, 8000, 12, 2, 'checked', 'Correct measurement']);
 });
 
-test('native correction TextFields have no boxed wrapper, sync corrected text and retain numeric/text keyboard behavior', () => {
-  const runner = hooks(), changes = [];
+test('native correction fields stay full width, focus at the end and never replay delayed JS text over typing or deletion', async () => {
+  const runner = hooks(), changes = [], queued = [], positions = [];
   const useNativeState = initial => runner.react.useMemo(() => {
     let current = initial;
-    return { get: () => current, set: value => { current = value; } };
+    const state = { get: () => current, set: value => { current = value; } };
+    Object.defineProperty(state, 'value', { get: () => current, set: value => { current = value; } });
+    return state;
   }, []);
   const { CorrectionField } = load('components/DailyWorkCorrectionFields.ios.tsx', {
     '@expo/ui/swift-ui': { ...iosUi, useNativeState }, '@expo/ui/swift-ui/modifiers': modifiers, react: runner.react,
+    'react-native-worklets': { scheduleOnRN: (fn, ...args) => queued.push(() => fn(...args)) },
     'react-native': { PlatformColor: name => name }, './BaseHost': {}, './useWorkerOrderText': {},
   }, '\nexport { CorrectionField };');
   let props = { label: 'Metraj (m)', value: '8000', decimal: true, change: value => changes.push(value) };
   const render = () => { runner.begin(); const tree = CorrectionField(props); runner.flush(); return tree; };
   let tree = render(), input = find(tree, node => node.type === 'TextField');
   assert.equal(input.props.text.get(), '8000');
-  assert.equal(tree.type, 'HStack'); assert.equal(modifier(tree, 'frame').minHeight, 52);
-  assert.equal(modifier(input, 'frame').minHeight, 44);
+  assert.equal(tree.type, 'VStack');
+  assert.equal(modifier(input, 'frame').minHeight, 48);
+  assert.equal(modifier(input, 'frame').maxWidth, Infinity);
+  assert.equal(modifier(input, 'multilineTextAlignment'), 'leading');
   assert.equal(modifier(input, 'textFieldStyle'), 'plain'); assert.equal(modifier(input, 'keyboardType'), 'decimal-pad');
   assert.equal(modifier(input, 'accessibilityLabel'), props.label);
-  input.props.text.set('12a,5'); input.props.onTextChange('12a,5');
-  assert.deepEqual(changes, ['12a,5']);
-  props = { ...props, value: '12,5' }; tree = render(); input = find(tree, node => node.type === 'TextField');
-  assert.equal(input.props.text.get(), '12,5', 'controller-normalized value must be reflected in the native field');
-  props = { ...props, label: 'WIP izohi', value: 'note', decimal: false }; tree = render(); input = find(tree, node => node.type === 'TextField');
+  input.props.ref.current = { setSelection: async (...args) => positions.push(args) };
+  input.props.onFocusChange(true); assert.deepEqual(positions, [[4, 4]]);
+  for (const value of ['800', '80', '8', '']) {
+    input.props.text.set(value); input.props.onTextChange(value);
+    tree = render(); input = find(tree, node => node.type === 'TextField');
+    assert.equal(input.props.text.get(), value, 'an older parent value must not restore deleted digits');
+  }
+  assert.deepEqual(changes, []);
+  while (queued.length) queued.shift()();
+  assert.deepEqual(changes, ['800', '80', '8', '']);
+  props = { ...props, value: '80' }; tree = render(); input = find(tree, node => node.type === 'TextField');
+  assert.equal(input.props.text.get(), '', 'a late React update must not undo a later native deletion');
+  input.props.text.set('1a2,5'); input.props.onTextChange('1a2,5');
+  assert.equal(input.props.text.get(), '12,5');
+  assert.deepEqual(input.props.selection.get(), { start: 4, end: 4 });
+  queued.shift()(); assert.equal(changes.at(-1), '12,5');
+  assert.deepEqual(positions, [[4, 4]], 'typing and parent renders must not force the cursor position again');
+  input.props.onFocusChange(false); input.props.onFocusChange(true);
+  await new Promise(setImmediate); assert.deepEqual(positions.at(-1), [4, 4]);
+  props = { ...props, decimal: false }; tree = render(); input = find(tree, node => node.type === 'TextField');
   assert.equal(input.props.axis, 'vertical'); assert.equal(modifier(input, 'keyboardType'), undefined);
-  assert.equal(input.props.text.get(), 'note');
+  input.props.text.set('New\nnote'); input.props.onTextChange('New\nnote'); queued.shift()();
+  assert.equal(changes.at(-1), 'New\nnote');
   props = { ...props, saving: true }; tree = render();
   assert.equal(modifier(find(tree, node => node.type === 'TextField'), 'disabled'), true);
   runner.dispose();
