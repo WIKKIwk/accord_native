@@ -1,6 +1,6 @@
 import { ListItem, Text } from '@expo/ui';
-import { Background, HStack, Rectangle, VStack } from '@expo/ui/swift-ui';
-import { accessibilityHidden, alignmentGuide, font, foregroundStyle, listRowInsets, onLongPressGesture, opacity, type ShapeStyle } from '@expo/ui/swift-ui/modifiers';
+import { Background, HStack, Rectangle, RNHostView, Spacer, VStack } from '@expo/ui/swift-ui';
+import { accessibilityAddTraits, accessibilityElement, accessibilityHidden, alignmentGuide, contentShape, font, foregroundStyle, listRowInsets, onLongPressGesture, onTapGesture, opacity, shapes, type ShapeStyle } from '@expo/ui/swift-ui/modifiers';
 import { PlatformColor, View, type ColorValue } from 'react-native';
 import type { Session } from '../../auth';
 import type { OrderCardTone } from '../../workerOrderAppearance';
@@ -32,19 +32,31 @@ export function OrderListItem({ headline, supportingText, statusText, statusDeta
     : queueStatus && statusText ? { label: statusText, color: statusColors[cardTone] ?? PlatformColor('secondaryLabel') } : null;
   const fallbackBackground = !status && !queueStatus ? fallbackBackgrounds[cardTone] : undefined;
   const rowModifiers = [alignmentGuide('listRowSeparatorLeading', 56), listRowInsets({ top: 8, bottom: 8, leading: 16, trailing: 16 })];
-  const modifiers = [...(fallbackBackground ? [] : rowModifiers), ...(onLongPress ? [onLongPressGesture(onLongPress)] : [])];
+  const modifiers = fallbackBackground ? [] : rowModifiers;
   const detailsText = queueStatus ? statusDetail ?? '' : supportingText;
   const details = detailsText ? <Text modifiers={[font({ textStyle: 'subheadline', ...(fontFamily ? { family: fontFamily } : {}) }), foregroundStyle(PlatformColor('secondaryLabel'))]}>{detailsText}</Text> : null;
-  const row = <ListItem onPress={onPress} modifiers={modifiers} leading={<View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}>
+  const thumbnail = <View pointerEvents="none" style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}>
     <WorkerOrderThumbnail session={session} orderId={orderId} imageId={imageId} active={imageActive} size={44} backgroundColor={colors.field} iconColor={colors.muted} />
-  </View>} supportingText={status ? <VStack alignment="leading" spacing={2}>
+  </View>;
+  const supporting = status ? <VStack alignment="leading" spacing={2}>
     {details}
     <HStack spacing={4}>
       <Text modifiers={[font({ textStyle: 'caption', weight: 'medium' }), foregroundStyle(status.color), accessibilityHidden(true)]}>●</Text>
       <Text modifiers={[font({ textStyle: 'caption', weight: 'medium' }), foregroundStyle(PlatformColor('secondaryLabel'))]}>{status.label}</Text>
     </HStack>
-  </VStack> : details ?? undefined}>
-    <Text modifiers={[font({ textStyle: 'body', weight: 'medium', ...(headlineFontFamily ? { family: headlineFontFamily } : {}) })]}>{headline}</Text>
+  </VStack> : details;
+  const heading = <Text modifiers={[font({ textStyle: 'body', weight: 'medium', ...(headlineFontFamily ? { family: headlineFontFamily } : {}) })]}>{headline}</Text>;
+  // A SwiftUI Button competes with its attached long-press recognizer inside List.
+  // Own both gestures on the same non-button row, including the thumbnail and gaps.
+  const row = onLongPress ? <HStack spacing={12} modifiers={[
+    ...modifiers, contentShape(shapes.rectangle()), onTapGesture(onPress), onLongPressGesture(onLongPress),
+    accessibilityElement('combine'), accessibilityAddTraits(['isButton']),
+  ]}>
+    <RNHostView matchContents>{thumbnail}</RNHostView>
+    <VStack alignment="leading" spacing={2}>{heading}{supporting}</VStack>
+    <Spacer />
+  </HStack> : <ListItem onPress={onPress} modifiers={modifiers} leading={thumbnail} supportingText={supporting ?? undefined}>
+    {heading}
   </ListItem>;
   if (!fallbackBackground) return row;
   return <Background modifiers={rowModifiers}>{row}<Background.Content>

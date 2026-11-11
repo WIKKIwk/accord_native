@@ -59,6 +59,13 @@ Source: `f11910bb2c8c7081ce26770e69811b03fd0739ed`, read-only baseline clone in 
 
 V2 demo fixtures remain deferred under D3. No fake runtime behavior is introduced.
 
+## iOS row gesture follow-up
+
+- On the connected iPhone, invoking the active order's long-press callback through the development inspector presented the real action sheet and loaded `temporary_pause`, `astatka`, and `finish`. The user confirmed that the sheet was visible, while a physical long press did not present it.
+- Replaced the SwiftUI Button plus attached long-press recognizer for interactive order rows with a single SwiftUI HStack owning tap and long-press gestures. Kept the same native content, full rectangular hit area, combined button accessibility traits, and thumbnail layout; the embedded thumbnail does not receive touches. Rows without long-press actions keep their native Button.
+- Reloaded the connected app and confirmed the updated HStack gesture modifiers were mounted. The user then confirmed on the real iPhone that physical long press opens Amallar and an ordinary tap opens order details. No menu mutation or report was submitted.
+- Focused row, long-press rule, and queue/controller tests:35/35 passed. iOS TypeScript passed. Lint passed with the existing AdminClosedHistoryOwner warning. This validates the reported row interactions, not every action's server-side mutation or the pending native transport build.
+
 ## Needs from the integrator
 
 None for source integration of this requested scope; the branch remains separate from main.
