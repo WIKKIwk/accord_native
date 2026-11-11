@@ -186,10 +186,15 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
     const { WorkerOrderButton } = load('components/WorkerOrderControls.ios.tsx', {
       ...mocks, 'react-native': { ...mocks['react-native'], Platform: { Version: version } },
     });
-    for (const [index, variant] of ['filled', 'outlined'].entries()) {
-      const tree = WorkerOrderButton({ label: index ? 'Rulonni yechish' : 'Tugatish', variant, height: 58, onPress() {} });
+    for (const [variant, orderAction, expectedColor] of [
+      ['filled', undefined, undefined], ['outlined', undefined, undefined],
+      ['filled', 'complete', 'systemRed'], ['outlined', 'pause', 'systemOrange'],
+      ['filled', 'resume', 'systemBlue'], ['filled', 'start', 'systemGreen'],
+    ]) {
+      const tree = WorkerOrderButton({ label: 'Localized action', orderAction, variant, height: 58, onPress() {} });
       const button = nodes(tree, item => item.type === 'Button')[0];
-      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[index]);
+      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[variant === 'filled' ? 0 : 1]);
+      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'tint')?.args[0], expectedColor);
       assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonBorderShape').args[0], 'capsule');
       assert.equal(button.props.modifiers.find(modifier => modifier.name === 'controlSize').args[0], 'large');
       assert.deepEqual(button.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { maxWidth: Infinity, minHeight: 48 });

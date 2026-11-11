@@ -1126,15 +1126,15 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Chiqmadi")} disabled={!actionsEnabled} outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label={t("Chiqmadi")} height={58} disabled={!actionsEnabled} icon={{ android: 'cancel', ios: 'xmark.circle' }} onPress={() => { void runPreflight('failed'); }} />}</View>
         </View>}
         {view.showPreflightHold && <WorkerPreflightButton label={p('worker.action.print_preflight')} disabled={!actionsEnabled} onPress={() => { void runPreflight('hold'); }} />}
-        {!view.showPreflightHold && !view.showPreflightOutcome && cardState.showStart && <NativeButton label={p('worker.action.start')} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || !actionsEnabled} onPress={() => { void submit('start'); }} />}
+        {!view.showPreflightHold && !view.showPreflightOutcome && cardState.showStart && <NativeButton orderAction="start" label={p('worker.action.start')} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || !actionsEnabled} onPress={() => { void submit('start'); }} />}
         {showOutputProgress && <WorkerOutputProgress session={session} orderId={orderId} apparatusId={apparatusId}
           stageId={view.stageId} map={order} operation={operation} outputRevision={`${controlEpoch}:${controlRevision}:${refresh}`} />}
         {(cardState.showPause || cardState.showComplete) && <WorkerOrderActionGroup>
-          {cardState.showPause && <NativeButton label={t(view.pauseLabel)} height={58} disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setError(''); selectProgressAction('pause'); }} />}
-          {cardState.showComplete && <NativeButton label={p('worker.action.complete')} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { if (actionsEnabled && authorityCurrent()) void beginCompletion(); }} />}
+          {cardState.showPause && <NativeButton orderAction="pause" label={t(view.pauseLabel)} height={58} disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setError(''); selectProgressAction('pause'); }} />}
+          {cardState.showComplete && <NativeButton orderAction="complete" label={p('worker.action.complete')} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { if (actionsEnabled && authorityCurrent()) void beginCompletion(); }} />}
         </WorkerOrderActionGroup>}
         {cardState.showMerge && <NativeButton label={p('worker.action.merge')} height={58} disabled={!actionsEnabled || scanInFlight.current} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setIntakeMode(false); merge.flow.toggle(); }} />}
-        {cardState.showResume && <NativeButton label={p('worker.action.resume')} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || !actionsEnabled} onPress={() => { void submit('resume'); }} />}
+        {cardState.showResume && <NativeButton orderAction="resume" label={p('worker.action.resume')} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || !actionsEnabled} onPress={() => { void submit('resume'); }} />}
         {cardState.showWaitingForPrevious && <WorkerOrderBlockingNotice message={p('worker.waiting.previous', { stage: previousStageLabel })} />}
         {cardState.showWaitingForSequence && <WorkerOrderBlockingNotice message={p('worker.waiting.sequence')} />}
       </View>}

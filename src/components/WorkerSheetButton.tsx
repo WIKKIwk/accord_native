@@ -13,6 +13,8 @@ type Props = {
   height?: number;
   icon?: WorkerSheetIcon;
   largeLabel?: boolean;
+  /** Semantic tint for the native iOS order-sheet controls. */
+  orderAction?: 'start' | 'resume' | 'pause' | 'complete';
 };
 
 export function WorkerSheetButton({ label, onPress, disabled, variant = 'outlined', height, icon, largeLabel }: Props) {
