@@ -12,23 +12,33 @@ export const paintOptions = [
   { name: 'Spirtlar', category: 'solvents', fields: ['Aralashmalar', 'Etil', 'Metoxil', 'Rasvavitel', 'Izopropel'] },
 ];
 
+/** Field positions retain source values when a dynamic name repeats a base name. */
+export const workerPaintValueKey = (stateKey: string, index: number, label: string): string => `@${JSON.stringify([stateKey, index, label])}`;
+export function workerPaintValue(paint: Record<string, string>, stateKey: string, index: number, label: string): string {
+  const indexed = workerPaintValueKey(stateKey, index, label);
+  return Object.hasOwn(paint, indexed) ? paint[indexed] : paint[`${stateKey}:${label}`] ?? '';
+}
+
 export function returnedPaintItemsFromDraft(paint: Record<string, string>, dynamic: Record<string, string[]>) {
   function valuesFor(usage: string, name: string, labels: string[]) {
-    return Object.fromEntries(labels.flatMap(label => {
-      const value = paint[`${usage}:${name}:${label}`]?.trim();
-      return value ? [[label, value.replace(',', '.')]] : [];
+    return Object.fromEntries(labels.flatMap((label, index) => {
+      const value = workerPaintValue(paint, `${usage}:${name}`, index, label).trim();
+      if (!value) return [];
+      const normalized = value.replace(/,/g, '.');
+      // The collector uses Dart double.tryParse; the stricter editable-draft
+      // number validation is a separate source guard before submission.
+      const parsed = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(normalized) ? Number(normalized) : NaN;
+      return Number.isFinite(parsed) && parsed >= 0 ? [[label, normalized]] : [];
     }));
   }
-  return ['rasxot', 'astatka'].flatMap(usage => [
-    ...paintOptions.flatMap(option => {
+  return ['rasxot', 'astatka'].flatMap(usage =>
+    paintOptions.flatMap(option => {
       const values = valuesFor(usage, option.name, [...option.fields, ...(dynamic[`${usage}:${option.name}`] ?? [])]);
-      return Object.keys(values).length ? [{ usage, category: option.category, name: option.name, values }] : [];
-    }),
-    ...(() => {
-      const values = valuesFor(usage, 'Pantone Mix', dynamic[`${usage}:Pantone Mix`] ?? []);
-      return Object.keys(values).length ? [{ usage, category: 'colors', name: 'Mix', values }] : [];
-    })(),
-  ]);
+      const items = Object.keys(values).length ? [{ usage, category: option.category, name: option.name, values }] : [];
+      if (option.name !== 'Pantone') return items;
+      const mixValues = valuesFor(usage, 'Pantone Mix', dynamic[`${usage}:Pantone Mix`] ?? []);
+      return [...items, ...(Object.keys(mixValues).length ? [{ usage, category: option.category, name: 'Mix', values: mixValues }] : [])];
+    }));
 }
 
 export function matchesMaterialAssignment(row: Obj, orderId: string, apparatus: string): boolean {

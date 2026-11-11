@@ -62,6 +62,8 @@ function NamedFieldDialog({ paint, close, add, disabled = false, isLocked }: { p
   </Modal>;
 }
 
+export { Field as ReturnedPaintField, NamedFieldDialog as ReturnedPaintNamedFieldDialog };
+
 export function BoyoqchiFormContent({ session, draft, close, onBusyChange, save }: Props) {
   const colors = useWorkerColors(), t = useBoyoqchiText(), theme = useBaseTheme(), [paint, setPaint] = useState<string | null>(null);
   const outlineColor = theme.colors.outlineVariant ?? colors.muted;
