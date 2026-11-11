@@ -13,7 +13,6 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
       <VStack spacing={12}>
         <VStack spacing={2} modifiers={[cornerRadius(16)]}>{[
           { id: 'welcome-language', label: copy.languageLabel, value: copy.languageValue, onPress: props.onLanguage },
-          { id: 'welcome-theme', label: copy.themeLabel, value: copy.themeValue, onPress: props.onTheme },
         ].map(item => <Button key={item.id} onPress={item.onPress} modifiers={[buttonStyle('plain'), accessibilityIdentifier(item.id)]}>
           <HStack spacing={16} modifiers={[padding({ horizontal: 18, vertical: 18 }), background(colors.surface), cornerRadius(4)]}>
             <Text modifiers={[font({ size: 20, textStyle: 'title3' }), foregroundStyle(colors.onSurface)]}>{item.label}</Text>

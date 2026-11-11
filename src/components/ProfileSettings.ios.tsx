@@ -1,5 +1,5 @@
 import { Button, Group, HStack, Image, List, NavigationStack, Picker, SecureField, Section, Spacer, Text, Toggle, Toolbar, ToolbarItem } from '@expo/ui/swift-ui';
-import { buttonStyle, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, keyboardType, listStyle, navigationBarTitleDisplayMode, navigationTitle, pickerStyle, presentationDetents, presentationDragIndicator, tag } from '@expo/ui/swift-ui/modifiers';
+import { buttonStyle, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, keyboardType, labelStyle, listStyle, navigationBarTitleDisplayMode, navigationTitle, pickerStyle, presentationDetents, presentationDragIndicator, tag } from '@expo/ui/swift-ui/modifiers';
 import Constants from 'expo-constants';
 import { useState, type ReactNode } from 'react';
 import { Alert } from 'react-native';
@@ -92,7 +92,8 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
           </Section>
           <Section><Text modifiers={[font({ textStyle: 'footnote' }), secondary]}>Ko‘rinish tanlovi ushbu qurilmada saqlanadi.</Text></Section>
         </List>
-        <Toolbar.Content><ToolbarItem placement="topBarTrailing"><Button label="Tayyor" onPress={closeSettings} modifiers={[disabled(pin.busy || biometricBusy || switchPinBusy)]} /></ToolbarItem></Toolbar.Content>
+        <Toolbar.Content><ToolbarItem placement="topBarTrailing"><Button label="Tayyor" systemImage="checkmark" onPress={closeSettings}
+          modifiers={[labelStyle('iconOnly'), disabled(pin.busy || biometricBusy || switchPinBusy)]} /></ToolbarItem></Toolbar.Content>
       </Toolbar>
     </NavigationStack>
   </Group>;
