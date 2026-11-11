@@ -151,10 +151,15 @@ for (const platform of ['ios', 'android']) test(`${platform}: blocked paused ord
     './WorkerSheetButton': { WorkerSheetButton: 'Button' } });
   const message = '8 ta rangli bosma apparat — shashoqcha';
   const tree = WorkerOrderBlockingNotice({ message });
-  assert.equal(text(tree), message); assert.equal(nodes(tree, node => node.type === 'Button').length, 0);
+  assert.equal(text(tree), platform === 'ios' ? `“${message}”` : message); assert.equal(nodes(tree, node => node.type === 'Button').length, 0);
   const label = nodes(tree, node => node.type === 'Text')[0];
   if (platform === 'android') assert.equal(label.props.color, 'label');
-  else assert.equal(label.props.modifiers.find(mod => mod.name === 'foregroundStyle').args[0], 'label');
+  else {
+    assert.equal(label.props.modifiers.find(mod => mod.name === 'foregroundStyle').args[0], 'label');
+    assert(label.props.modifiers.some(mod => mod.name === 'italic'));
+    assert(!label.props.modifiers.some(mod => mod.name === 'background'));
+    assert.equal(label.props.modifiers.find(mod => mod.name === 'accessibilityLabel').args[0], message);
+  }
 });
 
 test('order actions use system glass controls on iOS 26 and native bordered controls on older iOS', () => {

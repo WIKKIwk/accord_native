@@ -1,5 +1,5 @@
 import { Button, HStack, Image, Text } from '@expo/ui/swift-ui';
-import { background, buttonBorderShape, buttonStyle, controlSize, disabled, fixedSize, font, foregroundStyle, frame, multilineTextAlignment, padding, shapes } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, buttonBorderShape, buttonStyle, controlSize, disabled, fixedSize, font, foregroundStyle, frame, italic, lineSpacing, multilineTextAlignment, padding } from '@expo/ui/swift-ui/modifiers';
 import { Children, type ComponentProps, type ReactNode } from 'react';
 import { Platform, View } from 'react-native';
 import { BaseHost as Host } from './BaseHost';
@@ -10,8 +10,9 @@ import { WORKER_ORDER_LAYOUT as layout } from './workerOrderLayout';
 export function WorkerOrderBlockingNotice({ message }: { message: string }) {
   const { colors } = useBaseTheme();
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
-    <Text modifiers={[font({ textStyle: 'body' }), foregroundStyle(colors.onSurfaceVariant ?? colors.onSurface),
-      padding({ all: 12 }), frame({ maxWidth: Infinity, alignment: 'leading' }), background(colors.surfaceContainerHighest, shapes.roundedRectangle({ cornerRadius: 12 }))]}>{message}</Text>
+    <Text modifiers={[font({ textStyle: 'callout' }), italic(), lineSpacing(3), foregroundStyle(colors.onSurfaceVariant ?? colors.onSurface),
+      multilineTextAlignment('leading'), fixedSize({ horizontal: false, vertical: true }), accessibilityLabel(message),
+      padding({ vertical: layout.sectionGap }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>{`“${message}”`}</Text>
   </Host>;
 }
 
