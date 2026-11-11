@@ -339,6 +339,37 @@ test('native correction fields stay full width, focus at the end and never repla
   runner.dispose();
 });
 
+test('iOS feedback escapes screen clipping into a nonblocking native window banner and announces each new message', () => {
+  const runner = hooks(), announcements = [];
+  let insets = { top: 59, left: 0, right: 0 };
+  const { WorkerPaddonFeedback } = load('components/WorkerPaddonFeedback.ios.tsx', {
+    react: runner.react, '@expo/ui/swift-ui': iosUi, '@expo/ui/swift-ui/modifiers': modifiers,
+    'react-native': { View: 'View', PlatformColor: name => name,
+      AccessibilityInfo: { announceForAccessibilityWithOptions: (...args) => announcements.push(args) } },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => insets },
+    'react-native-screens': { FullWindowOverlay: 'FullWindowOverlay' }, './BaseHost': { BaseHost: 'Host' },
+  });
+  const render = message => { runner.begin(); const tree = WorkerPaddonFeedback({ message }); runner.flush(); return tree; };
+  assert.equal(render(''), null); assert.deepEqual(announcements, []);
+  const message = 'WIP o‘zgartirildi va izoh saqlandi';
+  let tree = render(message);
+  assert.equal(tree.type, 'FullWindowOverlay');
+  assert.equal(find(tree, node => node.type === 'Modal' || node.type === 'Alert'), undefined);
+  const banner = find(tree, node => node.props.testID === 'worker-feedback-banner');
+  assert.equal(banner.props.pointerEvents, 'none');
+  assert.equal(banner.props.style.top, 71); assert.equal(banner.props.style.bottom, undefined);
+  const label = find(tree, node => node.type === 'Text');
+  assert.equal(label.props.children, message); assert.equal(modifier(label, 'font').textStyle, 'body');
+  assert.equal(modifier(label, 'lineLimit'), undefined, 'long notices must wrap instead of disappearing');
+  assert.deepEqual(announcements, [[message, { queue: true }]]);
+  render(message); assert.equal(announcements.length, 1);
+  insets = { top: 0, left: 44, right: 44 }; tree = render('Yangi xabar');
+  assert.equal(find(tree, node => node.props.testID === 'worker-feedback-banner').props.style.left, 60);
+  assert.equal(announcements.length, 2);
+  assert.equal(render(''), null, 'clearing the owner notice must remove the overlay');
+  runner.dispose();
+});
+
 test('iOS daily date changes remain a bounded draft until Select and Cancel keeps the original day', () => {
   const runner = hooks(), changes = [], initial = new Date(2025, 3, 9, 12), next = new Date(2025, 4, 10, 15);
   const ui = Object.fromEntries(['Button','DatePicker','DisclosureGroup','Host','HStack','Image','List','NavigationStack','ProgressView','Section','Text','Toolbar','ToolbarItem','VStack'].map(x => [x,x]));
