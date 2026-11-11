@@ -1,5 +1,5 @@
 import { BottomSheet, Button, DisclosureGroup, Group, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowSeparator, listSectionSpacing, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, refreshable, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowInsets, listRowSeparator, listSectionSpacing, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, refreshable, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
 import { useCallback, useState, type ComponentProps } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { PlatformColor } from 'react-native';
@@ -125,7 +125,7 @@ export function ProfileView(props: ProfileViewProps) {
   const closeSettings = () => { if (!switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
   return <>{registerSettingsOpener && !settingsUnavailableMessage ? <SettingsOpenerRegistration register={registerSettingsOpener} setOpen={setSettingsOpen} /> : null}<Host style={{ flex: 1 }}>
     <List modifiers={[listStyle('insetGrouped'), listSectionSpacing('compact'), refreshable(props.onRefresh)]}>
-      <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), padding({ top: 14 })]}>
+      <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), listRowInsets({ top: 0, bottom: 0, leading: 0, trailing: 0 }), padding({ top: 14 })]}>
         <Spacer />
         <VStack alignment="center" spacing={6}>
           <ZStack alignment="bottomTrailing">
