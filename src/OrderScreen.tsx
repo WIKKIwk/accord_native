@@ -45,7 +45,7 @@ import { legacyLaminationReportMetrics } from './workerLegacyLaminationReport';
 import { adminLaminatsiyaAstatkaReport } from './workerLaminationReportApi';
 import { adminWipBatches } from './workerWipApi';
 import { workerHandoffBatch } from './workerHandoff';
-import type { MaterialRow } from './workerMaterialPresentation';
+import { materialSectionExpansion, type MaterialRow } from './workerMaterialPresentation';
 import { pickWorkerPrinter, printWorkerJobs, workerPrinterFields, WorkerPrintCancelled } from './workerPrinting';
 import { useWorkerPrinterSelector } from './components/useWorkerPrinterSelector';
 import { useWorkerColors } from './components/useWorkerColors';
@@ -746,6 +746,9 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     (allowed.includes('start') || !!String(interaction.blocking_reason_code ?? '').trim() || showPreflightHold || showPreflightOutcome);
   const materialsError = scanningRequired && sections.materials?.status === 'error' ? String(sections.materials?.error || 'Homashyolar yuklanmadi.') : attachedReadKey === materialReadKey ? attachedMaterialsError : '';
   const materialLoading = scanningRequired ? sections.materials?.status === 'loading' || rows === null : rows === null && !materialsError;
+  const intakeSection = materialSectionExpansion({ loading: intakeLoading, error: intakeError, count: intakeCandidates.length, expanded: intakeExpanded });
+  const attachedSection = materialSectionExpansion({ loading: materialLoading, error: materialsError, count: rows?.length ?? 0, expanded: materialsExpanded });
+  const allMaterialsAwaitingDelivery = scanningRequired && !!rows?.length && rows.every(row => row.execution_status === 'awaiting_delivery');
   function materialsChanged(barcode?: string) {
     if (barcode) setMaterials(previous => previous.some(value => normalizeCode(value) === normalizeCode(barcode)) ? previous : [...previous, barcode]);
     onChanged(); setRefresh(value => value + 1);
@@ -879,23 +882,23 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     {!!success && <Text style={styles.success}>{t(success)}</Text>}
     {!!bootstrap && <>
       {showIntakeCandidates && <View style={styles.sectionGroup}>
-        <Expansion title={p(intakeLoading || intakeError || intakeCandidates.length ? 'worker.materials.pending' : 'worker.materials.pending.empty')}
-          count={intakeLoading ? '..' : intakeCandidates.length ? materialCount(intakeCandidates.length) : ''} expanded={intakeExpanded}
-          onPress={() => { if (intakeLoading || intakeError || intakeCandidates.length) setIntakeExpanded(value => !value); }} />
-        {intakeExpanded && <>
+        <Expansion title={p(intakeSection.hasContent ? 'worker.materials.pending' : 'worker.materials.pending.empty')}
+          count={intakeLoading ? '..' : intakeCandidates.length ? materialCount(intakeCandidates.length) : ''} expanded={intakeSection.expanded}
+          onPress={intakeSection.canToggle ? () => setIntakeExpanded(value => !value) : undefined} />
+        {intakeSection.expanded && <>
           {intakeLoading && <Text style={[styles.muted, { color: colors.muted }]}>{t('Yuklanmoqda...')}</Text>}
           {!!intakeError && <Text style={styles.error}>{t(intakeError)}</Text>}
           {!intakeLoading && !intakeError && <WorkerMaterialList rows={intakeCandidates} scanned={[]} onLongPress={openMaterialQr} showBalances={false} />}
         </>}
       </View>}
       {showMaterials && <View style={styles.sectionGroup}>
-        <Expansion title={t(scanningRequired && rows?.length && rows.every(row => row.execution_status === 'awaiting_delivery') ? 'Apparat oldiga homashyo olib kelinmagan' : p(rows?.length || materialLoading || materialsError || showLinkRequests ? 'worker.materials.attached' : 'worker.materials.attached.empty'))}
-          count={materialLoading ? '..' : rows?.length ? materialCount(rows.length) : ''} expanded={materialsExpanded}
-          onPress={() => { if (rows?.length || materialLoading || materialsError || showLinkRequests) setMaterialsExpanded(value => !value); }} />
-        {materialsExpanded && <>
+        <Expansion title={t(allMaterialsAwaitingDelivery ? 'Apparat oldiga homashyo olib kelinmagan' : p(attachedSection.hasContent ? 'worker.materials.attached' : 'worker.materials.attached.empty'))}
+          count={materialLoading ? '..' : rows?.length && !allMaterialsAwaitingDelivery ? materialCount(rows.length) : ''} expanded={attachedSection.expanded}
+          onPress={attachedSection.canToggle ? () => setMaterialsExpanded(value => !value) : undefined} />
+        {attachedSection.expanded && <>
           {materialLoading && <Text style={[styles.muted, { color: colors.muted }]}>{t('Yuklanmoqda...')}</Text>}
           {!!materialsError && <Text style={styles.error}>{t(materialsError)}</Text>}
-          {!materialLoading && !materialsError && !!rows?.length && <WorkerMaterialList rows={rows} scanned={materials} onLongPress={openMaterialQr} />}
+          {!materialLoading && !materialsError && !!rows?.length && <WorkerMaterialList rows={rows} scanned={materials} orderId={orderId} onLongPress={openMaterialQr} />}
         </>}
         {canSendOrderAlert && scanningRequired && !materialLoading && !materialsError && rows?.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="rawMaterial" enabled={!busy} />}
         {scanningRequired && requiredMaterialCount > 0 && <View style={styles.expansion}><Text style={[styles.expansionTitle, { color: colors.text }]}>{t('Homashyo QR tasdiqlari')}</Text><Text style={[styles.muted, { color: colors.muted }]}>{matchedMaterialCount}/{requiredMaterialCount}</Text></View>}
@@ -906,7 +909,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {directMaterialUse && <WorkerMaterialUsePanel session={session} orderId={orderId} apparatusId={apparatusId} actionsEnabled={synchronized} onChanged={materialsChanged} />}
       </View>}
       {showMolds && <View style={styles.sectionGroup}>
-        <Expansion title={t(moldSets.size > 1 ? 'Muqobil qoliplar' : 'Qoliplar')} count={`${automaticQolip && automaticConfirmation ? requiredQolips.length : effectiveQolips.length}/${requiredQolips.length} ta`} expanded={qolipsExpanded} onPress={() => setQolipsExpanded(value => !value)} />
+        <Expansion title={t(moldSets.size > 1 ? 'Muqobil qoliplar' : 'Qoliplar')} count={requiredQolips.length ? `${automaticQolip && automaticConfirmation ? requiredQolips.length : effectiveQolips.length}/${requiredQolips.length} ta` : ''}
+          expanded={requiredQolips.length > 0 && qolipsExpanded} onPress={requiredQolips.length && sections.qolips?.status !== 'loading' ? () => setQolipsExpanded(value => !value) : undefined} />
         {automaticQolip && automaticSets.length > 1 && automaticSets.map(set => <NativeButton key={String(set.set_id)} label={String(set.set_id)} disabled={!synchronized} variant={selectedQolipSet === set.set_id ? 'filled' : 'outlined'} onPress={() => setSelectedQolipSet(String(set.set_id))} />)}
         {canSendOrderAlert && sections.qolips?.status === 'ready' && requiredQolips.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="qolip" enabled={!busy} />}
         {qolipsExpanded && requiredQolips.map((mold, index) => <View key={String(mold.qolip_code || index)} style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{String(mold.qolip_code ?? '')}{t(mold.color ? ` · ${mold.color}` : '')}{t(scannedMolds.has(normalizeCode(mold.qolip_code)) ? ' ✓' : '')}</Text></View>)}

@@ -1,20 +1,17 @@
-import { Button, Host, Icon, Row, Spacer, Text } from '@expo/ui';
-import { accessibilityValue, foregroundStyle } from '@expo/ui/swift-ui/modifiers';
-import { useWorkerColors } from './useWorkerColors';
+import { Button, HStack, Image, Text } from '@expo/ui/swift-ui';
+import { accessibilityValue, buttonStyle, fixedSize, font, foregroundStyle, frame, multilineTextAlignment } from '@expo/ui/swift-ui/modifiers';
+import { BaseHost } from './BaseHost';
 
-type Props = { title: string; count: string; expanded: boolean; onPress: () => void };
+type Props = { title: string; count: string; expanded: boolean; onPress?: () => void };
 
 export function WorkerExpansion({ title, count, expanded, onPress }: Props) {
-  const colors = useWorkerColors();
-  return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
-    <Button variant="text" onPress={onPress} style={{ width: '100%' }}
-      modifiers={[accessibilityValue(expanded ? 'Ochiq' : 'Yopiq')]}>
-      <Row alignment="center" spacing={8} style={{ width: '100%' }}>
-        <Text textStyle={{ fontSize: 16, fontWeight: '500' }} modifiers={[foregroundStyle(colors.text)]}>{title}</Text>
-        <Spacer flexible />
-        {!!count && <Text modifiers={[foregroundStyle(colors.muted)]}>{count}</Text>}
-        <Icon name={expanded ? 'chevron.up' : 'chevron.down'} size={16} color={colors.icon} />
-      </Row>
-    </Button>
-  </Host>;
+  const label = <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity, minHeight: 44, alignment: 'leading' })]}>
+    <Text modifiers={[font({ size: 16, weight: 'medium' }), foregroundStyle('primary'), multilineTextAlignment('leading'),
+      frame({ maxWidth: Infinity, alignment: 'leading' }), fixedSize({ horizontal: false, vertical: true })]}>{title}</Text>
+    {!!count && <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle('secondary'), fixedSize({ horizontal: true })]}>{count}</Text>}
+    {onPress ? <Image systemName={expanded ? 'chevron.up' : 'chevron.down'} size={16} modifiers={[foregroundStyle('secondary')]} /> : null}
+  </HStack>;
+  return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}>
+    {onPress ? <Button onPress={onPress} modifiers={[buttonStyle('plain'), accessibilityValue(expanded ? 'Ochiq' : 'Yopiq')]}>{label}</Button> : label}
+  </BaseHost>;
 }

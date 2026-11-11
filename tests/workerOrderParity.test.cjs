@@ -296,7 +296,7 @@ test('material balances group units case-insensitively and clamp remaining, stat
   const rows = [{ stock_uom: 'KG', received_qty: 20, consumed_qty: 5 }, { stock_uom: 'kg', received_qty: 5, consumed_qty: 50 }, { stock_uom: 'm', received_qty: NaN, consumed_qty: -2 }];
   assert.deepEqual(presentation.rawMaterialBalances(rows), [{ uom: 'KG', received: 25, consumed: 55, remaining: 0 }, { uom: 'm', received: 0, consumed: 0, remaining: 0 }]);
   const item = presentation.assignedMaterialPresentation({ item_name: 'PET', item_code: 'PET / 12', item_group: 'Film', barcode: 'R1', execution_status: 'in_use' }, ['r1'], value => value);
-  assert.equal(item.scanned, true); assert.deepEqual(item.details, ['12', 'Film', 'R1', 'Ishlatilmoqda']);
+  assert.equal(item.confirmed, true); assert.deepEqual(item.details, ['12', 'Film', 'R1', 'Ishlatilmoqda']);
 });
 test('native action and material labels use the V2 translations in all four locales', () => {
   const text = load('workerOrderText.ts'), catalog = require('../src/shared/localization/catalog.json');

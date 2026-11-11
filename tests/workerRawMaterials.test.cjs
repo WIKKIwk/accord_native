@@ -42,6 +42,18 @@ test('raw material assignments replay the V2 scoped request and prefer canonical
   replay.assertDone();
 });
 
+test('assignment API retains the reservation and stock status used to restore accepted rows after reopening', async () => {
+  const presentation = load('workerMaterialPresentation');
+  for (const stockStatus of ['in_use', 'consumed', 'ready']) {
+    const api = apiWith(async () => ({ status: 200, json: async () => [{ apparatus_id: station, order_id: '0337',
+      reserved_order_id: '0337', stock_status: stockStatus, barcode: 'ROLL1', execution_status: 'in_use', received_qty: 12 }] }));
+    const [assignment] = await api.adminRawMaterialAssignments({}, '0337', station);
+    assert.equal(assignment.stock_status, stockStatus); assert.equal(assignment.reserved_order_id, '0337');
+    assert.equal(presentation.assignedMaterialPresentation(assignment, [], value => value, '0337').confirmed, stockStatus !== 'ready');
+    assert.equal(presentation.assignedMaterialPresentation(assignment, [], value => value, 'another-order').confirmed, false);
+  }
+});
+
 test('material start requirements replay V2 and normalize assignments and barcodes', async () => {
   const stem = 'order_scan_bootstrap_api_test', name = 'scan bootstrap synthetic 250ms RTT aggregate=false';
   const replay = contractFetch(stem, name, { onlyPaths: ['/v1/mobile/admin/raw-material-start-requirements'] });

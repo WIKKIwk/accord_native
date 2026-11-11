@@ -1,6 +1,23 @@
 import type { AdminRawMaterialAssignment } from './workerRawMaterials';
 export type MaterialRow = Partial<AdminRawMaterialAssignment> & { material_name?: string };
-export type WorkerMaterialListProps = { rows: MaterialRow[]; scanned: string[]; onLongPress: (row: MaterialRow) => void; showBalances?: boolean };
+export type WorkerMaterialListProps = { rows: MaterialRow[]; scanned: string[]; orderId?: string; onLongPress: (row: MaterialRow) => void; showBalances?: boolean };
+
+/** @v2 _ScannedItemsExpansionHeader */
+export function materialSectionExpansion({ loading, error, count, expanded }: {
+  loading: boolean; error: string; count: number; expanded: boolean;
+}) {
+  const hasContent = loading || !!error.trim() || count > 0;
+  return { hasContent, canToggle: hasContent && !loading, expanded: hasContent && expanded };
+}
+
+/** @v2 _materialAssignmentConfirmed */
+export function materialAssignmentConfirmed(row: MaterialRow, scanned: string[], orderId: string) {
+  const barcode = row.barcode?.trim().toUpperCase();
+  if (!barcode) return false;
+  if (scanned.some(code => code.trim().toUpperCase() === barcode)) return true;
+  return !!orderId.trim() && row.reserved_order_id?.trim() === orderId.trim() &&
+    ['in_use', 'consumed'].includes(row.stock_status?.trim().toLowerCase() ?? '');
+}
 /** @v2 _rawMaterialBalances */
 export function rawMaterialBalances(assignments: MaterialRow[]) {
   const balances = new Map<string, { uom: string; received: number; consumed: number; remaining: number }>();
@@ -22,7 +39,7 @@ const statuses: Record<string, string> = {
   ready: 'Mos — apparat oldida, qabul qilishga tayyor', in_use: 'Ishlatilmoqda', consumed: 'Ishlatilgan', unavailable: 'Biriktirilgan — hozir qabul qilib bo‘lmaydi',
 };
 /** @v2 _AssignedMaterialTile */
-export function assignedMaterialPresentation(row: MaterialRow, scanned: string[], translate: (value: string) => string) {
+export function assignedMaterialPresentation(row: MaterialRow, scanned: string[], translate: (value: string) => string, orderId = '') {
   const title = String(row.item_name || row.material_name || row.item_code || '').trim();
   const details: string[] = [];
   const add = (raw?: string) => { const value = raw?.trim(); if (value && !details.some(item => item.toLowerCase() === value.toLowerCase())) details.push(value); };
@@ -32,6 +49,6 @@ export function assignedMaterialPresentation(row: MaterialRow, scanned: string[]
     add(remainder.replace(/^[•·|,/-]+\s*/, ''));
   }
   add(row.item_group); add(row.barcode); add(statuses[row.execution_status ?? ''] ? translate(statuses[row.execution_status!]) : '');
-  return { title: title || details.shift() || '', details,
-    scanned: scanned.some(code => code.trim().toUpperCase() === row.barcode?.trim().toUpperCase()) };
+  const primary = title || details.shift() || '';
+  return { title: primary, details, subtitle: details.join(' • '), confirmed: materialAssignmentConfirmed(row, scanned, orderId) };
 }
