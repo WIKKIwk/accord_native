@@ -1081,7 +1081,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           {!view.intakeLoading && !view.intakeError && <WorkerMaterialList rows={view.intakeCandidates} scanned={[]} onLongPress={openMaterialQr} showBalances={false} />}
         </>}
       </View>}
-      {showMaterials && <View style={cardSectionStyle}>
+      {showMaterials && <View style={[cardSectionStyle, showIntakeCandidates && cardSeparatorStyle]}>
         {cardState.showStartMaterials && !materialLoading && !materialsError && rows?.length === 0 ? <Text style={[styles.expansionTitle, { color: colors.text }]}>{p('worker.materials.unassigned_order')}</Text> : <Expansion title={t(allMaterialsAwaitingDelivery ? 'Apparat oldiga homashyo olib kelinmagan' : p(attachedSection.hasContent ? 'worker.materials.attached' : 'worker.materials.attached.empty'))}
           count={materialLoading ? '..' : rows?.length && !allMaterialsAwaitingDelivery ? materialCount(rows.length) : ''} expanded={attachedSection.expanded}
           onPress={attachedSection.canToggle ? () => setMaterialsExpanded(value => !value) : undefined} />}
