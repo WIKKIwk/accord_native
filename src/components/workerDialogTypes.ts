@@ -15,7 +15,7 @@ export type WorkerFormDialogProps = {
 };
 
 export type WorkerRadioChoiceProps = { label: string; selected: boolean; disabled?: boolean; onPress: () => void };
-export type WorkerIconButtonProps = { icon: 'close' | 'edit' | 'check' | 'back' | 'photo' | 'scannedWips'; label: string; onPress: () => void; tonal?: boolean };
+export type WorkerIconButtonProps = { icon: 'close' | 'edit' | 'check' | 'back' | 'photo' | 'scannedWips'; label: string; onPress: () => void; tonal?: boolean; transparent?: boolean };
 export type WorkerDeliveryDialogProps = {
   visible: boolean; name: string; barcode: string; choices: { key: string; label: string }[]; selected: string; error: string;
   busy: boolean; canConfirm: boolean; onChoose: (key: string) => void; onCancel: () => void; onConfirm: () => void;

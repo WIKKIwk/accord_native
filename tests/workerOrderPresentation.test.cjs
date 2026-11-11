@@ -229,6 +229,59 @@ test('iOS action sheet fits measured content with bounded scrolling and no half/
   assert.equal(scroll.props.style.height, undefined);
 });
 
+test('action sheet follows asynchronous menu height and keeps oversized content scrollable', () => {
+  const runner = require('./support/workerPaddonHarness.cjs').hooks();
+  const { WorkerOrderSheet } = load('components/WorkerOrderSheet.ios.tsx', {
+    ...mocks, react: runner.react,
+    'react-native': { PlatformColor: name => name, View: 'View', ScrollView: 'ScrollView', VirtualizedList: {},
+      useWindowDimensions: () => ({ width: 390, height: 844 }) },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) },
+    './useBaseTheme': { useBaseTheme: () => ({ mode: 'dark', colors: {}, direction: 'leftToRight' }) },
+    './workerSheetContext': { WorkerSheetCloseContext: { Provider: 'CloseProvider' } },
+  });
+  const render = () => { runner.begin(); return WorkerOrderSheet({ children: 'menu', onClose() {}, dismissible: true, compact: true, fitContent: true, measureContent: true, heightFraction: 0.86 }); };
+  const heightOf = tree => {
+    const mod = nodes(tree, node => node.type === 'Group')[0].props.modifiers.find(item => item.name === 'presentationDetents');
+    assert.deepEqual(mod.args[1].selection, mod.args[0][0]);
+    return mod.args[0][0].height;
+  };
+  let tree = render();
+  assert.equal(nodes(tree, node => node.type === 'BottomSheet')[0].props.fitToContents, false);
+  assert.equal(nodes(tree, node => node.type === 'RNHostView')[0].props.matchContents, false);
+  assert.equal(heightOf(tree), 280);
+  let scroll = nodes(tree, node => node.type === 'ScrollView')[0];
+  assert.equal(scroll.props.contentInsetAdjustmentBehavior, 'never');
+  assert.equal(scroll.props.automaticallyAdjustContentInsets, false);
+  assert.deepEqual(scroll.props.contentContainerStyle, { paddingBottom: 8 });
+  scroll.props.onContentSizeChange(350, 220.4);
+  tree = render(); assert.equal(heightOf(tree), 237);
+  scroll = nodes(tree, node => node.type === 'ScrollView')[0];
+  scroll.props.onContentSizeChange(350, 520);
+  tree = render(); assert.equal(heightOf(tree), 536);
+  scroll = nodes(tree, node => node.type === 'ScrollView')[0];
+  scroll.props.onContentSizeChange(350, 1200);
+  tree = render(); assert.equal(heightOf(tree), Math.round((844 - 59 - 34) * 0.86));
+  assert.deepEqual(nodes(tree, node => node.type === 'ScrollView')[0].props.style, { flex: 1 });
+});
+
+test('action sheet close has a transparent 44-point target and still closes', () => {
+  for (const version of ['26.1.1', '18.7']) {
+    let calls = 0;
+    const { WorkerIconButton } = load('components/WorkerIconButton.ios.tsx', {
+      ...mocks, 'react-native': { ...mocks['react-native'], Platform: { Version: version } },
+      './useWorkerColors': { useWorkerColors: () => ({ icon: 'systemBlue' }) },
+    });
+    const tree = WorkerIconButton({ icon: 'close', label: 'Yopish', transparent: true, onPress: () => { calls++; } });
+    const button = nodes(tree, node => node.type === 'Button')[0];
+    const icon = nodes(tree, node => node.type === 'Image')[0];
+    assert.equal(button.props.modifiers.find(mod => mod.name === 'buttonStyle').args[0], 'plain');
+    assert.equal(button.props.modifiers.find(mod => mod.name === 'accessibilityLabel').args[0], 'Yopish');
+    assert.equal(icon.props.systemName, 'xmark');
+    assert.deepEqual(icon.props.modifiers.find(mod => mod.name === 'frame').args[0], { width: 44, height: 44 });
+    button.props.onPress(); assert.equal(calls, 1);
+  }
+});
+
 test('report and paint dialogs use transparent secondary actions and filled system-blue confirmation', () => {
   for (const version of ['26.1.1', '18.7']) {
     const calls = [];
