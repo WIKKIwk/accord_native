@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict'), fs = require('node:fs'), Module = require('node:module'), path = require('node:path'),
-  test = require('node:test'), ts = require('typescript'), vm = require('node:vm');
+  test = require('node:test'), ts = require('typescript');
 const filename = path.resolve(__dirname, '../src/workerOrderBlocking.ts'), mod = new Module(filename, module);
 mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
 const { workerOrderBusyTitle, workerOrderBusyText } = mod.exports;
@@ -36,41 +36,4 @@ for (const locale of ['uz', 'en', 'ru', 'ur']) test(`${locale}: busy explanation
   assert.equal(workerOrderBusyText('waiting_sequence', 'machine', 'order', translate(locale)), '');
 });
 
-// Evaluate the actual screen conditions across a busy -> free -> stale transition.
-const source = fs.readFileSync(path.resolve(__dirname, '../src/OrderScreen.tsx'), 'utf8');
-const ast = ts.createSourceFile('OrderScreen.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const selected = new Map();
-(function visit(node) {
-  if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && ['allowed', 'busyNotice', 'waitingForSequence', 'showOutputProgress', 'showIntakeCandidates'].includes(node.name.text))
-    selected.set(node.name.text, node.initializer.getText(ast));
-  ts.forEachChild(node, visit);
-})(ast);
-assert.equal(selected.size, 5);
-const code = ts.transpileModule([...selected].map(([name, value]) => `const ${name} = ${value};`).join('\n') +
-  '\n({ allowed, busyNotice, waitingForSequence, showOutputProgress, showIntakeCandidates });', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-function screen({ actions = [], reason = 'apparatus_busy', synchronized = true, isActiveOrder = true } = {}) {
-  return vm.runInNewContext(code, { synchronized, isActiveOrder, safeStopRequest: null,
-    control: { temporarily_paused: true, allowed_actions: actions }, interaction: { mode: 'paused', material_intake_allowed: true, blocking_reason_code: reason },
-    detail: {}, scanningRequired: false, operation: 'print', showPreflightHold: false, showPreflightOutcome: false, showPreflightFreeze: false,
-    apparatus: { name: '8 ta rangli bosma apparat' }, busyOrderTitle: 'shashoqcha', p: translate('uz'), workerOrderBusyText });
-}
-test('busy pause preserves server action denial and intake; a fresh resume permission restores resume/progress', () => {
-  const busy = screen();
-  assert.equal(busy.allowed.length, 0); assert.match(busy.busyNotice, /shashoqcha/);
-  assert.equal(busy.showOutputProgress, false); assert.equal(busy.showIntakeCandidates, true);
-  const free = screen({ actions: ['resume'], reason: '' });
-  assert.deepEqual(Array.from(free.allowed), ['resume']); assert.equal(free.busyNotice, '');
-  assert.equal(free.showOutputProgress, true); assert.equal(free.showIntakeCandidates, true);
-});
-test('synchronization loss or a frozen order cannot expose stale busy details or resume permission', () => {
-  for (const change of [{ synchronized: false }, { isActiveOrder: false }]) {
-    const state = screen({ actions: ['resume'], ...change });
-    assert.equal(state.allowed.length, 0); assert.equal(state.busyNotice, ''); assert.equal(state.showOutputProgress, false);
-  }
-});
-test('a paused order waiting for sequence retains its explicit server reason without gaining a resume action', () => {
-  const state = screen({ reason: 'waiting_sequence' });
-  assert.equal(state.waitingForSequence, true); assert.equal(state.allowed.length, 0);
-  assert.equal(state.busyNotice, ''); assert.equal(state.showOutputProgress, false);
-  assert.equal(screen().waitingForSequence, false);
-});
+// Transition and visibility coverage now renders OrderScreen on both platforms in workerOrderStates.test.cjs.

@@ -1,0 +1,83 @@
+const fs = require('node:fs'), Module = require('node:module'), path = require('node:path'), ts = require('typescript');
+const root = path.resolve(__dirname, '../../src');
+function load(file, mocks = {}) {
+  const filename = path.join(root, file), mod = new Module(filename, module);
+  mod.filename = filename; mod.paths = module.paths;
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : Module.prototype.require.call(mod, id);
+  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, filename);
+  return mod.exports;
+}
+const ast = ts.createSourceFile('OrderScreen.tsx', fs.readFileSync(path.join(root, 'OrderScreen.tsx'), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const screen = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'OrderScreen');
+// Only hook storage is discovered from the source. All expected UI behavior lives in the tests' V2 cases.
+const stateNames = screen.body.statements.filter(ts.isVariableStatement).flatMap(node => node.declarationList.declarations)
+  .filter(node => ts.isArrayBindingPattern(node.name) && ts.isCallExpression(node.initializer) && node.initializer.expression.getText(ast) === 'useState')
+  .map(node => node.name.elements[0].name.text);
+const catalog = require('../../src/shared/localization/catalog.json');
+const localize = load('shared/localization/index.ts', { './catalog.json': catalog });
+const wording = load('workerOrderText.ts', { './shared/localization/catalog.json': catalog, './shared/localization': localize });
+const rules = load('workerOrderLogic.ts', { './workerControlsApi': { cancelStartControl: () => null, temporaryPauseControl: () => null } });
+const scope = load('sessionReadScope.ts');
+const controls = load('workerControlsApi.ts', { './authorizedFetch': {}, './sessionReadScope': scope });
+const reclose = load('workerOrderReclose.ts', { './workerControlsApi': controls, './sessionReadScope': scope });
+const card = load('workerOrderCardState.ts'), blocking = load('workerOrderBlocking.ts'), materials = load('workerMaterialPresentation.ts');
+const native = new Proxy({}, { get: (_target, key) => String(key) });
+const row = barcode => ({ barcode, order_id: '0198', apparatus: 'apparatus:default:bosma_8', execution_status: 'ready' });
+function harness(platform, input = {}, locale = 'uz') {
+  const station = 'apparatus:default:bosma_8', values = new Map(), effects = [], actions = [], notices = [], closed = [];
+  let cursor = 0, fresh = input.fresh !== false;
+  const p = (key, parameters) => localize.productionText(key, locale, parameters);
+  const text = { locale, p, t: value => wording.workerOrderText(value, locale) };
+  const interaction = { mode: 'paused', start_materials_mode: 'hidden', material_intake_allowed: true,
+    previous_wip_mode: 'not_required', opening_wip_mode: 'not_required', qolip_mode: 'not_required', blocking_reason_code: 'apparatus_busy', ...input.interaction };
+  const control = { state: interaction.mode, stage_node_id: 'stage', allowed_actions: [], previous_stage: 'upstream', ...input.control, interaction };
+  const bootstrap = { ok: true, control_state: { apparatus: station, order_id: '0198', epoch: 'epoch', rev: 1,
+    order_control: 'active', ...input.controlState, control }, sections: {
+    materials: { status: 'ready', data: { requires_material: false, assignments_satisfied: true, scan_satisfied: true,
+      assignments: [row('A')], assigned_barcodes: [], staged_barcodes: [], ...input.requirements } },
+    qolips: { status: 'ready', data: { qolip: { required_qolips: [] } } }, ...input.sections } };
+  const overrides = { detail: { maps: [{ map: { id: '0198', order_number: '0198', title: 'mofun keks' } }] }, bootstrap,
+    loading: false, attachedMaterials: [row('A')], attachedReadKey: JSON.stringify(['scope', station, '0198', 'epoch', 1, 0]),
+    intakeCandidatesState: [row('B'), row('C'), row('D'), row('E')], intakeReadKey: JSON.stringify(['scope', station, '0198', 'epoch', 1, 0]), ...input.states };
+  const mocks = {
+    react: { useState(initial) { const name = stateNames[cursor++]; if (!values.has(name)) values.set(name, Object.hasOwn(overrides, name) ? overrides[name] : typeof initial === 'function' ? initial() : initial);
+      return [values.get(name), value => values.set(name, typeof value === 'function' ? value(values.get(name)) : value)]; },
+      useRef: value => ({ current: value }), useContext: () => null, useCallback: callback => callback,
+      useEffect: callback => effects.push(callback), useLayoutEffect() {}, useEffectEvent: callback => callback },
+    'react-native': { ...native, ActivityIndicator: 'ActivityIndicator', Alert: { alert() {} }, Platform: { OS: platform, Version: 26 },
+      PlatformColor: value => value, StyleSheet: { create: value => value }, View: 'View', Text: 'Text', ScrollView: 'ScrollView', Pressable: 'Pressable' },
+    '@expo/ui': { Host: 'Host', TextInput: 'NativeInput', useNativeState: initial => ({ value: initial, set() {} }) },
+    'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })] },
+    'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },
+    './sessionReadScope': { sessionReadScope: () => 'scope' }, './nativeSheet': { useNativeSheet: () => ({ open() {}, close() {}, update() {}, isOpen: () => false }) },
+    './workerOrderLogic': { ...rules, validOrderControl: () => fresh }, './workerOrderCardState': card, './workerOrderBlocking': blocking,
+    './workerMaterialPresentation': materials, './workerQr': { WorkerInitialQr: class { run() {} }, workerQrPayload: value => value },
+    './workerOrderReclose': reclose, './workerLongPress': { workerLongPressMenu: () => ({ actions: ['reclose'] }),
+      runWorkerMenuAction: async (...args) => { actions.push(args); await input.runReclose?.(); } },
+    './workerLaminationWorkflow': { usesIntegratedLaminationReport: () => false }, './workerScannedWips': { scannedWipStage: () => '', canReadScannedWips: () => false },
+    './workerApi': { workerOrderDetailFromSnapshot: value => value }, './components/useWorkerOrderText': { useWorkerOrderText: () => text },
+    './components/useWorkerColors': { useWorkerColors: () => ({ field: '#111', surface: '#222', text: '#fff', muted: '#aaa' }) },
+    './components/useWorkerPrinterSelector': { useWorkerPrinterSelector: () => ({ element: null, selectDevice() {} }) },
+  };
+  const filename = path.join(root, 'OrderScreen.tsx'), mod = new Module(filename, module);
+  mod.filename = filename; mod.paths = module.paths;
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id === 'react/jsx-runtime' ? require(id) : native;
+  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
+  const props = { session: { baseUrl: 'https://example.invalid', token: 'token', profile: { role: 'aparatchi', ref: 'worker' },
+    capabilities: ['apparatus.queue.manage'], assigned_apparatus: [station] }, apparatusId: station, orderId: '0198',
+    apparatus: { id: station, name: '8 ta rangli bosma apparat', operation: 'print', ...input.apparatus },
+    apparatusCatalog: [{ id: 'upstream', name: 'Upstream' }], queueCursor: { epoch: 'epoch', rev: 1 }, busyOrderTitle: 'shashoqcha',
+    onNotice: message => notices.push(message), onClose: () => closed.push(true), onChanged() {} };
+  return { p, values, props, bootstrap, effects, actions, notices, closed, setFresh: value => { fresh = value; },
+    render: () => { cursor = 0; effects.length = 0; return mod.exports.OrderScreen(props); } };
+}
+function nodes(tree, predicate) {
+  if (!tree || typeof tree !== 'object') return [];
+  if (Array.isArray(tree)) return tree.flatMap(child => nodes(child, predicate));
+  return [...(predicate(tree) ? [tree] : []), ...nodes(tree.props?.children, predicate)];
+}
+function main(tree) { return nodes(tree, node => node.type === 'ScrollView')[0]; }
+const buttons = tree => nodes(main(tree), node => node.type?.name === 'NativeButton' || node.type === 'WorkerPreflightButton');
+module.exports = { harness, nodes, main, buttons, load, card, blocking, reclose, row };

@@ -73,6 +73,12 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const orderFontFamily = Platform.OS !== 'ios' && orderFontLoaded ? 'GoogleSans-Regular' : undefined;
   const orderHeadlineFontFamily = Platform.OS !== 'ios' && orderFontLoaded ? 'GoogleSans-Medium' : undefined;
   const [queue, setQueue] = useState<WorkerQueue | null>(null);
+  const [orderNotice, setOrderNotice] = useState('');
+  useEffect(() => {
+    if (!orderNotice) return;
+    const timer = setTimeout(() => setOrderNotice(''), 4000);
+    return () => clearTimeout(timer);
+  }, [orderNotice]);
   const [machineId, setMachineId] = useState('');
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
   const [nativeOverlayOpen, setNativeOverlayOpen] = useState(false);
@@ -157,7 +163,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       onSwitchCommitted={() => { const pending = pendingQrSwitch.current; if (pending && isSessionWitnessCurrent(pending.witness)) pending.committed = true; }}
       queueCursor={queueRef.current?.snapshot ?? null} busyOrderTitle={workerOrderBusyTitle(queueRef.current, target.apparatusId, target.orderId)}
       apparatusCatalog={queueRef.current?.catalog} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction}
-      onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
+      onNotice={setOrderNotice} onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
   }, [session, orderRoute]);
   useEffect(() => {
     if (nativeOrder.current) orderRoute.update(renderOrderRoute(nativeOrder.current));
@@ -462,7 +468,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
       <WorkerActivePaddonPicker {...activePaddon} />
       <WorkerPeremotkaSheet {...peremotka} />
-      <WorkerPaddonFeedback message={activePaddon.notice} />
+      <WorkerPaddonFeedback message={orderNotice || activePaddon.notice} />
       {nativeNavigation && <Modal visible={scannerOpen} presentationStyle="fullScreen" animationType="slide" onDismiss={scannerDismissed} onRequestClose={() => setScannerOpen(false)}>{scanner}</Modal>}
     </SafeAreaView>
   );
