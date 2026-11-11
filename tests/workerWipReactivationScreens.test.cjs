@@ -136,7 +136,9 @@ function completedMenu(completed = true) {
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, file);
   const props = { session: {}, apparatusId: 'cut', apparatusName: 'Kesish', operation: completed ? 'cut' : 'print', order: { id: 'o', code: '0304', title: 'Film' }, completed,
-    getCursor: () => ({ epoch: 'e', rev: 1 }), onChoose: choice => h.choices.push(choice) };
+    prepared: completed ? { kind: 'reactivation', reactivation: review } : { kind: 'menu', menu: { kind: 'bosma', operation: 'print',
+      actions: ['temporary_pause', 're_pause', 'astatka', 'finish'], control: { state: 'in_progress' } } },
+    onChoose: choice => h.choices.push(choice) };
   const render = () => { runner.begin(); const tree = mod.exports.WorkerLongPressActions(props); runner.flush(); return tree; };
   return Object.assign(h, { render, unmount: runner.dispose, review });
 }
@@ -160,17 +162,17 @@ test('iOS long-press menu renders all four full-width platform actions with sepa
   } finally { h.unmount(); }
 });
 
-test('completed-order menu keeps one preview through native dismissal and confirmation, without a second detail read', async () => {
+test('prepared completed-order menu never refetches through rerenders, native dismissal and confirmation', async () => {
   const h = completedMenu();
   try {
-    h.render(); await tick(); const tree = h.render();
+    h.render(); await tick(); h.render(); const tree = h.render();
     const action = nodes(tree, node => node.type === 'Action' && node.props.label === h.review.actionKey)[0];
     action.props.onPress(); action.props.onPress();
-    assert.equal(h.choices.length, 1); assert.equal(h.closes, 1); assert.equal(h.reads, 1); assert.equal(h.previews, 1); assert.equal(h.writes, 0);
+    assert.equal(h.choices.length, 1); assert.equal(h.closes, 1); assert.equal(h.reads, 0); assert.equal(h.previews, 0); assert.equal(h.writes, 0);
     assert.equal(h.choices[0].confirmation.message, `${h.review.identity}\n\nworker.reactivate.explanation`);
     h.unmount();
     assert.equal(await h.choices[0].run(() => null), 'worker.reactivate.success');
-    assert.equal(h.reads, 1); assert.equal(h.previews, 1); assert.equal(h.writes, 1);
+    assert.equal(h.reads, 0); assert.equal(h.previews, 0); assert.equal(h.writes, 1);
   } finally { h.unmount(); }
 });
 
@@ -180,6 +182,6 @@ test('completed-order confirmation cannot write through an account change after 
     h.render(); await tick(); const tree = h.render();
     nodes(tree, node => node.type === 'Action' && node.props.label === h.review.actionKey)[0].props.onPress();
     h.unmount(); h.version++;
-    assert.equal(await h.choices[0].run(() => null), ''); assert.equal(h.writes, 0); assert.equal(h.previews, 1);
+    assert.equal(await h.choices[0].run(() => null), ''); assert.equal(h.writes, 0); assert.equal(h.previews, 0);
   } finally { h.unmount(); }
 });

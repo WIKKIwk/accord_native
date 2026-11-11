@@ -1,10 +1,10 @@
 import { Button, Host } from '@expo/ui';
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { useContext, useRef, useState, type ComponentProps } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, captureSessionWitness, isSessionWitnessCurrent, type Session } from '../auth';
-import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu, type WorkerMenu, type WorkerMenuAction } from '../workerLongPress';
-import { workerProductionOrderDetail } from '../workerDetailApi';
-import { prepareWorkerWipReactivation, runWorkerWipReactivation, workerReactivationDenialKey, type WorkerWipReactivationReview } from '../workerWipReactivation';
+import { runWorkerMenuAction, type WorkerMenuAction } from '../workerLongPress';
+import type { WorkerPreparedActionSheet } from '../workerLongPressPreparation';
+import { runWorkerWipReactivation, workerReactivationDenialKey } from '../workerWipReactivation';
 import type { QueueCursor } from '../workerOrderLogic';
 import type { QueueOrder } from '../workerApi';
 import { useWorkerColors } from './useWorkerColors';
@@ -15,16 +15,13 @@ import { WorkerIconButton } from './WorkerIconButton';
 import type { WorkerSheetIcon } from './WorkerSheetButton';
 import { WorkerOrderButton as WorkerSheetButton } from './WorkerOrderControls';
 import { useWorkerOrderText } from './useWorkerOrderText';
-import { adminWipBatches } from '../workerWipApi';
-import { workerHandoffBatch } from '../workerHandoff';
 import { sessionReadScope } from '../sessionReadScope';
 
 export type WorkerActionChoice = 'astatka' | 'complete' | 'resume' | 'detach_roll' | {
   run: (readCursor: () => QueueCursor | null) => Promise<string>;
   confirmation?: Omit<WorkerAlertData, 'onConfirm'>;
 };
-type Props = { session: Session; apparatusId: string; apparatusName: string; operation: string; order: QueueOrder; completed: boolean; getCursor: () => QueueCursor | null; onChoose: (action: WorkerActionChoice) => void };
-type Reactivation = WorkerWipReactivationReview;
+type Props = { session: Session; apparatusId: string; operation: string; order: QueueOrder; prepared: WorkerPreparedActionSheet; onChoose: (action: WorkerActionChoice) => void };
 const labels: Record<WorkerMenuAction, string> = { cancel_start: '', temporary_pause: 'worker.temporary_pause.action', re_pause: 'worker.re_pause.action', reclose: 'worker.reclose.action', astatka: 'worker.bosma.astatka.title', finish: 'worker.finish.title', reopen: 'worker.print_preflight.reopen.action', resume: '', detach_roll: '' };
 const icons: Record<WorkerMenuAction, WorkerSheetIcon> = {
   temporary_pause: { android: 'pause_circle', ios: 'pause.circle' }, re_pause: { android: 'pause', ios: 'pause' },
@@ -38,53 +35,17 @@ const actionTints: Record<WorkerMenuAction, ComponentProps<typeof WorkerSheetBut
   finish: 'complete', reclose: 'complete', astatka: 'report', resume: 'resume', reopen: 'start',
 };
 
-export function WorkerLongPressActions({ session, apparatusId, apparatusName, operation, order, completed, getCursor, onChoose }: Props) {
+/** @v2 _BosmaWorkerFinishSheet */
+export function WorkerLongPressActions({ session, apparatusId, operation, order, prepared, onChoose }: Props) {
   const colors = useWorkerColors();
   const titleStyle = [styles.title, Platform.OS === 'ios' && iosStyles.title, { color: colors.text }];
   const bodyStyle = [styles.body, Platform.OS === 'ios' && iosStyles.body, { color: colors.muted }];
   const { p } = useWorkerOrderText();
   const close = useContext(WorkerSheetCloseContext);
-  const [loading, setLoading] = useState(true);
-  const [menu, setMenu] = useState<WorkerMenu | null>(null);
-  const [reactivation, setReactivation] = useState<Reactivation | null>(null);
-  const [error, setError] = useState('');
+  const menu = prepared.kind === 'menu' ? prepared.menu : null;
+  const reactivation = prepared.kind === 'reactivation' ? prepared.reactivation : null;
   const [alert, setAlert] = useState<WorkerAlertData | null>(null);
-  const chosen = useRef(false), text = useRef(p);
-  useLayoutEffect(() => { text.current = p; }, [p]);
-
-  const loadReactivation = useCallback(async () => {
-    const scope = sessionReadScope(session), witness = captureSessionWitness(session);
-    const current = () => !!activeSessionToken(session) && isSessionWitnessCurrent(witness) && sessionReadScope(session) === scope;
-    let map: Record<string, any> = { id: order.id, code: order.code, title: order.title };
-    try { const detail = await workerProductionOrderDetail(session, apparatusId, order.id); map = detail.maps[0].map; } catch { /* A partial local map cannot enable the action. */ }
-    return prepareWorkerWipReactivation(session, { apparatus: { id: apparatusId, name: apparatusName, operation }, map, workerMode: true, allowReactivation: true }, text.current, current);
-  }, [session, apparatusId, apparatusName, operation, order.id, order.code, order.title]);
-
-  useEffect(() => {
-    let current = true;
-    (async () => {
-      try {
-        if (completed) {
-          const result = await loadReactivation();
-          if (current && activeSessionToken(session)) { if (result) setReactivation(result); else close?.(); }
-        } else {
-          const data = await readWorkerActionControl(session, apparatusId, order.id, getCursor);
-          if (!current || !activeSessionToken(session)) return;
-          let result = workerLongPressMenu(data, session, apparatusId, order.id, getCursor(), operation);
-          if (result.kind === 'none') { close?.(); return; }
-          if (['laminate', 'glue'].includes(operation) && result.control.state === 'paused' && !result.actions.includes('reclose')) {
-            const batches = await adminWipBatches(session, { status: 'all', apparatus: apparatusId, orderId: order.id, limit: 250 });
-            if (!current || !activeSessionToken(session) || result.readScope !== sessionReadScope(session)) return;
-            if (workerHandoffBatch(batches, apparatusId, order.id)) result = { ...result, kind: 'handoff', actions: ['resume', 'detach_roll', ...(operation === 'laminate' ? ['astatka' as const] : [])] };
-          }
-          if (result.kind === 'astatka') { onChoose('astatka'); close?.(); return; }
-          setMenu(result);
-        }
-      } catch (e) { if (current) setError(e instanceof Error ? e.message : 'worker.error.sync'); }
-      finally { if (current) setLoading(false); }
-    })();
-    return () => { current = false; };
-  }, [completed, session, apparatusId, order.id, operation, getCursor, loadReactivation, close, onChoose]);
+  const chosen = useRef(false);
 
   function pick(choice: WorkerActionChoice) {
     if (chosen.current || !activeSessionToken(session)) return;
@@ -144,9 +105,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
       </View>
       <WorkerIconButton icon="close" label={p('worker.action.close')} onPress={() => close?.()} tonal neutralIcon />
     </View>}
-    {loading && <ActivityIndicator color={colors.icon} />}
-    {!!error && <Text style={styles.error}>{p(error)}</Text>}
-    {completed && reactivation && <>
+    {reactivation && <>
       <Text style={titleStyle}>{reactivation.identity}</Text>
       {!reactivation.target && <Text style={bodyStyle}>{p(workerReactivationDenialKey(reactivation.reason))}</Text>}
       <WorkerSheetButton label={p(reactivation.actionKey)} variant="filled" orderAction="resume"
@@ -181,7 +140,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
   </View>;
 }
 
-const styles = StyleSheet.create({ content: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', gap: 12 }, heading: { flex: 1, gap: 4 }, title: { fontSize: 20, fontWeight: '600', lineHeight: 27 }, body: { fontSize: 14, lineHeight: 20 }, host: { width: '100%' }, error: { color: '#a52626', fontSize: 14 }, finishSection: { gap: 12 } });
+const styles = StyleSheet.create({ content: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', gap: 12 }, heading: { flex: 1, gap: 4 }, title: { fontSize: 20, fontWeight: '600', lineHeight: 27 }, body: { fontSize: 14, lineHeight: 20 }, host: { width: '100%' }, finishSection: { gap: 12 } });
 const iosStyles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 16 },
   orderCode: { fontSize: 22, lineHeight: 28, fontWeight: '700', fontVariant: ['tabular-nums'] },
