@@ -12,6 +12,20 @@ function setup(platform, extra = {}) {
 }
 const button = (tree, label) => nodes(tree, node => node.type?.name === 'NativeButton' && node.props.label === label)[0];
 const dialog = tree => nodes(tree, node => node.type === 'PaintNamedDialog')[0];
+test('iOS report and inline paint editor retain glass secondary actions and blue confirm/done actions', () => {
+  const h = setup('ios', { states: { paintEditor: false } });
+  const report = nodes(h.render(), node => node.type === 'WorkerFormDialog')[0];
+  assert.equal(report.props.actionColors, 'blue');
+  assert.equal(report.props.cancelLabel, 'Bekor qilish');
+  assert.equal(report.props.confirmLabel, 'Tasdiqlash');
+  const paint = button(h.render(), h.p('worker.daily.field.returned_ink'));
+  assert.equal(paint.props.variant, 'outlined');
+  paint.props.onPress();
+  const editor = nodes(h.render(), node => node.type === 'WorkerFormDialog')[0];
+  assert.equal(editor.props.actionColors, 'blue');
+  assert.equal(editor.props.cancelLabel, 'Orqaga');
+  assert.equal(editor.props.confirmLabel, 'Tayyor');
+});
 for (const platform of ['ios', 'android']) {
   test(`${platform}: named paint fields open a dialog and commit its initial value with the source duplicate notice`, () => {
     const h = setup(platform); button(h.paintTree(), 'Pantone+').props.onPress();

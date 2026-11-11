@@ -12,7 +12,7 @@ export function WorkerFormDialog({ visible, title, children, confirmLabel, onCon
   const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), colors = useWorkerColors();
   const { t } = useWorkerOrderText();
   const glass = parseInt(String(Platform.Version), 10) >= 26;
-  const colored = actionColors === 'red-green';
+  const blueActions = actionColors === 'blue';
   return <Modal visible={visible} transparent animationType="fade" presentationStyle="overFullScreen" statusBarTranslucent
     onDismiss={onDismiss} onShow={onShow}
     onRequestClose={() => { if (!cancelDisabled && !preventDismiss) onCancel(); }}>
@@ -23,13 +23,13 @@ export function WorkerFormDialog({ visible, title, children, confirmLabel, onCon
         <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 14, paddingBottom: 8 }}>{children}</ScrollView>
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <BaseHost matchContents={{ vertical: true }} style={{ flex: 1 }}><Button onPress={onCancel}
-            modifiers={[buttonStyle(colored ? (glass ? 'glassProminent' : 'borderedProminent') : (glass ? 'glass' : 'bordered')), buttonBorderShape('capsule'), controlSize('large'),
-              ...(colored ? [tint(PlatformColor('systemRed'))] : []), disabled(!!cancelDisabled), frame({ maxWidth: Infinity, minHeight: 48 })]}>
+            modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('capsule'), controlSize('large'),
+              ...(blueActions ? [tint(PlatformColor('systemBlue'))] : []), disabled(!!cancelDisabled), frame({ maxWidth: Infinity, minHeight: 48 })]}>
             <NativeText modifiers={[font({ textStyle: 'headline', weight: 'semibold' }), frame({ maxWidth: Infinity }), multilineTextAlignment('center'), fixedSize({ horizontal: false, vertical: true })]}>{t(cancelLabel)}</NativeText>
           </Button></BaseHost>
           <BaseHost matchContents={{ vertical: true }} style={{ flex: 1 }}><Button onPress={onConfirm}
             modifiers={[buttonStyle(glass ? 'glassProminent' : 'borderedProminent'), buttonBorderShape('capsule'), controlSize('large'),
-              ...(colored ? [tint(PlatformColor('systemGreen'))] : []), disabled(!!confirmDisabled), frame({ maxWidth: Infinity, minHeight: 48 })]}>
+              ...(blueActions ? [tint(PlatformColor('systemBlue'))] : []), disabled(!!confirmDisabled), frame({ maxWidth: Infinity, minHeight: 48 })]}>
             <NativeText modifiers={[font({ textStyle: 'headline', weight: 'semibold' }), frame({ maxWidth: Infinity }), multilineTextAlignment('center'), fixedSize({ horizontal: false, vertical: true })]}>{t(confirmLabel)}</NativeText>
           </Button></BaseHost>
         </View>

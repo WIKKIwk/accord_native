@@ -224,7 +224,7 @@ test('iOS action sheet fits measured content with bounded scrolling and no half/
   assert.equal(scroll.props.style.height, undefined);
 });
 
-test('report confirmation actions use full-width filled red/green native buttons while other dialogs keep their default tints', () => {
+test('report and paint dialogs use transparent secondary actions and filled system-blue confirmation', () => {
   for (const version of ['26.1.1', '18.7']) {
     const calls = [];
     const { WorkerFormDialog } = load('components/WorkerFormDialog.ios.tsx', {
@@ -235,10 +235,11 @@ test('report confirmation actions use full-width filled red/green native buttons
     });
     const props = { visible: true, title: 'Pauza miqdori', children: null, confirmLabel: 'Tasdiqlash',
       onConfirm: () => calls.push('confirm'), onCancel: () => calls.push('cancel') };
-    const buttons = nodes(WorkerFormDialog({ ...props, actionColors: 'red-green' }), node => node.type === 'Button');
-    assert.deepEqual(buttons.map(button => button.props.modifiers.find(mod => mod.name === 'tint').args[0]), ['systemRed', 'systemGreen']);
+    const buttons = nodes(WorkerFormDialog({ ...props, actionColors: 'blue' }), node => node.type === 'Button');
+    assert.deepEqual(buttons.map(button => button.props.modifiers.find(mod => mod.name === 'tint').args[0]), ['systemBlue', 'systemBlue']);
+    assert.deepEqual(buttons.map(button => button.props.modifiers.find(mod => mod.name === 'buttonStyle').args[0]),
+      version.startsWith('26') ? ['glass', 'glassProminent'] : ['bordered', 'borderedProminent']);
     for (const button of buttons) {
-      assert.equal(button.props.modifiers.find(mod => mod.name === 'buttonStyle').args[0], version.startsWith('26') ? 'glassProminent' : 'borderedProminent');
       assert.equal(button.props.modifiers.find(mod => mod.name === 'frame').args[0].minHeight, 48);
       assert.equal(button.props.children.props.modifiers.find(mod => mod.name === 'frame').args[0].maxWidth, Infinity);
       button.props.onPress();
@@ -246,9 +247,40 @@ test('report confirmation actions use full-width filled red/green native buttons
     assert.deepEqual(calls, ['cancel', 'confirm']);
     const defaults = nodes(WorkerFormDialog(props), node => node.type === 'Button');
     assert.equal(defaults.every(button => !button.props.modifiers.some(mod => mod.name === 'tint')), true);
-    const busy = nodes(WorkerFormDialog({ ...props, actionColors: 'red-green', cancelDisabled: true, confirmDisabled: true }), node => node.type === 'Button');
+    const busy = nodes(WorkerFormDialog({ ...props, actionColors: 'blue', cancelDisabled: true, confirmDisabled: true }), node => node.type === 'Button');
     assert.equal(busy.every(button => button.props.modifiers.find(mod => mod.name === 'disabled').args[0]), true);
   }
+});
+
+test('native paint fields expose a wide visible input and preserve formatting, clearing and scope locks', () => {
+  const refs = [], changes = [], writes = [], selections = [];
+  let locked = false;
+  const native = new Proxy({}, { get: (_target, key) => String(key) });
+  const logic = load('boyoqchi/boyoqchiLogic.ts', { './returnedPaintModel': {}, './returnedPaintRules': {} });
+  const { WorkerReturnedPaintField } = load('components/WorkerReturnedPaintField.ios.tsx', {
+    '@expo/ui/swift-ui': { ...native, Text: 'Text', TextField: 'TextField', VStack: 'VStack', useNativeState: initial => ({
+      get: () => initial, set: value => writes.push(value),
+    }) },
+    '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_target, name) => name === 'shapes' ? { rectangle: () => 'rectangle' } : (...args) => ({ name, args }) }),
+    react: { useRef: initial => { const ref = { current: initial }; refs.push(ref); return ref; } },
+    'react-native': { PlatformColor: value => value }, './BaseHost': { BaseHost: 'Host' },
+    '../boyoqchi/boyoqchiLogic': logic, '../boyoqchi/useBoyoqchiText': { useBoyoqchiText: () => value => value },
+  });
+  const tree = WorkerReturnedPaintField({ label: '1w Oq', initial: '12', decimal: true, isLocked: () => locked, onChange: value => changes.push(value) });
+  assert.equal(tree.props.style.width, '100%');
+  assert.deepEqual(tree.props.matchContents, { vertical: true });
+  const field = nodes(tree, node => node.type === 'TextField')[0], modifiers = field.props.modifiers;
+  assert.equal(modifiers.find(mod => mod.name === 'frame').args[0].minHeight, 48);
+  assert.equal(modifiers.find(mod => mod.name === 'frame').args[0].maxWidth, Infinity);
+  assert.equal(modifiers.find(mod => mod.name === 'background').args[0], 'tertiarySystemFill');
+  assert.equal(modifiers.find(mod => mod.name === 'keyboardType').args[0], 'decimal-pad');
+  refs[0].current = { setSelection: (start, end) => { selections.push([start, end]); return Promise.resolve(); } };
+  field.props.onFocusChange(true); assert.deepEqual(selections, [[2, 2]]);
+  field.props.onTextChange('12,5'); field.props.onTextChange('');
+  assert.deepEqual(changes, ['12,5', '']); assert.deepEqual(writes, []);
+  field.props.onTextChange('-1'); field.props.onTextChange('invalid');
+  locked = true; field.props.onTextChange('5');
+  assert.deepEqual(changes, ['12,5', '']); assert.deepEqual(writes, ['', '', '']);
 });
 
 test('iOS quantity form field uses the wide native editor without changing raw report values', () => {

@@ -75,6 +75,7 @@ function harness(platform, input = {}, locale = 'uz') {
     './workerReturnedPaint': paintReport,
     './workerCompletion': load('workerCompletion.ts'),
     './boyoqchi/BoyoqchiFormContent': { ReturnedPaintField: 'PaintField', ReturnedPaintNamedFieldDialog: 'PaintNamedDialog' },
+    './components/WorkerReturnedPaintField': { WorkerReturnedPaintField: 'PaintField' },
     './boyoqchi/BoyoqchiImage': { BoyoqchiImage: 'PaintImage' },
     './boyoqchi/returnedPaintApi': {
       uploadReturnedPaintImage: async (...args) => { paintUploads.push(args); return input.uploadPaint ? input.uploadPaint(...args) : { image_id: 'new-image', image_url: '/new-image', image_name: 'photo.jpg', image_mime: 'image/jpeg', image_size_bytes: 1 }; },
