@@ -1,12 +1,13 @@
 # Aparatchi paint and order-sheet presentation
 
 Status: implemented and served on Metro; physical layout/hardware acceptance remains with the user.
-Stopped at: latest requested large-button and small-status-indicator corrections are implemented and checked.
+Stopped at: latest requested Uzbek notice hyphenation is implemented and checked.
 
 Worktree: `accord_mobile_v4-aparatchi-paint-parity`, branch `port/aparatchi-paint-parity`, based on the tested worker parity changes at45b77f1a. The separate audit commit is retained here too. Metro now serves this worktree at the existing LAN URL/port8081; `/status` returns running. Neither main nor V2 source was changed.
 
 ## Implemented
 
+- Uzbek notice hyphenation: iOS quoted/italic notices receive discretionary soft hyphens at Latin Uzbek syllable boundaries, using rules adapted from MIT-licensed [UzSyllable](https://github.com/UlugbekSalaev/UzSyllable/tree/7d874c708be555c1df3d2cdbc15251a1710ef56a); the upstream license is retained in `docs/third-party/UzSyllable-LICENSE.txt`. The text renderer chooses which opportunities to use at the actual available width. Digraphs/apostrophe letters stay together, single-letter line fragments are excluded, and quoted names/technical identifiers/unsupported spellings are kept intact. Other locales, stored text, API values and the original accessibility label are unchanged. Focused helper/presentation tests17/17 and iOS typecheck pass; on-device line layout remains part of the user's real testing.
 - Notice alignment correction: the quoted italic paragraph now spans the full card content width and uses native iOS justified text alignment. Quotation/spacing/accessibility content are retained; no nested background is added. Existing12 presentation tests and iOS typecheck pass; Metro serves the change.
 - Blocking-notice follow-up: removed the nested iOS notice background/card; the original message now appears in quotation marks, italic callout text, with12pt vertical spacing and no extra horizontal inset. VoiceOver retains the unquoted message. Existing notice presentation tests and iOS typecheck pass; actions and availability rules are unchanged.
 - Temporary-pause label follow-up: retained inside its existing iOS card, centered at17pt semibold/24pt line height with12pt top/bottom padding. Warm amber/carrot text adapts between light and dark appearance. The pause condition/text are unchanged. Both platform typechecks and66/66 order-state tests pass; Metro serves the change.
@@ -20,6 +21,7 @@ Worktree: `accord_mobile_v4-aparatchi-paint-parity`, branch `port/aparatchi-pain
 
 ## Verification
 
+- Latest hyphenation follow-up:17/17 focused tests, iOS typecheck, scoped lint and iOS Hermes export pass (`.expo/aparatchi-hyphenation-ios`). Project lint has0 errors and the existing unrelated AdminClosedHistoryOwner dependency warning. Metro remains running on8081.
 - Focused order/presentation/mold/paint/native inventory/palette suite175/175 passed. Handoff and resume integration9/9 passed after updating their extracted-function fixture for the new paint-helper dependency.
 - Shared paint/photo/API/draft follow-up17/17 passed; earlier expanded photo/preview/shared-form checks27/27 and pure paint checks27/27 passed. Native component grid tests66/66 passed.
 - Both iOS/Android TypeScript projects pass. Lint has0 errors and only the pre-existing AdminClosedHistoryOwner ticket-dependency warning. Source ledger resolves1236 `@v2`/115 `@v2-test` tags with the same11 endpoint-literal warnings.

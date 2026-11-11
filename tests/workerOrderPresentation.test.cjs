@@ -93,10 +93,13 @@ test('stage history retains the current order, identity, apparatus labels and na
 
 const native = new Proxy({}, { get: (_target, key) => String(key) });
 const layout = load('components/workerOrderLayout.ts');
+const noticeHyphenation = load('workerNoticeHyphenation.ts');
 const modifiers = new Proxy({}, { get: (_target, key) => key === 'shapes'
   ? { rectangle: () => ({ type: 'rectangle' }), roundedRectangle: value => ({ type: 'roundedRectangle', ...value }) } : (...args) => ({ name: String(key), args }) });
 const mocks = { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
   './useBaseTheme': { useBaseTheme: () => ({ colors: { onSurface: 'label', surfaceContainerHighest: 'surface' } }) },
+  './useWorkerOrderText': { useWorkerOrderText: () => ({ locale: 'uz' }) },
+  '../workerNoticeHyphenation': noticeHyphenation,
   'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, Text: 'Text', View: 'View' }, './BaseHost': { BaseHost: 'Host' }, './workerOrderLayout': layout };
 const byId = (tree, id) => nodes(tree, item => item.props.modifiers?.some(modifier => modifier.name === 'accessibilityIdentifier' && modifier.args[0] === id))[0];
 
@@ -151,7 +154,8 @@ for (const platform of ['ios', 'android']) test(`${platform}: blocked paused ord
     './WorkerSheetButton': { WorkerSheetButton: 'Button' } });
   const message = '8 ta rangli bosma apparat — shashoqcha';
   const tree = WorkerOrderBlockingNotice({ message });
-  assert.equal(text(tree), platform === 'ios' ? `“${message}”` : message); assert.equal(nodes(tree, node => node.type === 'Button').length, 0);
+  assert.equal(text(tree), platform === 'ios' ? `“${noticeHyphenation.hyphenateWorkerNotice(message, 'uz')}”` : message);
+  assert.equal(nodes(tree, node => node.type === 'Button').length, 0);
   const label = nodes(tree, node => node.type === 'Text')[0];
   if (platform === 'android') assert.equal(label.props.color, 'label');
   else {
@@ -161,6 +165,19 @@ for (const platform of ['ios', 'android']) test(`${platform}: blocked paused ord
     assert.equal(label.props.style.width, '100%');
     assert.equal(label.props.style.backgroundColor, undefined);
     assert.equal(label.props.accessibilityLabel, message);
+  }
+});
+
+test('iOS notice uses discretionary word breaks only in Uzbek while VoiceOver reads the original', () => {
+  for (const locale of ['uz', 'en', 'ru', 'ur']) {
+    const { WorkerOrderBlockingNotice } = load('components/WorkerOrderControls.ios.tsx', {
+      ...mocks, './useWorkerOrderText': { useWorkerOrderText: () => ({ locale }) },
+    });
+    const message = 'Ushbu buyurtmani boshlash uchun kuting.';
+    const label = WorkerOrderBlockingNotice({ message });
+    assert.equal(label.props.accessibilityLabel, message);
+    assert.equal(text(label).includes(noticeHyphenation.SOFT_HYPHEN), locale === 'uz');
+    assert.equal(text(label).replaceAll(noticeHyphenation.SOFT_HYPHEN, ''), `“${message}”`);
   }
 });
 

@@ -6,14 +6,18 @@ import { BaseHost as Host } from './BaseHost';
 import type { WorkerSheetButton } from './WorkerSheetButton';
 import { useBaseTheme } from './useBaseTheme';
 import { WORKER_ORDER_LAYOUT as layout } from './workerOrderLayout';
+import { useWorkerOrderText } from './useWorkerOrderText';
+import { hyphenateWorkerNotice } from '../workerNoticeHyphenation';
 
 export function WorkerOrderBlockingNotice({ message }: { message: string }) {
   const { colors } = useBaseTheme();
+  const { locale } = useWorkerOrderText();
+  const displayMessage = hyphenateWorkerNotice(message, locale);
   // The native iOS paragraph supports justified text, which SwiftUI Text does not expose.
   return <ParagraphText accessibilityLabel={message} style={{
     alignSelf: 'stretch', width: '100%', textAlign: 'justify', fontStyle: 'italic', fontSize: 16, lineHeight: 23,
     paddingVertical: layout.sectionGap, color: colors.onSurfaceVariant ?? colors.onSurface,
-  }}>{`“${message}”`}</ParagraphText>;
+  }}>{`“${displayMessage}”`}</ParagraphText>;
 }
 
 export function WorkerOrderButton({ label, onPress, disabled: inactive = false, variant = 'outlined', icon, largeLabel }: ComponentProps<typeof WorkerSheetButton>) {
