@@ -1,4 +1,4 @@
-import { BottomSheet, Button, FieldGroup, ListItem, Text, TextInput, useNativeState } from '@expo/ui';
+import { BottomSheet, Button, FieldGroup, ListItem, RNHostView, Text, TextInput, useNativeState } from '@expo/ui';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, BackHandler, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,11 +14,11 @@ import type { AppThemeVariant } from '../shared/themeController';
 import { themeController } from '../shared/themeRuntime';
 import { savedAccountDisplayName, savedAccountSubtitle } from '../shared/accountEntryLogic';
 import { BaseHost as Host } from './BaseHost';
+import { WelcomeScreen } from './WelcomeScreen';
+import { useBaseTheme } from './useBaseTheme';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeSnapshot = () => localeController.locale;
-const subscribeTheme = (listener: () => void) => themeController.addListener(listener);
-const themeSnapshot = () => `${themeController.variant}:${themeController.themeMode}`;
 const themes: { value: AppThemeVariant; label: string }[] = [
   { value: 'kalmar', label: 'themeKalmarLabel' }, { value: 'classic', label: 'themeClassicLabel' },
   { value: 'moss', label: 'themeMossLabel' }, { value: 'lavender', label: 'themeLavenderLabel' },
@@ -31,7 +31,7 @@ const themes: { value: AppThemeVariant; label: string }[] = [
 // @v2 _SelectionSheet
 export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
   const locale = useSyncExternalStore(subscribeLocale, localeSnapshot, localeSnapshot);
-  useSyncExternalStore(subscribeTheme, themeSnapshot, themeSnapshot);
+  const theme = useBaseTheme();
   const text = (key: string) => localizedGetter(key, locale);
   const [accounts, setAccounts] = useState<SavedAccount[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
     if (page !== 'welcome' || explicitLocale) return;
     let timer: ReturnType<typeof setTimeout>;
     const advance = () => { setHeadlineIndex(index => (index + 1) % 4); timer = setTimeout(advance, 5790); };
-    timer = setTimeout(advance, 5300);
+    timer = setTimeout(advance, 5000);
     return () => clearTimeout(timer);
   }, [page, explicitLocale]);
 
@@ -113,8 +113,17 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
 
   if (!accounts) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   if (page === 'login') return <LoginScreen onLogin={onLogin} onBack={back} />;
-  return <SafeAreaView style={{ flex: 1 }}><Host style={{ flex: 1 }}><FieldGroup>
-    {page === 'accounts' ? <FieldGroup.Section title={text('accountSwitchTitle')}>
+  const welcomeLocale = explicitLocale ? locale : ['uz', 'en', 'ru', 'ur-PK'][headlineIndex];
+  const welcomeText = (key: string) => localizedGetter(key, welcomeLocale);
+  const languageKey = ({ uz: 'uzbek', en: 'english', ru: 'russian' } as Record<string, string>)[locale.split('-')[0]] ?? 'uzbek';
+  return <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceContainerLow }}>
+    {page === 'welcome' || page === 'languages' || page === 'themes' ? <WelcomeScreen
+      headline={welcomeText('welcomeToAccord')} languageLabel={welcomeText('languageTitle')}
+      languageValue={explicitLocale ? locale.startsWith('ur') ? 'اردو (پاکستان)' : welcomeText(languageKey) : welcomeText('languageUnselected')}
+      themeLabel={welcomeText('themeTitle')} themeValue={welcomeText(themes.find(choice => choice.value === themeController.variant)!.label)}
+      startLabel={welcomeText('getStarted')} onStart={() => setPage('login')} onLanguage={() => setPage('languages')} onTheme={() => setPage('themes')} /> : null}
+    {page === 'accounts' ? <Host style={{ flex: 1 }}><FieldGroup>
+    <FieldGroup.Section title={text('accountSwitchTitle')}>
       {target ? <>
         <Text>{localizedMethod('accountPinPrompt', locale, { name: savedAccountDisplayName(target) })}</Text>
         <TextInput value={pinField} accessibilityLabel="PIN" placeholder="PIN" keyboardType="number-pad" secureTextEntry
@@ -131,16 +140,11 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
         <Button label={text('accountAdd')} disabled={busy} onPress={() => setPage('login')} />
       </>}
       {error ? <Text textStyle={{ color: '#b3261e' }}>{error}</Text> : null}
-    </FieldGroup.Section> : null}
-    {page === 'welcome' || page === 'languages' || page === 'themes' ? <FieldGroup.Section title="Accord">
-      <Text>{localizedGetter('welcomeToAccord', explicitLocale ? locale : ['uz', 'en', 'ru', 'ur-PK'][headlineIndex])}</Text>
-      <Button label={text('getStarted')} onPress={() => setPage('login')} />
-      <Button label={text('languageTitle')} onPress={() => setPage('languages')} />
-      <Button label={text('themeTitle')} onPress={() => setPage('themes')} />
-    </FieldGroup.Section> : null}
-  </FieldGroup></Host>
+    </FieldGroup.Section>
+  </FieldGroup></Host> : null}
   <BottomSheet isPresented={page === 'languages' || page === 'themes'} onDismiss={() => setPage('welcome')} snapPoints={['half', 'full']}>
-    <Host style={{ height: 420 }}><FieldGroup>
+    <RNHostView matchContents={{ vertical: true }}>
+    <Host style={{ width: '100%', height: 420 }}><FieldGroup>
     {page === 'languages' ? <FieldGroup.Section title={text('languageTitle')}>
       {[{ id: 'uz', label: text('uzbek') }, { id: 'en', label: text('english') },
         { id: 'ru', label: text('russian') }, { id: 'ur', label: 'اردو (پاکستان)' }].map(choice =>
@@ -155,5 +159,6 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
       <Button label={text('closeAction')} onPress={back} />
     </FieldGroup.Section> : null}
     </FieldGroup></Host>
+    </RNHostView>
   </BottomSheet></SafeAreaView>;
 }

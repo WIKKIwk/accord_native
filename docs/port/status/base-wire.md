@@ -12,7 +12,7 @@ Stopped at: integrator handoff for the listed native and role-owned work.
 | Native application metadata | `NativeAppUpdatePlatform.currentAppInfo` | The check reads the real `ExpoApplication` native module when present and otherwise reports that app information is unavailable. This worktree does not include `expo-application`; its dependency and a rebuilt app are needed for reliable manual checks. |
 | Update dialogs | `_AppUpdateCheckDialog`, `_AppUpdateDialog` | The manual presenter is connected, but both generated surface boxes remain unchecked until real native metadata, Android preparation/installation and device behavior are integrated. |
 | Login and account entry | `LoginScreen`, `AppEntryScreen`, `AccountSwitcherSheet` | Verify keyboard, login back swipe, saved-account PIN and unlock-after-login on real iOS and Android devices. |
-| In-session account switch launcher | `showAccountSwitcherSheet`, `app_shell_helpers_part_01.dart` | The V2 launcher is on the worker-owned profile button; connect it in the aparatchi session. |
+| In-session account switch device behavior | `showAccountSwitcherSheet`, `app_shell_helpers_part_01.dart` | Android and iOS header long presses now open the native chooser with switch PIN, add-account login and root-stack replacement. Verify native gestures, keyboard and sheet dismissal on real phones. |
 | Standalone PIN routes | `PinSetupEntryScreen`, `PinSetupConfirmScreen` | Settings now use the entry and confirmation flows for both PIN purposes, but other callers need Expo Router route files. The wire session may edit only `src/app/index.tsx` and `src/app/_layout.tsx`. |
 | Avatar device behavior | `ProfileAvatarCache`, `ProfileScreen._pickAvatar` | Validate image picking, compression and cached image rendering on a real phone. |
 | Role-owned theme and locale surfaces | `ThemeController`, `LocaleController` | Base native hosts use the persisted theme and RTL, but worker and other role-owned hosts still need to adopt the shared palette/direction and translate their own hard-coded text. Verify the base surfaces on devices. |
@@ -36,7 +36,7 @@ Login test mode remains deferred under D3.
 | `package.json`, `package-lock.json` | `NativeAppUpdatePlatform.currentAppInfo` | Install the SDK-compatible `expo-application` with `npx expo install expo-application`, rebuild the app and connect its public API. These files are outside the base-wire fence. |
 | Native Android update module | `accord/app_update` | Supply the V2 download, validation and installation bridge, then connect the automatic update runtime. |
 | `src/app/pin-setup-entry.tsx`, `src/app/pin-setup-confirm.tsx` | `PinSetupEntryScreen`, `PinSetupConfirmScreen` | Add the standalone routes using the shared PIN flow; only the root entry and layout routes are inside the base-wire fence. |
-| Worker profile launcher and other role-owned hosts | `showAccountSwitcherSheet`, `ThemeController`, `LocaleController` | Connect the in-session chooser and adopt the shared palette and direction in the owning role sessions. |
+| Other role-owned hosts | `ThemeController`, `LocaleController` | Adopt the shared palette and direction in the owning role sessions. The in-session account chooser is connected to the shared Android header and both iOS profile button hosts. |
 | `src/chatModel.ts` | `ProfileAvatarCache.refreshFromUrl` | Chat still constructs `/v1/mobile/profile/avatar/view`; profile now uses the URL returned by the server. Review the chat-owned path in the chat session. |
 
 ## Drift

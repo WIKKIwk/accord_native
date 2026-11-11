@@ -1,8 +1,10 @@
 import { Button, Host, Icon, TextInput, useNativeState } from '@expo/ui';
 import { accessibilityLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
+import { SymbolView } from 'expo-symbols';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useWorkerColors } from './useWorkerColors';
+import { ProfilePressTarget } from './ProfilePressTarget.ios';
 
 type Props = {
   search: string;
@@ -37,11 +39,9 @@ export function WorkerHeader({ search, onSearchChange, onMenu, onProfile }: Prop
         <Icon name="xmark.circle.fill" size={19} color={colors.clear} />
       </Button>
     </Host>}
-    <Host style={styles.button}>
-      <Button variant="text" style={styles.button} onPress={onProfile} modifiers={[accessibilityLabel('Profil')]}>
-        <Icon name="person.crop.circle" size={24} color={colors.icon} />
-      </Button>
-    </Host>
+    <ProfilePressTarget onPress={onProfile}>
+      <SymbolView name={{ ios: 'person.crop.circle' }} size={24} tintColor={colors.icon} />
+    </ProfilePressTarget>
   </View>;
 }
 

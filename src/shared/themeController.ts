@@ -23,7 +23,7 @@ export class ThemeController {
     const [mode, variant] = await Promise.all([
       this.storage.getItem(ThemeController.prefsKey), this.storage.getItem(ThemeController.variantPrefsKey),
     ]);
-    this.mode = mode === 'dark' ? 'dark' : 'light';
+    this.mode = mode === 'system' || mode === 'dark' ? mode : 'light';
     this.selectedVariant = variants.includes(variant as AppThemeVariant) ? variant as AppThemeVariant : 'classic';
     this.notify();
   }
@@ -31,7 +31,7 @@ export class ThemeController {
   async setThemeMode(mode: AppThemeMode): Promise<void> {
     if (this.mode === mode) return;
     this.mode = mode; this.notify();
-    await this.storage.setItem(ThemeController.prefsKey, mode === 'light' ? 'light' : 'dark');
+    await this.storage.setItem(ThemeController.prefsKey, mode);
   }
 
   async setVariant(variant: AppThemeVariant): Promise<void> {

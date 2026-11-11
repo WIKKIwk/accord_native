@@ -54,13 +54,13 @@ export default function IosWorkerLayout() {
               <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
               <NativeTabs.Trigger.Label>Asosiy</NativeTabs.Trigger.Label>
             </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="profile">
-              <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
-              <NativeTabs.Trigger.Label>Profil</NativeTabs.Trigger.Label>
-            </NativeTabs.Trigger>
             <NativeTabs.Trigger name="chat">
               <NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
               <NativeTabs.Trigger.Label>Chat</NativeTabs.Trigger.Label>
+            </NativeTabs.Trigger>
+            <NativeTabs.Trigger name="profile">
+              <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
+              <NativeTabs.Trigger.Label>Profil</NativeTabs.Trigger.Label>
             </NativeTabs.Trigger>
           </NativeTabs>
         </WorkerDrawer>

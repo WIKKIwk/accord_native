@@ -3,6 +3,7 @@ import { fillMaxWidth, padding, semantics, testID, verticalScroll, weight } from
 import Constants from 'expo-constants';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, BackHandler } from 'react-native';
+import type { AppearancePreference } from '../appAppearance';
 import type { Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { localizedGetter } from '../shared/localization';
@@ -20,17 +21,18 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 const currentLocale = () => localeController.locale;
 const subscribeTheme = (listener: () => void) => themeController.addListener(listener);
 const currentVariant = () => themeController.variant;
-const currentThemeMode = () => themeController.themeMode;
+const appearanceChoices: { id: AppearancePreference; label: string }[] = [
+  { id: 'system', label: 'Auto' }, { id: 'light', label: 'Yorug‘' }, { id: 'dark', label: 'Qorong‘i' },
+];
 
 // @v2 _ProfileSettingsSheet
 // @v2 _ProfileSelectionSheet
 export function ProfileSettings({ session, onClose, onLogout }: Props) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const variant = useSyncExternalStore(subscribeTheme, currentVariant, currentVariant);
-  const themeMode = useSyncExternalStore(subscribeTheme, currentThemeMode, currentThemeMode);
   const t = (key: string) => localizedGetter(key, locale);
   const dynamicColors = session.profile.role === 'tayyorlov_masteri';
-  const { setAppearance } = useAppSettings();
+  const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
   const switchPin = useSwitchPinSetup(session);
   const openUpdate = useAppUpdate();
@@ -81,6 +83,18 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
     </Column></Host>, { dismissible: true });
   };
 
+  const chooseAppearance = () => {
+    selectionSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
+      <Text style={{ typography: 'titleLarge' }}>{t('themeModeTitle')}</Text>
+      {appearanceChoices.map(choice => <TextButton key={choice.id} onClick={() => {
+        selectionSheet.close();
+        void setAppearance(choice.id).catch(() => Alert.alert('Saqlab bo‘lmadi'));
+      }} modifiers={[fillMaxWidth(), testID(`profile-appearance-${choice.id}`)]}>
+        <Text>{choice.label}{appearance === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text>
+      </TextButton>)}
+    </Column></Host>, { dismissible: true });
+  };
+
   const chooseTheme = () => {
     const choices: { id: AppThemeVariant; label: string }[] = [
       { id: 'kalmar', label: t('themeKalmarLabel') }, { id: 'classic', label: t('themeClassicLabel') },
@@ -104,10 +118,9 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
     <Text>{t('languageBody')}</Text>
     <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}>
       <Column modifiers={[weight(1)]}><Text>{t('themeModeTitle')}</Text><Text>{t('themeModeBody')}</Text></Column>
-      <Switch value={themeMode === 'dark'} onCheckedChange={enabled => {
-        const mode = enabled ? 'dark' : 'light';
-        void Promise.all([themeController.setThemeMode(mode), setAppearance(mode)]).catch(() => Alert.alert('Saqlab bo‘lmadi'));
-      }} modifiers={[semantics({ contentDescription: t('themeModeTitle') })]} />
+      <TextButton onClick={chooseAppearance} modifiers={[testID('profile-appearance'), semantics({ contentDescription: t('themeModeTitle') })]}>
+        <Text>{appearanceChoices.find(choice => choice.id === appearance)?.label}</Text>
+      </TextButton>
     </Row>
     <TextButton onClick={chooseTheme} modifiers={[fillMaxWidth(), testID('profile-theme')]}><Text>{t('themeTitle')}</Text></TextButton>
     <Text>{t('themeBody')}</Text>

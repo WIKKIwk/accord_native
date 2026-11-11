@@ -13,6 +13,18 @@
       "ru": "Нет доступа",
       "ur": "رسائی مسترد کر دی گئی"
     },
+    "accountAccessUnassignedBody": {
+      "uz": "Administratordan hisobingizga aparat biriktirishni so‘rang.",
+      "en": "Ask an administrator to assign a machine to your account.",
+      "ru": "Попросите администратора назначить аппарат вашей учётной записи.",
+      "ur": "منتظم سے اپنے اکاؤنٹ کے لیے مشین مختص کرنے کو کہیں۔"
+    },
+    "accountAccessUnavailableBody": {
+      "uz": "Ushbu rol uchun Accord V2 ilovasidan foydalanishda davom eting.",
+      "en": "Continue using Accord V2 for this role.",
+      "ru": "Для этой роли продолжайте пользоваться приложением Accord V2.",
+      "ur": "اس کردار کے لیے Accord V2 ایپ کا استعمال جاری رکھیں۔"
+    },
     "accountAdd": {
       "uz": "Profil qo‘shish",
       "en": "Add profile",

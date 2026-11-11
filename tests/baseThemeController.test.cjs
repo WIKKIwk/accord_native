@@ -15,7 +15,7 @@ const storage = initial => {
     setItem: async (key, value) => { writes++; values.set(key, value); }, removeItem: async key => values.delete(key) };
 };
 
-// V2 has no ThemeController test; these assertions follow its source behavior.
+// V2 defaults are retained; Auto is a user-requested V4 addition.
 test('theme preferences load with V2 defaults for unknown values', async () => {
   const store = storage({ app_theme_mode: 'dark', app_theme_variant: 'moss' });
   const controller = new ThemeController(store); let notifications = 0;
@@ -37,6 +37,21 @@ test('theme changes notify before persistence and skip unchanged choices', async
   assert.equal(store.values.get('app_theme_mode'), 'dark'); assert.equal(store.values.get('app_theme_variant'), 'lavender');
   assert.equal(store.writes, 2);
   unsubscribe(); await controller.setThemeMode('system');
-  assert.equal(controller.isDark, false); assert.equal(store.values.get('app_theme_mode'), 'dark');
+  assert.equal(controller.isDark, false); assert.equal(store.values.get('app_theme_mode'), 'system');
   assert.equal(changes.length, 2);
+});
+
+test('Auto survives a restart and preserves the selected palette', async () => {
+  const store = storage({ app_theme_mode: 'dark', app_theme_variant: 'moss' });
+  const controller = new ThemeController(store);
+  await controller.load();
+  await controller.setThemeMode('system');
+  const restored = new ThemeController(store);
+  await restored.load();
+  assert.equal(restored.themeMode, 'system');
+  assert.equal(restored.variant, 'moss');
+  assert.equal(store.values.get('app_theme_mode'), 'system');
+  const writes = store.writes;
+  await restored.setThemeMode('system');
+  assert.equal(store.writes, writes);
 });

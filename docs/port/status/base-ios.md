@@ -7,7 +7,7 @@ Stopped at: reconcile the remaining profile surfaces and integrator-owned behavi
 
 | Where | V2 reference | What is needed |
 |---|---|---|
-| Profile-switch PIN | `PinSetupEntryScreen`, `PinSetupConfirmScreen`, `AccountSwitcherSheet` | Entry, confirmation and removal are connected to the distinct switch-PIN store in settings. The saved-account entry verifies it; the in-session chooser launcher and standalone PIN routes remain unconnected. |
+| Profile-switch PIN | `PinSetupEntryScreen`, `PinSetupConfirmScreen`, `AccountSwitcherSheet` | Entry, confirmation and removal use the distinct switch-PIN store. Both saved-account entry and the in-session header chooser verify it. Standalone PIN routes remain unconnected; verify the native chooser on a real phone. |
 | Theme and locale integration | `ThemeController`, `LocaleController` | Base entry, login and profile hosts apply the selected mode, tint and RTL. Other role-owned hosts and remaining hard-coded strings need integration in their own sessions. Verify the base surfaces on a device. |
 
 ## Deviations candidates
