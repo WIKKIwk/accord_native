@@ -1158,7 +1158,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         else setError(p('worker.temporary_pause.failed'));
       }} />}
     <WorkerOrderMergeDialog state={merge.state} orderNumber={String(order.order_number ?? code)} onCancel={() => merge.flow.cancel()} onConfirm={() => { void merge.flow.confirm(); }} />
-    <WorkerFormDialog actionColors="blue" visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
+    <WorkerFormDialog actionColors="blue" neutralCancelLabel={!inlinePaint} visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
       reportDismissed.current?.(); reportDismissed.current = null;
       if (closeAfterProgress.current && isCurrent()) { closeAfterProgress.current = false; closeSheet(); }
     }} title={selected === 'detach_roll' ? p('worker.handoff.detach') : t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
@@ -1176,7 +1176,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           <Field label={`${p('worker.daily.field.print_leftover')} (kg)`} initialValue={leftoverWip} keyboardType="decimal-pad" onChangeText={setLeftoverWip} />
           <Field label={`${p('worker.daily.field.film_leftover')} (kg)`} initialValue={leftoverFilm} keyboardType="decimal-pad" onChangeText={setLeftoverFilm} /></>}
         {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p(laminationReport ? 'worker.progress.qty.waste' : 'worker.progress.qty.returned_paint_and_waste')}</Text><Field label={`${p('worker.daily.field.total_waste')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} />
-          {!laminationReport && <NativeButton label={p('worker.daily.field.returned_ink')} variant={Platform.OS === 'ios' ? 'outlined' : 'filled'} disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} />}</>}
+          {!laminationReport && <NativeButton label={p('worker.daily.field.returned_ink')} variant={Platform.OS === 'ios' ? 'outlined' : 'filled'} neutralLabel disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} />}</>}
         {selected === 'astatka' && <Field label={p('worker.progress.qty.optional_note')} initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
         {selected === 'complete' && descriptionRevealed && <Field label={p(closingOutput ? 'worker.progress.qty.optional_note' : 'worker.progress.qty.reason')} initialValue={completionNote} onChangeText={setCompletionNote} />}
         </>}

@@ -13,6 +13,8 @@ type Props = {
   height?: number;
   icon?: WorkerSheetIcon;
   largeLabel?: boolean;
+  /** Use the system label color for an iOS button's text. */
+  neutralLabel?: boolean;
   /** Semantic tint for the native iOS order-sheet controls. */
   orderAction?: 'start' | 'resume' | 'pause' | 'complete' | 'report';
 };

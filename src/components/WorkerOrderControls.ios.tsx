@@ -1,5 +1,5 @@
 import { Button, HStack, Image, Text } from '@expo/ui/swift-ui';
-import { buttonBorderShape, buttonStyle, controlSize, disabled, fixedSize, font, frame, multilineTextAlignment, tint } from '@expo/ui/swift-ui/modifiers';
+import { buttonBorderShape, buttonStyle, controlSize, disabled, fixedSize, font, foregroundStyle, frame, multilineTextAlignment, tint } from '@expo/ui/swift-ui/modifiers';
 import { Children, type ComponentProps, type ReactNode } from 'react';
 import { Platform, PlatformColor, Text as ParagraphText, View } from 'react-native';
 import { BaseHost as Host } from './BaseHost';
@@ -22,7 +22,7 @@ export function WorkerOrderBlockingNotice({ message }: { message: string }) {
 
 const actionColors = { complete: 'systemRed', pause: 'systemOrange', resume: 'systemBlue', start: 'systemGreen', report: 'systemBlue' } as const;
 
-export function WorkerOrderButton({ label, onPress, disabled: inactive = false, variant = 'outlined', icon, largeLabel, orderAction }: ComponentProps<typeof WorkerSheetButton>) {
+export function WorkerOrderButton({ label, onPress, disabled: inactive = false, variant = 'outlined', icon, largeLabel, orderAction, neutralLabel }: ComponentProps<typeof WorkerSheetButton>) {
   const symbol = typeof icon === 'string' ? icon : icon?.ios;
   const glass = parseInt(String(Platform.Version), 10) >= 26;
   const prominent = variant === 'filled' || !!orderAction;
@@ -32,7 +32,8 @@ export function WorkerOrderButton({ label, onPress, disabled: inactive = false, 
       fixedSize({ horizontal: false, vertical: true }), ...(orderAction ? [tint(PlatformColor(actionColors[orderAction]))] : []), disabled(inactive)]}>
       <HStack spacing={layout.rowGap} modifiers={[frame({ maxWidth: Infinity })]}>
         {symbol ? <Image systemName={symbol} size={18} /> : null}
-        <Text modifiers={[font({ textStyle: largeLabel ? 'title3' : 'headline', weight: 'semibold' }), multilineTextAlignment('center'), fixedSize({ horizontal: false, vertical: true })]}>{label}</Text>
+        <Text modifiers={[font({ textStyle: largeLabel ? 'title3' : 'headline', weight: 'semibold' }),
+          ...(neutralLabel ? [foregroundStyle(PlatformColor('label'))] : []), multilineTextAlignment('center'), fixedSize({ horizontal: false, vertical: true })]}>{label}</Text>
       </HStack>
     </Button>
   </Host>;

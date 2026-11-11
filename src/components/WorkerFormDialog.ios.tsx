@@ -1,5 +1,5 @@
 import { Button, Text as NativeText } from '@expo/ui/swift-ui';
-import { buttonBorderShape, buttonStyle, controlSize, disabled, fixedSize, font, frame, multilineTextAlignment, tint } from '@expo/ui/swift-ui/modifiers';
+import { buttonBorderShape, buttonStyle, controlSize, disabled, fixedSize, font, foregroundStyle, frame, multilineTextAlignment, tint } from '@expo/ui/swift-ui/modifiers';
 import { KeyboardAvoidingView, Modal, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { WorkerFormDialogProps } from './workerDialogTypes';
@@ -8,7 +8,7 @@ import { useWorkerColors } from './useWorkerColors';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
 /** Report dialogs require explicit actions; individual V2 confirmations may allow backdrop dismissal. */
-export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, onDismiss, onShow, scrollRef, dismissOnBackdrop, actionColors }: WorkerFormDialogProps) {
+export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, onDismiss, onShow, scrollRef, dismissOnBackdrop, actionColors, neutralCancelLabel }: WorkerFormDialogProps) {
   const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), colors = useWorkerColors();
   const { t } = useWorkerOrderText();
   const glass = parseInt(String(Platform.Version), 10) >= 26;
@@ -24,8 +24,9 @@ export function WorkerFormDialog({ visible, title, children, confirmLabel, onCon
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <BaseHost matchContents={{ vertical: true }} style={{ flex: 1 }}><Button onPress={onCancel}
             modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('capsule'), controlSize('large'),
-              ...(blueActions ? [tint(PlatformColor('systemBlue'))] : []), disabled(!!cancelDisabled), frame({ maxWidth: Infinity, minHeight: 48 })]}>
-            <NativeText modifiers={[font({ textStyle: 'headline', weight: 'semibold' }), frame({ maxWidth: Infinity }), multilineTextAlignment('center'), fixedSize({ horizontal: false, vertical: true })]}>{t(cancelLabel)}</NativeText>
+              ...(blueActions && !neutralCancelLabel ? [tint(PlatformColor('systemBlue'))] : []), disabled(!!cancelDisabled), frame({ maxWidth: Infinity, minHeight: 48 })]}>
+            <NativeText modifiers={[font({ textStyle: 'headline', weight: 'semibold' }), ...(neutralCancelLabel ? [foregroundStyle(PlatformColor('label'))] : []),
+              frame({ maxWidth: Infinity }), multilineTextAlignment('center'), fixedSize({ horizontal: false, vertical: true })]}>{t(cancelLabel)}</NativeText>
           </Button></BaseHost>
           <BaseHost matchContents={{ vertical: true }} style={{ flex: 1 }}><Button onPress={onConfirm}
             modifiers={[buttonStyle(glass ? 'glassProminent' : 'borderedProminent'), buttonBorderShape('capsule'), controlSize('large'),

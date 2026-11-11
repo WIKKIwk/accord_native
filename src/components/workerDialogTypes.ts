@@ -10,6 +10,7 @@ export type WorkerFormDialogProps = {
   cancelLabel?: string; onCancel: () => void; cancelDisabled?: boolean; preventDismiss?: boolean; onDismiss?: () => void; onShow?: () => void;
   dismissOnBackdrop?: boolean;
   actionColors?: 'blue';
+  neutralCancelLabel?: boolean;
   scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null>;
 };
 

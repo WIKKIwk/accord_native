@@ -202,6 +202,11 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
       assert.equal(nodes(button.props.children, item => item.props.modifiers?.some(modifier => modifier.name === 'frame'
         && ['height', 'minHeight', 'maxHeight'].some(key => key in modifier.args[0]))).length, 0, 'native control height must not be added again to the label');
     }
+    const neutral = WorkerOrderButton({ label: 'Qaytarilgan bo‘yoq', variant: 'outlined', neutralLabel: true, onPress() {} });
+    const button = nodes(neutral, item => item.type === 'Button')[0];
+    const label = nodes(neutral, item => item.type === 'Text')[0];
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[1]);
+    assert.equal(label.props.modifiers.find(modifier => modifier.name === 'foregroundStyle').args[0], 'label');
   }
 });
 
@@ -245,6 +250,10 @@ test('report and paint dialogs use transparent secondary actions and filled syst
       button.props.onPress();
     }
     assert.deepEqual(calls, ['cancel', 'confirm']);
+    const neutral = nodes(WorkerFormDialog({ ...props, actionColors: 'blue', neutralCancelLabel: true }), node => node.type === 'Button');
+    assert.equal(neutral[0].props.modifiers.some(mod => mod.name === 'tint'), false);
+    assert.equal(neutral[0].props.children.props.modifiers.find(mod => mod.name === 'foregroundStyle').args[0], 'label');
+    assert.equal(neutral[1].props.modifiers.find(mod => mod.name === 'tint').args[0], 'systemBlue');
     const defaults = nodes(WorkerFormDialog(props), node => node.type === 'Button');
     assert.equal(defaults.every(button => !button.props.modifiers.some(mod => mod.name === 'tint')), true);
     const busy = nodes(WorkerFormDialog({ ...props, actionColors: 'blue', cancelDisabled: true, confirmDisabled: true }), node => node.type === 'Button');

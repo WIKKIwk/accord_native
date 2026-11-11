@@ -17,13 +17,16 @@ test('iOS report and inline paint editor retain glass secondary actions and blue
   const report = nodes(h.render(), node => node.type === 'WorkerFormDialog')[0];
   assert.equal(report.props.actionColors, 'blue');
   assert.equal(report.props.cancelLabel, 'Bekor qilish');
+  assert.equal(report.props.neutralCancelLabel, true);
   assert.equal(report.props.confirmLabel, 'Tasdiqlash');
   const paint = button(h.render(), h.p('worker.daily.field.returned_ink'));
   assert.equal(paint.props.variant, 'outlined');
+  assert.equal(paint.props.neutralLabel, true);
   paint.props.onPress();
   const editor = nodes(h.render(), node => node.type === 'WorkerFormDialog')[0];
   assert.equal(editor.props.actionColors, 'blue');
   assert.equal(editor.props.cancelLabel, 'Orqaga');
+  assert.equal(editor.props.neutralCancelLabel, false);
   assert.equal(editor.props.confirmLabel, 'Tayyor');
 });
 for (const platform of ['ios', 'android']) {
