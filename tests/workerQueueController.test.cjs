@@ -165,8 +165,8 @@ test('pending writes prevent a successful-looking row snapshot from being handed
   assert.equal(x.released.at(-1).value, null);
 });
 
-function workerScreenHarness(platform) {
-  const hooks = [], effects = [], opened = [], historyOpened = []; let cursor = 0;
+function workerScreenHarness(platform, nativeNavigation = true) {
+  const hooks = [], effects = [], opened = [], historyOpened = [], routes = []; let cursor = 0;
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
     useState(initial) { const id = cursor++; if (!hooks[id]) hooks[id] = { value: typeof initial === 'function' ? initial() : initial }; return [hooks[id].value, value => { hooks[id].value = typeof value === 'function' ? value(hooks[id].value) : value; }]; },
@@ -189,7 +189,7 @@ function workerScreenHarness(platform) {
     react, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'react-native': { Platform: { OS: platform }, View: 'View', Modal: 'Modal', StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
-    'expo-font': { useFonts: () => [true] }, 'expo-router': { router: {} },
+    'expo-font': { useFonts: () => [true] }, 'expo-router': { router: { push: route => routes.push(route) } },
     'react-native-reanimated': { useSharedValue: () => ({ set() {} }) },
     './components/useWorkerQueue': { useWorkerQueue: () => queueState },
     './workerQueueReadError': { workerQueueReadCanRetry: () => true },
@@ -197,10 +197,12 @@ function workerScreenHarness(platform) {
     './auth': { activeSessionToken: () => 'token', captureSessionWitness: () => ({}), isSessionWitnessCurrent: () => true },
     './nativeSheet': { useNativeSheet: () => sheet },
     './components/useWorkerColors': { useWorkerColors: () => ({ background: '#000', surface: '#111' }) },
-    './components/useWorkerOrderText': { useWorkerOrderText: () => ({ p: value => value }) },
+    './components/useWorkerOrderText': { useWorkerOrderText: () => ({ p: value => value, t: value => value, locale: 'uz' }) },
     './components/useWorkerPeremotka': { useWorkerPeremotka: () => ({ state: { phase: 'closed' }, controller: {} }) },
     './components/useWorkerActivePaddon': { useWorkerActivePaddon: () => ({ state: { busy: false }, controller: {}, notice: '' }) },
     './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10, loadQueueLimit: async () => 10, saveQueueLimit: async () => {} },
+    './workerQueuePresentation': { workerQueueLimitLabels: () => ({ title: 'Ko‘rsatish', all: 'Barchasi', counts: {} }) },
+    './workerNavigation': { workerDailyWorkVisible: () => true, workerInventoryVisible: actor => actor.capabilities.includes('inventory.movement.manage') },
     './workerQueueWindow': { workerQueueSearch: value => value.trim() },
     './workerActivePaddon': { workerPaddonApparatus: () => null },
     './workerOrderBlocking': { workerOrderBusyTitle: () => '' },
@@ -213,7 +215,7 @@ function workerScreenHarness(platform) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const s = session();
   s.capabilities.push('apparatus.queue.manage');
-  return { opened, historyOpened, queueState, session: s, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation: true, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
+  return { opened, historyOpened, queueState, session: s, routes, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
 }
 function nodes(tree, type, result = []) {
   if (!tree) return result;
@@ -225,7 +227,8 @@ for (const platform of ['ios', 'android']) test(`${platform} real WorkerScreen o
   const x = workerScreenHarness(platform); let tree = x.render(); await flush(); tree = x.render();
   const list = nodes(tree, 'WorkerTabs')[0].props.children(station, undefined, undefined);
   const row = nodes(list, 'WorkerOrderListItem')[0];
-  assert.equal(row.props.statusText, 'Ish jarayonida');
+  assert.equal(row.props.statusText, undefined, 'V2 conveys queue state with the card tone, not an added status line');
+  assert.equal(row.props.supportingText, x.queueState.queue.orders[station][0].customer);
   assert.equal(nodes(list, 'WorkerQueueConnectionProgress')[0].props.active, true);
   row.props.onPress(); tree = x.render();
   const detail = platform === 'ios' ? nodes(tree, 'OrderScreen')[0] : x.opened[0];
@@ -245,6 +248,44 @@ async function readyIosScreen() {
   return x;
 }
 const screenRows = (tree, tab = station) => nodes(nodes(tree, 'WorkerTabs')[0].props.children(tab, undefined, undefined), 'WorkerOrderListItem');
+
+test('worker drawer transfer opens the real inventory screen and permission loss blocks entry', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
+  const drawer = nodes(tree, 'WorkerDrawer')[0];
+  drawer.props.onSelect('transfer'); tree = x.render();
+  assert.equal(nodes(tree, 'WorkerInventoryScreen').length, 0);
+  assert.equal(nodes(tree, 'WorkerAlert')[0].props.alert, null);
+  x.session.capabilities.push('inventory.movement.manage'); tree = x.render();
+  nodes(tree, 'WorkerDrawer')[0].props.onSelect('transfer'); tree = x.render();
+  assert.equal(nodes(tree, 'WorkerInventoryScreen').length, 1);
+  assert.equal(nodes(tree, 'WorkerFab').length, 0);
+  assert.equal(nodes(tree, 'WorkerBottomBar').length, 0);
+  nodes(tree, 'WorkerInventoryScreen')[0].props.onBack(); tree = x.render();
+  assert.equal(nodes(tree, 'WorkerInventoryScreen').length, 0);
+  assert.equal(nodes(tree, 'WorkerTabs').length, 1);
+});
+
+test('worker queue subtitles preserve the V2 temporary-pause label instead of invented status text', async () => {
+  const x = workerScreenHarness('ios'); x.render(); await flush();
+  x.queueState.queue.orders[station][0].temporarilyPaused = true;
+  const tree = x.render(), row = screenRows(tree)[0];
+  assert.equal(row.props.supportingText, `worker.temporary_pause.status • ${x.queueState.queue.orders[station][0].customer}`);
+  assert.equal(row.props.statusText, undefined);
+  const list = nodes(tree, 'WorkerTabs')[0].props.children(station);
+  assert.ok(nodes(list, 'ListItem').some(node => node.props.children === 'worker.queue.your.apparatus'));
+});
+
+test('iOS retained unvalidated rows can open a scoped action menu, but a changed query retires its read', async () => {
+  const x = workerScreenHarness('ios'); x.render(); await flush(); let tree = x.render();
+  const row = screenRows(tree)[0];
+  row.props.onLongPress(); tree = x.render();
+  const menu = nodes(tree, 'WorkerLongPressActions')[0];
+  assert.ok(menu);
+  assert.equal(menu.props.getCursor(), null, 'the fresh scoped control read owns authorization while the list is unvalidated');
+  assert.equal(nodes(tree, 'WorkerAlert')[0].props.alert, null);
+  nodes(tree, 'WorkerTabs')[0].props.onSearchChange('new query'); x.render();
+  assert.throws(() => menu.props.getCursor(), /worker.error.sync/);
+});
 function onlySheet(tree) {
   const sheets = nodes(tree, 'WorkerOrderSheet');
   assert.equal(sheets.length, 1, 'there must be exactly one order presentation');

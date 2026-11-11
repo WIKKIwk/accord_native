@@ -1,6 +1,6 @@
 # Aparatchi remaining parity audit
 
-Status: in progress; worker flow integration and native bundle gates passed; the iOS list-scroll bridge source is implemented, while final text verdicts and native integration/device validation remain open.
+Status: in progress; implementation groups and platform typechecks passed; final text scope diagnostics and refreshed native bundles are being checked. Native integration/device validation remains open.
 Worktree: `accord_mobile_v4-aparatchi-parity`, branch `port/aparatchi-parity`, based on the verified recovery/sheet fixes at `4da01457`. Metro continues serving the original recovery worktree while this batch is being checked. Main and the original V2 checkout are unchanged.
 Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`, read-only clone in the recovery worktree. Its `lib/` and `test/` match the original V2 checkout at `44396752`.
 
@@ -44,7 +44,7 @@ Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`, read-only clone in the re
 |---|---|
 | Paddon inline camera auto-scroll native integration on iOS | Implemented in `modules/accord-list-scroll/ios/AccordListScrollContent.swift` and the documented Expo UI wrapper `AccordListScrollModule.swift`; `WorkerPaddonDetail.ios.tsx` supplies the stable camera-row ID only during scanning. Real iPhoneOS SwiftUI typechecking passes, including List/swipeActions; the Expo wrapper has a syntax check and Apple autolinking resolves it. A full ExpoUI/ExpoModulesCore wrapper/app compile requires generated iOS/CocoaPods dependencies, absent from this worktree, then a rebuilt development binary and real camera/scroll/swipe validation. Expo Go/older binaries intentionally retain manual scrolling; native auto-scroll is not claimed there. |
 | Native device/hardware | This isolated batch has not been run on a real phone; no simulator was used. Camera permission/background/resume, actual print delivery and native WebSocket module build/heartbeat remain physical checks from the previous contracts. |
-| Text gate | The lexical report still includes admin-only widgets, diagnostic strings and shared-role text. Current snapshot:272 missing/106 extra on iOS,272/114 on Android;0 ambiguous tags. No text exceptions, exclusions or baseline changes were added to hide these diagnostics. Full word-for-word role completion is not claimed. |
+| Text gate | Source-backed reachability/composition/mapped-error exceptions are recorded individually in `docs/port/text/aparatchi.tsv`, with the audit in `aparatchi-text-audit.md`. Both platforms now have0 missing/0 extra lexical rows and0 ambiguous tags. The real gate still exits1 for442 iOS/445 Android global-only scope diagnostics; these remain separately under applicability review. No baseline or ledger changes were made. |
 
 ## Verification
 
@@ -55,4 +55,5 @@ Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`, read-only clone in the re
 - Full consolidated snapshot:6079 total,6056 passed,11 failed,12 TODO (`/tmp/accord-parity-all-tests.log`). The eleven failed names exactly match the unmodified main baseline; no new failure. Both iOS/Android Hermes bundles exported under `.expo/aparatchi-parity-export`. Subsequent diagnostic-only source fixes have their focused checks recorded separately.
 - Intermediate combined worker/daily/shell suite:1135/1135 passed. Later parent receipt/scoped-menu integration:138/138 passed. Inventory expanded focused suite:32/32 passed. Final consolidated totals are pending.
 - Both platform TypeScript projects and lint have passed at intermediate checkpoints; final consolidated runs pending. Lint retains the pre-existing AdminClosedHistoryOwner ticket-dependency warning.
+- Final shell integration:49/49 queue/controller/navigation/drawer/native-control tests passed; focused boundary/WIP follow-up:237/237 passed. Both platform TypeScript projects passed and lint has0 errors, retaining only the existing warning. Paddon final sweep:66/66 passed, including optional-module fallback and actual native-screen target wiring.
 - No backend mutation, account login, printer operation, simulator, device installation, main merge or push was performed.

@@ -25,6 +25,7 @@ function nodes(node, predicate) {
 test('worker FAB and navigation retain their destinations when using shared controls', () => {
   const calls = [];
   const { WorkerFab } = load('components/WorkerFab.android.tsx', {
+    './useWorkerOrderText': { useWorkerOrderText: () => ({ t: value => value }) },
     '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
   });
   const fab = WorkerFab({ onScan: () => calls.push('scan'), onSelect: id => calls.push(id), bottomOffset: 120 });
@@ -36,6 +37,7 @@ test('worker FAB and navigation retain their destinations when using shared cont
   assert.deepEqual(calls, ['scan', 'daily']);
 
   const { WorkerBottomBar } = load('components/WorkerBottomBar.android.tsx', {
+    './useWorkerOrderText': { useWorkerOrderText: () => ({ t: value => value }) },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
   });
   const bar = WorkerBottomBar({ active: 'profile', onSelect: id => calls.push(id) });

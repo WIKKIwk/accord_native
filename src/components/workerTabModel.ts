@@ -19,11 +19,14 @@ export type WorkerTabsProps = {
   onMenu?: () => void;
   onProfile?: () => void;
   toolbarActions?: ReactNode;
+  completedLabel?: string;
+  title?: string;
+  searchPlaceholder?: string;
   children: (id: string, pagerGesture?: PanGesture, machinePicker?: ReactNode) => ReactNode;
 };
 
 /** V2 order: first assigned apparatus, completed, then the remaining apparatuses. */
-export function getWorkerTabs(machines: Apparatus[]): WorkerTab[] {
-  const completed = { id: 'completed', name: 'Tugallangan' };
+export function getWorkerTabs(machines: Apparatus[], completedLabel = 'Tugallangan'): WorkerTab[] {
+  const completed = { id: 'completed', name: completedLabel };
   return machines.length ? [machines[0], completed, ...machines.slice(1)] : [completed];
 }
