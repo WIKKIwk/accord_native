@@ -299,6 +299,10 @@ test('iOS retained unvalidated rows can open a scoped action menu, but a changed
   row.props.onLongPress(); tree = x.render();
   const menu = nodes(tree, 'WorkerLongPressActions')[0];
   assert.ok(menu);
+  const sheet = onlySheet(tree);
+  assert.equal(sheet.props.fitContent, true);
+  assert.equal(sheet.props.compact, true);
+  assert.equal(sheet.props.heightFraction, 0.86);
   assert.equal(menu.props.getCursor(), null, 'the fresh scoped control read owns authorization while the list is unvalidated');
   assert.equal(nodes(tree, 'WorkerAlert')[0].props.alert, null);
   nodes(tree, 'WorkerTabs')[0].props.onSearchChange('new query'); x.render();

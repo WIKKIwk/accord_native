@@ -20,7 +20,7 @@ export function WorkerOrderBlockingNotice({ message }: { message: string }) {
   }}>{`“${displayMessage}”`}</ParagraphText>;
 }
 
-const actionColors = { complete: 'systemRed', pause: 'systemOrange', resume: 'systemBlue', start: 'systemGreen' } as const;
+const actionColors = { complete: 'systemRed', pause: 'systemOrange', resume: 'systemBlue', start: 'systemGreen', report: 'systemBlue' } as const;
 
 export function WorkerOrderButton({ label, onPress, disabled: inactive = false, variant = 'outlined', icon, largeLabel, orderAction }: ComponentProps<typeof WorkerSheetButton>) {
   const symbol = typeof icon === 'string' ? icon : icon?.ios;

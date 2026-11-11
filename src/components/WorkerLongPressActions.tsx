@@ -1,5 +1,5 @@
 import { Button, Host } from '@expo/ui';
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, captureSessionWitness, isSessionWitnessCurrent, type Session } from '../auth';
 import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu, type WorkerMenu, type WorkerMenuAction } from '../workerLongPress';
@@ -12,7 +12,8 @@ import { WorkerSheetCloseContext } from './workerSheetContext';
 import { WorkerAlert } from './WorkerAlert';
 import type { WorkerAlertData } from './workerDialogTypes';
 import { WorkerIconButton } from './WorkerIconButton';
-import { WorkerSheetButton, type WorkerSheetIcon } from './WorkerSheetButton';
+import type { WorkerSheetIcon } from './WorkerSheetButton';
+import { WorkerOrderButton as WorkerSheetButton } from './WorkerOrderControls';
 import { useWorkerOrderText } from './useWorkerOrderText';
 import { adminWipBatches } from '../workerWipApi';
 import { workerHandoffBatch } from '../workerHandoff';
@@ -32,10 +33,15 @@ const icons: Record<WorkerMenuAction, WorkerSheetIcon> = {
   finish: { android: 'logout', ios: 'rectangle.portrait.and.arrow.right' }, reopen: { android: 'colorize', ios: 'eyedropper' },
   resume: { android: 'play_arrow', ios: 'play.fill' }, detach_roll: { android: 'unarchive', ios: 'archivebox' },
 };
-
+const actionTints: Record<WorkerMenuAction, ComponentProps<typeof WorkerSheetButton>['orderAction']> = {
+  temporary_pause: 'pause', re_pause: 'pause', cancel_start: 'pause', detach_roll: 'pause',
+  finish: 'complete', reclose: 'complete', astatka: 'report', resume: 'resume', reopen: 'start',
+};
 
 export function WorkerLongPressActions({ session, apparatusId, apparatusName, operation, order, completed, getCursor, onChoose }: Props) {
   const colors = useWorkerColors();
+  const titleStyle = [styles.title, Platform.OS === 'ios' && iosStyles.title, { color: colors.text }];
+  const bodyStyle = [styles.body, Platform.OS === 'ios' && iosStyles.body, { color: colors.muted }];
   const { p } = useWorkerOrderText();
   const close = useContext(WorkerSheetCloseContext);
   const [loading, setLoading] = useState(true);
@@ -128,48 +134,58 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
     });
   }
   const actionButton = (action: WorkerMenuAction, variant: 'filled' | 'outlined' = 'outlined') =>
-    <WorkerSheetButton key={action} label={action === 'cancel_start' ? p('worker.cancel_start.action') : p(labels[action])} variant={variant} icon={icons[action]} onPress={() => choose(action)} />;
+    <WorkerSheetButton key={action} label={action === 'cancel_start' ? p('worker.cancel_start.action') : p(labels[action])} orderAction={actionTints[action]} variant={variant} icon={icons[action]} onPress={() => choose(action)} />;
 
-  return <View style={styles.content}>
+  return <View style={[styles.content, Platform.OS === 'ios' && iosStyles.content]}>
     {Platform.OS === 'ios' && <View style={styles.header}>
       <View style={styles.heading}>
-        <Text style={[styles.body, { color: colors.muted }]}>{[order.code, order.title].filter(Boolean).join(' · ')}</Text>
+        {order.code ? <Text style={[iosStyles.orderCode, { color: colors.text }]}>{order.code}</Text> : null}
+        {order.title ? <Text numberOfLines={2} style={[iosStyles.orderTitle, { color: colors.muted }]}>{order.title}</Text> : null}
       </View>
       <WorkerIconButton icon="close" label={p('worker.action.close')} onPress={() => close?.()} tonal />
     </View>}
     {loading && <ActivityIndicator color={colors.icon} />}
     {!!error && <Text style={styles.error}>{p(error)}</Text>}
     {completed && reactivation && <>
-      <Text style={[styles.title, { color: colors.text }]}>{reactivation.identity}</Text>
-      {!reactivation.target && <Text style={[styles.body, { color: colors.muted }]}>{p(workerReactivationDenialKey(reactivation.reason))}</Text>}
-      <WorkerSheetButton label={p(reactivation.actionKey)} variant="filled"
+      <Text style={titleStyle}>{reactivation.identity}</Text>
+      {!reactivation.target && <Text style={bodyStyle}>{p(workerReactivationDenialKey(reactivation.reason))}</Text>}
+      <WorkerSheetButton label={p(reactivation.actionKey)} variant="filled" orderAction="resume"
         icon={{ android: 'restart_alt', ios: 'arrow.counterclockwise' }} disabled={!reactivation.target} onPress={confirmReactivation} />
       {!reactivation.target && ['final_stage_closed', 'order_closed'].includes(reactivation.reason) && <Host matchContents={{ vertical: true }} style={styles.host}><Button label={p('worker.reactivate.reason_details')} variant="text" onPress={() => setAlert({ title: p(reactivation.actionKey), message: p(workerReactivationDenialKey(reactivation.reason)), confirmLabel: p('worker.action.close') })} /></Host>}
     </>}
     {menu?.kind === 'reopen' && actionButton('reopen')}
     {menu?.kind === 'handoff' && <>
-      <Text style={[styles.title, { color: colors.text }]}>{p('worker.handoff.title')}</Text>
-      <Text style={[styles.body, { color: colors.muted }]}>{p('worker.handoff.description')}</Text>
-      <WorkerSheetButton label={p('worker.handoff.continue')} variant="filled" icon={icons.resume} onPress={() => choose('resume')} />
-      <WorkerSheetButton label={p('worker.handoff.detach')} icon={icons.detach_roll} onPress={() => choose('detach_roll')} />
+      <Text style={titleStyle}>{p('worker.handoff.title')}</Text>
+      <Text style={bodyStyle}>{p('worker.handoff.description')}</Text>
+      <WorkerSheetButton label={p('worker.handoff.continue')} orderAction="resume" variant="filled" icon={icons.resume} onPress={() => choose('resume')} />
+      <WorkerSheetButton label={p('worker.handoff.detach')} orderAction="pause" icon={icons.detach_roll} onPress={() => choose('detach_roll')} />
       {menu.actions.includes('astatka') && actionButton('astatka')}
     </>}
     {menu?.kind === 'report' && <>
-      <Text style={[styles.title, { color: colors.text }]}>{p(operation === 'cut' ? 'worker.rezka.astatka.title' : 'worker.laminatsiya.astatka.title')}</Text>
-      <Text style={[styles.body, { color: colors.muted }]}>{p(operation === 'laminate' ? 'worker.lamination_astatka.description' : 'worker.finish.description')}</Text>
+      <Text style={titleStyle}>{p(operation === 'cut' ? 'worker.rezka.astatka.title' : 'worker.laminatsiya.astatka.title')}</Text>
+      <Text style={bodyStyle}>{p(operation === 'laminate' ? 'worker.lamination_astatka.description' : 'worker.finish.description')}</Text>
       {menu.actions.filter(action => ['cancel_start', 'temporary_pause', 're_pause', 'reclose'].includes(action)).map(action => actionButton(action))}
       <WorkerSheetButton label={p(menu.actions.includes('reclose') ? 'worker.action.complete' : operation === 'cut' ? 'worker.rezka.astatka.title' : 'worker.laminatsiya.astatka.title')}
-        variant="filled" icon={icons.finish} onPress={() => choose('finish')} />
+        orderAction={menu.actions.includes('reclose') ? 'complete' : 'report'} variant="filled" icon={icons.finish} onPress={() => choose('finish')} />
     </>}
     {menu?.kind === 'bosma' && <>
-      <Text style={[styles.title, { color: colors.text }]}>{p('worker.bosma.astatka.title')}</Text>
-      <Text style={[styles.body, { color: colors.muted }]}>{p('worker.finish.description')}</Text>
+      <Text style={titleStyle}>{p('worker.bosma.astatka.title')}</Text>
+      <Text style={bodyStyle}>{p('worker.finish.description')}</Text>
       {menu.actions.filter(action => ['cancel_start', 'temporary_pause', 're_pause', 'reclose'].includes(action)).map(action => actionButton(action))}
       {actionButton('astatka')}
-      {menu.actions.includes('finish') && <><Text style={[styles.body, { color: colors.muted }]}>{p('worker.bosma.finish.description')}</Text>{actionButton('finish', 'filled')}</>}
+      {menu.actions.includes('finish') && <View style={Platform.OS === 'ios' ? [iosStyles.finishSection, { borderTopColor: colors.muted }] : styles.finishSection}>
+        <Text style={bodyStyle}>{p('worker.bosma.finish.description')}</Text>{actionButton('finish', 'filled')}
+      </View>}
     </>}
     <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
   </View>;
 }
 
-const styles = StyleSheet.create({ content: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', gap: 12 }, heading: { flex: 1 }, title: { fontSize: 20, fontWeight: '600', lineHeight: 27 }, body: { fontSize: 14, lineHeight: 20 }, host: { width: '100%' }, error: { color: '#a52626', fontSize: 14 } });
+const styles = StyleSheet.create({ content: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 }, header: { flexDirection: 'row', alignItems: 'center', gap: 12 }, heading: { flex: 1, gap: 4 }, title: { fontSize: 20, fontWeight: '600', lineHeight: 27 }, body: { fontSize: 14, lineHeight: 20 }, host: { width: '100%' }, error: { color: '#a52626', fontSize: 14 }, finishSection: { gap: 12 } });
+const iosStyles = StyleSheet.create({
+  content: { paddingHorizontal: 16, paddingBottom: 16 },
+  orderCode: { fontSize: 22, lineHeight: 28, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  orderTitle: { fontSize: 17, lineHeight: 23, fontWeight: '500' },
+  title: { fontSize: 17, lineHeight: 23, fontWeight: '600' }, body: { fontSize: 15, lineHeight: 21 },
+  finishSection: { gap: 12, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12 },
+});

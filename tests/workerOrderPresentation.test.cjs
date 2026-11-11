@@ -190,6 +190,7 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
       ['filled', undefined, undefined], ['outlined', undefined, undefined],
       ['filled', 'complete', 'systemRed'], ['outlined', 'pause', 'systemOrange'],
       ['filled', 'resume', 'systemBlue'], ['filled', 'start', 'systemGreen'],
+      ['outlined', 'report', 'systemBlue'],
     ]) {
       const tree = WorkerOrderButton({ label: 'Localized action', orderAction, variant, height: 58, onPress() {} });
       const button = nodes(tree, item => item.type === 'Button')[0];
@@ -202,6 +203,25 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
         && ['height', 'minHeight', 'maxHeight'].some(key => key in modifier.args[0]))).length, 0, 'native control height must not be added again to the label');
     }
   }
+});
+
+test('iOS action sheet fits measured content with bounded scrolling and no half/full-screen snap points', () => {
+  const { WorkerOrderSheet } = load('components/WorkerOrderSheet.ios.tsx', {
+    ...mocks, react: { useCallback: fn => fn, useState: value => [value, () => {}], useRef: value => ({ current: value }) },
+    'react-native': { PlatformColor: name => name, View: 'View', ScrollView: 'ScrollView', VirtualizedList: {},
+      useWindowDimensions: () => ({ width: 390, height: 844 }) },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) },
+    './useBaseTheme': { useBaseTheme: () => ({ mode: 'dark', colors: {}, direction: 'leftToRight' }) },
+    './workerSheetContext': { WorkerSheetCloseContext: { Provider: 'CloseProvider' } },
+  });
+  const tree = WorkerOrderSheet({ children: 'all actions', onClose() {}, dismissible: true, compact: true, fitContent: true, heightFraction: 0.86 });
+  assert.equal(nodes(tree, item => item.type === 'BottomSheet')[0].props.fitToContents, true);
+  assert.deepEqual(nodes(tree, item => item.type === 'RNHostView')[0].props.matchContents, { vertical: true });
+  const group = nodes(tree, item => item.type === 'Group')[0];
+  assert.equal(group.props.modifiers.some(modifier => modifier.name === 'presentationDetents'), false);
+  const scroll = nodes(tree, item => item.type === 'ScrollView')[0];
+  assert.deepEqual(scroll.props.style, { flexGrow: 0, maxHeight: Math.round((844 - 59 - 34) * 0.86) });
+  assert.equal(scroll.props.style.height, undefined);
 });
 
 test('native order identity keeps image preview and close actions with the cached thumbnail', () => {

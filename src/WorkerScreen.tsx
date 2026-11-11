@@ -503,7 +503,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
         setHistoryPresentation(null);
         setNativeOverlayOpen(false); preflightCheck.current++;
       }} />}
-      {actionOrder ? <WorkerOrderSheet key={actionOrder.presentationId} dismissible compact onClose={() => closeOrderActions(actionOrder.presentationId)}>
+      {actionOrder ? <WorkerOrderSheet key={actionOrder.presentationId} dismissible compact fitContent heightFraction={0.86} onClose={() => closeOrderActions(actionOrder.presentationId)}>
         <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={actionOrder.onChoose} />
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />

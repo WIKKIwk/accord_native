@@ -113,7 +113,7 @@ test('read-only and unsupported operations retain ordinary details without a rea
   }
 });
 
-function completedMenu() {
+function completedMenu(completed = true) {
   const runner = hooks(), h = { version: 1, reads: 0, previews: 0, writes: 0, choices: [], closes: 0 };
   const p = key => key, close = () => h.closes++;
   runner.react.useContext = () => close;
@@ -123,21 +123,40 @@ function completedMenu() {
     react: runner.react, 'react/jsx-runtime': jsx, '@expo/ui': { Button: 'Button', Host: 'Host' },
     'react-native': { ActivityIndicator: 'Spinner', Platform: { OS: 'ios' }, StyleSheet: { create: value => value }, Text: 'Text', View: 'View' },
     '../auth': { activeSessionToken: () => 'token', captureSessionWitness: () => ({ version: h.version }), isSessionWitnessCurrent: witness => witness.version === h.version },
-    '../sessionReadScope': { sessionReadScope: () => `scope:${h.version}` }, '../workerLongPress': {}, '../workerWipApi': {}, '../workerHandoff': {},
+    '../sessionReadScope': { sessionReadScope: () => `scope:${h.version}` },
+    '../workerLongPress': { readWorkerActionControl: async () => ({}), workerLongPressMenu: () => ({ kind: 'bosma', operation: 'print',
+      actions: ['temporary_pause', 're_pause', 'astatka', 'finish'], control: { state: 'in_progress' } }) }, '../workerWipApi': {}, '../workerHandoff': {},
     '../workerDetailApi': { workerProductionOrderDetail: async () => { h.reads++; return { maps: [{ map: { id: 'o', nodes: [] } }] }; } },
     '../workerWipReactivation': { prepareWorkerWipReactivation: async (_session, input) => { h.previews++; assert.equal(input.batch, undefined); return review; },
       workerReactivationDenialKey: reason => `worker.reactivate.reason.${reason}`,
       runWorkerWipReactivation: async (_session, candidate, current) => { assert.equal(candidate, review); if (!current()) return { attempted: false, succeeded: false, reason: '' }; h.writes++; return { attempted: true, succeeded: true, reason: '' }; } },
     './useWorkerColors': { useWorkerColors: () => ({}) }, './useWorkerOrderText': { useWorkerOrderText: () => ({ p }) },
-    './workerSheetContext': { WorkerSheetCloseContext: {} }, './WorkerAlert': { WorkerAlert: 'Alert' }, './WorkerIconButton': { WorkerIconButton: 'Icon' }, './WorkerSheetButton': { WorkerSheetButton: 'Action' },
+    './workerSheetContext': { WorkerSheetCloseContext: {} }, './WorkerAlert': { WorkerAlert: 'Alert' }, './WorkerIconButton': { WorkerIconButton: 'Icon' }, './WorkerOrderControls': { WorkerOrderButton: 'Action' },
   };
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, file);
-  const props = { session: {}, apparatusId: 'cut', apparatusName: 'Kesish', operation: 'cut', order: { id: 'o', code: '0304', title: 'Film' }, completed: true,
+  const props = { session: {}, apparatusId: 'cut', apparatusName: 'Kesish', operation: completed ? 'cut' : 'print', order: { id: 'o', code: '0304', title: 'Film' }, completed,
     getCursor: () => ({ epoch: 'e', rev: 1 }), onChoose: choice => h.choices.push(choice) };
   const render = () => { runner.begin(); const tree = mod.exports.WorkerLongPressActions(props); runner.flush(); return tree; };
   return Object.assign(h, { render, unmount: runner.dispose, review });
 }
+
+test('iOS long-press menu renders all four full-width platform actions with separate order identity and semantic colors', async () => {
+  const h = completedMenu(false);
+  try {
+    h.render(); await tick(); const tree = h.render();
+    const buttons = nodes(tree, node => node.type === 'Action');
+    assert.deepEqual(buttons.map(node => [node.props.label, node.props.orderAction]), [
+      ['worker.temporary_pause.action', 'pause'], ['worker.re_pause.action', 'pause'],
+      ['worker.bosma.astatka.title', 'report'], ['worker.finish.title', 'complete'],
+    ]);
+    const code = nodes(tree, node => node.type === 'Text' && node.props.children === '0304')[0];
+    assert.equal(code.props.style[0].fontSize, 22);
+    assert.ok(nodes(tree, node => node.type === 'Text' && node.props.children === 'Film')[0]);
+    buttons.at(-1).props.onPress(); buttons.at(-1).props.onPress();
+    assert.deepEqual(h.choices, ['complete']); assert.equal(h.closes, 1);
+  } finally { h.unmount(); }
+});
 
 test('completed-order menu keeps one preview through native dismissal and confirmation, without a second detail read', async () => {
   const h = completedMenu();
