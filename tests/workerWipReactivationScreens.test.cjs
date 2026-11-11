@@ -153,7 +153,8 @@ test('iOS long-press menu renders all four full-width platform actions with sepa
     const code = nodes(tree, node => node.type === 'Text' && node.props.children === '0304')[0];
     assert.equal(code.props.style[0].fontSize, 22);
     assert.ok(nodes(tree, node => node.type === 'Text' && node.props.children === 'Film')[0]);
-    assert.equal(nodes(tree, node => node.type === 'Icon')[0].props.transparent, true);
+    assert.equal(nodes(tree, node => node.type === 'Icon')[0].props.neutralIcon, true);
+    assert.equal(nodes(tree, node => node.type === 'Icon')[0].props.tonal, true);
     buttons.at(-1).props.onPress(); buttons.at(-1).props.onPress();
     assert.deepEqual(h.choices, ['complete']); assert.equal(h.closes, 1);
   } finally { h.unmount(); }

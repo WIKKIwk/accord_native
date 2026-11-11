@@ -142,7 +142,7 @@ export function WorkerLongPressActions({ session, apparatusId, apparatusName, op
         {order.code ? <Text style={[iosStyles.orderCode, { color: colors.text }]}>{order.code}</Text> : null}
         {order.title ? <Text numberOfLines={2} style={[iosStyles.orderTitle, { color: colors.muted }]}>{order.title}</Text> : null}
       </View>
-      <WorkerIconButton icon="close" label={p('worker.action.close')} onPress={() => close?.()} transparent />
+      <WorkerIconButton icon="close" label={p('worker.action.close')} onPress={() => close?.()} tonal neutralIcon />
     </View>}
     {loading && <ActivityIndicator color={colors.icon} />}
     {!!error && <Text style={styles.error}>{p(error)}</Text>}

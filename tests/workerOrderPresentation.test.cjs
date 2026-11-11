@@ -264,20 +264,22 @@ test('action sheet follows asynchronous menu height and keeps oversized content 
   assert.deepEqual(nodes(tree, node => node.type === 'ScrollView')[0].props.style, { flex: 1 });
 });
 
-test('action sheet close has a transparent 44-point target and still closes', () => {
+test('action sheet close uses glass with an adaptive neutral icon and still closes', () => {
   for (const version of ['26.1.1', '18.7']) {
     let calls = 0;
     const { WorkerIconButton } = load('components/WorkerIconButton.ios.tsx', {
       ...mocks, 'react-native': { ...mocks['react-native'], Platform: { Version: version } },
       './useWorkerColors': { useWorkerColors: () => ({ icon: 'systemBlue' }) },
     });
-    const tree = WorkerIconButton({ icon: 'close', label: 'Yopish', transparent: true, onPress: () => { calls++; } });
+    const tree = WorkerIconButton({ icon: 'close', label: 'Yopish', neutralIcon: true, onPress: () => { calls++; } });
     const button = nodes(tree, node => node.type === 'Button')[0];
     const icon = nodes(tree, node => node.type === 'Image')[0];
-    assert.equal(button.props.modifiers.find(mod => mod.name === 'buttonStyle').args[0], 'plain');
+    assert.equal(button.props.modifiers.find(mod => mod.name === 'buttonStyle').args[0], version.startsWith('26') ? 'glass' : 'bordered');
+    assert.equal(button.props.modifiers.find(mod => mod.name === 'buttonBorderShape').args[0], 'circle');
     assert.equal(button.props.modifiers.find(mod => mod.name === 'accessibilityLabel').args[0], 'Yopish');
     assert.equal(icon.props.systemName, 'xmark');
-    assert.deepEqual(icon.props.modifiers.find(mod => mod.name === 'frame').args[0], { width: 44, height: 44 });
+    assert.equal(icon.props.color, 'label');
+    assert.deepEqual(button.props.modifiers.find(mod => mod.name === 'frame').args[0], { minWidth: 44, minHeight: 44 });
     button.props.onPress(); assert.equal(calls, 1);
   }
 });
