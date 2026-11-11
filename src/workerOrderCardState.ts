@@ -7,7 +7,7 @@ type CardInput = {
   intakeCount: number; reclose?: boolean;
 };
 
-/** @v2 _ReadOnlyOrderStartCard */
+/** @v2 _OrderStartUnifiedCard */
 export function workerOrderCardState(input: CardInput) {
   const { synchronized, activeOrder, interaction, operation } = input;
   const allows = (action: string) => synchronized && input.allowed.includes(action);

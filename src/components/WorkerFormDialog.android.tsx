@@ -3,12 +3,12 @@ import { ScrollView, useWindowDimensions, View } from 'react-native';
 import type { WorkerFormDialogProps } from './workerDialogTypes';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, scrollRef }: WorkerFormDialogProps) {
+export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, scrollRef, dismissOnBackdrop = false }: WorkerFormDialogProps) {
   const { width, height } = useWindowDimensions();
   const { t } = useWorkerOrderText();
   if (!visible) return null;
   return <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
-    <AlertDialog onDismissRequest={() => { if (!cancelDisabled && !preventDismiss) onCancel(); }} properties={{ dismissOnBackPress: !cancelDisabled && !preventDismiss, dismissOnClickOutside: false }}>
+    <AlertDialog onDismissRequest={() => { if (!cancelDisabled && !preventDismiss) onCancel(); }} properties={{ dismissOnBackPress: !cancelDisabled && !preventDismiss, dismissOnClickOutside: dismissOnBackdrop && !cancelDisabled && !preventDismiss }}>
       <AlertDialog.Title><Text>{t(title)}</Text></AlertDialog.Title>
       <AlertDialog.Text><RNHostView matchContents>
         <View style={{ width: Math.max(1, Math.min(width - 112, 480)) }}>

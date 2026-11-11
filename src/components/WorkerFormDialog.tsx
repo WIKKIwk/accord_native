@@ -1,12 +1,14 @@
 import { Button, Host } from '@expo/ui';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { WorkerFormDialogProps } from './workerDialogTypes';
 import { useWorkerColors } from './useWorkerColors';
 
-export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, onDismiss, onShow, scrollRef }: WorkerFormDialogProps) {
+export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, onDismiss, onShow, scrollRef, dismissOnBackdrop }: WorkerFormDialogProps) {
   const colors = useWorkerColors();
   return <Modal visible={visible} transparent animationType="fade" onDismiss={onDismiss} onShow={onShow} onRequestClose={() => { if (!cancelDisabled && !preventDismiss) onCancel(); }}>
-    <View style={styles.backdrop}><View style={[styles.dialog, { backgroundColor: colors.surface }]}><ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+    <View style={styles.backdrop}>
+      {dismissOnBackdrop && <Pressable accessible={false} style={StyleSheet.absoluteFill} disabled={cancelDisabled || preventDismiss} onPress={onCancel} />}
+      <View style={[styles.dialog, { backgroundColor: colors.surface }]}><ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       {children}
       <View style={styles.actions}><View style={styles.action}><Host matchContents={{ vertical: true }} style={styles.host}><Button label={cancelLabel} variant="outlined" disabled={cancelDisabled} onPress={onCancel} /></Host></View><View style={styles.action}><Host matchContents={{ vertical: true }} style={styles.host}><Button label={confirmLabel} variant="filled" disabled={confirmDisabled} onPress={onConfirm} /></Host></View></View>

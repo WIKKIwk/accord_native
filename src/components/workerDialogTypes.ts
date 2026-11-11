@@ -8,6 +8,7 @@ export type WorkerFormDialogProps = {
   visible: boolean; title: string; children: ReactNode;
   confirmLabel: string; onConfirm: () => void; confirmDisabled?: boolean;
   cancelLabel?: string; onCancel: () => void; cancelDisabled?: boolean; preventDismiss?: boolean; onDismiss?: () => void; onShow?: () => void;
+  dismissOnBackdrop?: boolean;
   scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null>;
 };
 

@@ -63,6 +63,10 @@ import { workerOrderBlockingText } from './workerOrderBlocking';
 import { workerOrderCardState, workerStartMaterialStatus } from './workerOrderCardState';
 import { workerOrderReclose } from './workerOrderReclose';
 import { runWorkerMenuAction, workerLongPressMenu } from './workerLongPress';
+import { workerFabQrReads } from './workerFabQrReads';
+import { workerMergeStateLines } from './workerOrderMerge';
+import { useWorkerOrderMerge } from './components/useWorkerOrderMerge';
+import { WorkerOrderMergeDialog } from './components/WorkerOrderMergeDialog';
 
 type Obj = Record<string, any>;
 type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onNotice?: (message: string) => void; onClose: () => void; onChanged: () => void };
@@ -262,6 +266,34 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const allowed: string[] = synchronized && (isActiveOrder || !!safeStopRequest) && Array.isArray(control.allowed_actions) ? control.allowed_actions : [];
   const finishReclose = workerOrderReclose(session, bootstrap, apparatusId, orderId, synchronized);
   const order = detail?.maps?.[0]?.map ?? {};
+  const merge = useWorkerOrderMerge({ identity: printingIdentity, available: synchronized && allowed.includes('merge') && !delivery && !deliveryBusy,
+    current: () => isCurrent() && session.capabilities.includes('apparatus.queue.manage') && session.assigned_apparatus.includes(apparatusId),
+    target: { apparatus: apparatusId, order: orderId, orderLabel: String(order.title || preview?.title || orderId),
+      apparatusLabel: apparatus?.name ?? apparatusId, label: id => apparatusCatalog?.find(row => row.id === id)?.name ?? id }, p,
+    reads: () => {
+      const reads = workerFabQrReads(session, apparatusId, () => detail, isCurrent);
+      return { ...reads, context: async (targetOrder, qr) => {
+        const result = await reads.context(targetOrder, qr);
+        if (targetOrder === orderId && isCurrent() && validOrderControl(result.bootstrap, apparatusId, orderId, latestCursor.current)) {
+          setBootstrap(previous => previous && previous.control_state?.epoch === result.bootstrap.control_state.epoch &&
+            previous.control_state.rev > result.bootstrap.control_state.rev ? previous : result.bootstrap);
+        }
+        return result;
+      } };
+    },
+    notice: message => { setSuccess(message); onNotice?.(message); },
+    write: async (qr, proof, current) => {
+      const writeCurrent = () => current() && isCurrent() && validOrderControl(proof.context.bootstrap, apparatusId, orderId, latestCursor.current);
+      if (!writeCurrent() || actionInFlight.current || scanInFlight.current) throw new Error(p('worker.error.sync'));
+      actionInFlight.current = true; loadVersion.current++;
+      setControlRetired(true); setBusy(true); setError(''); setSuccess('');
+      try { await adminApparatusQueueActionResult(session, { apparatus: apparatusId, order_id: orderId, action: 'merge', qr_payload: qr, include_control: true }, writeCurrent); }
+      finally {
+        actionInFlight.current = false;
+        if (isCurrent()) { onChanged(); setRefresh(value => value + 1); setBusy(false); }
+      }
+    },
+  });
   const scannedStage = scannedWipStage(control, order, apparatusId);
   const canOpenScannedWips = !busy && canReadScannedWips(session, apparatusId, operation, scannedStage, loading || !detail);
   const sections: Obj = bootstrap?.sections ?? {};
@@ -320,7 +352,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const pendingInput = (previousRequired || interaction.resume_input_required === true) && !inputReady;
   const scannerReady = !qolipRequired || (automaticQolip ? !!automaticConfirmation : sections.qolips?.status === 'ready' && requiredQolips.length > 0);
   const showQuickScanner = synchronized && !selected && !delivery && !deliveryBusy && !showPreflightHold &&
-    ((preparationVisible && scannerReady && (pendingMaterials || pendingDelivery || pendingMolds || pendingInput)) || pendingIntake);
+    !['confirmation', 'saving', 'guidance'].includes(merge.state.phase) &&
+    ((preparationVisible && scannerReady && (pendingMaterials || pendingDelivery || pendingMolds || pendingInput)) || pendingIntake || merge.scanning);
   useEffect(() => {
     if (showQuickScanner && permission?.status === 'undetermined') void askPermission();
   }, [showQuickScanner, permission?.status, askPermission]);
@@ -583,6 +616,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   async function quickScan(raw: string) {
     const value = raw.trim();
     if (!value || !showQuickScanner || scanInFlight.current) return;
+    if (merge.scanning) { await merge.flow.scan(value, barcodeFromQr(value)); return; }
     const now = Date.now();
     if (recentQuickScan.current?.value === value && now - recentQuickScan.current.at < 1500) return;
     recentQuickScan.current = { value, at: now };
@@ -604,7 +638,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   async function submit(action: string) {
     const isAstatka = action === 'astatka';
     const removingHandoffRoll = laminationReport && action === 'detach_roll';
-    if (!synchronized || (isAstatka ? !canOpenInitialAstatka : !allowed.includes(action)) || actionInFlight.current ||
+    if (!synchronized || merge.pending || (isAstatka ? !canOpenInitialAstatka : !allowed.includes(action)) || actionInFlight.current ||
         (isAstatka && !laminationReport && loadedDraftScope !== draftScope)) return;
     const isStarting = action === 'start' || action === 'resume';
     if (isStarting && !materialState.ready) { setError(materialState.reason); return; }
@@ -777,6 +811,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const attachedSection = materialSectionExpansion({ loading: materialLoading, error: materialsError, count: rows?.length ?? 0, expanded: materialsExpanded });
   const startMaterialStatus = workerStartMaterialStatus(rows ?? [], materialBlockingText, p('worker.error.material_not_at_machine'), p('worker.error.no_materials'));
   const allMaterialsAwaitingDelivery = cardState.showStartMaterials && startMaterialStatus.allAwaiting;
+  const mergeLines = workerMergeStateLines(control.rezka_input_lineage ?? [], p);
   function materialsChanged(barcode?: string) {
     if (barcode) setMaterials(previous => previous.some(value => normalizeCode(value) === normalizeCode(barcode)) ? previous : [...previous, barcode]);
     onChanged(); setRefresh(value => value + 1);
@@ -898,7 +933,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }]}>
       {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
         <NativeButton label={t("Kameraga ruxsat berish")} onPress={() => { void askPermission(); }} />}
-      <Text style={[styles.scannerText, { color: colors.muted }]}>{t("Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling")}</Text>
+      <Text style={[styles.scannerText, { color: colors.muted }]}>{merge.scanning ? p('worker.scanner.merge_prompt') : t("Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling")}</Text>
       {interaction.opening_wip_mode !== 'scan_required' && <>
         <View style={styles.manualToggle}><WorkerIconButton icon="edit" label={t("Kodni qo‘lda kiritish")} onPress={() => setManualScanVisible(value => !value)} /></View>
         {manualScanVisible && <View style={styles.manualRow}>
@@ -958,7 +993,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {!!inputBatch && <Text style={[styles.small, { color: colors.muted }]}>{inputBatch.qr}</Text>}
       </View>}
       {cardState.hasActions && <View style={styles.sectionGroup}>
-        {cardState.showMaterialIntakeAction && <NativeButton label={p(intakeMode ? 'worker.action.close_scanner' : 'worker.action.receive_material')} height={52} disabled={!synchronized || deliveryBusy} onPress={() => setIntakeMode(value => !value)} />}
+        {cardState.showMaterialIntakeAction && <NativeButton label={p(intakeMode ? 'worker.action.close_scanner' : 'worker.action.receive_material')} height={52} disabled={!synchronized || deliveryBusy || merge.pending} onPress={() => { merge.flow.cancel(); setIntakeMode(value => !value); }} />}
+        {!!mergeLines.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.merge_state.title')}</Text>{mergeLines.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
         {showPreflightFreeze && <NativeButton label={t("Rang chiqarishni to‘xtatib muzlatish")} height={58} variant="filled" onPress={() => { void freezePreflight(); }} />}
         {showPreflightOutcome && <View style={[styles.actionRow, Platform.OS === 'ios' && iosStyles.outcomeActions]}>
           <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Rang chiqdi")} onPress={() => { void runPreflight('passed'); }} /> : <NativeButton label={t("Rang chiqdi")} height={58} variant="filled" icon={{ android: 'check_circle', ios: 'checkmark.circle' }} onPress={() => { void runPreflight('passed'); }} />}</View>
@@ -969,9 +1005,10 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {showOutputProgress && <WorkerOutputProgress session={session} orderId={orderId} apparatusId={apparatusId}
           stageId={String(control.stage_node_id ?? '')} map={order} operation={operation} outputRevision={`${controlEpoch}:${controlRevision}:${refresh}`} />}
         {(cardState.showPause || cardState.showComplete) && <WorkerOrderActionGroup>
-          {allowed.includes('pause') && <NativeButton label={t(safeStopRequest ? 'Rulonni yechib muzlatish' : 'Rulonni yechish')} height={58} disabled={busy} onPress={() => { setError(''); selectProgressAction('pause'); }} />}
-          {cardState.showComplete && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={busy} onPress={() => { void beginCompletion(); }} />}
+          {allowed.includes('pause') && <NativeButton label={t(safeStopRequest ? 'Rulonni yechib muzlatish' : 'Rulonni yechish')} height={58} disabled={busy || merge.pending} onPress={() => { if (merge.pending) return; setError(''); selectProgressAction('pause'); }} />}
+          {cardState.showComplete && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={busy || merge.pending} onPress={() => { if (!merge.pending) void beginCompletion(); }} />}
         </WorkerOrderActionGroup>}
+        {cardState.showMerge && <NativeButton label={p('worker.action.merge')} height={58} disabled={!synchronized || busy || scanInFlight.current || merge.pending} onPress={() => { setIntakeMode(false); merge.flow.toggle(); }} />}
         {allowed.includes('resume') && <NativeButton label={t("Davom ettirish")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || busy} onPress={() => { void submit('resume'); }} />}
         {cardState.showWaitingForPrevious && <WorkerOrderBlockingNotice message={p('worker.waiting.previous', { stage: previousStageLabel })} />}
         {cardState.showWaitingForSequence && <WorkerOrderBlockingNotice message={p('worker.waiting.sequence')} />}
@@ -994,6 +1031,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         if (completed) { onSwitchCommitted?.(); closeSheet(); }
         else setError(p('worker.temporary_pause.failed'));
       }} />}
+    <WorkerOrderMergeDialog state={merge.state} orderNumber={String(order.order_number ?? code)} onCancel={() => merge.flow.cancel()} onConfirm={() => { void merge.flow.confirm(); }} />
     <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
       reportDismissed.current?.(); reportDismissed.current = null;
       if (closeAfterProgress.current && isCurrent()) { closeAfterProgress.current = false; closeSheet(); }

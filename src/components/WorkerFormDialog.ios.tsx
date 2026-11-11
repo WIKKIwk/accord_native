@@ -1,14 +1,14 @@
 import { Button, Text as NativeText } from '@expo/ui/swift-ui';
 import { buttonBorderShape, buttonStyle, controlSize, disabled, font, frame } from '@expo/ui/swift-ui/modifiers';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { WorkerFormDialogProps } from './workerDialogTypes';
 import { BaseHost } from './BaseHost';
 import { useWorkerColors } from './useWorkerColors';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-/** V2 showDialog: tapping outside never dismisses; only explicit actions close it. */
-export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, onDismiss, onShow, scrollRef }: WorkerFormDialogProps) {
+/** Report dialogs require explicit actions; individual V2 confirmations may allow backdrop dismissal. */
+export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, onDismiss, onShow, scrollRef, dismissOnBackdrop }: WorkerFormDialogProps) {
   const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), colors = useWorkerColors();
   const { t } = useWorkerOrderText();
   const glass = parseInt(String(Platform.Version), 10) >= 26;
@@ -16,6 +16,7 @@ export function WorkerFormDialog({ visible, title, children, confirmLabel, onCon
     onDismiss={onDismiss} onShow={onShow}
     onRequestClose={() => { if (!cancelDisabled && !preventDismiss) onCancel(); }}>
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0007', paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }}>
+      {dismissOnBackdrop && <Pressable accessible={false} style={StyleSheet.absoluteFill} disabled={cancelDisabled || preventDismiss} onPress={onCancel} />}
       <View accessibilityViewIsModal style={{ flexShrink: 1, width: Math.min(width - 32, 560), maxHeight: height - insets.top - insets.bottom - 24, backgroundColor: colors.surface, borderRadius: 26, padding: 20, gap: 16 }}>
         <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><NativeText modifiers={[font({ size: 22, weight: 'semibold' }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>{t(title)}</NativeText></BaseHost>
         <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 14, paddingBottom: 8 }}>{children}</ScrollView>

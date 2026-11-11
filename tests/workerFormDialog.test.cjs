@@ -13,7 +13,7 @@ function load(platform) {
   const modifiers = Object.fromEntries(['buttonBorderShape', 'buttonStyle', 'controlSize', 'disabled', 'font', 'frame'].map(name => [name, value => ({ [name]: value })]));
   const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': native, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
     './BaseHost': { BaseHost: 'Host' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 20 }) },
-    'react-native': { Platform: { Version: '26' }, KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', View: 'View', Text: 'Text', ScrollView: 'ScrollView', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
+    'react-native': { Platform: { Version: '26' }, Pressable: 'Pressable', KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', View: 'View', Text: 'Text', ScrollView: 'ScrollView', StyleSheet: { create: value => value, absoluteFill: {} }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
     './useWorkerOrderText': { useWorkerOrderText: () => ({ t: key => key }) }, './useWorkerColors': { useWorkerColors: () => ({ surface: 'white', text: 'black' }) } };
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
@@ -51,4 +51,18 @@ test('iOS native form forwards presentation/dismissal events and shares its scro
   tree.props.onRequestClose(); assert.equal(cancelled, 0); tree.props.onShow(); tree.props.onDismiss(); assert.equal(shown, 1); assert.equal(dismissed, 1);
   assert.equal(nodes(tree, node => node.type === 'ScrollView')[0].props.ref, scrollRef);
   assert.equal(nodes(tree, node => node.type === 'Button').length, 2);
+});
+for (const platform of ['ios', 'android']) test(`${platform}: merge confirmation permits Back/outside cancellation without changing report defaults`, () => {
+  let cancelled = 0;
+  const tree = load(platform)({ visible: true, title: 'Merge', dismissOnBackdrop: true,
+    onCancel: () => cancelled++, confirmLabel: 'Yes', onConfirm() {} });
+  if (platform === 'android') {
+    const dialog = nodes(tree, node => node.type === AlertDialog)[0];
+    assert.deepEqual(dialog.props.properties, { dismissOnBackPress: true, dismissOnClickOutside: true });
+    dialog.props.onDismissRequest();
+  } else {
+    nodes(tree, node => node.type === 'Pressable')[0].props.onPress();
+    tree.props.onRequestClose();
+  }
+  assert.equal(cancelled, platform === 'ios' ? 2 : 1);
 });

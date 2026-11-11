@@ -1,7 +1,7 @@
 # Aparatchi — navbatdagi tekshiruv va tuzatishlar
 
 Status: in progress.
-Stopped at: order-state/action matrix checkpoint passes on both platforms; continue the confirmed Merge and synchronization-presentation gaps below, then the remaining worker surface/text audit and capability-gated inventory destination. iOS inline scanner auto-scroll remains open below.
+Stopped at: order-state/action matrix and Merge checkpoints implemented on both platforms; continue synchronization-presentation below, then the remaining worker surface/text audit and capability-gated inventory destination. iOS inline scanner auto-scroll remains open below.
 
 Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va `test/` bilan bir xil. V2 va Mini ERP read-only. Wikki `main`da ishlash va har tekshirilgan o‘zgarishni commit qilishni aniq so‘radi. USB va Wi-Fi chop etish tanlovlari hozircha chiqariladi; Bluetooth qoladi. Bu foydalanuvchi qabul qilgan V2 farqi, yashirin parity da’vosi emas.
 
@@ -34,7 +34,6 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 |---|---|
 | Paddon inline camera on iOS | V2 `aparatchi_paddon_qr_addition.dart:24` calls `Scrollable.ensureVisible` at alignment .08. Android now scrolls on layout. The installed Expo SwiftUI List exposes no ScrollViewReader/scrollTo; its generic scrollPosition modifier documents ScrollView + target-layout usage, which has not been verified for List. Keep native List/swipe controls; a supported List scroll bridge or a verified native alternative is still needed. Camera is usable by manual scrolling, so this is not marked 1:1 complete |
 | Inventory movements destination | V2 drawer `widgets/aparatchi_navigation_drawer.dart:143` conditionally opens the general InventoryMovementsScreen. WorkerScreen and the iOS worker layout still show the placeholder for `transfer`. Preparation's implementation explicitly rejects non-preparation sessions (`preparationInventory.ts:17`), and its raw-material-only owner must not be relabeled as the general worker flow. Audit/port that shared module separately before wiring this destination |
-| Order-sheet merge | Current state audit found that `start_card.dart:1142` has a Merge action and `read_only_sheet.dart:2162,2440` requires explicit confirmation/revalidation. V4 has the queue serializer but lacks this sheet flow. Implement next in this active audit, including source lineage and rejection/cancellation tests |
 | Order-sheet synchronization presentation | V2 `admin_production_map_orders_worker_presentation.dart` retains eligible display data while current authority is unsynchronized, disabling writes. V4 currently clears action visibility. Compare and restore the presentation-only retention after the state/action checkpoint; never reuse it as action authority |
 
 ## Test mode pending
@@ -160,3 +159,10 @@ Specification: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`; checkout `lib/` va
 - Restored Complete for an unstarted worker-owned reactivation with a matching scoped `reclose` control. The existing guarded reclose action re-reads authority and checks the token; no production report or completion fallback is opened. Only acknowledged success closes the order. Success/failure uses the existing native feedback surface and read reconciliation.
 - **136/136 focused tests pass**, including **44 actual rendered-screen cases** across iOS/Android. The hook-storage harness feeds state into the real `OrderScreen`; expected buttons/messages are specified independently from V2. It replaces three narrower AST-condition tests that had missed the original outer-branch omission. Separate native notice/control tests and existing material/API/logic tests remain green. Log: `/tmp/accord-order-states-focused.log`.
 - Both native typechecks exit 0; lint exits 0 with the same pre-existing admin `ticket` warning. Logs: `/tmp/accord-order-states-{ios,android,lint}.log`. This is a passing checkpoint within the ongoing audit, not whole-role completion. Merge and synchronization presentation are explicitly listed above and are the next work.
+
+### Merge checkpoint — 2026-11-11
+
+- Restored the sheet's Merge action, exclusive scan mode, native confirmation with No/Yes, order and QR, irreversible warning, and server-sequence roll labels. Source: `start_card.dart:1142`, `read_only_sheet.dart:2162-2259,2440-2504`, `wip_scan.dart:311-635` and `read_only_helpers.dart:965-1018` in the pinned V2 export.
+- Both progress and opening WIP use scoped current-order validation before confirmation and again before submission. Recheck permission, stage, epoch, route and the complete input lineage. Cancellation/back/outside closes the task; late/duplicate scans cannot reopen it or post twice. Server rejection shows guidance; a timed-out write is reconciled by a fresh read without replaying the mutation. No output metrics or print job are sent by Merge.
+- `workerOrderMerge.test.cjs` and the real shared OrderScreen harness cover these transitions and the exact queue payload on both platforms, plus all four localized confirmation surfaces. Combined with `workerOrderStates.test.cjs`: 69/69 pass (`/tmp/accord-order-merge-tests.log`). Phone/native presentation timing remains unverified.
+- Including native dialog dismissal checks: 75/75 pass (`/tmp/accord-order-merge-verified.log`); both platform typechecks exit 0 and lint has 0 errors / the same existing admin warning. Corrected the earlier card's provenance tag to V2's actual `_OrderStartUnifiedCard` class.

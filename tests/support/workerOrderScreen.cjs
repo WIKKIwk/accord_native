@@ -23,11 +23,15 @@ const scope = load('sessionReadScope.ts');
 const controls = load('workerControlsApi.ts', { './authorizedFetch': {}, './sessionReadScope': scope });
 const reclose = load('workerOrderReclose.ts', { './workerControlsApi': controls, './sessionReadScope': scope });
 const card = load('workerOrderCardState.ts'), blocking = load('workerOrderBlocking.ts'), materials = load('workerMaterialPresentation.ts');
+const fab = load('workerFabQr.ts', { './workerControlsApi': controls, './workerOrderLogic': rules,
+  './workerOutputProgress': { workerNextWorkStages: map => map.nodes ?? [], workerWipConsumerIds: map => map.consumers ?? [] } });
+const merge = load('workerOrderMerge.ts', { './workerControlsApi': controls, './workerOrderLogic': rules, './workerFabQr': fab });
 const native = new Proxy({}, { get: (_target, key) => String(key) });
 const row = barcode => ({ barcode, order_id: '0198', apparatus: 'apparatus:default:bosma_8', execution_status: 'ready' });
 function harness(platform, input = {}, locale = 'uz') {
   const station = 'apparatus:default:bosma_8', values = new Map(), effects = [], actions = [], notices = [], closed = [];
-  let cursor = 0, fresh = input.fresh !== false;
+  let cursor = 0, refCursor = 0, fresh = input.fresh !== false, mergeOptions, mergeFlow;
+  const refs = [], layouts = [];
   const p = (key, parameters) => localize.productionText(key, locale, parameters);
   const text = { locale, p, t: value => wording.workerOrderText(value, locale) };
   const interaction = { mode: 'paused', start_materials_mode: 'hidden', material_intake_allowed: true,
@@ -44,8 +48,8 @@ function harness(platform, input = {}, locale = 'uz') {
   const mocks = {
     react: { useState(initial) { const name = stateNames[cursor++]; if (!values.has(name)) values.set(name, Object.hasOwn(overrides, name) ? overrides[name] : typeof initial === 'function' ? initial() : initial);
       return [values.get(name), value => values.set(name, typeof value === 'function' ? value(values.get(name)) : value)]; },
-      useRef: value => ({ current: value }), useContext: () => null, useCallback: callback => callback,
-      useEffect: callback => effects.push(callback), useLayoutEffect() {}, useEffectEvent: callback => callback },
+      useRef: value => refs[refCursor++] ?? (refs[refCursor - 1] = { current: value }), useContext: () => null, useCallback: callback => callback,
+      useEffect: callback => effects.push(callback), useLayoutEffect: callback => layouts.push(callback), useEffectEvent: callback => callback },
     'react-native': { ...native, ActivityIndicator: 'ActivityIndicator', Alert: { alert() {} }, Platform: { OS: platform, Version: 26 },
       PlatformColor: value => value, StyleSheet: { create: value => value }, View: 'View', Text: 'Text', ScrollView: 'ScrollView', Pressable: 'Pressable' },
     '@expo/ui': { Host: 'Host', TextInput: 'NativeInput', useNativeState: initial => ({ value: initial, set() {} }) },
@@ -53,6 +57,16 @@ function harness(platform, input = {}, locale = 'uz') {
     'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },
     './sessionReadScope': { sessionReadScope: () => 'scope' }, './nativeSheet': { useNativeSheet: () => ({ open() {}, close() {}, update() {}, isOpen: () => false }) },
     './workerOrderLogic': { ...rules, validOrderControl: () => fresh }, './workerOrderCardState': card, './workerOrderBlocking': blocking,
+    './workerOrderMerge': merge, './workerFabQrReads': { workerFabQrReads: () => input.mergeReads },
+    './workerQueueAction': { adminApparatusQueueActionResult: async (_session, body, current) => { if (!current()) throw new Error('stale'); actions.push(body); await input.runMerge?.(); } },
+    './components/useWorkerOrderMerge': { useWorkerOrderMerge(options) {
+      mergeOptions = options;
+      if (!mergeFlow) mergeFlow = new merge.WorkerOrderMergeFlow({ available: () => mergeOptions.available, current: () => mergeOptions.current(),
+        reads: () => mergeOptions.reads(), target: () => mergeOptions.target, p: (key, values) => mergeOptions.p(key, values),
+        write: (...args) => mergeOptions.write(...args), notice: message => mergeOptions.notice(message), changed() {} });
+      return { state: mergeFlow.state, flow: mergeFlow, scanning: ['scanning', 'checking'].includes(mergeFlow.state.phase),
+        pending: !['closed', 'scanning'].includes(mergeFlow.state.phase) };
+    } },
     './workerMaterialPresentation': materials, './workerQr': { WorkerInitialQr: class { run() {} }, workerQrPayload: value => value },
     './workerOrderReclose': reclose, './workerLongPress': { workerLongPressMenu: () => ({ actions: ['reclose'] }),
       runWorkerMenuAction: async (...args) => { actions.push(args); await input.runReclose?.(); } },
@@ -71,7 +85,7 @@ function harness(platform, input = {}, locale = 'uz') {
     apparatusCatalog: [{ id: 'upstream', name: 'Upstream' }], queueCursor: { epoch: 'epoch', rev: 1 }, busyOrderTitle: 'shashoqcha',
     onNotice: message => notices.push(message), onClose: () => closed.push(true), onChanged() {} };
   return { p, values, props, bootstrap, effects, actions, notices, closed, setFresh: value => { fresh = value; },
-    render: () => { cursor = 0; effects.length = 0; return mod.exports.OrderScreen(props); } };
+    render: () => { cursor = 0; refCursor = 0; effects.length = 0; layouts.length = 0; const tree = mod.exports.OrderScreen(props); layouts.forEach(effect => effect()); return tree; } };
 }
 function nodes(tree, predicate) {
   if (!tree || typeof tree !== 'object') return [];
@@ -80,4 +94,4 @@ function nodes(tree, predicate) {
 }
 function main(tree) { return nodes(tree, node => node.type === 'ScrollView')[0]; }
 const buttons = tree => nodes(main(tree), node => node.type?.name === 'NativeButton' || node.type === 'WorkerPreflightButton');
-module.exports = { harness, nodes, main, buttons, load, card, blocking, reclose, row };
+module.exports = { harness, nodes, main, buttons, load, card, blocking, reclose, row, merge, fab, rules };
