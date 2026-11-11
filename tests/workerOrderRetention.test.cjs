@@ -92,7 +92,8 @@ test('preflight disabled state reaches the native iOS modifier and Android butto
   const modifiers = new Proxy({}, { get: (_target, key) => value => ({ [key]: value }) });
   const controls = load('components/WorkerOrderControls.ios.tsx', { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
     './BaseHost': { BaseHost: 'Host' }, './useBaseTheme': {}, './workerOrderLayout': load('components/workerOrderLayout.ts'),
-    'react-native': { Platform: { Version: 26 }, View: 'View' } });
+    './useWorkerOrderText': { useWorkerOrderText: () => ({ locale: 'uz' }) }, '../workerNoticeHyphenation': { hyphenateWorkerNotice: value => value },
+    'react-native': { Platform: { Version: 26 }, PlatformColor: value => value, View: 'View' } });
   const ios = load('components/WorkerPreflightButton.ios.tsx', { './WorkerOrderControls': controls });
   const element = ios.WorkerPreflightButton({ onPress() {}, disabled: true, label: 'Rang chiqdi' }), tree = element.type(element.props);
   assert.ok(nodes(tree, node => node.type === 'Button')[0].props.modifiers.some(modifier => modifier.disabled === true));

@@ -1,9 +1,9 @@
 # Aparatchi paint and order-sheet presentation
 
-Status: implemented and served on Metro; physical layout/hardware acceptance remains with the user.
+Status: merged locally into main and served on Metro; physical layout/hardware acceptance remains with the user.
 Stopped at: the order-actions close control uses Liquid Glass with a neutral icon and the iOS sheet tracks the loaded menu's measured height.
 
-Worktree: `accord_mobile_v4-aparatchi-paint-parity`, branch `port/aparatchi-paint-parity`, based on the tested worker parity changes at45b77f1a. The separate audit commit is retained here too. Metro now serves this worktree at the existing LAN URL/port8081; `/status` returns running. Neither main nor V2 source was changed.
+Source worktree: `accord_mobile_v4-aparatchi-paint-parity`, branch `port/aparatchi-paint-parity`, based on the tested worker parity changes at45b77f1a. The separate audit commit is retained here too. The branch was merged into main as f11a05f6, preserving the existing main changes. Metro now serves main at the existing LAN URL/port8081; V2 source remains unchanged.
 
 ## Implemented
 
@@ -30,6 +30,7 @@ Worktree: `accord_mobile_v4-aparatchi-paint-parity`, branch `port/aparatchi-pain
 
 ## Verification
 
+- Main integration: both platform typechecks pass and lint has0 errors with its existing unrelated warning. The merged iOS bundle compiles and Metro runs from main. The focused integration suite passes58/58; the full suite has6145 passed,11 pre-existing failures and12 TODOs, with no new failures compared with the previous full-suite baseline.
 - Action-sheet clipping correction:42/42 focused order-presentation, long-press and reactivation checks passed, including asynchronous size changes, the height cap/scroll path and close action. Both platform typechecks passed; project lint had0 errors and its existing unrelated warning. Metro compiled the iOS bundle; the actual phone layout remains unverified by this session.
 - Returned-paint UI correction:94/94 focused presentation/paint/form/parity tests pass, including native formatter delegation, clearing, scope-lock rollback, transparent secondary actions, system-blue confirmation and existing photo/named-field flows. Both platform typechecks pass. Project lint has0 errors and the existing unrelated AdminClosedHistoryOwner dependency warning. The live Metro iOS bundle compiles with the native paint editor. Physical appearance remains with the user's real testing.
 - Latest progress UI correction:141/141 focused presentation/daily-field/order-state/parity tests pass. Coverage includes pause-before-completion, filled semantic colors, red/green dialog actions, disabled state/callback preservation and raw report-value forwarding. Both platform typechecks pass; project lint has0 errors and its existing unrelated warning. Physical Clock-style appearance and input acceptance remain with the user's real testing.
@@ -65,4 +66,4 @@ D3 demo coverage remains deferred under the existing project decision. USB/Wi-Fi
 
 ## Needs from the integrator
 
-No main merge or push was performed. The native bridge build/device checks above remain open.
+The branch was merged locally into main; no push was performed. The native bridge build/device checks above remain open.
