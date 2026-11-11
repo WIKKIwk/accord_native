@@ -1,12 +1,14 @@
 # Aparatchi paint and order-sheet presentation
 
 Status: implemented and served on Metro; physical layout/hardware acceptance remains with the user.
-Stopped at: latest requested Uzbek notice hyphenation is implemented and checked.
+Stopped at: latest requested daily-work WIP grouping and QR-sheet layout corrections are implemented and checked.
 
 Worktree: `accord_mobile_v4-aparatchi-paint-parity`, branch `port/aparatchi-paint-parity`, based on the tested worker parity changes at45b77f1a. The separate audit commit is retained here too. Metro now serves this worktree at the existing LAN URL/port8081; `/status` returns running. Neither main nor V2 source was changed.
 
 ## Implemented
 
+- Daily-work UI follow-up: the iOS order header now toggles an outlined group with independently shaded/inset WIP cards and an explicit up/down chevron. WIP title, index, status and compact QR/metraj columns are distinct; expanded metadata uses aligned label/value rows. Full-width padded tap/long-press ownership is retained, and the labeled large edit button is outside that gesture owner. Source: `_DailyWorkOrderGroupCardState` / `_DailyWorkWipCardState` in V2 daily-work model parts03–04.
+- WIP QR-sheet UI follow-up: separated rendering from the existing shared print/session/dismissal owner, with the existing presentation retained as the platform fallback. iOS uses a native scrolling sheet body:240pt white QR preview, centered product/code, aligned88pt label column with wrapping values, and a full-width large reprint control. Edit and close have visible standard44pt glass/bordered button surfaces. Source daily rows/order/permissions, native-dismiss-before-edit handoff and first-event print guards are retained. No native rebuild is required.
 - Uzbek notice hyphenation: iOS quoted/italic notices receive discretionary soft hyphens at Latin Uzbek syllable boundaries, using rules adapted from MIT-licensed [UzSyllable](https://github.com/UlugbekSalaev/UzSyllable/tree/7d874c708be555c1df3d2cdbc15251a1710ef56a); the upstream license is retained in `docs/third-party/UzSyllable-LICENSE.txt`. The text renderer chooses which opportunities to use at the actual available width. Digraphs/apostrophe letters stay together, single-letter line fragments are excluded, and quoted names/technical identifiers/unsupported spellings are kept intact. Other locales, stored text, API values and the original accessibility label are unchanged. Focused helper/presentation tests17/17 and iOS typecheck pass; on-device line layout remains part of the user's real testing.
 - Notice alignment correction: the quoted italic paragraph now spans the full card content width and uses native iOS justified text alignment. Quotation/spacing/accessibility content are retained; no nested background is added. Existing12 presentation tests and iOS typecheck pass; Metro serves the change.
 - Blocking-notice follow-up: removed the nested iOS notice background/card; the original message now appears in quotation marks, italic callout text, with12pt vertical spacing and no extra horizontal inset. VoiceOver retains the unquoted message. Existing notice presentation tests and iOS typecheck pass; actions and availability rules are unchanged.
@@ -21,6 +23,7 @@ Worktree: `accord_mobile_v4-aparatchi-paint-parity`, branch `port/aparatchi-pain
 
 ## Verification
 
+- Latest daily-work UI follow-up:28/28 focused daily-work/correction/WIP-metadata/native-presentation checks and both platform typechecks pass. Project lint has0 errors and the existing unrelated AdminClosedHistoryOwner dependency warning. The final iOS Hermes export passes under `.expo/aparatchi-daily-layout-ios`; Metro remains running on8081. Native component fixtures establish data/handler/layout configuration, not measured phone pixels; physical presentation remains with the user's real testing.
 - Latest hyphenation follow-up:17/17 focused tests, iOS typecheck, scoped lint and iOS Hermes export pass (`.expo/aparatchi-hyphenation-ios`). Project lint has0 errors and the existing unrelated AdminClosedHistoryOwner dependency warning. Metro remains running on8081.
 - Focused order/presentation/mold/paint/native inventory/palette suite175/175 passed. Handoff and resume integration9/9 passed after updating their extracted-function fixture for the new paint-helper dependency.
 - Shared paint/photo/API/draft follow-up17/17 passed; earlier expanded photo/preview/shared-form checks27/27 and pure paint checks27/27 passed. Native component grid tests66/66 passed.

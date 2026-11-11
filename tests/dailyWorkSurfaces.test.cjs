@@ -23,6 +23,8 @@ function nodes(tree, predicate) {
 }
 const find = (tree, predicate) => nodes(tree, predicate)[0];
 const modifiers = new Proxy({}, { get: (_, name) => name === 'shapes' ? { rectangle: () => 'rectangle' } : (...args) => ({ name, args }) });
+const iosUi = Object.fromEntries(['Button','DatePicker','Divider','Host','HStack','Image','List','NavigationStack','ProgressView','RNHostView','ScrollView','Section','Spacer','Text','Toolbar','ToolbarItem','VStack'].map(x => [x,x]));
+const modifier = (node, name) => node?.props.modifiers?.find(value => value.name === name)?.args[0];
 
 // @v2-test test/aparatchi_daily_work_test.dart
 test('daily cards use source product titles, translated statuses, short QR fallbacks and two-decimal metrics', () => {
@@ -44,25 +46,60 @@ test('daily cards use source product titles, translated statuses, short QR fallb
 
 test('iOS daily WIP tap expands inline, editing appears only expanded, and long press owns a non-Button gesture row', () => {
   const runner = hooks(), calls = [], actions = { qrBatch: null, alert: null, canEdit: () => true, edit: row => calls.push(['edit', row.id]), showQr: row => calls.push(['qr', row.id]) };
-  const ui = Object.fromEntries(['Button','DatePicker','DisclosureGroup','Host','HStack','Image','List','NavigationStack','ProgressView','Section','Text','Toolbar','ToolbarItem','VStack'].map(x => [x,x]));
   const { BatchCard } = load('components/DailyWorkScreen.ios.tsx', {
-    react: runner.react, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers, 'expo-router': { Stack: { Screen: 'Screen' } },
-    'react-native': { StyleSheet: { create: x => x }, View: 'View' }, '../dailyWork': model, '../dailyWorkPresentation': presentation,
+    react: runner.react, '@expo/ui/swift-ui': iosUi, '@expo/ui/swift-ui/modifiers': modifiers, 'expo-router': { Stack: { Screen: 'Screen' } },
+    'react-native': { PlatformColor: name => name, StyleSheet: { create: x => x }, View: 'View' }, '../dailyWork': model, '../dailyWorkPresentation': presentation,
     './useDailyWork': {}, './useDailyWorkActions': {}, './DailyWorkDialogs': {}, './WorkerFormDialog': {}, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: p }) },
   }, '\nexport { BatchCard };');
   const render = () => { runner.begin(); const tree = BatchCard({ batch: batch(), index: 0, names: { 'apparatus:default:cut': 'Kesish' }, assigned: ['apparatus:default:cut'], showWorker: false, actions }); runner.flush(); return tree; };
   let tree = render();
+  assert.equal(modifier(tree, 'background'), 'tertiarySystemGroupedBackground');
+  assert.equal(modifier(tree, 'cornerRadius'), 16);
+  const compact = nodes(tree, node => node.type?.name === 'CompactValue');
+  assert.deepEqual(compact.map(node => [node.props.label, node.props.value]), [['worker.wip.info.qr', 'QR'], ['worker.daily.field.length', '123.46 m']]);
+  assert.equal(find(tree, node => node.type === 'HStack' && compact.every(value => node.props.children?.includes?.(value)))?.props.alignment, 'top');
   assert.equal(find(tree, node => node.type === 'Button'), undefined);
   const owner = find(tree, node => node.props?.modifiers?.some(mod => mod.name === 'onLongPressGesture'));
   assert.equal(owner.type, 'VStack');
+  assert.equal(modifier(owner, 'frame').maxWidth, Infinity);
+  assert.deepEqual(modifier(owner, 'padding'), { all: 12 });
   const tap = owner.props.modifiers.find(mod => mod.name === 'onTapGesture').args[0];
   owner.props.modifiers.find(mod => mod.name === 'onLongPressGesture').args[0](); tap(); tree = render();
   assert.deepEqual(calls, [['qr', 'b']]); assert.equal(find(tree, node => node.type === 'Button'), undefined);
   tap(); tree = render();
   const edit = find(tree, node => node.type === 'Button' && node.props.label === 'worker.daily.edit_wip');
   assert.ok(edit); edit.props.onPress(); assert.deepEqual(calls.at(-1), ['edit', 'b']);
+  assert.equal(modifier(edit, 'buttonStyle'), 'bordered'); assert.equal(modifier(edit, 'controlSize'), 'large');
+  assert.equal(modifier(edit, 'labelStyle'), 'titleAndIcon');
+  assert.equal(modifier(edit, 'frame').minHeight, 44);
+  const expandedOwner = find(tree, node => modifier(node, 'onLongPressGesture'));
+  assert.equal(find(expandedOwner, node => node === edit), undefined, 'edit must not compete with the enclosing tap/long-press gesture');
   assert.ok(find(tree, node => node.props?.children === 'worker.wip.info.source'));
   assert.equal(find(tree, node => node.type === 'WorkerOrderSheet'), undefined);
+  runner.dispose();
+});
+
+test('iOS order expansion reveals individually keyed WIP cards without native DisclosureGroup indentation', () => {
+  const runner = hooks(), row = batch(), other = batch({ batch_id: 'other', qr_payload: 'OTHER' });
+  const { BatchGroup } = load('components/DailyWorkScreen.ios.tsx', {
+    react: runner.react, '@expo/ui/swift-ui': iosUi, '@expo/ui/swift-ui/modifiers': modifiers, 'expo-router': { Stack: { Screen: 'Screen' } },
+    'react-native': { PlatformColor: name => name, StyleSheet: { create: x => x }, View: 'View' }, '../dailyWork': model, '../dailyWorkPresentation': presentation,
+    './useDailyWork': {}, './useDailyWorkActions': {}, './DailyWorkDialogs': {}, './WorkerFormDialog': {}, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: p }) },
+  }, '\nexport { BatchGroup };');
+  const props = { group: { key: 'order:o', orderId: 'o', title: 'Film', batches: [row, other] }, names: {}, assigned: [], showWorker: false, actions: {} };
+  const render = () => { runner.begin(); const tree = BatchGroup(props); runner.flush(); return tree; };
+  let tree = render();
+  assert.equal(modifier(tree, 'strokeBorder').style.lineWidth, 1);
+  assert.equal(modifier(tree, 'listRowInsets').leading, 0);
+  assert.equal(find(tree, node => node.type?.name === 'BatchCard'), undefined);
+  assert.ok(find(tree, node => node.props.systemName === 'chevron.down'));
+  find(tree, node => node.type === 'Button').props.onPress(); tree = render();
+  assert.ok(find(tree, node => node.props.systemName === 'chevron.up'));
+  const children = nodes(tree, node => node.type?.name === 'BatchCard');
+  assert.deepEqual(children.map(node => node.props.batch.id), ['b', 'other']);
+  assert.equal(new Set(children.map(node => node.key)).size, 2);
+  find(tree, node => node.type === 'Button').props.onPress(); tree = render();
+  assert.equal(find(tree, node => node.type?.name === 'BatchCard'), undefined);
   runner.dispose();
 });
 
@@ -159,20 +196,60 @@ test('WIP QR close is blocked from the first printing event until the print sett
     '../workerWipDetailsPresentation': { workerWipDetailsItemName: () => 'WIP' },
     '../workerWip': { wipText: value => typeof value === 'string' ? value.trim() : '', wipBatchWeights: () => ({ gross: null, net: null, bobina: null }) },
     './useWorkerColors': { useWorkerColors: () => ({}) }, './useWorkerPrinterSelector': { useWorkerPrinterSelector: () => ({ dialogs: null }) },
-    './WorkerIconButton': { WorkerIconButton: 'IconButton' }, './WorkerOrderThumbnail': { WorkerOrderThumbnail: 'Thumbnail' },
+    './WorkerWipBatchDetailsView': { WorkerWipBatchDetailsView: 'WipView' },
     './WorkerPaddonFeedback': { WorkerPaddonFeedback: 'Feedback' },
     './workerSheetContext': { WorkerSheetCloseContext: {} }, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: p }) },
   });
   const render = () => { runner.begin(); const tree = WorkerWipBatchDetails({ session: {}, order: {}, batch: { batch_id: 'b', qr_payload: 'QR' }, apparatusNames: {}, onClose() {}, allowReprint: true, detailRows: [], title: 'QR' }); runner.flush(); return tree; };
   let tree = render();
-  const close = find(tree, node => node.type === 'IconButton').props.onPress;
-  find(tree, node => node.type === 'Button' && node.props.label === 'Qayta chop etish').props.onPress();
+  const close = find(tree, node => node.type === 'WipView').props.onClose;
+  find(tree, node => node.type === 'WipView').props.onReprint();
   close(); assert.deepEqual(calls, []);
-  tree = render(); assert.equal(find(tree, node => node.type === 'View' && node.props.pointerEvents === 'none').props.accessibilityState.disabled, true);
+  tree = render(); assert.equal(find(tree, node => node.type === 'WipView').props.busy, true);
   finish(); await new Promise(setImmediate); tree = render();
   assert.equal(find(tree, node => node.type === 'Feedback').props.message, 'worker.daily.wip_qr.reprinted');
-  find(tree, node => node.type === 'IconButton').props.onPress(); assert.deepEqual(calls, ['native-close']);
+  find(tree, node => node.type === 'WipView').props.onClose(); assert.deepEqual(calls, ['native-close']);
   runner.dispose();
+});
+
+test('iOS WIP QR uses aligned label/value rows in a native scroll, with large visible edit and reprint controls', () => {
+  const { WorkerWipBatchDetailsView } = load('components/WorkerWipBatchDetailsView.ios.tsx', {
+    '@expo/ui/swift-ui': iosUi, '@expo/ui/swift-ui/modifiers': modifiers, 'expo-image': { Image: 'QrImage' },
+    'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name }, './BaseHost': { BaseHost: 'Host' },
+  });
+  const calls = [], rows = [['Order', 'zakaz-0304'], ['QR:', '400118E6EF86AD68FBA09EF6'], ['Metraj', '8000 m'],
+    ['Og‘irlik', '12 kg'], ['Boshlangan', '11.11.2026 13:13'], ['Qayerdan chiqdi', '8 ta rangli bosma apparat']];
+  const props = { title: 'WIP QR', itemName: 'keks yarim tayyor mahsulot', payload: rows[1][1], qrImage: 'qr', rows,
+    editLabel: 'WIPni o‘zgartirish', closeLabel: 'Yopish', reprintLabel: 'Qayta chop etish', canReprint: true, busy: false, message: '',
+    onEdit: () => calls.push('edit'), onClose: () => calls.push('close'), onReprint: () => calls.push('reprint') };
+  const tree = WorkerWipBatchDetailsView(props), scroll = find(tree, node => node.type === 'ScrollView');
+  assert.ok(scroll); assert.equal(find(tree, node => node.type === 'ListItem'), undefined);
+  const table = find(scroll, node => modifier(node, 'accessibilityIdentifier') === 'worker-wip-qr-details');
+  assert.equal(table.props.children.length, rows.length);
+  table.props.children.forEach((row, index) => {
+    assert.equal(row.type, 'HStack'); assert.equal(row.props.alignment, 'top');
+    assert.deepEqual(row.props.children.map(node => node.props.children), rows[index]);
+    assert.equal(modifier(row.props.children[0], 'frame').width, 88);
+    assert.equal(modifier(row.props.children[1], 'frame').maxWidth, Infinity);
+    for (const node of row.props.children) assert.equal(modifier(node, 'fixedSize').vertical, true);
+  });
+  const qr = find(scroll, node => node.type === 'QrImage');
+  assert.equal(qr.props.style.width, 240); assert.equal(qr.props.style.height, 240);
+  assert.equal(qr.props.style.backgroundColor, '#fff');
+  assert.equal(modifier(find(scroll, node => node.type === 'Text' && node.props.children === props.payload), 'textSelection'), true);
+  for (const id of ['edit', 'close', 'reprint']) {
+    const button = find(tree, node => modifier(node, 'accessibilityIdentifier') === `worker-wip-qr-${id}`);
+    assert.equal(modifier(button, 'controlSize'), 'large'); assert.equal(modifier(button, 'disabled'), false);
+    assert.notEqual(modifier(button, 'buttonStyle'), 'plain');
+    if (id !== 'reprint') assert.deepEqual(modifier(button, 'frame'), { width: 44, height: 44 });
+    button.props.onPress();
+  }
+  assert.deepEqual(calls, ['edit', 'close', 'reprint']);
+  const locked = WorkerWipBatchDetailsView({ ...props, busy: true });
+  assert.equal(nodes(locked, node => node.type === 'Button').every(button => modifier(button, 'disabled') === true), true);
+  const restricted = WorkerWipBatchDetailsView({ ...props, onEdit: undefined, canReprint: false });
+  assert.equal(find(restricted, node => modifier(node, 'accessibilityIdentifier') === 'worker-wip-qr-edit'), undefined);
+  assert.equal(find(restricted, node => modifier(node, 'accessibilityIdentifier') === 'worker-wip-qr-reprint'), undefined);
 });
 
 test('iOS daily date changes remain a bounded draft until Select and Cancel keeps the original day', () => {

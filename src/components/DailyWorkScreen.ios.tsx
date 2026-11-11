@@ -1,8 +1,8 @@
-import { Button, DatePicker, DisclosureGroup, Host, HStack, Image, List, NavigationStack, ProgressView, Section, Text, Toolbar, ToolbarItem, VStack } from '@expo/ui/swift-ui';
-import { accessibilityAddTraits, accessibilityElement, accessibilityLabel, buttonStyle, contentShape, datePickerStyle, font, foregroundStyle, frame, labelStyle, lineLimit, listStyle, navigationBarTitleDisplayMode, navigationTitle, onLongPressGesture, onTapGesture, padding, refreshable, scrollEdgeEffectStyle, shapes } from '@expo/ui/swift-ui/modifiers';
+import { Button, DatePicker, Divider, Host, HStack, Image, List, NavigationStack, ProgressView, Section, Spacer, Text, Toolbar, ToolbarItem, VStack } from '@expo/ui/swift-ui';
+import { accessibilityAddTraits, accessibilityElement, accessibilityIdentifier, accessibilityLabel, background, buttonStyle, contentShape, controlSize, cornerRadius, datePickerStyle, fixedSize, font, foregroundStyle, frame, labelStyle, layoutPriority, lineLimit, listRowBackground, listRowInsets, listRowSeparator, listStyle, navigationBarTitleDisplayMode, navigationTitle, onLongPressGesture, onTapGesture, padding, refreshable, scrollEdgeEffectStyle, shapes, strokeBorder } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { PlatformColor, StyleSheet, View } from 'react-native';
 import type { Session } from '../auth';
 import { dailyWorkQuantity, type DailyWorkBatch, type DailyWorkGroup } from '../dailyWork';
 import { dailyWorkDateDraft, dailyWorkDayLabel, dailyWorkDisplayCode, dailyWorkExpandedRows, dailyWorkProductTitle, dailyWorkStatusLabel } from '../dailyWorkPresentation';
@@ -27,6 +27,13 @@ function Metric({ label, value }: { label: string; value: number }) {
   </VStack>;
 }
 
+function CompactValue({ label, value }: { label: string; value: string }) {
+  return <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+    <Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{label}</Text>
+    <Text modifiers={[font({ textStyle: 'subheadline', weight: 'medium' }), lineLimit(1)]}>{value}</Text>
+  </VStack>;
+}
+
 function BatchCard({ batch, index, names, assigned, showWorker, actions }: {
   batch: DailyWorkBatch; index: number; names: Record<string, string>; assigned: readonly string[]; showWorker: boolean;
   actions: ReturnType<typeof useDailyWorkActions>;
@@ -34,47 +41,70 @@ function BatchCard({ batch, index, names, assigned, showWorker, actions }: {
   const [expanded, setExpanded] = useState(false), { p } = useWorkerOrderText();
   const held = useMemo(() => createLongPressGate(), []);
   useEffect(() => { if (!actions.qrBatch && !actions.alert) held.reset(); }, [actions.qrBatch, actions.alert, held]);
-  const rows = expanded ? dailyWorkExpandedRows(batch, names, p, assigned) : [
-    [p('worker.wip.info.qr'), dailyWorkDisplayCode(batch)], [p('worker.daily.field.length'), dailyWorkQuantity(batch)],
-  ];
-  return <VStack alignment="leading" spacing={8}>
-    <VStack alignment="leading" spacing={8} modifiers={[
-      frame({ maxWidth: Infinity, alignment: 'leading' }), padding({ vertical: 7 }), contentShape(shapes.rectangle()),
+  const rows = expanded ? dailyWorkExpandedRows(batch, names, p, assigned) : [];
+  return <VStack alignment="leading" spacing={0} modifiers={[
+    frame({ maxWidth: Infinity, alignment: 'leading' }), background(PlatformColor('tertiarySystemGroupedBackground')), cornerRadius(16),
+    accessibilityIdentifier(`daily-work-wip-card-${batch.id}`),
+  ]}>
+    <VStack alignment="leading" spacing={12} modifiers={[
+      padding({ all: 12 }), frame({ maxWidth: Infinity, alignment: 'leading' }), contentShape(shapes.rectangle()),
       onTapGesture(() => { if (!held.take(batch.id)) setExpanded(value => !value); }),
       onLongPressGesture(() => { held.mark(batch.id); actions.showQr(batch); }, 0.5),
       accessibilityElement('combine'), accessibilityAddTraits(['isButton']), accessibilityLabel(dailyWorkProductTitle(batch, index + 1)),
     ]}>
-      <HStack spacing={10}>
-        <Text>{String(index + 1)}</Text>
-        <Text modifiers={[font({ textStyle: 'body', weight: 'semibold' }), lineLimit(2), frame({ maxWidth: Infinity, alignment: 'leading' })]}>{dailyWorkProductTitle(batch, index + 1)}</Text>
-        <Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{dailyWorkStatusLabel(batch, p)}</Text>
-        <Image systemName={expanded ? 'chevron.up' : 'chevron.down'} size={12} modifiers={[secondary]} />
+      <HStack alignment="top" spacing={10}>
+        <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }), frame({ minWidth: 32, minHeight: 32 }),
+          background(PlatformColor('tertiarySystemFill')), cornerRadius(16)]}>{String(index + 1)}</Text>
+        <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' }), layoutPriority(1)]}>
+          <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }), lineLimit(2), fixedSize({ horizontal: false, vertical: true })]}>{dailyWorkProductTitle(batch, index + 1)}</Text>
+          <Text modifiers={[font({ textStyle: 'caption', weight: 'medium' }), secondary, padding({ horizontal: 8, vertical: 4 }),
+            background(PlatformColor('quaternarySystemFill')), cornerRadius(8)]}>{dailyWorkStatusLabel(batch, p)}</Text>
+        </VStack>
+        <Image systemName={expanded ? 'chevron.up' : 'chevron.down'} size={13} modifiers={[secondary, padding({ top: 8 })]} />
       </HStack>
-      {showWorker ? <Text>{`${p('worker.wip.info.worker')}: ${batch.worker || '—'}`}</Text> : null}
-      {expanded && actions.canEdit(batch) ? <Button label={p('worker.daily.edit_wip')} systemImage="pencil" modifiers={[labelStyle('iconOnly'), buttonStyle('borderless')]}
-        onPress={() => actions.edit(batch)} /> : null}
-      {rows.map(([label, value]) => <VStack key={label} alignment="leading" spacing={3}>
-        <Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{label}</Text><Text>{value}</Text>
-      </VStack>)}
+      {showWorker ? <CompactValue label={p('worker.wip.info.worker')} value={batch.worker || '—'} /> : null}
+      {expanded ? <>
+        <Divider />
+        {rows.map(([label, value]) => <HStack key={label} alignment="top" spacing={12}>
+          <Text modifiers={[font({ textStyle: 'caption' }), secondary, frame({ width: 88, alignment: 'leading' }), fixedSize({ horizontal: false, vertical: true })]}>{label}</Text>
+          <Text modifiers={[font({ textStyle: 'subheadline' }), frame({ maxWidth: Infinity, alignment: 'leading' }), fixedSize({ horizontal: false, vertical: true })]}>{value}</Text>
+        </HStack>)}
+      </> : <HStack alignment="top" spacing={12}>
+        <CompactValue label={p('worker.wip.info.qr')} value={dailyWorkDisplayCode(batch)} />
+        <CompactValue label={p('worker.daily.field.length')} value={dailyWorkQuantity(batch)} />
+      </HStack>}
       <Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{p(expanded ? 'worker.daily.card.collapse_hint' : 'worker.daily.card.expand_hint')}</Text>
     </VStack>
+    {expanded && actions.canEdit(batch) ? <HStack modifiers={[padding({ horizontal: 12, bottom: 12 })]}>
+      <Spacer />
+      <Button label={p('worker.daily.edit_wip')} systemImage="pencil" modifiers={[labelStyle('titleAndIcon'), buttonStyle('bordered'), controlSize('large'), frame({ minHeight: 44 })]}
+        onPress={() => actions.edit(batch)} />
+    </HStack> : null}
   </VStack>;
 }
 
 function BatchGroup({ group, names, assigned, showWorker, actions }: { group: DailyWorkGroup; names: Record<string, string>; assigned: readonly string[]; showWorker: boolean; actions: ReturnType<typeof useDailyWorkActions> }) {
   const [expanded, setExpanded] = useState(false), { p } = useWorkerOrderText();
   const hasTitle = group.title.trim() && group.title.trim().toLowerCase() !== group.orderId.trim().toLowerCase();
-  return <DisclosureGroup isExpanded={expanded} onIsExpandedChange={setExpanded}>
-    <DisclosureGroup.Label><HStack spacing={12}>
-      <Image systemName="doc.text" size={21} />
-      <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-        <Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{p('worker.daily.order')}{hasTitle ? ` • ${group.orderId}` : ''}</Text>
-        <Text modifiers={[font({ textStyle: 'body', weight: 'medium' }), lineLimit(2)]}>{hasTitle ? group.title : group.orderId}</Text>
-      </VStack>
-      <Text modifiers={[font({ textStyle: 'subheadline' }), secondary]}>{`${group.batches.length} ${p('worker.daily.wip')}`}</Text>
-    </HStack></DisclosureGroup.Label>
+  return <VStack alignment="leading" spacing={12} modifiers={[
+    padding({ all: 10 }), background(PlatformColor('secondarySystemGroupedBackground')), cornerRadius(20),
+    strokeBorder({ color: PlatformColor('separator'), shape: 'roundedRectangle', cornerRadius: 20, style: { lineWidth: 1 } }),
+    listRowInsets({ top: 0, bottom: 12, leading: 0, trailing: 0 }), listRowSeparator('hidden'), listRowBackground(PlatformColor('systemGroupedBackground')),
+  ]}>
+    <Button onPress={() => setExpanded(value => !value)} modifiers={[buttonStyle('plain'), accessibilityIdentifier(`daily-work-order-header-${group.key}`)]}>
+      <HStack spacing={10} modifiers={[padding({ horizontal: 4, vertical: 4 }), frame({ maxWidth: Infinity, minHeight: 44, alignment: 'leading' }), contentShape(shapes.rectangle())]}>
+        <Image systemName="doc.text" size={21} color={PlatformColor('systemBlue')} />
+        <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+          <Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{p('worker.daily.order')}{hasTitle ? ` • ${group.orderId}` : ''}</Text>
+          <Text modifiers={[font({ textStyle: 'headline', weight: 'semibold' }), lineLimit(2)]}>{hasTitle ? group.title : group.orderId}</Text>
+        </VStack>
+        <Text modifiers={[font({ textStyle: 'caption', weight: 'semibold' }), secondary, fixedSize(), padding({ horizontal: 8, vertical: 5 }),
+          background(PlatformColor('tertiarySystemFill')), cornerRadius(12)]}>{`${group.batches.length} ${p('worker.daily.wip')}`}</Text>
+        <Image systemName={expanded ? 'chevron.up' : 'chevron.down'} size={13} modifiers={[secondary]} />
+      </HStack>
+    </Button>
     {expanded ? group.batches.map((batch, index) => <BatchCard key={`${batch.id}:${index}`} batch={batch} index={index} names={names} assigned={assigned} showWorker={showWorker} actions={actions} />) : null}
-  </DisclosureGroup>;
+  </VStack>;
 }
 
 export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
