@@ -16,6 +16,7 @@ test('worker printer choice waits for native dismissal before handing the printe
   let settled = false; const pending = owner.selectDevice().then(value => { settled = true; return value; });
   const first = h.opened[0], picker = first.content.type(first.content.props);
   assert.equal(picker.props.emptyLabel, 'Bluetooth printer topilmadi');
+  assert.equal(picker.props.title, 'Bluetooth printer');
   picker.props.select(printer); await Promise.resolve();
   assert.deepEqual(h.calls, ['native-close']); assert.equal(settled, false);
   first.options.onDismiss(); assert.deepEqual(await pending, printer);

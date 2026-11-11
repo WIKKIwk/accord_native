@@ -6,7 +6,7 @@ import { WorkerSheetCloseContext } from './workerSheetContext';
 
 function WorkerPrinterPicker({ select }: { select: (value: PreparationDeviceSelection | null) => void }) {
   const close = useContext(WorkerSheetCloseContext);
-  return <PreparationPrinterPicker emptyLabel="Bluetooth printer topilmadi" select={value => { select(value); close?.(); }} />;
+  return <PreparationPrinterPicker title="Bluetooth printer" emptyLabel="Bluetooth printer topilmadi" select={value => { select(value); close?.(); }} />;
 }
 export function useWorkerPrinterSelector(current: () => boolean) {
   const sheet = useNativeSheet(), pending = useRef<((value: PreparationDeviceSelection | null) => void) | null>(null);
