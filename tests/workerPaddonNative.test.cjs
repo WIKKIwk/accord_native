@@ -22,9 +22,33 @@ function native(h) {
   h.files['components/WorkerOrderControls'] = { WorkerOrderButton: 'Action' };
   h.files['components/WorkerPaddonWip'] = { WorkerPaddonWipCard: 'WipCard', WorkerPaddonWipContent: 'WipContent' };
   h.files['components/useWorkerColors'] = { useWorkerColors: () => ({ background: 'bg', surface: 'surface' }) };
+  h.files['../modules/accord-list-scroll/src/AccordListScrollReader'] = { AccordListScrollReader: 'ListScrollReader' };
   const render = (Component, props) => { runner.begin(); const tree = Component(props); runner.flush(); return tree; };
   return { render, runner };
 }
+test('iOS Paddon scan activation targets the inline camera while preserving the native List and row swipe actions', async () => {
+  const h = await setup('detail', 'ios'), n = native(h);
+  h.paddons.get('P1').items = [batch('A')]; await h.model.controller.load(); h.render();
+  h.files['components/useWorkerPaddonDetail'] = { useWorkerPaddonDetail: () => h.model };
+  const Component = h.load('components/WorkerPaddonDetail.ios').WorkerPaddonDetail;
+  try {
+    let tree = n.render(Component, h.props);
+    assert.equal(node(tree, 'ListScrollReader').props.targetID, '');
+    assert(node(tree, 'List')); assert(node(tree, 'SwipeActions.Actions'));
+    node(tree, 'Action', row => row.props.label === 'worker.paddon.add_wip').props.onPress(); h.render(); tree = n.render(Component, h.props);
+    const targetID = node(tree, 'ListScrollReader').props.targetID;
+    assert.equal(targetID, 'accord-paddon-inline-camera');
+    const cameraRow = node(tree, 'VStack', row => !!node(row, 'WorkerPaddonCamera'));
+    assert.deepEqual(cameraRow.props.modifiers, [{ name: 'id', args: [targetID] }]);
+    h.model.controller.clearFeedback(); h.render(); tree = n.render(Component, h.props);
+    assert.equal(node(tree, 'ListScrollReader').props.targetID, targetID, 'feedback updates must not request another native scroll');
+    h.model.controller.cancelScan(); h.render(); tree = n.render(Component, h.props);
+    assert.equal(node(tree, 'ListScrollReader').props.targetID, ''); assert.equal(node(tree, 'WorkerPaddonCamera'), undefined);
+    assert(node(tree, 'List')); assert(node(tree, 'SwipeActions.Actions'), 'row removal keeps the original native List swipe surface');
+    h.model.controller.startScan(); h.render(); tree = n.render(Component, h.props);
+    assert.equal(node(tree, 'ListScrollReader').props.targetID, targetID, 'a new scan activation restores the target after native cancellation');
+  } finally { n.runner.dispose(); h.dispose(); }
+});
 // @v2-test test/aparatchi_paddons_test.dart
 for (const platform of ['ios', 'android']) {
   test(`${platform}: native detail actions reach the real scan/review controller and stop exposing a retired account`, async () => {
