@@ -1,6 +1,36 @@
 const assert = require('node:assert/strict'), test = require('node:test');
 const { harness, nodes, main, buttons, card, blocking } = require('./support/workerOrderScreen.cjs');
 
+for (const platform of ['ios', 'android']) {
+  const automatic = (extra = {}, locale = 'uz') => harness(platform, {
+    control: { allowed_actions: ['start'] }, interaction: { mode: 'fresh_start', blocking_reason_code: '', qolip_mode: 'scan_required', qolip_automatic_confirmation: true },
+    sections: { qolips: { status: 'ready', data: { qolip: { required_qolips: [], sets: [], blocking_reason_code: 'qolip_scan_required' } } } }, ...extra,
+  }, locale);
+  for (const locale of ['uz', 'en', 'ru', 'ur']) test(`${platform}/${locale}: automatic unassigned molds show their source warning and zero progress`, () => {
+    const h = automatic({}, locale), tree = h.render();
+    const header = nodes(tree, node => node.type === 'WorkerExpansion' && node.props.title === h.p('worker.molds'))[0];
+    assert.equal(header.props.count, h.p('worker.mold.progress', { scanned: 0, required: 0 }));
+    assert.equal(header.props.onPress, undefined);
+    const warning = nodes(tree, node => node.type === 'Text' && node.props.accessibilityRole === 'alert')[0];
+    assert.equal(warning.props.children, h.p('worker.mold.requirements.empty'));
+    const start = buttons(tree).find(button => button.props.label === h.p('worker.action.start')); assert.equal(start.props.disabled, true);
+  });
+  test(`${platform}: loading mold requirements do not claim the product has no molds`, () => {
+    const h = automatic({ sections: { qolips: { status: 'loading' } } }), tree = h.render();
+    const messages = nodes(tree, node => node.type === 'Text').map(node => node.props.children);
+    assert(!messages.includes(h.p('worker.mold.requirements.empty')));
+    assert(messages.includes(h.p('qolip.start.auto.checking')));
+  });
+  test(`${platform}: retained mold warning and counter stay coherent during control recovery`, () => {
+    const h = automatic(); h.render(); h.setFresh(false);
+    h.bootstrap.sections.qolips = { status: 'error', error: 'New transient read failure' };
+    const tree = h.render(), header = nodes(tree, node => node.type === 'WorkerExpansion' && node.props.title === h.p('worker.molds'))[0];
+    assert.equal(header.props.count, '0/0 ta');
+    assert(nodes(tree, node => node.type === 'Text' && node.props.children === h.p('worker.mold.requirements.empty')).length);
+    assert.equal(nodes(tree, node => node.type === 'Text' && node.props.children === 'New transient read failure').length, 0);
+  });
+}
+
 // V2 read_only_helpers:603-706 and start_card:319-377,828-1265.
 // Candidate-list permission does not itself make the action area visible.
 const cases = [

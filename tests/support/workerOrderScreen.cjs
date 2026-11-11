@@ -21,6 +21,9 @@ const wording = load('workerOrderText.ts', { './shared/localization/catalog.json
 const rules = load('workerOrderLogic.ts', { './workerControlsApi': { cancelStartControl: () => null, temporaryPauseControl: () => null } });
 const scope = load('sessionReadScope.ts');
 const controls = load('workerControlsApi.ts', { './authorizedFetch': {}, './sessionReadScope': scope });
+const paintModel = load('boyoqchi/returnedPaintModel.ts', { '../workerControlsApi': controls });
+const paintRules = load('boyoqchi/returnedPaintRules.ts', { '../workerOrderLogic': rules, './returnedPaintModel': paintModel });
+const paintReport = load('workerReturnedPaint.ts', { './workerOrderLogic': rules, './boyoqchi/returnedPaintModel': paintModel, './boyoqchi/returnedPaintRules': paintRules });
 const reclose = load('workerOrderReclose.ts', { './workerControlsApi': controls, './sessionReadScope': scope });
 const card = load('workerOrderCardState.ts'), blocking = load('workerOrderBlocking.ts'), materials = load('workerMaterialPresentation.ts');
 const fab = load('workerFabQr.ts', { './workerControlsApi': controls, './workerOrderLogic': rules,
@@ -34,9 +37,9 @@ const instructions = load('workerOrderRezkaInstructions.ts', { './workerApi': ap
 const native = new Proxy({}, { get: (_target, key) => String(key) });
 const row = barcode => ({ barcode, order_id: '0198', apparatus: 'apparatus:default:bosma_8', execution_status: 'ready' });
 function harness(platform, input = {}, locale = 'uz') {
-  const station = 'apparatus:default:bosma_8', values = new Map(), effects = [], actions = [], notices = [], closed = [], preflights = [];
+  const station = 'apparatus:default:bosma_8', values = new Map(), effects = [], actions = [], notices = [], closed = [], preflights = [], alerts = [], paintUploads = [], paintDeletes = [], sheetContents = [];
   let cursor = 0, refCursor = 0, fresh = input.fresh !== false, mergeOptions, mergeFlow, savedPresentation = null, readScope = 'scope';
-  const refs = [], layouts = [];
+  const refs = [], layouts = [], layoutDeps = []; let layoutCursor = 0;
   const p = (key, parameters) => localize.productionText(key, locale, parameters);
   const text = { locale, p, t: value => wording.workerOrderText(value, locale) };
   const interaction = { mode: 'paused', start_materials_mode: 'hidden', material_intake_allowed: true,
@@ -54,15 +57,33 @@ function harness(platform, input = {}, locale = 'uz') {
     react: { useState(initial) { const name = stateNames[cursor++]; if (!values.has(name)) values.set(name, Object.hasOwn(overrides, name) ? overrides[name] : typeof initial === 'function' ? initial() : initial);
       return [values.get(name), value => values.set(name, typeof value === 'function' ? value(values.get(name)) : value)]; },
       useRef: value => refs[refCursor++] ?? (refs[refCursor - 1] = { current: value }), useContext: () => null, useCallback: callback => callback,
-      useEffect: callback => effects.push(callback), useLayoutEffect: callback => layouts.push(callback), useEffectEvent: callback => callback },
-    'react-native': { ...native, ActivityIndicator: 'ActivityIndicator', Alert: { alert() {} }, AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) }, Platform: { OS: platform, Version: 26 },
+      useEffect: callback => effects.push(callback), useLayoutEffect: (callback, deps) => {
+        const index = layoutCursor++, previous = layoutDeps[index];
+        if (!deps || !previous || deps.some((value, index) => !Object.is(value, previous[index]))) { layoutDeps[index] = deps; layouts.push(callback); }
+      }, useEffectEvent: callback => callback },
+    'react-native': { ...native, ActivityIndicator: 'ActivityIndicator', Alert: { alert: (...args) => alerts.push(args) }, AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) }, Platform: { OS: platform, Version: 26 },
       PlatformColor: value => value, StyleSheet: { create: value => value }, View: 'View', Text: 'Text', ScrollView: 'ScrollView', Pressable: 'Pressable' },
     '@expo/ui': { Host: 'Host', TextInput: 'NativeInput', useNativeState: initial => ({ value: initial, set() {} }) },
     'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })] },
     'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },
-    './sessionReadScope': { sessionReadScope: () => readScope }, './nativeSheet': { useNativeSheet: () => ({ open() {}, close() {}, update() {}, isOpen: () => false }) },
+    './sessionReadScope': { sessionReadScope: () => readScope }, './nativeSheet': { useNativeSheet: () => ({ open(content) { sheetContents.push(content); }, close() {}, update(content) { sheetContents.push(content); }, isOpen: () => false }) },
     './workerOrderLogic': { ...rules, validOrderControl: () => fresh, validWorkerOrderControl: () => fresh }, './workerOrderCardState': card, './workerOrderBlocking': blocking,
     './shared/mobileApiException': load('shared/mobileApiException.ts'),
+    './shared/localization': localize,
+    './workerMoldPresentation': load('workerMoldPresentation.ts'),
+    './components/workerOrderLayout': load('components/workerOrderLayout.ts'),
+    './workerReturnedPaint': paintReport,
+    './workerCompletion': load('workerCompletion.ts'),
+    './boyoqchi/BoyoqchiFormContent': { ReturnedPaintField: 'PaintField', ReturnedPaintNamedFieldDialog: 'PaintNamedDialog' },
+    './boyoqchi/BoyoqchiImage': { BoyoqchiImage: 'PaintImage' },
+    './boyoqchi/returnedPaintApi': {
+      uploadReturnedPaintImage: async (...args) => { paintUploads.push(args); return input.uploadPaint ? input.uploadPaint(...args) : { image_id: 'new-image', image_url: '/new-image', image_name: 'photo.jpg', image_mime: 'image/jpeg', image_size_bytes: 1 }; },
+      deleteReturnedPaintImage: async (...args) => { paintDeletes.push(args); return input.deletePaint?.(...args); },
+    },
+    './workerReturnedPaintPhoto': {
+      selectWorkerReturnedPaintPhoto: async (...args) => input.pickPaintPhoto ? input.pickPaintPhoto(...args) : { uri: 'file:photo', width: 10, height: 10 },
+      prepareWorkerReturnedPaintPhoto: async (...args) => input.preparePaintPhoto ? input.preparePaintPhoto(...args) : { bytes: new Uint8Array([1]), mime: 'image/jpeg', filename: 'photo.jpg' },
+    },
     './workerOrderMerge': merge, './workerFabQrReads': { workerFabQrReads: () => input.mergeReads },
     './workerOrderPresentation': presentation,
     './workerDetailRecovery': detailRecovery,
@@ -105,8 +126,8 @@ function harness(platform, input = {}, locale = 'uz') {
     apparatus: { id: station, name: '8 ta rangli bosma apparat', operation: 'print', ...input.apparatus },
     apparatusCatalog: [{ id: 'upstream', name: 'Upstream' }], queueCursor: { epoch: 'epoch', rev: 1 }, busyOrderTitle: 'shashoqcha',
     onNotice: message => notices.push(message), onClose: () => closed.push(true), onChanged() {} };
-  return { p, values, props, bootstrap, effects, actions, notices, closed, preflights, setFresh: value => { fresh = value; }, setScope: value => { readScope = value; },
-    render: () => { cursor = 0; refCursor = 0; effects.length = 0; layouts.length = 0; const tree = mod.exports.OrderScreen(props); layouts.forEach(effect => effect()); return tree; } };
+  return { p, values, props, bootstrap, effects, actions, notices, closed, preflights, alerts, paintUploads, paintDeletes, sheetContents, setFresh: value => { fresh = value; }, setScope: value => { readScope = value; },
+    render: () => { cursor = 0; refCursor = 0; layoutCursor = 0; effects.length = 0; layouts.length = 0; const tree = mod.exports.OrderScreen(props); layouts.forEach(effect => effect()); return tree; } };
 }
 function nodes(tree, predicate) {
   if (!tree || typeof tree !== 'object') return [];

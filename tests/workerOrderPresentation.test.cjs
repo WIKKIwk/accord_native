@@ -92,11 +92,12 @@ test('stage history retains the current order, identity, apparatus labels and na
 });
 
 const native = new Proxy({}, { get: (_target, key) => String(key) });
+const layout = load('components/workerOrderLayout.ts');
 const modifiers = new Proxy({}, { get: (_target, key) => key === 'shapes'
   ? { rectangle: () => ({ type: 'rectangle' }), roundedRectangle: value => ({ type: 'roundedRectangle', ...value }) } : (...args) => ({ name: String(key), args }) });
 const mocks = { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
   './useBaseTheme': { useBaseTheme: () => ({ colors: { onSurface: 'label', surfaceContainerHighest: 'surface' } }) },
-  'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, View: 'View' }, './BaseHost': { BaseHost: 'Host' } };
+  'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, View: 'View' }, './BaseHost': { BaseHost: 'Host' }, './workerOrderLayout': layout };
 const byId = (tree, id) => nodes(tree, item => item.props.modifiers?.some(modifier => modifier.name === 'accessibilityIdentifier' && modifier.args[0] === id))[0];
 
 test('native iOS summary expands all metrics and six production stages, keeping apparatus rows actionable', () => {
@@ -166,8 +167,10 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
       const button = nodes(tree, item => item.type === 'Button')[0];
       assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[index]);
       assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonBorderShape').args[0], 'capsule');
-      assert.equal(nodes(tree, item => item.props.modifiers?.some(modifier => modifier.name === 'frame'
-        && ['height', 'minHeight'].some(key => key in modifier.args[0]))).length, 0);
+      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'controlSize').args[0], 'large');
+      assert.deepEqual(button.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { maxWidth: Infinity, minHeight: 48 });
+      assert.equal(nodes(button.props.children, item => item.props.modifiers?.some(modifier => modifier.name === 'frame'
+        && ['height', 'minHeight', 'maxHeight'].some(key => key in modifier.args[0]))).length, 0, 'native control height must not be added again to the label');
     }
   }
 });
@@ -183,8 +186,46 @@ test('native order identity keeps image preview and close actions with the cache
   assert.deepEqual(calls, ['image', 'close']);
   const thumbnail = nodes(tree, item => item.type === 'Thumbnail')[0];
   assert.equal(thumbnail.props.session, h.props.session); assert.equal(thumbnail.props.imageId, 'image');
+  assert.equal(thumbnail.props.size, 48);
+  assert.deepEqual(byId(tree, 'worker-order-close').props.modifiers.find(modifier => modifier.name === 'frame').args[0], { width: 44, height: 44 });
   assert.equal(text(tree).includes('0337'), true); assert.equal(text(tree).includes('Tea'), true);
   const withHistory = WorkerOrderIdentity({ ...h.props, onScannedWips: () => calls.push('scanned') });
   nodes(withHistory, item => item.props.systemImage === 'qrcode.viewfinder')[0].props.onPress();
   assert.equal(calls.at(-1), 'scanned');
+});
+
+test('disclosure rows use an intrinsic 44pt grid with aligned tabular counters and stable chevron space', () => {
+  const { WorkerExpansion } = load('components/WorkerExpansion.ios.tsx', mocks);
+  let presses = 0;
+  for (const actionable of [false, true]) {
+    const tree = WorkerExpansion({ title: 'Biriktirilgan homashyolar', count: '0/1', expanded: false, onPress: actionable ? () => presses++ : undefined });
+    const row = nodes(tree, item => item.type === 'HStack')[0], counter = nodes(tree, item => item.type === 'Text' && text(item) === '0/1')[0];
+    assert.equal(row.props.spacing, 8);
+    assert.deepEqual(row.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { maxWidth: Infinity, minHeight: 44, alignment: 'leading' });
+    assert.ok(counter.props.modifiers.some(modifier => modifier.name === 'monospacedDigit'));
+    assert.deepEqual(counter.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { minWidth: 44, alignment: 'trailing' });
+    const trailing = nodes(tree, item => item.type === (actionable ? 'Image' : 'Spacer'))[0];
+    assert.deepEqual(trailing.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { width: 16 });
+    assert.equal(nodes(tree, item => item.type === 'Button').length, actionable ? 1 : 0);
+    if (actionable) nodes(tree, item => item.type === 'Button')[0].props.onPress();
+  }
+  assert.equal(presses, 1);
+});
+
+test('preflight outcomes render immediately on the same control grid without width measurement or extra label height', () => {
+  const controls = load('components/WorkerOrderControls.ios.tsx', mocks);
+  const { WorkerPreflightButton } = load('components/WorkerPreflightButton.ios.tsx', { './WorkerOrderControls': controls });
+  const calls = [];
+  for (const [label, outlined] of [['Rang chiqarish', false], ['Rang chiqdi', false], ['Chiqmadi', true]]) {
+    const element = WorkerPreflightButton({ label, outlined, disabled: true, onPress: () => calls.push(label) }), tree = element.type(element.props);
+    assert.equal(tree.type, 'Host'); assert.equal(tree.props.matchContents.vertical, true);
+    const button = nodes(tree, item => item.type === 'Button')[0];
+    assert.ok(button); assert.equal(nodes(button, item => item.type === 'Text')[0].props.children, label); assert.equal(nodes(tree, item => item.props.onLayout).length, 0);
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'disabled').args[0], true);
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], outlined ? 'glass' : 'glassProminent');
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'frame').args[0].minHeight, 48);
+    assert.equal(nodes(button.props.children, item => item.props.modifiers?.some(modifier => modifier.name === 'frame' && 'height' in modifier.args[0])).length, 0);
+    button.props.onPress();
+  }
+  assert.deepEqual(calls, ['Rang chiqarish', 'Rang chiqdi', 'Chiqmadi']);
 });

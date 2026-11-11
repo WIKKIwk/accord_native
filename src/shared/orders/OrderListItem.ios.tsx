@@ -14,6 +14,7 @@ const statusColors: Partial<Record<OrderCardTone, ColorValue>> = {
   in_progress: PlatformColor('systemGreen'), waiting_next_stage: PlatformColor('systemBlue'),
   paused: PlatformColor('systemOrange'), frozen: PlatformColor('systemRed'), issue: PlatformColor('systemRed'),
   completed: PlatformColor('systemGreen'),
+  history_partial: PlatformColor('systemOrange'), history_completed: PlatformColor('systemGreen'),
 };
 
 const fallbackBackgrounds: Partial<Record<OrderCardTone, ShapeStyle>> = {
@@ -27,9 +28,10 @@ const fallbackBackgrounds: Partial<Record<OrderCardTone, ShapeStyle>> = {
 export function OrderListItem({ headline, supportingText, statusText, statusDetail, onPress, onLongPress, session, orderId, imageId, imageActive, cardTone = 'neutral', fontFamily, headlineFontFamily }: Props) {
   const colors = useWorkerColors();
   const queueStatus = statusText !== undefined;
-  const status = cardTone === 'history_completed' ? { label: 'Tugallangan', color: statusColors.completed! }
+  const status = queueStatus && statusText ? { label: statusText, color: statusColors[cardTone] ?? PlatformColor('secondaryLabel') }
+    : cardTone === 'history_completed' ? { label: 'Tugallangan', color: statusColors.completed! }
     : cardTone === 'history_partial' ? { label: 'Qisman', color: statusColors.paused! }
-    : queueStatus && statusText ? { label: statusText, color: statusColors[cardTone] ?? PlatformColor('secondaryLabel') } : null;
+    : null;
   const fallbackBackground = !status && !queueStatus ? fallbackBackgrounds[cardTone] : undefined;
   const rowModifiers = [alignmentGuide('listRowSeparatorLeading', 56), listRowInsets({ top: 8, bottom: 8, leading: 16, trailing: 16 })];
   const modifiers = fallbackBackground ? [] : rowModifiers;

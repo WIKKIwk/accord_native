@@ -1,14 +1,13 @@
 import { Host, TextInput as NativeInput, useNativeState } from '@expo/ui';
-import { Image } from 'expo-image';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
 import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
-import { Alert, AppState, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Platform, PlatformColor, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { adminBosmaAstatkaReport } from './workerControlsApi';
 import { MobileApiException } from './shared/mobileApiException';
+import { extensionText } from './shared/localization';
 import { adminPrintPreflight } from './workerPrintPreflight';
 import { adminMaterialStartDeliveryCandidates, adminReceiveMaterialForStart, materialDeliveryIdempotencyKey } from './workerMaterialDelivery';
 import { adminRawMaterialAssignments, adminRawMaterialIntakeCandidates, adminReceiveRawMaterialForActiveOrder } from './workerRawMaterials';
@@ -22,7 +21,6 @@ import { adminLookupOpeningWip } from './workerOpeningWip';
 import { WorkerDetailRecovery } from './workerDetailRecovery';
 import { readWorkerDetailSnapshot, workerDetailInitialBootstrap, workerDetailSectionRetryable } from './workerDetailRecoveryRead';
 import { useNativeSheet } from './nativeSheet';
-import { authorizedFetch } from './authorizedFetch';
 import { WorkerOrderImage } from './components/WorkerOrderHeader';
 import { WorkerInitialOrderSwitch } from './components/WorkerInitialOrderSwitch';
 import { WorkerOrderIdentity } from './components/WorkerOrderIdentity';
@@ -42,6 +40,8 @@ import { WorkerAssignedMaterialQr } from './components/WorkerAssignedMaterialQr'
 import { MaterialLinkRequestPanel, WorkerMaterialUsePanel } from './components/WorkerMaterialPanels';
 import { WorkerOrderAlertButton } from './components/WorkerOrderAlertButton';
 import { useWorkerOrderText } from './components/useWorkerOrderText';
+import { WORKER_ORDER_LAYOUT as GRID } from './components/workerOrderLayout';
+import { workerMoldPresentation, workerMoldBlockingText, workerMoldCountText } from './workerMoldPresentation';
 import { workerCompletionMode } from './workerCompletion';
 import { legacyLaminationReportMetrics } from './workerLegacyLaminationReport';
 import { adminLaminatsiyaAstatkaReport } from './workerLaminationReportApi';
@@ -59,7 +59,13 @@ import { WorkerPreflightButton } from './components/WorkerPreflightButton';
 import { WorkerFormField as PlatformField } from './components/WorkerFormField';
 import { WorkerExpansion as Expansion } from './components/WorkerExpansion';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
-import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, returnedPaintItemsFromDraft, runningFreezeRequest, validWorkerOrderControl, workerControlCoversReceipt, workerControlIsUnversioned, type QueueCursor } from './workerOrderLogic';
+import { ReturnedPaintField, ReturnedPaintNamedFieldDialog } from './boyoqchi/BoyoqchiFormContent';
+import { BoyoqchiImage } from './boyoqchi/BoyoqchiImage';
+import { deleteReturnedPaintImage, uploadReturnedPaintImage } from './boyoqchi/returnedPaintApi';
+import type { ReturnedPaintImage } from './boyoqchi/returnedPaintModel';
+import { prepareWorkerReturnedPaintPhoto, selectWorkerReturnedPaintPhoto } from './workerReturnedPaintPhoto';
+import { workerPaintValue, workerPaintValueKey, workerReturnedPaintReport } from './workerReturnedPaint';
+import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, runningFreezeRequest, validWorkerOrderControl, workerControlCoversReceipt, workerControlIsUnversioned, type QueueCursor } from './workerOrderLogic';
 import { workerOrderDetailFromSnapshot, type Apparatus, type QueueOrder } from './workerApi';
 import { workerOrderBlockingText } from './workerOrderBlocking';
 import { workerOrderCardState, workerStartMaterialStatus } from './workerOrderCardState';
@@ -82,7 +88,7 @@ function NativeButton(props: ComponentProps<typeof PlatformButton>) {
 function Field(props: ComponentProps<typeof PlatformField>) {
   const { t } = useWorkerOrderText(); return <PlatformField {...props} label={t(props.label)} />;
 }
-type ScanKind = 'material' | 'qolip' | 'input' | 'paintPhoto';
+type ScanKind = 'material' | 'qolip' | 'input';
 const numberValue = (v: string) => Number(v.trim().replace(',', '.'));
 function barcodeFromQr(raw: string) {
   const value = raw.trim();
@@ -113,6 +119,10 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const colors = useWorkerColors();
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
   const sheetCard = Platform.OS === 'ios' ? PlatformColor('secondarySystemGroupedBackground') : colors.surface;
+  const errorTextStyle = [styles.error, { color: colors.error }];
+  const successTextStyle = [styles.success, Platform.OS === 'ios' && iosStyles.success];
+  const cardSectionStyle = [styles.sectionGroup, Platform.OS === 'ios' && iosStyles.sectionGroup];
+  const cardSeparatorStyle = Platform.OS === 'ios' ? iosStyles.separatedSection : undefined;
   const closeSheet = useContext(WorkerSheetCloseContext) ?? onClose;
   const [detail, setDetail] = useState<Obj | null>(null);
   const [detailReadScope, setDetailReadScope] = useState('');
@@ -147,10 +157,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const [imageOpen, setImageOpen] = useState(false);
   const [scannedWipsStage, setScannedWipsStage] = useState('');
   const [paintImageId, setPaintImageId] = useState('');
-  const [paintImageExpanded, setPaintImageExpanded] = useState(false);
+  const [paintImageMetadata, setPaintImageMetadata] = useState<ReturnedPaintImage | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
-  const camera = useRef<CameraView>(null);
   const [permission, askPermission] = useCameraPermissions();
   const [selected, setSelected] = useState('');
   const [switchProgress, setSwitchProgress] = useState<'complete' | 'astatka' | null>(null);
@@ -170,8 +178,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const paintSheet = useNativeSheet();
   const [paintUsage, setPaintUsage] = useState<'rasxot' | 'astatka'>('rasxot');
   const [paintDynamic, setPaintDynamic] = useState<Record<string, string[]>>({});
-  const [newPaintField, setNewPaintField] = useState('');
-  const newPaintFieldValue = useNativeState('');
+  const [paintFieldDialog, setPaintFieldDialog] = useState<{ target: string; usage: 'rasxot' | 'astatka' } | null>(null);
+  const paintPhotoPending = useRef(false);
   const [loadedDraftScope, setLoadedDraftScope] = useState('');
   const [paint, setPaint] = useState<Record<string, string>>({});
   const [selectedQolipSet, setSelectedQolipSet] = useState('');
@@ -247,17 +255,18 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     let current = true;
     loadReturnedPaintDraft(draftScope).then(draft => {
       if (!current) return;
-      if (draft) { setPaint(draft.values); setPaintDynamic(draft.fields); setPaintUsage(draft.usage); setPaintImageId(draft.imageId); }
-      else { setPaint({}); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintImageId(''); }
+      setPhotoBusy(false); setPaintFieldDialog(null);
+      if (draft) { setPaint(draft.values); setPaintDynamic(draft.fields); setPaintUsage(draft.usage); setPaintImageId(draft.imageId); setPaintImageMetadata(draft.image ?? null); }
+      else { setPaint({}); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintImageId(''); setPaintImageMetadata(null); }
       setLoadedDraftScope(draftScope);
     }).catch(() => { if (current) { setError('Bo‘yoq hisobotini qurilmadan o‘qib bo‘lmadi.'); setLoadedDraftScope(draftScope); } });
     return () => { current = false; };
   }, [draftScope]);
   useEffect(() => {
     if (loadedDraftScope !== draftScope) return;
-    void saveReturnedPaintDraft(draftScope, { values: paint, fields: paintDynamic, usage: paintUsage, imageId: paintImageId })
+    void saveReturnedPaintDraft(draftScope, { values: paint, fields: paintDynamic, usage: paintUsage, imageId: paintImageId, ...(paintImageMetadata ? { image: paintImageMetadata } : {}) })
       .catch(() => { if (screenMounted.current) setError('Bo‘yoq hisobotini qurilmada saqlab bo‘lmadi.'); });
-  }, [draftScope, loadedDraftScope, paint, paintDynamic, paintUsage, paintImageId]);
+  }, [draftScope, loadedDraftScope, paint, paintDynamic, paintUsage, paintImageId, paintImageMetadata]);
 
   const load = useCallback(async (ownerCurrent: () => boolean) => {
     const version = ++loadVersion.current;
@@ -503,57 +512,42 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     return () => { current = false; };
   }, [session, apparatusId, orderId, scanningRequired, operation, interaction.material_intake_allowed, controlEpoch, controlRevision, materialReadKey]);
 
-  async function openScanner(kind: ScanKind) {
-    const result = permission?.granted ? permission : await askPermission();
-    if (!result.granted) { setError('QR skanerlash uchun kamera ruxsati kerak.'); return; }
-    setCameraReady(false);
-    setScanner(kind);
-  }
-  async function uploadPaintPhoto(uri: string, mime: string, fileName: string) {
-      const blob = await (await fetch(uri)).blob();
-      if (!blob.size || blob.size > 6 * 1024 * 1024) throw new Error('Rasm hajmi 6 MB dan oshmasligi kerak.');
-      const params = new URLSearchParams({ order_id: orderId, apparatus: apparatusId });
-      const response = await authorizedFetch(session, `/v1/mobile/returned-paint/images?${params}`, { method: 'POST', headers: { 'Content-Type': mime, 'x-file-name': fileName }, body: blob });
-      if (!response.ok) throw new Error('Bo‘yoq rasmi yuklanmadi.');
-      const payload = await response.json();
-      const id = typeof payload.image?.image_id === 'string' ? payload.image.image_id.trim() : '';
-      if (!id) throw new Error('Rasm javobi noto‘g‘ri.');
-      if (paintImageId && paintImageId !== id) void authorizedFetch(session, `/v1/mobile/returned-paint/images?id=${encodeURIComponent(paintImageId)}`, { method: 'DELETE' }).catch(() => {});
-      setPaintImageId(id); setScanner(null); setSuccess('Bo‘yoq rasmi yuklandi.');
-  }
-  async function takePaintPhoto() {
-    if (photoBusy || !cameraReady || !camera.current) return;
-    setPhotoBusy(true); setError('');
+  const paintPhotoGeneration = useRef(0);
+  useLayoutEffect(() => {
+    paintPhotoGeneration.current++;
+    paintPhotoPending.current = false;
+  }, [draftScope, paintEditor]);
+  const paintPhotoError = (failure: unknown, fallback: string) => failure instanceof Error && failure.name === 'MobileApiException' ? failure.message : fallback;
+  async function pickPaintPhoto(source: 'camera' | 'gallery') {
+    if (photoBusy || paintPhotoPending.current || !isCurrent()) return;
+    paintPhotoPending.current = true;
+    const generation = paintPhotoGeneration.current;
+    const current = () => isCurrent() && generation === paintPhotoGeneration.current;
     try {
-      const photo = await camera.current.takePictureAsync({ quality: 0.7 });
-      if (!photo?.uri) throw new Error('Rasm olinmadi.');
-      await uploadPaintPhoto(photo.uri, 'image/jpeg', 'returned-paint.jpg');
-    } catch (e) { setError(e instanceof Error ? e.message : 'Rasm yuklanmadi.'); setScanner(null); }
-    finally { setPhotoBusy(false); }
-  }
-  async function pickPaintPhoto() {
-    if (photoBusy) return;
-    setPhotoBusy(true); setError('');
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-      if (result.canceled) return;
-      const photo = result.assets[0];
-      const mime = photo.mimeType?.toLowerCase() ?? 'image/jpeg';
-      const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif' };
-      if (!photo.uri || !extensions[mime]) throw new Error('Rasm formati qo‘llab-quvvatlanmaydi.');
-      await uploadPaintPhoto(photo.uri, mime, `returned-paint.${extensions[mime]}`);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Rasm yuklanmadi.'); }
-    finally { setPhotoBusy(false); }
+      const photo = await selectWorkerReturnedPaintPhoto(source, current);
+      if (!photo || !current()) return;
+      setPhotoBusy(true); setError('');
+      const prepared = await prepareWorkerReturnedPaintPhoto(photo, current);
+      if (!prepared || !current()) return;
+      const image = await uploadReturnedPaintImage(session, { orderId, apparatus: apparatusId, ...prepared });
+      if (!current()) return;
+      setPaintImageId(image.image_id); setPaintImageMetadata(image);
+      if (paintImageId && paintImageId !== image.image_id) {
+        try { await deleteReturnedPaintImage(session, paintImageId, orderId); } catch { /* The new image is already committed to this draft. */ }
+      }
+    } catch (failure) { if (current()) setError(paintPhotoError(failure, 'Rasm yuklanmadi')); }
+    finally { if (current()) { paintPhotoPending.current = false; setPhotoBusy(false); } }
   }
   async function removePaintPhoto() {
-    if (!paintImageId || photoBusy) return;
-    setPhotoBusy(true);
+    if (!paintImageId || photoBusy || paintPhotoPending.current || !isCurrent()) return;
+    const generation = paintPhotoGeneration.current;
+    const current = () => isCurrent() && generation === paintPhotoGeneration.current;
+    paintPhotoPending.current = true; setPhotoBusy(true); setError('');
     try {
-      const response = await authorizedFetch(session, `/v1/mobile/returned-paint/images?id=${encodeURIComponent(paintImageId)}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Rasmni olib tashlab bo‘lmadi.');
-      setPaintImageId('');
-    } catch (e) { setError(e instanceof Error ? e.message : 'Rasmni olib tashlab bo‘lmadi.'); }
-    finally { setPhotoBusy(false); }
+      await deleteReturnedPaintImage(session, paintImageId, orderId);
+      if (current()) { setPaintImageId(''); setPaintImageMetadata(null); }
+    } catch (failure) { if (current()) setError(paintPhotoError(failure, 'Rasm olib tashlanmadi')); }
+    finally { if (current()) { paintPhotoPending.current = false; setPhotoBusy(false); } }
   }
   async function onScan(value: string, kind: ScanKind | null = scanner) {
     if (kind === 'input') {
@@ -748,17 +742,24 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     const fullReport = !completionIssue && !safeStopIssue && (isAstatka || (action === 'complete' && (switchProgress === 'complete' || control.complete_requires_full_report !== false || !!closingOutputId)));
     const fields = [kg, meter, bobina];
     if (needsOutput && fields.some(x => !x.trim() || !Number.isFinite(numberValue(x)) || numberValue(x) <= 0)) { setDescriptionRevealed(true); setError('Metr, vazn va bobina uchun noldan katta qiymatlarni kiriting.'); return; }
-    const returnedPaintItems = returnedPaintItemsFromDraft(paint, paintDynamic);
-    const imageOnly = !!paintImageId && returnedPaintItems.length === 0;
+    const returnedPaintReport = workerReturnedPaintReport(paint, paintDynamic, paintImageId);
+    const returnedPaintItems = returnedPaintReport.items;
+    if (fullReport && operation === 'print' && returnedPaintReport.error) {
+      setDescriptionRevealed(true); setError(p(returnedPaintReport.error.key, returnedPaintReport.error.values)); return;
+    }
     let laminationMetrics: ReturnType<typeof legacyLaminationReportMetrics> | null = null;
     if (fullReport && laminationReport) {
       try { laminationMetrics = legacyLaminationReportMetrics(isAstatka, { wip: leftoverWip, film: leftoverFilm, waste }); }
       catch (reason) { setDescriptionRevealed(true); setError(p(reason instanceof Error ? reason.message : 'worker.daily.invalid_number')); return; }
     }
-    if (fullReport && !laminationReport && (!waste.trim() || !Number.isFinite(numberValue(waste)) || numberValue(waste) < 0 || (!closingOutputId && !isAstatka && numberValue(waste) === 0) || (!imageOnly && ['rasxot','astatka'].some(usage => {
-      const values = returnedPaintItems.filter(item => item.usage === usage).flatMap(item => Object.values(item.values));
-      return values.length < 3 || values.some(value => !Number.isFinite(numberValue(value)) || numberValue(value) < 0);
-    })))) { setDescriptionRevealed(true); setError('Chiqindi va bo‘yoq rasmini yoki har bir bo‘lim uchun kamida uchta to‘g‘ri qiymatni kiriting.'); return; }
+    if (fullReport && !laminationReport) {
+      const amount = numberValue(waste);
+      const wasteError = !waste.trim()
+        ? closingOutputId || isAstatka ? p('worker.daily.required_field', { label: p('worker.daily.field.total_waste') }) : p('worker.progress.qty.completion_reason')
+        : !Number.isFinite(amount) || amount < 0 ? p('worker.progress.qty.invalid_number')
+        : !closingOutputId && !isAstatka && amount === 0 ? p('worker.progress.qty.completion_reason') : '';
+      if (wasteError) { setDescriptionRevealed(true); setError(wasteError); return; }
+    }
     actionInFlight.current = true;
     loadVersion.current++;
     setControlRetired(true); setBusy(true); setError(''); setSuccess('');
@@ -788,10 +789,10 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       if (safeStopIssue) body.completion_request_note = completion.note;
       if (fullReport && laminationMetrics) Object.assign(body, laminationMetrics, { full_completion_report_required: true });
       else if (fullReport) {
-        const returnInk = returnedPaintItems.filter(item => item.usage === 'astatka').flatMap(item => Object.values(item.values)).reduce((sum, value) => sum + numberValue(value), 0);
+        const returnInk = closingOutputId ? returnedPaintReport.rawReturnInkKg : returnedPaintReport.returnInkKg;
         Object.assign(body, { total_waste: numberValue(waste), full_completion_report_required: true, returned_paint_items: returnedPaintItems });
         if (paintImageId) body.returned_paint_image_id = paintImageId;
-        if (returnedPaintItems.length && (returnInk > 0 || closingOutputId)) body.return_ink_kg = returnInk;
+        if (returnInk !== null) body.return_ink_kg = returnInk;
       }
       if (preview?.customer || order.customer_name) body.customer_name = preview?.customer || order.customer_name;
       const result = isAstatka
@@ -818,7 +819,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       if (action === 'complete' || isAstatka) {
         setLeftoverWip(''); setLeftoverFilm('');
         void saveReturnedPaintDraft(draftScope, { values: {}, fields: {}, usage: 'rasxot', imageId: '' }).catch(() => {});
-        setWaste(''); setAstatkaNote(''); setPaintImageId(''); setPaint({}); setPaintColor(''); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintEditor(false);
+        setWaste(''); setAstatkaNote(''); setPaintImageId(''); setPaintImageMetadata(null); setPaint({}); setPaintColor(''); setPaintDynamic({}); setPaintUsage('rasxot'); setPaintEditor(false);
       }
       const qr = result.progress_batch?.qr_payload;
       if (printFailed) setError('Amal bajarildi, lekin rulon yorlig‘i chop etilmadi.');
@@ -915,6 +916,9 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     rows: currentRows, materialLoading: currentMaterialLoading, materialsError: currentMaterialsError, materialBlockingText: currentMaterialBlockingText,
     intakeCandidates, intakeLoading, intakeError, requiredMaterialCount, matchedMaterialCount,
     requiredQolips, effectiveQolips, automaticQolip, automaticSets, automaticConfirmed: !!automaticConfirmation, moldSetCount: moldSets.size, moldStatus: sections.qolips?.status,
+    moldValidationLoaded: !!qolipValidation, moldBlockingReason: String(qolipValidation?.blocking_reason_code ?? ''),
+    moldReadError: typeof sections.qolips?.error === 'string' ? sections.qolips.error : '',
+    selectedMoldSetId: selectedQolipSet || (automaticSets.length === 1 ? String(automaticSets[0].set_id ?? '') : ''),
     stageId: String(control.stage_node_id ?? ''), mergeLines: workerMergeStateLines(control.rezka_input_lineage ?? [], p),
     rezkaInstructions: workerOrderRezkaInstructions(order, apparatusId, String(control.stage_node_id ?? ''), control.rezka_output_kadr_counts ?? [], p),
     inputVisible: preparationVisible && previousRequired,
@@ -922,6 +926,10 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     inputQr: inputBatch?.qr ?? '',
   });
   const view = presentation.data, cardState = view.cardState;
+  const moldDisplay = workerMoldPresentation({ automatic: view.automaticQolip, status: view.moldStatus, requiredQolips: view.requiredQolips,
+    scannedCodes: view.effectiveQolips, sets: view.automaticSets, selectedSetId: view.selectedMoldSetId || null, confirmed: view.automaticConfirmed,
+    validation: view.moldValidationLoaded ? { blocking_reason_code: view.moldBlockingReason } : null, readError: view.moldReadError });
+  const moldWarning = workerMoldBlockingText(moldDisplay.blocking, p, key => extensionText('qolipReworkText', key, locale));
   const actionsEnabled = synchronized && !busy && !merge.pending;
   const rows = view.rows, materialLoading = view.materialLoading, materialsError = view.materialsError, materialBlockingText = view.materialBlockingText;
   const showIntakeCandidates = cardState.showIntakeCandidates;
@@ -952,6 +960,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   function cancelProgressDialog() {
     if (busy || photoBusy) return;
     if (paintEditor) {
+      setPaintFieldDialog(null);
       if (Platform.OS === 'android') paintSheet.close();
       else if (paintColor) setPaintColor('');
       else setPaintEditor(false);
@@ -961,69 +970,65 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     selectProgressAction('');
     if (closeInitial) closeSheet();
   }
-  function addPaintField(target: string) {
-    const label = newPaintField.trim();
-    if (!label) return;
-    const key = `${paintUsage}:${target}`;
+  function addPaintField(label: string, value: string) {
+    if (!paintFieldDialog || !isCurrent() || photoBusy || busy) return;
+    const { target, usage } = paintFieldDialog, key = `${usage}:${target}`;
+    setPaintFieldDialog(null);
     const existing = paintDynamic[key] ?? [];
-    if (existing.some(value => value.toLowerCase() === label.toLowerCase())) { setError('Bu maydon allaqachon mavjud.'); return; }
+    if (existing.some(item => item.toLowerCase() === label.toLowerCase())) { setError('Bu nom allaqachon qo‘shilgan.'); return; }
     setPaintDynamic(old => ({ ...old, [key]: [...existing, label] }));
-    setNewPaintField(''); newPaintFieldValue.set(''); setError('');
+    const index = (paintOptions.find(option => option.name === target)?.fields.length ?? 0) + existing.length;
+    setPaint(old => ({ ...old, [workerPaintValueKey(key, index, label)]: value })); setError('');
   }
 
   const inlinePaint = Platform.OS !== 'android' && paintEditor;
-  const paintCamera = <View style={styles.cameraScreen}><CameraView ref={camera} style={styles.camera} mode="picture" onCameraReady={() => setCameraReady(true)} /><Text style={styles.cameraText}>{t("Bo‘yoq hisobotini suratga oling")}</Text><NativeButton label={t(photoBusy ? 'Yuklanmoqda…' : 'Suratga olish')} disabled={photoBusy || !cameraReady} variant="filled" onPress={() => { void takePaintPhoto(); }} /><NativeButton label={t("Bekor qilish")} disabled={photoBusy} onPress={() => setScanner(null)} /></View>;
-  const paintToken = paintEditor ? activeSessionToken(session) : null;
-  const paintPhoto = paintImageId && paintToken ? {
-    uri: new URL(`/v1/mobile/returned-paint/images/view?id=${encodeURIComponent(paintImageId)}`, session.baseUrl).toString(),
-    headers: { Authorization: `Bearer ${paintToken}` },
-    cacheKey: JSON.stringify(['returned-paint', session.imageCacheScope, paintImageId]),
+  const paintPhoto: ReturnedPaintImage | null = paintImageId ? paintImageMetadata?.image_id === paintImageId ? paintImageMetadata : {
+    image_id: paintImageId, image_name: '', image_mime: '', image_size_bytes: 0,
+    image_url: `/v1/mobile/returned-paint/images/view?id=${encodeURIComponent(paintImageId)}`,
   } : null;
-  const pickPaintImage = () => Alert.alert(paintImageId ? 'Rasmni almashtirish' : 'Rasm qo‘shish', '', [
-    { text: 'Kamera', onPress: () => { void openScanner('paintPhoto'); } },
-    { text: 'Galereya', onPress: () => { void pickPaintPhoto(); } },
-    { text: 'Bekor qilish', style: 'cancel' },
+  const pickPaintImage = () => Alert.alert('', '', [
+    { text: t('Kamera'), onPress: () => { void pickPaintPhoto('camera'); } },
+    { text: t('Gallery'), onPress: () => { void pickPaintPhoto('gallery'); } },
+    { text: t('Bekor qilish'), style: 'cancel' },
   ]);
+  const paintLocked = () => !isCurrent() || photoBusy || busy;
   const paintBody = paintEditor ? <>
           {paintPhoto && <>
-            <Pressable disabled={inlinePaint} accessibilityRole="button" accessibilityLabel="Rasmni to‘liq ko‘rish" onPress={() => setPaintImageExpanded(true)}>
-              <Image source={paintPhoto} style={styles.paintPreview} contentFit="contain" />
-            </Pressable>
+            <BoyoqchiImage session={session} image={paintPhoto} allowDownload={false} isLocked={() => !isCurrent()} />
             <View style={styles.actionRow}>
-              <View style={styles.flex}><NativeButton label={t("Almashtirish")} disabled={photoBusy} onPress={pickPaintImage} /></View>
-              <View style={styles.flex}><NativeButton label={t("Olib tashlash")} disabled={photoBusy} onPress={() => { void removePaintPhoto(); }} /></View>
+              <View style={styles.flex}><NativeButton label={t('Almashtirish')} disabled={photoBusy} onPress={pickPaintImage} /></View>
+              <View style={styles.flex}><NativeButton label={t('Olib tashlash')} disabled={photoBusy} onPress={() => { void removePaintPhoto(); }} /></View>
             </View>
           </>}
-          {inlinePaint && !paintPhoto && <NativeButton label={t("Rasm qo‘shish")} disabled={photoBusy} onPress={pickPaintImage} />}
+          {inlinePaint && !paintPhoto && <NativeButton label={t('Rasm qo‘shish')} disabled={photoBusy} onPress={pickPaintImage} />}
           {!paintColor && <WorkerPaintPalette usage={paintUsage} onUsage={setPaintUsage} onSelect={setPaintColor} />}
           {!!paintColor && <View style={styles.sectionGroup}>
-            {[...(paintOptions.find(option => option.name === paintColor)?.fields ?? []), ...(paintDynamic[`${paintUsage}:${paintColor}`] ?? [])].map(label => <Field key={`${paintUsage}:${paintColor}:${label}`} label={label} initialValue={paint[`${paintUsage}:${paintColor}:${label}`] ?? ''} keyboardType="decimal-pad" onChangeText={value => setPaint(old => ({ ...old, [`${paintUsage}:${paintColor}:${label}`]: value }))} />)}
-            {paintColor === 'Pantone' && (paintDynamic[`${paintUsage}:Pantone Mix`] ?? []).map(label => <Field key={`${paintUsage}:Pantone Mix:${label}`} label={label} initialValue={paint[`${paintUsage}:Pantone Mix:${label}`] ?? ''} keyboardType="decimal-pad" onChangeText={value => setPaint(old => ({ ...old, [`${paintUsage}:Pantone Mix:${label}`]: value }))} />)}
+            {[...(paintOptions.find(option => option.name === paintColor)?.fields ?? []), ...(paintDynamic[`${paintUsage}:${paintColor}`] ?? [])].map((label, index) => <ReturnedPaintField key={`${paintUsage}:${paintColor}:${index}:${label}`} label={label} initial={workerPaintValue(paint, `${paintUsage}:${paintColor}`, index, label)} decimal isLocked={paintLocked} onChange={value => setPaint(old => ({ ...old, [workerPaintValueKey(`${paintUsage}:${paintColor}`, index, label)]: value }))} />)}
+            {paintColor === 'Pantone' && (paintDynamic[`${paintUsage}:Pantone Mix`] ?? []).map((label, index) => <ReturnedPaintField key={`${paintUsage}:Pantone Mix:${index}:${label}`} label={label} initial={workerPaintValue(paint, `${paintUsage}:Pantone Mix`, index, label)} decimal isLocked={paintLocked} onChange={value => setPaint(old => ({ ...old, [workerPaintValueKey(`${paintUsage}:Pantone Mix`, index, label)]: value }))} />)}
             {!['Lak', 'Spirtlar'].includes(paintColor) && <>
-              <Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={newPaintFieldValue} placeholder={t("Maydon nomi")} onChangeText={setNewPaintField} /></Host>
-              <NativeButton label={t(paintColor === 'Mix' ? 'Mix+' : 'Pantone+')} onPress={() => addPaintField(paintColor)} />
-              {paintColor === 'Pantone' && <NativeButton label={t("Mix+")} onPress={() => addPaintField('Pantone Mix')} />}
+              <NativeButton label={t(paintColor === 'Mix' ? 'Mix+' : 'Pantone+')} onPress={() => setPaintFieldDialog({ target: paintColor, usage: paintUsage })} />
+              {paintColor === 'Pantone' && <NativeButton label={t('Mix+')} onPress={() => setPaintFieldDialog({ target: 'Pantone Mix', usage: paintUsage })} />}
             </>}
           </View>}
+          {paintFieldDialog && <ReturnedPaintNamedFieldDialog paint={paintFieldDialog.target === 'Pantone Mix' ? 'Mix' : paintFieldDialog.target}
+            close={() => setPaintFieldDialog(null)} add={addPaintField} disabled={photoBusy || busy} isLocked={paintLocked} />}
         </> : null;
   const paintContent = paintEditor && !inlinePaint ? (
-    scanner === 'paintPhoto' ? paintCamera : <View style={styles.screen}>
+    <View style={styles.screen}>
       <View style={styles.paintHeader}>
         <WorkerIconButton icon="back" label={t("Orqaga")} onPress={() => {
           if (photoBusy) return;
-          if (paintImageExpanded) setPaintImageExpanded(false);
-          else if (paintColor) setPaintColor('');
+          if (paintColor) setPaintColor('');
           else paintSheet.close();
         }} />
         <Text style={[styles.expansionTitle, { color: colors.text }]}>{t("Qaytarilgan bo‘yoq")}</Text>
         <WorkerIconButton icon="photo" label={t(paintPhoto ? 'Rasmni almashtirish' : 'Rasm qo‘shish')}
           onPress={() => { if (!photoBusy) pickPaintImage(); }} />
       </View>
-      {paintImageExpanded && paintPhoto ? <Image source={paintPhoto} style={styles.flex} contentFit="contain" /> :
       <ScrollView nestedScrollEnabled contentContainerStyle={styles.paintContent} keyboardShouldPersistTaps="handled">
-        {!!error && <Text style={styles.error}>{t(error)}</Text>}
+        {!!error && <Text style={errorTextStyle}>{t(error)}</Text>}
         {paintBody}
-      </ScrollView>}
+      </ScrollView>
     </View>
   ) : null;
   useLayoutEffect(() => {
@@ -1032,14 +1037,13 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     else paintSheet.open(paintContent, { dismissible: true, onDismiss: () => {
       setPaintEditor(false);
       setPaintColor('');
-      setPaintImageExpanded(false);
+      setPaintFieldDialog(null);
       setScanner(null);
       setError('');
     } });
   });
 
-  if (inlinePaint && scanner === 'paintPhoto') return paintCamera;
-  if (scanner && scanner !== 'paintPhoto') return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{t(scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang')}</Text><NativeButton label={t("Bekor qilish")} onPress={() => setScanner(null)} /></View>;
+  if (scanner) return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{t(scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang')}</Text><NativeButton label={t("Bekor qilish")} onPress={() => setScanner(null)} /></View>;
   const imageId = String(order.image_id || preview?.imageId || '');
   if (imageOpen) return <WorkerOrderImage session={session} orderId={orderId} imageId={imageId} onClose={() => setImageOpen(false)} />;
 
@@ -1047,12 +1051,12 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     <WorkerOrderIdentity session={session} orderId={orderId} imageId={imageId} code={code} title={String(order.title || preview?.title || '')}
       onScannedWips={canOpenScannedWips ? () => setScannedWipsStage(scannedStage) : undefined}
       onOpenImage={() => setImageOpen(true)} onClose={closeSheet} />
-    {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }]}>
-      {permission?.granted ? <CameraView style={styles.quickCamera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
+    {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.scannerPanel]}>
+      {permission?.granted ? <CameraView style={[styles.quickCamera, Platform.OS === 'ios' && iosStyles.quickCamera]} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
         <NativeButton label={t("Kameraga ruxsat berish")} onPress={() => { void askPermission(); }} />}
-      <Text style={[styles.scannerText, { color: colors.muted }]}>{merge.scanning ? p('worker.scanner.merge_prompt') : t("Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling")}</Text>
+      <Text style={[styles.scannerText, { color: colors.muted }, Platform.OS === 'ios' && iosStyles.scannerText]}>{merge.scanning ? p('worker.scanner.merge_prompt') : t("Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling")}</Text>
       {interaction.opening_wip_mode !== 'scan_required' && <>
-        <View style={styles.manualToggle}><WorkerIconButton icon="edit" label={t("Kodni qo‘lda kiritish")} onPress={() => setManualScanVisible(value => !value)} /></View>
+        <View style={[styles.manualToggle, Platform.OS === 'ios' && iosStyles.manualToggle]}><WorkerIconButton icon="edit" label={t("Kodni qo‘lda kiritish")} onPress={() => setManualScanVisible(value => !value)} /></View>
         {manualScanVisible && <View style={styles.manualRow}>
           <View style={styles.flex}><Host matchContents={{ vertical: true }} style={styles.host}><NativeInput value={manualScanValue} placeholder={t("QR / barcode")} onChangeText={setManualScan} autoCapitalize="none" /></Host></View>
           <WorkerIconButton icon="check" label={t("Kodni tekshirish")} onPress={() => { void quickScan(manualScan); manualScanValue.set(''); setManualScan(''); }} />
@@ -1062,22 +1066,22 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     <View style={[styles.card, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.actionCard]}>
     <WorkerOrderSyncProgress pending={loading || (!synchronized && !busy && !presentationDenied)} color={colors.icon} />
     {view.temporarilyPaused && <Text style={[styles.detailText, { color: colors.muted }]}>{t("Vaqtincha yechilgan")}</Text>}
-    {['frozen', 'freeze_requested'].includes(effectiveOrderControl) && <Text style={styles.error}>{p(effectiveOrderControl === 'frozen' ? 'worker.freeze.active' : 'worker.freeze.requested')}</Text>}
-    {!!error && !selected && !delivery && <Text style={styles.error}>{t(error)}</Text>}
-    {!!success && <Text style={styles.success}>{t(success)}</Text>}
+    {['frozen', 'freeze_requested'].includes(effectiveOrderControl) && <Text style={errorTextStyle}>{p(effectiveOrderControl === 'frozen' ? 'worker.freeze.active' : 'worker.freeze.requested')}</Text>}
+    {!!error && !selected && !delivery && <Text style={errorTextStyle}>{t(error)}</Text>}
+    {!!success && <Text style={successTextStyle}>{t(success)}</Text>}
     {!!blockingNotice && <WorkerOrderBlockingNotice message={blockingNotice} />}
     {(!!bootstrap || presentation.retaining) && <>
-      {showIntakeCandidates && <View style={styles.sectionGroup}>
+      {showIntakeCandidates && <View style={cardSectionStyle}>
         <Expansion title={p(intakeSection.hasContent ? 'worker.materials.pending' : 'worker.materials.pending.empty')}
           count={view.intakeLoading ? '..' : view.intakeCandidates.length ? materialCount(view.intakeCandidates.length) : ''} expanded={intakeSection.expanded}
           onPress={intakeSection.canToggle ? () => setIntakeExpanded(value => !value) : undefined} />
         {intakeSection.expanded && <>
           {view.intakeLoading && <Text style={[styles.muted, { color: colors.muted }]}>{t('Yuklanmoqda...')}</Text>}
-          {!!view.intakeError && <Text style={styles.error}>{t(view.intakeError)}</Text>}
+          {!!view.intakeError && <Text style={errorTextStyle}>{t(view.intakeError)}</Text>}
           {!view.intakeLoading && !view.intakeError && <WorkerMaterialList rows={view.intakeCandidates} scanned={[]} onLongPress={openMaterialQr} showBalances={false} />}
         </>}
       </View>}
-      {showMaterials && <View style={styles.sectionGroup}>
+      {showMaterials && <View style={cardSectionStyle}>
         {cardState.showStartMaterials && !materialLoading && !materialsError && rows?.length === 0 ? <Text style={[styles.expansionTitle, { color: colors.text }]}>{p('worker.materials.unassigned_order')}</Text> : <Expansion title={t(allMaterialsAwaitingDelivery ? 'Apparat oldiga homashyo olib kelinmagan' : p(attachedSection.hasContent ? 'worker.materials.attached' : 'worker.materials.attached.empty'))}
           count={materialLoading ? '..' : rows?.length && !allMaterialsAwaitingDelivery ? materialCount(rows.length) : ''} expanded={attachedSection.expanded}
           onPress={attachedSection.canToggle ? () => setMaterialsExpanded(value => !value) : undefined} />}
@@ -1085,31 +1089,34 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           <Text style={[styles.muted, { color: colors.muted }]}>{p(startMaterialStatus.deliveryKey, { present: startMaterialStatus.present, waiting: startMaterialStatus.waiting })}</Text>}
         {attachedSection.expanded && <>
           {materialLoading && <Text style={[styles.muted, { color: colors.muted }]}>{t('Yuklanmoqda...')}</Text>}
-          {!!materialsError && <Text style={styles.error}>{t(materialsError)}</Text>}
+          {!!materialsError && <Text style={errorTextStyle}>{t(materialsError)}</Text>}
           {!materialLoading && !materialsError && !!rows?.length && <WorkerMaterialList rows={rows} scanned={materials} orderId={orderId} onLongPress={openMaterialQr} />}
         </>}
         {canSendOrderAlert && scanningRequired && !materialLoading && !materialsError && rows?.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="rawMaterial" enabled={!busy} />}
-        {cardState.showStartMaterials && !!rows?.length && !materialLoading && !materialsError && view.requiredMaterialCount > 0 && <View style={styles.expansion}><Text style={[styles.expansionTitle, { color: colors.text }]}>{p('worker.materials.scan_progress')}</Text><Text style={[styles.muted, { color: colors.muted }]}>{view.matchedMaterialCount}/{view.requiredMaterialCount}</Text></View>}
-        {cardState.showStartMaterials && !!rows?.length && !materialLoading && !materialsError && startMaterialStatus.showBlockingReason && <Text style={styles.error}>{t(materialBlockingText)}</Text>}
+        {cardState.showStartMaterials && !!rows?.length && !materialLoading && !materialsError && view.requiredMaterialCount > 0 && <View style={[styles.expansion, Platform.OS === 'ios' && iosStyles.scanProgress]}><Text style={[styles.expansionTitle, { color: colors.text }, Platform.OS === 'ios' && iosStyles.scanProgressLabel]}>{p('worker.materials.scan_progress')}</Text><Text style={[styles.muted, { color: colors.muted }, Platform.OS === 'ios' && iosStyles.scanProgressCount]}>{view.matchedMaterialCount}/{view.requiredMaterialCount}</Text></View>}
+        {cardState.showStartMaterials && !!rows?.length && !materialLoading && !materialsError && startMaterialStatus.showBlockingReason && <Text style={errorTextStyle}>{t(materialBlockingText)}</Text>}
         {showLinkRequests && <View style={!scanningRequired && !materialsExpanded ? { display: 'none' } : undefined}>
           <MaterialLinkRequestPanel session={session} orderId={orderId} apparatusId={apparatusId} actionsEnabled={synchronized} allowNewRequests={allowNewMaterialRequests} onChanged={materialsChanged} />
         </View>}
         {directMaterialUse && <WorkerMaterialUsePanel session={session} orderId={orderId} apparatusId={apparatusId} actionsEnabled={synchronized} onChanged={materialsChanged} />}
       </View>}
-      {showMolds && <View style={styles.sectionGroup}>
-        <Expansion title={t(view.moldSetCount > 1 ? 'Muqobil qoliplar' : 'Qoliplar')} count={view.requiredQolips.length ? `${view.automaticQolip && view.automaticConfirmed ? view.requiredQolips.length : view.effectiveQolips.length}/${view.requiredQolips.length} ta` : ''}
-          expanded={view.requiredQolips.length > 0 && qolipsExpanded} onPress={view.requiredQolips.length && view.moldStatus !== 'loading' ? () => setQolipsExpanded(value => !value) : undefined} />
+      {showMolds && <View style={[cardSectionStyle, (showMaterials || showIntakeCandidates) && cardSeparatorStyle]}>
+        <Expansion title={moldDisplay.manualStatusText || p(moldDisplay.manualStatusKey || moldDisplay.titleKey)} count={workerMoldCountText(moldDisplay, locale, p)}
+          expanded={moldDisplay.expandable && qolipsExpanded} onPress={moldDisplay.expandable && !moldDisplay.loading ? () => setQolipsExpanded(value => !value) : undefined} />
+        {!!moldWarning && <View style={[iosStyles.moldWarning, { borderColor: colors.error, backgroundColor: colors.field }]}>
+          <Text accessibilityRole="alert" style={[errorTextStyle, iosStyles.moldWarningText]}>{moldWarning}</Text>
+        </View>}
         {view.automaticQolip && view.automaticSets.length > 1 && view.automaticSets.map(set => <NativeButton key={String(set.set_id)} label={String(set.set_id)} disabled={!actionsEnabled} variant={selectedQolipSet === set.set_id ? 'filled' : 'outlined'} onPress={() => { if (actionsEnabled && authorityCurrent()) setSelectedQolipSet(String(set.set_id)); }} />)}
         {canSendOrderAlert && sections.qolips?.status === 'ready' && requiredQolips.length === 0 && <WorkerOrderAlertButton session={session} orderId={orderId} apparatusId={apparatusId} kind="qolip" enabled={!busy} />}
-        {qolipsExpanded && view.requiredQolips.map((mold, index) => <View key={String(mold.qolip_code || index)} style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{String(mold.qolip_code ?? '')}{t(mold.color ? ` · ${mold.color}` : '')}{t(displayScannedMolds.has(normalizeCode(mold.qolip_code)) ? ' ✓' : '')}</Text></View>)}
+        {qolipsExpanded && moldDisplay.molds.map((mold, index) => <View key={String(mold.qolip_code || index)} style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{String(mold.qolip_code ?? '')}{t(mold.color ? ` · ${mold.color}` : '')}{t(displayScannedMolds.has(normalizeCode(mold.qolip_code)) ? ' ✓' : '')}</Text></View>)}
         {!view.automaticQolip && view.moldSetCount > 1 && view.effectiveQolips.length > 0 && <NativeButton label={t("Komplektni almashtirish")} variant="text" disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setQolipsReset(true); setQolips([]); }} />}
-        {view.moldStatus === 'error' && <Text style={styles.error}>{t("Qoliplar yuklanmadi")}</Text>}
+        {!view.automaticQolip && view.moldStatus === 'error' && !!view.requiredQolips.length && <Text style={errorTextStyle}>{t("Qoliplar yuklanmadi")}</Text>}
       </View>}
       {view.inputVisible && <View style={[styles.detailRow, { backgroundColor: colors.field }]}>
         <Text style={[styles.expansionTitle, { color: colors.text }]}>{view.inputLabel}</Text>
         {!!view.inputQr && <Text style={[styles.small, { color: colors.muted }]}>{view.inputQr}</Text>}
       </View>}
-      {cardState.hasActions && <View style={styles.sectionGroup}>
+      {cardState.hasActions && <View style={[cardSectionStyle, (showMaterials || showMolds || showIntakeCandidates) && cardSeparatorStyle]}>
         {cardState.showMaterialIntakeAction && <NativeButton label={p(intakeMode ? 'worker.action.close_scanner' : 'worker.action.receive_material')} height={52} disabled={!actionsEnabled || deliveryBusy} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; merge.flow.cancel(); setIntakeMode(value => !value); }} />}
         {!!view.rezkaInstructions.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.map.cutting')}</Text>{view.rezkaInstructions.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
         {!!view.mergeLines.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.merge_state.title')}</Text>{view.mergeLines.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
@@ -1119,15 +1126,15 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           <View style={styles.flex}>{Platform.OS === 'ios' ? <WorkerPreflightButton label={t("Chiqmadi")} disabled={!actionsEnabled} outlined onPress={() => { void runPreflight('failed'); }} /> : <NativeButton label={t("Chiqmadi")} height={58} disabled={!actionsEnabled} icon={{ android: 'cancel', ios: 'xmark.circle' }} onPress={() => { void runPreflight('failed'); }} />}</View>
         </View>}
         {view.showPreflightHold && <WorkerPreflightButton label={p('worker.action.print_preflight')} disabled={!actionsEnabled} onPress={() => { void runPreflight('hold'); }} />}
-        {!view.showPreflightHold && !view.showPreflightOutcome && cardState.showStart && <NativeButton label={t("Boshlash")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || !actionsEnabled} onPress={() => { void submit('start'); }} />}
+        {!view.showPreflightHold && !view.showPreflightOutcome && cardState.showStart && <NativeButton label={p('worker.action.start')} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} largeLabel disabled={!startReady || !actionsEnabled} onPress={() => { void submit('start'); }} />}
         {showOutputProgress && <WorkerOutputProgress session={session} orderId={orderId} apparatusId={apparatusId}
           stageId={view.stageId} map={order} operation={operation} outputRevision={`${controlEpoch}:${controlRevision}:${refresh}`} />}
         {(cardState.showPause || cardState.showComplete) && <WorkerOrderActionGroup>
           {cardState.showPause && <NativeButton label={t(view.pauseLabel)} height={58} disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setError(''); selectProgressAction('pause'); }} />}
-          {cardState.showComplete && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { if (actionsEnabled && authorityCurrent()) void beginCompletion(); }} />}
+          {cardState.showComplete && <NativeButton label={p('worker.action.complete')} height={58} variant="filled" disabled={!actionsEnabled} onPress={() => { if (actionsEnabled && authorityCurrent()) void beginCompletion(); }} />}
         </WorkerOrderActionGroup>}
         {cardState.showMerge && <NativeButton label={p('worker.action.merge')} height={58} disabled={!actionsEnabled || scanInFlight.current} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setIntakeMode(false); merge.flow.toggle(); }} />}
-        {cardState.showResume && <NativeButton label={t("Davom ettirish")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || !actionsEnabled} onPress={() => { void submit('resume'); }} />}
+        {cardState.showResume && <NativeButton label={p('worker.action.resume')} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || !actionsEnabled} onPress={() => { void submit('resume'); }} />}
         {cardState.showWaitingForPrevious && <WorkerOrderBlockingNotice message={p('worker.waiting.previous', { stage: previousStageLabel })} />}
         {cardState.showWaitingForSequence && <WorkerOrderBlockingNotice message={p('worker.waiting.sequence')} />}
       </View>}
@@ -1159,7 +1166,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       confirmLabel={t(inlinePaint ? 'Tayyor' : busy ? 'Yuborilmoqda…' : 'Tasdiqlash')}
       confirmDisabled={busy || photoBusy || (!inlinePaint && (!synchronized || (selected === 'astatka' ? !canOpenInitialAstatka : !allowed.includes(selected)) || (showFullReport && !laminationReport && loadedDraftScope !== draftScope)))}
       onConfirm={() => { if (inlinePaint) { setError(''); setPaintEditor(false); } else void submit(selected); }}>
-        {!!error && <Text style={styles.error}>{t(error)}</Text>}
+        {!!error && <Text style={errorTextStyle}>{t(error)}</Text>}
         {inlinePaint ? paintBody : <>
         <Text style={[styles.muted, { color: colors.muted }]}>{t(selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting')}</Text>
         {selected === 'pause' && safeStopRequest && descriptionRevealed && <Field label={p('worker.freeze.safe_stop.issue_note')} initialValue={freezeNote} onChangeText={setFreezeNote} />}
@@ -1221,5 +1228,21 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       onChoose={setDeliveryChoice} onCancel={() => setDelivery(null)} onConfirm={() => { void confirmMaterialDelivery(); }} />
   </View>;
 }
-const iosStyles = StyleSheet.create({ content: { paddingHorizontal: 16, paddingTop: 16, gap: 16 }, actionCard: { padding: 16, borderRadius: 22, gap: 16 }, outcomeActions: { gap: 24 } });
+const iosStyles = StyleSheet.create({
+  content: { paddingHorizontal: GRID.cardInset, paddingTop: GRID.sectionGap, gap: GRID.sectionGap },
+  actionCard: { paddingHorizontal: GRID.cardInset, paddingVertical: 4, borderRadius: GRID.cardRadius, gap: 0, elevation: 0 },
+  sectionGroup: { paddingTop: GRID.sectionGap, paddingBottom: GRID.sectionGap, gap: GRID.rowGap },
+  separatedSection: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: PlatformColor('separator') },
+  outcomeActions: { gap: GRID.rowGap },
+  scannerPanel: { padding: GRID.cardInset, borderRadius: GRID.cardRadius, gap: GRID.sectionGap },
+  quickCamera: { width: '100%', height: 'auto', aspectRatio: 1, maxWidth: 224, borderRadius: 12 },
+  scannerText: { fontSize: 14, lineHeight: 20 },
+  manualToggle: { padding: 0, minHeight: GRID.iconSize, justifyContent: 'center' },
+  scanProgress: { paddingStart: 12, paddingEnd: GRID.chevronWidth + GRID.rowGap, paddingVertical: 8, minHeight: 40, borderRadius: 10, backgroundColor: PlatformColor('tertiarySystemFill') },
+  scanProgressLabel: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  scanProgressCount: { fontSize: 14, lineHeight: 20, fontWeight: '600', fontVariant: ['tabular-nums'], minWidth: GRID.counterMinWidth, textAlign: 'right' },
+  moldWarning: { borderStartWidth: 3, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12 },
+  moldWarningText: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  success: { color: PlatformColor('systemGreen'), fontSize: 14, lineHeight: 20, paddingTop: 12, paddingBottom: 4 },
+});
 const styles = StyleSheet.create({ screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},scannerPanel:{borderRadius:18,padding:12,alignItems:'center',gap:10},quickCamera:{width:218,height:218,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},paintHeader:{flexDirection:'row',alignItems:'center',padding:8,gap:6},paintPreview:{height:170,borderRadius:12},paintContent:{padding:14,gap:12,paddingBottom:24},flex:{flex:1}});

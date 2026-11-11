@@ -30,8 +30,11 @@ function InventoryOwner({ session, onBack }: { session: Session; onBack: () => v
           {tabs.map(tab => <Text key={tab.id} modifiers={[tag(tab.id)]}>{t(tab.name)}</Text>)}
         </Picker>
         <List modifiers={[listStyle('plain'), refreshable(() => owner.refresh())]}>
-          <Picker label={t('Ombor')} selection={state.warehouse} onSelectionChange={value => owner.selectWarehouse(String(value))} modifiers={[pickerStyle('menu')]}>
-            {owner.warehouses.map(row => <Text key={row.warehouse_id} modifiers={[tag(row.warehouse_id)]}>{row.name}</Text>)}
+          <Picker label={t('Ombor')} selection={state.warehouse} onSelectionChange={value => {
+            if (typeof value === 'string' && owner.warehouses.some(row => row.warehouse_id === value)) owner.selectWarehouse(value);
+          }} modifiers={[pickerStyle('menu'), disabled(!owner.warehouses.length)]}>
+            {owner.warehouses.length ? owner.warehouses.map(row => <Text key={row.warehouse_id} modifiers={[tag(row.warehouse_id)]}>{row.name}</Text>)
+              : <Text modifiers={[tag(''), disabled(true)]}>{t('Tanlanmagan')}</Text>}
           </Picker>
           {state.scanning ? <RNHostView matchContents><WorkerInventoryScanner surface={surface} /></RNHostView> : null}
           {surface.loading ? <ProgressView /> : null}

@@ -63,6 +63,15 @@ type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean;
 export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer }: Props) {
   const colors = useWorkerColors();
   const { p, t, locale } = useWorkerOrderText();
+  const queueStateLabels: Record<string, string> = {
+    pending: p('worker.queue.status.pending'), in_progress: p('worker.queue.status.in_progress'),
+    paused: p('worker.queue.status.paused'), frozen: p('worker.queue.status.frozen'),
+    print_preflight: p('worker.queue.status.print_preflight'), print_preflight_passed: p('worker.queue.status.print_preflight_passed'),
+    waiting_next_stage: p('worker.qr.order_status.waiting_next_stage'), issue: p('worker.qr.order_status.completed_with_issue'),
+    completed: p('worker.queue.status.completed'), history_completed: p('worker.queue.status.completed'),
+    history_partial: p('worker.queue.status.completed_partial'),
+  };
+  const queueStatusLabel = (order: QueueOrder) => queueStateLabels[order.cardTone] ?? queueStateLabels[order.state] ?? queueStateLabels.pending;
   const synchronizationError = p('worker.error.sync');
   const headerOffset = useSharedValue(0);
   const headerHeight = useSharedValue(70);
@@ -458,6 +467,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
+              {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(order),
+                statusDetail: [order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ') } : {})}
               onPress={() => openHistory(order)}
               onLongPress={!order.issueNote.trim() && canWorkMachine(order.apparatusId) ? () => openOrderActions(order.apparatusId, order, true) : undefined} />
           )) : null}
@@ -467,6 +478,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.temporarilyPaused ? p('worker.temporary_pause.status') : '', order.customer].filter(Boolean).join(' • ')}
+              {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(order),
+                statusDetail: [order.temporarilyPaused ? p('worker.temporary_pause.status') : '', order.customer].filter(Boolean).join(' • ') } : {})}
               onLongPress={canWork ? () => openOrderActions(tabId, order, false) : undefined}
               onPress={() => {
                 openOrder({ apparatusId: tabId, orderId: order.id, preview: order, readOnly: !canWork });

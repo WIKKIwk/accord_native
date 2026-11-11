@@ -105,3 +105,18 @@ test('iOS interactive rows put tap and long press on one full-width gesture owne
     assert.equal(find(row, node => node.type === 'View').props.pointerEvents, 'none');
   }
 });
+
+test('explicit worker labels keep every queue tone neutral with a small native status dot and original gestures', () => {
+  const { ui, render } = fixture();
+  for (const [cardTone, color] of Object.entries({ neutral: 'secondaryLabel', in_progress: 'systemGreen', paused: 'systemOrange', frozen: 'systemRed',
+    print_preflight: 'systemPurple', print_preflight_passed: 'systemGreen', waiting_next_stage: 'systemBlue', history_partial: 'systemOrange', history_completed: 'systemGreen' })) {
+    const onPress = () => {}, onLongPress = () => {}, label = `localized:${cardTone}`;
+    const tree = render({ cardTone, statusText: label, statusDetail: 'Mijoz', onPress, onLongPress });
+    assert.equal(tree.type, ui.HStack); assert.equal(find(tree, node => node.type === ui.Rectangle), null);
+    assert.ok(find(tree, node => node.props?.children === label)); assert.ok(find(tree, node => node.props?.children === 'Mijoz'));
+    const dot = find(tree, node => node.props?.children === '●');
+    assert.deepEqual(dot.props.modifiers.find(modifier => modifier.name === 'foregroundStyle').args[0], { semantic: [color] });
+    assert.equal(tree.props.modifiers.find(modifier => modifier.name === 'onTapGesture').args[0], onPress);
+    assert.equal(tree.props.modifiers.find(modifier => modifier.name === 'onLongPressGesture').args[0], onLongPress);
+  }
+});

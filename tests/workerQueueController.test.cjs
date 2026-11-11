@@ -166,7 +166,7 @@ test('pending writes prevent a successful-looking row snapshot from being handed
 });
 
 function workerScreenHarness(platform, nativeNavigation = true) {
-  const hooks = [], effects = [], opened = [], historyOpened = [], routes = []; let cursor = 0;
+  const hooks = [], effects = [], opened = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
     useState(initial) { const id = cursor++; if (!hooks[id]) hooks[id] = { value: typeof initial === 'function' ? initial() : initial }; return [hooks[id].value, value => { hooks[id].value = typeof value === 'function' ? value(hooks[id].value) : value; }]; },
@@ -197,7 +197,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     './auth': { activeSessionToken: () => 'token', captureSessionWitness: () => ({}), isSessionWitnessCurrent: () => true },
     './nativeSheet': { useNativeSheet: () => sheet },
     './components/useWorkerColors': { useWorkerColors: () => ({ background: '#000', surface: '#111' }) },
-    './components/useWorkerOrderText': { useWorkerOrderText: () => ({ p: value => value, t: value => value, locale: 'uz' }) },
+    './components/useWorkerOrderText': { useWorkerOrderText: () => ({ p: value => locale === 'uz' ? value : `${locale}:${value}`, t: value => value, locale }) },
     './components/useWorkerPeremotka': { useWorkerPeremotka: () => ({ state: { phase: 'closed' }, controller: {} }) },
     './components/useWorkerActivePaddon': { useWorkerActivePaddon: () => ({ state: { busy: false }, controller: {}, notice: '' }) },
     './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10, loadQueueLimit: async () => 10, saveQueueLimit: async () => {} },
@@ -215,7 +215,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const s = session();
   s.capabilities.push('apparatus.queue.manage');
-  return { opened, historyOpened, queueState, session: s, routes, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
+  return { opened, historyOpened, queueState, session: s, routes, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
 }
 function nodes(tree, type, result = []) {
   if (!tree) return result;
@@ -227,7 +227,7 @@ for (const platform of ['ios', 'android']) test(`${platform} real WorkerScreen o
   const x = workerScreenHarness(platform); let tree = x.render(); await flush(); tree = x.render();
   const list = nodes(tree, 'WorkerTabs')[0].props.children(station, undefined, undefined);
   const row = nodes(list, 'WorkerOrderListItem')[0];
-  assert.equal(row.props.statusText, undefined, 'V2 conveys queue state with the card tone, not an added status line');
+  assert.equal(row.props.statusText, platform === 'ios' ? 'worker.queue.status.in_progress' : undefined, 'iOS worker queue uses the requested small status indicator; other platform defaults are retained');
   assert.equal(row.props.supportingText, x.queueState.queue.orders[station][0].customer);
   assert.equal(nodes(list, 'WorkerQueueConnectionProgress')[0].props.active, true);
   row.props.onPress(); tree = x.render();
@@ -270,9 +270,27 @@ test('worker queue subtitles preserve the V2 temporary-pause label instead of in
   x.queueState.queue.orders[station][0].temporarilyPaused = true;
   const tree = x.render(), row = screenRows(tree)[0];
   assert.equal(row.props.supportingText, `worker.temporary_pause.status • ${x.queueState.queue.orders[station][0].customer}`);
-  assert.equal(row.props.statusText, undefined);
+  assert.equal(row.props.statusText, 'worker.queue.status.in_progress');
+  assert.equal(row.props.statusDetail, row.props.supportingText);
   const list = nodes(tree, 'WorkerTabs')[0].props.children(station);
   assert.ok(nodes(list, 'ListItem').some(node => node.props.children === 'worker.queue.your.apparatus'));
+});
+
+test('iOS worker status indicators follow current card tone/state and refresh labels when locale changes', async () => {
+  const x = workerScreenHarness('ios'); x.render(); await flush();
+  const order = x.queueState.queue.orders[station][0];
+  for (const [cardTone, state, key] of [
+    ['neutral', 'pending', 'worker.queue.status.pending'], ['neutral', 'in_progress', 'worker.queue.status.in_progress'],
+    ['paused', 'in_progress', 'worker.queue.status.paused'], ['frozen', 'pending', 'worker.queue.status.frozen'],
+    ['print_preflight', 'pending', 'worker.queue.status.print_preflight'],
+    ['print_preflight_passed', 'pending', 'worker.queue.status.print_preflight_passed'],
+  ]) {
+    order.cardTone = cardTone; order.state = state;
+    assert.equal(screenRows(x.render())[0].props.statusText, key);
+    x.setLocale('ru'); const row = screenRows(x.render())[0];
+    assert.equal(row.props.statusText, `ru:${key}`); assert.equal(row.props.statusDetail, order.customer);
+    x.setLocale('uz');
+  }
 });
 
 test('iOS retained unvalidated rows can open a scoped action menu, but a changed query retires its read', async () => {
