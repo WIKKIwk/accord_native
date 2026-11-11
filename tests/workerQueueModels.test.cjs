@@ -28,7 +28,9 @@ test('queue sequence and state maps normalize ids and reject invalid server data
   assert.deepEqual(model.parseApparatusSequenceMap({ [` ${station} `]: [' order ', 2] }), { [station]: ['order', '2'] });
   assert.deepEqual(model.parseApparatusQueueStateMap({ [station]: { ' order ': ' IN_PROGRESS ' } }), { [station]: { order: 'in_progress' } });
   assert.throws(() => model.parseApparatusSequenceMap({ invalid: ['order'] }), error => error.code === 'production_map_snapshot_contract_invalid');
-  assert.throws(() => model.parseApparatusQueueStateMap({ [station]: { order: 'unexpected' } }), error => error.code === 'production_map_snapshot_contract_invalid');
+  assert.throws(() => model.parseApparatusQueueStateMap({ [station]: { order: 'unexpected' } }), error =>
+    error.code === 'production_map_snapshot_contract_invalid' &&
+    error.message === 'Production map navbati server shartnomasiga mos emas: queue_states contains an invalid order state');
 });
 
 test('queue policy parser supports V2 list/map inputs and defaults', () => {

@@ -87,3 +87,8 @@ test('worker command HTTP failures pass response headers into the structured exc
   });
   assert.equal(calls, 1);
 });
+test('local validation errors keep absent HTTP and request metadata null like MobileApiException', () => {
+  const error = new (load().WorkerControlException)('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
+  assert.equal(error.statusCode, null); assert.equal(error.requestId, null);
+  assert.equal(String(error), error.message);
+});

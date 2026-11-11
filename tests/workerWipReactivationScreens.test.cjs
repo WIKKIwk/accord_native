@@ -18,7 +18,7 @@ function setup(extra = {}) {
     '../auth': { activeSessionToken: () => 'token', captureSessionWitness: () => ({ version: h.version }), isSessionWitnessCurrent: witness => witness.version === h.version,
       subscribeSessionWitness: fn => { h.witnessChanged = fn; return () => {}; } },
     '../sessionReadScope': { sessionReadScope: () => `scope:${h.version}` }, '../nativeSheet': { useNativeSheet: () => sheet },
-    '../workerDetailApi': { workerProductionOrderDetail: async () => { h.reads++; if (h.mapRead) return h.mapRead.promise; return { maps: [{ map: { id: 'o', nodes: [] } }] }; } },
+    '../workerDetailApi': { workerProductionOrderDetail: async () => { h.reads++; if (h.mapError) throw h.mapError; if (h.mapRead) return h.mapRead.promise; return { maps: [{ map: { id: 'o', nodes: [] } }] }; } },
     '../workerWipReactivation': { prepareWorkerWipReactivation: async (_session, input) => { h.previews.push(input); return h.review; }, workerReactivationDenialKey: reason => `worker.reactivate.reason.${reason || 'unavailable'}`,
       runWorkerWipReactivation: async () => { h.writes++; return h.write ? h.write.promise : { attempted: true, succeeded: true, reason: '' }; } },
     './WorkerSheetButton': { WorkerSheetButton: 'Action' }, './WorkerPaddonDialog': { WorkerPaddonDialog: 'Dialog' }, './WorkerPaddonFeedback': { WorkerPaddonFeedback: 'Feedback' },
@@ -37,7 +37,20 @@ function setup(extra = {}) {
     dismissMenu() { sheet.shown = false; sheet.options.onDismiss(); }, confirm(value) { const resolve = h.confirmResolve; h.confirmResolve = null; resolve(value); } });
 }
 const batch = { batch_id: 'selected', qr_payload: 'QR' };
-// @v2-test test/production_work_reactivation_test.dart
+test('a failed full-detail read shows the source notice and never starts a reactivation preview', async () => {
+  for (const error of [Error('Network'), Object.assign(Error('Source API detail'), { name: 'MobileApiException' })]) {
+    const h = setup({ mapError: error });
+    try {
+      await h.model.open(batch);
+      assert.deepEqual(h.notices, [error.name === 'MobileApiException' ? error.message : 'worker.error.sync']);
+      assert.equal(h.previews.length, 0); assert.equal(h.writes, 0); assert.equal(h.sheet.shown, false);
+      h.mapError = null;
+      const retry = h.model.open(batch); await tick(); assert.equal(h.previews.length, 1);
+      h.dismissMenu(); await retry;
+    } finally { h.unmount(); }
+  }
+});
+// @v2-test test/admin_production_map_reactivation_test_part.dart
 test('WIP long press previews its selected batch, dismisses native sheet, then confirms before a single fenced write', async () => {
   const h = setup();
   try {

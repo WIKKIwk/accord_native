@@ -110,6 +110,52 @@ test('scan bootstrap rejects mismatched control, queue context and QR proof', ()
   }
 });
 
+test('scan bootstrap distinguishes malformed context from control and map identity disagreement', () => {
+  const { api } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
+  for (const [edit, detail] of [
+    [value => { value.queue_context.stage_states = []; }, 'invalid scan queue context'],
+    [value => { value.queue_context.epoch = 'old'; }, 'scan queue context disagrees with control'],
+    [value => { value.queue_context.maps.push(structuredClone(value.queue_context.maps[0])); }, 'scan queue context disagrees with control'],
+    [value => { value.queue_context.maps = []; }, 'scan queue context disagrees with control'],
+  ]) {
+    const value = fixture(); edit(value);
+    assert.throws(() => api.parseWorkerScanBootstrap(value, station, order, qr), error =>
+      error.code === 'production_map_snapshot_contract_invalid' &&
+      error.message === `Production map navbati server shartnomasiga mos emas: ${detail}`);
+  }
+});
+
+test('scan bootstrap retains the V2 proof diagnostic for invalid validation authority', () => {
+  const { api } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
+  for (const edit of [
+    value => { value.validated_progress.active_order_validated = false; },
+    value => { value.validated_progress.validated_order_id = 'other'; },
+    value => { value.validated_progress.batch = null; },
+  ]) {
+    const value = fixture(); edit(value);
+    assert.throws(() => api.parseWorkerScanBootstrap(value, station, order, qr), error =>
+      error.code === 'production_map_snapshot_contract_invalid' &&
+      error.message === 'Production map navbati server shartnomasiga mos emas: invalid scan progress proof');
+  }
+});
+
+test('scan bootstrap reports V2 progress identity failures separately from proof authority', () => {
+  const { api } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
+  for (const edit of [
+    value => { value.validated_progress.batch.batch_id = ' '; },
+    value => { value.validated_progress.batch.order_id = 'other'; },
+    value => { value.validated_progress.batch.qr_payload = 'other'; },
+    value => { value.validated_progress.batch.wip_status = 'in_use'; },
+    value => { value.validated_progress.input_route = null; },
+    value => { value.validated_progress.input_route_error = 'unresolved'; },
+  ]) {
+    const value = fixture(); edit(value);
+    assert.throws(() => api.parseWorkerScanBootstrap(value, station, order, qr), error =>
+      error.code === 'production_map_snapshot_contract_invalid' &&
+      error.message === 'Production map navbati server shartnomasiga mos emas: invalid scan progress identity');
+  }
+});
+
 test('scan bootstrap accepts reordered control keys and treats incomplete sections independently', () => {
   const { api } = setup('bootstrap sends one scoped GET and passes scanned barcodes');
   const value = fixture();
@@ -171,6 +217,8 @@ test('scan bootstrap returns a typed validated batch with the proven input route
   assert.equal(result.validated_progress.batch.has_input_route_metadata, true);
   assert.deepEqual(result.validated_progress.batch.input_route, result.validated_progress.input_route);
   assert.ok(result.validated_progress.batch.input_route.consumer_apparatus_ids.includes(station));
+  value.validated_progress.batch.apparatus = 'invalid apparatus';
+  assert.throws(() => api.parseWorkerScanBootstrap(value, station, order, qr), error => error.code === 'apparatus_id_invalid');
 });
 
 test('scan context accepts a numeric-string snapshot revision like V2', () => {

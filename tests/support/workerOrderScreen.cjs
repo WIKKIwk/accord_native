@@ -62,6 +62,7 @@ function harness(platform, input = {}, locale = 'uz') {
     'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },
     './sessionReadScope': { sessionReadScope: () => readScope }, './nativeSheet': { useNativeSheet: () => ({ open() {}, close() {}, update() {}, isOpen: () => false }) },
     './workerOrderLogic': { ...rules, validOrderControl: () => fresh, validWorkerOrderControl: () => fresh }, './workerOrderCardState': card, './workerOrderBlocking': blocking,
+    './shared/mobileApiException': load('shared/mobileApiException.ts'),
     './workerOrderMerge': merge, './workerFabQrReads': { workerFabQrReads: () => input.mergeReads },
     './workerOrderPresentation': presentation,
     './workerDetailRecovery': detailRecovery,

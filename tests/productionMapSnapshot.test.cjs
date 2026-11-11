@@ -44,6 +44,40 @@ test('canonical snapshot rejects malformed global queue controls', () => {
   }
 });
 
+test('canonical snapshot preserves V2 queue-state boundary diagnostics', () => {
+  const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
+  for (const [raw, detail] of [
+    [null, 'queue_states must be an object'],
+    [{ invalid: {} }, 'queue_states contains an invalid apparatus'],
+    [{ [station]: [] }, 'queue_states contains an invalid apparatus'],
+    [{ [station]: { [order]: 'unknown' } }, 'queue_states contains an unknown order state'],
+    [{ [station]: { [order]: 7 } }, 'queue_states contains an unknown order state'],
+    [{ [station]: { ' ': 'pending' } }, 'queue_states contains an unknown order state'],
+  ]) {
+    const value = context(); value.queue_states = raw;
+    assert.throws(() => decoder.decodeCanonicalProductionMapSnapshot(value, true), error =>
+      error.code === 'production_map_snapshot_contract_invalid' &&
+      error.message === `Production map navbati server shartnomasiga mos emas: ${detail}`);
+  }
+});
+
+test('canonical snapshot preserves V2 action-control boundary diagnostics', () => {
+  const station = 'apparatus:default:bosma_7', order = 'zakaz-scan-bootstrap';
+  for (const [edit, detail] of [
+    [value => { value.queue_action_controls = { invalid: {} }; }, 'queue_action_controls contains an invalid apparatus key'],
+    [value => { value.queue_action_controls[station] = []; }, `queue_action_controls[${station}] must be an object`],
+    [value => { value.queue_action_controls[station][order] = null; }, `queue_action_controls[${station}] contains an invalid order`],
+    [value => { value.queue_action_controls[station][' '] = value.queue_action_controls[station][order]; }, `queue_action_controls[${station}] contains an invalid order`],
+    [value => { value.queue_action_controls[station][order].allowed_actions = ['unexpected']; }, 'queue_action_controls contains an invalid order control'],
+    [value => { value.queue_states[station][order] = 'paused'; }, 'queue state and action control state disagree'],
+  ]) {
+    const value = context(); edit(value);
+    assert.throws(() => decoder.decodeCanonicalProductionMapSnapshot(value, true), error =>
+      error.code === 'production_map_snapshot_contract_invalid' &&
+      error.message === `Production map navbati server shartnomasiga mos emas: ${detail}`);
+  }
+});
+
 test('compact canonical snapshots expose V2 empty authority fields and typed order controls', () => {
   const record = loadContract('worker_list_api_test').find(value => value.test.startsWith('worker HTTP and v2 socket'));
   const wire = JSON.parse(record.responseBody.text);

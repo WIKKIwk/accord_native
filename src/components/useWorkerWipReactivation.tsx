@@ -65,7 +65,11 @@ export function useWorkerWipReactivation(props: Props) {
     const current = () => owner.current() && !controller.signal.aborted && request.current === controller;
     try {
       let map: Record<string, any> = { id: order.id, code: order.code, title: order.title };
-      try { const snapshot = await workerProductionOrderDetail(session, order.apparatusId, order.id, controller.signal); map = snapshot.maps[0].map; } catch { /* A partial map never enables reactivation. */ }
+      try { const snapshot = await workerProductionOrderDetail(session, order.apparatusId, order.id, controller.signal); map = snapshot.maps[0].map; }
+      catch (error) {
+        if (current()) presentation.message(error instanceof Error && error.name === 'MobileApiException' ? error.message : p('worker.error.sync'));
+        return;
+      }
       if (!current()) return;
       const review = await prepareWorkerWipReactivation(session, { apparatus: { id: order.apparatusId, name: apparatusNames[order.apparatusId] ?? '', operation },
         map, batch: { batch_id: batch.batch_id, qr_payload: batch.qr_payload }, workerMode: true, allowReactivation }, p, current);

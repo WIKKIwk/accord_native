@@ -3,7 +3,7 @@ import { authorizedFetch } from './authorizedFetch';
 import { validWorkerOrderControl, type QueueCursor } from './workerOrderLogic';
 import { sessionReadScope } from './sessionReadScope';
 import { adminCancelStartedWork, adminRecloseReactivatedWork, adminRePauseResumedWork, adminTemporarilyPauseWork,
-  cancelStartControl, reactivationRecloseControl, resumePauseControl, temporaryPauseControl, type AdminWorkReactivationTarget } from './workerControlsApi';
+  cancelStartControl, reactivationRecloseControl, resumePauseControl, temporaryPauseControl, WorkerControlException, type AdminWorkReactivationTarget } from './workerControlsApi';
 import { apparatusUsesLaminationWorkflow } from './apparatusApi';
 import { adminPrintPreflight } from './workerPrintPreflight';
 import { adminOrderScanBootstrap } from './workerScanBootstrap';
@@ -31,7 +31,10 @@ export async function readWorkerActionControl(session: Session, apparatus: strin
   const data = await adminOrderScanBootstrap(session, { apparatus, orderId, includeSections: false, automaticQolipConfirmation: true }) ??
     await legacyWorkerScanControl(session, apparatus, orderId);
   const cursor = getCursor();
-  if (scope !== sessionReadScope(session) || !data || !validWorkerOrderControl(data, apparatus, orderId, cursor)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+  if (scope !== sessionReadScope(session)) throw new WorkerControlException('session_scope_changed', '');
+  if (!data || !validWorkerOrderControl(data, apparatus, orderId, cursor)) {
+    throw new WorkerControlException('order_scan_bootstrap_stale', 'Order control changed');
+  }
   return data;
 }
 

@@ -12,8 +12,8 @@ export class WorkerControlException extends Error {
   readonly activeKadrCount: number | null;
   readonly scannedKadrCount: number | null;
   readonly orderTitle: string;
-  constructor(readonly code: string, message: string, readonly statusCode?: number,
-    readonly diagnostics: JsonObject = {}, readonly requestId?: string | null, fields: WorkerControlErrorDetails = {}) {
+  constructor(readonly code: string, message: string, readonly statusCode: number | null = null,
+    readonly diagnostics: JsonObject = {}, readonly requestId: string | null = null, fields: WorkerControlErrorDetails = {}) {
     super(message);
     this.name = 'MobileApiException';
     this.apparatusOptions = fields.apparatusOptions ?? []; this.details = fields.details ?? [];

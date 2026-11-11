@@ -8,6 +8,7 @@ import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, us
 import { Alert, AppState, Platform, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { adminBosmaAstatkaReport } from './workerControlsApi';
+import { MobileApiException } from './shared/mobileApiException';
 import { adminPrintPreflight } from './workerPrintPreflight';
 import { adminMaterialStartDeliveryCandidates, adminReceiveMaterialForStart, materialDeliveryIdempotencyKey } from './workerMaterialDelivery';
 import { adminRawMaterialAssignments, adminRawMaterialIntakeCandidates, adminReceiveRawMaterialForActiveOrder } from './workerRawMaterials';
@@ -282,7 +283,9 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     if (!current()) return;
     const unversioned = workerControlIsUnversioned(scan);
     if ((!unversioned && (snapshot.epoch !== scan.control_state?.epoch || scan.control_state?.rev < snapshot.rev)) ||
-        !validWorkerOrderControl(scan, apparatusId, orderId, latestCursor.current) || !workerControlCoversReceipt(scan, remainingReceipt)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+        !validWorkerOrderControl(scan, apparatusId, orderId, latestCursor.current) || !workerControlCoversReceipt(scan, remainingReceipt)) {
+      throw new MobileApiException({ code: 'order_scan_bootstrap_stale', message: 'Order state changed while scan requirements loaded' });
+    }
     liveDetailAuthority.current = true; setBootstrap(scan); setControlRetired(false); setLoading(false);
     updateControlReceipt(null);
     sectionRecoveryNeeded.current.bootstrap = scan.sections?.materials?.status === 'error' && workerDetailSectionRetryable(scan.sections.materials.readError);

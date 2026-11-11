@@ -51,6 +51,16 @@ function requireStringLists(raw: unknown, field: string): void {
     }
   }
 }
+function requireQueueStates(raw: unknown): void {
+  const value = object(raw); if (!value) return fail('queue_states must be an object');
+  for (const [apparatus, rawStates] of Object.entries(value)) {
+    const states = object(rawStates);
+    if (!isCanonicalApparatusId(apparatus.trim()) || !states) return fail('queue_states contains an invalid apparatus');
+    if (Object.entries(states).some(([id, state]) => !id.trim() || typeof state !== 'string' || !knownStates.has(state.trim().toLowerCase()))) {
+      return fail('queue_states contains an unknown order state');
+    }
+  }
+}
 function sequencePositions(raw: unknown, visible: Record<string, string[]>): Obj {
   if (raw === undefined) return {};
   const positions = object(raw); if (!positions) return fail('sequence positions must be an object');
@@ -97,17 +107,21 @@ export function parseProductionQueueActionControls(raw: unknown, states: Obj, st
   const result: Obj = {};
   for (const [apparatus, entries] of Object.entries(value)) {
     const station = apparatus.trim(), orders = object(entries);
-    if (!isCanonicalApparatusId(station) || !orders) return fail('invalid queue action apparatus');
+    if (!isCanonicalApparatusId(station)) return fail('queue_action_controls contains an invalid apparatus key');
+    if (!orders) return fail(`queue_action_controls[${station}] must be an object`);
     result[station] = {};
     for (const [orderId, rawControl] of Object.entries(orders)) {
       const control = object(rawControl), id = orderId.trim();
-      if (!id || !control) return fail('invalid queue action control');
+      if (!id || !control) return fail(`queue_action_controls[${station}] contains an invalid order`);
       const stationStates = object(states[station]);
       const queueState = stationStates && Object.hasOwn(stationStates, id) ? stationStates[id] : control.state;
-      const normalized = queueActionControlState({ apparatus: station, order_id: id, queue_state: queueState,
+      const normalized = queueActionControlState({ apparatus: station, order_id: id, queue_state: control.state,
         order_control: 'active', epoch: '__snapshot__', scope: '__snapshot__', rev: 0,
         stage_states: Object.hasOwn(stages, id) ? stages[id] : {}, control }, true, session);
       if (!normalized) return fail('queue_action_controls contains an invalid order control');
+      if (typeof queueState === 'string' && queueState.trim() && queueState.trim().toLowerCase() !== normalized.control.state.trim().toLowerCase()) {
+        return fail('queue state and action control state disagree');
+      }
       Object.defineProperty(result[station], id, { value: normalized.control, enumerable: true, writable: true, configurable: true });
     }
   }
@@ -135,6 +149,7 @@ export function decodeCanonicalProductionMapSnapshot(value: unknown, requireMaps
   if ((requireMaps || fullLive) && (!Array.isArray(row.maps) || row.maps.some((item: unknown) => !object(item)))) return fail('maps must be an array');
   requireStringLists(row.sequences, 'sequences'); requireStringLists(row.visible_order_ids, 'visible_order_ids');
   const sequences = parseApparatusSequenceMap(row.sequences), visible = parseApparatusSequenceMap(row.visible_order_ids);
+  requireQueueStates(row.queue_states);
   const queueStates = parseApparatusQueueStateMap(row.queue_states);
   if (!Array.isArray(row.queue_policies)) return fail('queue_policies must be an array');
   for (const value of row.queue_policies) {
