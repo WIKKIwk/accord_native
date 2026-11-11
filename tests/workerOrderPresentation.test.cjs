@@ -93,8 +93,9 @@ test('stage history retains the current order, identity, apparatus labels and na
 
 const native = new Proxy({}, { get: (_target, key) => String(key) });
 const modifiers = new Proxy({}, { get: (_target, key) => key === 'shapes'
-  ? { rectangle: () => ({ type: 'rectangle' }) } : (...args) => ({ name: String(key), args }) });
+  ? { rectangle: () => ({ type: 'rectangle' }), roundedRectangle: value => ({ type: 'roundedRectangle', ...value }) } : (...args) => ({ name: String(key), args }) });
 const mocks = { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
+  './useBaseTheme': { useBaseTheme: () => ({ colors: { onSurface: 'label', surfaceContainerHighest: 'surface' } }) },
   'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, View: 'View' }, './BaseHost': { BaseHost: 'Host' } };
 const byId = (tree, id) => nodes(tree, item => item.props.modifiers?.some(modifier => modifier.name === 'accessibilityIdentifier' && modifier.args[0] === id))[0];
 
@@ -141,6 +142,18 @@ test('native order controls retain callbacks and busy state, with completion bef
   const group = WorkerOrderActionGroup({ children: [React.createElement('Button', { key: 'pause' }, 'Rulonni yechish'),
     React.createElement('Button', { key: 'complete' }, 'Tugatish')] });
   assert.equal(text(group), 'Tugatish Rulonni yechish');
+});
+
+for (const platform of ['ios', 'android']) test(`${platform}: blocked paused orders show native information without creating an action`, () => {
+  const { WorkerOrderBlockingNotice } = load(`components/WorkerOrderControls.${platform}.tsx`, { ...mocks,
+    '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifiers,
+    './WorkerSheetButton': { WorkerSheetButton: 'Button' } });
+  const message = '8 ta rangli bosma apparat — shashoqcha';
+  const tree = WorkerOrderBlockingNotice({ message });
+  assert.equal(text(tree), message); assert.equal(nodes(tree, node => node.type === 'Button').length, 0);
+  const label = nodes(tree, node => node.type === 'Text')[0];
+  if (platform === 'android') assert.equal(label.props.color, 'label');
+  else assert.equal(label.props.modifiers.find(mod => mod.name === 'foregroundStyle').args[0], 'label');
 });
 
 test('order actions use system glass controls on iOS 26 and native bordered controls on older iOS', () => {

@@ -34,7 +34,7 @@ import { workerQrPayload, WorkerInitialQr } from './workerQr';
 import { WorkerOrderOverview } from './components/WorkerOrderOverview';
 import { WorkerPaintPalette } from './components/WorkerPaintPalette';
 import { WorkerOutputProgress } from './components/WorkerOutputProgress';
-import { WorkerOrderButton as PlatformButton, WorkerOrderActionGroup } from './components/WorkerOrderControls';
+import { WorkerOrderButton as PlatformButton, WorkerOrderActionGroup, WorkerOrderBlockingNotice } from './components/WorkerOrderControls';
 import { WorkerMaterialList } from './components/WorkerMaterialList';
 import { WorkerAssignedMaterialQr } from './components/WorkerAssignedMaterialQr';
 import { MaterialLinkRequestPanel, WorkerMaterialUsePanel } from './components/WorkerMaterialPanels';
@@ -59,9 +59,10 @@ import { WorkerExpansion as Expansion } from './components/WorkerExpansion';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
 import { automaticQolipConfirmation, matchesMaterialAssignment, materialStartReadiness, paintOptions, preflightFreezeRequest, returnedPaintItemsFromDraft, runningFreezeRequest, validOrderControl, type QueueCursor } from './workerOrderLogic';
 import { workerOrderDetailFromSnapshot, type Apparatus, type QueueOrder } from './workerApi';
+import { workerOrderBusyText } from './workerOrderBlocking';
 
 type Obj = Record<string, any>;
-type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onClose: () => void; onChanged: () => void };
+type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onClose: () => void; onChanged: () => void };
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
 }
@@ -94,7 +95,7 @@ async function scanBootstrap(session: Session, input: Parameters<typeof adminOrd
   return input.includeSections === false ? result : completeWorkerScanSections(session, result, input.materialBarcodes ?? []);
 }
 
-export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog, orderId, preview, queueCursor, initialAction, initialScanQr = '', initialSwitchQr = '', onSwitchCommitted, onClose, onChanged }: Props) {
+export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog, orderId, preview, queueCursor, busyOrderTitle = '', initialAction, initialScanQr = '', initialSwitchQr = '', onSwitchCommitted, onClose, onChanged }: Props) {
   const { t, p, locale } = useWorkerOrderText();
   const colors = useWorkerColors();
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
@@ -764,6 +765,9 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   }
   const showMolds = (preparationVisible || ['fresh_start_blocked', 'requeued_waiting', 'waiting_previous_stage'].includes(interaction.mode)) && qolipRequired;
   const showOutputProgress = !!detail && ['pause', 'complete', 'resume'].some(action => allowed.includes(action));
+  const busyNotice = synchronized && isActiveOrder && !allowed.length && !showPreflightHold && !showPreflightOutcome && !showPreflightFreeze
+    ? workerOrderBusyText(interaction.blocking_reason_code, apparatus?.name ?? '', busyOrderTitle, p) : '';
+  const waitingForSequence = synchronized && isActiveOrder && interaction.blocking_reason_code === 'waiting_sequence';
   function cancelProgressDialog() {
     if (busy || photoBusy) return;
     if (paintEditor) {
@@ -880,6 +884,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     {bootstrap?.control_state?.order_control === 'frozen' && <Text style={styles.error}>{t("Buyurtma muzlatilgan. Ishni davom ettirish uchun, iltimos, adminga xabar bering va buyurtmani muzdan ochishini so‘rang.")}</Text>}
     {!!error && !selected && !delivery && <Text style={styles.error}>{t(error)}</Text>}
     {!!success && <Text style={styles.success}>{t(success)}</Text>}
+    {!!busyNotice && <WorkerOrderBlockingNotice message={busyNotice} />}
     {!!bootstrap && <>
       {showIntakeCandidates && <View style={styles.sectionGroup}>
         <Expansion title={p(intakeSection.hasContent ? 'worker.materials.pending' : 'worker.materials.pending.empty')}
@@ -937,7 +942,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           {allowed.includes('complete') && <NativeButton label={t("Tugatish")} height={58} variant="filled" disabled={busy} onPress={() => { setError(''); selectProgressAction('complete'); }} />}
         </WorkerOrderActionGroup>}
         {allowed.includes('resume') && <NativeButton label={t("Davom ettirish")} height={58} variant="filled" icon={{ android: 'play_arrow', ios: 'play.fill' }} disabled={!resumeReady || busy} onPress={() => { void submit('resume'); }} />}
-        {synchronized && !showPreflightHold && !showPreflightOutcome && !showPreflightFreeze && !allowed.length && <Text style={[styles.muted, { color: colors.muted }]}>{t(interaction.mode === 'waiting_previous_stage' ? 'Oldingi bosqich tugallanguncha kutilmoqda' : interaction.mode === 'requeued_waiting' ? 'Buyurtma apparat navbatidagi o‘z vaqtini kutmoqda' : 'Hozir bajarish mumkin bo‘lgan amal yo‘q.')}</Text>}
+        {synchronized && !showPreflightHold && !showPreflightOutcome && !showPreflightFreeze && !allowed.length && !busyNotice && <Text style={[styles.muted, { color: colors.muted }]}>{waitingForSequence ? p('worker.waiting.sequence') : t(interaction.mode === 'waiting_previous_stage' ? 'Oldingi bosqich tugallanguncha kutilmoqda' : interaction.mode === 'requeued_waiting' ? 'Buyurtma apparat navbatidagi o‘z vaqtini kutmoqda' : 'Hozir bajarish mumkin bo‘lgan amal yo‘q.')}</Text>}
         {!synchronized && <Text style={[styles.muted, { color: colors.muted }]}>{t("Buyurtma holati tekshirilmoqda…")}</Text>}
       </View>
     </>}

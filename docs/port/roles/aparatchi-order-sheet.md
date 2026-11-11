@@ -14,6 +14,13 @@ Specification: Accord V2 baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`. Th
 - Link requests use GET/POST `/v1/mobile/material-link-requests`. Creation requires explicit selected barcodes; nothing is preselected. Recheck permission and assignments after preflight and after the picker. Track the latest request per mover, prevent duplicate pending creation, allow pending cancellation, and refresh material assignments once per approved/stale request ID. An ambiguous creation response triggers verification without automatically repeating POST.
 - Keep refresh notifications queued while confirming, picking or saving. Hidden/background panels resume their refresh on return. Reads issued before a mutation cannot overwrite post-mutation verification. Session/order identity and active-session guards apply before writes and async updates; token refresh within the same active login does not change the read scope.
 
+## Temporarily paused orders
+
+- `temporarily_paused` is a presentation marker, not permission to resume. Resume remains bound to fresh synchronized `allowed_actions` and the existing material/mold/WIP readiness checks. V2 also hides output progress when none of pause/complete/resume is permitted.
+- If a paused order is blocked by `apparatus_busy`, show the V2 localized busy notice instead of the generic no-action text. Identify another running order from this apparatus's queue states, with in-progress/freeze-requested controls as the fallback, and resolve its existing queue title. Missing labels use V2's generic busy explanation; do not invent an order name.
+- The busy notice is native SwiftUI/Compose, uses the app theme and has no mutation action. Hide it while controls are unsynchronized, the order is frozen or a preflight surface owns the action area. A new resume permission removes the notice. Material intake retains its separate server permission, including while another order occupies the apparatus.
+- A paused order whose blocker is `waiting_sequence` shows the V2 `worker.waiting.sequence` text even though its interaction mode remains `paused`.
+
 ## Progress and completion
 
 - Print/laminate progress is available on both platforms for pause/complete/resume states. Resolve the current occurrence, including alternative apparatus groups. Fetch all producer WIP batches with `status=all`, `limit=500`; preserve duplicate IDs until the highest revision is selected.

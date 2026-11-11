@@ -13,6 +13,7 @@ import { sessionReadScope } from './sessionReadScope';
 import { canWorkOnApparatus, loadWorkerQueue, queueFromSnapshot, workerOrderIsFrozen, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
 import { useNativeSheet } from './nativeSheet';
 import { OrderScreen } from './OrderScreen';
+import { workerOrderBusyTitle } from './workerOrderBlocking';
 import { subscribeWorkerLive } from './workerLive';
 import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu } from './workerLongPress';
 import { WorkerHeader } from './components/WorkerHeader';
@@ -154,7 +155,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     return <OrderScreen key={`${target.apparatusId}:${target.orderId}`} session={session} apparatusId={target.apparatusId} orderId={target.orderId} preview={target.preview}
       initialScanQr={target.initialScanQr} initialSwitchQr={target.initialSwitchQr}
       onSwitchCommitted={() => { const pending = pendingQrSwitch.current; if (pending && isSessionWitnessCurrent(pending.witness)) pending.committed = true; }}
-      queueCursor={queueRef.current?.snapshot ?? null} apparatusCatalog={queueRef.current?.catalog} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction}
+      queueCursor={queueRef.current?.snapshot ?? null} busyOrderTitle={workerOrderBusyTitle(queueRef.current, target.apparatusId, target.orderId)}
+      apparatusCatalog={queueRef.current?.catalog} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction}
       onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
   }, [session, orderRoute]);
   useEffect(() => {
