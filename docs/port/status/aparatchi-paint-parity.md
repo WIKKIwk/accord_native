@@ -7,6 +7,7 @@ Worktree: `accord_mobile_v4-aparatchi-paint-parity`, branch `port/aparatchi-pain
 
 ## Implemented
 
+- Notice alignment correction: the quoted italic paragraph now spans the full card content width and uses native iOS justified text alignment. Quotation/spacing/accessibility content are retained; no nested background is added. Existing12 presentation tests and iOS typecheck pass; Metro serves the change.
 - Blocking-notice follow-up: removed the nested iOS notice background/card; the original message now appears in quotation marks, italic callout text, with12pt vertical spacing and no extra horizontal inset. VoiceOver retains the unquoted message. Existing notice presentation tests and iOS typecheck pass; actions and availability rules are unchanged.
 - Temporary-pause label follow-up: retained inside its existing iOS card, centered at17pt semibold/24pt line height with12pt top/bottom padding. Warm amber/carrot text adapts between light and dark appearance. The pause condition/text are unchanged. Both platform typechecks and66/66 order-state tests pass; Metro serves the change.
 - Latest divider follow-up: the pending-material/empty-intake section and attached-material section now have the same conditional iOS hairline boundary as the later sections. Existing spacing and controls are retained. iOS typecheck and diff check pass.

@@ -97,7 +97,7 @@ const modifiers = new Proxy({}, { get: (_target, key) => key === 'shapes'
   ? { rectangle: () => ({ type: 'rectangle' }), roundedRectangle: value => ({ type: 'roundedRectangle', ...value }) } : (...args) => ({ name: String(key), args }) });
 const mocks = { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
   './useBaseTheme': { useBaseTheme: () => ({ colors: { onSurface: 'label', surfaceContainerHighest: 'surface' } }) },
-  'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, View: 'View' }, './BaseHost': { BaseHost: 'Host' }, './workerOrderLayout': layout };
+  'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, Text: 'Text', View: 'View' }, './BaseHost': { BaseHost: 'Host' }, './workerOrderLayout': layout };
 const byId = (tree, id) => nodes(tree, item => item.props.modifiers?.some(modifier => modifier.name === 'accessibilityIdentifier' && modifier.args[0] === id))[0];
 
 test('native iOS summary expands all metrics and six production stages, keeping apparatus rows actionable', () => {
@@ -155,10 +155,12 @@ for (const platform of ['ios', 'android']) test(`${platform}: blocked paused ord
   const label = nodes(tree, node => node.type === 'Text')[0];
   if (platform === 'android') assert.equal(label.props.color, 'label');
   else {
-    assert.equal(label.props.modifiers.find(mod => mod.name === 'foregroundStyle').args[0], 'label');
-    assert(label.props.modifiers.some(mod => mod.name === 'italic'));
-    assert(!label.props.modifiers.some(mod => mod.name === 'background'));
-    assert.equal(label.props.modifiers.find(mod => mod.name === 'accessibilityLabel').args[0], message);
+    assert.equal(label.props.style.color, 'label');
+    assert.equal(label.props.style.fontStyle, 'italic');
+    assert.equal(label.props.style.textAlign, 'justify');
+    assert.equal(label.props.style.width, '100%');
+    assert.equal(label.props.style.backgroundColor, undefined);
+    assert.equal(label.props.accessibilityLabel, message);
   }
 });
 
