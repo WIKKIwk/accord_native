@@ -1,6 +1,6 @@
 # Aparatchi remaining parity audit
 
-Status: in progress; local source fixes implemented, final history-action integration and full gates pending.
+Status: in progress; worker flow integration and native bundle gates passed; final text verdicts and the remaining iOS list-scroll bridge are being resolved.
 Worktree: `accord_mobile_v4-aparatchi-parity`, branch `port/aparatchi-parity`, based on the verified recovery/sheet fixes at `4da01457`. Metro continues serving the original recovery worktree while this batch is being checked. Main and the original V2 checkout are unchanged.
 Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`, read-only clone in the recovery worktree. Its `lib/` and `test/` match the original V2 checkout at `44396752`.
 
@@ -22,11 +22,11 @@ Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`, read-only clone in the re
 |---|---|---|---|---|
 | `_AparatchiWatchSequencePage`, `module_pages.dart:946` | WorkerScreen, queue models/presentation | compared | compared | Source row subtitle/heading/empty/limit labels; rendered queue callbacks and lifecycle regressions |
 | `_AparatchiCompletedOrdersPage`, `module_pages.dart:1536` | WorkerScreen/WorkerWipHistory | compared | compared | Completed state, frozen issue detail and actual apparatus names |
-| `_BosmaWorkerFinishSheet`, `_LaminatsiyaWorkerFinishSheet`, `_LaminatsiyaWorkerHandoffSheet` | WorkerLongPressActions | integration ongoing | integration ongoing | Fresh scoped controls; existing action-specific guards and report/handoff tests retained |
+| `_BosmaWorkerFinishSheet`, `_LaminatsiyaWorkerFinishSheet`, `_LaminatsiyaWorkerHandoffSheet` | WorkerLongPressActions | compared | compared | Fresh scoped controls; source action labels; completed work uses one preview and one confirmed token submission |
 | `_ProgressQtyDialog`, `_ReadOnlyOrderDetailSheet` | OrderScreen and native dialog components | compared | compared | Existing detailed contract retained; nullable legacy control plus pending-write receipt fence added |
 | `_ScannedWipHistorySheet`, `scanned_wip.dart:67` | WorkerScannedWipHistory | compared | compared | iOS header now closes through the native-sheet context rather than unmounting mid-animation |
 | `_WorkerFrozenOrderDetailsSheet`, `wip_history_sheet.dart:3` | WorkerOrderDetails/WorkerWipHistory | compared | compared | Source localized messages and resolved apparatus display names |
-| `_WorkerWipHistorySheet`, `wip_history_sheet.dart:106` | WorkerWipHistory | action integration ongoing | action integration ongoing | Source-exact rows/summary/details; batch reactivation being connected |
+| `_WorkerWipHistorySheet`, `wip_history_sheet.dart:106` | WorkerWipHistory | compared | compared | Source-exact rows/summary/details; batch-specific reactivation after native menu dismissal and explicit confirmation; write-pending lease follows the actual POST |
 | `WorkerWipDetailsSheet`, shared widget | WorkerWipBatchDetails/new presentation helper | compared | compared | Correct default versus daily metadata, producer filtering, measurements, date/EPC and print-time close guard |
 | Daily work/date/edit/reason surfaces | DailyWorkScreen/Dialogs/actions and existing edit/reason controllers | compared | compared | Inline details, 2-decimal cards versus 3-decimal detail units, localized source formats and explicit date commit/cancel |
 | Paddon list/detail/transfer/scanned additions | Existing Paddon contract | compared | compared | Existing flow retained; iOS inline-camera auto-scroll remains open below |
@@ -49,6 +49,8 @@ Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`, read-only clone in the re
 
 - Inventory checkpoint: expanded agent suite37/37 passed; parent inventory API/controller/render and reused inventory/transfer/reprint sweep29/29 passed. Both platform typechecks passed before the checkpoint. This feature's routes and shell wiring remain in the later integration checkpoint.
 - Scoped-control/error checkpoint:261/261 focused error, legacy, WIP reactivation, preflight, transport, scoped-detail and Rezka report tests passed. The stale-detail exhaustion now retains V2's `order_page_changed` code and `Buyurtma yangilandi. Qayta oching.` message. Both native typechecks passed. Whole-role integration remains pending.
+- UI checkpoint: agent source-surface suite50/50 and parent final daily/WIP/QR/native-printer/translator sweep41/41 passed. Both native typechecks passed and lint has no new warnings. The reused preparation printer picker received only an optional empty-label override; its default is unchanged. Worker uses the source Bluetooth-specific label and waits for native dismissal before continuing a report. Translator callbacks retain identity until locale changes, preventing repeated effect reads on ordinary re-render.
+- Full consolidated snapshot:6079 total,6056 passed,11 failed,12 TODO (`/tmp/accord-parity-all-tests.log`). The eleven failed names exactly match the unmodified main baseline; no new failure. Both iOS/Android Hermes bundles exported under `.expo/aparatchi-parity-export`. Subsequent diagnostic-only source fixes have their focused checks recorded separately.
 - Intermediate combined worker/daily/shell suite:1135/1135 passed. Later parent receipt/scoped-menu integration:138/138 passed. Inventory expanded focused suite:32/32 passed. Final consolidated totals are pending.
 - Both platform TypeScript projects and lint have passed at intermediate checkpoints; final consolidated runs pending. Lint retains the pre-existing AdminClosedHistoryOwner ticket-dependency warning.
 - No backend mutation, account login, printer operation, simulator, device installation, main merge or push was performed.

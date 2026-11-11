@@ -14,6 +14,8 @@ import { WorkerOrderHeader, WorkerOrderImage } from './WorkerOrderHeader';
 import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerOrderOverview } from './WorkerOrderOverview';
 import { WorkerSheetCloseContext } from './workerSheetContext';
+import { useWorkerOrderText } from './useWorkerOrderText';
+import { adminText } from '../shared/localization';
 
 type Props = { session: Session; apparatusId: string; order: QueueOrder; queueCursor: QueueCursor | null; queueWindow?: string; onClose: () => void };
 type DetailResult = { key: string; detail: WorkerOrderDetail | null; error: string; loading: boolean; denied: boolean };
@@ -97,16 +99,20 @@ const styles = StyleSheet.create({
 
 export function WorkerOrderFreezeDetails({ order, apparatusName, onClose }: { order: CompletedOrder; apparatusName: string; onClose: () => void }) {
   const colors = useWorkerColors();
+  const { locale, t } = useWorkerOrderText();
   const close = useContext(WorkerSheetCloseContext) ?? onClose;
+  const code = order.code || order.title || order.id;
+  const identity = [code, order.title && order.title !== code ? order.title : '', apparatusName].filter(Boolean).join(' • ');
   return <View style={styles.card}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Text style={{ flex: 1, fontSize: 20, fontWeight: '700', color: colors.text }}>Muzlatish tafsilotlari</Text>
-      <WorkerIconButton icon="close" label="Yopish" tonal onPress={close} />
+      <Text style={{ flex: 1, fontSize: 20, fontWeight: '700', color: colors.text }}>{adminText('production.freeze_details', locale)}</Text>
+      <WorkerIconButton icon="close" label={t('Yopish')} tonal onPress={close} />
     </View>
+    <Text style={{ color: colors.muted }}>{identity}</Text>
     <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
       <Column spacing={6}>
-        <ListItem supportingText={[order.code, order.title, apparatusName].filter(Boolean).join(' • ')}>Muzdan ochilgan</ListItem>
-        <ListItem supportingText={order.issueNote}>Muammo izohi</ListItem>
+        <ListItem>{adminText('production.unfreeze', locale)}</ListItem>
+        {order.issueNote.trim() ? <ListItem supportingText={order.issueNote.trim()}>{adminText('production.issue_note', locale)}</ListItem> : null}
       </Column>
     </Host>
   </View>;

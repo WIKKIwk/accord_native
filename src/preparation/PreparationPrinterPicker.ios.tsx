@@ -5,7 +5,7 @@ import { NativeBluetoothPrinter, type BluetoothPrinterProfile } from '../printin
 import type { PreparationDeviceSelection } from './preparationPrinter';
 import { usePreparationText } from './PreparationUI';
 
-export function PreparationPrinterPicker({ select }: { select: (value: PreparationDeviceSelection | null) => void }) {
+export function PreparationPrinterPicker({ select, emptyLabel = 'Printer topilmadi' }: { select: (value: PreparationDeviceSelection | null) => void; emptyLabel?: string }) {
   const t = usePreparationText();
   const [devices, setDevices] = useState<BluetoothPrinterProfile[]>([]);
   const [scanning, setScanning] = useState(true), [scanVersion, setScanVersion] = useState(0);
@@ -30,7 +30,7 @@ export function PreparationPrinterPicker({ select }: { select: (value: Preparati
   }, [scanVersion]);
   return <Host style={{ minHeight: 400 }}><VStack><Text>{t('Printer tanlang')}</Text><List>
     <Section title="Bluetooth">{scanning && <ProgressView />}
-      {!scanning && !devices.length && !error && <Text>{t('Printer topilmadi')}</Text>}
+      {!scanning && !devices.length && !error && <Text>{t(emptyLabel)}</Text>}
       {devices.map(printer => <Button key={printer.address} label={printer.displayName}
         onPress={() => finish({ transport: 'bluetooth', printer })} />)}
       <Button label={t('Qayta qidirish')} modifiers={[disabled(scanning)]} onPress={() => {

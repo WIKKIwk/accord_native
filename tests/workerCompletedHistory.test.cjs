@@ -27,10 +27,11 @@ function harness() {
 test('iOS completed history opens the issue reason and dismisses without opening WIP history', () => {
   const h = harness(); assert.equal(h.render(), null);
   const order = { id: 'o', apparatusId: 'apparatus:default:p', issueNote: 'Material nuqsonli' };
-  h.ref.current.open(order);
+  h.ref.current.open(order, { 'apparatus:default:p': '8 ta rangli bosma apparat' });
   const tree = h.render(), detail = tree.props.children;
   assert.equal(tree.type, 'OrderSheet'); assert.equal(tree.props.compact, true);
   assert.equal(detail.type, 'FreezeDetails'); assert.equal(detail.props.order, order);
+  assert.equal(detail.props.apparatusName, '8 ta rangli bosma apparat');
   detail.props.onClose(); assert.equal(h.render(), null); assert.equal(h.dismissed.length, 1);
 });
 

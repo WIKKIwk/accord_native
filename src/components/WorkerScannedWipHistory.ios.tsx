@@ -1,10 +1,17 @@
 import { Button, HStack, Image, List, ProgressView, Section, Text, VStack } from '@expo/ui/swift-ui';
 import { contentShape, disabled, font, foregroundStyle, frame, labelStyle, listStyle, onLongPressGesture, shapes } from '@expo/ui/swift-ui/modifiers';
+import { useContext } from 'react';
 import { View } from 'react-native';
 import { BaseHost } from './BaseHost';
 import { WorkerAlert } from './WorkerAlert';
 import { WorkerOrderSheet } from './WorkerOrderSheet';
 import { useWorkerScannedWips, type WorkerScannedWipsProps } from './useWorkerScannedWips';
+import { WorkerSheetCloseContext } from './workerSheetContext';
+
+function CloseHistory({ onClose, writing, label }: { onClose: () => void; writing: boolean; label: string }) {
+  const close = useContext(WorkerSheetCloseContext) ?? onClose;
+  return <Button label={label} systemImage="xmark" onPress={close} modifiers={[labelStyle('iconOnly'), disabled(writing)]} />;
+}
 
 // @v2 _ScannedWipHistorySheet
 export function WorkerScannedWipHistory(props: WorkerScannedWipsProps) {
@@ -14,7 +21,7 @@ export function WorkerScannedWipHistory(props: WorkerScannedWipsProps) {
       <HStack spacing={12}>
         <Text modifiers={[font({ textStyle: 'title3', weight: 'bold' }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>{p('worker.scanned_wip.title')}</Text>
         <Button label={t('Qayta urinish')} systemImage="arrow.clockwise" onPress={() => { void controller.load(); }} modifiers={[labelStyle('iconOnly'), disabled(state.phase === 'loading' || state.phase === 'invalid' || state.writing)]} />
-        <Button label={p('worker.action.close')} systemImage="xmark" onPress={props.onClose} modifiers={[labelStyle('iconOnly'), disabled(state.writing)]} />
+        <CloseHistory label={p('worker.action.close')} onClose={props.onClose} writing={state.writing} />
       </HStack>
       {!!state.notice && <Text>{p(state.notice)}</Text>}
       {(state.writing || state.phase === 'loading') && <ProgressView />}

@@ -17,7 +17,7 @@ function fixture(read) {
       if (!before || deps.some((value, i) => value !== before.deps[i])) effects.push(() => { before?.cleanup?.(); hooks[index] = { deps, cleanup: run() }; }); } };
   react.useLayoutEffect = react.useEffect;
   const jsx = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
-  const component = load('components/WorkerOrderDetails.tsx', {
+  const components = load('components/WorkerOrderDetails.tsx', {
     react, 'react/jsx-runtime': jsx, '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host', ListItem: 'ListItem' },
     'react-native': { AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) }, ScrollView: 'ScrollView', Text: 'Text', View: 'View', StyleSheet: { create: x => x } },
     '../auth': { activeSessionToken: session => session.token }, '../sessionReadScope': { sessionReadScope: session => session.scope },
@@ -27,12 +27,25 @@ function fixture(read) {
     './WorkerOrderSyncProgress': { WorkerOrderSyncProgress: 'SyncProgress' }, './useWorkerColors': { useWorkerColors: () => ({}) },
     './WorkerOrderHeader': { WorkerOrderHeader: 'Header', WorkerOrderImage: 'Image' }, './WorkerIconButton': {},
     './WorkerOrderOverview': { WorkerOrderOverview: 'Overview' }, './workerSheetContext': { WorkerSheetCloseContext: {} },
-  }).WorkerOrderDetails;
+    './useWorkerOrderText': { useWorkerOrderText: () => ({ locale: 'uz', t: value => value }) }, '../shared/localization': { adminText: key => key },
+  });
+  const component = components.WorkerOrderDetails;
   const props = { session: { token: 'token', scope: 'scope' }, apparatusId: 'press', order: { id: 'order', code: '0198', title: 'Row preview' }, queueCursor: { epoch: 'epoch', rev: 1 }, queueWindow: 'ten', onClose() {} };
   const render = () => { let tree; do { dirty = false; cursor = 0; tree = component(props); while (effects.length) effects.shift()(); } while (dirty); return tree; };
-  return { props, render, close: () => { hooks.forEach(hook => hook?.cleanup?.()); } };
+  return { props, render, freeze: components.WorkerOrderFreezeDetails, close: () => { hooks.forEach(hook => hook?.cleanup?.()); } };
 }
 function node(tree, type) { if (!tree || typeof tree !== 'object') return null; if (Array.isArray(tree)) return tree.map(value => node(value, type)).find(Boolean); return tree.type === type ? tree : node(tree.props?.children, type); }
+test('freeze history retains source localized headings, identity-before-status and trimmed issue note', () => {
+  const h = fixture(() => { throw Error('unexpected read'); });
+  const tree = h.freeze({ order: { id: 'order', code: '0304', title: 'Keks', issueNote: '  Nuqson  ' }, apparatusName: 'Bosma', onClose() {} });
+  const text = [];
+  const visit = value => { if (!value || typeof value !== 'object') return; if (Array.isArray(value)) { value.forEach(visit); return; }
+    if (typeof value.props?.children === 'string') text.push(value.props.children); visit(value.props?.children); };
+  visit(tree);
+  assert.deepEqual(text, ['production.freeze_details', '0304 • Keks • Bosma', 'production.unfreeze', 'production.issue_note']);
+  assert.equal(node(tree, 'Column').props.children[1].props.supportingText, 'Nuqson');
+  h.close();
+});
 test('actual read-only sheet displays preview before first GET then retains hydrated detail while new list revision loads', async () => {
   const first = pending(), second = pending(); let reads = 0;
   const h = fixture(() => (++reads === 1 ? first : second).promise);
