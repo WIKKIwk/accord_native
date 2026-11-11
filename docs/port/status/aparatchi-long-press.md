@@ -1,12 +1,13 @@
 # Aparatchi long press
 
-Status: focused fix implemented; physical verification and the existing whole-role audit remain open.
+Status: focused fix merged into main; physical verification and the existing whole-role audit remain open.
 Stopped at: real-phone comparison of queue long press. No additional implementation is pending for this reported fix.
 
 Scope: the user's reported queue long-press flash, delayed opening and intermittent inline loading error, on iOS
 and Android. This is a focused correction to the existing role, not a completion claim for the entire aparatchi port.
 Base: `port/aparatchi-paint-parity` at `a4400f33`. Worktree: `accord_mobile_v4-aparatchi-long-press`, branch
-`port/aparatchi-long-press`. It is not merged into `main`.
+`port/aparatchi-long-press`. The user authorized main integration on 2026-11-11; merge commit `095e85be` includes
+the implementation commit `8ed92537` in `main` without conflicts.
 
 ## Changes
 
@@ -33,7 +34,7 @@ Base: `port/aparatchi-paint-parity` at `a4400f33`. Worktree: `accord_mobile_v4-a
 
 Short V2 filenames above refer to `lib/src/features/admin/presentation/admin_production_map_orders_*`.
 
-## Verification
+## Branch verification before main integration
 
 - Before edits: 60/60 focused tests passed.
 - Final focused suite: **83/83 passed**, including no-action/no-modal behavior, immediate feedback, repeated holds,
@@ -56,6 +57,16 @@ Short V2 filenames above refer to `lib/src/features/admin/presentation/admin_pro
 - No text exception rows were added. The private-sheet text query reports zero extracted texts/surfaces, so that
   result does not prove text coverage. The source keys/action order were compared directly and exercised by native
   component harness tests; the broader role text diagnostic is recorded separately.
+
+## Main integration — 2026-11-11
+
+- Merged `port/aparatchi-long-press` into the current `main` with `--no-ff`; preserved the newer profile and main
+  verification changes. `git merge-base --is-ancestor port/aparatchi-long-press main` passed.
+- Main focused regression suite: **83/83 passed** (`/tmp/accord-long-press-main-focused.log`).
+- Both platform TypeScript checks exited 0. Expo lint exited 0 with the same unrelated Admin hook warning
+  (`/tmp/accord-long-press-main-lint.log`).
+- The branch-wide test/text results above describe the pre-integration snapshot; these merge checks do not make a
+  new whole-role or physical-device verification claim.
 
 ## Open items
 
