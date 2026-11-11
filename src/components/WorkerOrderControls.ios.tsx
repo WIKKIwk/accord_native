@@ -25,8 +25,9 @@ const actionColors = { complete: 'systemRed', pause: 'systemOrange', resume: 'sy
 export function WorkerOrderButton({ label, onPress, disabled: inactive = false, variant = 'outlined', icon, largeLabel, orderAction }: ComponentProps<typeof WorkerSheetButton>) {
   const symbol = typeof icon === 'string' ? icon : icon?.ios;
   const glass = parseInt(String(Platform.Version), 10) >= 26;
+  const prominent = variant === 'filled' || !!orderAction;
   return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
-    <Button onPress={onPress} modifiers={[buttonStyle(variant === 'filled' ? (glass ? 'glassProminent' : 'borderedProminent') : variant === 'text' ? 'plain' : (glass ? 'glass' : 'bordered')),
+    <Button onPress={onPress} modifiers={[buttonStyle(prominent ? (glass ? 'glassProminent' : 'borderedProminent') : variant === 'text' ? 'plain' : (glass ? 'glass' : 'bordered')),
       buttonBorderShape('capsule'), controlSize('large'), frame({ maxWidth: Infinity, minHeight: layout.controlMinHeight }),
       fixedSize({ horizontal: false, vertical: true }), ...(orderAction ? [tint(PlatformColor(actionColors[orderAction]))] : []), disabled(inactive)]}>
       <HStack spacing={layout.rowGap} modifiers={[frame({ maxWidth: Infinity })]}>
@@ -38,5 +39,5 @@ export function WorkerOrderButton({ label, onPress, disabled: inactive = false, 
 }
 
 export function WorkerOrderActionGroup({ children }: { children: ReactNode }) {
-  return <View style={{ gap: layout.rowGap }}>{Children.toArray(children).reverse()}</View>;
+  return <View style={{ gap: layout.rowGap }}>{Children.toArray(children)}</View>;
 }

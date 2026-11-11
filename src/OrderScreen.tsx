@@ -86,7 +86,7 @@ function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
 }
 function Field(props: ComponentProps<typeof PlatformField>) {
-  const { t } = useWorkerOrderText(); return <PlatformField {...props} label={t(props.label)} />;
+  const { t } = useWorkerOrderText(); return <PlatformField {...props} multiline={Platform.OS === 'ios' && props.keyboardType !== 'decimal-pad'} label={t(props.label)} />;
 }
 type ScanKind = 'material' | 'qolip' | 'input';
 const numberValue = (v: string) => Number(v.trim().replace(',', '.'));
@@ -1157,7 +1157,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         else setError(p('worker.temporary_pause.failed'));
       }} />}
     <WorkerOrderMergeDialog state={merge.state} orderNumber={String(order.order_number ?? code)} onCancel={() => merge.flow.cancel()} onConfirm={() => { void merge.flow.confirm(); }} />
-    <WorkerFormDialog visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
+    <WorkerFormDialog actionColors="red-green" visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
       reportDismissed.current?.(); reportDismissed.current = null;
       if (closeAfterProgress.current && isCurrent()) { closeAfterProgress.current = false; closeSheet(); }
     }} title={selected === 'detach_roll' ? p('worker.handoff.detach') : t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}

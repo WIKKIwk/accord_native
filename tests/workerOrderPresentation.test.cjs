@@ -131,7 +131,7 @@ test('overview metadata uses the active locale without changing the order values
   }
 });
 
-test('native order controls retain callbacks and busy state, with completion before pause on iOS', () => {
+test('native order controls retain callbacks and busy state, with pause above completion on iOS', () => {
   const calls = [];
   const { WorkerOrderButton, WorkerOrderActionGroup } = load('components/WorkerOrderControls.ios.tsx', mocks);
   for (const busy of [false, true]) {
@@ -145,7 +145,7 @@ test('native order controls retain callbacks and busy state, with completion bef
   assert.deepEqual(calls, ['complete']);
   const group = WorkerOrderActionGroup({ children: [React.createElement('Button', { key: 'pause' }, 'Rulonni yechish'),
     React.createElement('Button', { key: 'complete' }, 'Tugatish')] });
-  assert.equal(text(group), 'Tugatish Rulonni yechish');
+  assert.equal(text(group), 'Rulonni yechish Tugatish');
 });
 
 for (const platform of ['ios', 'android']) test(`${platform}: blocked paused orders show native information without creating an action`, () => {
@@ -194,7 +194,7 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
     ]) {
       const tree = WorkerOrderButton({ label: 'Localized action', orderAction, variant, height: 58, onPress() {} });
       const button = nodes(tree, item => item.type === 'Button')[0];
-      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[variant === 'filled' ? 0 : 1]);
+      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[variant === 'filled' || orderAction ? 0 : 1]);
       assert.equal(button.props.modifiers.find(modifier => modifier.name === 'tint')?.args[0], expectedColor);
       assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonBorderShape').args[0], 'capsule');
       assert.equal(button.props.modifiers.find(modifier => modifier.name === 'controlSize').args[0], 'large');
@@ -222,6 +222,45 @@ test('iOS action sheet fits measured content with bounded scrolling and no half/
   const scroll = nodes(tree, item => item.type === 'ScrollView')[0];
   assert.deepEqual(scroll.props.style, { flexGrow: 0, maxHeight: Math.round((844 - 59 - 34) * 0.86) });
   assert.equal(scroll.props.style.height, undefined);
+});
+
+test('report confirmation actions use full-width filled red/green native buttons while other dialogs keep their default tints', () => {
+  for (const version of ['26.1.1', '18.7']) {
+    const calls = [];
+    const { WorkerFormDialog } = load('components/WorkerFormDialog.ios.tsx', {
+      ...mocks, 'react-native': { ...mocks['react-native'], Platform: { Version: version }, KeyboardAvoidingView: 'Keyboard', Modal: 'Modal',
+        Pressable: 'Pressable', ScrollView: 'ScrollView', StyleSheet: { absoluteFill: {} }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
+      'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) },
+      './useWorkerColors': { useWorkerColors: () => ({}) }, './useWorkerOrderText': { useWorkerOrderText: () => ({ t: value => value }) },
+    });
+    const props = { visible: true, title: 'Pauza miqdori', children: null, confirmLabel: 'Tasdiqlash',
+      onConfirm: () => calls.push('confirm'), onCancel: () => calls.push('cancel') };
+    const buttons = nodes(WorkerFormDialog({ ...props, actionColors: 'red-green' }), node => node.type === 'Button');
+    assert.deepEqual(buttons.map(button => button.props.modifiers.find(mod => mod.name === 'tint').args[0]), ['systemRed', 'systemGreen']);
+    for (const button of buttons) {
+      assert.equal(button.props.modifiers.find(mod => mod.name === 'buttonStyle').args[0], version.startsWith('26') ? 'glassProminent' : 'borderedProminent');
+      assert.equal(button.props.modifiers.find(mod => mod.name === 'frame').args[0].minHeight, 48);
+      assert.equal(button.props.children.props.modifiers.find(mod => mod.name === 'frame').args[0].maxWidth, Infinity);
+      button.props.onPress();
+    }
+    assert.deepEqual(calls, ['cancel', 'confirm']);
+    const defaults = nodes(WorkerFormDialog(props), node => node.type === 'Button');
+    assert.equal(defaults.every(button => !button.props.modifiers.some(mod => mod.name === 'tint')), true);
+    const busy = nodes(WorkerFormDialog({ ...props, actionColors: 'red-green', cancelDisabled: true, confirmDisabled: true }), node => node.type === 'Button');
+    assert.equal(busy.every(button => button.props.modifiers.find(mod => mod.name === 'disabled').args[0]), true);
+  }
+});
+
+test('iOS quantity form field uses the wide native editor without changing raw report values', () => {
+  const changes = [];
+  const { WorkerFormField } = load('components/WorkerFormField.ios.tsx', {
+    './BaseHost': { BaseHost: 'Host' }, './DailyWorkCorrectionFields.ios': { WorkerNativeField: 'NativeField' },
+  });
+  const tree = WorkerFormField({ label: 'Metraj, metr', initialValue: '6002', keyboardType: 'decimal-pad', onChangeText: value => changes.push(value) });
+  const field = nodes(tree, node => node.type === 'NativeField')[0];
+  assert.equal(field.props.value, '6002'); assert.equal(field.props.decimal, true); assert.equal(field.props.maskDecimal, false);
+  field.props.change('12,5'); field.props.change('');
+  assert.deepEqual(changes, ['12,5', '']);
 });
 
 test('native order identity keeps image preview and close actions with the cached thumbnail', () => {

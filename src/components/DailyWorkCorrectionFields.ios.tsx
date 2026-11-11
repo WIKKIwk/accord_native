@@ -7,23 +7,23 @@ import { BaseHost } from './BaseHost';
 import type { DailyWorkCorrectionFieldsProps } from './dailyWorkCorrectionFieldsTypes';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-function CorrectionField({ label, value, change, decimal = false, saving = false }: {
-  label: string; value: string; change: (value: string) => void; decimal?: boolean; saving?: boolean;
+function CorrectionField({ label, value, change, decimal = false, saving = false, maskDecimal = true, multiline = true }: {
+  label: string; value: string; change: (value: string) => void; decimal?: boolean; saving?: boolean; maskDecimal?: boolean; multiline?: boolean;
 }) {
   const text = useNativeState(value), selection = useNativeState({ start: 0, end: 0 }), input = useRef<TextFieldRef>(null);
   // Keep typing/selection on the UI thread; a JS state echo can overwrite newer keystrokes.
   const changed = useCallback((incoming: string) => {
     'worklet';
-    const next = decimal ? incoming.replace(/[^0-9.,]/g, '') : incoming;
+    const next = decimal && maskDecimal ? incoming.replace(/[^0-9.,]/g, '') : incoming;
     if (next !== incoming) {
       text.set(next);
       selection.set({ start: next.length, end: next.length });
     }
     scheduleOnRN(change, next);
-  }, [change, decimal, selection, text]);
+  }, [change, decimal, maskDecimal, selection, text]);
   return <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
     <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle({ type: 'hierarchical', style: 'secondary' })]}>{label}</Text>
-    <TextField ref={input} text={text} selection={selection} onTextChange={changed} axis={decimal ? 'horizontal' : 'vertical'}
+    <TextField ref={input} text={text} selection={selection} onTextChange={changed} axis={!decimal && multiline ? 'vertical' : 'horizontal'}
       onFocusChange={focused => {
         if (focused && decimal) {
           const end = text.get().length;
@@ -32,13 +32,15 @@ function CorrectionField({ label, value, change, decimal = false, saving = false
       }}
       modifiers={[textFieldStyle('plain'), font({ textStyle: 'body' }), foregroundStyle(PlatformColor('label')), accessibilityLabel(label),
         disabled(saving), textInputAutocapitalization('never'), multilineTextAlignment('leading'),
-        ...(decimal ? [keyboardType('decimal-pad'), autocorrectionDisabled()] : [lineLimit({ min: 2, max: 4 })]),
+        ...(decimal ? [keyboardType('decimal-pad'), autocorrectionDisabled()] : multiline ? [lineLimit({ min: 2, max: 4 })] : []),
         padding({ horizontal: 12, vertical: 8 }), frame({ maxWidth: Infinity, minHeight: 48, alignment: 'leading' }),
         background(PlatformColor('tertiarySystemFill')), cornerRadius(10),
         strokeBorder({ color: PlatformColor('separator'), shape: 'roundedRectangle', cornerRadius: 10, style: { lineWidth: 0.5 } }),
         contentShape(shapes.rectangle())]} />
   </VStack>;
 }
+
+export { CorrectionField as WorkerNativeField };
 
 export function DailyWorkCorrectionFields({ edit, controller }: DailyWorkCorrectionFieldsProps) {
   const { p } = useWorkerOrderText();
