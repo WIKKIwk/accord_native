@@ -123,18 +123,33 @@ export function dailyWorkTotals(batches: readonly DailyWorkBatch[]) {
 export function dailyWorkQuantity(batch: DailyWorkBatch): string {
   const value = batch.meters != null && batch.meters > 0 ? batch.meters : batch.quantity;
   const unit = batch.meters != null && batch.meters > 0 ? 'm' : batch.unit;
-  return value == null ? '—' : [String(Number(value.toFixed(3))), unit].filter(Boolean).join(' ');
+  return value == null ? '—' : dailyWorkMetric(value, unit);
 }
 
+/** @v2 formatQuantityWithUnit */
+export function dailyWorkMetric(value: number, unit: string): string {
+  const quantity = Object.is(value, -0) ? '-0' : Number.isInteger(value) ? value.toFixed(0)
+    : value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  return [quantity, unit.trim()].filter(Boolean).join(' ');
+}
+
+/** @v2 formatUnixSecondsLocalDateTime */
 export function dailyWorkDate(value: number): string {
-  return value > 0 ? new Date(value * 1000).toLocaleString() : '';
+  if (value <= 0) return '';
+  const date = new Date(value * 1000), two = (part: number) => String(part).padStart(2, '0');
+  return `${two(date.getDate())}.${two(date.getMonth() + 1)}.${date.getFullYear()} ${two(date.getHours())}:${two(date.getMinutes())}`;
 }
 
 /** Return human-readable names, never a technical apparatus ID. */
-export function dailyWorkLocation(value: string, names: Record<string, string>): string {
+export function dailyWorkLocation(value: string, names: Record<string, string>, assigned: readonly string[] = []): string {
   const location = value.trim();
-  if (!location) return '';
-  return names[location] || (location.includes(':') ? '' : location);
+  if (!location) return '—';
+  if (names[location]) return names[location];
+  const suffix = (id: string) => id.trim().toLowerCase().split(/[:/_-]+/).filter(Boolean).at(-1) ?? '';
+  const matching = Object.entries(names).find(([id]) => suffix(id) === suffix(location))?.[1];
+  if (matching) return matching;
+  if (!location.includes(':')) return location;
+  return assigned.map(id => names[id]).find(Boolean) || Object.values(names).find(name => name.trim()) || '—';
 }
 
 export async function loadDailyWorkApparatus(session: Session, signal: AbortSignal): Promise<Record<string, string>> {

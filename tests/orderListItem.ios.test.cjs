@@ -8,8 +8,9 @@ const ts = require('typescript');
 function fixture() {
   const background = function Background() {};
   background.Content = 'Background.Content';
-  const ui = { ListItem: 'ListItem', Text: 'Text', Background: background, HStack: 'HStack', Rectangle: 'Rectangle', VStack: 'VStack' };
-  const modifiers = new Proxy({}, { get: (_, name) => (...args) => ({ name, args }) });
+  const ui = { ListItem: 'ListItem', Text: 'Text', Background: background, HStack: 'HStack', Rectangle: 'Rectangle', RNHostView: 'RNHostView', Spacer: 'Spacer', VStack: 'VStack' };
+  const modifiers = new Proxy({}, { get: (_, name) => name === 'shapes'
+    ? { rectangle: () => ({ type: 'rectangle' }) } : (...args) => ({ name, args }) });
   const mocks = {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     '@expo/ui': ui,
@@ -69,8 +70,9 @@ test('iOS unlabeled status rows use translucent native colors and keep their act
     const tree = render({ cardTone, onPress, onLongPress });
     assert.equal(tree.type, ui.Background);
     assert.ok(tree.props.modifiers.some(modifier => modifier.name === 'listRowInsets'));
-    const row = find(tree, node => node.type === ui.ListItem);
-    assert.equal(row.props.onPress, onPress);
+    const row = find(tree, node => node.type === ui.HStack && node.props.modifiers?.some(modifier => modifier.name === 'onLongPressGesture'));
+    assert.equal(find(tree, node => node.type === ui.ListItem), null);
+    assert.equal(row.props.modifiers.find(modifier => modifier.name === 'onTapGesture').args[0], onPress);
     assert.equal(row.props.modifiers.find(modifier => modifier.name === 'onLongPressGesture').args[0], onLongPress);
     const rectangle = find(tree, node => node.type === ui.Rectangle);
     assert.deepEqual(rectangle.props.modifiers.find(modifier => modifier.name === 'foregroundStyle').args[0], { semantic: [color] });
@@ -83,5 +85,38 @@ test('iOS unlabeled status rows use translucent native colors and keep their act
     const gradient = rectangle.props.modifiers.find(modifier => modifier.name === 'foregroundStyle').args[0];
     assert.equal(gradient.type, 'linearGradient');
     assert.ok(gradient.colors.every(color => Array.isArray(color.semantic)));
+  }
+});
+
+test('iOS interactive rows put tap and long press on one full-width gesture owner', () => {
+  const { ui, render } = fixture();
+  for (const overrides of [{}, { statusText: 'Ish jarayonida', cardTone: 'in_progress' }, { cardTone: 'history_partial' }]) {
+    let taps = 0, holds = 0;
+    const row = render({ ...overrides, onPress: () => taps++, onLongPress: () => holds++ });
+    assert.equal(row.type, ui.HStack);
+    assert.equal(find(row, node => node.type === ui.ListItem), null, 'no nested Button can consume the row gesture');
+    const mods = row.props.modifiers;
+    assert.ok(mods.some(modifier => modifier.name === 'contentShape'));
+    mods.find(modifier => modifier.name === 'onTapGesture').args[0]();
+    assert.equal(taps, 1); assert.equal(holds, 0);
+    mods.find(modifier => modifier.name === 'onLongPressGesture').args[0]();
+    assert.equal(taps, 1); assert.equal(holds, 1);
+    assert.ok(find(row, node => node.type === ui.Spacer));
+    assert.equal(find(row, node => node.type === 'View').props.pointerEvents, 'none');
+  }
+});
+
+test('explicit worker labels keep every queue tone neutral with a small native status dot and original gestures', () => {
+  const { ui, render } = fixture();
+  for (const [cardTone, color] of Object.entries({ neutral: 'secondaryLabel', in_progress: 'systemGreen', paused: 'systemOrange', frozen: 'systemRed',
+    print_preflight: 'systemPurple', print_preflight_passed: 'systemGreen', waiting_next_stage: 'systemBlue', history_partial: 'systemOrange', history_completed: 'systemGreen' })) {
+    const onPress = () => {}, onLongPress = () => {}, label = `localized:${cardTone}`;
+    const tree = render({ cardTone, statusText: label, statusDetail: 'Mijoz', onPress, onLongPress });
+    assert.equal(tree.type, ui.HStack); assert.equal(find(tree, node => node.type === ui.Rectangle), null);
+    assert.ok(find(tree, node => node.props?.children === label)); assert.ok(find(tree, node => node.props?.children === 'Mijoz'));
+    const dot = find(tree, node => node.props?.children === '●');
+    assert.deepEqual(dot.props.modifiers.find(modifier => modifier.name === 'foregroundStyle').args[0], { semantic: [color] });
+    assert.equal(tree.props.modifiers.find(modifier => modifier.name === 'onTapGesture').args[0], onPress);
+    assert.equal(tree.props.modifiers.find(modifier => modifier.name === 'onLongPressGesture').args[0], onLongPress);
   }
 });

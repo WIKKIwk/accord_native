@@ -2,7 +2,7 @@ import { Host, TextInput, useNativeState } from '@expo/ui';
 import { StyleSheet, Text, View } from 'react-native';
 import { useWorkerColors } from './useWorkerColors';
 
-type Props = { label: string; onChangeText: (value: string) => void; keyboardType?: 'decimal-pad' | 'default'; initialValue?: string };
+type Props = { label: string; onChangeText: (value: string) => void; keyboardType?: 'decimal-pad' | 'default'; initialValue?: string; multiline?: boolean };
 
 export function WorkerFormField({ label, onChangeText, keyboardType, initialValue = '' }: Props) {
   const value = useNativeState(initialValue);

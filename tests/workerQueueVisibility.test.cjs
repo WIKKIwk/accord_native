@@ -22,7 +22,7 @@ const models = load('workerQueueModels', { './workerControlsApi': controls });
 const decisions = load('productionCompletionApi', { './workerControlsApi': controls, './workerQueueModels': models, './authorizedFetch': {} });
 const snapshotDecoder = load('workerSnapshot', { './workerControlsApi': controls, './workerQueueModels': models, './productionCompletionApi': decisions });
 const { workerMachinesFromSnapshot, queueFromSnapshot, canWorkOnApparatus, workerOrderDetailFromSnapshot, workerOrderIsFrozen } = load('workerApi', {
-  './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, './workerSnapshot': snapshotDecoder,
+  './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': snapshotDecoder,
   './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {},
 });
 
@@ -43,7 +43,7 @@ test('the current account profile refreshes stale login assignments for the queu
   const api = load('workerApi', {
     './workerOrderAppearance': appearance,
     './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 },
-    './workerSnapshot': snapshotDecoder,
+    './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': snapshotDecoder,
     './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': { adminApparatus: async () => catalog },
     './authorizedFetch': { authorizedFetch: async (_session, url) => ({ ok: true, json: async () =>
       url === '/v1/mobile/profile' ? profile : url.includes('/apparatus?') ? catalog : {
@@ -111,6 +111,20 @@ test('decoded freeze-requested order control keeps the existing queue-card tone'
   const queue = queueFromSnapshot([{ id: 'press' }], { worker_list_rows: { one: { title: 'One' } },
     visible_order_ids: { press: ['one'] }, queue_states: { press: { one: 'pending' } }, order_controls: { one: 'freeze_requested' } }, ['press']);
   assert.equal(queue.orders.press[0].cardTone, 'frozen');
+});
+
+test('temporary-pause row marker follows canonical control or exact paused compact apparatus membership', () => {
+  const base = { worker_list_rows: { one: { title: 'One', temporarily_paused_apparatus: ['press'] } },
+    visible_order_ids: { press: ['one'], cut: ['one'] }, queue_states: { press: { one: 'paused' }, cut: { one: 'paused' } } };
+  const build = snapshot => queueFromSnapshot([{ id: 'press' }, { id: 'cut' }], snapshot, ['press']);
+  let rows = build(base).orders;
+  assert.equal(rows.press[0].temporarilyPaused, true); assert.equal(rows.cut[0].temporarilyPaused, undefined);
+  rows = build({ ...base, queue_states: { press: { one: 'in_progress' } } }).orders;
+  assert.equal(rows.press[0].temporarilyPaused, undefined);
+  const canonical = { maps: [{ map: { id: 'one', title: 'One' } }], visible_order_ids: { press: ['one'] },
+    queue_states: { press: { one: 'paused' } }, queue_action_controls: { press: { one: { temporarily_paused: true } } } };
+  assert.equal(build(canonical).orders.press[0].temporarilyPaused, true);
+  assert.equal(build({ ...canonical, queue_action_controls: { press: { one: { temporarily_paused: 'true' } } } }).orders.press[0].temporarilyPaused, undefined);
 });
 
 test('order detail follows the assigned V2 display path and prefers occurrence status', () => {

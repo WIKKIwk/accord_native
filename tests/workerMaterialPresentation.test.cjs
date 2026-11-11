@@ -76,6 +76,7 @@ function nativeComponent(name, platform, palette = colors) {
     '@expo/ui/jetpack-compose': new Proxy({}, { get: (_target, key) => key }),
     '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers,
     './BaseHost': { BaseHost: 'BaseHost' }, './useBaseTheme': { useBaseTheme: () => ({ colors: palette }) },
+    './workerOrderLayout': load('components/workerOrderLayout.ts'),
     './useWorkerOrderText': { useWorkerOrderText: () => ({ locale: 'uz', t: identity,
       p: (key, values) => key + (values ? JSON.stringify(values) : '') }) },
     '../workerMaterialPresentation': model,

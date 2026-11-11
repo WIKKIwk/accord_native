@@ -52,7 +52,7 @@ async function assignments(session: Session, path: string, query: URLSearchParam
     if (response.status !== 200) {
       let payload: unknown;
       try { payload = await response.json(); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, fallback);
+      throw productionMapResponseError(response.status, payload, fallback, response.headers);
     }
     const data: unknown = await response.json();
     if (!Array.isArray(data)) throw new TypeError('Invalid material assignments');
@@ -118,7 +118,7 @@ export async function adminRawMaterialStartRequirements(session: Session, orderI
     const response = await authorizedFetch(session, `/v1/mobile/admin/raw-material-start-requirements?${query}`, { signal: controller.signal });
     if (response.status !== 200) {
       let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, 'raw_material_start_requirements');
+      throw productionMapResponseError(response.status, payload, 'raw_material_start_requirements', response.headers);
     }
     return rawMaterialStartRequirements(await response.json());
   } finally { clearTimeout(timer); }

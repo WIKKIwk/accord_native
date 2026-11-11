@@ -1,0 +1,86 @@
+const assert = require('node:assert/strict'), fs = require('node:fs'), Module = require('node:module'), path = require('node:path'), test = require('node:test'), ts = require('typescript');
+const { hooks } = require('./support/workerPaddonHarness.cjs');
+const jsx = { jsx: (type, props) => ({ type, props: props ?? {} }), jsxs: (type, props) => ({ type, props: props ?? {} }), Fragment: 'Fragment' };
+function load(file, mocks = {}) {
+  const name = path.resolve(__dirname, '../src', file), mod = new Module(name, module); mod.paths = module.paths;
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod._compile(ts.transpileModule(fs.readFileSync(name, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, name); return mod.exports;
+}
+const daily = load('dailyWork.ts', { './apparatusApi': {}, './workerProgressModel': { progressBatchStatusDetail: row => row.status_detail ?? {} }, './workerProgressApi': {}, './workerControlsApi': {} });
+const api = load('workerWipHistoryPresentation.ts', { './dailyWork': daily });
+const details = load('workerWipDetailsPresentation.ts', { './dailyWork': daily, './workerProgressModel': { progressBatchStatusDetail: row => row.status_detail ?? {} } });
+const wip = load('workerWip.ts', { './workerProgressModel': { progressBatchStatusDetail: row => row.status_detail ?? {} }, './workerWipApi': {}, './workerControlsApi': {} });
+const p = (key, values) => key + (values ? `:${JSON.stringify(values)}` : '');
+const batch = extra => ({ batch_id: 'b', qr_payload: 'QR', wip_status: 'waiting', apparatus: 'apparatus:default:press', produced_qty: 100.12345, uom: 'm', payload_json: {}, ...extra });
+function nodes(tree, predicate) { if (!tree || typeof tree !== 'object') return []; if (Array.isArray(tree)) return tree.flatMap(value => nodes(value, predicate)); return [...(predicate(tree) ? [tree] : []), ...nodes(tree.props?.children, predicate), ...nodes(tree.props?.ListHeaderComponent, predicate)]; }
+const find = (tree, predicate) => nodes(tree, predicate)[0];
+const tick = () => new Promise(setImmediate);
+
+// @v2-test test/admin_production_map_worker_completed_wip_test_part.dart
+test('history totals sum micro-units and keep missing measurements separate from known zero', () => {
+  const totals = api.workerWipHistoryTotals([
+    batch({ finished_goods_kg: 10.0000001, bobina_kg: 10.0000002 }),
+    batch({ produced_qty: 0, finished_goods_kg: 4, payload_json: { gross_qty: 'bad' } }),
+  ]);
+  assert.deepEqual(totals.gross, { units: 10000000, known: 1, missing: 1 });
+  assert.deepEqual(totals.net, { units: 0, known: 1, missing: 1 });
+  assert.deepEqual(totals.meters, { units: 100123450, known: 2, missing: 0 });
+  assert.equal(api.workerWipHistoryTotalText(totals.net, 'kg', p), '0 kg');
+  assert.equal(api.workerWipHistoryTotalText({ units: 0, known: 0, missing: 2 }, 'kg', p), 'worker.paddon.bobina_unknown');
+});
+
+test('history card rows retain source action, two-decimal quantity, both activity dates and legacy identity fallbacks', () => {
+  const row = batch({ current_location: 'location', next_apparatus: '', worker_ref: 'worker:123456', action: ' PAUSE ', started_at_unix: 1, completed_at_unix: 2 });
+  const actual = api.workerWipHistoryRows(row, { 'apparatus:default:press': 'Bosma' }, p);
+  assert.deepEqual(actual.map(([label]) => label), ['worker.wip.info.quantity', 'worker.wip.info.started', 'worker.wip.info.finished', 'worker.wip.info.source', 'worker.wip.info.action', 'worker.wip.info.location', 'worker.wip.info.next_machine', 'worker.wip.info.worker']);
+  assert.equal(actual[0][1], '100.12 m'); assert.equal(actual[3][1], 'Bosma'); assert.equal(actual[4][1], 'worker.wip.action.pause');
+  assert.equal(actual[6][1], '—'); assert.equal(actual[7][1], 'worker:123456', 'source list card deliberately retains the legacy worker fallback');
+});
+function harness(platform = 'ios', initial = []) {
+  const runner = hooks(), state = { rows: initial, error: null, opened: [] };
+  runner.react.useContext = () => null;
+  runner.react.useImperativeHandle = () => {};
+  const sheet = { isOpen: () => false, close() {}, open: (content, options) => state.opened.push({ content, options }) };
+  const { WorkerWipHistory } = load('components/WorkerWipHistory.tsx', {
+    react: runner.react, '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host' }, 'expo-camera': { CameraView: 'Camera', useCameraPermissions: () => [{ granted: false, status: 'undetermined' }, async () => {}] },
+    'react-native': { ActivityIndicator: 'Spinner', FlatList: 'FlatList', Platform: { OS: platform }, PlatformColor: value => value, Pressable: 'Pressable', StyleSheet: { create: value => value }, Text: 'Text', View: 'View' },
+    '../authorizedFetch': {}, '../nativeSheet': { useNativeSheet: () => sheet }, './useWorkerColors': { useWorkerColors: () => ({}) }, './workerSheetContext': { WorkerSheetCloseContext: {} },
+    './WorkerAlert': { WorkerAlert: 'Alert' }, './WorkerFormDialog': { WorkerFormDialog: 'Search' }, './WorkerFormField': { WorkerFormField: 'Field' }, './WorkerIconButton': { WorkerIconButton: 'IconButton' },
+    './WorkerOrderSheet': {}, '../workerWip': { ...wip, loadWorkerWipBatches: async () => { if (state.error) throw state.error; return state.rows; } },
+    './WorkerWipBatchDetails': { WorkerWipBatchDetails: 'Details' }, './WorkerOrderDetails': {}, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: key => key }) },
+    './useWorkerWipReactivation': { useWorkerWipReactivation: () => ({ isBusy: () => false, open() {}, dialogs: null }) },
+    '../workerWipHistoryPresentation': api, '../workerWipDetailsPresentation': details,
+  });
+  const props = { session: { profile: { ref: 'worker' } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() {} };
+  return { state, render() { runner.begin(); const tree = WorkerWipHistory(props); runner.flush(); return tree; }, dispose: runner.dispose };
+}
+for (const platform of ['ios', 'android']) test(`${platform}: history renders localized summary, partial totals, states and QR details with no lost source action row`, async () => {
+  const h = harness(platform, [batch({ finished_goods_kg: 10, bobina_kg: 2, action: 'pause', worker_ref: 'worker' }), batch({ batch_id: 'unknown', qr_payload: '' })]);
+  try {
+    h.render(); await tick(); let tree = h.render();
+    assert.ok(find(tree, node => node.props?.children === 'worker.wip.history.title'));
+    assert.ok(find(tree, node => node.props?.children === 'worker.wip.history.summary:{"count":2}'));
+    assert.ok(find(tree, node => node.props?.children === 'worker.wip.history.partial_total:{"count":1}'));
+    const list = find(tree, node => node.type === 'FlatList'); assert.equal(list.props.data.length, 2);
+    const rendered = list.props.renderItem({ item: h.state.rows[0], index: 0 });
+    assert.ok(find(rendered, node => node.props?.children === 'worker.wip.status.waiting'));
+    const texts = nodes(rendered, node => node.type === 'Text').map(node => node.props.children).flat().join(' ');
+    assert.match(texts, /worker.wip.info.action.*worker.wip.action.pause/);
+    rendered.props.onPress(); assert.equal(h.state.opened[0].content.type, 'Details');
+    list.props.renderItem({ item: h.state.rows[1], index: 1 }).props.onPress(); tree = h.render();
+    assert.deepEqual(find(tree, node => node.type === 'Alert').props.alert, { title: 'worker.daily.wip_qr_missing', message: 'worker.daily.wip_qr_missing.body', confirmLabel: 'worker.action.close' });
+    const search = find(tree, node => node.type === 'Button' && node.props.label === 'worker.wip.history.search_qr'); search.props.onPress(); tree = h.render();
+    assert.equal(find(tree, node => node.type === 'Search').props.title, 'worker.wip.history.search_qr');
+    assert.equal(find(tree, node => node.type === 'Field').props.label, 'worker.wip.history.enter_qr');
+  } finally { h.dispose(); }
+});
+for (const scenario of ['empty', 'error', 'forbidden']) test(`history ${scenario} state preserves the source translated message and retry condition`, async () => {
+  const h = harness(); if (scenario !== 'empty') h.state.error = Object.assign(Error('private transport details'), { statusCode: scenario === 'forbidden' ? 403 : 500 });
+  try {
+    h.render(); await tick(); const tree = h.render();
+    const key = scenario === 'empty' ? 'worker.wip.history.empty' : scenario === 'forbidden' ? 'worker.wip.access_denied' : 'worker.wip.history.error';
+    assert.ok(find(tree, node => node.props?.children === key));
+    assert.equal(!!find(tree, node => node.type === 'Button' && node.props.label === 'worker.action.retry'), scenario !== 'empty');
+    assert.equal(find(tree, node => node.type === 'Button' && node.props.label === 'worker.wip.history.search_qr').props.disabled, true);
+  } finally { h.dispose(); }
+});

@@ -1,5 +1,5 @@
 import { Button, HStack, List, ProgressView, RNHostView, Section, SwipeActions, Text, VStack } from '@expo/ui/swift-ui';
-import { buttonStyle, disabled, font, foregroundStyle, listStyle, onLongPressGesture, onTapGesture, refreshable } from '@expo/ui/swift-ui/modifiers';
+import { buttonStyle, disabled, font, foregroundStyle, id, listStyle, onLongPressGesture, onTapGesture, refreshable } from '@expo/ui/swift-ui/modifiers';
 import { Stack, useNavigation, usePreventRemove } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
 import { BaseHost } from './BaseHost';
@@ -10,6 +10,9 @@ import { WorkerPaddonFeedback } from './WorkerPaddonFeedback';
 import { WorkerPaddonWipCard, WorkerPaddonWipContent } from './WorkerPaddonWip';
 import { useWorkerColors } from './useWorkerColors';
 import { useWorkerPaddonDetail, type WorkerPaddonDetailProps } from './useWorkerPaddonDetail';
+import { AccordListScrollReader } from '../../modules/accord-list-scroll/src/AccordListScrollReader';
+
+const cameraRowID = 'accord-paddon-inline-camera';
 
 // @v2 AparatchiPaddonDetailScreen
 export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
@@ -20,7 +23,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
     title: p('worker.paddon.scan.pending', { count: state.scanned.length }), confirmLabel: p('worker.paddon.scan.confirm', { count: state.scanned.length }), confirmDisabled: !h.canConfirmScan } : h.presentation.data;
   return <View style={{ flex: 1, backgroundColor: colors.background }}>
     <Stack.Screen options={{ title: props.code }} />
-    <BaseHost style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(() => h.controller.load())]}>
+    <BaseHost style={{ flex: 1 }}><AccordListScrollReader targetID={state.scanning ? cameraRowID : ''}><List modifiers={[listStyle('insetGrouped'), refreshable(() => h.controller.load())]}>
       <Section><Text modifiers={[foregroundStyle('secondary')]}>{p('worker.paddon.detail.subtitle')}</Text></Section>
       {state.phase === 'loading' ? <ProgressView /> : state.phase === 'error' || !header ? <Section><Text>{p('worker.paddon.load_failed')}</Text>
         <Button label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} /></Section> : <>
@@ -38,7 +41,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
           {header.note ? <Text>{header.note}</Text> : null}
         </VStack></Section>
         {state.scanning ? <>
-          <Section><RNHostView matchContents={{ vertical: true }}><WorkerPaddonCamera enabled={h.canManage && !state.review} current={h.current} accept={qr => { void h.controller.stage(qr); }} /></RNHostView>
+          <Section><VStack modifiers={[id(cameraRowID)]}><RNHostView matchContents={{ vertical: true }}><WorkerPaddonCamera enabled={h.canManage && !state.review} current={h.current} accept={qr => { void h.controller.stage(qr); }} /></RNHostView></VStack>
             <Text>{h.feedback}</Text>{state.pending || state.busy ? <ProgressView /> : null}
             <Button label={p('worker.paddon.scan.close')} onPress={() => { void h.cancelScan(); }} modifiers={[disabled(h.blocked)]} />
             <Button label={p('worker.paddon.scan.confirm', { count: state.scanned.length })} onPress={() => { void h.controller.confirmScan(); }} modifiers={[disabled(!h.canConfirmScan)]} />
@@ -53,7 +56,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
           {row.removable ? <SwipeActions.Actions edge="trailing" allowsFullSwipe={false}><Button label={p('worker.paddon.remove')} systemImage="trash" role="destructive" onPress={() => { void h.remove(row.batch); }} /></SwipeActions.Actions> : null}
         </SwipeActions>) : <Text>{h.itemsEmpty}</Text>}</Section>
       </>}
-    </List></BaseHost>
+    </List></AccordListScrollReader></BaseHost>
     {header ? <View style={{ padding: 12, gap: 8 }}>{state.scanning ? <>
       <WorkerOrderButton label={p('worker.paddon.scan.confirm', { count: state.scanned.length })} disabled={!h.canConfirmScan} variant="filled" onPress={() => { void h.controller.confirmScan(); }} />
       <WorkerOrderButton label={p('worker.paddon.scan.close')} disabled={h.blocked} onPress={() => { void h.cancelScan(); }} />

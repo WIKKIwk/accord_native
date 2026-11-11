@@ -18,7 +18,7 @@ export async function adminWorkerLayerRemainders(session: Session, apparatus: st
   guard();
   if (response.status !== 200) {
     let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-    throw productionMapResponseError(response.status, payload, 'layer_remainder_failed');
+    throw productionMapResponseError(response.status, payload, 'layer_remainder_failed', response.headers);
   }
   const payload = await response.json(); guard();
   return Array.isArray(payload?.remainders) ? payload.remainders.map(layerRemainderFromJson) : [];
@@ -35,7 +35,7 @@ export async function adminLaminationAstatkaSnapshot(session: Session, input: { 
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    throw productionMapResponseError(response.status, payload, 'laminatsiya_astatka_report_failed');
+    throw productionMapResponseError(response.status, payload, 'laminatsiya_astatka_report_failed', response.headers);
   }
   const result = laminationAstatkaSnapshotFromJson(await response.json()); guard(); return result;
 }

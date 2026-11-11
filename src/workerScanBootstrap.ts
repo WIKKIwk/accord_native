@@ -142,23 +142,27 @@ function validateContext(raw: unknown, state: Obj, session?: Session) {
       (decoded.order_controls?.[order] ?? 'active') !== state.order_control ||
       !equal(decoded.stage_states[order] ?? {}, state.stage_states) ||
       !object(context.queue_action_controls?.[station]?.[order]) ||
-      !equal(context.queue_action_controls[station][order], state.control)) throw invalid('invalid scan queue context');
+      !equal(context.queue_action_controls[station][order], state.control)) throw invalid('scan queue context disagrees with control');
   for (const field of ['sequences', 'visible_order_ids']) {
     for (const [apparatus, ids] of Object.entries(context[field])) {
       if (!isCanonicalApparatusId(apparatus.trim()) || !Array.isArray(ids) ||
-          ids.some(id => typeof id !== 'string' || !id.trim())) throw invalid(`invalid scan ${field}`);
+          ids.some(id => typeof id !== 'string' || !id.trim())) throw invalid(`${field} contains an invalid item`);
     }
   }
   const knownStates = new Set(['pending', 'print_preflight', 'in_progress', 'paused', 'frozen', 'completed']);
   for (const [apparatus, rawStates] of Object.entries(context.queue_states)) {
     const states = object(rawStates);
-    if (!isCanonicalApparatusId(apparatus.trim()) || !states || Object.entries(states).some(([id, value]) =>
-      !id.trim() || typeof value !== 'string' || !knownStates.has(value.trim().toLowerCase()))) throw invalid('invalid scan queue states');
+    if (!isCanonicalApparatusId(apparatus.trim()) || !states) throw invalid('queue_states contains an invalid apparatus');
+    if (Object.entries(states).some(([id, value]) =>
+      !id.trim() || typeof value !== 'string' || !knownStates.has(value.trim().toLowerCase()))) throw invalid('queue_states contains an unknown order state');
   }
   for (const [apparatus, rawControls] of Object.entries(context.queue_action_controls)) {
     const controls = object(rawControls);
-    if (!isCanonicalApparatusId(apparatus.trim()) || !controls || Object.entries(controls).some(([id, value]) =>
-      !id.trim() || !object(value))) throw invalid('invalid scan action controls');
+    if (!isCanonicalApparatusId(apparatus.trim())) throw invalid('queue_action_controls contains an invalid apparatus key');
+    if (!controls) throw invalid(`queue_action_controls[${apparatus.trim()}] must be an object`);
+    if (Object.entries(controls).some(([id, value]) => !id.trim() || !object(value))) {
+      throw invalid(`queue_action_controls[${apparatus.trim()}] contains an invalid order`);
+    }
     for (const [id, value] of Object.entries(controls)) {
       const control = object(value)!;
       const queueState = context.queue_states[apparatus]?.[id];
@@ -166,9 +170,11 @@ function validateContext(raw: unknown, state: Obj, session?: Session) {
           !Array.isArray(control.allowed_actions) || control.allowed_actions.some((action: unknown) =>
             typeof action !== 'string' || !['start', 'pause', 'detach_roll', 'merge', 'resume', 'roll_complete', 'complete', 'freeze'].includes(action.trim())) ||
           !object(control.interaction) || typeof control.previous_stage_ready !== 'boolean' ||
-          typeof control.complete_requires_full_report !== 'boolean' ||
-          (typeof queueState === 'string' && queueState.trim() && queueState.trim().toLowerCase() !== control.state.trim().toLowerCase())) {
-        throw invalid('invalid scan action control');
+          typeof control.complete_requires_full_report !== 'boolean') {
+        throw invalid('queue_action_controls contains an invalid order control');
+      }
+      if (typeof queueState === 'string' && queueState.trim() && queueState.trim().toLowerCase() !== control.state.trim().toLowerCase()) {
+        throw invalid('queue state and action control state disagree');
       }
     }
   }
@@ -176,34 +182,35 @@ function validateContext(raw: unknown, state: Obj, session?: Session) {
     const stages = object(value);
     if (!id.trim() || !stages) continue;
     if (Object.entries(stages).some(([stage, status]) => stage.trim() && !knownStates.has(String(status).trim().toLowerCase()))) {
-      throw invalid('invalid scan stage state');
+      throw invalid('stage_states contains an invalid stage state');
     }
   }
   if (context.queue_policies.some((rawPolicy: unknown) => {
     const policy = object(rawPolicy);
     return !policy || typeof policy.apparatus_id !== 'string' || !isCanonicalApparatusId(policy.apparatus_id.trim()) ||
       typeof policy.policy !== 'string' || !['strict_sequence', 'free_pick'].includes(policy.policy.trim());
-  }) || Object.entries(context.order_controls).some(([id, value]) => {
+  })) throw invalid('queue_policies contains an invalid item');
+  if (Object.entries(context.order_controls).some(([id, value]) => {
     const control = object(value);
     return !id.trim() || !control || typeof control.state !== 'string' ||
       !['active', 'freeze_requested', 'frozen'].includes(control.state.trim());
-  })) throw invalid('invalid scan queue policies or order controls');
+  })) throw invalid('order_controls contains an invalid item');
   const ids = context.maps.map((row: unknown) => {
     const entry = object(row), map = object(entry?.map);
-    if (!entry || !map || !object(entry.program) || typeof map.id !== 'string') throw invalid('invalid scan queue map');
+    if (!entry || !map || !object(entry.program) || typeof map.id !== 'string') throw invalid('scan queue context disagrees with control');
     return map.id.trim();
   });
-  if (ids.some((id: string) => !id) || new Set(ids).size !== ids.length || !ids.includes(order)) throw invalid('invalid scan queue maps');
+  if (ids.some((id: string) => !id) || new Set(ids).size !== ids.length || !ids.includes(order)) throw invalid('scan queue context disagrees with control');
   return decoded;
 }
 
 function validateProgress(raw: unknown, state: Obj, qr: string) {
   const proof = object(raw), batch = object(proof?.batch), route = object(proof?.input_route);
   if (!proof || proof.ok !== true || proof.active_order_validated !== true || proof.validated_apparatus !== state.apparatus ||
-      proof.validated_order_id !== state.order_id || state.order_control !== 'active' || !batch || !nonempty(batch.batch_id) ||
-      batch.order_id !== state.order_id || !qr.trim() || typeof batch.qr_payload !== 'string' ||
+      proof.validated_order_id !== state.order_id || state.order_control !== 'active' || !batch) throw invalid('invalid scan progress proof');
+  if (!nonempty(batch.batch_id) || batch.order_id !== state.order_id || !qr.trim() || typeof batch.qr_payload !== 'string' ||
       batch.qr_payload.trim().toUpperCase() !== qr.trim().toUpperCase() || batch.wip_status !== 'waiting' ||
-      !validBatch(batch) || !route || (proof.input_route_error != null && proof.input_route_error !== '')) throw invalid('invalid scan progress proof');
+      !route || (proof.input_route_error != null && proof.input_route_error !== '')) throw invalid('invalid scan progress identity');
   const inputRoute = progressInputRoute(route);
   if (!inputRoute.consumer_apparatus_ids.includes(state.apparatus)) throw invalid('invalid scan progress route');
   return { ...proof, batch: progressBatchFromJson(batch, { inputRoute, hasInputRouteMetadata: true }), input_route: inputRoute };
@@ -258,7 +265,7 @@ export async function adminOrderScanBootstrap(session: Session, input: {
     if ((response.status === 404 || response.status === 405) && !body.trim()) return null;
     if (response.status !== 200) {
       let payload: unknown; try { payload = JSON.parse(body); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, 'order_scan_bootstrap_failed');
+      throw productionMapResponseError(response.status, payload, 'order_scan_bootstrap_failed', response.headers);
     }
     return parseWorkerScanBootstrap(JSON.parse(body), station, order, qr, session);
   } finally { clearTimeout(timer); }

@@ -1,6 +1,6 @@
 type Diagnostics = Record<string, unknown>;
 export type MobileApiExceptionOptions = {
-  code: string; message: string; statusCode?: number; apparatusOptions?: readonly string[]; details?: readonly string[];
+  code: string; message: string; statusCode?: number | null; apparatusOptions?: readonly string[]; details?: readonly string[];
   activeKadrCount?: number | null; scannedKadrCount?: number | null; orderTitle?: string; requestId?: string | null;
   diagnostics?: Diagnostics;
 };

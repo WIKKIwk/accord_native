@@ -48,7 +48,7 @@ export async function adminWipBatches(session: Session, options: {
       guard();
       if (response.status !== 200) {
         let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-        throw productionMapResponseError(response.status, payload, 'wip_batches');
+        throw productionMapResponseError(response.status, payload, 'wip_batches', response.headers);
       }
       const payload: unknown = await response.json();
       guard();

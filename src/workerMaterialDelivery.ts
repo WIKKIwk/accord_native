@@ -27,7 +27,7 @@ export async function adminMaterialStartDeliveryCandidates(session: Session, ord
     if (response.status !== 200) {
       let payload: unknown;
       try { payload = await response.json(); } catch { payload = null; }
-      throw productionMapResponseError(response.status, payload, 'material_delivery_candidates');
+      throw productionMapResponseError(response.status, payload, 'material_delivery_candidates', response.headers);
     }
     const value = object(await response.json());
     if (!value || (value.deliverers != null && !Array.isArray(value.deliverers))) throw new TypeError('Invalid delivery candidates');

@@ -1,9 +1,9 @@
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
-import { validOrderControl, type QueueCursor } from './workerOrderLogic';
+import { validWorkerOrderControl, type QueueCursor } from './workerOrderLogic';
 import { sessionReadScope } from './sessionReadScope';
 import { adminCancelStartedWork, adminRecloseReactivatedWork, adminRePauseResumedWork, adminTemporarilyPauseWork,
-  cancelStartControl, reactivationRecloseControl, resumePauseControl, temporaryPauseControl, type AdminWorkReactivationTarget } from './workerControlsApi';
+  cancelStartControl, reactivationRecloseControl, resumePauseControl, temporaryPauseControl, WorkerControlException, type AdminWorkReactivationTarget } from './workerControlsApi';
 import { apparatusUsesLaminationWorkflow } from './apparatusApi';
 import { adminPrintPreflight } from './workerPrintPreflight';
 import { adminOrderScanBootstrap } from './workerScanBootstrap';
@@ -31,8 +31,10 @@ export async function readWorkerActionControl(session: Session, apparatus: strin
   const data = await adminOrderScanBootstrap(session, { apparatus, orderId, includeSections: false, automaticQolipConfirmation: true }) ??
     await legacyWorkerScanControl(session, apparatus, orderId);
   const cursor = getCursor();
-  if (scope !== sessionReadScope(session) || !data || !cursor || typeof cursor.epoch !== 'string' || !cursor.epoch || !Number.isInteger(cursor.rev) ||
-      !validOrderControl(data, apparatus, orderId, cursor)) throw new Error('Buyurtma holati yangilandi. Qayta urining.');
+  if (scope !== sessionReadScope(session)) throw new WorkerControlException('session_scope_changed', '');
+  if (!data || !validWorkerOrderControl(data, apparatus, orderId, cursor)) {
+    throw new WorkerControlException('order_scan_bootstrap_stale', 'Order control changed');
+  }
   return data;
 }
 
@@ -40,7 +42,7 @@ export function workerLongPressMenu(data: Obj, session: Session, apparatus: stri
   const control = data?.control_state?.control ?? {};
   const readScope = sessionReadScope(session);
   const none: WorkerMenu = { kind: 'none', actions: [], control, readScope, operation };
-  if (!['print', 'laminate', 'glue', 'cut'].includes(operation) || !cursor || !session.assigned_apparatus.includes(apparatus) || !validOrderControl(data, apparatus, orderId, cursor) ||
+  if (!['print', 'laminate', 'glue', 'cut'].includes(operation) || !session.assigned_apparatus.includes(apparatus) || !validWorkerOrderControl(data, apparatus, orderId, cursor) ||
       data.control_state.order_control !== 'active' || ['frozen', 'freeze_requested'].includes(control.stage_control_state)) return none;
   const role = text(session.profile.role), ref = text(session.profile.ref);
   const allowed = Array.isArray(control.allowed_actions) ? control.allowed_actions : [];

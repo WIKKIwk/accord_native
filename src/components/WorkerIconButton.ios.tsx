@@ -1,11 +1,21 @@
 import { Button, Host, Image } from '@expo/ui/swift-ui';
 import { accessibilityLabel, buttonBorderShape, buttonStyle, controlSize, frame, labelStyle } from '@expo/ui/swift-ui/modifiers';
-import { Platform } from 'react-native';
+import { Platform, PlatformColor } from 'react-native';
 import type { WorkerIconButtonProps } from './workerDialogTypes';
 import { useWorkerColors } from './useWorkerColors';
 
-export function WorkerIconButton({ icon, label, onPress, tonal }: WorkerIconButtonProps) {
+export function WorkerIconButton({ icon, label, onPress, tonal, neutralIcon }: WorkerIconButtonProps) {
   const colors = useWorkerColors();
+  if (icon === 'close' && neutralIcon) {
+    const glass = parseInt(String(Platform.Version), 10) >= 26;
+    return <Host matchContents>
+      <Button {...(glass ? { role: 'close' as const } : {})} onPress={onPress}
+        modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('circle'), controlSize('large'),
+          frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(label)]}>
+        <Image systemName="xmark" size={20} color={PlatformColor('label')} />
+      </Button>
+    </Host>;
+  }
   if (icon === 'close') {
     const glass = Number(Platform.Version) >= 26;
     return <Host matchContents>

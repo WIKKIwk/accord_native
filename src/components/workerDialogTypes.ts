@@ -9,11 +9,13 @@ export type WorkerFormDialogProps = {
   confirmLabel: string; onConfirm: () => void; confirmDisabled?: boolean;
   cancelLabel?: string; onCancel: () => void; cancelDisabled?: boolean; preventDismiss?: boolean; onDismiss?: () => void; onShow?: () => void;
   dismissOnBackdrop?: boolean;
+  actionColors?: 'blue';
+  neutralCancelLabel?: boolean;
   scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null>;
 };
 
 export type WorkerRadioChoiceProps = { label: string; selected: boolean; disabled?: boolean; onPress: () => void };
-export type WorkerIconButtonProps = { icon: 'close' | 'edit' | 'check' | 'back' | 'photo' | 'scannedWips'; label: string; onPress: () => void; tonal?: boolean };
+export type WorkerIconButtonProps = { icon: 'close' | 'edit' | 'check' | 'back' | 'photo' | 'scannedWips'; label: string; onPress: () => void; tonal?: boolean; neutralIcon?: boolean };
 export type WorkerDeliveryDialogProps = {
   visible: boolean; name: string; barcode: string; choices: { key: string; label: string }[]; selected: string; error: string;
   busy: boolean; canConfirm: boolean; onChoose: (key: string) => void; onCancel: () => void; onConfirm: () => void;

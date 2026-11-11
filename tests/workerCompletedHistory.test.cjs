@@ -12,7 +12,7 @@ function harness() {
   const filename = path.resolve(__dirname, '../src/components/WorkerWipHistory.tsx');
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
   const mocks = {
-    react: { useState: () => [selected, value => { selected = value; }], useImperativeHandle: (target, create) => { target.current = create(); } },
+    react: { useState: () => [selected, value => { selected = typeof value === 'function' ? value(selected) : value; }], useImperativeHandle: (target, create) => { target.current = create(); } },
     'react-native': { StyleSheet: { create: value => value } },
     './WorkerOrderSheet': { WorkerOrderSheet: 'OrderSheet' },
     './WorkerOrderDetails': { WorkerOrderFreezeDetails: 'FreezeDetails' },
@@ -27,10 +27,11 @@ function harness() {
 test('iOS completed history opens the issue reason and dismisses without opening WIP history', () => {
   const h = harness(); assert.equal(h.render(), null);
   const order = { id: 'o', apparatusId: 'apparatus:default:p', issueNote: 'Material nuqsonli' };
-  h.ref.current.open(order);
+  h.ref.current.open(order, { 'apparatus:default:p': '8 ta rangli bosma apparat' });
   const tree = h.render(), detail = tree.props.children;
   assert.equal(tree.type, 'OrderSheet'); assert.equal(tree.props.compact, true);
   assert.equal(detail.type, 'FreezeDetails'); assert.equal(detail.props.order, order);
+  assert.equal(detail.props.apparatusName, '8 ta rangli bosma apparat');
   detail.props.onClose(); assert.equal(h.render(), null); assert.equal(h.dismissed.length, 1);
 });
 
@@ -43,4 +44,16 @@ test('completed history without an issue keeps the regular WIP list', () => {
   assert.equal(tree.props.children.type.name, 'WorkerWipHistory');
   assert.equal(tree.props.children.props.order, order);
   tree.props.onClose(); assert.equal(h.render(), null);
+});
+
+test('a delayed history dismissal cannot clear a later opening of the same order', () => {
+  const h = harness(); h.render();
+  const order = { id: 'o', apparatusId: 'apparatus:default:p', issueNote: '' };
+  h.ref.current.open(order);
+  const oldClose = h.render().props.onClose;
+  oldClose(); h.render();
+  h.ref.current.open(order);
+  const latest = h.render();
+  oldClose();
+  assert.equal(h.render().props.children.props.order, latest.props.children.props.order);
 });

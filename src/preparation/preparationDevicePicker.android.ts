@@ -4,9 +4,9 @@ import type { usePreparationDialogs } from './PreparationUI.android';
 
 type Dialogs = ReturnType<typeof usePreparationDialogs>;
 
-export async function selectPreparationDevice(dialogs: Dialogs, isCurrent: () => boolean): Promise<PreparationDeviceSelection | null> {
+export async function selectPreparationDevice(dialogs: Dialogs, isCurrent: () => boolean, options: { connectionTitle?: string } = {}): Promise<PreparationDeviceSelection | null> {
   // USB and Wi-Fi printing are temporarily disabled by Wikki.
-  const mode = await dialogs.choose('Printer tanlang', [{ label: 'Bluetooth printer', value: 'bluetooth' }]);
+  const mode = await dialogs.choose(options.connectionTitle ?? 'Printer tanlang', [{ label: 'Bluetooth printer', value: 'bluetooth' }]);
   if (mode !== 'bluetooth' || !isCurrent()) return null;
   while (isCurrent()) {
     const devices = await NativeBluetoothPrinter.pairedPrinters();

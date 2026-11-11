@@ -21,7 +21,7 @@ export function useWorkerPrinterSelector(current: () => boolean) {
   return { selectDevice: () => selectPreparationDevice({
     choose: (title: string, choices: Choice[], message?: string) => open({ title, choices, message }),
     input: (options: { title: string; initial?: string; label?: string }) => open({ title: options.title, initialValue: options.initial, message: options.label }),
-  } as Parameters<typeof selectPreparationDevice>[0], current), dialogs: <WorkerFormDialog visible={!!dialog} title={t(dialog?.title ?? '')}
+  } as Parameters<typeof selectPreparationDevice>[0], current, { connectionTitle: 'Qurilma tanlash' }), dialogs: <WorkerFormDialog visible={!!dialog} title={t(dialog?.title ?? '')}
     confirmLabel={t('Tasdiqlash')} confirmDisabled={!value.trim()} onConfirm={() => finish(value)} onCancel={() => finish(null)} cancelLabel={t('Bekor qilish')}>
     {!!dialog?.message && <Text style={{ color: colors.text }}>{t(dialog.message)}</Text>}
     {dialog?.choices ? dialog.choices.map(choice => <WorkerRadioChoice key={choice.value} label={[t(choice.label), choice.subtitle].filter(Boolean).join('\n')}

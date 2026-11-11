@@ -90,7 +90,7 @@ export async function adminProgressQrHistory(session: Session, options: { limit?
       guard();
       if (response.status !== 200) {
         let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
-        throw productionMapResponseError(response.status, payload, 'progress_qr_history');
+        throw productionMapResponseError(response.status, payload, 'progress_qr_history', response.headers);
       }
       const payload: unknown = await response.json();
       guard();

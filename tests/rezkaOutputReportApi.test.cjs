@@ -13,6 +13,11 @@ function load(name, mocks = {}) {
   return loaded.exports;
 }
 const stem = 'rezka_output_report_read_api_test';
+test('malformed output report retains the source contract detail in its error', () => {
+  const client = load('rezkaOutputReportApi', { './authorizedFetch': {} });
+  assert.throws(() => client.rezkaOutputSnapshotFromJson({}, 'apparatus:default:asset-010', 'order'),
+    { code: 'production_map_snapshot_contract_invalid', message: 'Production map navbati server shartnomasiga mos emas: invalid Rezka output report' });
+});
 for (const record of loadContract(stem)) test(record.test, async () => {
   const replay = contractFetch(stem, record.test), session = recordedSession(stem, record.test);
   const client = load('rezkaOutputReportApi', { './authorizedFetch': { authorizedFetch: (s, p, init = {}) => replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) } });

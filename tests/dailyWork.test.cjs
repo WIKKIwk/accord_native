@@ -107,7 +107,7 @@ test('groups orders, counts unique orders and follows V2 WIP status and title ru
   assert.equal(groups[0].batches.length, 2);
   assert.deepEqual(model.dailyWorkTotals(rows), { orders: 2, wips: 4, used: 2 });
   assert.equal(model.dailyWorkStatus(rows[2]), 'Jarayonda');
-  assert.equal(model.dailyWorkQuantity(rows[1]), '123.457 m');
+  assert.equal(model.dailyWorkQuantity(rows[1]), '123.46 m');
   assert.equal(model.dailyWorkQuantity(rows[0]), '150 m');
 });
 
@@ -130,6 +130,6 @@ test('apparatus names resolve from the catalog without exposing internal IDs', a
   } }]), { status: 200 }));
   const names = await api.loadDailyWorkApparatus({}, new AbortController().signal);
   assert.equal(api.dailyWorkLocation('apparatus:default:press', names), 'Bosma 1');
-  assert.equal(api.dailyWorkLocation('apparatus:other', names), '');
+  assert.equal(api.dailyWorkLocation('apparatus:other', names), 'Bosma 1');
   assert.equal(api.dailyWorkLocation('Ombor', names), 'Ombor');
 });

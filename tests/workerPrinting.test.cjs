@@ -96,7 +96,19 @@ test('iOS printer chooser has a Bluetooth list, rescan and cancel without USB/Wi
   const nodes = walk(tree), labels = nodes.map(node => node.props?.label).filter(Boolean);
   assert.deepEqual(labels, ['Qayta qidirish', 'Bekor qilish']);
   assert.deepEqual(nodes.filter(node => node.type === 'Section').map(node => node.props.title), ['Bluetooth']);
+  assert(nodes.some(node => node.type === 'Text' && node.props.children === 'Printer tanlang'));
+  const workerNodes = walk(api.PreparationPrinterPicker({ title: 'Bluetooth printer', select() {} }));
+  assert(workerNodes.some(node => node.type === 'Text' && node.props.children === 'Bluetooth printer'));
+  assert(!workerNodes.some(node => node.type === 'Text' && node.props.children === 'Printer tanlang'));
   nodes.find(node => node.props?.role === 'cancel').props.onPress(); assert.deepEqual(selections, [null]);
+});
+
+test('worker Android printer flow uses the source connection and Bluetooth titles', async () => {
+  const titles = [], answers = ['bluetooth', 'AA:BB'];
+  const api = load('preparation/preparationDevicePicker.android.ts', { '../printing/nativePrinter': { NativeBluetoothPrinter: { pairedPrinters: async () => [profile] } } });
+  const dialogs = { choose: async title => { titles.push(title); return answers.shift(); } };
+  assert.deepEqual(await api.selectPreparationDevice(dialogs, () => true, { connectionTitle: 'Qurilma tanlash' }), { transport: 'bluetooth', printer: profile });
+  assert.deepEqual(titles, ['Qurilma tanlash', 'Bluetooth printer']);
 });
 
 test('iOS output printing waits for the report Modal dismissal before opening its native picker', async () => {

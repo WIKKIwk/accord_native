@@ -15,5 +15,5 @@ export function workerOrderPresentationFor<T>(previous: WorkerOrderPresentation<
 export function workerOrderPresentationDenied(error: unknown): boolean {
   const value = error as { statusCode?: number; code?: string };
   return value?.statusCode === 401 || value?.statusCode === 403 ||
-    ['unauthorized', 'forbidden', 'order_not_available', 'training_order_scan_bootstrap_unsupported'].includes(value?.code ?? '');
+    ['unauthorized', 'forbidden', 'order_not_available', 'worker_order_not_available', 'training_order_scan_bootstrap_unsupported'].includes(value?.code ?? '');
 }

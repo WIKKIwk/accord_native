@@ -9,4 +9,5 @@ export type WorkerQueueFilterProps = {
   backgroundColor: ColorValue;
   onChange: (limit: QueueLimit) => void;
   machinePicker?: ReactNode;
+  labels?: { title: string; all: string; counts: Record<number, string> };
 };

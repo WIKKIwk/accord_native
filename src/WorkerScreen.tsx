@@ -6,15 +6,17 @@ import { router, type Href } from 'expo-router';
 import { Modal, Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
-import { activeSessionToken, captureSessionWitness, isSessionWitnessCurrent, updateSessionAssignments, type Session, type SessionWitness } from './auth';
+import { activeSessionToken, captureSessionWitness, isSessionWitnessCurrent, type Session, type SessionWitness } from './auth';
 import { prepareWorkerFabQr, workerFabErrorText } from './workerFabQr';
 import { workerFabQrReads } from './workerFabQrReads';
 import { sessionReadScope } from './sessionReadScope';
-import { canWorkOnApparatus, loadWorkerQueue, queueFromSnapshot, workerOrderIsFrozen, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
+import { canWorkOnApparatus, workerOrderIsFrozen, type CompletedOrder, type QueueOrder, type WorkerQueue } from './workerApi';
 import { useNativeSheet } from './nativeSheet';
 import { OrderScreen } from './OrderScreen';
 import { workerOrderBusyTitle } from './workerOrderBlocking';
-import { subscribeWorkerLive } from './workerLive';
+import { useWorkerQueue } from './components/useWorkerQueue';
+import { workerQueueReadCanRetry } from './workerQueueReadError';
+import { WorkerQueueConnectionProgress } from './components/WorkerQueueConnectionProgress';
 import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu } from './workerLongPress';
 import { WorkerHeader } from './components/WorkerHeader';
 import { WorkerDrawer } from './components/WorkerDrawer';
@@ -35,7 +37,7 @@ import { WorkerWipHistory, WorkerWipHistorySheet, type WorkerWipHistorySheetHand
 import { WorkerLongPressActions, type WorkerActionChoice } from './components/WorkerLongPressActions';
 import { WorkerAlert } from './components/WorkerAlert';
 import type { WorkerAlertData } from './components/workerDialogTypes';
-import { DEFAULT_QUEUE_LIMIT, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
+import { DEFAULT_QUEUE_LIMIT, QUEUE_LIMITS, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
 import { workerQueueSearch } from './workerQueueWindow';
 import { useWorkerOrderText } from './components/useWorkerOrderText';
 import { workerPaddonApparatus } from './workerActivePaddon';
@@ -48,21 +50,29 @@ import { WorkerPeremotkaButton, WorkerPeremotkaSheet } from './components/Worker
 import { useWorkerPeremotka } from './components/useWorkerPeremotka';
 import { WorkerCutToolbar } from './components/WorkerCutToolbar';
 import { openWorkerCutPanel } from './workerPeremotka';
+import { WorkerSheetPresentation } from './workerSheetPresentation';
+import { workerDailyWorkVisible, workerInventoryVisible } from './workerNavigation';
+import { workerQueueLimitLabels } from './workerQueuePresentation';
+import { WorkerInventoryScreen } from './components/WorkerInventoryScreen';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
-type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string };
-type ActionScope = { window: string; scope: string };
-type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean };
-const statusLabel: Record<string, string> = {
-  pending: 'Kutilmoqda', waiting: 'Kutilmoqda', in_progress: 'Ish jarayonida',
-  paused: 'To‘xtatilgan', completed: 'Yakunlangan', frozen: 'Muzlatilgan',
-  print_preflight: 'Rang moslash', print_preflight_passed: 'Rang chiqarildi',
-  waiting_next_stage: 'Keyingi bosqich kutilmoqda', issue: 'Muammoli',
-};
+type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; presentationId?: number; onClose?: () => void };
+type ActionScope = { window: string; scope: string; readScope: string; witness: SessionWitness | null };
+type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean; presentationId?: number; onChoose: (action: WorkerActionChoice) => void };
 
 export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer }: Props) {
   const colors = useWorkerColors();
-  const { p } = useWorkerOrderText();
+  const { p, t, locale } = useWorkerOrderText();
+  const queueStateLabels: Record<string, string> = {
+    pending: p('worker.queue.status.pending'), in_progress: p('worker.queue.status.in_progress'),
+    paused: p('worker.queue.status.paused'), frozen: p('worker.queue.status.frozen'),
+    print_preflight: p('worker.queue.status.print_preflight'), print_preflight_passed: p('worker.queue.status.print_preflight_passed'),
+    waiting_next_stage: p('worker.qr.order_status.waiting_next_stage'), issue: p('worker.qr.order_status.completed_with_issue'),
+    completed: p('worker.queue.status.completed'), history_completed: p('worker.queue.status.completed'),
+    history_partial: p('worker.queue.status.completed_partial'),
+  };
+  const queueStatusLabel = (order: QueueOrder) => queueStateLabels[order.cardTone] ?? queueStateLabels[order.state] ?? queueStateLabels.pending;
+  const synchronizationError = p('worker.error.sync');
   const headerOffset = useSharedValue(0);
   const headerHeight = useSharedValue(70);
   const [headerSize, setHeaderSize] = useState(70);
@@ -72,24 +82,25 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   });
   const orderFontFamily = Platform.OS !== 'ios' && orderFontLoaded ? 'GoogleSans-Regular' : undefined;
   const orderHeadlineFontFamily = Platform.OS !== 'ios' && orderFontLoaded ? 'GoogleSans-Medium' : undefined;
-  const [queue, setQueue] = useState<WorkerQueue | null>(null);
   const [orderNotice, setOrderNotice] = useState('');
   useEffect(() => {
     if (!orderNotice) return;
     const timer = setTimeout(() => setOrderNotice(''), 4000);
     return () => clearTimeout(timer);
   }, [orderNotice]);
-  const [machineId, setMachineId] = useState('');
+  const [machineSelection, setMachineId] = useState('');
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
   const [nativeOverlayOpen, setNativeOverlayOpen] = useState(false);
   const historySheet = useRef<WorkerWipHistorySheetHandle>(null);
   const [actionOrder, setActionOrder] = useState<ActionOrder | null>(null);
+  const sheetPresentation = useRef(new WorkerSheetPresentation());
+  const [historyPresentation, setHistoryPresentation] = useState<number | null>(null);
   const orderRoute = useNativeSheet();
   const historyRoute = useNativeSheet();
   const actionsRoute = useNativeSheet();
   const nativeOrder = useRef<ActiveOrder | null>(null);
   const nativeActions = useRef<ActionOrder | null>(null);
-  const [section, setSection] = useState<'home' | 'profile' | 'daily' | 'instructions' | 'paddons'>('home');
+  const [section, setSection] = useState<'home' | 'profile' | 'daily' | 'instructions' | 'paddons' | 'inventory'>('home');
   const [paddonApparatus, setPaddonApparatus] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -101,10 +112,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const [search, setSearch] = useState('');
   const [queueLimit, setQueueLimit] = useState<QueueLimit>(DEFAULT_QUEUE_LIMIT);
   const [limitReady, setLimitReady] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [alert, setAlert] = useState<WorkerAlertData | null>(null);
-  const requestGeneration = useRef(0);
   const screenMounted = useRef(true);
   const queueRef = useRef<WorkerQueue | null>(null);
   const pendingAction = useRef<WorkerActionChoice | null>(null);
@@ -113,65 +121,68 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const preflightCheck = useRef(0);
   const preflightReopenBusy = useRef(false);
   const queueScopeRef = useRef<string | null>(null);
-  const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const searchScope = workerQueueSearch(search);
   const windowScope = JSON.stringify([searchScope, queueLimit]);
   const currentWindow = useRef(windowScope);
-  useEffect(() => { currentWindow.current = windowScope; }, [windowScope]);
+  const queueState = useWorkerQueue(session, searchScope, queueLimit, limitReady);
+  const { queue, loading, loadedWindow: loadedScope, reload } = queueState;
+  const machineId = machineSelection === 'completed' || queue?.machines.some(machine => machine.id === machineSelection) ? machineSelection : (queue?.machines[0]?.id ?? '');
+  const retryingQueue = !!queueState.error && workerQueueReadCanRetry(queueState.error);
+  const error = queueState.error && !retryingQueue ? (queueState.error instanceof Error ? queueState.error.message : p('worker.error.sync')) : '';
+  const synchronizedQueue = useRef(false);
+  useLayoutEffect(() => {
+    currentWindow.current = windowScope;
+    queueRef.current = queue;
+    queueScopeRef.current = loadedScope;
+    synchronizedQueue.current = queueState.synchronized;
+  }, [windowScope, queue, loadedScope, queueState.synchronized]);
   useEffect(() => { preflightCheck.current++; }, [session, windowScope, machineId, activeOrder, actionOrder, section, scannerOpen, alert]);
   useEffect(() => {
     let mounted = true;
-    void loadQueueLimit(session).then(limit => { if (mounted) { setQueueLimit(limit); setLimitReady(true); } });
+    void loadQueueLimit(session).then(limit => { if (mounted) setQueueLimit(limit); }).catch(() => {}).finally(() => { if (mounted) setLimitReady(true); });
     return () => { mounted = false; };
   }, [session]);
   useEffect(() => {
     if (section !== 'home') headerOffset.set(0);
   }, [section, headerOffset]);
-  const reload = useCallback(async (showLoading = false) => {
-    if (!limitReady) return;
-    const generation = ++requestGeneration.current;
-    if (showLoading) setLoading(true);
-    try {
-      const result = await loadWorkerQueue(session, searchScope, queueLimit);
-      if (generation !== requestGeneration.current) return;
-      const current = queueRef.current;
-      const old = current?.snapshot;
-      const next = result.snapshot;
-      if (old && queueScopeRef.current === windowScope && old.epoch === next.epoch && old.scope === next.scope && typeof old.rev === 'number' && typeof next.rev === 'number' && old.rev > next.rev) return;
-      if (!updateSessionAssignments(session, result.assignedIds, result.assignedLabels)) return;
-      queueRef.current = result;
-      queueScopeRef.current = windowScope;
-      setQueue(result);
-      setLoadedScope(windowScope);
-      setMachineId(current => current === 'completed' || result.machines.some(machine => machine.id === current) ? current : (result.machines[0]?.id ?? ''));
-      setError('');
-    } catch (e) {
-      if (generation !== requestGeneration.current) return;
-      setError(e instanceof Error ? e.message : 'Navbatni yuklab bo‘lmadi.');
-    } finally { if (generation === requestGeneration.current) setLoading(false); }
-  }, [session, searchScope, queueLimit, windowScope, limitReady]);
   const latestReload = useRef(reload);
   useEffect(() => { latestReload.current = reload; }, [reload]);
+  const onWritePending = useCallback((pending: boolean) => queueState.controller.setWritePending(pending), [queueState.controller]);
+  const readScope = sessionReadScope(session), previousReadScope = useRef(readScope);
+  useEffect(() => {
+    if (previousReadScope.current === readScope) return;
+    previousReadScope.current = readScope;
+    setActiveOrder(null); setActionOrder(null); setScannerOpen(false);
+    nativeOrder.current = null; nativeActions.current = null;
+    sheetPresentation.current.reset(); setHistoryPresentation(null);
+    orderRoute.close(); actionsRoute.close(); historyRoute.close();
+  }, [readScope, orderRoute, actionsRoute, historyRoute]);
   useEffect(() => { screenMounted.current = true; return () => { screenMounted.current = false; }; }, []);
   useLayoutEffect(() => { qrLocation.current = { machine: machineId, window: windowScope }; }, [machineId, windowScope]);
   const renderOrderRoute = useCallback((target: ActiveOrder, onClose = orderRoute.close) => {
     if (target.readOnly && target.preview) return <WorkerOrderDetails session={session}
       apparatusId={target.apparatusId}
-      order={target.preview} queueCursor={queueRef.current?.snapshot ?? null} onClose={onClose} />;
+      order={target.preview} queueCursor={queueState.synchronized ? queueRef.current?.snapshot ?? null : null} queueWindow={windowScope} onClose={onClose} />;
     return <OrderScreen key={`${target.apparatusId}:${target.orderId}`} session={session} apparatusId={target.apparatusId} orderId={target.orderId} preview={target.preview}
       initialScanQr={target.initialScanQr} initialSwitchQr={target.initialSwitchQr}
       onSwitchCommitted={() => { const pending = pendingQrSwitch.current; if (pending && isSessionWitnessCurrent(pending.witness)) pending.committed = true; }}
-      queueCursor={queueRef.current?.snapshot ?? null} busyOrderTitle={workerOrderBusyTitle(queueRef.current, target.apparatusId, target.orderId)}
-      apparatusCatalog={queueRef.current?.catalog} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction}
-      onNotice={setOrderNotice} onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
-  }, [session, orderRoute]);
+      queueCursor={queueState.synchronized ? queueRef.current?.snapshot ?? null : null} busyOrderTitle={workerOrderBusyTitle(queueRef.current, target.apparatusId, target.orderId)}
+      apparatusCatalog={queueRef.current?.catalog} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction} queueWindow={windowScope}
+      onWritePending={onWritePending} onNotice={setOrderNotice} onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
+  }, [session, orderRoute, windowScope, queueState.synchronized, onWritePending]);
   useEffect(() => {
     if (nativeOrder.current) orderRoute.update(renderOrderRoute(nativeOrder.current));
   }, [queue, orderRoute, renderOrderRoute]);
   function openOrder(target: ActiveOrder) {
-    if (Platform.OS !== 'android') { setActiveOrder(target); return; }
+    if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     if (workerOrderIsFrozen(queueRef.current?.snapshot, target.orderId)) {
-      ToastAndroid.show('Buyurtma muzlatilgan. Adminga xabar bering.', ToastAndroid.LONG);
+      setOrderNotice('Buyurtma muzlatilgan. Adminga xabar bering.');
+      return;
+    }
+    if (Platform.OS !== 'android') {
+      const presentationId = sheetPresentation.current.open();
+      if (presentationId === null) return;
+      setActiveOrder({ ...target, presentationId, onClose: () => closeOrder(presentationId) });
       return;
     }
     if (orderRoute.isOpen()) return;
@@ -185,9 +196,25 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       finishQrOrderDismissal();
     } });
   }
+  function closeOrder(presentationId: number) {
+    if (!sheetPresentation.current.dismiss(presentationId)) return;
+    setActiveOrder(current => current?.presentationId === presentationId ? null : current);
+    finishQrOrderDismissal();
+  }
   function openHistory(order: CompletedOrder) {
+    if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     preflightCheck.current++;
-    if (Platform.OS !== 'android') { setNativeOverlayOpen(true); historySheet.current?.open(order); return; }
+    if (Platform.OS !== 'android') {
+      if (!historySheet.current) return;
+      const presentationId = sheetPresentation.current.open();
+      if (presentationId === null) return;
+      setHistoryPresentation(presentationId);
+      setNativeOverlayOpen(true);
+      const catalog = queueRef.current?.catalog ?? queueRef.current?.machines ?? [];
+      historySheet.current.open(order, Object.fromEntries(catalog.map(machine => [machine.id, machine.name])),
+        catalog.find(machine => machine.id === order.apparatusId), () => { void latestReload.current(); }, onWritePending);
+      return;
+    }
     if (workerOrderIsFrozen(queueRef.current?.snapshot, order.id)) return;
     setNativeOverlayOpen(true);
     const apparatusNames = Object.fromEntries(queueRef.current?.machines.map(machine => [machine.id, machine.name]) ?? []);
@@ -196,34 +223,24 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
         { dismissible: true, compact: true, onDismiss: () => { setNativeOverlayOpen(false); preflightCheck.current++; } });
       return;
     }
-    historyRoute.open(<WorkerWipHistory session={session} order={order} apparatusNames={apparatusNames} onClose={historyRoute.close} />,
+    const operation = (queueRef.current?.catalog ?? queueRef.current?.machines)?.find(machine => machine.id === order.apparatusId)?.operation ?? '';
+    historyRoute.open(<WorkerWipHistory session={session} order={order} apparatusNames={apparatusNames} operation={operation}
+      allowReactivation={['laminate', 'glue', 'cut'].includes(operation)} onReactivationAttempted={() => { void latestReload.current(); }}
+      onWritePending={onWritePending} onClose={historyRoute.close} />,
       { dismissible: true, onDismiss: () => { setNativeOverlayOpen(false); preflightCheck.current++; } });
   }
   const scopedCursor = useCallback((expected: ActionScope | null) => {
     const snapshot = queueRef.current?.snapshot;
-    return expected && currentWindow.current === expected.window && queueScopeRef.current === expected.window && snapshot?.scope === expected.scope ? snapshot : null;
+    return synchronizedQueue.current && expected && currentWindow.current === expected.window && queueScopeRef.current === expected.window && snapshot?.scope === expected.scope ? snapshot : null;
   }, []);
-  const getActionCursor = useCallback(() => scopedCursor(actionScope.current), [scopedCursor]);
+  const actionContextCurrent = useCallback((expected: ActionScope | null) => !!expected && screenMounted.current &&
+    !!activeSessionToken(session) && isSessionWitnessCurrent(expected.witness) && expected.readScope === sessionReadScope(session) &&
+    currentWindow.current === expected.window, [session]);
+  const getActionCursor = useCallback(() => {
+    if (!actionContextCurrent(actionScope.current)) throw new Error(synchronizationError);
+    return scopedCursor(actionScope.current);
+  }, [actionContextCurrent, scopedCursor, synchronizationError]);
   const chooseOrderAction = useCallback((action: WorkerActionChoice) => { pendingAction.current = action; }, []);
-  useEffect(() => {
-    if (!limitReady) return;
-    const timer = setTimeout(() => { void reload(true); }, searchScope ? 350 : 0);
-    return () => clearTimeout(timer);
-  }, [reload, searchScope, limitReady]);
-  useEffect(() => {
-    if (loadedScope !== windowScope || !queueRef.current) return;
-    return subscribeWorkerLive(session, searchScope, () => { void reload(); }, undefined,
-      () => queueRef.current?.snapshot ?? null,
-      snapshot => {
-        const current = queueRef.current;
-        if (!current) return;
-        const updated = queueFromSnapshot(current.machines, snapshot, current.assignedIds, current.assignedLabels, current.catalog);
-        requestGeneration.current++;
-        queueRef.current = updated;
-        setQueue(updated);
-        setLoading(false);
-      }, queueLimit);
-  }, [session, searchScope, windowScope, queueLimit, reload, loadedScope]);
 
   const selectedMachine = queue?.machines.find(machine => machine.id === machineId);
   const completedMatches = (queue?.completed ?? []).filter(order => !searchScope || [order.code, order.title, order.customer].some(value => value.toLocaleLowerCase().includes(searchScope.toLocaleLowerCase())));
@@ -231,7 +248,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
   const scannerMachineId = selectedMachine && canWorkMachine(selectedMachine.id) ? selectedMachine.id : '';
   const paddonMachine = workerPaddonApparatus(queue?.machines ?? [], machineId, session.assigned_apparatus);
-  const cutVisible = section === 'home' && loadedScope === windowScope && !drawerOpen && !scannerOpen && !activeOrder && !actionOrder && !nativeOverlayOpen;
+  const cutVisible = section === 'home' && queueState.synchronized && loadedScope === windowScope && !drawerOpen && !scannerOpen && !activeOrder && !actionOrder && !nativeOverlayOpen;
   const peremotka = useWorkerPeremotka(session, paddonMachine?.id ?? '', cutVisible);
   const activePaddon = useWorkerActivePaddon(session, paddonMachine?.id ?? '',
     cutVisible && peremotka.state.phase === 'closed',
@@ -268,6 +285,12 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const scanner = scannerOpen ? <WorkerQrScanner key={scannerMachineId} session={session} apparatusId={scannerMachineId} apparatus={selectedMachine} getSnapshot={() => queueRef.current?.snapshot ?? null} apparatusLabel={id => (queueRef.current?.catalog ?? queueRef.current?.machines)?.find(machine => machine.id === id)?.name ?? id} onClose={() => setScannerOpen(false)} onOrder={finishQrScan} /> : null;
   if (scannerOpen && !nativeNavigation) return scanner;
   function selectDestination(id: string) {
+    if (id === 'transfer') {
+      if (!workerInventoryVisible(session)) return;
+      if (nativeNavigation) router.push('/ios-worker/inventory' as Href);
+      else setSection('inventory');
+      return;
+    }
     if (id === 'home' || id === 'queue') { setSection('home'); return; }
     if (id === 'profile') { if (nativeNavigation) onNavigate?.('profile'); else setSection('profile'); return; }
     if (id === 'daily') { if (nativeNavigation) onNavigate?.('daily'); else setSection('daily'); return; }
@@ -287,8 +310,6 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       else { setPaddonApparatus(apparatus); setSection('paddons'); }
       return;
     }
-    const labels: Record<string, string> = { chat: 'Chat', paddons: 'Paddonlar', instructions: 'App yo‘riqnomasi', transfer: 'Joylashtirish va transfer' };
-    setAlert({ title: labels[id] ?? 'Bo‘lim', message: 'Bu bo‘lim hozircha tayyor emas.' });
   }
   function openScanner() {
     if (!scannerMachineId) { setAlert({ title: 'QR skanerlash', message: p('worker.qr.select_apparatus') }); return; }
@@ -298,9 +319,12 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (preflightReopenBusy.current) return;
     const generation = ++preflightCheck.current;
     const expectedWindow = windowScope;
+    const witness = captureSessionWitness(session), readScope = sessionReadScope(session);
     const getCursor = () => {
+      if (!screenMounted.current || !activeSessionToken(session) || !isSessionWitnessCurrent(witness) ||
+          readScope !== sessionReadScope(session) || currentWindow.current !== expectedWindow) throw new Error(p('worker.error.sync'));
       const snapshot = queueRef.current?.snapshot;
-      return currentWindow.current === expectedWindow && queueScopeRef.current === expectedWindow && snapshot?.scope === scope ? snapshot : null;
+      return synchronizedQueue.current && currentWindow.current === expectedWindow && queueScopeRef.current === expectedWindow && snapshot?.scope === scope ? snapshot : null;
     };
     try {
       const data = await readWorkerActionControl(session, apparatusId, orderId, getCursor);
@@ -310,12 +334,13 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       setAlert({ title: 'Rang chiqarilyapti holatiga qaytarish', message: 'Rostdan ham rang chiqarilyapti holatiga qaytarmoqchimisiz?', confirmLabel: 'Ruxsat', onConfirm: () => {
         if (preflightReopenBusy.current) return;
         preflightReopenBusy.current = true;
+        queueState.controller.setWritePending(true);
         void (async () => {
           let message = '';
           try {
             await runWorkerMenuAction(session, apparatusId, orderId, 'reopen', menu, getCursor);
           } catch { message = 'Amal tasdiqlanmadi. Buyurtmaning joriy holati yangilanmoqda.'; }
-          finally { preflightReopenBusy.current = false; }
+          finally { preflightReopenBusy.current = false; queueState.controller.setWritePending(false); }
           if (screenMounted.current) {
             void latestReload.current();
             if (message) setAlert(current => current ?? { title: 'Buyurtma', message });
@@ -332,13 +357,20 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   function openOrderActions(apparatusId: string, order: QueueOrder, isCompleted: boolean) {
     if (!canWorkMachine(apparatusId) || actionWrites.current.has(JSON.stringify([apparatusId, order.id]))) return;
     if (Platform.OS === 'android' && actionsRoute.isOpen()) return;
+    if (Platform.OS !== 'android' && sheetPresentation.current.isOpen()) return;
     preflightCheck.current++;
-    const scope = queueRef.current?.snapshot.scope;
-    if (loadedScope !== windowScope || typeof scope !== 'string' || !scope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; }
+    const snapshotScope = queueRef.current?.snapshot.scope;
+    const scope = typeof snapshotScope === 'string' ? snapshotScope : '';
     if (!isCompleted && order.state === 'print_preflight_passed') { void openPreflightConfirmation(apparatusId, order.id, scope); return; }
-    actionScope.current = { window: windowScope, scope };
+    const presentationId = Platform.OS !== 'android' ? sheetPresentation.current.open() : undefined;
+    if (presentationId === null) return;
+    actionScope.current = { window: windowScope, scope, readScope: sessionReadScope(session), witness: captureSessionWitness(session) };
     pendingAction.current = null;
-    const target = { apparatusId, order, completed: isCompleted };
+    const target: ActionOrder = { apparatusId, order, completed: isCompleted, presentationId,
+      onChoose: presentationId === undefined ? chooseOrderAction : action => {
+        if (sheetPresentation.current.isCurrent(presentationId)) chooseOrderAction(action);
+      },
+    };
     if (Platform.OS === 'android') {
       nativeActions.current = target;
       setNativeOverlayOpen(true);
@@ -350,7 +382,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       { dismissible: true, compact: true, onDismiss: closeOrderActions });
     } else setActionOrder(target);
   }
-  function closeOrderActions() {
+  function closeOrderActions(presentationId = actionOrder?.presentationId) {
+    if (Platform.OS !== 'android' && (presentationId === undefined || !sheetPresentation.current.dismiss(presentationId))) return;
     const target = Platform.OS === 'android' ? nativeActions.current : actionOrder;
     const action = pendingAction.current;
     const expected = actionScope.current;
@@ -367,19 +400,23 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       return;
     }
     const key = JSON.stringify([target.apparatusId, target.order.id]);
-    const readCursor = () => screenMounted.current ? scopedCursor(expected) : null;
+    const readCursor = () => {
+      if (!actionContextCurrent(expected)) throw new Error(p('worker.error.sync'));
+      return scopedCursor(expected);
+    };
     const run = async () => {
       if (actionWrites.current.has(key) || !screenMounted.current) return;
-      if (!readCursor()) {
+      if (!actionContextCurrent(expected)) {
         void latestReload.current();
         setAlert({ title: 'Buyurtma', message: 'Buyurtma holati o‘zgardi. Qayta urining.' });
         return;
       }
       actionWrites.current.add(key);
+      queueState.controller.setWritePending(true);
       let message: string;
       try { message = await action.run(readCursor); }
       catch { message = 'Amal tasdiqlanmadi. Buyurtmaning joriy holati yangilanmoqda.'; }
-      finally { actionWrites.current.delete(key); }
+      finally { actionWrites.current.delete(key); queueState.controller.setWritePending(false); }
       if (screenMounted.current) {
         void latestReload.current();
         if (message && Platform.OS === 'android') ToastAndroid.show(message, ToastAndroid.LONG);
@@ -404,48 +441,47 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   </View>;
   const content = (
     <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
-      {!nativeNavigation && section !== 'daily' && section !== 'instructions' && section !== 'paddons' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
-      {section === 'paddons' ? <WorkerPaddons key={paddonApparatus} session={session} apparatus={paddonApparatus} onBack={() => setSection('home')} /> : section === 'instructions' ? <WorkerWorkInstructions session={session} onBack={() => setSection('home')} /> : section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => setSection('daily')} /> : section === 'daily'
+      {!nativeNavigation && section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
+      {section === 'inventory' ? <WorkerInventoryScreen session={session} onBack={() => setSection('home')} /> : section === 'paddons' ? <WorkerPaddons key={paddonApparatus} session={session} apparatus={paddonApparatus} onBack={() => setSection('home')} /> : section === 'instructions' ? <WorkerWorkInstructions session={session} onBack={() => setSection('home')} /> : section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => setSection('daily')} /> : section === 'daily'
         ? <DailyWorkScreen session={session} onOpenDrawer={openDrawer} onBack={() => setSection('home')} /> : <>
       <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
-        toolbarActions={cutActions}>
+        toolbarActions={cutActions} completedLabel={p('worker.queue.tab.completed')} title={t('Buyurtmalar')} searchPlaceholder={p('worker.queue.search.open')}>
         {(tabId, pagerGesture, machinePicker) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const canWork = canWorkMachine(tabId);
           const pageOrders = queue?.orders[tabId] ?? [];
           const pageActive = tabId === (machineId || 'completed');
-          return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={async () => { await reload(); }}>
-          <WorkerQueueFilter key="queue-filter" machinePicker={machinePicker} value={queueLimit} enabled={limitReady} loading={!!queue && loading && loadedScope !== windowScope} backgroundColor={colors.surface} onChange={limit => {
+          return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={queueState.controller.refreshAll}>
+          <WorkerQueueFilter key="queue-filter" machinePicker={machinePicker} labels={workerQueueLimitLabels(locale, QUEUE_LIMITS)} value={queueLimit} enabled={limitReady} loading={!!queue && loading && loadedScope !== windowScope} backgroundColor={colors.surface} onChange={limit => {
             if (limit === queueLimit) return;
-            requestGeneration.current++;
-            queueRef.current = null;
-            queueScopeRef.current = null;
-            setLoadedScope(null);
-            setLoading(true);
             setQueueLimit(limit);
             void saveQueueLimit(session, limit).catch(() => {});
           }} />
-          {error ? <ListItem supportingText={error} onPress={() => { void reload(true); }}>Qayta urinish</ListItem> : null}
-          {queue && !queue.machines.length ? <ListItem supportingText="Administrator aparatni hisobingizga biriktirishi kerak.">Bosma aparati topilmadi</ListItem> : null}
-          {tabId === 'completed' && !completed.length && !loading ? <ListItem>Tugallangan buyurtmalar yo‘q</ListItem> : null}
+          <WorkerQueueConnectionProgress active={loading || retryingQueue} />
+          {error ? <ListItem supportingText={error} onPress={() => { void reload(true); }}>{p('worker.action.retry')}</ListItem> : null}
+          {queue && !queue.machines.length ? <ListItem>{p('worker.queue.empty.apparatus')}</ListItem> : null}
+          {tabId === 'completed' && !completed.length && !loading ? <ListItem>{p('worker.queue.completed.empty')}</ListItem> : null}
+          {tabId !== 'completed' && canWork ? <ListItem>{p('worker.queue.your.apparatus')}</ListItem> : null}
           {tabId === 'completed' ? completed.map((order, index) => (
-            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} first={index === 0} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
+              {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(order),
+                statusDetail: [order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ') } : {})}
               onPress={() => openHistory(order)}
               onLongPress={!order.issueNote.trim() && canWorkMachine(order.apparatusId) ? () => openOrderActions(order.apparatusId, order, true) : undefined} />
           )) : null}
-          {pageMachine && !pageOrders.length && !loading ? <ListItem>Buyurtmalar topilmadi</ListItem> : null}
+          {pageMachine && !pageOrders.length && !loading ? <ListItem>{p('worker.queue.empty.orders', { apparatus: pageMachine.name.trim() })}</ListItem> : null}
           {tabId !== 'completed' ? pageOrders.map((order, index) => (
-            <WorkerOrderListItem key={order.id} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+            <WorkerOrderListItem key={order.id} first={index === 0} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
-              supportingText={[order.customer, statusLabel[order.state] ?? order.state].filter(Boolean).join(' · ')}
-              statusText={statusLabel[order.state] ?? order.state} statusDetail={order.customer}
+              supportingText={[order.temporarilyPaused ? p('worker.temporary_pause.status') : '', order.customer].filter(Boolean).join(' • ')}
+              {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(order),
+                statusDetail: [order.temporarilyPaused ? p('worker.temporary_pause.status') : '', order.customer].filter(Boolean).join(' • ') } : {})}
               onLongPress={canWork ? () => openOrderActions(tabId, order, false) : undefined}
               onPress={() => {
-                if (loadedScope !== windowScope) { setAlert({ title: 'Navbat yangilanmoqda', message: 'Buyurtmani ochishdan avval yangilanishini kuting.' }); return; }
                 openOrder({ apparatusId: tabId, orderId: order.id, preview: order, readOnly: !canWork });
               }} />
           )) : null}
@@ -454,16 +490,21 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
         }}
       </WorkerTabs>
       </>}
-      {!nativeNavigation && section !== 'paddons' && <View onLayout={event => setNavBarHeight(event.nativeEvent.layout.height)}>
+      {!nativeNavigation && section !== 'paddons' && section !== 'inventory' && <View onLayout={event => setNavBarHeight(event.nativeEvent.layout.height)}>
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
       </View>}
-      {section !== 'daily' && section !== 'instructions' && section !== 'paddons' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
-      {activeOrder ? <WorkerOrderSheet onClose={() => { setActiveOrder(null); finishQrOrderDismissal(); }}>
-        {renderOrderRoute(activeOrder, () => setActiveOrder(null))}
+      {section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
+      {activeOrder ? <WorkerOrderSheet key={activeOrder.presentationId} onClose={activeOrder.onClose!}>
+        {renderOrderRoute(activeOrder, activeOrder.onClose)}
       </WorkerOrderSheet> : null}
-      {Platform.OS !== 'android' && <WorkerWipHistorySheet ref={historySheet} session={session} onDismiss={() => { setNativeOverlayOpen(false); preflightCheck.current++; }} />}
-      {actionOrder ? <WorkerOrderSheet dismissible compact onClose={closeOrderActions}>
-        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={chooseOrderAction} />
+      {Platform.OS !== 'android' && <WorkerWipHistorySheet key={readScope} ref={historySheet} session={session} presentationId={historyPresentation ?? undefined} onDismiss={() => {
+        const id = historyPresentation;
+        if (id === null || !sheetPresentation.current.dismiss(id)) return;
+        setHistoryPresentation(null);
+        setNativeOverlayOpen(false); preflightCheck.current++;
+      }} />}
+      {actionOrder ? <WorkerOrderSheet key={actionOrder.presentationId} dismissible compact fitContent measureContent heightFraction={0.86} onClose={() => closeOrderActions(actionOrder.presentationId)}>
+        <WorkerLongPressActions session={session} apparatusId={actionOrder.apparatusId} operation={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.operation ?? ''} apparatusName={queue?.machines.find(machine => machine.id === actionOrder.apparatusId)?.name ?? actionOrder.apparatusId} order={actionOrder.order} completed={actionOrder.completed} getCursor={getActionCursor} onChoose={actionOrder.onChoose} />
       </WorkerOrderSheet> : null}
       <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
       <WorkerActivePaddonPicker {...activePaddon} />
@@ -473,7 +514,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     </SafeAreaView>
   );
   if (nativeNavigation) return content;
-  return <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination} displayName={String(session.profile.display_name ?? '')} canTransfer={session.capabilities.includes('inventory.movement.manage')} active={section === 'home' ? 'queue' : section}>{content}</WorkerDrawer>;
+  return <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination} displayName={String(session.profile.display_name ?? '')} canTransfer={workerInventoryVisible(session)} showDailyWork={workerDailyWorkVisible(session)} active={section === 'home' ? 'queue' : section === 'inventory' ? 'transfer' : section}>{content}</WorkerDrawer>;
 }
 const styles = StyleSheet.create({
   safe: { flex: 1 },

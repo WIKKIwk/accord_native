@@ -387,6 +387,20 @@ test('iOS close and swipe notify callers once after native dismissal, so another
   }
 });
 
+test('iOS closing sheet ignores delayed native presentation echoes until dismissal', () => {
+  const h = sheetHarness({ dismissible: true }), tree = h.render();
+  sheetNode(tree, 'SheetClose').props.value();
+  sheetNode(tree, 'BottomSheet').props.onIsPresentedChange(true);
+  const closing = sheetNode(h.render(), 'BottomSheet');
+  assert.equal(closing.props.isPresented, false);
+  assert.deepEqual(h.closed, []);
+  closing.props.onIsPresentedChange(false);
+  closing.props.onDismiss();
+  closing.props.onIsPresentedChange(true);
+  assert.equal(sheetNode(h.render(), 'BottomSheet').props.isPresented, false);
+  assert.deepEqual(h.closed, ['closed']);
+});
+
 for (const platform of ['android', 'ios']) {
   test(`${platform}: native chooser connects every saved row, PIN input and add action with busy guards`, () => {
     const calls = [], field = { get: () => '1234' };

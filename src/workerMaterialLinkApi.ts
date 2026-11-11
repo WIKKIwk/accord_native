@@ -90,7 +90,7 @@ async function request(session: Session, path: string, fallback: string, body?: 
         throw new MobileApiException({ code, message: linkMessages[code] ?? (response.status === 403
           ? 'Bu so‘rov bo‘yicha amal qilishga ruxsat yo‘q' : 'So‘rov holatini yangilab bo‘lmadi. Qayta urinib ko‘ring'), statusCode: response.status });
       }
-      throw productionMapResponseError(response.status, raw, fallback);
+      throw productionMapResponseError(response.status, raw, fallback, response.headers);
     }
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new TypeError('Invalid response');
     return raw as Json;

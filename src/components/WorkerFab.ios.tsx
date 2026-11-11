@@ -1,3 +1,4 @@
+import { useWorkerOrderText } from './useWorkerOrderText';
 import { MenuView, type MenuAction } from '@expo/ui/community/menu';
 import { SymbolView } from 'expo-symbols';
 import { PlatformColor, StyleSheet, View } from 'react-native';
@@ -5,20 +6,21 @@ import { PlatformColor, StyleSheet, View } from 'react-native';
 type Props = { onSelect: (id: string) => void; onScan: () => void; bottomOffset?: number };
 
 const actions: MenuAction[] = [
-  { id: 'scan', title: 'QR kodni skanerlash', image: 'qrcode.viewfinder' },
-  { id: 'daily', title: 'Kunlik ishlar', image: 'calendar' },
+  { id: 'scan', title: 'QR scan qilish', image: 'qrcode.viewfinder' },
+  { id: 'daily', title: 'Kunlik ish', image: 'calendar' },
   { id: 'paddons', title: 'Paddonlar', image: 'shippingbox' },
 ];
 
 export function WorkerFab({ onSelect, onScan, bottomOffset = 88 }: Props) {
+  const { t } = useWorkerOrderText();
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-    <MenuView actions={actions} style={[styles.menu, { bottom: bottomOffset }]}
+    <MenuView actions={actions.map(action => ({ ...action, title: t(action.title) }))} style={[styles.menu, { bottom: bottomOffset }]}
       onPressAction={event => {
         const id = event.nativeEvent.event;
         if (id === 'scan') onScan();
         else onSelect(id);
       }}>
-      <View style={styles.trigger} accessibilityRole="button" accessibilityLabel="Amallar">
+      <View style={styles.trigger} accessibilityRole="button" accessibilityLabel={t('Amallar')}>
         <SymbolView name="plus.circle.fill" size={44} tintColor={PlatformColor('systemBlue')} />
       </View>
     </MenuView>

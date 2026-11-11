@@ -22,7 +22,7 @@ const controls = load('workerControlsApi', { './authorizedFetch': {}, './session
 const models = load('workerQueueModels', { './workerControlsApi': controls });
 const decisions = load('productionCompletionApi', { './workerControlsApi': controls, './workerQueueModels': models, './authorizedFetch': {} });
 const decoder = load('workerSnapshot', { './workerControlsApi': controls, './workerQueueModels': models, './productionCompletionApi': decisions });
-const { applyWorkerDelta } = load('workerDelta', { './workerSnapshot': decoder });
+const { applyWorkerDelta } = load('workerDelta', { './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': decoder });
 const station = 'apparatus:default:bosma_7';
 function fixture() {
   const record = loadContract('worker_list_api_test').find(item => item.test.startsWith('worker HTTP and v2 socket'));
@@ -43,7 +43,7 @@ test('worker queue sends the compact request recorded from V2', async () => {
   });
   const appearance = load('workerOrderAppearance');
   const api = load('workerApi', {
-    './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerSnapshot': decoder,
+    './workerOrderAppearance': appearance, './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './workerQueueReadApi': {}, './workerQueueReadError': {}, './workerSnapshot': decoder,
     './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': { adminApparatus: async () => [
       { runtime_projection: { apparatus_id: station, display: { display_name: 'Bosma' }, execution_profile: { operation: 'print' } } },
     ] },

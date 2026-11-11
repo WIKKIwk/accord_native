@@ -1,23 +1,10 @@
 import type { Session } from './auth';
-import { postWorkerApiRequest, reactivationRecloseControl, WorkerControlException } from './workerControlsApi';
-import { validOrderControl } from './workerOrderLogic';
+import { postWorkerApiRequest, printPreflightHold, WorkerControlException, type AdminPrintPreflightHold } from './workerControlsApi';
+import { queueActionControlState } from './workerQueueAction';
+export { printPreflightHold, type AdminPrintPreflightHold } from './workerControlsApi';
 
 type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
-const text = (value: unknown) => value == null ? '' : String(value).trim();
-
-/** @v2 AdminPrintPreflightHold */
-export type AdminPrintPreflightHold = { hold_id: string; idempotency_key: string; order_id: string; apparatus: string;
-  status: string; revision: number };
-export function printPreflightHold(raw: unknown): AdminPrintPreflightHold | null {
-  const value = object(raw);
-  if (!value) return null;
-  const hold_id = text(value.hold_id), idempotency_key = text(value.idempotency_key), order_id = text(value.order_id);
-  const apparatus = text(value.apparatus), status = text(value.status).toLowerCase(), revision = value.revision ?? 0;
-  if (!hold_id || !idempotency_key || !order_id || !apparatus || !Number.isInteger(revision) || (revision as number) < 0 ||
-      !['held', 'running', 'passed', 'failed', 'cancelled', 'consumed'].includes(status)) return null;
-  return { hold_id, idempotency_key, order_id, apparatus, status, revision: revision as number };
-}
 
 /** @v2 AdminPrintPreflightResponse */
 export type AdminPrintPreflightResponse = { hold: AdminPrintPreflightHold; control_state: Obj | null };
@@ -26,11 +13,11 @@ export function printPreflightResponse(raw: unknown, session?: Session): AdminPr
   if (!hold) throw new WorkerControlException('print_preflight_invalid_response', 'Rang sinovi javobi noto‘g‘ri');
   const state = object(payload?.control_state);
   let control: Obj | null = null;
-  if (state && typeof state.apparatus === 'string' && typeof state.order_id === 'string' && object(state.stage_states) &&
-      validOrderControl({ ok: true, control_state: { ...state, scope: '__preflight__' } }, state.apparatus, state.order_id, null)) {
-    const value = object(state.control);
-    control = session && value ? { ...state, control: { ...value, reclose: reactivationRecloseControl(value.reclose, session, false) } } : state;
-  }
+  try {
+    // The hold is already committed. Parse its optional action authority with
+    // the same model as queue ACK/bootstrap; failure drops only that authority.
+    control = queueActionControlState(state, false, session);
+  } catch { /* V2 refreshes malformed optional controls read-only. */ }
   return { hold, control_state: control };
 }
 

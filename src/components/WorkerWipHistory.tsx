@@ -5,7 +5,7 @@ import { ActivityIndicator, FlatList, Platform, PlatformColor, Pressable, StyleS
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { useNativeSheet } from '../nativeSheet';
-import type { CompletedOrder } from '../workerApi';
+import type { Apparatus, CompletedOrder } from '../workerApi';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 import { WorkerAlert } from './WorkerAlert';
@@ -14,29 +14,41 @@ import { WorkerFormField } from './WorkerFormField';
 import type { WorkerAlertData } from './workerDialogTypes';
 import { WorkerIconButton } from './WorkerIconButton';
 import { WorkerOrderSheet } from './WorkerOrderSheet';
-import { loadWorkerWipBatches, wipBatchKind, wipBatchRows, wipBatchStatus, wipBatchWeights, wipMeters, wipText, type WipApparatusNames, type WipBatch, type WipOrder } from '../workerWip';
+import { loadWorkerWipBatches, wipBatchKind, wipText, type WipApparatusNames, type WipBatch, type WipOrder } from '../workerWip';
 import { WorkerWipBatchDetails } from './WorkerWipBatchDetails';
 import { WorkerOrderFreezeDetails } from './WorkerOrderDetails';
+import { useWorkerOrderText } from './useWorkerOrderText';
+import { workerWipHistoryRows, workerWipHistoryTotals, workerWipHistoryTotalText } from '../workerWipHistoryPresentation';
+import { workerWipStatusLabel } from '../workerWipDetailsPresentation';
+import { useWorkerWipReactivation } from './useWorkerWipReactivation';
 
-type Props = { session: Session; order: WipOrder; onClose: () => void; stageHistory?: boolean; apparatusNames?: WipApparatusNames };
-export type WorkerWipHistorySheetHandle = { open: (order: CompletedOrder) => void };
+type Props = { session: Session; order: WipOrder; onClose: () => void; stageHistory?: boolean; apparatusNames?: WipApparatusNames;
+  operation?: string; allowReactivation?: boolean; onReactivationAttempted?: () => void; onWritePending?: (pending: boolean) => void };
+export type WorkerWipHistorySheetHandle = { open: (order: CompletedOrder, apparatusNames?: WipApparatusNames, apparatus?: Apparatus,
+  onReactivationAttempted?: () => void, onWritePending?: (pending: boolean) => void) => void };
 
-export function WorkerWipHistorySheet({ ref, session, onDismiss }: {
+export function WorkerWipHistorySheet({ ref, session, onDismiss, presentationId }: {
   ref: Ref<WorkerWipHistorySheetHandle>;
   session: Session;
   onDismiss: () => void;
+  presentationId?: number;
 }) {
-  const [order, setOrder] = useState<CompletedOrder | null>(null);
-  useImperativeHandle(ref, () => ({ open: setOrder }), []);
-  if (!order) return null;
+  const [selection, setSelection] = useState<{ order: CompletedOrder; apparatusNames?: WipApparatusNames; apparatus?: Apparatus;
+    onReactivationAttempted?: () => void; onWritePending?: (pending: boolean) => void } | null>(null);
+  useImperativeHandle(ref, () => ({ open: (order: CompletedOrder, apparatusNames?: WipApparatusNames, apparatus?: Apparatus,
+    onReactivationAttempted?: () => void, onWritePending?: (pending: boolean) => void) => setSelection({ order, apparatusNames, apparatus, onReactivationAttempted, onWritePending }) }), []);
+  if (!selection) return null;
+  const { order, apparatusNames = {} } = selection;
   const close = () => {
-    setOrder(null);
+    setSelection(current => current === selection ? null : current);
     onDismiss();
   };
-  return <WorkerOrderSheet key={JSON.stringify([order.apparatusId, order.id])} dismissible compact={!!order.issueNote} onClose={close}>
+  return <WorkerOrderSheet key={JSON.stringify([order.apparatusId, order.id, presentationId])} dismissible compact={!!order.issueNote} onClose={close}>
     {order.issueNote
-      ? <WorkerOrderFreezeDetails order={order} apparatusName={order.apparatusId} onClose={close} />
-      : <WorkerWipHistory session={session} order={order} onClose={close} />}
+      ? <WorkerOrderFreezeDetails order={order} apparatusName={apparatusNames[order.apparatusId] ?? ''} onClose={close} />
+      : <WorkerWipHistory session={session} order={order} apparatusNames={apparatusNames} onClose={close}
+        operation={selection.apparatus?.operation} allowReactivation={['laminate', 'glue', 'cut'].includes(selection.apparatus?.operation ?? '')}
+        onReactivationAttempted={selection.onReactivationAttempted} onWritePending={selection.onWritePending} />}
   </WorkerOrderSheet>;
 }
 
@@ -59,8 +71,8 @@ async function loadOpeningWip(session: Session, order: WipOrder, signal: AbortSi
   });
 }
 
-export function WorkerWipHistory({ session, order, onClose, stageHistory = false, apparatusNames = {} }: Props) {
-  const colors = useWorkerColors();
+export function WorkerWipHistory({ session, order, onClose, stageHistory = false, apparatusNames = {}, operation, allowReactivation, onReactivationAttempted, onWritePending }: Props) {
+  const colors = useWorkerColors(), { p, t } = useWorkerOrderText();
   const android = Platform.OS === 'android';
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
   const sheetCard = Platform.OS === 'ios' ? PlatformColor('secondarySystemGroupedBackground') : colors.surface;
@@ -77,6 +89,10 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
   const [foundId, setFoundId] = useState('');
   const [notFound, setNotFound] = useState(false);
   const searchHandled = useRef(false);
+  const reactivation = useWorkerWipReactivation({ session, order, apparatusNames, operation, allowReactivation,
+    showDetails: batch => openBatch(batch, true), onWritePending, onAttempted: () => {
+      setLoading(true); setError(''); setFoundId(''); setNotFound(false); setReload(value => value + 1); onReactivationAttempted?.();
+    } });
   useEffect(() => {
     const controller = new AbortController();
     const opening = stageHistory ? loadOpeningWip(session, order, controller.signal) : Promise.resolve([]);
@@ -88,22 +104,21 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
       setLoading(false);
     }, reason => {
       if (controller.signal.aborted) return;
-      setError(reason instanceof Error ? reason.message : 'Yuklab bo‘lmadi.');
+      setError(reason?.statusCode === 403 || reason?.code === 'forbidden' ? 'worker.wip.access_denied' : 'worker.wip.history.error');
       setLoading(false);
     });
     return () => controller.abort();
   }, [reload, stageHistory, session, order]);
 
-  const totals = batches.reduce((total, batch) => {
-    const { gross, net } = wipBatchWeights(batch);
-    const meters = wipMeters(batch);
-    if (gross !== null) { total.gross += gross; total.grossCount++; }
-    if (net !== null) { total.net += net; total.netCount++; }
-    if (meters !== null) { total.meters += meters; total.meterCount++; }
-    total[wipBatchKind(batch)]++;
-    return total;
-  }, { gross: 0, net: 0, meters: 0, grossCount: 0, netCount: 0, meterCount: 0, waiting: 0, inUse: 0, processed: 0 });
-  const metric = (amount: number, count: number, unit: string) => count ? `${Number(amount.toFixed(6))} ${unit}${count < batches.length ? ' (qisman)' : ''}` : '—';
+  const totals = batches.reduce((total, batch) => { total[wipBatchKind(batch)]++; return total; }, { waiting: 0, inUse: 0, processed: 0 });
+  const outputTotals = workerWipHistoryTotals(batches);
+  const outputLines = (['gross', 'net', 'meters'] as const).map(kind => {
+    const total = outputTotals[kind];
+    return <View key={kind}>
+      <Text style={{ color: colors.text }}>{p(`worker.wip.history.total_${kind}`)}: {workerWipHistoryTotalText(total, kind === 'meters' ? 'm' : 'kg', p)}</Text>
+      {total.known && total.missing ? <Text style={{ color: colors.muted }}>{p('worker.wip.history.partial_total', { count: total.missing })}</Text> : null}
+    </View>;
+  });
   const filtered = foundId ? batches.filter(batch => batch.batch_id === foundId) : batches;
   function searchQr(raw: string) {
     const qr = raw.trim().toUpperCase();
@@ -114,9 +129,10 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
     setNotFound(!match);
     setSearching(false);
   }
-  function openBatch(batch: WipBatch) {
+  function openBatch(batch: WipBatch, afterActions = false) {
+    if (detailsSheet.isOpen() || !afterActions && reactivation.isBusy()) return;
     if (!wipText(batch.qr_payload)) {
-      setAlert({ title: 'WIP QR kodi mavjud emas', message: 'Bu WIP uchun QR kodi saqlanmagan.' });
+      setAlert({ title: p('worker.daily.wip_qr_missing'), message: p('worker.daily.wip_qr_missing.body'), confirmLabel: p('worker.action.close') });
       return;
     }
     detailsSheet.open(<WorkerWipBatchDetails session={session} order={order} batch={batch}
@@ -124,27 +140,23 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
   }
   const heading = <View style={[styles.header, android && styles.androidHeader]}>
     <View style={styles.flex}>
-      <Text style={[styles.heading, { color: colors.text }]}>WIP tafsilotlari</Text>
+      <Text style={[styles.heading, { color: colors.text }]}>{p('worker.wip.history.title')}</Text>
       <Text style={{ color: colors.muted }}>{[order.code, order.title, apparatusNames[order.apparatusId]].filter(Boolean).join(' • ')}</Text>
     </View>
-    <WorkerIconButton icon="close" label="Yopish" onPress={close} tonal />
+    <WorkerIconButton icon="close" label={p('worker.action.close')} onPress={close} tonal />
   </View>;
   const status = <>
     {loading ? <ActivityIndicator color={colors.icon} /> : null}
-    {!!error && <><Text style={styles.error}>{error}</Text><Host matchContents={{ vertical: true }}><Button label="Qayta urinish" onPress={() => { setLoading(true); setError(''); setFoundId(''); setNotFound(false); setReload(old => old + 1); }} /></Host></>}
+    {!!error && <><Text style={styles.error}>{p(error)}</Text><Host matchContents={{ vertical: true }}><Button label={p('worker.action.retry')} onPress={() => { setLoading(true); setError(''); setFoundId(''); setNotFound(false); setReload(old => old + 1); }} /></Host></>}
     {!loading && !error && (batches.length ? <View style={[styles.card, { backgroundColor: sheetCard }]}>
-      <Text style={[styles.heading, { color: colors.text }]}>{batches.length} ta WIP yaratilgan</Text>
-      <Text style={{ color: colors.muted }}>Bu order bo‘yicha hosil bo‘lgan yarim tayyor mahsulotlar:</Text>
-      {!stageHistory && <>
-        <Text style={{ color: colors.text }}>Jami brutto: {metric(totals.gross, totals.grossCount, 'kg')}</Text>
-        <Text style={{ color: colors.text }}>Jami netto: {metric(totals.net, totals.netCount, 'kg')}</Text>
-        <Text style={{ color: colors.text }}>Jami metraj: {metric(totals.meters, totals.meterCount, 'm')}</Text>
-      </>}
+      <Text style={[styles.heading, { color: colors.text }]}>{p('worker.wip.history.summary', { count: batches.length })}</Text>
+      <Text style={{ color: colors.muted }}>{p('worker.wip.history.description')}</Text>
+      {!stageHistory ? outputLines : null}
       <View style={styles.chips}>
-        {[['Kutilmoqda', totals.waiting], ['Ish jarayonida', totals.inUse], ['Ishlatilgan', totals.processed]].map(([label, count]) =>
+        {[[p('worker.wip.status.waiting'), totals.waiting], [p('worker.wip.status.in_progress'), totals.inUse], [p('worker.wip.status.used'), totals.processed]].map(([label, count]) =>
           <Text key={label} style={[styles.chip, { backgroundColor: colors.field, color: colors.text }]}>{label}: {count}</Text>)}
       </View>
-    </View> : <Text style={{ color: colors.muted }}>Bu buyurtma bo‘yicha WIP topilmadi.</Text>)}
+    </View> : <Text style={{ color: colors.muted }}>{p('worker.wip.history.empty')}</Text>)}
   </>;
   return <View style={[styles.flex, { backgroundColor: sheetBackground }]}>
     {android && heading}
@@ -156,26 +168,26 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
       ListHeaderComponent={android ? status : <>{heading}{status}</>}
       renderItem={({ item, index }) => {
         const position = foundId ? batches.indexOf(item) + 1 : index + 1;
-        const title = wipText(item.label_item_name) || wipText(item.label_item_code) || `WIP ${position}`;
-        const rows = wipBatchRows(item, apparatusNames);
-        return <Pressable accessibilityRole="button" android_ripple={{}} onPress={() => openBatch(item)} onLongPress={() => openBatch(item)}
+        const title = wipText(item.label_item_name) || wipText(item.label_item_code) || `${p('worker.daily.wip')} ${position}`;
+        const rows = workerWipHistoryRows(item, apparatusNames, p);
+        return <Pressable accessibilityRole="button" android_ripple={{}} onPress={() => openBatch(item)} onLongPress={() => { if (!detailsSheet.isOpen()) void reactivation.open(item); }}
           style={[styles.card, { backgroundColor: colors.field }]}>
           <View style={styles.rowHeader}>
             <Text style={[styles.chip, { color: colors.text, backgroundColor: sheetCard }]}>{position}</Text>
             <Text style={[styles.heading, styles.flex, { color: colors.text }]}>{title}</Text>
-            <Text style={[styles.chip, { color: colors.text, backgroundColor: sheetCard }]}>{wipBatchStatus(item)}</Text>
+            <Text style={[styles.chip, { color: colors.text, backgroundColor: sheetCard }]}>{workerWipStatusLabel(item, p)}</Text>
           </View>
           {rows.map(([label, text]) => <Text key={label} style={{ color: colors.muted }}>{label}: {text}</Text>)}
-          {!!wipText(item.qr_payload) && <Text numberOfLines={2} style={{ color: colors.muted }}>QR: {item.qr_payload}</Text>}
-          {!!wipText(item.description) && <Text style={{ color: colors.muted }}>Izoh: {item.description}</Text>}
+          {!!wipText(item.qr_payload) && <Text numberOfLines={2} style={{ color: colors.muted }}>{p('worker.wip.info.qr')} {item.qr_payload.trim()}</Text>}
+          {!!wipText(item.description) && <Text style={{ color: colors.muted }}>{p('worker.wip.info.note')}: {item.description.trim()}</Text>}
         </Pressable>;
       }} />}
     <View style={styles.footer}>
-      {notFound && <Text style={styles.error}>Bu ro‘yxatda ushbu QR bilan WIP topilmadi</Text>}
+      {notFound && <Text style={styles.error}>{p('worker.wip.history.qr_not_found')}</Text>}
       <Host matchContents={{ vertical: true }}>
         <Column spacing={6}>
-          {!!foundId && <Button label="Barchasini ko‘rsatish" variant="text" onPress={() => { setFoundId(''); setNotFound(false); }} />}
-          <Button label="QR orqali WIP qidirish" disabled={searching || loading || !!error || !batches.length} onPress={() => {
+          {!!foundId && <Button label={p('worker.wip.history.show_all')} variant="text" onPress={() => { setFoundId(''); setNotFound(false); }} />}
+          <Button label={p('worker.wip.history.search_qr')} disabled={searching || loading || !!error || !batches.length} onPress={() => {
             searchHandled.current = false;
             setManualQr('');
             setNotFound(false);
@@ -185,14 +197,14 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
         </Column>
       </Host>
     </View>
-    <WorkerFormDialog visible={searching} title="QR orqali WIP qidirish" onCancel={() => setSearching(false)}
-      confirmLabel="Qidirish" confirmDisabled={!manualQr.trim()} onConfirm={() => searchQr(manualQr)}>
+    <WorkerFormDialog visible={searching} title={p('worker.wip.history.search_qr')} onCancel={() => setSearching(false)}
+      cancelLabel={p('worker.action.cancel')} confirmLabel={t('Qidirish')} confirmDisabled={!manualQr.trim()} onConfirm={() => searchQr(manualQr)}>
       {searching && permission?.granted && <CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={({ data }) => searchQr(data)} />}
-      {searching && !permission?.granted && <Host matchContents={{ vertical: true }}><Button label="Kameraga ruxsat berish" onPress={() => { void requestPermission(); }} /></Host>}
-      {searching && <WorkerFormField label="WIP QR kodini kiriting" onChangeText={setManualQr} />}
+      {searching && !permission?.granted && <Host matchContents={{ vertical: true }}><Button label={t('Kameraga ruxsat berish')} onPress={() => { void requestPermission(); }} /></Host>}
+      {searching && <WorkerFormField label={p('worker.wip.history.enter_qr')} onChangeText={setManualQr} />}
     </WorkerFormDialog>
-    <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />
+    <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />{reactivation.dialogs}
   </View>;
 }
 

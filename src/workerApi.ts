@@ -7,13 +7,16 @@ import { decodeWorkerListSnapshot } from './workerSnapshot';
 import { workerProductionOrderDetail } from './workerDetailApi';
 import { sessionReadScope } from './sessionReadScope';
 import { adminApparatus } from './apparatusApi';
+import { loadWorkerQueueSnapshot } from './workerQueueReadApi';
+import { workerQueueReadError } from './workerQueueReadError';
+export { loadWorkerQueueSnapshot } from './workerQueueReadApi';
 
 type RecordValue = Record<string, unknown>;
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
 export type Apparatus = { id: string; name: string; operation: string; worker_material_assignment_allowed?: boolean };
-export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone };
+export type QueueOrder = { id: string; code: string; title: string; customer: string; state: string; imageId: string; cardTone: OrderCardTone; temporarilyPaused?: boolean };
 export type CompletedOrder = QueueOrder & { apparatusId: string; completedAt: number; issueNote: string };
 export type WorkerQueue = { machines: Apparatus[]; orders: Record<string, QueueOrder[]>; completed: CompletedOrder[]; snapshot: Record<string, unknown>; catalog?: Apparatus[]; assignedIds: string[]; assignedLabels: string[] };
 export type WorkerOrderDetail = {
@@ -140,18 +143,34 @@ async function getJson(session: Session, path: string, resource: 'queue' | 'prof
       signal: controller.signal,
     });
     if (!response.ok) {
-      if (response.status === 401) throw new Error('Sessiya tugagan. Qayta kiring.');
-      if (response.status === 403) {
-        if (resource === 'queue' && !session.assigned_apparatus.length) {
-          throw new Error('Hisobingizga aparat biriktirilmagan. Administratordan bosma aparatini biriktirishni so‘rang va qayta kiring.');
-        }
-        throw new Error(resource === 'profile' ? 'Profilni yangilab bo‘lmadi.'
-          : 'Server bu hisobga aparat navbatini ko‘rishga ruxsat bermadi. Hisob ruxsatlari va aparat biriktirilishini tekshiring.');
-      }
-      throw new Error(`Server xatosi (${response.status})`);
+      let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
+      throw workerQueueReadError(response.status, payload, resource, response.headers);
     }
     return await response.json();
   } finally { clearTimeout(timeout); }
+}
+
+/** @v2 _readOrdersApparatus */
+export async function loadWorkerQueueCatalog(session: Session): Promise<Apparatus[]> {
+  const scope = sessionReadScope(session);
+  const catalog = await adminApparatus(session, { limit: 200 });
+  if (scope !== sessionReadScope(session)) throw new Error('Session changed');
+  return workerApparatusCatalog(catalog);
+}
+
+/** @v2 _refreshCanonicalInitialOnce */
+export async function loadWorkerQueueBaseline(session: Session, search = '', queueLimit: QueueLimit = DEFAULT_QUEUE_LIMIT): Promise<WorkerQueue> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => { timer = setTimeout(() => {
+    const error = new Error('Worker queue initial load timed out'); error.name = 'TimeoutError'; reject(error);
+  }, 10_000); });
+  try {
+    const [snapshot, catalog] = await Promise.race([
+      Promise.all([loadWorkerQueueSnapshot(session, search, queueLimit), loadWorkerQueueCatalog(session)]), deadline,
+    ]);
+    const assignedIds = session.assigned_apparatus, assignedLabels = session.assigned_apparatus_labels;
+    return queueFromSnapshot(workerMachinesFromSnapshot(catalog, snapshot, assignedIds), snapshot, assignedIds, assignedLabels, catalog);
+  } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
 export async function loadWorkerQueue(session: Session, search = '', queueLimit: QueueLimit = DEFAULT_QUEUE_LIMIT): Promise<WorkerQueue> {
@@ -211,7 +230,13 @@ export function workerApparatusCatalog(catalog: unknown[]): Apparatus[] {
 }
 
 export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string, unknown>, assignedIds: readonly string[], assignedLabels: readonly string[] = [], catalog?: Apparatus[]): WorkerQueue {
-  const rows = object(snapshot.worker_list_rows);
+  const rows = snapshot.projection === 'worker_list_v1' || snapshot.worker_list_rows ? object(snapshot.worker_list_rows)
+    : Object.fromEntries((Array.isArray(snapshot.maps) ? snapshot.maps : []).flatMap(raw => {
+      const saved = object(raw), map = object(saved.map), id = string(map.id);
+      return id ? [[id, { id, code: string(map.order_code) || string(map.code), title: string(map.title),
+        customer_name: string(object(snapshot.order_customers)[id]) || string(map.customer_name),
+        image_id: string(map.image_id) || string(map.id) }]] : [];
+    }));
   const visible = object(snapshot.visible_order_ids);
   const sequences = object(snapshot.sequences);
   const states = object(snapshot.worker_display_states);
@@ -228,7 +253,13 @@ export function queueFromSnapshot(machines: Apparatus[], snapshot: Record<string
       const displayState = string(machineStates[id]);
       const queueState = string(fallback[id]);
       const state = displayState === 'in_progress' && queueState === 'paused' ? queueState : displayState || queueState;
-      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state, imageId: string(row.image_id), cardTone: workerOrderTone(displayState, queueState, workerOrderControl(snapshot, id)) }];
+      const control = object(object(object(snapshot.queue_action_controls)[machine.id])[id]);
+      // V2's canonical control proves the marker directly. Compact display rows
+      // prove it only for this apparatus while its actual queue state is paused.
+      const temporarilyPaused = control.temporarily_paused === true || queueState === 'paused' &&
+        Array.isArray(row.temporarily_paused_apparatus) && row.temporarily_paused_apparatus.includes(machine.id);
+      return [{ id, code: string(row.code), title: string(row.title) || 'Buyurtma', customer: string(row.customer_name), state, imageId: string(row.image_id),
+        cardTone: workerOrderTone(displayState, queueState, workerOrderControl(snapshot, id)), ...(temporarilyPaused ? { temporarilyPaused: true } : {}) }];
     });
   }
   const assigned = new Set(assignedIds);

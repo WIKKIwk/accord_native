@@ -18,7 +18,7 @@ export function WorkerOrderAlertButton({ session, orderId, apparatusId, kind, en
     // eslint-disable-next-line react-hooks/refs -- Constructor retains guards without executing them during render.
     () => mounted.current && identity.current === key && !!activeSessionToken(session) && sessionReadScope(session) === scope, () => permit.current, redraw), [session, scope, key, orderId, apparatusId, kind]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  return <View style={{ gap: 6 }}><WorkerOrderButton label={p(state.label(kind))} disabled={!enabled || state.sending || state.sent} onPress={() => { void state.send(); }} />
+  return <View style={{ gap: 6 }}><WorkerOrderButton label={p(state.label(kind))} icon={{ ios: 'bell', android: 'notifications' }} disabled={!enabled || state.sending || state.sent} onPress={() => { void state.send(); }} />
     {!!state.errorCode && <Text accessibilityRole="alert" style={{ color: colors.error }}>{p(state.errorKey)}</Text>}
   </View>;
 }

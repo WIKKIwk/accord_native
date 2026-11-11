@@ -88,11 +88,13 @@ test('connection progress appears after V2’s two-second grace period and cance
   assert.equal(child.type(child.props).type, 'ActivityIndicator'); cleanup(); assert.equal(cleared, 1);
 });
 test('preflight disabled state reaches the native iOS modifier and Android button wrapper', () => {
-  const native = { Button: 'Button', Host: 'Host', Text: 'Text' };
-  const modifiers = Object.fromEntries(['buttonBorderShape', 'buttonStyle', 'controlSize', 'frame', 'disabled'].map(key => [key, value => ({ [key]: value })]));
-  const ios = load('components/WorkerPreflightButton.ios.tsx', { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
-    react: { useState: () => [320, () => {}] }, 'react-native': { Platform: { Version: 26 }, View: 'View' } });
-  const tree = ios.WorkerPreflightButton({ onPress() {}, disabled: true, label: 'Rang chiqdi' });
+  const native = new Proxy({}, { get: (_target, key) => key });
+  const modifiers = new Proxy({}, { get: (_target, key) => value => ({ [key]: value }) });
+  const controls = load('components/WorkerOrderControls.ios.tsx', { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
+    './BaseHost': { BaseHost: 'Host' }, './useBaseTheme': {}, './workerOrderLayout': load('components/workerOrderLayout.ts'),
+    'react-native': { Platform: { Version: 26 }, View: 'View' } });
+  const ios = load('components/WorkerPreflightButton.ios.tsx', { './WorkerOrderControls': controls });
+  const element = ios.WorkerPreflightButton({ onPress() {}, disabled: true, label: 'Rang chiqdi' }), tree = element.type(element.props);
   assert.ok(nodes(tree, node => node.type === 'Button')[0].props.modifiers.some(modifier => modifier.disabled === true));
   const android = load('components/WorkerPreflightButton.tsx', { './WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' } });
   assert.equal(android.WorkerPreflightButton({ onPress() {}, disabled: true }).props.disabled, true);

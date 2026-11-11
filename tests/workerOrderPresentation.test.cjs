@@ -92,11 +92,15 @@ test('stage history retains the current order, identity, apparatus labels and na
 });
 
 const native = new Proxy({}, { get: (_target, key) => String(key) });
+const layout = load('components/workerOrderLayout.ts');
+const noticeHyphenation = load('workerNoticeHyphenation.ts');
 const modifiers = new Proxy({}, { get: (_target, key) => key === 'shapes'
   ? { rectangle: () => ({ type: 'rectangle' }), roundedRectangle: value => ({ type: 'roundedRectangle', ...value }) } : (...args) => ({ name: String(key), args }) });
 const mocks = { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
   './useBaseTheme': { useBaseTheme: () => ({ colors: { onSurface: 'label', surfaceContainerHighest: 'surface' } }) },
-  'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, View: 'View' }, './BaseHost': { BaseHost: 'Host' } };
+  './useWorkerOrderText': { useWorkerOrderText: () => ({ locale: 'uz' }) },
+  '../workerNoticeHyphenation': noticeHyphenation,
+  'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, Text: 'Text', View: 'View' }, './BaseHost': { BaseHost: 'Host' }, './workerOrderLayout': layout };
 const byId = (tree, id) => nodes(tree, item => item.props.modifiers?.some(modifier => modifier.name === 'accessibilityIdentifier' && modifier.args[0] === id))[0];
 
 test('native iOS summary expands all metrics and six production stages, keeping apparatus rows actionable', () => {
@@ -127,7 +131,7 @@ test('overview metadata uses the active locale without changing the order values
   }
 });
 
-test('native order controls retain callbacks and busy state, with completion before pause on iOS', () => {
+test('native order controls retain callbacks and busy state, with pause above completion on iOS', () => {
   const calls = [];
   const { WorkerOrderButton, WorkerOrderActionGroup } = load('components/WorkerOrderControls.ios.tsx', mocks);
   for (const busy of [false, true]) {
@@ -141,7 +145,7 @@ test('native order controls retain callbacks and busy state, with completion bef
   assert.deepEqual(calls, ['complete']);
   const group = WorkerOrderActionGroup({ children: [React.createElement('Button', { key: 'pause' }, 'Rulonni yechish'),
     React.createElement('Button', { key: 'complete' }, 'Tugatish')] });
-  assert.equal(text(group), 'Tugatish Rulonni yechish');
+  assert.equal(text(group), 'Rulonni yechish Tugatish');
 });
 
 for (const platform of ['ios', 'android']) test(`${platform}: blocked paused orders show native information without creating an action`, () => {
@@ -150,10 +154,31 @@ for (const platform of ['ios', 'android']) test(`${platform}: blocked paused ord
     './WorkerSheetButton': { WorkerSheetButton: 'Button' } });
   const message = '8 ta rangli bosma apparat — shashoqcha';
   const tree = WorkerOrderBlockingNotice({ message });
-  assert.equal(text(tree), message); assert.equal(nodes(tree, node => node.type === 'Button').length, 0);
+  assert.equal(text(tree), platform === 'ios' ? `“${noticeHyphenation.hyphenateWorkerNotice(message, 'uz')}”` : message);
+  assert.equal(nodes(tree, node => node.type === 'Button').length, 0);
   const label = nodes(tree, node => node.type === 'Text')[0];
   if (platform === 'android') assert.equal(label.props.color, 'label');
-  else assert.equal(label.props.modifiers.find(mod => mod.name === 'foregroundStyle').args[0], 'label');
+  else {
+    assert.equal(label.props.style.color, 'label');
+    assert.equal(label.props.style.fontStyle, 'italic');
+    assert.equal(label.props.style.textAlign, 'justify');
+    assert.equal(label.props.style.width, '100%');
+    assert.equal(label.props.style.backgroundColor, undefined);
+    assert.equal(label.props.accessibilityLabel, message);
+  }
+});
+
+test('iOS notice uses discretionary word breaks only in Uzbek while VoiceOver reads the original', () => {
+  for (const locale of ['uz', 'en', 'ru', 'ur']) {
+    const { WorkerOrderBlockingNotice } = load('components/WorkerOrderControls.ios.tsx', {
+      ...mocks, './useWorkerOrderText': { useWorkerOrderText: () => ({ locale }) },
+    });
+    const message = 'Ushbu buyurtmani boshlash uchun kuting.';
+    const label = WorkerOrderBlockingNotice({ message });
+    assert.equal(label.props.accessibilityLabel, message);
+    assert.equal(text(label).includes(noticeHyphenation.SOFT_HYPHEN), locale === 'uz');
+    assert.equal(text(label).replaceAll(noticeHyphenation.SOFT_HYPHEN, ''), `“${message}”`);
+  }
 });
 
 test('order actions use system glass controls on iOS 26 and native bordered controls on older iOS', () => {
@@ -161,15 +186,177 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
     const { WorkerOrderButton } = load('components/WorkerOrderControls.ios.tsx', {
       ...mocks, 'react-native': { ...mocks['react-native'], Platform: { Version: version } },
     });
-    for (const [index, variant] of ['filled', 'outlined'].entries()) {
-      const tree = WorkerOrderButton({ label: index ? 'Rulonni yechish' : 'Tugatish', variant, height: 58, onPress() {} });
+    for (const [variant, orderAction, expectedColor] of [
+      ['filled', undefined, undefined], ['outlined', undefined, undefined],
+      ['filled', 'complete', 'systemRed'], ['outlined', 'pause', 'systemOrange'],
+      ['filled', 'resume', 'systemBlue'], ['filled', 'start', 'systemGreen'],
+      ['outlined', 'report', 'systemBlue'],
+    ]) {
+      const tree = WorkerOrderButton({ label: 'Localized action', orderAction, variant, height: 58, onPress() {} });
       const button = nodes(tree, item => item.type === 'Button')[0];
-      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[index]);
+      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[variant === 'filled' || orderAction ? 0 : 1]);
+      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'tint')?.args[0], expectedColor);
       assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonBorderShape').args[0], 'capsule');
-      assert.equal(nodes(tree, item => item.props.modifiers?.some(modifier => modifier.name === 'frame'
-        && ['height', 'minHeight'].some(key => key in modifier.args[0]))).length, 0);
+      assert.equal(button.props.modifiers.find(modifier => modifier.name === 'controlSize').args[0], 'large');
+      assert.deepEqual(button.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { maxWidth: Infinity, minHeight: 48 });
+      assert.equal(nodes(button.props.children, item => item.props.modifiers?.some(modifier => modifier.name === 'frame'
+        && ['height', 'minHeight', 'maxHeight'].some(key => key in modifier.args[0]))).length, 0, 'native control height must not be added again to the label');
     }
+    const neutral = WorkerOrderButton({ label: 'Qaytarilgan bo‘yoq', variant: 'outlined', neutralLabel: true, onPress() {} });
+    const button = nodes(neutral, item => item.type === 'Button')[0];
+    const label = nodes(neutral, item => item.type === 'Text')[0];
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], styles[1]);
+    assert.equal(label.props.modifiers.find(modifier => modifier.name === 'foregroundStyle').args[0], 'label');
   }
+});
+
+test('iOS action sheet fits measured content with bounded scrolling and no half/full-screen snap points', () => {
+  const { WorkerOrderSheet } = load('components/WorkerOrderSheet.ios.tsx', {
+    ...mocks, react: { useCallback: fn => fn, useState: value => [value, () => {}], useRef: value => ({ current: value }) },
+    'react-native': { PlatformColor: name => name, View: 'View', ScrollView: 'ScrollView', VirtualizedList: {},
+      useWindowDimensions: () => ({ width: 390, height: 844 }) },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) },
+    './useBaseTheme': { useBaseTheme: () => ({ mode: 'dark', colors: {}, direction: 'leftToRight' }) },
+    './workerSheetContext': { WorkerSheetCloseContext: { Provider: 'CloseProvider' } },
+  });
+  const tree = WorkerOrderSheet({ children: 'all actions', onClose() {}, dismissible: true, compact: true, fitContent: true, heightFraction: 0.86 });
+  assert.equal(nodes(tree, item => item.type === 'BottomSheet')[0].props.fitToContents, true);
+  assert.deepEqual(nodes(tree, item => item.type === 'RNHostView')[0].props.matchContents, { vertical: true });
+  const group = nodes(tree, item => item.type === 'Group')[0];
+  assert.equal(group.props.modifiers.some(modifier => modifier.name === 'presentationDetents'), false);
+  const scroll = nodes(tree, item => item.type === 'ScrollView')[0];
+  assert.deepEqual(scroll.props.style, { flexGrow: 0, maxHeight: Math.round((844 - 59 - 34) * 0.86) });
+  assert.equal(scroll.props.style.height, undefined);
+});
+
+test('action sheet follows asynchronous menu height and keeps oversized content scrollable', () => {
+  const runner = require('./support/workerPaddonHarness.cjs').hooks();
+  const { WorkerOrderSheet } = load('components/WorkerOrderSheet.ios.tsx', {
+    ...mocks, react: runner.react,
+    'react-native': { PlatformColor: name => name, View: 'View', ScrollView: 'ScrollView', VirtualizedList: {},
+      useWindowDimensions: () => ({ width: 390, height: 844 }) },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) },
+    './useBaseTheme': { useBaseTheme: () => ({ mode: 'dark', colors: {}, direction: 'leftToRight' }) },
+    './workerSheetContext': { WorkerSheetCloseContext: { Provider: 'CloseProvider' } },
+  });
+  const render = () => { runner.begin(); return WorkerOrderSheet({ children: 'menu', onClose() {}, dismissible: true, compact: true, fitContent: true, measureContent: true, heightFraction: 0.86 }); };
+  const heightOf = tree => {
+    const mod = nodes(tree, node => node.type === 'Group')[0].props.modifiers.find(item => item.name === 'presentationDetents');
+    assert.deepEqual(mod.args[1].selection, mod.args[0][0]);
+    return mod.args[0][0].height;
+  };
+  let tree = render();
+  assert.equal(nodes(tree, node => node.type === 'BottomSheet')[0].props.fitToContents, false);
+  assert.equal(nodes(tree, node => node.type === 'RNHostView')[0].props.matchContents, false);
+  assert.equal(heightOf(tree), 280);
+  let scroll = nodes(tree, node => node.type === 'ScrollView')[0];
+  assert.equal(scroll.props.contentInsetAdjustmentBehavior, 'never');
+  assert.equal(scroll.props.automaticallyAdjustContentInsets, false);
+  assert.deepEqual(scroll.props.contentContainerStyle, { paddingBottom: 8 });
+  scroll.props.onContentSizeChange(350, 220.4);
+  tree = render(); assert.equal(heightOf(tree), 237);
+  scroll = nodes(tree, node => node.type === 'ScrollView')[0];
+  scroll.props.onContentSizeChange(350, 520);
+  tree = render(); assert.equal(heightOf(tree), 536);
+  scroll = nodes(tree, node => node.type === 'ScrollView')[0];
+  scroll.props.onContentSizeChange(350, 1200);
+  tree = render(); assert.equal(heightOf(tree), Math.round((844 - 59 - 34) * 0.86));
+  assert.deepEqual(nodes(tree, node => node.type === 'ScrollView')[0].props.style, { flex: 1 });
+});
+
+test('action sheet close uses glass with an adaptive neutral icon and still closes', () => {
+  for (const version of ['26.1.1', '18.7']) {
+    let calls = 0;
+    const { WorkerIconButton } = load('components/WorkerIconButton.ios.tsx', {
+      ...mocks, 'react-native': { ...mocks['react-native'], Platform: { Version: version } },
+      './useWorkerColors': { useWorkerColors: () => ({ icon: 'systemBlue' }) },
+    });
+    const tree = WorkerIconButton({ icon: 'close', label: 'Yopish', neutralIcon: true, onPress: () => { calls++; } });
+    const button = nodes(tree, node => node.type === 'Button')[0];
+    const icon = nodes(tree, node => node.type === 'Image')[0];
+    assert.equal(button.props.modifiers.find(mod => mod.name === 'buttonStyle').args[0], version.startsWith('26') ? 'glass' : 'bordered');
+    assert.equal(button.props.modifiers.find(mod => mod.name === 'buttonBorderShape').args[0], 'circle');
+    assert.equal(button.props.modifiers.find(mod => mod.name === 'accessibilityLabel').args[0], 'Yopish');
+    assert.equal(icon.props.systemName, 'xmark');
+    assert.equal(icon.props.color, 'label');
+    assert.deepEqual(button.props.modifiers.find(mod => mod.name === 'frame').args[0], { minWidth: 44, minHeight: 44 });
+    button.props.onPress(); assert.equal(calls, 1);
+  }
+});
+
+test('report and paint dialogs use transparent secondary actions and filled system-blue confirmation', () => {
+  for (const version of ['26.1.1', '18.7']) {
+    const calls = [];
+    const { WorkerFormDialog } = load('components/WorkerFormDialog.ios.tsx', {
+      ...mocks, 'react-native': { ...mocks['react-native'], Platform: { Version: version }, KeyboardAvoidingView: 'Keyboard', Modal: 'Modal',
+        Pressable: 'Pressable', ScrollView: 'ScrollView', StyleSheet: { absoluteFill: {} }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
+      'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) },
+      './useWorkerColors': { useWorkerColors: () => ({}) }, './useWorkerOrderText': { useWorkerOrderText: () => ({ t: value => value }) },
+    });
+    const props = { visible: true, title: 'Pauza miqdori', children: null, confirmLabel: 'Tasdiqlash',
+      onConfirm: () => calls.push('confirm'), onCancel: () => calls.push('cancel') };
+    const buttons = nodes(WorkerFormDialog({ ...props, actionColors: 'blue' }), node => node.type === 'Button');
+    assert.deepEqual(buttons.map(button => button.props.modifiers.find(mod => mod.name === 'tint').args[0]), ['systemBlue', 'systemBlue']);
+    assert.deepEqual(buttons.map(button => button.props.modifiers.find(mod => mod.name === 'buttonStyle').args[0]),
+      version.startsWith('26') ? ['glass', 'glassProminent'] : ['bordered', 'borderedProminent']);
+    for (const button of buttons) {
+      assert.equal(button.props.modifiers.find(mod => mod.name === 'frame').args[0].minHeight, 48);
+      assert.equal(button.props.children.props.modifiers.find(mod => mod.name === 'frame').args[0].maxWidth, Infinity);
+      button.props.onPress();
+    }
+    assert.deepEqual(calls, ['cancel', 'confirm']);
+    const neutral = nodes(WorkerFormDialog({ ...props, actionColors: 'blue', neutralCancelLabel: true }), node => node.type === 'Button');
+    assert.equal(neutral[0].props.modifiers.some(mod => mod.name === 'tint'), false);
+    assert.equal(neutral[0].props.children.props.modifiers.find(mod => mod.name === 'foregroundStyle').args[0], 'label');
+    assert.equal(neutral[1].props.modifiers.find(mod => mod.name === 'tint').args[0], 'systemBlue');
+    const defaults = nodes(WorkerFormDialog(props), node => node.type === 'Button');
+    assert.equal(defaults.every(button => !button.props.modifiers.some(mod => mod.name === 'tint')), true);
+    const busy = nodes(WorkerFormDialog({ ...props, actionColors: 'blue', cancelDisabled: true, confirmDisabled: true }), node => node.type === 'Button');
+    assert.equal(busy.every(button => button.props.modifiers.find(mod => mod.name === 'disabled').args[0]), true);
+  }
+});
+
+test('native paint fields expose a wide visible input and preserve formatting, clearing and scope locks', () => {
+  const refs = [], changes = [], writes = [], selections = [];
+  let locked = false;
+  const native = new Proxy({}, { get: (_target, key) => String(key) });
+  const logic = load('boyoqchi/boyoqchiLogic.ts', { './returnedPaintModel': {}, './returnedPaintRules': {} });
+  const { WorkerReturnedPaintField } = load('components/WorkerReturnedPaintField.ios.tsx', {
+    '@expo/ui/swift-ui': { ...native, Text: 'Text', TextField: 'TextField', VStack: 'VStack', useNativeState: initial => ({
+      get: () => initial, set: value => writes.push(value),
+    }) },
+    '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_target, name) => name === 'shapes' ? { rectangle: () => 'rectangle' } : (...args) => ({ name, args }) }),
+    react: { useRef: initial => { const ref = { current: initial }; refs.push(ref); return ref; } },
+    'react-native': { PlatformColor: value => value }, './BaseHost': { BaseHost: 'Host' },
+    '../boyoqchi/boyoqchiLogic': logic, '../boyoqchi/useBoyoqchiText': { useBoyoqchiText: () => value => value },
+  });
+  const tree = WorkerReturnedPaintField({ label: '1w Oq', initial: '12', decimal: true, isLocked: () => locked, onChange: value => changes.push(value) });
+  assert.equal(tree.props.style.width, '100%');
+  assert.deepEqual(tree.props.matchContents, { vertical: true });
+  const field = nodes(tree, node => node.type === 'TextField')[0], modifiers = field.props.modifiers;
+  assert.equal(modifiers.find(mod => mod.name === 'frame').args[0].minHeight, 48);
+  assert.equal(modifiers.find(mod => mod.name === 'frame').args[0].maxWidth, Infinity);
+  assert.equal(modifiers.find(mod => mod.name === 'background').args[0], 'tertiarySystemFill');
+  assert.equal(modifiers.find(mod => mod.name === 'keyboardType').args[0], 'decimal-pad');
+  refs[0].current = { setSelection: (start, end) => { selections.push([start, end]); return Promise.resolve(); } };
+  field.props.onFocusChange(true); assert.deepEqual(selections, [[2, 2]]);
+  field.props.onTextChange('12,5'); field.props.onTextChange('');
+  assert.deepEqual(changes, ['12,5', '']); assert.deepEqual(writes, []);
+  field.props.onTextChange('-1'); field.props.onTextChange('invalid');
+  locked = true; field.props.onTextChange('5');
+  assert.deepEqual(changes, ['12,5', '']); assert.deepEqual(writes, ['', '', '']);
+});
+
+test('iOS quantity form field uses the wide native editor without changing raw report values', () => {
+  const changes = [];
+  const { WorkerFormField } = load('components/WorkerFormField.ios.tsx', {
+    './BaseHost': { BaseHost: 'Host' }, './DailyWorkCorrectionFields.ios': { WorkerNativeField: 'NativeField' },
+  });
+  const tree = WorkerFormField({ label: 'Metraj, metr', initialValue: '6002', keyboardType: 'decimal-pad', onChangeText: value => changes.push(value) });
+  const field = nodes(tree, node => node.type === 'NativeField')[0];
+  assert.equal(field.props.value, '6002'); assert.equal(field.props.decimal, true); assert.equal(field.props.maskDecimal, false);
+  field.props.change('12,5'); field.props.change('');
+  assert.deepEqual(changes, ['12,5', '']);
 });
 
 test('native order identity keeps image preview and close actions with the cached thumbnail', () => {
@@ -183,8 +370,46 @@ test('native order identity keeps image preview and close actions with the cache
   assert.deepEqual(calls, ['image', 'close']);
   const thumbnail = nodes(tree, item => item.type === 'Thumbnail')[0];
   assert.equal(thumbnail.props.session, h.props.session); assert.equal(thumbnail.props.imageId, 'image');
+  assert.equal(thumbnail.props.size, 48);
+  assert.deepEqual(byId(tree, 'worker-order-close').props.modifiers.find(modifier => modifier.name === 'frame').args[0], { width: 44, height: 44 });
   assert.equal(text(tree).includes('0337'), true); assert.equal(text(tree).includes('Tea'), true);
   const withHistory = WorkerOrderIdentity({ ...h.props, onScannedWips: () => calls.push('scanned') });
   nodes(withHistory, item => item.props.systemImage === 'qrcode.viewfinder')[0].props.onPress();
   assert.equal(calls.at(-1), 'scanned');
+});
+
+test('disclosure rows use an intrinsic 44pt grid with aligned tabular counters and stable chevron space', () => {
+  const { WorkerExpansion } = load('components/WorkerExpansion.ios.tsx', mocks);
+  let presses = 0;
+  for (const actionable of [false, true]) {
+    const tree = WorkerExpansion({ title: 'Biriktirilgan homashyolar', count: '0/1', expanded: false, onPress: actionable ? () => presses++ : undefined });
+    const row = nodes(tree, item => item.type === 'HStack')[0], counter = nodes(tree, item => item.type === 'Text' && text(item) === '0/1')[0];
+    assert.equal(row.props.spacing, 8);
+    assert.deepEqual(row.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { maxWidth: Infinity, minHeight: 44, alignment: 'leading' });
+    assert.ok(counter.props.modifiers.some(modifier => modifier.name === 'monospacedDigit'));
+    assert.deepEqual(counter.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { minWidth: 44, alignment: 'trailing' });
+    const trailing = nodes(tree, item => item.type === (actionable ? 'Image' : 'Spacer'))[0];
+    assert.deepEqual(trailing.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { width: 16 });
+    assert.equal(nodes(tree, item => item.type === 'Button').length, actionable ? 1 : 0);
+    if (actionable) nodes(tree, item => item.type === 'Button')[0].props.onPress();
+  }
+  assert.equal(presses, 1);
+});
+
+test('preflight outcomes render immediately on the same control grid without width measurement or extra label height', () => {
+  const controls = load('components/WorkerOrderControls.ios.tsx', mocks);
+  const { WorkerPreflightButton } = load('components/WorkerPreflightButton.ios.tsx', { './WorkerOrderControls': controls });
+  const calls = [];
+  for (const [label, outlined] of [['Rang chiqarish', false], ['Rang chiqdi', false], ['Chiqmadi', true]]) {
+    const element = WorkerPreflightButton({ label, outlined, disabled: true, onPress: () => calls.push(label) }), tree = element.type(element.props);
+    assert.equal(tree.type, 'Host'); assert.equal(tree.props.matchContents.vertical, true);
+    const button = nodes(tree, item => item.type === 'Button')[0];
+    assert.ok(button); assert.equal(nodes(button, item => item.type === 'Text')[0].props.children, label); assert.equal(nodes(tree, item => item.props.onLayout).length, 0);
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'disabled').args[0], true);
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'buttonStyle').args[0], outlined ? 'glass' : 'glassProminent');
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'frame').args[0].minHeight, 48);
+    assert.equal(nodes(button.props.children, item => item.props.modifiers?.some(modifier => modifier.name === 'frame' && 'height' in modifier.args[0])).length, 0);
+    button.props.onPress();
+  }
+  assert.deepEqual(calls, ['Rang chiqarish', 'Rang chiqdi', 'Chiqmadi']);
 });

@@ -31,3 +31,11 @@ test('drafts persist by worker and order, and successful completion clears only 
   assert.equal(await loadReturnedPaintDraft('worker-1:order-1'), null);
   assert.deepEqual(await loadReturnedPaintDraft('worker-2:order-1'), other);
 });
+
+test('worker drafts preserve authoritative image metadata and reject metadata for a different image', async () => {
+  const image = { image_id: 'photo', image_name: 'original.png', image_mime: 'image/png', image_size_bytes: 25, image_url: '/returned/photo' };
+  const draft = { values: {}, fields: {}, usage: 'rasxot', imageId: 'photo', image };
+  await saveReturnedPaintDraft('metadata', draft); assert.deepEqual(await loadReturnedPaintDraft('metadata'), draft);
+  await saveReturnedPaintDraft('old-metadata', { ...draft, imageId: 'new-photo' });
+  assert.deepEqual(await loadReturnedPaintDraft('old-metadata'), { values: {}, fields: {}, usage: 'rasxot', imageId: 'new-photo' });
+});

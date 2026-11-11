@@ -6,6 +6,8 @@ const test = require('node:test');
 const ts = require('typescript');
 
 function load(name, mocks = {}) {
+  mocks = { './workerLegacyState': {}, './workerLiveTransport': { openWorkerLiveSocket: (_session, url) => new WebSocket(url) },
+    './workerQueueReadError': require('./support/workerQueueTransport.cjs').loader()('workerQueueReadError'), ...mocks };
   const filename = path.resolve(__dirname, `../src/${name}.ts`);
   const loaded = new Module(filename, module);
   loaded.filename = filename;
@@ -71,11 +73,11 @@ test('worker live ignores stale accounts and already applied revisions', () => {
     const session = { baseUrl: 'https://example.test', token: 'mock-token', active: true, profile: { role: 'aparatchi', ref: 'one' } };
     const stop = live.subscribeWorkerLive(session, '', () => { invalidated++; }, undefined,
       () => ({ epoch: 'e', scope: 's', rev: 8 }), () => {});
-    sockets[0].onmessage({ data: JSON.stringify({ ok: true, type: 'state_delta', protocol: 'state_delta_v2', epoch: 'e', scope: 's', rev: 8 }) });
+    sockets[0].onmessage({ data: JSON.stringify({ ok: true, type: 'state_delta', protocol: 'state_delta_v2', epoch: 'e', scope: 's', base_rev: 7, rev: 8, patch: {} }) });
     assert.equal(applied, 0);
     assert.equal(invalidated, 0);
     session.profile.ref = 'other';
-    sockets[0].onmessage({ data: JSON.stringify({ ok: true, type: 'state_delta', protocol: 'state_delta_v2', epoch: 'e', scope: 's', rev: 9 }) });
+    sockets[0].onmessage({ data: JSON.stringify({ ok: true, type: 'state_delta', protocol: 'state_delta_v2', epoch: 'e', scope: 's', base_rev: 8, rev: 9, patch: {} }) });
     assert.equal(sockets[0].closed, true);
     assert.equal(applied, 0);
     stop();

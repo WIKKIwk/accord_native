@@ -242,6 +242,7 @@ for (const platform of ['ios', 'android']) {
     const api = load(`components/WorkerDrawer.${platform}.tsx`, {
       '../shared/navigation/RoleDrawer': { RoleDrawer: 'SharedRoleDrawer' },
       '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: callback => calls.push(callback) },
+      './useWorkerOrderText': { useWorkerOrderText: () => ({ t: value => value }) },
       './useWorkerPaddonNavigation': { useWorkerPaddonNavigation: () => [{ id: 'paddons:cut', label: 'Paddon · Cut' }] },
       'expo-router': { router: { push: route => calls.push(['push', route]) } },
     });

@@ -1,11 +1,10 @@
 import type { Session } from './auth';
-import { cancelStartControl, isCanonicalApparatusId, postWorkerApiRequest, reactivationRecloseControl, resumePauseControl, temporaryPauseControl, WorkerControlException } from './workerControlsApi';
-import { validOrderControl } from './workerOrderLogic';
+import { cancelStartControl, isCanonicalApparatusId, postWorkerApiRequest, printPreflightHold, reactivationRecloseControl, resumePauseControl, temporaryPauseControl, WorkerControlException } from './workerControlsApi';
+import { validLegacyWorkerControlFields, validOrderControl } from './workerOrderLogic';
 import { progressBatchFromJson } from './workerProgressBatch';
 import { completionRequestNotification, productionOrderStatusDetail, queueWorkActivity } from './workerQueueModels';
 import { printJobFromJson, type WorkerPrintJob } from './workerPrintJob';
 import { rezkaReportFromJson, rezkaReportFromSession } from './workerRezkaReport';
-import { printPreflightHold } from './workerPrintPreflight';
 
 type Obj = Record<string, any>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
@@ -128,7 +127,7 @@ function validRezkaMergeState(control: Obj, actions: string[]): boolean {
   return true;
 }
 
-export function queueActionControlState(raw: unknown, contractOnly = false, session?: Session): Obj | null {
+export function queueActionControlState(raw: unknown, contractOnly = false, session?: Session, legacy = false): Obj | null {
   const state = object(raw), control = object(state?.control), interaction = object(control?.interaction);
   if (!state || !control || !interaction || !object(state.stage_states) || typeof state.apparatus !== 'string' ||
       typeof state.order_id !== 'string' || typeof state.queue_state !== 'string' || !Array.isArray(control.allowed_actions)) return null;
@@ -160,8 +159,10 @@ export function queueActionControlState(raw: unknown, contractOnly = false, sess
     closing_output_batch_id: typeof control.closing_output_batch_id === 'string' ? control.closing_output_batch_id.trim() : '',
     ...(normalizedFreeze ? { freeze_request: normalizedFreeze } : {}),
     ...(hold ? { print_preflight: hold } : {}) };
-  if (!validOrderControl({ ok: true, control_state: { ...state, scope: '__action__',
-    queue_state: state.queue_state.trim(), control: normalizedControl } }, state.apparatus, state.order_id, null, contractOnly)) return null;
+  const parsed = { ok: true, control_state: { ...state, scope: '__action__',
+    queue_state: state.queue_state.trim(), control: normalizedControl } };
+  if (!(legacy ? validLegacyWorkerControlFields(parsed, state.apparatus, state.order_id, contractOnly)
+    : validOrderControl(parsed, state.apparatus, state.order_id, null, contractOnly))) return null;
   const stages = state.order_id === state.order_id.trim() ? Object.fromEntries(Object.entries(state.stage_states)
     .filter(([key]) => !!key.trim()).map(([key, value]) => [key.trim(), String(value).trim().toLowerCase()])) : {};
   const stageWork = object(control.stage_work);

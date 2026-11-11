@@ -108,8 +108,32 @@ test('temporary pause is revalidated and never sent for an outdated token', asyn
   await assert.rejects(runWorkerMenuAction(session, 'apparatus:default:p', 'o', 'temporary_pause', previous, () => cursor));
   assert.equal(requests.length, 1);
   requests = [];
-  await assert.rejects(readWorkerActionControl(session, 'apparatus:default:p', 'o', () => null));
+  assert.equal((await readWorkerActionControl(session, 'apparatus:default:p', 'o', () => null)).control_state.order_id, 'o');
   assert.equal(requests.length, 1);
+});
+
+test('a scoped action-control read rejected by the live cursor preserves the V2 stale diagnostic', async () => {
+  for (const current of [{ epoch: 'e', rev: 4 }, { epoch: 'another', rev: 3 }]) {
+    responseControl = bootstrap(); requests = [];
+    await assert.rejects(readWorkerActionControl(session, 'apparatus:default:p', 'o', () => current), error => {
+      assert.ok(error instanceof controls.WorkerControlException);
+      assert.equal(error.code, 'order_scan_bootstrap_stale'); assert.equal(error.message, 'Order control changed');
+      return true;
+    });
+    assert.equal(requests.length, 1); assert.equal(requests[0].body, null);
+  }
+});
+
+test('an action-control read retired by account scope does not report an order-control diagnostic', async () => {
+  const account = { ...session, profile: { ...session.profile } };
+  const isolated = load('workerLongPress', { './authorizedFetch': {}, './workerControlsApi': controls,
+    './workerOrderLogic': logic, './sessionReadScope': scope, './workerPrintPreflight': preflight,
+    './workerLegacyScan': legacyApi, './workerScanBootstrap': { adminOrderScanBootstrap: async () => {
+      account.profile.ref = 'another-worker'; return bootstrap();
+    } } });
+  await assert.rejects(isolated.readWorkerActionControl(account, 'apparatus:default:p', 'o', () => cursor), error => {
+    assert.equal(error.code, 'session_scope_changed'); assert.equal(error.message, ''); return true;
+  });
 });
 
 test('re-pause and reclose require the owner and the current stage', () => {

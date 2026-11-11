@@ -19,7 +19,7 @@ export async function adminMoveProductionMapOrdersBatch(session: Session, input:
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    const error = productionMapResponseError(response.status, payload, 'production_map_move_batch');
+    const error = productionMapResponseError(response.status, payload, 'production_map_move_batch', response.headers);
     const requestId = response.headers.get('x-request-id') ?? (object(payload)?.request_id == null ? undefined : String(object(payload)?.request_id));
     throw new WorkerControlException(error.code, error.message, error.statusCode, error.diagnostics, requestId);
   }

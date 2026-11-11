@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkerColors } from './useWorkerColors';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 
-type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; preventDismiss?: boolean; compact?: boolean; fitContent?: boolean; heightFraction?: number;
+type Props = { children: ReactNode; onClose: () => void; dismissible?: boolean; preventDismiss?: boolean; compact?: boolean; fitContent?: boolean; measureContent?: boolean; heightFraction?: number;
   sheetRef?: Ref<ModalBottomSheetRef> };
 
 export function WorkerOrderSheet({ children, onClose, dismissible = false, preventDismiss = false, compact = false, fitContent = false, heightFraction, sheetRef }: Props) {
