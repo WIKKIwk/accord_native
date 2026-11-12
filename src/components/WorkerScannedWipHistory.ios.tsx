@@ -1,6 +1,6 @@
 import { Button, HStack, Image, List, ProgressView, Section, Text, VStack } from '@expo/ui/swift-ui';
-import { accessibilityIdentifier, accessibilityLabel, buttonBorderShape, buttonStyle, contentShape, controlSize, disabled,
-  fixedSize, font, foregroundStyle, frame, labelStyle, lineLimit, listStyle, multilineTextAlignment, onLongPressGesture, shapes } from '@expo/ui/swift-ui/modifiers';
+import { buttonStyle, contentShape, controlSize, disabled,
+  fixedSize, font, foregroundStyle, frame, lineLimit, listStyle, multilineTextAlignment, onLongPressGesture, shapes } from '@expo/ui/swift-ui/modifiers';
 import { useContext } from 'react';
 import { PlatformColor, StyleSheet, View } from 'react-native';
 import { BaseHost } from './BaseHost';
@@ -8,12 +8,11 @@ import { WorkerAlert } from './WorkerAlert';
 import { WorkerOrderSheet } from './WorkerOrderSheet';
 import { useWorkerScannedWips, type WorkerScannedWipsProps } from './useWorkerScannedWips';
 import { WorkerSheetCloseContext } from './workerSheetContext';
+import { WorkerHistoryButton } from './WorkerHistoryButton';
 
 function CloseHistory({ onClose, writing, label }: { onClose: () => void; writing: boolean; label: string }) {
   const close = useContext(WorkerSheetCloseContext) ?? onClose;
-  return <Button label={label} systemImage="xmark" onPress={close}
-    modifiers={[buttonStyle('bordered'), buttonBorderShape('circle'), controlSize('large'), labelStyle('iconOnly'),
-      frame({ width: 44, height: 44 }), accessibilityLabel(label), accessibilityIdentifier('scanned-wip-history-close'), disabled(writing)]} />;
+  return <WorkerHistoryButton icon="close" label={label} onPress={close} disabled={writing} testID="scanned-wip-history-close" />;
 }
 
 // @v2 _ScannedWipHistorySheet
@@ -27,9 +26,8 @@ export function WorkerScannedWipHistory(props: WorkerScannedWipsProps) {
           <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
             <Text modifiers={[font({ textStyle: 'title3', weight: 'bold' }), lineLimit(2), fixedSize({ horizontal: false, vertical: true }),
               frame({ maxWidth: Infinity, alignment: 'leading' })]}>{p('worker.scanned_wip.title')}</Text>
-            <Button label={t('Qayta urinish')} systemImage="arrow.clockwise" onPress={() => { void controller.load(); }}
-              modifiers={[buttonStyle('bordered'), buttonBorderShape('circle'), controlSize('large'), labelStyle('iconOnly'),
-                frame({ width: 44, height: 44 }), accessibilityLabel(t('Qayta urinish')), accessibilityIdentifier('scanned-wip-history-refresh'), disabled(!presentation.canReload)]} />
+            <WorkerHistoryButton icon="reload" label={t('Qayta urinish')} onPress={() => { void controller.load(); }}
+              disabled={!presentation.canReload} testID="scanned-wip-history-refresh" />
             <CloseHistory label={p('worker.action.close')} onClose={props.onClose} writing={state.writing} />
           </HStack>
         </BaseHost>

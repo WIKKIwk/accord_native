@@ -504,7 +504,9 @@ test('iOS quantity form field uses the wide native editor without changing raw r
 
 test('native order identity keeps image preview and close actions with the cached thumbnail', () => {
   const h = harness(), calls = [];
+  const { WorkerHistoryButton } = load('components/WorkerHistoryButton.ios.tsx', mocks);
   const { WorkerOrderIdentity } = load('components/WorkerOrderIdentity.ios.tsx', { ...mocks,
+    './WorkerHistoryButton': { WorkerHistoryButton },
     './useWorkerOrderText': { useWorkerOrderText: () => ({ p: key => key }) },
     './WorkerOrderThumbnail': { WorkerOrderThumbnail: 'Thumbnail' }, './useWorkerColors': { useWorkerColors: () => ({ surface: 'surface', icon: 'icon' }) } });
   const tree = WorkerOrderIdentity({ ...h.props, onOpenImage: () => calls.push('image'), onClose: () => calls.push('close') });
@@ -517,8 +519,17 @@ test('native order identity keeps image preview and close actions with the cache
   assert.deepEqual(byId(tree, 'worker-order-close').props.modifiers.find(modifier => modifier.name === 'frame').args[0], { width: 44, height: 44 });
   assert.equal(text(tree).includes('0337'), true); assert.equal(text(tree).includes('Tea'), true);
   const withHistory = WorkerOrderIdentity({ ...h.props, onScannedWips: () => calls.push('scanned') });
-  nodes(withHistory, item => item.props.systemImage === 'qrcode.viewfinder')[0].props.onPress();
+  const history = nodes(withHistory, item => item.type === WorkerHistoryButton)[0];
+  const historyButton = WorkerHistoryButton(history.props);
+  historyButton.props.onPress();
   assert.equal(calls.at(-1), 'scanned');
+  for (const icon of ['qr', 'reload', 'close']) {
+    const button = WorkerHistoryButton({ ...history.props, icon, disabled: true });
+    const label = nodes(button, item => item.type === 'ZStack')[0];
+    assert.deepEqual(label.props.modifiers.find(modifier => modifier.name === 'frame').args[0], { width: 48, height: 48 });
+    assert.deepEqual(label.props.modifiers.find(modifier => modifier.name === 'contentShape').args[0], { type: 'rectangle' });
+    assert.equal(button.props.modifiers.find(modifier => modifier.name === 'disabled').args[0], true);
+  }
 });
 
 test('disclosure rows use an intrinsic 44pt grid with aligned tabular counters and stable chevron space', () => {

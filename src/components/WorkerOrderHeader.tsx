@@ -25,7 +25,7 @@ export function WorkerOrderHeader({ session, orderId, imageId, code, title, onOp
       <Text numberOfLines={1} style={[styles.code, { color: colors.text }]}>{code}</Text>
       {title ? <Text numberOfLines={2} style={[styles.label, { color: colors.muted }]}>{title}</Text> : null}
     </View>
-    {onScannedWips && <WorkerIconButton icon="scannedWips" label={p('worker.scanned_wip.title')} onPress={onScannedWips} />}
+    {onScannedWips && <WorkerIconButton icon="scannedWips" label={p('worker.scanned_wip.title')} onPress={onScannedWips} size={48} tonal />}
     <WorkerIconButton icon="close" label="Yopish" onPress={onClose} tonal />
   </View>;
 }

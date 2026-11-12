@@ -1,4 +1,4 @@
-import { FilledTonalIconButton, Host, IconButton, RNHostView, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { FilledTonalIconButton, Host, Icon, IconButton, RNHostView, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet } from 'react-native';
@@ -15,9 +15,10 @@ export function WorkerIconButton({ icon, label, onPress, tonal, size: buttonSize
     </Pressable>;
   }
   const Component = tonal ? FilledTonalIconButton : IconButton;
-  return <Host matchContents style={{ width: buttonSize, height: buttonSize }}>
+  return <Host matchContents style={{ width: buttonSize, height: buttonSize, ...(icon === 'scannedWips' ? { flexShrink: 0 } : {}) }}>
     <Component onClick={onPress} modifiers={[size(buttonSize, buttonSize), semantics({ contentDescription: label })]}>
-      <RNHostView matchContents><SymbolView name={{ android: icon === 'back' ? 'arrow_back' : icon === 'photo' ? 'add_photo_alternate' : icon === 'scannedWips' ? 'qr_code_scanner' : icon }} size={iconSize} tintColor={colors.onSurfaceVariant} /></RNHostView>
+      {icon === 'scannedWips' ? <Icon source={require('../../assets/icons/worker/qr_code_scanner.xml')} size={iconSize} tint={colors.onSecondaryContainer} />
+        : <RNHostView matchContents><SymbolView name={{ android: icon === 'back' ? 'arrow_back' : icon === 'photo' ? 'add_photo_alternate' : icon }} size={iconSize} tintColor={colors.onSurfaceVariant} /></RNHostView>}
     </Component>
   </Host>;
 }

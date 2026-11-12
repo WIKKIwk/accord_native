@@ -8,6 +8,7 @@ import { WorkerOrderThumbnail } from './WorkerOrderThumbnail';
 import { useWorkerColors } from './useWorkerColors';
 import { useWorkerOrderText } from './useWorkerOrderText';
 import { WORKER_ORDER_LAYOUT as layout } from './workerOrderLayout';
+import { WorkerHistoryButton } from './WorkerHistoryButton';
 
 export function WorkerOrderIdentity({ session, orderId, imageId, code, title, onOpenImage, onClose, onScannedWips }: ComponentProps<typeof WorkerOrderHeader>) {
   const colors = useWorkerColors();
@@ -24,8 +25,7 @@ export function WorkerOrderIdentity({ session, orderId, imageId, code, title, on
         <Text modifiers={[font({ textStyle: 'title2', weight: 'bold' }), monospacedDigit()]}>{code}</Text>
         {title ? <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle({ type: 'hierarchical', style: 'secondary' }), lineLimit(2)]}>{title}</Text> : null}
       </VStack>
-      {onScannedWips && <Button label={p('worker.scanned_wip.title')} systemImage="qrcode.viewfinder" onPress={onScannedWips}
-        modifiers={[buttonStyle('plain'), controlSize('large'), frame({ width: layout.iconSize, height: layout.iconSize }), labelStyle('iconOnly'), accessibilityLabel(p('worker.scanned_wip.title'))]} />}
+      {onScannedWips && <WorkerHistoryButton icon="qr" label={p('worker.scanned_wip.title')} onPress={onScannedWips} testID="worker-order-scanned-wips" />}
       <Button {...(glass ? { role: 'close' as const } : { label: 'Yopish', systemImage: 'xmark' as const })} onPress={onClose}
         modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('circle'), controlSize('large'), frame({ width: layout.iconSize, height: layout.iconSize }), labelStyle('iconOnly'),
           accessibilityLabel('Yopish'), accessibilityIdentifier('worker-order-close')]} />

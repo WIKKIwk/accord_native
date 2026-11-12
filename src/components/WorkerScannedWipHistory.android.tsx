@@ -1,4 +1,4 @@
-import { Button, CircularProgressIndicator, Column, FilledTonalIconButton, LinearProgressIndicator, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Button, CircularProgressIndicator, Column, FilledTonalIconButton, Icon, LinearProgressIndicator, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { combinedClickable, fillMaxWidth, padding, semantics, size, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -20,11 +20,11 @@ export function WorkerScannedWipHistory(props: WorkerScannedWipsProps) {
             style={{ typography: 'titleLarge', fontSize: 20, fontWeight: '700' }}>{p('worker.scanned_wip.title')}</Text>
           <FilledTonalIconButton enabled={presentation.canReload} onClick={() => { void controller.load(); }}
             modifiers={[size(48, 48), semantics({ contentDescription: t('Qayta urinish') })]}>
-            <RNHostView matchContents><SymbolView name={{ android: 'refresh' }} size={24} tintColor={colors.onSecondaryContainer} /></RNHostView>
+            <Icon source={require('../../assets/icons/gscale/refresh.xml')} size={24} tint={colors.onSecondaryContainer} />
           </FilledTonalIconButton>
           <FilledTonalIconButton enabled={!state.writing} onClick={props.onClose}
             modifiers={[size(48, 48), semantics({ contentDescription: p('worker.action.close') })]}>
-            <RNHostView matchContents><SymbolView name={{ android: 'close' }} size={24} tintColor={colors.onSecondaryContainer} /></RNHostView>
+            <Icon source={require('../../assets/icons/gscale/close.xml')} size={24} tint={colors.onSecondaryContainer} />
           </FilledTonalIconButton>
         </Row>
       </BaseHost>
