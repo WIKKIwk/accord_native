@@ -261,6 +261,53 @@ test('iOS WIP QR uses aligned label/value rows in a native scroll, with large vi
   assert.equal(find(restricted, node => modifier(node, 'accessibilityIdentifier') === 'worker-wip-qr-reprint'), undefined);
 });
 
+test('Android WIP QR follows the source order and keeps compact details and print actions usable', () => {
+  const { WorkerWipBatchDetailsView } = load('components/WorkerWipBatchDetailsView.android.tsx', {
+    '@expo/ui/jetpack-compose': { Button: 'ComposeButton', Host: 'ComposeHost', RNHostView: 'ComposeRNHostView', Row: 'ComposeRow', Text: 'ComposeText',
+      useMaterialColors: () => ({ onPrimary: 'on-primary', onSurfaceVariant: 'muted' }) },
+    '@expo/ui/jetpack-compose/modifiers': modifiers, 'expo-image': { Image: 'QrImage' }, 'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { ScrollView: 'ScrollView', StyleSheet: { create: value => value }, Text: 'Text', View: 'View' },
+    './WorkerIconButton': { WorkerIconButton: 'IconButton' }, './WorkerOrderThumbnail': { WorkerOrderThumbnail: 'Thumbnail' },
+    './useWorkerColors': { useWorkerColors: () => ({ text: 'text', muted: 'muted', surface: 'surface', icon: 'icon', error: 'error' }) },
+  });
+  const calls = [], rows = [['Miqdor', '100 m'], ['Brutto', '100 kg'], ['Netto', '99 kg'], ['EPC', '4001 18E4 6E18 D89E 00A0 EE45']];
+  const props = { session: {}, order: { id: 'order', imageId: 'image' }, title: 'WIP tafsilotlari', itemName: '0344 • Film', payload: '400118E46E18D89E00A0EE45',
+    qrImage: 'data:image/gif;base64,QR', rows, editLabel: 'Tahrirlash', closeLabel: 'Yopish', reprintLabel: 'Qayta chop etish',
+    busy: false, canReprint: true, message: '', onEdit: () => calls.push('edit'), onClose: () => calls.push('close'), onReprint: () => calls.push('print') };
+  const tree = WorkerWipBatchDetailsView(props), scroll = find(tree, node => node.type === 'ScrollView');
+  const [qrFrame, identity, details] = scroll.props.children;
+  assert.equal(qrFrame.props.style.width, 240);
+  assert.equal(qrFrame.props.style.aspectRatio, 1);
+  assert.equal(qrFrame.props.style.padding, 16);
+  assert.equal(qrFrame.props.style.borderRadius, 18);
+  assert.equal(qrFrame.props.style.backgroundColor, '#fff');
+  assert.equal(find(qrFrame, node => node.type === 'QrImage').props.source.uri, props.qrImage);
+  assert.equal(find(identity, node => node.type === 'Thumbnail').props.orderId, 'order');
+  assert.equal(find(identity, node => node.props.children === props.itemName).type, 'Text');
+  assert.equal(details.props.children.length, rows.length);
+  for (const [index, row] of details.props.children.entries()) {
+    const [label, value] = row.props.children;
+    assert.equal(label.props.children, rows[index][0]); assert.equal(label.props.style[0].width, 112);
+    assert.equal(value.props.children, rows[index][1]); assert.equal(value.props.style[0].flex, 1);
+  }
+  assert.equal(find(tree, node => node.type === 'ListItem'), undefined);
+  const print = find(tree, node => node.type === 'ComposeButton');
+  assert.equal(print.props.enabled, true);
+  assert.equal(modifier(print, 'testID'), 'worker-wip-qr-reprint');
+  assert.ok(print.props.modifiers.some(value => value.name === 'fillMaxWidth'));
+  assert.equal(find(print, node => node.type === 'SymbolView').props.name.android, 'print');
+  find(tree, node => node.type === 'IconButton' && node.props.icon === 'edit').props.onPress();
+  find(tree, node => node.type === 'IconButton' && node.props.icon === 'close').props.onPress();
+  print.props.onClick(); assert.deepEqual(calls, ['edit', 'close', 'print']);
+  const locked = WorkerWipBatchDetailsView({ ...props, busy: true });
+  assert.equal(find(locked, node => node.type === 'ComposeButton').props.enabled, false);
+  assert.equal(find(locked, node => node.props?.pointerEvents === 'none').props.accessibilityState.disabled, true);
+  const restricted = WorkerWipBatchDetailsView({ ...props, onEdit: undefined, canReprint: false, qrImage: '' });
+  assert.equal(find(restricted, node => node.type === 'ComposeButton'), undefined);
+  assert.equal(find(restricted, node => node.type === 'IconButton' && node.props.icon === 'edit'), undefined);
+  assert.equal(find(restricted, node => node.type === 'Text' && node.props.children === props.payload).props.selectable, true);
+});
+
 test('native daily correction fields retain prefilled values, units, callbacks and the revisioned save/reason flow', async () => {
   const { DailyWorkCorrectionController } = load('dailyWorkCorrection.ts');
   const row = batch({ revision: 7 }), saves = [];

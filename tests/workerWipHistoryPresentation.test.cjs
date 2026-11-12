@@ -87,7 +87,7 @@ test('Android WIP cards keep long titles readable, align facts and retain both r
     h.render(); await tick(); const tree = h.render();
     const list = find(tree, node => node.type === 'FlatList');
     const summary = find(list.props.ListHeaderComponent, node => node.type === 'View' && flatten(node.props.style).backgroundColor === 'summary');
-    assert.ok(summary, 'summary is visually distinct and uses the system tertiary container');
+    assert.ok(summary, 'summary uses the system surface color');
     const row = list.props.renderItem({ item: h.state.rows[0], index: 0 });
     assert.equal(flatten(row.props.style).backgroundColor, 'card');
     assert.equal(find(row, node => node.type === 'Text' && node.props.children === title).props.numberOfLines, 2);
@@ -111,17 +111,17 @@ test('Android WIP surfaces follow the current Material palette in light and dark
   for (const mode of ['light', 'dark']) {
     const colors = Object.fromEntries(['tertiaryContainer', 'onTertiaryContainer', 'surfaceContainerHighest', 'surface', 'onSurface', 'onSurfaceVariant',
       'secondaryContainer', 'onSecondaryContainer', 'primaryContainer', 'onPrimaryContainer', 'onPrimary'].map(role => [role, `${mode}-${role}`]));
-    colors.onTertiaryContainer = mode === 'light' ? '#112233FF' : '#DDEEFFff';
     let options;
     const { useWorkerWipHistoryPalette } = load('components/useWorkerWipHistoryPalette.android.ts', {
       '@expo/ui/jetpack-compose': { useMaterialColors: value => { options = value; return colors; } },
     });
     const palette = useWorkerWipHistoryPalette();
     assert.deepEqual(options, {});
-    assert.equal(palette.summary, colors.tertiaryContainer);
-    assert.equal(palette.summaryChip, `${colors.onTertiaryContainer.slice(0, 7)}1F`);
+    assert.equal(palette.summary, colors.surface);
+    assert.equal(palette.summaryText, colors.onSurface);
+    assert.equal(palette.summaryChip, colors.surfaceContainerHighest);
     assert.equal(palette.card, colors.surface);
-    assert.equal(palette.status.waiting.backgroundColor, colors.tertiaryContainer);
+    assert.equal(palette.status.waiting.backgroundColor, colors.secondaryContainer);
     assert.equal(palette.status.inUse.backgroundColor, colors.primaryContainer);
     assert.equal(palette.status.processed.backgroundColor, colors.secondaryContainer);
   }
