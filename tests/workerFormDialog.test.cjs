@@ -71,6 +71,18 @@ test('Android save prevents cancellation and default dialogs preserve permitted 
   }
   assert.equal(render({ visible: false }), null);
 });
+test('Android choice dialog uses the native Material dialog with cancel and no extra confirm action', () => {
+  const render = load('android'); let cancels = 0;
+  const tree = render({ visible: true, title: 'Rasm qo‘shish', children: 'Choices', hideConfirm: true, dismissOnBackdrop: true,
+    confirmLabel: '', onConfirm() {}, onCancel: () => cancels++ });
+  const dialog = nodes(tree, node => node.type === AlertDialog)[0];
+  assert.deepEqual(dialog.props.properties, { dismissOnBackPress: true, dismissOnClickOutside: true });
+  assert.equal(nodes(tree, node => node.type === 'ConfirmButton').length, 0);
+  const cancel = nodes(tree, node => node.type === 'TextButton')[0];
+  cancel.props.onClick(); dialog.props.onDismissRequest(); assert.equal(cancels, 2);
+  const normal = render({ visible: true, title: 'Report', confirmLabel: 'Save', onConfirm() {}, onCancel() {} });
+  assert.equal(nodes(normal, node => node.type === 'ConfirmButton').length, 1);
+});
 for (const progressAction of ['pause', 'complete']) test(`Android ${progressAction} report has a readable form and preserves its actions`, () => {
   const render = load('android'), calls = [], scrollRef = { current: null };
   const tree = render({ visible: true, title: 'Miqdor', children: 'Fields', progressAction, preventDismiss: true, scrollRef,

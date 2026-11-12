@@ -4,7 +4,7 @@ import { ScrollView, useWindowDimensions, View } from 'react-native';
 import type { WorkerFormDialogProps } from './workerDialogTypes';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, scrollRef, dismissOnBackdrop = false, progressAction }: WorkerFormDialogProps) {
+export function WorkerFormDialog({ visible, title, children, confirmLabel, onConfirm, confirmDisabled, cancelLabel = 'Bekor qilish', onCancel, cancelDisabled, preventDismiss, scrollRef, dismissOnBackdrop = false, hideConfirm = false, progressAction }: WorkerFormDialogProps) {
   const { width, height } = useWindowDimensions();
   const { t } = useWorkerOrderText();
   const colors = useMaterialColors({});
@@ -33,7 +33,7 @@ export function WorkerFormDialog({ visible, title, children, confirmLabel, onCon
           shape={Shape.RoundedCorner({ cornerRadii: { topStart: 14, topEnd: 14, bottomStart: 14, bottomEnd: 14 } })}><Text maxLines={1} overflow="ellipsis">{t(confirmLabel)}</Text></Button>
       </Row></AlertDialog.ConfirmButton> : <>
         <AlertDialog.DismissButton><TextButton enabled={!cancelDisabled} onClick={onCancel}><Text>{t(cancelLabel)}</Text></TextButton></AlertDialog.DismissButton>
-        <AlertDialog.ConfirmButton><TextButton enabled={!confirmDisabled} onClick={onConfirm}><Text>{t(confirmLabel)}</Text></TextButton></AlertDialog.ConfirmButton>
+        {!hideConfirm && <AlertDialog.ConfirmButton><TextButton enabled={!confirmDisabled} onClick={onConfirm}><Text>{t(confirmLabel)}</Text></TextButton></AlertDialog.ConfirmButton>}
       </>}
     </AlertDialog>
   </Host>;

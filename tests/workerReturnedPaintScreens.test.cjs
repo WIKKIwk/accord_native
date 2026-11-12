@@ -12,6 +12,11 @@ function setup(platform, extra = {}) {
 }
 const button = (tree, label) => nodes(tree, node => node.type?.name === 'NativeButton' && node.props.label === label)[0];
 const dialog = tree => nodes(tree, node => node.type === 'PaintNamedDialog')[0];
+const photoSourceDialog = h => nodes(h.paintTree(), node => node.type === 'WorkerFormDialog')[0];
+function choosePhoto(h, platform, source) {
+  if (platform === 'android') button(photoSourceDialog(h), source === 'camera' ? 'Kamera' : 'Gallery').props.onPress();
+  else h.alerts[0][2][source === 'camera' ? 0 : 1].onPress();
+}
 test('iOS report and inline paint editor retain glass secondary actions and blue confirm/done actions', () => {
   const h = setup('ios', { states: { paintEditor: false } });
   const report = nodes(h.render(), node => node.type === 'WorkerFormDialog')[0];
@@ -36,7 +41,37 @@ test('Android returned-paint entry and sheet header use full-sized controls', ()
   paint.props.onPress();
   const header = nodes(h.paintTree(), node => node.type === 'WorkerIconButton');
   assert.deepEqual(header.map(item => [item.props.icon, item.props.size]), [['back', 48], ['photo', 48]]);
-  header[1].props.onPress(); assert.deepEqual(h.alerts[0][2].map(item => item.text), ['Kamera', 'Gallery', 'Bekor qilish']);
+  header[1].props.onPress();
+  const choices = photoSourceDialog(h);
+  assert.equal(h.alerts.length, 0); assert.equal(choices.props.title, 'Rasm qo‘shish');
+  assert.equal(choices.props.hideConfirm, true); assert.equal(choices.props.dismissOnBackdrop, true);
+  assert.equal(choices.props.cancelLabel, 'Bekor qilish');
+  assert.deepEqual(['Kamera', 'Gallery'].map(label => [button(choices, label).props.height, button(choices, label).props.icon.android]),
+    [[56, 'photo_camera'], [56, 'photo_library']]);
+});
+test('Android photo source dialog opens each picker once and cancel prevents stale choices', async () => {
+  for (const source of ['camera', 'gallery']) {
+    const picks = [];
+    const h = setup('android', { states: { paintColor: '' }, pickPaintPhoto: async value => { picks.push(value); return null; } });
+    const photo = nodes(h.paintTree(), node => node.type === 'WorkerIconButton' && node.props.icon === 'photo')[0];
+    photo.props.onPress();
+    const cancelled = photoSourceDialog(h), stale = button(cancelled, 'Kamera');
+    cancelled.props.onCancel(); stale.props.onPress();
+    assert.equal(h.values.get('paintPhotoSourceOwner'), null); assert.deepEqual(picks, []);
+    photo.props.onPress();
+    const choice = button(photoSourceDialog(h), source === 'camera' ? 'Kamera' : 'Gallery');
+    choice.props.onPress(); choice.props.onPress(); await tick();
+    assert.equal(h.values.get('paintPhotoSourceOwner'), null); assert.deepEqual(picks, [source]);
+  }
+});
+test('Android photo source dialog is retired when its worker or order scope changes', () => {
+  const h = setup('android', { states: { paintColor: '' } });
+  nodes(h.paintTree(), node => node.type === 'WorkerIconButton' && node.props.icon === 'photo')[0].props.onPress();
+  assert.ok(photoSourceDialog(h));
+  h.props.session.profile.ref = 'another-worker';
+  assert.equal(photoSourceDialog(h), undefined);
+  h.props.session.profile.ref = 'worker';
+  assert.equal(photoSourceDialog(h), undefined);
 });
 for (const platform of ['ios', 'android']) {
   test(`${platform}: named paint fields open a dialog and commit its initial value with the source duplicate notice`, () => {
@@ -76,8 +111,9 @@ for (const platform of ['ios', 'android']) {
   test(`${platform}: Gallery upload uses shared API and a failed old-image deletion cannot roll back the new photo`, async () => {
     const h = setup(platform, { states: { paintImageId: 'old' }, deletePaint: async () => { throw Error('old cleanup failed'); } });
     button(h.paintTree(), 'Almashtirish').props.onPress();
-    const choices = h.alerts[0][2]; assert.deepEqual(choices.map(item => item.text), ['Kamera', 'Gallery', 'Bekor qilish']);
-    choices[1].onPress(); await tick(); await tick();
+    if (platform === 'ios') assert.deepEqual(h.alerts[0][2].map(item => item.text), ['Kamera', 'Gallery', 'Bekor qilish']);
+    else assert.equal(photoSourceDialog(h).props.title, 'Rasmni almashtirish');
+    choosePhoto(h, platform, 'gallery'); await tick(); await tick();
     assert.equal(h.paintUploads.length, 1); assert.equal(h.paintUploads[0][1].orderId, h.props.orderId);
     assert.equal(h.paintUploads[0][1].apparatus, h.props.apparatusId); assert.equal(h.values.get('paintImageId'), 'new-image');
     assert.equal(h.values.get('paintImageMetadata').image_url, '/new-image');
@@ -87,14 +123,14 @@ for (const platform of ['ios', 'android']) {
   });
   test(`${platform}: an unreadable selected photo never reaches upload and retains the previous image`, async () => {
     const h = setup(platform, { states: { paintImageId: 'old' }, preparePaintPhoto: async () => { throw Error('file unavailable'); } });
-    button(h.paintTree(), 'Almashtirish').props.onPress(); h.alerts[0][2][1].onPress(); await tick();
+    button(h.paintTree(), 'Almashtirish').props.onPress(); choosePhoto(h, platform, 'gallery'); await tick();
     assert.equal(h.paintUploads.length, 0); assert.equal(h.values.get('paintImageId'), 'old');
     assert.equal(h.values.get('error'), 'Rasm yuklanmadi'); assert.equal(h.values.get('photoBusy'), false);
   });
   test(`${platform}: retired photo selection cannot upload into the next account`, async () => {
     let finish;
     const h = setup(platform, { states: { paintImageId: 'old' }, pickPaintPhoto: () => new Promise(resolve => { finish = resolve; }) });
-    button(h.paintTree(), 'Almashtirish').props.onPress(); h.alerts[0][2][1].onPress();
+    button(h.paintTree(), 'Almashtirish').props.onPress(); choosePhoto(h, platform, 'gallery');
     h.setScope('retired'); finish({ uri: 'file:old', width: 10, height: 10 }); await tick();
     assert.equal(h.paintUploads.length, 0); assert.equal(h.values.get('paintImageId'), 'old');
   });

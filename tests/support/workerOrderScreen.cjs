@@ -38,8 +38,9 @@ const native = new Proxy({}, { get: (_target, key) => String(key) });
 const row = barcode => ({ barcode, order_id: '0198', apparatus: 'apparatus:default:bosma_8', execution_status: 'ready' });
 function harness(platform, input = {}, locale = 'uz') {
   const station = 'apparatus:default:bosma_8', values = new Map(), effects = [], actions = [], notices = [], closed = [], preflights = [], alerts = [], paintUploads = [], paintDeletes = [], sheetContents = [];
-  let cursor = 0, refCursor = 0, fresh = input.fresh !== false, mergeOptions, mergeFlow, savedPresentation = null, readScope = 'scope';
+  let cursor = 0, refCursor = 0, memoCursor = 0, fresh = input.fresh !== false, mergeOptions, mergeFlow, savedPresentation = null, readScope = 'scope';
   const refs = [], layouts = [], layoutDeps = []; let layoutCursor = 0;
+  const memos = [];
   const p = (key, parameters) => localize.productionText(key, locale, parameters);
   const text = { locale, p, t: value => wording.workerOrderText(value, locale) };
   const interaction = { mode: 'paused', start_materials_mode: 'hidden', material_intake_allowed: true,
@@ -57,6 +58,9 @@ function harness(platform, input = {}, locale = 'uz') {
     react: { useState(initial) { const name = stateNames[cursor++]; if (!values.has(name)) values.set(name, Object.hasOwn(overrides, name) ? overrides[name] : typeof initial === 'function' ? initial() : initial);
       return [values.get(name), value => values.set(name, typeof value === 'function' ? value(values.get(name)) : value)]; },
       useRef: value => refs[refCursor++] ?? (refs[refCursor - 1] = { current: value }), useContext: () => null, useCallback: callback => callback,
+      useMemo: (create, deps) => { const i = memoCursor++, previous = memos[i];
+        if (!previous || !deps || deps.some((value, index) => !Object.is(value, previous.deps[index]))) memos[i] = { value: create(), deps };
+        return memos[i].value; },
       useEffect: callback => effects.push(callback), useLayoutEffect: (callback, deps) => {
         const index = layoutCursor++, previous = layoutDeps[index];
         if (!deps || !previous || deps.some((value, index) => !Object.is(value, previous[index]))) { layoutDeps[index] = deps; layouts.push(callback); }
@@ -128,7 +132,7 @@ function harness(platform, input = {}, locale = 'uz') {
     apparatusCatalog: [{ id: 'upstream', name: 'Upstream' }], queueCursor: { epoch: 'epoch', rev: 1 }, busyOrderTitle: 'shashoqcha',
     onNotice: message => notices.push(message), onClose: () => closed.push(true), onChanged() {} };
   return { p, values, props, bootstrap, effects, actions, notices, closed, preflights, alerts, paintUploads, paintDeletes, sheetContents, setFresh: value => { fresh = value; }, setScope: value => { readScope = value; },
-    render: () => { cursor = 0; refCursor = 0; layoutCursor = 0; effects.length = 0; layouts.length = 0; const tree = mod.exports.OrderScreen(props); layouts.forEach(effect => effect()); return tree; } };
+    render: () => { cursor = 0; refCursor = 0; memoCursor = 0; layoutCursor = 0; effects.length = 0; layouts.length = 0; const tree = mod.exports.OrderScreen(props); layouts.forEach(effect => effect()); return tree; } };
 }
 function nodes(tree, predicate) {
   if (!tree || typeof tree !== 'object') return [];

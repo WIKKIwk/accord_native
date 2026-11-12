@@ -2,7 +2,7 @@ import { Host, TextInput as NativeInput, useNativeState } from '@expo/ui';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
-import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, DynamicColorIOS, Platform, PlatformColor, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { adminBosmaAstatkaReport } from './workerControlsApi';
@@ -163,6 +163,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const [paintImageId, setPaintImageId] = useState('');
   const [paintImageMetadata, setPaintImageMetadata] = useState<ReturnedPaintImage | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [paintPhotoSourceOwner, setPaintPhotoSourceOwner] = useState<object | null>(null);
   const [permission, askPermission] = useCameraPermissions();
   const [selected, setSelected] = useState('');
   const [switchProgress, setSwitchProgress] = useState<'complete' | 'astatka' | null>(null);
@@ -517,9 +518,12 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   }, [session, apparatusId, orderId, scanningRequired, operation, interaction.material_intake_allowed, controlEpoch, controlRevision, materialReadKey]);
 
   const paintPhotoGeneration = useRef(0);
+  const paintPhotoSourceOpen = useRef(false);
+  const paintPhotoSourceKey = useMemo(() => ({ draftScope, paintEditor }), [draftScope, paintEditor]);
   useLayoutEffect(() => {
     paintPhotoGeneration.current++;
     paintPhotoPending.current = false;
+    paintPhotoSourceOpen.current = false;
   }, [draftScope, paintEditor]);
   const paintPhotoError = (failure: unknown, fallback: string) => failure instanceof Error && failure.name === 'MobileApiException' ? failure.message : fallback;
   async function pickPaintPhoto(source: 'camera' | 'gallery') {
@@ -993,11 +997,26 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     image_id: paintImageId, image_name: '', image_mime: '', image_size_bytes: 0,
     image_url: `/v1/mobile/returned-paint/images/view?id=${encodeURIComponent(paintImageId)}`,
   } : null;
-  const pickPaintImage = () => Alert.alert('', '', [
-    { text: t('Kamera'), onPress: () => { void pickPaintPhoto('camera'); } },
-    { text: t('Gallery'), onPress: () => { void pickPaintPhoto('gallery'); } },
-    { text: t('Bekor qilish'), style: 'cancel' },
-  ]);
+  const closePaintPhotoSource = () => { paintPhotoSourceOpen.current = false; setPaintPhotoSourceOwner(null); };
+  const choosePaintPhotoSource = (source: 'camera' | 'gallery') => {
+    if (!paintPhotoSourceOpen.current || photoBusy || !isCurrent()) return;
+    closePaintPhotoSource();
+    void pickPaintPhoto(source);
+  };
+  const pickPaintImage = () => {
+    if (photoBusy || paintPhotoPending.current || !isCurrent()) return;
+    if (Platform.OS === 'android') {
+      if (paintPhotoSourceOpen.current) return;
+      paintPhotoSourceOpen.current = true;
+      setPaintPhotoSourceOwner(paintPhotoSourceKey);
+      return;
+    }
+    Alert.alert('', '', [
+      { text: t('Kamera'), onPress: () => { void pickPaintPhoto('camera'); } },
+      { text: t('Gallery'), onPress: () => { void pickPaintPhoto('gallery'); } },
+      { text: t('Bekor qilish'), style: 'cancel' },
+    ]);
+  };
   const paintLocked = () => !isCurrent() || photoBusy || busy;
   const paintBody = paintEditor ? <>
           {paintPhoto && <>
@@ -1036,12 +1055,18 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {!!error && <Text style={errorTextStyle}>{t(error)}</Text>}
         {paintBody}
       </ScrollView>
+      {paintPhotoSourceOwner === paintPhotoSourceKey && <WorkerFormDialog visible title={t(paintPhoto ? 'Rasmni almashtirish' : 'Rasm qo‘shish')}
+        confirmLabel="" onConfirm={() => {}} hideConfirm cancelLabel={t('Bekor qilish')} onCancel={closePaintPhotoSource} dismissOnBackdrop>
+        <NativeButton label="Kamera" height={56} icon={{ android: 'photo_camera', ios: 'camera' }} onPress={() => choosePaintPhotoSource('camera')} />
+        <NativeButton label="Gallery" height={56} icon={{ android: 'photo_library', ios: 'photo.on.rectangle' }} onPress={() => choosePaintPhotoSource('gallery')} />
+      </WorkerFormDialog>}
     </View>
   ) : null;
   useLayoutEffect(() => {
     if (!paintContent) return;
     if (paintSheet.isOpen()) paintSheet.update(paintContent);
     else paintSheet.open(paintContent, { dismissible: true, onDismiss: () => {
+      closePaintPhotoSource();
       setPaintEditor(false);
       setPaintColor('');
       setPaintFieldDialog(null);

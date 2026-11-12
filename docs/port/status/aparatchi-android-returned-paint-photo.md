@@ -22,3 +22,12 @@
 
 The open phone session still has the old code and a corrupted previously uploaded image. Reload the app and reselect
 the photo; the currently entered finish-form values may be lost on reload.
+
+## Android photo-source dialog
+
+At the user's request, the Android camera/gallery choice now uses the existing Expo UI Material dialog. It has
+56 dp camera and gallery actions and a cancel action; Back and outside taps dismiss it. V2 uses a bottom sheet with
+the same two source choices. The iOS source picker is unchanged. Account/order changes retire the open choice.
+
+Focused dialog, picker, upload and preview tests pass, as do both platform TypeScript checks. The actual native
+dialog's appearance and picker transitions still need a phone check after the updated app is loaded.
