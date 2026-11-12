@@ -20,7 +20,8 @@ export function WorkerFormDialog({ visible, title, children, confirmLabel, onCon
       {dismissOnBackdrop && <Pressable accessible={false} style={StyleSheet.absoluteFill} disabled={cancelDisabled || preventDismiss} onPress={onCancel} />}
       <View accessibilityViewIsModal style={{ flexShrink: 1, width: Math.min(width - 32, 560), maxHeight: height - insets.top - insets.bottom - 24, backgroundColor: colors.surface, borderRadius: 26, padding: 20, gap: 16 }}>
         <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><NativeText modifiers={[font({ size: 22, weight: 'semibold' }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>{t(title)}</NativeText></BaseHost>
-        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 14, paddingBottom: 8 }}>{children}</ScrollView>
+        {/* SwiftUI fields handle taps natively, without claiming a JS responder. */}
+        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="always" keyboardDismissMode="interactive" style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 14, paddingBottom: 8 }}>{children}</ScrollView>
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <BaseHost matchContents={{ vertical: true }} style={{ flex: 1 }}><Button onPress={onCancel}
             modifiers={[buttonStyle(glass ? 'glass' : 'bordered'), buttonBorderShape('capsule'), controlSize('large'),

@@ -24,6 +24,35 @@ function load(platform, screenWidth = 400) {
 }
 function nodes(node, pred) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(value => nodes(value, pred));
   return [...(pred(node) ? [node] : []), ...nodes(node.props?.children, pred)]; }
+
+// Run the installed RN responder: SwiftUI field touches don't claim a JS responder.
+const scrollSource = fs.readFileSync(path.join(path.dirname(require.resolve('react-native/package.json')), 'Libraries/Components/ScrollView/ScrollView.js'), 'utf8');
+const responderMethods = ['_handleStartShouldSetResponder', '_handleResponderRelease'].map(name => {
+  const start = scrollSource.indexOf(`  ${name}:`);
+  assert.ok(start >= 0, `RN must expose ${name}`);
+  return scrollSource.slice(start, scrollSource.indexOf('\n  };', start) + 5);
+}).join('\n');
+const responderCode = ts.transpileModule(`class ScrollResponderProbe { ${responderMethods} }`, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022 },
+}).outputText;
+function assertNativeFieldHandoff(props) {
+  let focused = { field: 'bobina' }, blurs = 0;
+  const Responder = new Function('TextInputState', `${responderCode}\nreturn ScrollResponderProbe;`)({
+    currentlyFocusedInput: () => focused, blurTextInput: () => { focused = null; blurs++; },
+  });
+  const responder = new Responder();
+  Object.assign(responder, { props, _keyboardIsDismissible: () => true,
+    _observedScrollSinceBecomingResponder: false, _becameResponderWhileAnimating: false });
+  for (const field of ['metraj', 'kg', 'bobina']) {
+    const target = { field }, event = { target, nativeEvent: { touches: [] } };
+    const intercepted = responder._handleStartShouldSetResponder(event);
+    if (intercepted) responder._handleResponderRelease(event);
+    else focused = target;
+    assert.equal(intercepted, false, `${field}: first tap must reach the native field`);
+    assert.equal(focused, target);
+  }
+  assert.equal(blurs, 0, 'the scroll container must not dismiss the keyboard between fields');
+}
 // @v2-test test/admin_production_map_test_screen_test.dart
 test('Android native report dialog blocks Back/outside when preventDismiss is set while explicit Cancel remains available', () => {
   const render = load('android'); let cancels = 0;
@@ -90,6 +119,17 @@ test('iOS native form forwards presentation/dismissal events and shares its scro
   tree.props.onRequestClose(); assert.equal(cancelled, 0); tree.props.onShow(); tree.props.onDismiss(); assert.equal(shown, 1); assert.equal(dismissed, 1);
   assert.equal(nodes(tree, node => node.type === 'ScrollView')[0].props.ref, scrollRef);
   assert.equal(nodes(tree, node => node.type === 'Button').length, 2);
+});
+test('iOS shared report form passes consecutive native field taps through while the keyboard is open', () => {
+  const tree = load('ios')({ visible: true, title: 'Miqdor', confirmLabel: 'Save', onConfirm() {}, onCancel() {} });
+  const scroll = nodes(tree, node => node.type === 'ScrollView')[0];
+  assertNativeFieldHandoff(scroll.props);
+  assert.equal(scroll.props.keyboardDismissMode, 'interactive', 'dragging can still dismiss the keyboard');
+});
+test('order field taps reach native inputs on iOS while Android retains its existing tap handling', () => {
+  const { harness, main } = require('./support/workerOrderScreen.cjs');
+  assertNativeFieldHandoff(main(harness('ios').render()).props);
+  assert.equal(main(harness('android').render()).props.keyboardShouldPersistTaps, 'handled');
 });
 for (const platform of ['ios', 'android']) test(`${platform}: merge confirmation permits Back/outside cancellation without changing report defaults`, () => {
   let cancelled = 0;

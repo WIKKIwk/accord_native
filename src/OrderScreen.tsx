@@ -1054,7 +1054,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const imageId = String(order.image_id || preview?.imageId || '');
   if (imageOpen) return <WorkerOrderImage session={session} orderId={orderId} imageId={imageId} onClose={() => setImageOpen(false)} />;
 
-  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps="handled">
+  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'always' : 'handled'}>
     <WorkerOrderIdentity session={session} orderId={orderId} imageId={imageId} code={code} title={String(order.title || preview?.title || '')}
       onScannedWips={canOpenScannedWips ? () => setScannedWipsStage(scannedStage) : undefined}
       onOpenImage={() => setImageOpen(true)} onClose={closeSheet} />

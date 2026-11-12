@@ -347,6 +347,7 @@ test('iOS action sheet fits measured content with bounded scrolling and no half/
   assert.equal(group.props.modifiers.some(modifier => modifier.name === 'presentationDetents'), false);
   const scroll = nodes(tree, item => item.type === 'ScrollView')[0];
   assert.deepEqual(scroll.props.style, { flexGrow: 0, maxHeight: Math.round((844 - 59 - 34) * 0.86) });
+  assert.equal(scroll.props.keyboardShouldPersistTaps, 'always', 'native fields inside a compact sheet must receive the first tap');
   assert.equal(scroll.props.style.height, undefined);
 });
 

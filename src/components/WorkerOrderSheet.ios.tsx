@@ -27,7 +27,7 @@ export function WorkerOrderSheet({ children, onClose, dismissible = false, preve
   const dismiss = () => { if (!closed.current) { closed.current = true; onClose(); } };
 
   let content: ReactNode = <WorkerSheetCloseContext.Provider value={close}>
-      {compact ? <ScrollView keyboardShouldPersistTaps="handled"
+      {compact ? <ScrollView keyboardShouldPersistTaps="always"
         contentInsetAdjustmentBehavior={measured ? 'never' : 'automatic'}
         automaticallyAdjustContentInsets={!measured}
         onContentSizeChange={measured ? (_width, nextHeight) => { if (Number.isFinite(nextHeight) && nextHeight > 0) setContentHeight(Math.ceil(nextHeight)); } : undefined}
