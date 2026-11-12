@@ -3,22 +3,28 @@ const { setup, hooks, batch, tick, jsx } = require('./support/workerPaddonHarnes
 const walk = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(walk) : [node, ...walk(node.props?.children), ...walk(node.props?.ListHeaderComponent)];
 const node = (tree, type, predicate = () => true) => walk(tree).find(row => row.type === type && predicate(row));
 const proxy = new Proxy({}, { get: (_target, key) => key });
-const mods = new Proxy({}, { get: (_target, key) => (...args) => ({ name: key, args }) });
+const mods = new Proxy({}, { get: (_target, key) => key === 'shapes' ? { rectangle: () => ({ shape: 'rectangle' }), roundedRectangle: args => ({ shape: 'roundedRectangle', ...args }) } : (...args) => ({ name: key, args }) });
 function native(h) {
   const runner = hooks(), events = h.events;
   h.packages.react = runner.react;
-  h.packages['@expo/ui/swift-ui'] = { ...proxy, Button: 'Button', HStack: 'HStack', List: 'List', ProgressView: 'ProgressView', RNHostView: 'RNHostView', Section: 'Section', Spacer: 'Spacer', SwipeActions: Object.assign(() => {}, { Actions: 'SwipeActions.Actions' }), Text: 'Text', VStack: 'VStack' };
+  h.packages['@expo/ui/swift-ui'] = { ...proxy, Button: 'Button', HStack: 'HStack', Image: 'Image', List: 'List', ProgressView: 'ProgressView', RNHostView: 'RNHostView', Section: 'Section', Spacer: 'Spacer', SwipeActions: Object.assign(() => {}, { Actions: 'SwipeActions.Actions' }), Text: 'Text', VStack: 'VStack' };
   h.packages['@expo/ui/swift-ui/modifiers'] = mods;
-  h.packages['@expo/ui/jetpack-compose'] = { Host: 'Host', Text: 'Text', Column: 'Column', TextButton: 'TextButton',
+  h.packages['@expo/ui/jetpack-compose'] = { Host: 'Host', Text: 'Text', Column: 'Column', Row: 'Row', TextButton: 'TextButton',
     AlertDialog: Object.assign(() => {}, { Title: 'AlertDialog.Title', Text: 'AlertDialog.Text', DismissButton: 'AlertDialog.DismissButton', ConfirmButton: 'AlertDialog.ConfirmButton' }), RNHostView: 'RNHostView',
     useMaterialColors: () => ({ background: 'bg', primary: 'primary' }) };
+  h.packages['@expo/ui/jetpack-compose/modifiers'] = mods;
+  h.packages['@expo/ui/community/menu'] = { MenuView: 'MenuView' };
+  h.packages['expo-symbols'] = { SymbolView: 'SymbolView' };
+  h.packages['react-native-safe-area-context'] = { useSafeAreaInsets: () => ({ top: 44, bottom: 34 }) };
   h.packages['react-native'] = { ...h.packages['react-native'], View: 'View', Pressable: 'Pressable', ScrollView: 'ScrollView', FlatList: 'FlatList', ActivityIndicator: 'ActivityIndicator', Modal: 'Modal', RefreshControl: 'RefreshControl',
-    useWindowDimensions: () => ({ width: 400, height: 800 }), BackHandler: { addEventListener: (_name, fn) => { h.hardwareBack = fn; return { remove() {} }; } } };
+    PlatformColor: value => value, useWindowDimensions: () => ({ width: 400, height: 800 }), BackHandler: { addEventListener: (_name, fn) => { h.hardwareBack = fn; return { remove() {} }; } } };
   h.packages['expo-router'] = { Stack: { Screen: 'Stack.Screen' }, useNavigation: () => ({ dispatch: action => events.push(['dispatch', action]) }), usePreventRemove: (blocked, callback) => { h.prevent = { blocked, callback }; } };
   h.packages['react-native-gesture-handler/ReanimatedSwipeable'] = { __esModule: true, default: 'Swipeable' };
   h.packages['react-native-gesture-handler'] = { GestureHandlerRootView: 'GestureRoot', GestureDetector: 'GestureDetector', usePanGesture: config => config };
   for (const name of ['BaseHost', 'WorkerPaddonDialog', 'WorkerPaddonFeedback', 'WorkerPaddonCamera', 'WorkerQueueCard.android']) h.files[`components/${name}`] = { [name.split('.')[0]]: name };
   h.files['shared/navigation/RoleHeader.android'] = { RoleHeader: 'RoleHeader' };
+  h.files['shared/navigation/RoleHeaderButton'] = { RoleHeaderButton: 'RoleHeaderButton' };
+  h.files['shared/navigation/RoleFab.android'] = { RoleFab: 'RoleFab' };
   h.files['components/WorkerOrderControls'] = { WorkerOrderButton: 'Action' };
   h.files['components/WorkerPaddonWip'] = { WorkerPaddonWipCard: 'WipCard', WorkerPaddonWipContent: 'WipContent' };
   h.files['components/useWorkerColors'] = { useWorkerColors: () => ({ background: 'bg', surface: 'surface' }) };
@@ -26,6 +32,53 @@ function native(h) {
   const render = (Component, props) => { runner.begin(); const tree = Component(props); runner.flush(); return tree; };
   return { render, runner };
 }
+for (const platform of ['ios', 'android']) test(`${platform}: Paddon list shows V2 totals, rows, navigation, and the compact action menu`, async () => {
+  const h = await setup('list', platform), n = native(h);
+  h.paddons.get('P1').paddon.item_count = 3; await h.model.controller.load(); h.render();
+  h.files['components/useWorkerPaddonList'] = { useWorkerPaddonList: () => h.model };
+  const Component = h.load(`components/WorkerPaddonList.${platform}`).WorkerPaddonList;
+  try {
+    const tree = n.render(Component, h.props), text = walk(tree).filter(row => row.type === 'Text').map(row => row.props.children);
+    assert(text.includes('worker.paddons: 2')); assert(text.includes('worker.daily.wip: 3'));
+    if (platform === 'ios') {
+      assert.equal(node(tree, 'Stack.Screen').props.options.headerBackButtonDisplayMode, 'minimal');
+      const row = walk(tree).find(item => item.type === 'HStack' && walk(item).some(child => child.type === 'Text' && child.props.children === 'P1'));
+      assert(row.props.modifiers.some(item => item.name === 'contentShape'));
+      row.props.modifiers.find(item => item.name === 'onTapGesture').args[0]();
+      const menu = node(tree, 'MenuView'); assert.deepEqual(menu.props.actions.map(item => item.id), ['transfer', 'create']);
+      assert(menu.props.style.bottom >= 88);
+      menu.props.onPressAction({ nativeEvent: { event: 'transfer' } });
+      menu.props.onPressAction({ nativeEvent: { event: 'create' } });
+    } else {
+      const list = node(tree, 'FlatList'), row = list.props.renderItem({ item: h.model.state.rows[0], index: 0 });
+      assert(node(row, 'SymbolView', item => item.props.name.android === 'inventory_2'));
+      assert(node(row, 'SymbolView', item => item.props.name.android === 'chevron_right'));
+      row.props.onPress();
+      const fab = node(tree, 'RoleFab'); assert.deepEqual(fab.props.actions.map(item => item.id), ['transfer', 'create']);
+      fab.props.onSelect('transfer'); fab.props.onSelect('create');
+      assert.equal(h.hardwareBack(), true);
+    }
+    await tick();
+    assert(h.events.some(event => event[0] === 'detail' && event[1] === 'P1'));
+    assert(h.events.some(event => event[0] === 'transferRoute' && event[1] === 'cut'));
+    assert(h.events.some(event => event[0] === 'create' && event[1] === 'cut'));
+    h.expire(); h.render(); assert.equal(n.render(Component, h.props), null);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('Android Paddon list keeps the worker navigation beneath the action area', async () => {
+  const h = await setup('list', 'android'), n = native(h), selected = [];
+  for (const name of ['WorkerPaddonList', 'WorkerPaddonDetail', 'WorkerPaddonTransfer', 'WorkerBottomBar']) h.files[`components/${name}`] = { [name]: name };
+  const Component = h.load('components/WorkerPaddons.android').WorkerPaddons;
+  try {
+    let tree = n.render(Component, { ...h.props, onSelect: id => selected.push(id) });
+    const bar = node(tree, 'WorkerBottomBar'); assert.equal(bar.props.active, ''); bar.props.onSelect('profile');
+    node(tree, 'WorkerPaddonList').props.onProfile(); assert.deepEqual(selected, ['profile', 'profile']);
+    node(tree, 'WorkerPaddonList').props.onDetail('P1', 'cut'); tree = n.render(Component, h.props);
+    assert(node(tree, 'WorkerPaddonDetail')); assert.equal(node(tree, 'WorkerBottomBar'), undefined);
+    node(tree, 'WorkerPaddonDetail').props.onBack(); tree = n.render(Component, { ...h.props, onSelect: id => selected.push(id) });
+    assert(node(tree, 'WorkerPaddonList')); assert(node(tree, 'WorkerBottomBar'));
+  } finally { n.runner.dispose(); h.dispose(); }
+});
 test('iOS Paddon scan activation targets the inline camera while preserving the native List and row swipe actions', async () => {
   const h = await setup('detail', 'ios'), n = native(h);
   h.paddons.get('P1').items = [batch('A')]; await h.model.controller.load(); h.render();

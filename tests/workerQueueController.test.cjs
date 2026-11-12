@@ -359,6 +359,14 @@ test('worker drawer transfer opens the real inventory screen and permission loss
   assert.equal(nodes(tree, 'WorkerTabs').length, 1);
 });
 
+test('Android drawer opens the assigned Paddon page with its own working navigation', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerDrawer')[0].props.onSelect('paddons:cut'); tree = x.render();
+  const page = nodes(tree, 'WorkerPaddons')[0]; assert.equal(page.props.apparatus, 'cut');
+  page.props.onSelect('profile'); tree = x.render();
+  assert.equal(nodes(tree, 'WorkerPaddons').length, 0); assert.equal(nodes(tree, 'ProfileScreen').length, 1);
+});
+
 test('Android daily work opens above the existing queue and repeated Home returns retain its tab and search', async () => {
   const x = workerScreenHarness('android', false); x.render(); await flush();
   let tree = x.render(), reloads = 0;
