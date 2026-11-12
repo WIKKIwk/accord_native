@@ -9,13 +9,16 @@ const AlertDialog = Object.assign(() => null, { Title: 'Title', Text: 'DialogTex
 function load(platform) {
   const filename = path.resolve(__dirname, `../src/components/WorkerFormDialog${platform ? `.${platform}` : ''}.tsx`), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  const native = { AlertDialog, Button: 'Button', Host: 'Host', RNHostView: 'RNHostView', Text: 'Text', TextButton: 'TextButton' };
+  const native = { AlertDialog, Box: 'Box', Button: 'Button', OutlinedButton: 'OutlinedButton', Row: 'Row', Icon: 'Icon', Host: 'Host', RNHostView: 'RNHostView', Text: 'Text', TextButton: 'TextButton',
+    Shape: { RoundedCorner: props => ({ type: 'roundedCorner', ...props }) },
+    useMaterialColors: () => ({ primaryContainer: 'primaryContainer', onPrimaryContainer: 'onPrimaryContainer', onSurface: 'onSurface' }) };
   const modifiers = Object.fromEntries(['buttonBorderShape', 'buttonStyle', 'controlSize', 'disabled', 'fixedSize', 'font', 'foregroundStyle', 'frame', 'multilineTextAlignment', 'tint'].map(name => [name, value => ({ [name]: value })]));
-  const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': native, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
+  const composeModifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name, args }) });
+  const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': native, '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': composeModifiers, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
     './BaseHost': { BaseHost: 'Host' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 20 }) },
     'react-native': { Platform: { Version: '26' }, PlatformColor: value => value, Pressable: 'Pressable', KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', View: 'View', Text: 'Text', ScrollView: 'ScrollView', StyleSheet: { create: value => value, absoluteFill: {} }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
     './useWorkerOrderText': { useWorkerOrderText: () => ({ t: key => key }) }, './useWorkerColors': { useWorkerColors: () => ({ surface: 'white', text: 'black' }) } };
-  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.endsWith('.xml') ? id : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   return mod.exports.WorkerFormDialog;
 }
@@ -38,6 +41,28 @@ test('Android save prevents cancellation and default dialogs preserve permitted 
     assert.equal(dialog.props.properties.dismissOnBackPress, !cancelDisabled); assert.equal(cancels, cancelDisabled ? 0 : 1);
   }
   assert.equal(render({ visible: false }), null);
+});
+for (const progressAction of ['pause', 'complete']) test(`Android ${progressAction} report has a readable form and preserves its actions`, () => {
+  const render = load('android'), calls = [], scrollRef = { current: null };
+  const tree = render({ visible: true, title: 'Miqdor', children: 'Fields', progressAction, preventDismiss: true, scrollRef,
+    confirmLabel: 'Tasdiqlash', onConfirm: () => calls.push('confirm'), onCancel: () => calls.push('cancel') });
+  const dialog = nodes(tree, node => node.type === AlertDialog)[0];
+  assert.equal(dialog.props.properties.dismissOnBackPress, false);
+  dialog.props.onDismissRequest(); assert.deepEqual(calls, []);
+  const icon = nodes(tree, node => node.type === 'Icon')[0];
+  assert.match(icon.props.source, progressAction === 'pause' ? /pause_circle\.xml$/ : /check_circle\.xml$/);
+  assert.equal(icon.props.tint, 'onPrimaryContainer');
+  const content = nodes(tree, node => node.type === 'ScrollView')[0];
+  assert.equal(content.props.ref, scrollRef);
+  assert.equal(content.props.style.maxHeight, 480);
+  assert.equal(nodes(tree, node => node.type === 'View')[0].props.style.width, 320);
+  const cancel = nodes(tree, node => node.type === 'OutlinedButton')[0], confirm = nodes(tree, node => node.type === 'Button')[0];
+  cancel.props.onClick(); confirm.props.onClick(); assert.deepEqual(calls, ['cancel', 'confirm']);
+  assert.equal(cancel.props.modifiers.find(mod => mod.name === 'height').args[0], 48);
+  assert.equal(confirm.props.modifiers.find(mod => mod.name === 'height').args[0], 48);
+  const busy = render({ visible: true, title: 'Miqdor', progressAction, confirmLabel: 'Save', onConfirm() {}, onCancel() {}, confirmDisabled: true, cancelDisabled: true });
+  assert.equal(nodes(busy, node => node.type === 'OutlinedButton')[0].props.enabled, false);
+  assert.equal(nodes(busy, node => node.type === 'Button')[0].props.enabled, false);
 });
 test('fallback report also honors preventDismiss and forwards the actual native modal dismissal', () => {
   const render = load(); let cancels = 0, dismissals = 0;

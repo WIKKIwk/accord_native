@@ -16,6 +16,7 @@ import { adminApparatusQueueActionResult } from '../workerQueueAction';
 import { workerReportPendingStore } from '../workerReportPendingStore';
 import { WorkerFormDialog } from './WorkerFormDialog';
 import { WorkerFormField } from './WorkerFormField';
+import { WorkerProgressField } from './WorkerProgressField';
 import { WorkerOrderButton as WorkerActionButton } from './WorkerOrderControls';
 import { useWorkerOrderText } from './useWorkerOrderText';
 import { useWorkerColors } from './useWorkerColors';
@@ -99,11 +100,13 @@ export function WorkerLaminationReport(props: Props) {
     if (owner.current()) owner.close();
   }
   const output = context.complete || state.snapshot?.session_status === 'active';
-  const valueField = (key: keyof typeof state.values, label: string, unit = 'kg') => <WorkerFormField key={key} label={`${p(label)}${unit ? ` (${unit})` : ''}`} initialValue={state.values[key]}
+  const ReportField = context.complete ? WorkerProgressField : WorkerFormField;
+  const valueField = (key: keyof typeof state.values, label: string, unit = 'kg') => <ReportField key={key} label={`${p(label)}${unit ? ` (${unit})` : ''}`} initialValue={state.values[key]}
     keyboardType={key === 'note' ? 'default' : 'decimal-pad'} onChangeText={value => workflow.change(key, value)} />;
   const rows = history.length ? history : state.receipt?.remainders ?? [];
   return <>
-    <WorkerFormDialog visible={!hidden} title={p(context.complete ? 'worker.progress.qty.title.complete' : 'worker.laminatsiya.astatka.title')}
+    <WorkerFormDialog visible={!hidden} progressAction={Platform.OS === 'android' && context.complete ? 'complete' : undefined}
+      title={p(context.complete ? 'worker.progress.qty.title.complete' : 'worker.laminatsiya.astatka.title')}
       cancelLabel={p('worker.action.close')} onCancel={() => { void close(); }} cancelDisabled={saving || printing} preventDismiss
       confirmLabel={receipt ? p('worker.action.close') : state.phase === 'error' ? t('Qayta urinish') : pending ? p('worker.layer_remainder.retry') : t('Saqlash')}
       confirmDisabled={state.phase === 'loading' || saving || printing}

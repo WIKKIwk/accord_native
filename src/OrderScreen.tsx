@@ -56,7 +56,8 @@ import { WorkerFormDialog } from './components/WorkerFormDialog';
 import { WorkerDeliveryDialog } from './components/WorkerDeliveryDialog';
 import { WorkerIconButton } from './components/WorkerIconButton';
 import { WorkerPreflightButton } from './components/WorkerPreflightButton';
-import { WorkerFormField as PlatformField } from './components/WorkerFormField';
+import { WorkerFormField } from './components/WorkerFormField';
+import { WorkerProgressField as PlatformField } from './components/WorkerProgressField';
 import { WorkerExpansion as Expansion } from './components/WorkerExpansion';
 import { loadReturnedPaintDraft, saveReturnedPaintDraft } from './returnedPaintDraft';
 import { ReturnedPaintNamedFieldDialog } from './boyoqchi/BoyoqchiFormContent';
@@ -87,8 +88,9 @@ type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; app
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
 }
-function Field(props: ComponentProps<typeof PlatformField>) {
-  const { t } = useWorkerOrderText(); return <PlatformField {...props} multiline={Platform.OS === 'ios' && props.keyboardType !== 'decimal-pad'} label={t(props.label)} />;
+function Field({ progress = true, ...props }: ComponentProps<typeof PlatformField> & { progress?: boolean }) {
+  const { t } = useWorkerOrderText(), Component = progress ? PlatformField : WorkerFormField;
+  return <Component {...props} multiline={Platform.OS === 'ios' && props.keyboardType !== 'decimal-pad'} label={t(props.label)} />;
 }
 type ScanKind = 'material' | 'qolip' | 'input';
 const numberValue = (v: string) => Number(v.trim().replace(',', '.'));
@@ -878,6 +880,9 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     finally { actionInFlight.current = false; notifyWritePending(false); if (isCurrent()) { onChanged(); setRefresh(value => value + 1); setBusy(false); } }
   }
   const code = String(preview?.code || order.order_number || order.code || orderId);
+  const androidProgress = Platform.OS === 'android' && selected !== 'astatka';
+  const progressSectionStyle = [styles.label, { color: androidProgress ? colors.text : colors.muted, textAlign: 'center' as const },
+    androidProgress && { fontSize: 14, fontWeight: '700' as const }];
   const closingOutput = selected === 'complete' && typeof control.closing_output_batch_id === 'string' && !!control.closing_output_batch_id.trim();
   const showFullReport = selected === 'astatka' || (selected === 'complete' && (switchProgress === 'complete' || control.complete_requires_full_report !== false || closingOutput));
   const integratedLaminationReport = usesIntegratedLaminationReport({ operation, action: selected, training: isTrainingOrder,
@@ -1160,7 +1165,9 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         else setError(p('worker.temporary_pause.failed'));
       }} />}
     <WorkerOrderMergeDialog state={merge.state} orderNumber={String(order.order_number ?? code)} onCancel={() => merge.flow.cancel()} onConfirm={() => { void merge.flow.confirm(); }} />
-    <WorkerFormDialog actionColors="blue" neutralCancelLabel={!inlinePaint} visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
+    <WorkerFormDialog actionColors="blue" neutralCancelLabel={!inlinePaint}
+      progressAction={Platform.OS === 'android' && !inlinePaint ? ['pause', 'detach_roll'].includes(selected) ? 'pause' : ['roll_complete', 'complete'].includes(selected) ? 'complete' : undefined : undefined}
+      visible={!!selected && !printerDialogHidden && !integratedLaminationReport && !rezkaAstatkaReport && !rezkaOutputReport} onDismiss={() => {
       reportDismissed.current?.(); reportDismissed.current = null;
       if (closeAfterProgress.current && isCurrent()) { closeAfterProgress.current = false; closeSheet(); }
     }} title={selected === 'detach_roll' ? p('worker.handoff.detach') : t(inlinePaint ? 'Qaytarilgan bo‘yoq' : selected === 'astatka' ? 'Astatka hisobotini topshirish' : safeStopRequest && selected === 'pause' ? 'Rulonni yechib muzlatish' : selected === 'pause' ? 'Pauza miqdori' : 'Tugatish miqdori')}
@@ -1173,13 +1180,13 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {inlinePaint ? paintBody : <>
         <Text style={[styles.muted, { color: colors.muted }]}>{t(selected === 'astatka' ? 'Bu faqat order astatkasini qayd qiladi. Pauza va Tugatish holati o‘zgarmaydi.' : safeStopRequest && selected === 'pause' ? 'Sog‘lom rulon bo‘lsa barcha miqdorlarni kiriting. Ishlab chiqarish imkonsiz bo‘lsa miqdorlarni bo‘sh qoldirib, faqat muammo izohini yozing.' : showFullReport ? '0 yoki to‘liq bo‘lmagan hisobot uchun izoh yozing' : 'Joriy miqdorni kiriting')}</Text>
         {selected === 'pause' && safeStopRequest && descriptionRevealed && <Field label={p('worker.freeze.safe_stop.issue_note')} initialValue={freezeNote} onChangeText={setFreezeNote} />}
-        {['pause','detach_roll','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.standard')}</Text><Field label={`${p('worker.daily.field.roll')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.finished_goods')}</Text><Field label={`${p('worker.daily.field.length')}, ${p('worker.progress.qty.unit.meter')}`} initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label={`${p('worker.daily.field.weight')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
-        {showFullReport && laminationReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p('worker.progress.qty.excess_rolls')}</Text>
-          <Field label={`${p('worker.daily.field.print_leftover')} (kg)`} initialValue={leftoverWip} keyboardType="decimal-pad" onChangeText={setLeftoverWip} />
-          <Field label={`${p('worker.daily.field.film_leftover')} (kg)`} initialValue={leftoverFilm} keyboardType="decimal-pad" onChangeText={setLeftoverFilm} /></>}
-        {showFullReport && <><Text style={[styles.label, { color: colors.muted, textAlign: 'center' }]}>{p(laminationReport ? 'worker.progress.qty.waste' : 'worker.progress.qty.returned_paint_and_waste')}</Text><Field label={`${p('worker.daily.field.total_waste')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} />
+        {['pause','detach_roll','roll_complete','complete'].includes(selected) && !closingOutput && <><Text style={progressSectionStyle}>{p('worker.progress.qty.standard')}</Text><Field label={`${p('worker.daily.field.roll')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={bobina} keyboardType="decimal-pad" onChangeText={setBobina} /><Text style={progressSectionStyle}>{p('worker.progress.qty.finished_goods')}</Text><Field label={`${p('worker.daily.field.length')}, ${p('worker.progress.qty.unit.meter')}`} initialValue={meter} keyboardType="decimal-pad" onChangeText={setMeter} /><Field label={`${p('worker.daily.field.weight')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={kg} keyboardType="decimal-pad" onChangeText={setKg} /></>}
+        {showFullReport && laminationReport && <><Text style={progressSectionStyle}>{p('worker.progress.qty.excess_rolls')}</Text>
+          <Field progress={selected !== 'astatka'} label={`${p('worker.daily.field.print_leftover')} (kg)`} initialValue={leftoverWip} keyboardType="decimal-pad" onChangeText={setLeftoverWip} />
+          <Field progress={selected !== 'astatka'} label={`${p('worker.daily.field.film_leftover')} (kg)`} initialValue={leftoverFilm} keyboardType="decimal-pad" onChangeText={setLeftoverFilm} /></>}
+        {showFullReport && <><Text style={progressSectionStyle}>{p(laminationReport ? 'worker.progress.qty.waste' : 'worker.progress.qty.returned_paint_and_waste')}</Text><Field progress={selected !== 'astatka'} label={`${p('worker.daily.field.total_waste')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} />
           {!laminationReport && <NativeButton label={p('worker.daily.field.returned_ink')} variant={Platform.OS === 'ios' ? 'outlined' : 'filled'} neutralLabel disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} />}</>}
-        {selected === 'astatka' && <Field label={p('worker.progress.qty.optional_note')} initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
+        {selected === 'astatka' && <Field progress={false} label={p('worker.progress.qty.optional_note')} initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
         {selected === 'complete' && descriptionRevealed && <Field label={p(closingOutput ? 'worker.progress.qty.optional_note' : 'worker.progress.qty.reason')} initialValue={completionNote} onChangeText={setCompletionNote} />}
         </>}
     </WorkerFormDialog>

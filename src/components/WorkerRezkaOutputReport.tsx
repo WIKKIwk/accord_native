@@ -138,6 +138,7 @@ export function WorkerRezkaOutputReport(props: Props) {
   const confirmLabel = panel.kind === 'deviation' ? p('worker.rezka.deviation.confirm') : panel.kind === 'reason' && panel.peremotka ? p('worker.rezka.print.peremotka_save_print')
     : panel.kind === 'discard' ? p('worker.rezka.print.queue_discard') : main ? state.phase === 'done' || state.phase === 'error' && !state.canReload ? p('worker.action.close') : state.phase === 'error' || state.phase === 'print_pending' ? t('Qayta urinish') : p('worker.action.confirm') : p('worker.action.confirm');
   return <><WorkerFormDialog visible={!hidden} title={title} preventDismiss cancelDisabled={main && saving} scrollRef={scroll}
+    progressAction={Platform.OS === 'android' && main ? action === 'complete' || action === 'roll_complete' ? 'complete' : 'pause' : undefined}
     cancelLabel={panel.kind === 'deviation' ? p('worker.rezka.deviation.edit') : p('worker.action.cancel')}
     onCancel={() => { if (main) void close(); else void finishPanel(panel.kind === 'deviation' || panel.kind === 'discard' ? false : null); }}
     confirmLabel={confirmLabel} confirmDisabled={panel.kind === 'choice' || (panel.kind === 'reason' ? !reason.trim() || panel.peremotka && [...reason.trim()].length > 250 : main && (saving || state.phase === 'loading'))}

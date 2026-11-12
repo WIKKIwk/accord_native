@@ -11,6 +11,7 @@ export type WorkerFormDialogProps = {
   dismissOnBackdrop?: boolean;
   actionColors?: 'blue';
   neutralCancelLabel?: boolean;
+  progressAction?: 'pause' | 'complete';
   scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null>;
 };
 
