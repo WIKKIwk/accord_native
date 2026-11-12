@@ -21,3 +21,15 @@ labels reuse the recorded translations. The change introduces no dependency or b
 - The connected Android Expo Go loaded the updated modules and mounted the native scanner from the FAB. The app was
   in the background, and the camera correctly remained inactive. Foreground appearance, live camera detection and iOS
   device presentation were not verified. No simulator, production order command or print operation was used.
+
+## Android queue retention follow-up
+
+The user's follow-up was reproduced in the connected runtime: opening the scanner removed `WorkerTabs` and
+`OrdersWorkspace`; the scanner was directly beneath `WorkerScreen`. The running phone still had the replacing-page
+branch even though the current served source map had the inline implementation. Reload requests did not restart that
+background runtime. Metro was restarted with its cache cleared.
+
+The scanner JSX is now declared directly in the queue's existing root, alongside its other overlays. A three-cycle
+Android regression verifies that cancellation retains the apparatus, search, valid queue limit and controller, with
+no route push, auxiliary page or reload call. The 53 queue tests, Android TypeScript check and lint pass. Device
+confirmation of the refreshed bundle requires bringing the Android app to the foreground.

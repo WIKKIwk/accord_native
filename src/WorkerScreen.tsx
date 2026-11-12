@@ -294,10 +294,6 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       .then(target => { if (reads.current()) finishQrScan(apparatus.id, target.orderId, pending.qr, target.switching); })
       .catch(error => { if (reads.current()) setAlert({ title: p('worker.qr.guidance.title'), message: workerFabErrorText(error, p), confirmLabel: p('worker.action.close') }); });
   }
-  const scanner = scannerOpen ? <WorkerQrScanner key={scannerMachineId} session={session} apparatusId={scannerMachineId} apparatus={selectedMachine}
-    current={() => qrLocation.current.machine === scannerMachineId && qrLocation.current.window === windowScope}
-    getSnapshot={() => queueRef.current?.snapshot ?? null} apparatusLabel={id => (queueRef.current?.catalog ?? queueRef.current?.machines)?.find(machine => machine.id === id)?.name ?? id}
-    onClose={() => setScannerOpen(false)} onOrder={finishQrScan} /> : null;
   function selectDestination(id: string) {
     if (id === 'transfer') {
       if (!workerInventoryVisible(session)) return;
@@ -578,7 +574,12 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       <WorkerActivePaddonPicker {...activePaddon} />
       <WorkerPeremotkaSheet {...peremotka} />
       <WorkerPaddonFeedback message={orderNotice || activePaddon.notice} />
-      {scanner}
+      {/* Keep the scanner alongside the mounted queue; opening it must not replace this page. */}
+      {scannerOpen && <WorkerQrScanner key={scannerMachineId} session={session} apparatusId={scannerMachineId} apparatus={selectedMachine}
+        current={() => qrLocation.current.machine === scannerMachineId && qrLocation.current.window === windowScope}
+        getSnapshot={() => queueRef.current?.snapshot ?? null}
+        apparatusLabel={id => (queueRef.current?.catalog ?? queueRef.current?.machines)?.find(machine => machine.id === id)?.name ?? id}
+        onClose={() => setScannerOpen(false)} onOrder={finishQrScan} />}
     </SafeAreaView>
   );
   if (nativeNavigation) return content;

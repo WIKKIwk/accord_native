@@ -244,6 +244,25 @@ for (const platform of ['ios', 'android']) test(`${platform}: FAB scanner overla
   assert.equal(nodes(tree, 'WorkerQrScanner').length, 0); assert.equal(nodes(tree, 'WorkerTabs').length, 1);
   assert.equal(x.queueState.queue, queueBefore); assert.deepEqual(x.routes, []);
 });
+test('Android repeated scanner cancellation retains the selected tab, search, limit and queue owner without reloading', async () => {
+  const x = workerScreenHarness('android', false); let reloads = 0;
+  x.queueState.reload = async () => { reloads++; };
+  x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerTabs')[0].props.onSearchChange('saved query'); tree = x.render();
+  let tabs = nodes(tree, 'WorkerTabs')[0];
+  nodes(tabs.props.children(station), 'WorkerQueueFilter')[0].props.onChange(20); tree = x.render();
+  const queueBefore = x.queueState.queue, controllerBefore = x.queueState.controller;
+  for (let cycle = 0; cycle < 3; cycle++) {
+    nodes(tree, 'WorkerFab')[0].props.onScan(); tree = x.render();
+    assert.equal(nodes(tree, 'WorkerTabs').length, 1, 'the scanner must leave the queue in the same rendered tree');
+    nodes(tree, 'WorkerQrScanner')[0].props.onClose(); tree = x.render();
+    tabs = nodes(tree, 'WorkerTabs')[0];
+    assert.equal(tabs.props.selected, station); assert.equal(tabs.props.search, 'saved query');
+    assert.equal(nodes(tabs.props.children(station), 'WorkerQueueFilter')[0].props.value, 20);
+    assert.equal(x.queueState.queue, queueBefore); assert.equal(x.queueState.controller, controllerBefore);
+  }
+  assert.equal(reloads, 0); assert.deepEqual(x.routes, []); assert.deepEqual(x.opened, []);
+});
 for (const platform of ['ios', 'android']) test(`${platform} real WorkerScreen opens order sheet from retained unsynchronized rows with no stale action cursor`, async () => {
   const x = workerScreenHarness(platform); let tree = x.render(); await flush(); tree = x.render();
   const list = nodes(tree, 'WorkerTabs')[0].props.children(station, undefined, undefined);
