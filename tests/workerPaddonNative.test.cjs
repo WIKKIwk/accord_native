@@ -17,7 +17,7 @@ function native(h) {
   h.packages['expo-symbols'] = { SymbolView: 'SymbolView' };
   h.packages['react-native-safe-area-context'] = { useSafeAreaInsets: () => ({ top: 44, bottom: 34 }) };
   h.packages['react-native'] = { ...h.packages['react-native'], View: 'View', Pressable: 'Pressable', ScrollView: 'ScrollView', FlatList: 'FlatList', ActivityIndicator: 'ActivityIndicator', Modal: 'Modal', RefreshControl: 'RefreshControl',
-    PlatformColor: value => value, useWindowDimensions: () => ({ width: 400, height: 800 }), BackHandler: { addEventListener: (_name, fn) => { h.hardwareBack = fn; return { remove() {} }; } } };
+    PlatformColor: value => value, useWindowDimensions: () => ({ width: h.width ?? 400, height: 800, fontScale: h.fontScale ?? 1 }), BackHandler: { addEventListener: (_name, fn) => { h.hardwareBack = fn; return { remove() {} }; } } };
   h.packages['expo-router'] = { Stack: { Screen: 'Stack.Screen' }, useNavigation: () => ({ dispatch: action => events.push(['dispatch', action]) }), usePreventRemove: (blocked, callback) => { h.prevent = { blocked, callback }; } };
   h.packages['react-native-gesture-handler/ReanimatedSwipeable'] = { __esModule: true, default: 'Swipeable' };
   h.packages['react-native-gesture-handler'] = { GestureHandlerRootView: 'GestureRoot', GestureDetector: 'GestureDetector', usePanGesture: config => config };
@@ -88,7 +88,7 @@ test('iOS Paddon scan activation targets the inline camera while preserving the 
     let tree = n.render(Component, h.props);
     assert.equal(node(tree, 'ListScrollReader').props.targetID, '');
     assert(node(tree, 'List')); assert(node(tree, 'SwipeActions.Actions'));
-    node(tree, 'Action', row => row.props.label === 'worker.paddon.add_wip').props.onPress(); h.render(); tree = n.render(Component, h.props);
+    node(tree, 'MenuView').props.onPressAction({ nativeEvent: { event: 'scan' } }); h.render(); tree = n.render(Component, h.props);
     const targetID = node(tree, 'ListScrollReader').props.targetID;
     assert.equal(targetID, 'accord-paddon-inline-camera');
     const cameraRow = node(tree, 'VStack', row => !!node(row, 'WorkerPaddonCamera'));
@@ -110,10 +110,13 @@ for (const platform of ['ios', 'android']) {
     const Component = h.load(`components/WorkerPaddonDetail.${platform}`).WorkerPaddonDetail;
     try {
       let tree = n.render(Component, h.props);
-      node(tree, 'Action', row => row.props.label === 'worker.paddon.add_wip').props.onPress(); h.render();
+      if (platform === 'ios') node(tree, 'MenuView').props.onPressAction({ nativeEvent: { event: 'scan' } });
+      else node(tree, 'Action', row => row.props.label === 'worker.paddon.add_wip').props.onPress();
+      h.render();
       tree = n.render(Component, h.props); const camera = node(tree, 'WorkerPaddonCamera'); assert(camera.props.enabled);
       await camera.props.accept('A'); await tick(); h.render(); tree = n.render(Component, h.props);
-      const dock = walk(tree).filter(row => row.type === 'Action').map(row => row.props.label);
+      const dock = platform === 'ios' ? node(tree, 'MenuView').props.actions.map(row => row.title)
+        : walk(tree).filter(row => row.type === 'Action').map(row => row.props.label);
       assert.deepEqual(dock.slice(-2), ['worker.paddon.scan.confirm|{"count":1}', 'worker.paddon.scan.close']);
       const review = platform === 'ios' ? node(tree, 'Button', row => row.props.label === 'worker.paddon.scan.pending|{"count":1}') : node(tree, 'Action', row => row.props.label === 'worker.paddon.scan.pending|{"count":1}');
       review.props.onPress(); h.render(); tree = n.render(Component, h.props);
@@ -164,6 +167,52 @@ test('long-press transfer checks the opposite native drop zone and rechecks its 
     drag.start('P1', batch('A'), { x: 10, y: 20 }); const ending = drag.end({ x: 10, y: 220 });
     h.expire(); measure(0, 200, 100, 100); await ending;
     assert.equal(h.events.some(e => e[0] === 'move'), false); assert.equal(h.model.presentation.data, null);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('iOS Paddon detail keeps the back button and action menu clear of the tab bar', async () => {
+  const h = await setup('detail', 'ios'), n = native(h);
+  h.paddons.get('P1').items = [batch('A', { bobina_kg: 1 }), batch('B', { bobina_kg: 12 }), batch('C', { bobina_kg: 151 }), batch('D', { bobina_kg: null })];
+  await h.model.controller.load(); h.render(); h.files['components/useWorkerPaddonDetail'] = { useWorkerPaddonDetail: () => h.model };
+  const Component = h.load('components/WorkerPaddonDetail.ios').WorkerPaddonDetail;
+  try {
+    let tree = n.render(Component, h.props), menu = node(tree, 'MenuView');
+    assert.equal(node(tree, 'Stack.Screen').props.options.headerBackButtonDisplayMode, 'minimal');
+    assert(menu.props.style.bottom >= 88);
+    assert(walk(tree).some(row => row.type === 'BaseHost' && row.props.style?.marginBottom >= 88 && node(row, 'ListScrollReader')));
+    assert.deepEqual(menu.props.actions.map(action => action.id), ['scan', 'add', 'remove']);
+    const groups = () => {
+      const panel = walk(tree).find(item => item.type === 'VStack' && Array.isArray(item.props.children) && item.props.children[0]?.props?.children === h.model.header.bobinaTitle);
+      return panel.props.children.flat().filter(item => item?.type === 'HStack');
+    };
+    assert.equal(h.model.header.bobina.length, 4); assert.deepEqual(groups().map(row => walk(row).filter(item => item.type === 'Button').length), [2, 2]);
+    const first = walk(groups()[0]).find(item => item.type === 'Button'); first.props.onPress(); h.render();
+    assert.equal(h.model.state.bobina, h.model.header.bobina[0].units);
+    h.fontScale = 2; tree = n.render(Component, h.props); assert.deepEqual(groups().map(row => walk(row).filter(item => item.type === 'Button').length), [1, 1, 1, 1]);
+    h.fontScale = 1; h.model.controller.filter(h.model.header.bobina[0].units); h.render();
+    await h.model.edit('remove'); h.render(); h.model.controller.toggle('A'); h.render();
+    tree = n.render(Component, h.props); menu = node(tree, 'MenuView');
+    assert.deepEqual(menu.props.actions.map(action => action.id), ['add', 'remove', 'cancel']);
+    assert.equal(menu.props.actions.find(action => action.id === 'add').attributes.disabled, true);
+    menu.props.onPressAction({ nativeEvent: { event: 'add' } }); assert.equal(h.model.state.mode, 'remove');
+    menu.props.onPressAction({ nativeEvent: { event: 'cancel' } }); h.render();
+    assert.equal(h.model.presentation.data.title, 'worker.paddon.confirm.cancel.title');
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('iOS Paddon detail menu preserves scan cancellation and confirmation', async () => {
+  const h = await setup('detail', 'ios'), n = native(h);
+  h.files['components/useWorkerPaddonDetail'] = { useWorkerPaddonDetail: () => h.model };
+  const Component = h.load('components/WorkerPaddonDetail.ios').WorkerPaddonDetail;
+  const press = (tree, id) => node(tree, 'MenuView').props.onPressAction({ nativeEvent: { event: id } });
+  try {
+    let tree = n.render(Component, h.props); press(tree, 'scan'); h.render(); tree = n.render(Component, h.props);
+    assert.equal(node(tree, 'MenuView').props.actions.find(action => action.id === 'confirm').attributes.disabled, true);
+    press(tree, 'confirm'); assert.equal(h.events.some(event => event[0] === 'add'), false);
+    press(tree, 'close'); await tick(); h.render(); assert.equal(h.model.state.scanning, false);
+    tree = n.render(Component, h.props); press(tree, 'scan'); h.render(); tree = n.render(Component, h.props);
+    node(tree, 'WorkerPaddonCamera').props.accept('A'); await tick(); h.render(); tree = n.render(Component, h.props);
+    assert.equal(node(tree, 'MenuView').props.actions.find(action => action.id === 'confirm').attributes.disabled, false);
+    press(tree, 'confirm'); await tick(); h.render();
+    assert.deepEqual(h.events.find(event => event[0] === 'add'), ['add', ['A']]); assert.equal(h.model.state.scanning, false);
   } finally { n.runner.dispose(); h.dispose(); }
 });
 test('a valid drop carries the selected batch to the opposite Paddon and cancellation never moves it', async () => {
