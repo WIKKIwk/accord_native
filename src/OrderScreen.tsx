@@ -82,6 +82,9 @@ import { useWorkerOrderPresentation } from './components/useWorkerOrderPresentat
 import { WorkerOrderSyncProgress } from './components/WorkerOrderSyncProgress';
 import { WorkerOrderPauseStatus } from './components/WorkerOrderPauseStatus';
 import { workerOrderRezkaInstructions } from './workerOrderRezkaInstructions';
+import type { WorkerInputSelection } from './workerInputProgress';
+import { useWorkerInputProgress } from './components/useWorkerInputProgress';
+import { WorkerInputProgress } from './components/WorkerInputProgress';
 
 type Obj = Record<string, any>;
 type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; queueWindow?: string; onWritePending?: (pending: boolean) => void; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onNotice?: (message: string) => void; onClose: () => void; onChanged: () => void };
@@ -156,7 +159,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const [materials, setMaterials] = useState<string[]>([]);
   const [qolips, setQolips] = useState<string[]>([]);
   const [qolipsReset, setQolipsReset] = useState(false);
-  const [inputBatch, setInputBatch] = useState<{ id: string; qr: string; stage: string } | null>(null);
+  const [inputBatch, setInputBatch] = useState<WorkerInputSelection | null>(null);
+  const [inputSectionsLoaded, setInputSectionsLoaded] = useState(false);
   const [scanner, setScanner] = useState<ScanKind | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
   const [scannedWipsStage, setScannedWipsStage] = useState('');
@@ -279,6 +283,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     const window = latestDetailWindow.current;
     const current = () => ownerCurrent() && version === loadVersion.current && isCurrent() && scope === sessionReadScope(session) && window === latestDetailWindow.current;
     setLoading(true);
+    setInputSectionsLoaded(false);
     sectionRecoveryNeeded.current = { bootstrap: false, assignments: false, intake: false };
     setSectionReadVersion(value => value + 1);
     // The first frame is the row preview. Full map hydration precedes section loading,
@@ -301,6 +306,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       throw new MobileApiException({ code: 'order_scan_bootstrap_stale', message: 'Order state changed while scan requirements loaded' });
     }
     liveDetailAuthority.current = true; setBootstrap(scan); setControlRetired(false); setLoading(false);
+    setInputSectionsLoaded(true);
     updateControlReceipt(null);
     sectionRecoveryNeeded.current.bootstrap = scan.sections?.materials?.status === 'error' && workerDetailSectionRetryable(scan.sections.materials.readError);
   }, [session, apparatusId, orderId, materials, isCurrent, updateControlReceipt]);
@@ -433,6 +439,12 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const startReady = materialState.ready && moldsReady && (!previousRequired || inputReady);
   const resumeReady = materialState.ready && moldsReady && (interaction.resume_input_required === false || inputReady);
   const preparationVisible = synchronized && (allowed.includes('start') || allowed.includes('resume'));
+  const inputProgress = useWorkerInputProgress({ session, enabled: preparationVisible && previousRequired && inputSectionsLoaded, readKey: materialReadKey,
+    source: { apparatusId, orderId, stageId: String(control.stage_node_id ?? ''), previousStage: String(control.previous_stage ?? ''),
+      previousRequired: interaction.previous_wip_mode === 'scan_required', openingRequired: interaction.opening_wip_mode === 'scan_required',
+      map: order, section: sections.input_progress, selected: inputBatch }, current: authorityCurrent,
+    label: id => apparatusCatalog?.find(row => row.id === id)?.name ?? id,
+    onSelection: (value, expected) => setInputBatch(previous => previous === expected ? value : previous) });
   const pendingMaterials = scanningRequired && !materialState.unavailable && materialRequirements.scan_satisfied !== true;
   const startAssignments: Obj[] = Array.isArray(materialRequirements.assignments) ? materialRequirements.assignments.filter((row: Obj) => matchesMaterialAssignment(row, orderId, apparatusId)) : [];
   const pendingDelivery = allowed.includes('start') && scanningRequired && startAssignments.some(row =>
@@ -573,7 +585,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
             if (scanScope !== sessionReadScope(session) || version !== loadVersion.current || !validOrderControl(bootstrap, apparatusId, orderId, latestCursor.current) ||
                 !batch || batch.order_id !== orderId || typeof batch.batch_id !== 'string' || !batch.batch_id.trim() ||
                 String(batch.qr_payload ?? '').trim().toUpperCase() !== qr.toUpperCase() || batch.wip_status !== 'waiting') throw new Error('Rulon ushbu buyurtma uchun tasdiqlanmadi.');
-            setInputBatch({ id: batch.batch_id.trim(), qr, stage: String(control.stage_node_id ?? '') });
+            setInputBatch({ id: batch.batch_id.trim(), qr, stage: String(control.stage_node_id ?? ''), batch, opening: true });
             setSuccess('Kiruvchi rulon tasdiqlandi.');
             return;
           } catch (e) {
@@ -599,7 +611,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           throw new Error('Rulon ushbu buyurtma uchun tasdiqlanmadi.');
         }
         setBootstrap(scan);
-        setInputBatch({ id: batch.batch_id.trim(), qr, stage: String(scan.control_state.control.stage_node_id ?? '') });
+        setInputSectionsLoaded(true);
+        setInputBatch({ id: batch.batch_id.trim(), qr, stage: String(scan.control_state.control.stage_node_id ?? ''), batch, opening: false });
         setSuccess('Kiruvchi rulon tasdiqlandi.');
       } catch (e) { if (version === loadVersion.current) setError(e instanceof Error ? e.message : 'Rulonni tekshirib bo‘lmadi.'); }
       finally { scanInFlight.current = false; if (version === loadVersion.current) setLoading(false); }
@@ -933,8 +946,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     stageId: String(control.stage_node_id ?? ''), mergeLines: workerMergeStateLines(control.rezka_input_lineage ?? [], p),
     rezkaInstructions: workerOrderRezkaInstructions(order, apparatusId, String(control.stage_node_id ?? ''), control.rezka_output_kadr_counts ?? [], p),
     inputVisible: preparationVisible && previousRequired,
-    inputLabel: t(inputBatch ? (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP ruloni tasdiqlandi' : 'Oldingi bosqich tasdiqlandi') : (interaction.opening_wip_mode === 'scan_required' ? 'Opening WIP QR ni skan qiling' : 'Oldingi bosqich QR')),
-    inputQr: inputBatch?.qr ?? '',
+    inputProgress,
   });
   const view = presentation.data, cardState = view.cardState;
   const moldDisplay = workerMoldPresentation({ automatic: view.automaticQolip, status: view.moldStatus, requiredQolips: view.requiredQolips,
@@ -1145,10 +1157,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         {!view.automaticQolip && view.moldSetCount > 1 && view.effectiveQolips.length > 0 && <NativeButton label={t("Komplektni almashtirish")} variant="text" disabled={!actionsEnabled} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; setQolipsReset(true); setQolips([]); }} />}
         {!view.automaticQolip && view.moldStatus === 'error' && !!view.requiredQolips.length && <Text style={errorTextStyle}>{t("Qoliplar yuklanmadi")}</Text>}
       </View>}
-      {view.inputVisible && <View style={[styles.detailRow, { backgroundColor: colors.field }]}>
-        <Text style={[styles.expansionTitle, { color: colors.text }]}>{view.inputLabel}</Text>
-        {!!view.inputQr && <Text style={[styles.small, { color: colors.muted }]}>{view.inputQr}</Text>}
-      </View>}
+      {view.inputVisible && <WorkerInputProgress model={view.inputProgress} />}
       {cardState.hasActions && <View style={[cardSectionStyle, (showMaterials || showMolds || showIntakeCandidates) && cardSeparatorStyle]}>
         {cardState.showMaterialIntakeAction && <NativeButton label={p(intakeMode ? 'worker.action.close_scanner' : 'worker.action.receive_material')} height={52} disabled={!actionsEnabled || deliveryBusy} onPress={() => { if (!actionsEnabled || !authorityCurrent()) return; merge.flow.cancel(); setIntakeMode(value => !value); }} />}
         {!!view.rezkaInstructions.length && <View style={[styles.detailRow, { backgroundColor: colors.field }]}><Text style={[styles.detailText, { color: colors.text }]}>{p('worker.map.cutting')}</Text>{view.rezkaInstructions.map((line, index) => <Text key={index} style={[styles.detailText, { color: colors.text }]}>{line}</Text>)}</View>}
