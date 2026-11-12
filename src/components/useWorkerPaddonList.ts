@@ -8,17 +8,17 @@ import { useWorkerPaddonOwner, useWorkerPaddonState } from './useWorkerPaddonOwn
 import { useWorkerPaddonPresentation } from './useWorkerPaddonPresentation';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-export type WorkerPaddonListProps = { session: Session; apparatus?: string; name?: string; onBack(): void;
+export type WorkerPaddonListProps = { session: Session; apparatus?: string; name?: string; visible?: boolean; onBack(): void;
   onDetail(code: string, apparatus: string, name: string): void; onTransfer(apparatus: string): void };
 
-export function useWorkerPaddonList({ session, apparatus = '', onDetail, onTransfer }: WorkerPaddonListProps) {
+export function useWorkerPaddonList({ session, apparatus = '', visible = true, onDetail, onTransfer }: WorkerPaddonListProps) {
   const owner = useWorkerPaddonOwner(session, apparatus), controller = owner.list, state = useWorkerPaddonState(controller);
   const { p, t, locale } = useWorkerOrderText(), presentation = useWorkerPaddonPresentation(owner.current);
   const presenting = useRef(presentation.isOpen); useLayoutEffect(() => { presenting.current = presentation.isOpen; }, [presentation.isOpen]);
-  useFocusEffect(useCallback(() => { if (!presenting.current()) void controller.load(); }, [controller]));
+  useFocusEffect(useCallback(() => { if (visible && !presenting.current()) void controller.load(); }, [controller, visible]));
   const showError = (key: string) => presentation.message(workerPaddonErrorText(controller.getSnapshot().error, p, key));
   const canDelete = workerPaddonCanDelete(session), canTransfer = workerPaddonCanTransfer(session, state.options, state.apparatus);
-  const enabled = owner.current() && state.phase === 'ready' && !state.busy;
+  const enabled = visible && owner.current() && state.phase === 'ready' && !state.busy;
   return { state, controller, presentation, current: owner.current, p, t,
     title: state.name ? p('worker.paddon.apparatus', { apparatus: state.name }) : p('worker.paddons'),
     enabled, canCreate: enabled && state.options.some(row => row.id === state.apparatus), canTransfer: enabled && canTransfer, canDelete: enabled && canDelete,

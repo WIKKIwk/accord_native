@@ -82,6 +82,39 @@ test('paddon list resolves only assigned active cut machines and keeps every lis
   await c.load(); assert.equal(c.getSnapshot().apparatus, ''); assert.deepEqual(calls, []); await c.select('print'); assert.deepEqual(calls, []);
   await c.select('cut2'); assert.deepEqual(calls, ['cut2']); assert.deepEqual(c.getSnapshot().rows.map(row => row.code), ['P1']);
 });
+test('paddon list retains its last results while refreshing, but clears them when changing apparatus', async () => {
+  let pending, rows = [{ code: 'P1', apparatus_id: 'cut' }];
+  const c = new WorkerPaddonList({ session, apparatus: 'cut', current: () => true,
+    catalog: async () => pending ? pending.promise : catalog,
+    list: async id => rows.filter(row => row.apparatus_id === id), create() {}, remove() {} });
+  await c.load();
+  pending = defer(); rows = [{ code: 'P2', apparatus_id: 'cut' }];
+  const refresh = c.load();
+  assert.equal(c.getSnapshot().phase, 'ready'); assert.deepEqual(c.getSnapshot().rows.map(row => row.code), ['P1']);
+  pending.resolve(catalog); await refresh;
+  assert.equal(c.getSnapshot().phase, 'ready'); assert.deepEqual(c.getSnapshot().rows.map(row => row.code), ['P2']);
+  pending = defer(); const change = c.select('cut2');
+  assert.equal(c.getSnapshot().phase, 'loading'); assert.deepEqual(c.getSnapshot().rows, []);
+  pending.resolve(catalog); await change;
+  assert.equal(c.getSnapshot().apparatus, 'cut2'); assert.deepEqual(c.getSnapshot().rows, []);
+});
+test('paddon detail retains its snapshot during refresh while resetting the V2 selections', async () => {
+  const h = detail(), c = h.controller; await c.load(); c.edit('add'); c.toggle('a'); c.filter(1_000_000);
+  const old = c.getSnapshot().snapshot, pending = defer(); h.deps.read = () => pending.promise;
+  const refresh = c.load();
+  assert.equal(c.getSnapshot().phase, 'ready'); assert.equal(c.getSnapshot().snapshot, old);
+  assert.equal(c.getSnapshot().bobina, null); assert.deepEqual(c.getSnapshot().selected, []);
+  pending.resolve(snapshot([batch('new')])); await refresh;
+  assert.deepEqual(c.getSnapshot().snapshot.items.map(row => row.batch_id), ['new']);
+});
+test('a detail refresh started before a confirmed edit cannot overwrite the edit', async () => {
+  const h = detail(), c = h.controller; await c.load();
+  const pending = defer(); h.deps.read = () => pending.promise;
+  const refresh = c.load(); c.edit('add'); c.toggle('a');
+  assert(await c.add(['a']));
+  pending.resolve(snapshot()); await refresh;
+  assert.deepEqual(c.getSnapshot().snapshot.items.map(row => row.batch_id), ['a']);
+});
 test('transfer reads each assigned cut list, restricts editing and resets both sides after an uncertain write', async () => {
   const lists = [], writes = [], reads = [], h = { fail: false };
   const c = new WorkerPaddonTransfer({ session, apparatus: 'cut2', current: () => true, catalog: async () => catalog,

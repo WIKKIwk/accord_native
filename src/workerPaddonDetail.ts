@@ -13,6 +13,7 @@ type Dependencies = { code: string; current(): boolean; read(current: () => bool
 /** @v2 _AparatchiPaddonDetailScreenState */
 export class WorkerPaddonDetail extends WorkerPaddonState<State> {
   private queue: Promise<void> = Promise.resolve();
+  private readGeneration = 0;
   private scanGeneration = 0;
   private queued = new Set<string>();
   private known = new Map<string, string>();
@@ -25,7 +26,9 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
   }
   async load() {
     if (!this.current() || this.state.busy) return;
-    this.revision++; const current = this.capture(); this.update({ phase: 'loading', error: null, bobina: null, selected: [] });
+    this.revision++; const revisionCurrent = this.capture(), generation = ++this.readGeneration;
+    const current = () => revisionCurrent() && generation === this.readGeneration;
+    this.update({ phase: this.state.phase === 'ready' && this.state.snapshot ? 'ready' : 'loading', error: null, bobina: null, selected: [] });
     try { const snapshot = this.snapshot(await this.deps.read(current)); this.check(current); this.update({ phase: 'ready', snapshot }); }
     catch (error) { if (current()) this.update({ phase: 'error', error }); }
   }
@@ -52,12 +55,12 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
     this.update({ busy: true, error: null });
     try {
       const snapshot = this.snapshot(await command(permit)); this.check(permit);
-      this.update({ snapshot, phase: 'ready', bobina: null }); this.deps.changed(); return true;
+      this.readGeneration++; this.update({ snapshot, phase: 'ready', bobina: null }); this.deps.changed(); return true;
     } catch (error) {
       if (!permit()) return false;
       // The write may have committed. Reconcile once; never resend it here.
       try { const snapshot = this.snapshot(await this.deps.read(permit)); this.check(permit);
-        this.update({ snapshot, phase: 'ready', bobina: null });
+        this.readGeneration++; this.update({ snapshot, phase: 'ready', bobina: null });
         if (applied(snapshot)) { this.deps.changed(); return true; }
       } catch { /* Retain the original command error. */ }
       if (permit()) this.update({ error }); return false;

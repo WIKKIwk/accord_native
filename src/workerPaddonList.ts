@@ -18,7 +18,7 @@ export class WorkerPaddonList extends WorkerPaddonState<State> {
   async load() {
     if (!this.current() || this.state.busy) return;
     this.revision++; const current = this.capture();
-    this.update({ phase: 'loading', error: null });
+    this.update({ phase: this.state.phase === 'ready' ? 'ready' : 'loading', error: null });
     try {
       const catalog = await this.deps.catalog(current); this.check(current);
       const options = assignedPaddonApparatus(catalog, this.deps.session.assigned_apparatus);
@@ -33,7 +33,7 @@ export class WorkerPaddonList extends WorkerPaddonState<State> {
   async select(apparatus: string) {
     if (!this.current() || this.state.busy) return;
     const option = this.state.options.find(row => row.id === apparatus); if (!option) return;
-    this.update({ apparatus: option.id, name: option.name, rows: [] }); await this.load();
+    this.update({ apparatus: option.id, name: option.name, rows: [], phase: 'loading' }); await this.load();
   }
   async create(): Promise<WorkerPaddon | null> {
     const current = this.capture(), apparatus = this.state.apparatus;

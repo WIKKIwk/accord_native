@@ -18,7 +18,7 @@ function native(h) {
   h.packages['expo-symbols'] = { SymbolView: 'SymbolView' };
   h.packages['react-native-safe-area-context'] = { useSafeAreaInsets: () => ({ top: 44, bottom: 34 }) };
   h.packages['react-native'] = { ...h.packages['react-native'], View: 'View', Pressable: 'Pressable', ScrollView: 'ScrollView', FlatList: 'FlatList', ActivityIndicator: 'ActivityIndicator', Modal: 'Modal', RefreshControl: 'RefreshControl',
-    PlatformColor: value => value, useWindowDimensions: () => ({ width: h.width ?? 400, height: 800, fontScale: h.fontScale ?? 1 }), BackHandler: { addEventListener: (_name, fn) => { h.hardwareBack = fn; return { remove() {} }; } } };
+    PlatformColor: value => value, useWindowDimensions: () => ({ width: h.width ?? 400, height: 800, fontScale: h.fontScale ?? 1 }), BackHandler: { addEventListener: (_name, fn) => { h.hardwareBack = fn; return { remove() { if (h.hardwareBack === fn) h.hardwareBack = null; } }; } } };
   h.packages['expo-router'] = { Stack: { Screen: 'Stack.Screen' }, useNavigation: () => ({ dispatch: action => events.push(['dispatch', action]) }), usePreventRemove: (blocked, callback) => { h.prevent = { blocked, callback }; } };
   h.packages['react-native-gesture-handler/ReanimatedSwipeable'] = { __esModule: true, default: 'Swipeable' };
   h.packages['react-native-gesture-handler'] = { GestureHandlerRootView: 'GestureRoot', GestureDetector: 'GestureDetector', usePanGesture: config => config };
@@ -73,13 +73,29 @@ test('Android Paddon list keeps the worker navigation beneath the action area', 
   for (const name of ['WorkerPaddonList', 'WorkerPaddonDetail', 'WorkerPaddonTransfer', 'WorkerBottomBar']) h.files[`components/${name}`] = { [name]: name };
   const Component = h.load('components/WorkerPaddons.android').WorkerPaddons;
   try {
-    let tree = n.render(Component, { ...h.props, onSelect: id => selected.push(id) });
+    const props = { ...h.props, onSelect: id => selected.push(id) };
+    let tree = n.render(Component, props);
     const bar = node(tree, 'WorkerBottomBar'); assert.equal(bar.props.active, ''); bar.props.onSelect('profile');
     node(tree, 'WorkerPaddonList').props.onProfile(); assert.deepEqual(selected, ['profile', 'profile']);
-    node(tree, 'WorkerPaddonList').props.onDetail('P1', 'cut'); tree = n.render(Component, h.props);
-    assert(node(tree, 'WorkerPaddonDetail')); assert.equal(node(tree, 'WorkerBottomBar'), undefined);
-    node(tree, 'WorkerPaddonDetail').props.onBack(); tree = n.render(Component, { ...h.props, onSelect: id => selected.push(id) });
-    assert(node(tree, 'WorkerPaddonList')); assert(node(tree, 'WorkerBottomBar'));
+    node(tree, 'WorkerPaddonList').props.onDetail('P1', 'cut'); tree = n.render(Component, props);
+    assert(node(tree, 'WorkerPaddonDetail')); assert.equal(node(tree, 'WorkerPaddonList').props.visible, false);
+    assert.equal(node(tree, 'View').props.style.display, 'none');
+    node(tree, 'WorkerPaddonDetail').props.onBack(); tree = n.render(Component, props);
+    assert.equal(node(tree, 'WorkerPaddonList').props.visible, true); assert.equal(node(tree, 'View').props.style.display, 'flex');
+    assert(node(tree, 'WorkerBottomBar'));
+    node(tree, 'WorkerPaddonList').props.onTransfer('cut'); tree = n.render(Component, props);
+    assert(node(tree, 'WorkerPaddonTransfer')); assert.equal(node(tree, 'WorkerPaddonList').props.visible, false);
+    node(tree, 'WorkerPaddonTransfer').props.onBack(); tree = n.render(Component, props);
+    assert.equal(node(tree, 'WorkerPaddonList').props.visible, true);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('hidden Android Paddon list does not consume the detail screen back action', async () => {
+  const h = await setup('list', 'android'), n = native(h);
+  h.files['components/useWorkerPaddonList'] = { useWorkerPaddonList: () => h.model };
+  const Component = h.load('components/WorkerPaddonList.android').WorkerPaddonList;
+  try {
+    n.render(Component, { ...h.props, visible: true }); assert.equal(typeof h.hardwareBack, 'function');
+    n.render(Component, { ...h.props, visible: false }); assert.equal(h.hardwareBack, null);
   } finally { n.runner.dispose(); h.dispose(); }
 });
 test('iOS Paddon list keeps all rows in the full-height scroll area with its FAB overlaid', async () => {

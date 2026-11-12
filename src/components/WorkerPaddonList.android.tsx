@@ -16,7 +16,11 @@ import { useWorkerPaddonList, type WorkerPaddonListProps } from './useWorkerPadd
 export function WorkerPaddonList(props: WorkerPaddonListProps & { onProfile?: () => void }) {
   const { onBack } = props;
   const h = useWorkerPaddonList(props), { state, p } = h, colors = useMaterialColors();
-  useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { if (!h.presentation.isOpen()) onBack(); return true; }); return () => sub.remove(); }, [onBack, h.presentation]);
+  useEffect(() => {
+    if (props.visible === false) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { if (!h.presentation.isOpen()) onBack(); return true; });
+    return () => sub.remove();
+  }, [onBack, h.presentation, props.visible]);
   if (!h.current()) return null;
   const actions: RoleFabAction[] = [
     ...(h.canTransfer ? [{ id: 'transfer', label: p('worker.paddon.transfer.title'), icon: 'swap_vert' as const, width: 310 }] : []),

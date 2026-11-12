@@ -1,6 +1,20 @@
 const assert = require('node:assert/strict'), test = require('node:test');
 const { setup, tick, defer, batch } = require('./support/workerPaddonHarness.cjs');
 // @v2-test test/aparatchi_paddons_test.dart
+test('Android list stays quiet behind a detail and refreshes the existing list on return', async () => {
+  const h = await setup('list', 'android');
+  try {
+    const controller = h.model.controller, before = h.events.filter(event => event[0] === 'list').length;
+    h.props.visible = false; h.render(); await tick();
+    assert.equal(h.model.enabled, false); assert.equal(h.events.filter(event => event[0] === 'list').length, before);
+    h.paddons.delete('P1'); h.props.visible = true; h.render();
+    assert.equal(h.model.controller, controller); assert.equal(h.model.state.phase, 'ready');
+    assert(h.model.state.rows.some(row => row.code === 'P1'));
+    await tick(); h.render(); assert.equal(h.model.controller, controller);
+    assert.equal(h.events.filter(event => event[0] === 'list').length, before + 1);
+    assert(!h.model.state.rows.some(row => row.code === 'P1'));
+  } finally { h.dispose(); }
+});
 for (const platform of ['ios', 'android']) {
   test(`${platform}: creating a Paddon navigates to its returned code and keeps the assigned apparatus`, async () => {
     const h = await setup('list', platform);
