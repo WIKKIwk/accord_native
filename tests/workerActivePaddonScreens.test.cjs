@@ -12,7 +12,7 @@ function setup(platform) {
   const h = { events: [] }, state = { code: '00001', selection: 'ready', picker: 'ready', busy: false, paddons: [{ code: '00001', item_count: 3 }, { code: '00002', item_count: 2 }] };
   const native = new Proxy({}, { get: (_, key) => key === 'useMaterialColors' ? () => ({}) : key === 'ListItem' ? Object.assign('Item', {}) : key });
   const Item = { HeadlineContent: 'Headline', SupportingContent: 'Supporting', LeadingContent: 'Leading', TrailingContent: 'Trailing' };
-  const modifiers = new Proxy({}, { get: (_, key) => (...args) => ({ kind: key, args }) });
+  const modifiers = new Proxy({}, { get: (_, key) => key === 'shapes' ? { rectangle: () => ({ shape: 'rectangle' }) } : (...args) => ({ kind: key, args }) });
   const compose = { ...Object.fromEntries(['Badge', 'BadgedBox', 'Box', 'CircularProgressIndicator', 'Column', 'IconButton', 'LazyColumn', 'ModalBottomSheet', 'RNHostView', 'Text'].map(key => [key, key])),
     ListItem: Object.assign(function ItemView() {}, Item), useMaterialColors: () => ({}) };
   compose.BadgedBox = Object.assign(function BadgeBox() {}, { Badge: 'BadgeSlot' });
@@ -57,6 +57,22 @@ for (const platform of ['ios', 'android']) {
     else { assert.equal(button.props.enabled, false); assert(button.props.modifiers.some(m => m.kind === 'semantics' && m.args[0].contentDescription === 'selected')); }
   });
 }
+
+test('iOS picker makes each full-width choice, including its trailing space, interactive', () => {
+  const h = setup('ios'), rows = nodes(h.views.WorkerActivePaddonPicker(h.props), 'Button');
+  assert.equal(rows.length, 3);
+  for (const row of rows) {
+    const layout = nodes(row, 'HStack')[0].props.modifiers;
+    const width = layout.findIndex(modifier => modifier.kind === 'frame' && modifier.args[0].maxWidth === Infinity);
+    const hitArea = layout.findIndex(modifier => modifier.kind === 'contentShape' && modifier.args[0].shape === 'rectangle');
+    assert(width >= 0 && hitArea > width);
+  }
+  for (const row of rows.slice(1)) {
+    assert.deepEqual(row.props.modifiers.find(modifier => modifier.kind === 'listRowInsets').args[0], { top: 0, bottom: 0, leading: 0, trailing: 0 });
+  }
+  rows[0].props.onPress(); rows[1].props.onPress(); rows[2].props.onPress();
+  assert.deepEqual(h.events, [['choose', null], ['choose', '00001'], ['choose', '00002']]);
+});
 
 test('iOS queue connects the worker action inside its existing native toolbar and keeps profile', () => {
   const native = new Proxy({}, { get: (_, key) => key === 'Toolbar' ? { Content: 'ToolbarContent' } : key === 'useNativeState' ? value => value : key });

@@ -1,5 +1,5 @@
 import { BottomSheet, Button, Group, HStack, Image, List, ProgressView, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, buttonStyle, disabled, font, foregroundStyle, frame, labelStyle, listStyle, padding, presentationDetents, presentationDragIndicator } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, labelStyle, listRowInsets, listStyle, padding, presentationDetents, presentationDragIndicator, shapes } from '@expo/ui/swift-ui/modifiers';
 import { PlatformColor, useWindowDimensions } from 'react-native';
 import { BaseHost } from './BaseHost';
 import type { WorkerActivePaddonProps } from './workerActivePaddonProps';
@@ -20,8 +20,10 @@ export function WorkerActivePaddonPicker({ state, controller }: WorkerActivePadd
   const { p } = useWorkerOrderText(), { width } = useWindowDimensions();
   const ready = state.selection === 'ready' && (state.picker === 'ready' || state.picker === 'closed');
   const error = state.selection === 'error' || state.picker === 'error';
-  const choice = (code: string | null, title: string, count?: number) => <Button key={code ?? 'none'} onPress={() => { void controller.choose(code); }} modifiers={[buttonStyle('plain')]}>
-    <HStack spacing={14} modifiers={[padding({ vertical: 8 }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+  const choice = (code: string | null, title: string, count?: number) => <Button key={code ?? 'none'} onPress={() => { void controller.choose(code); }} modifiers={[
+    buttonStyle('plain'), ...(code === null ? [] : [listRowInsets({ top: 0, bottom: 0, leading: 0, trailing: 0 })]),
+  ]}>
+    <HStack spacing={14} modifiers={[padding({ vertical: 8, horizontal: code === null ? 0 : 16 }), frame({ maxWidth: Infinity, alignment: 'leading' }), contentShape(shapes.rectangle())]}>
       <Image systemName={code === null ? 'link' : 'shippingbox'} size={22} />
       <VStack alignment="leading" spacing={3}><Text>{title}</Text>
         {count != null ? <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle('secondary')]}>{p('worker.paddon.active.rolls', { count })}</Text> : null}
