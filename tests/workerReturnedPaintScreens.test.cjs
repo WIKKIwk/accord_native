@@ -29,6 +29,15 @@ test('iOS report and inline paint editor retain glass secondary actions and blue
   assert.equal(editor.props.neutralCancelLabel, false);
   assert.equal(editor.props.confirmLabel, 'Tayyor');
 });
+test('Android returned-paint entry and sheet header use full-sized controls', () => {
+  const h = setup('android', { states: { paintEditor: false, paintColor: '' } });
+  const paint = button(h.render(), h.p('worker.daily.field.returned_ink'));
+  assert.equal(paint.props.height, 56); assert.equal(paint.props.disabled, false);
+  paint.props.onPress();
+  const header = nodes(h.paintTree(), node => node.type === 'WorkerIconButton');
+  assert.deepEqual(header.map(item => [item.props.icon, item.props.size]), [['back', 48], ['photo', 48]]);
+  header[1].props.onPress(); assert.deepEqual(h.alerts[0][2].map(item => item.text), ['Kamera', 'Gallery', 'Bekor qilish']);
+});
 for (const platform of ['ios', 'android']) {
   test(`${platform}: named paint fields open a dialog and commit its initial value with the source duplicate notice`, () => {
     const h = setup(platform); button(h.paintTree(), 'Pantone+').props.onPress();
@@ -72,7 +81,15 @@ for (const platform of ['ios', 'android']) {
     assert.equal(h.paintUploads.length, 1); assert.equal(h.paintUploads[0][1].orderId, h.props.orderId);
     assert.equal(h.paintUploads[0][1].apparatus, h.props.apparatusId); assert.equal(h.values.get('paintImageId'), 'new-image');
     assert.equal(h.values.get('paintImageMetadata').image_url, '/new-image');
+    const preview = nodes(h.paintTree(), node => node.type === 'PaintImage')[0];
+    assert.equal(preview.props.image.image_id, 'new-image'); assert.equal(preview.props.image.image_url, '/new-image');
     assert.deepEqual(h.paintDeletes[0].slice(1), ['old', h.props.orderId]); assert.equal(h.values.get('error'), '');
+  });
+  test(`${platform}: an unreadable selected photo never reaches upload and retains the previous image`, async () => {
+    const h = setup(platform, { states: { paintImageId: 'old' }, preparePaintPhoto: async () => { throw Error('file unavailable'); } });
+    button(h.paintTree(), 'Almashtirish').props.onPress(); h.alerts[0][2][1].onPress(); await tick();
+    assert.equal(h.paintUploads.length, 0); assert.equal(h.values.get('paintImageId'), 'old');
+    assert.equal(h.values.get('error'), 'Rasm yuklanmadi'); assert.equal(h.values.get('photoBusy'), false);
   });
   test(`${platform}: retired photo selection cannot upload into the next account`, async () => {
     let finish;

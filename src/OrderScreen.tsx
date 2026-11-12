@@ -1023,13 +1023,13 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const paintContent = paintEditor && !inlinePaint ? (
     <View style={styles.screen}>
       <View style={styles.paintHeader}>
-        <WorkerIconButton icon="back" label={t("Orqaga")} onPress={() => {
+        <WorkerIconButton icon="back" label={t("Orqaga")} size={48} onPress={() => {
           if (photoBusy) return;
           if (paintColor) setPaintColor('');
           else paintSheet.close();
         }} />
         <Text style={[styles.expansionTitle, { color: colors.text }]}>{t("Qaytarilgan bo‘yoq")}</Text>
-        <WorkerIconButton icon="photo" label={t(paintPhoto ? 'Rasmni almashtirish' : 'Rasm qo‘shish')}
+        <WorkerIconButton icon="photo" size={48} label={t(paintPhoto ? 'Rasmni almashtirish' : 'Rasm qo‘shish')}
           onPress={() => { if (!photoBusy) pickPaintImage(); }} />
       </View>
       <ScrollView nestedScrollEnabled contentContainerStyle={styles.paintContent} keyboardShouldPersistTaps="handled">
@@ -1185,7 +1185,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
           <Field progress={selected !== 'astatka'} label={`${p('worker.daily.field.print_leftover')} (kg)`} initialValue={leftoverWip} keyboardType="decimal-pad" onChangeText={setLeftoverWip} />
           <Field progress={selected !== 'astatka'} label={`${p('worker.daily.field.film_leftover')} (kg)`} initialValue={leftoverFilm} keyboardType="decimal-pad" onChangeText={setLeftoverFilm} /></>}
         {showFullReport && <><Text style={progressSectionStyle}>{p(laminationReport ? 'worker.progress.qty.waste' : 'worker.progress.qty.returned_paint_and_waste')}</Text><Field progress={selected !== 'astatka'} label={`${p('worker.daily.field.total_waste')}, ${p('worker.progress.qty.unit.kg')}`} initialValue={waste} keyboardType="decimal-pad" onChangeText={setWaste} />
-          {!laminationReport && <NativeButton label={p('worker.daily.field.returned_ink')} variant={Platform.OS === 'ios' ? 'outlined' : 'filled'} neutralLabel disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} />}</>}
+          {!laminationReport && <NativeButton label={p('worker.daily.field.returned_ink')} height={Platform.OS === 'android' ? 56 : undefined} variant={Platform.OS === 'ios' ? 'outlined' : 'filled'} neutralLabel disabled={photoBusy || loadedDraftScope !== draftScope} onPress={() => { setError(''); setPaintEditor(true); }} />}</>}
         {selected === 'astatka' && <Field progress={false} label={p('worker.progress.qty.optional_note')} initialValue={astatkaNote} onChangeText={setAstatkaNote} />}
         {selected === 'complete' && descriptionRevealed && <Field label={p(closingOutput ? 'worker.progress.qty.optional_note' : 'worker.progress.qty.reason')} initialValue={completionNote} onChangeText={setCompletionNote} />}
         </>}

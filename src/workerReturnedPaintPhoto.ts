@@ -1,5 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
 import { MobileApiException } from './shared/mobileApiException';
 
 /** @v2 _ReturnedPaintSheetState */
@@ -36,7 +38,12 @@ export async function prepareWorkerReturnedPaintPhoto(asset: ImagePicker.ImagePi
     filename = filename.replace(/\.[^.]*$/, '') + (format === SaveFormat.PNG ? '.png' : format === SaveFormat.WEBP ? '.webp' : '.jpg');
   }
   if (!current()) return null;
-  const bytes = new Uint8Array(await (await fetch(uri)).arrayBuffer());
+  let bytes: Uint8Array;
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    if (!response.ok) throw new Error('image_read_failed');
+    bytes = new Uint8Array(await response.arrayBuffer());
+  } else bytes = await new File(uri).bytes();
   if (!current()) return null;
   if (!bytes.length) throw new MobileApiException({ code: 'returned_paint_image_empty', message: 'Tanlangan rasm bo‘sh' });
   if (bytes.length > 6 * 1024 * 1024) throw new MobileApiException({ code: 'returned_paint_image_too_large', message: 'Rasm hajmi 6 MB dan oshmasligi kerak' });

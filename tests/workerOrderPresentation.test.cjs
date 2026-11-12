@@ -406,6 +406,27 @@ test('action sheet close uses glass with an adaptive neutral icon and still clos
   }
 });
 
+test('Android returned-paint header icons have 48 dp touch targets and clear accessibility labels', () => {
+  const { WorkerIconButton } = load('components/WorkerIconButton.android.tsx', {
+    '@expo/ui/jetpack-compose': { Host: 'Host', IconButton: 'IconButton', FilledTonalIconButton: 'FilledTonalIconButton', RNHostView: 'RNHostView', useMaterialColors: () => ({ onSurfaceVariant: 'icon' }) },
+    '@expo/ui/jetpack-compose/modifiers': modifiers, 'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { Pressable: 'Pressable', StyleSheet: { create: value => value } },
+  });
+  for (const [icon, label, symbol] of [['back', 'Orqaga', 'arrow_back'], ['photo', 'Rasm qo‘shish', 'add_photo_alternate']]) {
+    let calls = 0;
+    const tree = WorkerIconButton({ icon, label, size: 48, onPress: () => calls++ });
+    assert.deepEqual(tree.props.style, { width: 48, height: 48 });
+    const button = nodes(tree, item => item.type === 'IconButton')[0];
+    assert.deepEqual(button.props.modifiers.find(mod => mod.name === 'size').args, [48, 48]);
+    assert.equal(button.props.modifiers.find(mod => mod.name === 'semantics').args[0].contentDescription, label);
+    const image = nodes(tree, item => item.type === 'SymbolView')[0];
+    assert.equal(image.props.name.android, symbol); assert.equal(image.props.size, 24);
+    button.props.onClick(); assert.equal(calls, 1);
+  }
+  const defaultButton = WorkerIconButton({ icon: 'edit', label: 'Edit', onPress() {} });
+  assert.deepEqual(defaultButton.props.style, { width: 40, height: 40 });
+});
+
 test('report and paint dialogs use transparent secondary actions and filled system-blue confirmation', () => {
   for (const version of ['26.1.1', '18.7']) {
     const calls = [];
