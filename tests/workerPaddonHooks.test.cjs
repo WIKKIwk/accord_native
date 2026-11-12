@@ -1,13 +1,15 @@
 const assert = require('node:assert/strict'), test = require('node:test');
 const { setup, tick, defer, batch } = require('./support/workerPaddonHarness.cjs');
 // @v2-test test/aparatchi_paddons_test.dart
-test('Android list stays quiet behind a detail and refreshes the existing list on return', async () => {
+test('Android list stays quiet behind a detail and revalidates a changed Paddon on return', async () => {
   const h = await setup('list', 'android');
   try {
     const controller = h.model.controller, before = h.events.filter(event => event[0] === 'list').length;
     h.props.visible = false; h.render(); await tick();
     assert.equal(h.model.enabled, false); assert.equal(h.events.filter(event => event[0] === 'list').length, before);
-    h.paddons.delete('P1'); h.props.visible = true; h.render();
+    h.paddons.delete('P1');
+    h.load('workerPaddonRevision').workerPaddonRevision.notify(h.load('sessionReadScope').sessionReadScope(h.session));
+    h.props.visible = true; h.render();
     assert.equal(h.model.controller, controller); assert.equal(h.model.state.phase, 'ready');
     assert(h.model.state.rows.some(row => row.code === 'P1'));
     await tick(); h.render(); assert.equal(h.model.controller, controller);
@@ -16,6 +18,29 @@ test('Android list stays quiet behind a detail and refreshes the existing list o
   } finally { h.dispose(); }
 });
 for (const platform of ['ios', 'android']) {
+  test(`${platform}: reopening a fresh Paddon immediately reuses its data and catalog without another read`, async () => {
+    const h = await setup('detail', platform), events = h.events.length;
+    const owner = h.load('workerPaddonRuntime').workerPaddonOwner(h.session, 'cut'); owner.mount(true);
+    try {
+      const reopened = owner.detail('P1');
+      assert.equal(reopened.getSnapshot().phase, 'ready'); assert.equal(reopened.getSnapshot().snapshot.paddon.code, 'P1');
+      assert.deepEqual(owner.cachedCatalog(), h.catalog);
+      await reopened.load(false); await owner.catalog(() => true, false);
+      assert.equal(h.events.length, events);
+      h.paddons.get('P1').items = [batch('new')];
+      await reopened.load();
+      assert.equal(h.events.filter(event => event[0] === 'read').length, 2);
+      assert.deepEqual(reopened.getSnapshot().snapshot.items.map(row => row.batch_id), ['new']);
+    } finally { owner.mount(false); h.dispose(); }
+  });
+  test(`${platform}: a fresh return to the Paddon list does not refetch unchanged rows`, async () => {
+    const h = await setup('list', platform);
+    try {
+      const before = h.events.length; h.props.visible = false; h.render();
+      h.props.visible = true; h.render(); await tick(); h.render();
+      assert.equal(h.events.length, before); assert.equal(h.model.state.phase, 'ready');
+    } finally { h.dispose(); }
+  });
   test(`${platform}: creating a Paddon navigates to its returned code and keeps the assigned apparatus`, async () => {
     const h = await setup('list', platform);
     try { assert(h.model.canCreate); await h.model.create(); assert(h.events.some(e => e[0] === 'create' && e[1] === 'cut'));
@@ -61,6 +86,26 @@ for (const platform of ['ios', 'android']) {
     } finally { h.dispose(); }
   });
 }
+test('a new account witness cannot reuse cached Paddon permissions or apparatus names', async () => {
+  const h = await setup('detail', 'android'); h.expire();
+  const owner = h.load('workerPaddonRuntime').workerPaddonOwner(h.session, 'cut'); owner.mount(true);
+  try {
+    const reopened = owner.detail('P1'); assert.equal(reopened.getSnapshot().snapshot, null); assert.equal(owner.cachedCatalog(), null);
+    await reopened.load(false); assert.equal(h.events.filter(event => event[0] === 'read').length, 2);
+  } finally { owner.mount(false); h.dispose(); }
+});
+test('membership changes invalidate rapid Paddon reopen and list return even within the freshness window', async () => {
+  const h = await setup('detail', 'android'), owner = h.load('workerPaddonRuntime').workerPaddonOwner(h.session, 'cut'); owner.mount(true);
+  try {
+    await owner.list.load(false); assert(owner.detail('P1').getSnapshot().snapshot);
+    assert(await h.model.controller.add(['A']));
+    const reopened = owner.detail('P1'); assert.equal(reopened.getSnapshot().snapshot, null);
+    await reopened.load(false); await owner.list.load(false);
+    assert.deepEqual(reopened.getSnapshot().snapshot.items.map(row => row.batch_id), ['A']);
+    assert.equal(h.events.filter(event => event[0] === 'read').length, 2);
+    assert.equal(h.events.filter(event => event[0] === 'list').length, 2);
+  } finally { owner.mount(false); h.dispose(); }
+});
 test('iOS decisions do not resolve on button press before Modal.onDismiss', async () => {
   const h = await setup();
   try { await h.model.edit('add'); h.model.controller.toggle('A'); h.render(); const operation = h.model.edit('add'); h.render();

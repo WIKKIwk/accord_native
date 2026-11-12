@@ -29,7 +29,7 @@ async function setup(kind = 'detail', platform = 'ios') {
   class Cancel extends Error {}
   const files = {
     auth: { currentSession: () => h.session, captureSessionWitness: () => ({ version: h.version }), isSessionWitnessCurrent: witness => witness.version === h.version,
-      subscribeSessionWitness: fn => { watches.add(fn); return () => watches.delete(fn); } },
+      subscribeSessionWitness: fn => { watches.add(fn); return () => watches.delete(fn); }, registerSessionResetHook: fn => { h.resetSession = fn; return () => {}; } },
     apparatusApi: { adminApparatus: async (_session, options) => { options.beforeSend(); h.events.push(['catalog', options.limit]); return h.catalog; } },
     paddonManagementApi: {
       adminPaddonDetail: async (_session, code, options) => { options.beforeSend(); h.events.push(['read', code]); return h.paddons.get(code); },

@@ -6,7 +6,7 @@ import { workerPaddonCanDelete, WorkerPaddonState, type WorkerPaddon } from './w
 type State = { phase: 'loading' | 'ready' | 'error'; options: AdminApparatus[]; catalog: AdminApparatus[];
   apparatus: string; name: string; rows: WorkerPaddon[]; busy: boolean; error: unknown; notice: string };
 type Dependencies = { session: Session; apparatus?: string; name?: string; current(): boolean;
-  catalog(current: () => boolean): Promise<AdminApparatus[]>; list(apparatus: string, current: () => boolean): Promise<WorkerPaddon[]>;
+  catalog(current: () => boolean, force?: boolean): Promise<AdminApparatus[]>; list(apparatus: string, current: () => boolean, force?: boolean): Promise<WorkerPaddon[]>;
   create(apparatus: string, current: () => boolean): Promise<WorkerPaddon>; remove(code: string, current: () => boolean): Promise<void> };
 
 /** @v2 _AparatchiPaddonsScreenState */
@@ -15,17 +15,17 @@ export class WorkerPaddonList extends WorkerPaddonState<State> {
     super({ phase: 'loading', options: [], catalog: [], apparatus: deps.apparatus?.trim() ?? '', name: deps.name?.trim() ?? '',
       rows: [], busy: false, error: null, notice: '' }, deps.current);
   }
-  async load() {
+  async load(force = true) {
     if (!this.current() || this.state.busy) return;
     this.revision++; const current = this.capture();
     this.update({ phase: this.state.phase === 'ready' ? 'ready' : 'loading', error: null });
     try {
-      const catalog = await this.deps.catalog(current); this.check(current);
+      const catalog = await this.deps.catalog(current, force); this.check(current);
       const options = assignedPaddonApparatus(catalog, this.deps.session.assigned_apparatus);
       const scope = resolveRezkaPaddonScope(options, this.state.apparatus, this.state.name);
       // A supplied route cannot authorize another worker's apparatus.
       if (scope.apparatusId && !options.some(row => row.id === scope.apparatusId)) throw new Error('apparatus_not_assigned');
-      const rows = scope.needsApparatus ? [] : await this.deps.list(scope.apparatusId, current); this.check(current);
+      const rows = scope.needsApparatus ? [] : await this.deps.list(scope.apparatusId, current, force); this.check(current);
       this.update({ phase: 'ready', options, catalog, apparatus: scope.apparatusId, name: scope.apparatusName,
         rows: rows.filter(row => row.apparatus_id === scope.apparatusId) });
     } catch (error) { if (current()) this.update({ phase: 'error', error }); }

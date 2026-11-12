@@ -25,10 +25,10 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '' }: WorkerP
   const state = useWorkerPaddonState(controller), presentation = useWorkerPaddonPresentation(owner.current), wipSheet = useNativeSheet();
   const printer = useWorkerPrinterSelector(owner.current), { p, t, locale } = useWorkerOrderText();
   const printing = useRef(false);
-  const [catalogState, setCatalog] = useState<{ owner: typeof owner; rows: AdminApparatus[] } | null>(null);
+  const [catalogState, setCatalog] = useState<{ owner: typeof owner; rows: AdminApparatus[] } | null>(() => ({ owner, rows: owner.cachedCatalog() ?? [] }));
   const catalog = catalogState?.owner === owner ? catalogState.rows : [];
-  useEffect(() => { void controller.load(); let alive = true;
-    void owner.catalog(() => alive).then(rows => { if (alive && owner.current()) setCatalog({ owner, rows }); }).catch(() => {});
+  useEffect(() => { void controller.load(false); let alive = true;
+    void owner.catalog(() => alive, false).then(rows => { if (alive && owner.current()) setCatalog({ owner, rows }); }).catch(() => {});
     return () => { alive = false; };
   }, [controller, owner]);
   const strings = useRef({ p, locale }), presenter = useRef(presentation), printerSelector = useRef(printer.selectDevice);
@@ -40,7 +40,7 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '' }: WorkerP
       catch (error) { if (error instanceof WorkerPrintCancelled) return null; throw error; } },
     prepare: (selected, valid) => adminPaddonPrintQr(session, { code, ...workerPrinterFields(selected), beforeSend: owner.guard(valid) }),
     print: (job, selected, valid) => printWorkerJobs({ print_job: job }, selected, valid),
-    confirm: valid => confirmPaddonPrint(session, code, valid), refresh: () => controller.load(), changed: owner.changed,
+    confirm: valid => owner.mutate(valid, () => confirmPaddonPrint(session, code, valid)), refresh: () => controller.load(), changed: owner.changed,
     chooseNext: async completion => {
       controller.setPrinting(false); const { p, locale } = strings.current, permit = controller.capture();
       if (await presenter.current.open({ kind: 'successor', title: p('worker.paddon.next.title'), message: p('worker.paddon.next.body', { code }),
@@ -51,7 +51,7 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '' }: WorkerP
         choices: Object.entries(completion.apparatus_options).map(([id, title]) => ({ id, title })) });
       return permit() ? selected : null;
     },
-    successor: (selected, valid) => { controller.setPrinting(true); return createActivePaddonSuccessor(session, code, selected, valid); },
+    successor: (selected, valid) => { controller.setPrinting(true); return owner.mutate(valid, () => createActivePaddonSuccessor(session, code, selected, valid)); },
     notice: (key, values, error) => presenter.current.message(error ? workerPaddonErrorText(error, strings.current.p, key) : strings.current.p(key, values)),
   }), [controller, owner, session, code, apparatus]);
   /* eslint-enable react-hooks/refs */

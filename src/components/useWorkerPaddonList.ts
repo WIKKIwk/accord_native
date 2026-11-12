@@ -15,7 +15,7 @@ export function useWorkerPaddonList({ session, apparatus = '', visible = true, o
   const owner = useWorkerPaddonOwner(session, apparatus), controller = owner.list, state = useWorkerPaddonState(controller);
   const { p, t, locale } = useWorkerOrderText(), presentation = useWorkerPaddonPresentation(owner.current);
   const presenting = useRef(presentation.isOpen); useLayoutEffect(() => { presenting.current = presentation.isOpen; }, [presentation.isOpen]);
-  useFocusEffect(useCallback(() => { if (visible && !presenting.current()) void controller.load(); }, [controller, visible]));
+  useFocusEffect(useCallback(() => { if (visible && !presenting.current()) void controller.load(false); }, [controller, visible]));
   const showError = (key: string) => presentation.message(workerPaddonErrorText(controller.getSnapshot().error, p, key));
   const canDelete = workerPaddonCanDelete(session), canTransfer = workerPaddonCanTransfer(session, state.options, state.apparatus);
   const enabled = visible && owner.current() && state.phase === 'ready' && !state.busy;

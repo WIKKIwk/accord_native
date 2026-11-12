@@ -4,7 +4,7 @@ import { WorkerPaddonError, WorkerPaddonState, workerPaddonItems, workerPaddonMo
 type State = { phase: 'loading' | 'ready' | 'error'; snapshot: WorkerPaddonSnapshot | null; busy: boolean; printing: boolean; error: unknown;
   mode: 'add' | 'remove' | null; bobina: number | null; selected: string[]; scanning: boolean; scanned: WorkerPaddonBatch[];
   pending: number; review: boolean; feedback: string; feedbackKind: 'accepted' | 'rejected' | 'none' | null };
-type Dependencies = { code: string; current(): boolean; read(current: () => boolean): Promise<WorkerPaddonSnapshot>;
+type Dependencies = { code: string; initial?: WorkerPaddonSnapshot | null; current(): boolean; read(current: () => boolean, force?: boolean): Promise<WorkerPaddonSnapshot>;
   add(ids: string[], current: () => boolean): Promise<WorkerPaddonSnapshot>;
   remove(ids: string[], single: boolean, current: () => boolean): Promise<WorkerPaddonSnapshot>;
   lookup(qr: string, current: () => boolean): Promise<WorkerPaddonBatch>;
@@ -18,18 +18,19 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
   private queued = new Set<string>();
   private known = new Map<string, string>();
   constructor(private deps: Dependencies) {
-    super({ phase: 'loading', snapshot: null, busy: false, printing: false, error: null, mode: null, bobina: null, selected: [], scanning: false,
+    const initial = deps.initial && deps.initial.paddon.code.trim() === deps.code.trim() ? deps.initial : null;
+    super({ phase: initial ? 'ready' : 'loading', snapshot: initial, busy: false, printing: false, error: null, mode: null, bobina: null, selected: [], scanning: false,
       scanned: [], pending: 0, review: false, feedback: '', feedbackKind: null }, deps.current);
   }
   private snapshot(value: WorkerPaddonSnapshot) {
     if (value.paddon.code.trim() !== this.deps.code.trim()) throw new Error('paddon_not_found'); return value;
   }
-  async load() {
+  async load(force = true) {
     if (!this.current() || this.state.busy) return;
     this.revision++; const revisionCurrent = this.capture(), generation = ++this.readGeneration;
     const current = () => revisionCurrent() && generation === this.readGeneration;
     this.update({ phase: this.state.phase === 'ready' && this.state.snapshot ? 'ready' : 'loading', error: null, bobina: null, selected: [] });
-    try { const snapshot = this.snapshot(await this.deps.read(current)); this.check(current); this.update({ phase: 'ready', snapshot }); }
+    try { const snapshot = this.snapshot(await this.deps.read(current, force)); this.check(current); this.update({ phase: 'ready', snapshot }); }
     catch (error) { if (current()) this.update({ phase: 'error', error }); }
   }
   items() { return this.state.snapshot ? workerPaddonItems(this.state.snapshot, this.state.mode, this.state.bobina) : []; }
