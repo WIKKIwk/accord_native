@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict'), test = require('node:test');
-const { setup, hooks, batch, tick, jsx } = require('./support/workerPaddonHarness.cjs');
+const { setup, hooks, batch, tick, snapshot, jsx } = require('./support/workerPaddonHarness.cjs');
 const walk = node => !node || typeof node !== 'object' ? [] : Array.isArray(node) ? node.flatMap(walk) : [node, ...walk(node.props?.children), ...walk(node.props?.ListHeaderComponent)];
 const node = (tree, type, predicate = () => true) => walk(tree).find(row => row.type === type && predicate(row));
 const proxy = new Proxy({}, { get: (_target, key) => key });
@@ -46,7 +46,9 @@ for (const platform of ['ios', 'android']) test(`${platform}: Paddon list shows 
       assert(row.props.modifiers.some(item => item.name === 'contentShape'));
       row.props.modifiers.find(item => item.name === 'onTapGesture').args[0]();
       const menu = node(tree, 'MenuView'); assert.deepEqual(menu.props.actions.map(item => item.id), ['transfer', 'create']);
-      assert(menu.props.style.bottom >= 88);
+      assert.equal(menu.props.style.bottom, 88);
+      const host = walk(tree).find(item => item.type === 'BaseHost' && node(item, 'List'));
+      assert.deepEqual(host.props.style, { flex: 1 });
       menu.props.onPressAction({ nativeEvent: { event: 'transfer' } });
       menu.props.onPressAction({ nativeEvent: { event: 'create' } });
     } else {
@@ -77,6 +79,21 @@ test('Android Paddon list keeps the worker navigation beneath the action area', 
     assert(node(tree, 'WorkerPaddonDetail')); assert.equal(node(tree, 'WorkerBottomBar'), undefined);
     node(tree, 'WorkerPaddonDetail').props.onBack(); tree = n.render(Component, { ...h.props, onSelect: id => selected.push(id) });
     assert(node(tree, 'WorkerPaddonList')); assert(node(tree, 'WorkerBottomBar'));
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('iOS Paddon list keeps all rows in the full-height scroll area with its FAB overlaid', async () => {
+  const h = await setup('list', 'ios'), n = native(h);
+  for (const code of ['P3', 'P4', 'P5']) h.paddons.set(code, snapshot(code));
+  await h.model.controller.load(); h.render(); h.files['components/useWorkerPaddonList'] = { useWorkerPaddonList: () => h.model };
+  const Component = h.load('components/WorkerPaddonList.ios').WorkerPaddonList;
+  try {
+    const tree = n.render(Component, h.props), host = walk(tree).find(item => item.type === 'BaseHost' && node(item, 'List'));
+    assert.deepEqual(host.props.style, { flex: 1 });
+    assert.equal(node(tree, 'MenuView').props.style.bottom, 88);
+    const rows = walk(node(host, 'List')).filter(item => item.type === 'HStack' && item.props.modifiers?.some(modifier => modifier.name === 'onTapGesture'));
+    assert.equal(rows.length, 5);
+    rows[4].props.modifiers.find(modifier => modifier.name === 'onTapGesture').args[0]();
+    assert.deepEqual(h.events.find(event => event[0] === 'detail'), ['detail', 'P5', 'cut', 'cut']);
   } finally { n.runner.dispose(); h.dispose(); }
 });
 test('iOS Paddon scan activation targets the inline camera while preserving the native List and row swipe actions', async () => {
@@ -177,8 +194,9 @@ test('iOS Paddon detail keeps the back button and action menu clear of the tab b
   try {
     let tree = n.render(Component, h.props), menu = node(tree, 'MenuView');
     assert.equal(node(tree, 'Stack.Screen').props.options.headerBackButtonDisplayMode, 'minimal');
-    assert(menu.props.style.bottom >= 88);
-    assert(walk(tree).some(row => row.type === 'BaseHost' && row.props.style?.marginBottom >= 88 && node(row, 'ListScrollReader')));
+    assert.equal(menu.props.style.bottom, 88);
+    const host = walk(tree).find(row => row.type === 'BaseHost' && node(row, 'ListScrollReader'));
+    assert.deepEqual(host.props.style, { flex: 1 });
     assert.deepEqual(menu.props.actions.map(action => action.id), ['scan', 'add', 'remove']);
     const groups = () => {
       const panel = walk(tree).find(item => item.type === 'VStack' && Array.isArray(item.props.children) && item.props.children[0]?.props?.children === h.model.header.bobinaTitle);

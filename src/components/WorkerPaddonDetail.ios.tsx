@@ -4,7 +4,6 @@ import { background, buttonStyle, contentShape, disabled, font, foregroundStyle,
 import { Stack, useNavigation, usePreventRemove } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { PlatformColor, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from './BaseHost';
 import { WorkerPaddonCamera } from './WorkerPaddonCamera';
 import { WorkerPaddonDialog } from './WorkerPaddonDialog';
@@ -19,10 +18,10 @@ const cameraRowID = 'accord-paddon-inline-camera';
 // @v2 AparatchiPaddonDetailScreen
 export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
   const h = useWorkerPaddonDetail(props), { state, p, header } = h, colors = useWorkerColors(), navigation = useNavigation();
-  const insets = useSafeAreaInsets(), { width, fontScale } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   usePreventRemove(h.blockBack, ({ data }) => { void h.requestBack(() => navigation.dispatch(data.action)); });
   if (!h.current()) return null;
-  const fabBottom = Math.max(88, insets.bottom + 70), columns = width >= 340 && fontScale <= 1.3 ? 2 : 1;
+  const columns = width >= 340 && fontScale <= 1.3 ? 2 : 1;
   const actions: MenuAction[] = state.scanning ? [
     { id: 'confirm', title: p('worker.paddon.scan.confirm', { count: state.scanned.length }), image: 'checkmark', attributes: { disabled: !h.canConfirmScan } },
     { id: 'close', title: p('worker.paddon.scan.close'), image: 'xmark', attributes: { disabled: h.blocked } },
@@ -45,7 +44,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
     <BaseHost matchContents={{ vertical: true }} style={{ width: '100%', paddingHorizontal: 20, paddingTop: 8 }}>
       <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle('secondary')]}>{p('worker.paddon.detail.subtitle')}</Text>
     </BaseHost>
-    <BaseHost style={{ flex: 1, marginBottom: fabBottom }}><AccordListScrollReader targetID={state.scanning ? cameraRowID : ''}><List modifiers={[listStyle('insetGrouped'), refreshable(() => h.controller.load())]}>
+    <BaseHost style={{ flex: 1 }}><AccordListScrollReader targetID={state.scanning ? cameraRowID : ''}><List modifiers={[listStyle('insetGrouped'), refreshable(() => h.controller.load())]}>
       {state.phase === 'loading' ? <ProgressView /> : state.phase === 'error' || !header ? <Section><Text>{p('worker.paddon.load_failed')}</Text>
         <Button label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} /></Section> : <>
         <Section><VStack alignment="leading" spacing={12}>
@@ -91,7 +90,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
         </SwipeActions>) : <Text>{h.itemsEmpty}</Text>}</Section>
       </>}
     </List></AccordListScrollReader></BaseHost>
-    {header ? <MenuView actions={actions} style={{ position: 'absolute', right: 16, bottom: fabBottom, width: 56, height: 56 }} onPressAction={event => {
+    {header ? <MenuView actions={actions} style={{ position: 'absolute', right: 16, bottom: 88, width: 56, height: 56 }} onPressAction={event => {
       const action = actions.find(item => item.id === event.nativeEvent.event);
       if (!action || action.attributes?.disabled) return;
       if (action.id === 'scan') h.controller.startScan();

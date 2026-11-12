@@ -4,7 +4,6 @@ import { background, contentShape, disabled, font, foregroundStyle, frame, listS
 import { Stack } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { PlatformColor, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from './BaseHost';
 import { WorkerPaddonDialog } from './WorkerPaddonDialog';
 import { WorkerPaddonFeedback } from './WorkerPaddonFeedback';
@@ -13,9 +12,8 @@ import { useWorkerPaddonList, type WorkerPaddonListProps } from './useWorkerPadd
 
 // @v2 AparatchiPaddonsScreen
 export function WorkerPaddonList(props: WorkerPaddonListProps) {
-  const h = useWorkerPaddonList(props), { state, p } = h, colors = useWorkerColors(), insets = useSafeAreaInsets();
+  const h = useWorkerPaddonList(props), { state, p } = h, colors = useWorkerColors();
   if (!h.current()) return null;
-  const fabBottom = Math.max(88, insets.bottom + 70);
   const actions: MenuAction[] = [
     ...(h.canTransfer ? [{ id: 'transfer', title: p('worker.paddon.transfer.title'), image: 'arrow.up.arrow.down' as const }] : []),
     ...(state.apparatus ? [{ id: 'create', title: p('worker.paddon.create'), image: 'plus' as const, attributes: { disabled: !h.canCreate } }] : []),
@@ -29,7 +27,7 @@ export function WorkerPaddonList(props: WorkerPaddonListProps) {
     <BaseHost matchContents={{ vertical: true }} style={{ width: '100%', paddingHorizontal: 20, paddingTop: 8 }}>
       <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle('secondary')]}>{p('worker.paddon.subtitle')}</Text>
     </BaseHost>
-    <BaseHost style={{ flex: 1, marginBottom: fabBottom }}><List modifiers={[listStyle('insetGrouped'), refreshable(() => h.controller.load())]}>
+    <BaseHost style={{ flex: 1 }}><List modifiers={[listStyle('insetGrouped'), refreshable(() => h.controller.load())]}>
       {state.phase === 'loading' ? <ProgressView /> : state.phase === 'error' ? <Section>
         <Text>{p('worker.paddon.load_failed')}</Text><Button label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} />
       </Section> : !state.apparatus ? <Section>{state.options.map(option => <Button key={option.id} label={p('worker.paddon.apparatus', { apparatus: option.name })}
@@ -53,7 +51,7 @@ export function WorkerPaddonList(props: WorkerPaddonListProps) {
           <Text modifiers={[foregroundStyle('secondary')]}>{p('worker.paddon.empty.body')}</Text></VStack>}</Section>
       </>}
     </List></BaseHost>
-    {actions.length ? <MenuView actions={actions} style={{ position: 'absolute', right: 16, bottom: fabBottom, width: 56, height: 56 }}
+    {actions.length ? <MenuView actions={actions} style={{ position: 'absolute', right: 16, bottom: 88, width: 56, height: 56 }}
       onPressAction={event => {
         if (event.nativeEvent.event === 'transfer' && h.canTransfer) h.transfer();
         else if (event.nativeEvent.event === 'create' && h.canCreate) void h.create();
