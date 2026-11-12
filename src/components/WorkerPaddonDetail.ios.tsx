@@ -49,7 +49,10 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
         <Button label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} /></Section> : <>
         <Section><VStack alignment="leading" spacing={12}>
           <HStack><Text modifiers={[font({ textStyle: 'title2', weight: 'bold' })]}>{header.code}</Text><Spacer />
-            <Button label={p('worker.paddon.print.short')} systemImage="qrcode" onPress={() => { void h.print(); }} modifiers={[buttonStyle('borderedProminent'), disabled(!h.canPrint)]} /></HStack>
+            <Button onPress={() => { void h.print(); }} modifiers={[buttonStyle('borderedProminent'), disabled(!h.canPrint)]}>
+              <HStack spacing={6}><Image systemName="qrcode" modifiers={[font({ textStyle: 'body' }), foregroundStyle('white')]} />
+                <Text>{p('worker.paddon.print.short')}</Text></HStack>
+            </Button></HStack>
           {header.peremotka ? <Text>{header.peremotka}</Text> : null}{header.location ? <Text>{header.location}</Text> : null}
           <HStack alignment="top" spacing={8}><Image systemName="person" size={20} /><VStack alignment="leading" spacing={3}>
             <Text modifiers={[foregroundStyle('secondary'), font({ textStyle: 'caption' })]}>{header.creatorLabel}</Text><Text modifiers={[font({ textStyle: 'body', weight: 'semibold' })]}>{header.creator}</Text>
