@@ -33,6 +33,7 @@ import { WorkerWorkInstructions } from './components/WorkerWorkInstructions';
 import { ProfileScreen } from './components/ProfileScreen';
 import { DailyWorkScreen } from './components/DailyWorkScreen';
 import { WorkerDailyPage } from './components/WorkerDailyPage';
+import { WorkerPaddonPage } from './components/WorkerPaddonPage';
 import { WorkerOrderListItem } from './components/WorkerOrderListItem';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerQueueList } from './components/WorkerQueueList';
@@ -99,8 +100,10 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const historyRoute = useNativeSheet();
   const actionsRoute = useNativeSheet();
   const dailyRoute = useNativeSheet();
+  const paddonRoute = useNativeSheet();
   const dailyDestination = useRef<string | null>(null);
-  const dailyNavigation = useRef<{ select: (id: string) => void; scan: () => void } | null>(null);
+  const paddonDestination = useRef<string | null>(null);
+  const pageNavigation = useRef<{ select: (id: string) => void; scan: () => void } | null>(null);
   const nativeOrder = useRef<ActiveOrder | null>(null);
   const nativeActions = useRef<ActionOrder | null>(null);
   const [section, setSection] = useState<'home' | 'profile' | 'daily' | 'instructions' | 'paddons' | 'inventory'>('home');
@@ -159,7 +162,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   }, [section, headerOffset]);
   const latestReload = useRef(reload);
   useEffect(() => { latestReload.current = reload; }, [reload]);
-  useLayoutEffect(() => { dailyNavigation.current = { select: selectDestination, scan: openScanner }; });
+  useLayoutEffect(() => { pageNavigation.current = { select: selectDestination, scan: openScanner }; });
   const onWritePending = useCallback((pending: boolean) => queueState.controller.setWritePending(pending), [queueState.controller]);
   const readScope = sessionReadScope(session), previousReadScope = useRef(readScope);
   useLayoutEffect(() => () => cancelActionOpening(),
@@ -310,8 +313,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
           const destination = dailyDestination.current;
           dailyDestination.current = null;
           if (!destination || !screenMounted.current || !activeSessionToken(session) || scope !== sessionReadScope(session)) return;
-          if (destination === 'scan') dailyNavigation.current?.scan();
-          else dailyNavigation.current?.select(destination);
+          if (destination === 'scan') pageNavigation.current?.scan();
+          else pageNavigation.current?.select(destination);
         } });
       } else setSection('daily');
       return;
@@ -329,6 +332,24 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     if (id === 'paddons' || id.startsWith('paddons:')) {
       const apparatus = id.startsWith('paddons:') ? id.slice(8) : '';
       if (nativeNavigation) router.push(workerPaddonListRoute(apparatus));
+      else if (Platform.OS === 'android') {
+        if (paddonRoute.isOpen()) return;
+        const witness = captureSessionWitness(session);
+        if (!witness) return;
+        const scope = sessionReadScope(session);
+        preflightCheck.current++;
+        cancelActionOpening();
+        paddonDestination.current = null;
+        paddonRoute.open(<WorkerPaddonPage session={session} apparatus={apparatus} onBack={paddonRoute.close} onSelect={destination => {
+          paddonDestination.current = destination; paddonRoute.close();
+        }} />, { presentation: 'page', onDismiss: () => {
+          const destination = paddonDestination.current;
+          paddonDestination.current = null;
+          if (!destination || !screenMounted.current || !isSessionWitnessCurrent(witness) || scope !== sessionReadScope(session)) return;
+          if (destination === 'scan') pageNavigation.current?.scan();
+          else pageNavigation.current?.select(destination);
+        } });
+      }
       else { setPaddonApparatus(apparatus); setSection('paddons'); }
       return;
     }

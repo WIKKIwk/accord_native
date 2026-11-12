@@ -212,6 +212,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     './components/useWorkerActivePaddon': { useWorkerActivePaddon: () => ({ state: { busy: false }, controller: {}, notice: '' }) },
     './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10, loadQueueLimit: async () => 10, saveQueueLimit: async () => {} },
     './workerQueuePresentation': { workerQueueLimitLabels: () => ({ title: 'Ko‘rsatish', all: 'Barchasi', counts: {} }) },
+    './workerPaddonNavigation': load('workerPaddonNavigation'),
     './workerNavigation': { workerDailyWorkVisible: () => true, workerInventoryVisible: actor => actor.capabilities.includes('inventory.movement.manage') },
     './workerQueueWindow': { workerQueueSearch: value => value.trim() },
     './workerActivePaddon': { workerPaddonApparatus: () => null },
@@ -362,9 +363,59 @@ test('worker drawer transfer opens the real inventory screen and permission loss
 test('Android drawer opens the assigned Paddon page with its own working navigation', async () => {
   const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
   nodes(tree, 'WorkerDrawer')[0].props.onSelect('paddons:cut'); tree = x.render();
-  const page = nodes(tree, 'WorkerPaddons')[0]; assert.equal(page.props.apparatus, 'cut');
-  page.props.onSelect('profile'); tree = x.render();
-  assert.equal(nodes(tree, 'WorkerPaddons').length, 0); assert.equal(nodes(tree, 'ProfileScreen').length, 1);
+  const page = x.presentations.at(-1); assert.equal(page.value.type, 'WorkerPaddonPage'); assert.equal(page.value.props.apparatus, 'cut');
+  assert.equal(page.options.presentation, 'page'); assert.equal(nodes(tree, 'WorkerTabs').length, 1);
+  page.value.props.onSelect('profile'); tree = x.render();
+  assert.equal(nodes(tree, 'ProfileScreen').length, 0);
+  page.options.onDismiss(); tree = x.render(); assert.equal(nodes(tree, 'ProfileScreen').length, 1);
+});
+
+test('Android Paddon Home and back returns retain the mounted queue, tab, search, limit and owner', async () => {
+  const x = workerScreenHarness('android', false); let reloads = 0;
+  x.queueState.reload = async () => { reloads++; };
+  x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerTabs')[0].props.onSelect('completed'); nodes(tree, 'WorkerTabs')[0].props.onSearchChange('saved query');
+  tree = x.render(); nodes(nodes(tree, 'WorkerTabs')[0].props.children('completed'), 'WorkerQueueFilter')[0].props.onChange(20);
+  const queue = x.queueState.queue, controller = x.queueState.controller;
+  for (const destination of ['home', 'queue', 'back']) {
+    tree = x.render(); nodes(tree, 'WorkerFab')[0].props.onSelect('paddons:cut'); tree = x.render();
+    assert.equal(nodes(tree, 'WorkerTabs').length, 1); assert.equal(nodes(tree, 'WorkerPaddons').length, 0);
+    const page = x.presentations.at(-1);
+    assert.equal(page.value.type, 'WorkerPaddonPage'); assert.equal(page.options.presentation, 'page');
+    if (destination === 'back') page.value.props.onBack(); else page.value.props.onSelect(destination);
+    page.options.onDismiss(); tree = x.render(); const tabs = nodes(tree, 'WorkerTabs')[0];
+    assert.equal(tabs.props.selected, 'completed'); assert.equal(tabs.props.search, 'saved query');
+    assert.equal(nodes(tabs.props.children('completed'), 'WorkerQueueFilter')[0].props.value, 20);
+    assert.equal(x.queueState.queue, queue); assert.equal(x.queueState.controller, controller);
+  }
+  assert.equal(reloads, 0); assert.deepEqual(x.routes, []);
+});
+
+test('a closed Android Paddon page cannot navigate after its session witness expires', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerFab')[0].props.onSelect('paddons:cut'); const page = x.presentations.at(-1);
+  page.value.props.onSelect('profile'); x.preparation.witnessCurrent = false; page.options.onDismiss();
+  tree = x.render(); assert.equal(nodes(tree, 'ProfileScreen').length, 0); assert.equal(nodes(tree, 'WorkerTabs').length, 1);
+});
+
+test('opening Android Paddons cancels a pending order action before covering the queue', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
+  const read = deferred(); x.preparation.pending = read;
+  const opening = screenRows(tree)[0].props.onLongPress();
+  nodes(tree, 'WorkerFab')[0].props.onSelect('paddons:cut');
+  assert.equal(x.preparation.calls[0][6].aborted, true);
+  read.resolve(x.preparation.result); await opening; tree = x.render();
+  assert.deepEqual(x.presentations.map(page => page.value.type), ['WorkerPaddonPage']);
+  assert.equal(nodes(tree, 'WorkerOrderSheet').length, 0); assert.equal(nodes(tree, 'WorkerTabs').length, 1);
+});
+
+test('iOS Paddon navigation pushes above the existing home queue without replacing it', async () => {
+  const x = workerScreenHarness('ios'); x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerTabs')[0].props.onSelect('completed'); nodes(tree, 'WorkerTabs')[0].props.onSearchChange('saved query');
+  tree = x.render(); nodes(tree, 'WorkerFab')[0].props.onSelect('paddons:cut'); tree = x.render();
+  assert.deepEqual(x.routes, ['/ios-worker/paddons?apparatus=cut&name=']);
+  const tabs = nodes(tree, 'WorkerTabs')[0]; assert.equal(tabs.props.selected, 'completed'); assert.equal(tabs.props.search, 'saved query');
+  assert.equal(x.presentations.length, 0);
 });
 
 test('Android daily work opens above the existing queue and repeated Home returns retain its tab and search', async () => {
