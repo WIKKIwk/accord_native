@@ -411,6 +411,7 @@ for (const platform of ['android', 'ios']) {
       'HStack', 'Image', 'ProgressView', 'SecureField', 'Spacer', 'VStack'].map(name => [name, name]));
     const ListItem = Object.assign(() => null, Object.fromEntries(['LeadingContent', 'HeadlineContent', 'SupportingContent', 'TrailingContent'].map(name => [name, `ListItem.${name}`])));
     ui.ListItem = ListItem; ui.OutlinedTextField = Object.assign(() => null, { Label: 'Label' }); ui.useNativeState = () => field;
+    ui.useMaterialColors = () => ({ onSurface: '#ffffff', primary: '#d0bcff' });
     const { AccountSwitcher } = load(`components/AccountSwitcher.${platform}.tsx`, {
       [`@expo/ui/${platform === 'android' ? 'jetpack-compose' : 'swift-ui'}`]: ui,
       [`@expo/ui/${platform === 'android' ? 'jetpack-compose' : 'swift-ui'}/modifiers`]: modifiers,

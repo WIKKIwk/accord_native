@@ -1,14 +1,13 @@
-import { Box, Button, CircularProgressIndicator, Column, Icon, IconButton, ListItem, OutlinedTextField, Row, Text, useNativeState } from '@expo/ui/jetpack-compose';
+import { Box, Button, CircularProgressIndicator, Column, Icon, IconButton, ListItem, OutlinedTextField, Row, Text, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { background, clickable, clip, fillMaxWidth, height, padding, semantics, size, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { savedAccountDisplayName, savedAccountSubtitle } from '../shared/accountEntryLogic';
 import { BaseHost as Host } from './BaseHost';
 import { useAccountSwitcher, type AccountSwitcherProps } from './useAccountSwitcher';
-import { useBaseTheme } from './useBaseTheme';
 
 /** @v2 AccountSwitcherSheet */
 export function AccountSwitcher(props: AccountSwitcherProps) {
-  const model = useAccountSwitcher(useNativeState(''), props), { colors } = useBaseTheme();
-  return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+  const model = useAccountSwitcher(useNativeState(''), props), colors = useMaterialColors({});
+  return <Host dynamicColors matchContents={{ vertical: true }} style={{ width: '100%' }}>
     <Column verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth(), padding(16, 12, 16, 24)]}>
       {model.target ? <>
         <IconButton onClick={model.back} enabled={!model.busy}
