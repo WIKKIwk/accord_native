@@ -1075,7 +1075,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     {!!blockingNotice && <WorkerOrderBlockingNotice message={blockingNotice} />}
     {(!!bootstrap || presentation.retaining) && <>
       {showIntakeCandidates && <View style={cardSectionStyle}>
-        <Expansion title={p(intakeSection.hasContent ? 'worker.materials.pending' : 'worker.materials.pending.empty')}
+        <Expansion systemColors={Platform.OS === 'android'} title={p(intakeSection.hasContent ? 'worker.materials.pending' : 'worker.materials.pending.empty')}
           count={view.intakeLoading ? '..' : view.intakeCandidates.length ? materialCount(view.intakeCandidates.length) : ''} expanded={intakeSection.expanded}
           onPress={intakeSection.canToggle ? () => setIntakeExpanded(value => !value) : undefined} />
         {intakeSection.expanded && <>
@@ -1085,7 +1085,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
         </>}
       </View>}
       {showMaterials && <View style={[cardSectionStyle, showIntakeCandidates && cardSeparatorStyle]}>
-        {cardState.showStartMaterials && !materialLoading && !materialsError && rows?.length === 0 ? <Text style={[styles.expansionTitle, { color: colors.text }]}>{p('worker.materials.unassigned_order')}</Text> : <Expansion title={t(allMaterialsAwaitingDelivery ? 'Apparat oldiga homashyo olib kelinmagan' : p(attachedSection.hasContent ? 'worker.materials.attached' : 'worker.materials.attached.empty'))}
+        {cardState.showStartMaterials && !materialLoading && !materialsError && rows?.length === 0 ? <Text style={[styles.expansionTitle, { color: colors.text }]}>{p('worker.materials.unassigned_order')}</Text> : <Expansion systemColors={Platform.OS === 'android'} title={t(allMaterialsAwaitingDelivery ? 'Apparat oldiga homashyo olib kelinmagan' : p(attachedSection.hasContent ? 'worker.materials.attached' : 'worker.materials.attached.empty'))}
           count={materialLoading ? '..' : rows?.length && !allMaterialsAwaitingDelivery ? materialCount(rows.length) : ''} expanded={attachedSection.expanded}
           onPress={attachedSection.canToggle ? () => setMaterialsExpanded(value => !value) : undefined} />}
         {cardState.showStartMaterials && !!rows?.length && !materialLoading && !materialsError && !!startMaterialStatus.deliveryKey &&

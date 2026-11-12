@@ -63,6 +63,7 @@ for (const platform of ['ios', 'android']) test(`${platform}: busy paused 0198 r
   const h = harness(platform), tree = main(h.render());
   const headers = nodes(tree, node => node.type === 'WorkerExpansion');
   assert.deepEqual(headers.map(node => node.props.title), [h.p('worker.materials.pending'), h.p('worker.materials.attached')]);
+  assert.ok(headers.every(header => header.props.systemColors === (platform === 'android')));
   assert.equal(buttons(tree).length, 0);
   assert.equal(JSON.stringify(tree).includes('Hozir bajarish mumkin'), false);
   h.bootstrap.control_state.control.allowed_actions = ['resume']; h.bootstrap.control_state.control.interaction.blocking_reason_code = '';

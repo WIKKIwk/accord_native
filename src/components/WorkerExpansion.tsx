@@ -2,7 +2,7 @@ import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useWorkerColors } from './useWorkerColors';
 
-type Props = { title: string; count: string; expanded: boolean; onPress?: () => void };
+type Props = { title: string; count: string; expanded: boolean; onPress?: () => void; systemColors?: boolean };
 
 export function WorkerExpansion({ title, count, expanded, onPress }: Props) {
   const colors = useWorkerColors();

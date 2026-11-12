@@ -70,10 +70,11 @@ const modifiers = new Proxy({}, { get: (_target, name) => name === 'shapes'
   : (...args) => ({ kind: name, args }) });
 const colors = Object.fromEntries(['onSurface', 'onSurfaceVariant', 'surface', 'surfaceContainerHigh', 'surfaceContainerHighest', 'primaryContainer',
   'onPrimaryContainer', 'secondaryContainer', 'onSecondaryContainer'].map(name => [name, name]));
-function nativeComponent(name, platform, palette = colors) {
+function nativeComponent(name, platform, palette = colors, systemPalette = palette) {
   return load(`components/${name}.${platform}.tsx`, {
     'react/jsx-runtime': jsx, '@expo/ui/swift-ui': new Proxy({}, { get: (_target, key) => key }),
-    '@expo/ui/jetpack-compose': new Proxy({}, { get: (_target, key) => key }),
+    '@expo/ui/jetpack-compose': new Proxy({ useMaterialColors: options => { assert.deepEqual(options, {}); return systemPalette; } },
+      { get: (target, key) => target[key] ?? key }),
     '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers,
     './BaseHost': { BaseHost: 'BaseHost' }, './useBaseTheme': { useBaseTheme: () => ({ colors: palette }) },
     './workerOrderLayout': load('components/workerOrderLayout.ts'),
@@ -92,6 +93,35 @@ function text(tree) {
   if (Array.isArray(tree)) return tree.map(text).join('');
   return tree && typeof tree === 'object' ? text(tree.props?.children) : '';
 }
+
+for (const mode of ['light', 'dark']) test(`android: ${mode} order material headers and expanded lists use system colors`, () => {
+  const configured = Object.fromEntries(Object.keys(colors).map(name => [name, `configured-${name}`]));
+  const system = Object.fromEntries(Object.keys(colors).map(name => [name, `system-${mode}-${name}`]));
+  const Header = nativeComponent('WorkerExpansion', 'android', configured, system);
+  let presses = 0;
+  const header = Header({ title: 'Hali qabul qilinmagan homashyolar', count: '2 ta', expanded: true, onPress: () => presses++, systemColors: true });
+  assert.equal(header.props.dynamicColors, true);
+  assert.deepEqual(nodes(header, 'Text').map(node => node.props.color), [system.onSurface, system.onSurfaceVariant]);
+  assert.equal(nodes(header, 'Icon')[0].props.tint, system.onSurfaceVariant);
+  nodes(header, 'TextButton')[0].props.onClick(); assert.equal(presses, 1);
+  const otherHeader = Header({ title: 'Qoliplar', count: '1 ta', expanded: false, onPress() {} });
+  assert.equal(otherHeader.props.dynamicColors, false);
+  assert.deepEqual(nodes(otherHeader, 'Text').map(node => node.props.color), [configured.onSurface, configured.onSurfaceVariant]);
+
+  const List = nativeComponent('WorkerMaterialList', 'android', configured, system), opened = [];
+  const pending = { ...row, barcode: 'R2', stock_status: 'ready', received_qty: 0 };
+  const list = List({ rows: [row, pending], scanned: [], orderId: '0337', onLongPress: material => opened.push(material) });
+  assert.equal(list.props.dynamicColors, true);
+  const backgroundOf = node => node.props.modifiers.find(mod => mod.kind === 'background').args[0];
+  const balance = nodes(list, 'Column').find(node => node.props.modifiers?.some(mod => mod.kind === 'background'));
+  assert.equal(backgroundOf(balance), system.secondaryContainer);
+  const materialRows = nodes(list, 'Row').filter(node => node.props.modifiers?.some(mod => mod.kind === 'combinedClickable'));
+  assert.deepEqual(materialRows.map(backgroundOf), [system.primaryContainer, system.surfaceContainerHighest]);
+  assert.deepEqual(nodes(list, 'Icon').map(node => node.props.tint), [system.onPrimaryContainer, system.onSurfaceVariant]);
+  for (const node of nodes(list, 'Text')) assert.ok(Object.values(system).includes(node.props.color));
+  materialRows[1].props.modifiers.find(mod => mod.kind === 'combinedClickable').args[0].onLongClick();
+  assert.deepEqual(opened, [pending]);
+});
 
 for (const platform of ['ios', 'android']) {
   test(`${platform}: all twelve app palettes supply readable text/icon colors, including palettes without onSurfaceVariant`, () => {
