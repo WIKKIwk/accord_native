@@ -45,7 +45,7 @@ export function ProfileView(props: ProfileViewProps) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const dark = useColorScheme() === 'dark';
   const theme = useBaseTheme();
-  const colors = useMaterialColors(), dynamicColors = session.profile.role === 'tayyorlov_masteri';
+  const colors = useMaterialColors({}), dynamicColors = session.profile.role === 'tayyorlov_masteri' || session.profile.role === 'aparatchi';
   const muted = dynamicColors ? colors.onSurfaceVariant : theme.colors.onSurfaceVariant ?? (dark ? '#aeaeb2' : '#6d6d72');
   const [apparatusExpanded, setApparatusExpanded] = useState(false);
   const editorSheet = useNativeSheet();

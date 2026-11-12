@@ -25,7 +25,7 @@ const react = { useEffect() {}, useState: initial => [initial, () => {}], useRef
   useSyncExternalStore: (_subscribe, snapshot) => snapshot() };
 const security = { hasPin: false, canUseBiometric: false, biometric: false };
 
-test('Android profile exposes Auto, light and dark and sends the chosen preference', async () => {
+for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`Android ${role} profile exposes appearance choices with the correct palette`, async () => {
   const selected = [], sheets = [];
   let appearance = 'system', closed = 0;
   const ui = new Proxy({}, { get: (_, name) => name });
@@ -42,11 +42,13 @@ test('Android profile exposes Auto, light and dark and sends the chosen preferen
     './useSwitchPinSetup.android': { useSwitchPinSetup: () => ({ stage: null, busy: false, hasPin: false }) },
     './BaseHost': { BaseHost: 'Host' }, './AppUpdateProvider': { useAppUpdate: () => () => {} },
   });
-  const render = () => ProfileSettings({ session: { profile: { role: 'tayyorlov_masteri' } }, onClose() {}, onLogout() {} });
+  const render = () => ProfileSettings({ session: { profile: { role } }, onClose() {}, onLogout() {} });
   const findId = (tree, id) => nodes(tree, node => node.props?.modifiers?.some(item => item.name === 'testID' && item.value === id))[0];
   const opener = findId(render(), 'profile-appearance');
   assert.deepEqual(nodes(opener, node => node.type === 'Text').map(node => node.props.children), ['Auto']);
   opener.props.onClick();
+  const dynamic = role === 'tayyorlov_masteri' || role === 'aparatchi';
+  assert.equal(sheets[0].props.dynamicColors, dynamic);
   const options = ['system', 'light', 'dark'].map(id => findId(sheets[0], `profile-appearance-${id}`));
   assert.equal(options.filter(Boolean).length, 3);
   assert.deepEqual(nodes(options[0], node => node.type === 'Text')[0].props.children, ['Auto', ' · accountCurrent']);
@@ -54,6 +56,10 @@ test('Android profile exposes Auto, light and dark and sends the chosen preferen
   assert.deepEqual(selected, ['system', 'light', 'dark']);
   assert.equal(closed, 3);
   assert.deepEqual(nodes(findId(render(), 'profile-appearance'), node => node.type === 'Text').map(node => node.props.children), ['Qorong‘i']);
+  for (const id of ['profile-language', 'profile-theme']) {
+    findId(render(), id).props.onClick();
+    assert.equal(sheets.at(-1).props.dynamicColors, dynamic);
+  }
 });
 
 test('iOS profile offers Auto in the appearance picker and forwards system', async () => {

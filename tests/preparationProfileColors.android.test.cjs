@@ -37,15 +37,15 @@ test('Android host can follow system colors while preserving text direction', ()
   assert.equal(configured.props.colorOverrides, theme.colors);
 });
 
-for (const role of ['tayyorlov_masteri', 'aparatchi']) test(`${role} profile uses its surrounding Android theme`, () => {
-  const opened = [], sheets = [];
+for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`${role} profile uses its surrounding Android theme`, () => {
+  const opened = [], sheets = [], materialOptions = [];
   const FieldGroup = Object.assign(() => {}, { Section: 'FieldSection' });
   const react = { useCallback: fn => fn, useLayoutEffect: fn => fn(), useRef: value => ({ current: value }),
     useState: value => [value, () => {}], useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = {
     react,
     '@expo/ui': { Button: 'Button', Column: 'Column', FieldGroup, ListItem: 'ListItem', RNHostView: 'RNHostView', Row: 'Row', ScrollView: 'ScrollView', Spacer: 'Spacer', Text: 'Text', TextInput: 'TextInput', useNativeState: value => value },
-    '@expo/ui/jetpack-compose': { PullToRefreshBox: 'PullToRefreshBox', useMaterialColors: () => ({ surfaceContainerLow: 'system-background', onSurfaceVariant: 'system-muted' }) },
+    '@expo/ui/jetpack-compose': { PullToRefreshBox: 'PullToRefreshBox', useMaterialColors: options => { materialOptions.push(options); return { surfaceContainerLow: 'system-background', onSurfaceVariant: 'system-muted' }; } },
     'react-native': { Alert: { alert() {} }, useColorScheme: () => 'light' },
     '../profileModel': { profileDisplay: () => ({ name: 'Ibrohim', role: 'Master', phone: '123', apparatusLabels: [] }) },
     '../nativeSheet': { useNativeSheet: () => { const index = sheets.length, sheet = { isOpen: () => false, open: value => { opened[index] = value; }, close() {}, update() {} }; sheets.push(sheet); return sheet; } },
@@ -57,7 +57,8 @@ for (const role of ['tayyorlov_masteri', 'aparatchi']) test(`${role} profile use
   const { ProfileView } = load('ProfileView.android.tsx', mocks);
   const page = ProfileView({ session: { profile: { role } }, snapshot: { profile: {} }, editing: true, busy: false,
     onOpenEditor() {}, onCloseEditor() {}, onLogout() {}, onDailyWork() {} });
-  const dynamic = role === 'tayyorlov_masteri';
+  const dynamic = role === 'tayyorlov_masteri' || role === 'aparatchi';
+  assert.deepEqual(materialOptions, [{}]);
   assert.equal(page.props.dynamicColors, dynamic);
   const group = nodes(page, node => node.type === FieldGroup)[0];
   assert.deepEqual(group.props.style, dynamic ? { backgroundColor: 'system-background' } : undefined);

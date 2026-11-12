@@ -31,7 +31,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const variant = useSyncExternalStore(subscribeTheme, currentVariant, currentVariant);
   const t = (key: string) => localizedGetter(key, locale);
-  const dynamicColors = session.profile.role === 'tayyorlov_masteri';
+  const dynamicColors = session.profile.role === 'tayyorlov_masteri' || session.profile.role === 'aparatchi';
   const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
   const switchPin = useSwitchPinSetup(session);
