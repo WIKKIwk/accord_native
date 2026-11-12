@@ -9,7 +9,7 @@ const jsx = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : Module.prototype.require.call(mod, id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.endsWith('.xml') ? id : Module.prototype.require.call(mod, id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
   }).outputText, filename);
@@ -28,7 +28,7 @@ const security = { hasPin: false, canUseBiometric: false, biometric: false };
 for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`Android ${role} profile exposes appearance choices with the correct palette`, async () => {
   const selected = [], sheets = [];
   let appearance = 'system', closed = 0;
-  const ui = new Proxy({}, { get: (_, name) => name });
+  const ui = new Proxy({ useMaterialColors: () => ({}) }, { get: (target, name) => target[name] ?? name });
   const { ProfileSettings } = load('components/ProfileSettings.android.tsx', {
     react, '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers,
     'expo-constants': { default: { expoConfig: { version: '1' } } },
@@ -45,7 +45,7 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`Android
   const render = () => ProfileSettings({ session: { profile: { role } }, onClose() {}, onLogout() {} });
   const findId = (tree, id) => nodes(tree, node => node.props?.modifiers?.some(item => item.name === 'testID' && item.value === id))[0];
   const opener = findId(render(), 'profile-appearance');
-  assert.deepEqual(nodes(opener, node => node.type === 'Text').map(node => node.props.children), ['Auto']);
+  assert.deepEqual(nodes(opener, node => node.type === 'Text').map(node => node.props.children), ['themeModeTitle', 'themeModeBody', 'Auto']);
   opener.props.onClick();
   const dynamic = role === 'tayyorlov_masteri' || role === 'aparatchi';
   assert.equal(sheets[0].props.dynamicColors, dynamic);
@@ -55,7 +55,7 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`Android
   for (const option of options) option.props.onClick();
   assert.deepEqual(selected, ['system', 'light', 'dark']);
   assert.equal(closed, 3);
-  assert.deepEqual(nodes(findId(render(), 'profile-appearance'), node => node.type === 'Text').map(node => node.props.children), ['Qorong‘i']);
+  assert.deepEqual(nodes(findId(render(), 'profile-appearance'), node => node.type === 'Text').map(node => node.props.children), ['themeModeTitle', 'themeModeBody', 'Qorong‘i']);
   for (const id of ['profile-language', 'profile-theme']) {
     findId(render(), id).props.onClick();
     assert.equal(sheets.at(-1).props.dynamicColors, dynamic);

@@ -1,4 +1,4 @@
-import { Button, Column, FieldGroup, ListItem, RNHostView, Row, ScrollView, Spacer, Text, TextInput, useNativeState } from '@expo/ui';
+import { Button, Column, FieldGroup, RNHostView, Row, Spacer, Text } from '@expo/ui';
 import { PullToRefreshBox, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, useColorScheme } from 'react-native';
@@ -6,8 +6,8 @@ import { profileDisplay } from '../profileModel';
 import { useNativeSheet } from '../nativeSheet';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
-import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileAvatarPreview } from './ProfileAvatarPreview.android';
+import { ProfileEditor } from './ProfileEditor.android';
 import { ProfileSettings } from './ProfileSettings';
 import { BaseHost as Host } from './BaseHost';
 import { useBaseTheme } from './useBaseTheme';
@@ -15,29 +15,6 @@ import type { ProfileViewProps } from './profileViewTypes';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
-
-function ProfileEditor({ session, snapshot, avatarToken, avatarRevision, cachedAvatar, draftName, draftPhoto, busy, saving,
-  onChangeName, onChoosePhoto, onSave }: ProfileViewProps) {
-  const name = useNativeState(draftName);
-  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const t = (key: string) => localizedGetter(key, locale);
-  return <Column spacing={16} style={{ padding: 12 }}>
-    <Column spacing={6}>
-      <Text textStyle={{ fontSize: 22, fontWeight: '600' }}>{t('profileEditTitle')}</Text>
-      <Text>{t('profileEditBody')}</Text>
-    </Column>
-    <TextInput value={name} onChangeText={onChangeName} editable={!busy} autoFocus returnKeyType="done"
-      placeholder={t('nicknameHint')} accessibilityLabel={t('nicknameLabel')} onSubmitEditing={() => { if (!busy) onSave(); }} />
-    <ListItem supportingText={t(draftPhoto ? 'changeImage' : 'chooseImage')}
-      onPress={busy ? undefined : () => onChoosePhoto('library')}
-      leading={<RNHostView matchContents><ProfileAvatar session={session} profile={snapshot.profile} token={avatarToken}
-        size={48} revision={avatarRevision} previewUri={draftPhoto} cachedUri={cachedAvatar} /></RNHostView>}>
-      {t('profilePhotoTitle')}
-    </ListItem>
-    {draftPhoto ? <Text>{t('selectedImageNotice')}</Text> : null}
-    <Button label={t(saving ? 'pinSaving' : 'save')} disabled={busy} onPress={onSave} testID="profile-save" />
-  </Column>;
-}
 
 // @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
@@ -65,11 +42,9 @@ export function ProfileView(props: ProfileViewProps) {
     ]);
   }, [locale, onLogout]);
   useLayoutEffect(() => {
-    const content = <Host dynamicColors={dynamicColors} style={{ flex: 1 }}><ScrollView>
-      <ProfileEditor {...props} />
-    </ScrollView></Host>;
+    const content = <Host dynamicColors={dynamicColors} style={{ flex: 1 }}><ProfileEditor {...props} /></Host>;
     if (editing) {
-      const options = { dismissible: true, onDismiss: onCloseEditor };
+      const options = { dismissible: true, heightFraction: 0.72, onDismiss: onCloseEditor };
       if (editorSheet.isOpen()) editorSheet.update(content, options);
       else editorSheet.open(content, options);
     } else if (editorSheet.isOpen()) {

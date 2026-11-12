@@ -1,5 +1,5 @@
-import { Button, Column, OutlinedButton, OutlinedTextField, Row, Switch, Text, TextButton } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, padding, semantics, testID, verticalScroll, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { Button, Column, HorizontalDivider, Icon, IconButton, OutlinedTextField, Row, Switch, Text, TextButton, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { background, clip, fillMaxWidth, padding, rotate, semantics, testID, verticalScroll, weight } from '@expo/ui/jetpack-compose/modifiers';
 import Constants from 'expo-constants';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, BackHandler } from 'react-native';
@@ -31,6 +31,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const variant = useSyncExternalStore(subscribeTheme, currentVariant, currentVariant);
   const t = (key: string) => localizedGetter(key, locale);
+  const colors = useMaterialColors();
   const dynamicColors = session.profile.role === 'tayyorlov_masteri' || session.profile.role === 'aparatchi';
   const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
@@ -39,6 +40,17 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   const [biometricBusy, setBiometricBusy] = useState(false);
   const biometricPending = useRef(false);
   const selectionSheet = useNativeSheet();
+  const languages = [
+    { id: 'uz', label: t('uzbek') }, { id: 'en', label: t('english') },
+    { id: 'ru', label: t('russian') }, { id: 'ur-PK', label: 'اردو (پاکستان)' },
+  ];
+  const themes: { id: AppThemeVariant; label: string }[] = [
+    { id: 'kalmar', label: t('themeKalmarLabel') }, { id: 'classic', label: t('themeClassicLabel') },
+    { id: 'moss', label: t('themeMossLabel') }, { id: 'lavender', label: t('themeLavenderLabel') },
+    { id: 'bliss', label: t('themeBlissLabel') }, { id: 'white', label: t('themeWhiteLabel') },
+  ];
+  const cardModifiers = [fillMaxWidth(), clip({ type: 'roundedCorner', radius: 20 }), background(colors.surfaceContainerLow)];
+  const rowPadding = { start: 16, end: 16, top: 12, bottom: 12 };
   useEffect(() => {
     if (!pin.mode && !switchPin.stage) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -69,17 +81,13 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   };
 
   const chooseLanguage = () => {
-    const choices = [
-      { id: 'uz', label: t('uzbek') }, { id: 'en', label: t('english') },
-      { id: 'ru', label: t('russian') }, { id: 'ur-PK', label: 'اردو (پاکستان)' },
-    ];
     selectionSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('languageTitle')}</Text>
-      <Text>{t('languageBody')}</Text>
-      {choices.map(choice => <TextButton key={choice.id} onClick={() => {
+      <Text color={colors.onSurfaceVariant}>{t('languageBody')}</Text>
+      {languages.map(choice => <TextButton key={choice.id} onClick={() => {
         selectionSheet.close();
         void localeController.setLocale(choice.id).catch(() => Alert.alert('Saqlab bo‘lmadi'));
-      }} modifiers={[fillMaxWidth()]}><Text>{choice.label}{locale === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></TextButton>)}
+      }} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}><Row modifiers={[fillMaxWidth()]}><Text>{choice.label}{locale === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></Row></TextButton>)}
     </Column></Host>, { dismissible: true });
   };
 
@@ -89,88 +97,123 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
       {appearanceChoices.map(choice => <TextButton key={choice.id} onClick={() => {
         selectionSheet.close();
         void setAppearance(choice.id).catch(() => Alert.alert('Saqlab bo‘lmadi'));
-      }} modifiers={[fillMaxWidth(), testID(`profile-appearance-${choice.id}`)]}>
-        <Text>{choice.label}{appearance === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text>
+      }} contentPadding={rowPadding} modifiers={[fillMaxWidth(), testID(`profile-appearance-${choice.id}`)]}>
+        <Row modifiers={[fillMaxWidth()]}><Text>{choice.label}{appearance === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></Row>
       </TextButton>)}
     </Column></Host>, { dismissible: true });
   };
 
   const chooseTheme = () => {
-    const choices: { id: AppThemeVariant; label: string }[] = [
-      { id: 'kalmar', label: t('themeKalmarLabel') }, { id: 'classic', label: t('themeClassicLabel') },
-      { id: 'moss', label: t('themeMossLabel') }, { id: 'lavender', label: t('themeLavenderLabel') },
-      { id: 'bliss', label: t('themeBlissLabel') }, { id: 'white', label: t('themeWhiteLabel') },
-    ];
     selectionSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('themeTitle')}</Text>
-      <Text>{t('themeBody')}</Text>
-      {choices.map(choice => <TextButton key={choice.id} onClick={() => {
+      <Text color={colors.onSurfaceVariant}>{t('themeBody')}</Text>
+      {themes.map(choice => <TextButton key={choice.id} onClick={() => {
         selectionSheet.close();
         void themeController.setVariant(choice.id).catch(() => Alert.alert('Saqlab bo‘lmadi'));
-      }} modifiers={[fillMaxWidth()]}><Text>{choice.label}{variant === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></TextButton>)}
+      }} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}><Row modifiers={[fillMaxWidth()]}><Text>{choice.label}{variant === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></Row></TextButton>)}
     </Column></Host>, { dismissible: true });
   };
 
-  return <Column verticalArrangement={{ spacedBy: 14 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
-    <Text style={{ typography: 'titleLarge' }}>{t('profileSettingsTitle')}</Text>
-    <Text>{t('profileSettingsBody')}</Text>
-    <TextButton onClick={chooseLanguage} modifiers={[fillMaxWidth(), testID('profile-language')]}><Text>{t('languageTitle')}</Text></TextButton>
-    <Text>{t('languageBody')}</Text>
-    <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}>
-      <Column modifiers={[weight(1)]}><Text>{t('themeModeTitle')}</Text><Text>{t('themeModeBody')}</Text></Column>
-      <TextButton onClick={chooseAppearance} modifiers={[testID('profile-appearance'), semantics({ contentDescription: t('themeModeTitle') })]}>
-        <Text>{appearanceChoices.find(choice => choice.id === appearance)?.label}</Text>
-      </TextButton>
-    </Row>
-    <TextButton onClick={chooseTheme} modifiers={[fillMaxWidth(), testID('profile-theme')]}><Text>{t('themeTitle')}</Text></TextButton>
-    <Text>{t('themeBody')}</Text>
-    <Text style={{ typography: 'titleLarge' }}>{t('securityTitle')}</Text>
-    <Text>{t('appLockPinTitle')}</Text><Text>{t('appLockPinBody')}</Text>
-    {!pin.mode ? <>
-      <Button enabled={!pin.busy} onClick={() => pin.open('set')} modifiers={[fillMaxWidth(), testID('profile-pin-set')]}>
-        <Text>{t(pin.security.hasPin ? 'pinChange' : 'pinSet')}</Text>
-      </Button>
-      {pin.security.hasPin ? <OutlinedButton enabled={!pin.busy} onClick={() => { void pin.remove(); }} modifiers={[fillMaxWidth()]}><Text>{t('pinRemove')}</Text></OutlinedButton> : null}
-      <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}>
-        <Column modifiers={[weight(1)]}><Text>{t('biometricEnableTitle')}</Text><Text>{t(pin.security.biometric ? 'biometricEnabledBody' : 'biometricDisabledBody')}</Text></Column>
-        <Switch value={pin.security.biometric} enabled={pin.security.hasPin && !biometricBusy} onCheckedChange={enabled => { void setBiometric(enabled); }}
-          modifiers={[semantics({ contentDescription: t('biometricEnableTitle') })]} />
+  const preferenceRow = (title: string, description: string, value: string, onClick: () => void, id: string) =>
+    <TextButton onClick={onClick} contentPadding={rowPadding} modifiers={[fillMaxWidth(), testID(id)]}>
+      <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth()]}>
+        <Column verticalArrangement={{ spacedBy: 3 }} modifiers={[weight(1)]}>
+          <Text color={colors.onSurface} style={{ typography: 'bodyLarge', fontWeight: '500' }}>{title}</Text>
+          <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{description}</Text>
+        </Column>
+        <Text color={colors.primary} style={{ typography: 'bodyMedium' }}>{value}</Text>
+        <Icon source={require('../../assets/icons/gscale/expand_more.xml')} size={18} tint={colors.onSurfaceVariant} modifiers={[rotate(-90)]} />
       </Row>
-    </> : <>
-      {pin.mode === 'set' && pin.phase === 'entry' ? <>
-        <OutlinedTextField value={pin.pin} enabled={!pin.busy} singleLine maxLength={4} visualTransformation="password"
+    </TextButton>;
+  const sectionTitle = (title: string) => <Text color={colors.onSurfaceVariant}
+    style={{ typography: 'labelLarge', fontWeight: '600' }} modifiers={[padding(4, 4, 4, 0)]}>{title}</Text>;
+  const divider = () => <HorizontalDivider color={colors.outlineVariant} modifiers={[padding(16, 0, 16, 0)]} />;
+
+  return <Column verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), verticalScroll(), padding(16, 8, 16, 28)]}>
+    <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}>
+      <Text color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '600' }} modifiers={[weight(1)]}>{t('profileSettingsTitle')}</Text>
+      <IconButton enabled={!pin.busy && !switchPin.busy && !biometricBusy} onClick={onClose} modifiers={[semantics({ contentDescription: t('closeAction') })]}>
+        <Icon source={require('../../assets/icons/gscale/close.xml')} size={22} tint={colors.onSurfaceVariant} />
+      </IconButton>
+    </Row>
+    <Text color={colors.onSurfaceVariant} style={{ typography: 'bodyMedium' }}>{t('profileSettingsBody')}</Text>
+    <Column modifiers={cardModifiers}>
+      {preferenceRow(t('languageTitle'), t('languageBody'), languages.find(choice => choice.id.split('-')[0] === locale.split('-')[0])?.label ?? '', chooseLanguage, 'profile-language')}
+      {divider()}
+      {preferenceRow(t('themeModeTitle'), t('themeModeBody'), appearanceChoices.find(choice => choice.id === appearance)?.label ?? '', chooseAppearance, 'profile-appearance')}
+      {divider()}
+      {preferenceRow(t('themeTitle'), t('themeBody'), themes.find(choice => choice.id === variant)?.label ?? '', chooseTheme, 'profile-theme')}
+    </Column>
+    {sectionTitle(t('securityTitle'))}
+    <Column modifiers={cardModifiers}>
+      <Column verticalArrangement={{ spacedBy: 4 }} modifiers={[fillMaxWidth(), padding(16, 14, 16, 4)]}>
+        <Text color={colors.onSurface} style={{ typography: 'bodyLarge', fontWeight: '500' }}>{t('appLockPinTitle')}</Text>
+        <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t('appLockPinBody')}</Text>
+      </Column>
+      {!pin.mode ? <>
+        <TextButton enabled={!pin.busy} onClick={() => pin.open('set')} contentPadding={rowPadding} modifiers={[fillMaxWidth(), testID('profile-pin-set')]}>
+          <Row modifiers={[fillMaxWidth()]}><Text>{t(pin.security.hasPin ? 'pinChange' : 'pinSet')}</Text></Row>
+        </TextButton>
+        {pin.security.hasPin ? <TextButton enabled={!pin.busy} onClick={() => { void pin.remove(); }} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}>
+          <Row modifiers={[fillMaxWidth()]}><Text>{t('pinRemove')}</Text></Row>
+        </TextButton> : null}
+        {divider()}
+        <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), padding(16, 12, 16, 12)]}>
+          <Column verticalArrangement={{ spacedBy: 3 }} modifiers={[weight(1)]}>
+            <Text color={colors.onSurface} style={{ typography: 'bodyLarge' }}>{t('biometricEnableTitle')}</Text>
+            <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t(pin.security.biometric ? 'biometricEnabledBody' : 'biometricDisabledBody')}</Text>
+          </Column>
+          <Switch value={pin.security.biometric} enabled={pin.security.hasPin && !biometricBusy} onCheckedChange={enabled => { void setBiometric(enabled); }}
+            modifiers={[semantics({ contentDescription: t('biometricEnableTitle') })]} />
+        </Row>
+      </> : <Column verticalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth(), padding(16, 8, 16, 16)]}>
+        {pin.mode === 'set' && pin.phase === 'entry' ? <OutlinedTextField value={pin.pin} enabled={!pin.busy} singleLine maxLength={4} visualTransformation="password"
           keyboardOptions={{ keyboardType: 'numberPassword' }} onValueChange={value => pin.change('pin', value)} modifiers={[fillMaxWidth()]}>
-          <OutlinedTextField.Label><Text>{t('pinEnterTitle')}</Text></OutlinedTextField.Label></OutlinedTextField>
-      </> : null}
-      {pin.mode === 'set' && pin.phase === 'confirm' ? <>
-        <OutlinedTextField value={pin.repeat} enabled={!pin.busy} singleLine maxLength={4} visualTransformation="password"
+          <OutlinedTextField.Label><Text>{t('pinEnterTitle')}</Text></OutlinedTextField.Label></OutlinedTextField> : null}
+        {pin.mode === 'set' && pin.phase === 'confirm' ? <OutlinedTextField value={pin.repeat} enabled={!pin.busy} singleLine maxLength={4} visualTransformation="password"
           keyboardOptions={{ keyboardType: 'numberPassword' }} onValueChange={value => pin.change('repeat', value)} modifiers={[fillMaxWidth()]}>
-          <OutlinedTextField.Label><Text>{t('pinRepeatTitle')}</Text></OutlinedTextField.Label></OutlinedTextField>
-      </> : null}
-      {pin.phaseError ? <Text>{pin.phaseError}</Text> : null}
-      {pin.phase === 'entry' ? <Button enabled={!pin.busy && pin.canNext} onClick={pin.next} modifiers={[fillMaxWidth()]}><Text>{t('nextItemAction')}</Text></Button> :
-        <Button enabled={!pin.busy} onClick={() => { void submitPin(); }} modifiers={[fillMaxWidth(), testID('profile-pin-save')]}><Text>{t(pin.busy ? 'pinSaving' : 'save')}</Text></Button>}
-      <TextButton enabled={!pin.busy} onClick={pin.back}><Text>{t('no')}</Text></TextButton>
-    </>}
-    <Text>{t('switchPinTitle')}</Text><Text>{t('switchPinBody')}</Text>
-    {!switchPin.stage ? <>
-      <Button enabled={!switchPin.busy && switchPin.hasPin !== null} onClick={switchPin.open} modifiers={[fillMaxWidth()]}>
-        <Text>{t(switchPin.hasPin ? 'switchPinChange' : 'switchPinSet')}</Text></Button>
-      {switchPin.hasPin ? <OutlinedButton enabled={!switchPin.busy} onClick={() => { void switchPin.remove(); }} modifiers={[fillMaxWidth()]}><Text>{t('switchPinRemove')}</Text></OutlinedButton> : null}
-    </> : <>
-      <OutlinedTextField value={switchPin.field} enabled={!switchPin.busy} singleLine maxLength={4} visualTransformation="password"
-        keyboardOptions={{ keyboardType: 'numberPassword' }} onValueChange={switchPin.change} modifiers={[fillMaxWidth()]}>
-        <OutlinedTextField.Label><Text>{t(switchPin.stage === 'entry' ? 'switchPinEnterTitle' : 'switchPinRepeatTitle')}</Text></OutlinedTextField.Label></OutlinedTextField>
-      {switchPin.error ? <Text>{switchPin.error}</Text> : null}
-      <Button enabled={!switchPin.busy} onClick={() => { void switchPin.submit(); }} modifiers={[fillMaxWidth()]}>
-        <Text>{t(switchPin.stage === 'entry' ? 'nextItemAction' : 'save')}</Text></Button>
-      <TextButton enabled={!switchPin.busy} onClick={switchPin.back}><Text>{t('no')}</Text></TextButton>
-    </>}
-    <TextButton onClick={openUpdate} modifiers={[fillMaxWidth()]}><Text>{t('appUpdateSettingsTitle')}</Text></TextButton>
-    <Text>{t('appUpdateSettingsBody')}</Text>
-    <Text>{`Versiya: ${Constants.expoConfig?.version ?? '—'}`}</Text>
-    <TextButton onClick={onLogout} modifiers={[fillMaxWidth(), testID('profile-disconnect')]}><Text>{t('disconnectSessionTitle')}</Text></TextButton>
-    <Text>{t('disconnectSessionBody')}</Text>
-    <TextButton enabled={!pin.busy && !switchPin.busy && !biometricBusy} onClick={onClose}><Text>{t('closeAction')}</Text></TextButton>
+          <OutlinedTextField.Label><Text>{t('pinRepeatTitle')}</Text></OutlinedTextField.Label></OutlinedTextField> : null}
+        {pin.phaseError ? <Text color={colors.error}>{pin.phaseError}</Text> : null}
+        {pin.phase === 'entry' ? <Button enabled={!pin.busy && pin.canNext} onClick={pin.next} modifiers={[fillMaxWidth()]}><Text>{t('nextItemAction')}</Text></Button> :
+          <Button enabled={!pin.busy} onClick={() => { void submitPin(); }} modifiers={[fillMaxWidth(), testID('profile-pin-save')]}><Text>{t(pin.busy ? 'pinSaving' : 'save')}</Text></Button>}
+        <TextButton enabled={!pin.busy} onClick={pin.back}><Text>{t('no')}</Text></TextButton>
+      </Column>}
+    </Column>
+    {sectionTitle(t('switchPinTitle'))}
+    <Column modifiers={cardModifiers}>
+      <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }} modifiers={[fillMaxWidth(), padding(16, 14, 16, 4)]}>{t('switchPinBody')}</Text>
+      {!switchPin.stage ? <>
+        <TextButton enabled={!switchPin.busy && switchPin.hasPin !== null} onClick={switchPin.open} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}>
+          <Row modifiers={[fillMaxWidth()]}><Text>{t(switchPin.hasPin ? 'switchPinChange' : 'switchPinSet')}</Text></Row></TextButton>
+        {switchPin.hasPin ? <TextButton enabled={!switchPin.busy} onClick={() => { void switchPin.remove(); }} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}>
+          <Row modifiers={[fillMaxWidth()]}><Text>{t('switchPinRemove')}</Text></Row></TextButton> : null}
+      </> : <Column verticalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth(), padding(16, 8, 16, 16)]}>
+        <OutlinedTextField value={switchPin.field} enabled={!switchPin.busy} singleLine maxLength={4} visualTransformation="password"
+          keyboardOptions={{ keyboardType: 'numberPassword' }} onValueChange={switchPin.change} modifiers={[fillMaxWidth()]}>
+          <OutlinedTextField.Label><Text>{t(switchPin.stage === 'entry' ? 'switchPinEnterTitle' : 'switchPinRepeatTitle')}</Text></OutlinedTextField.Label></OutlinedTextField>
+        {switchPin.error ? <Text color={colors.error}>{switchPin.error}</Text> : null}
+        <Button enabled={!switchPin.busy} onClick={() => { void switchPin.submit(); }} modifiers={[fillMaxWidth()]}>
+          <Text>{t(switchPin.stage === 'entry' ? 'nextItemAction' : 'save')}</Text></Button>
+        <TextButton enabled={!switchPin.busy} onClick={switchPin.back}><Text>{t('no')}</Text></TextButton>
+      </Column>}
+    </Column>
+    {sectionTitle(t('appTitle'))}
+    <Column modifiers={cardModifiers}>
+      <TextButton onClick={openUpdate} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}><Row modifiers={[fillMaxWidth()]}>
+        <Column verticalArrangement={{ spacedBy: 3 }}><Text>{t('appUpdateSettingsTitle')}</Text>
+          <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t('appUpdateSettingsBody')}</Text></Column>
+      </Row></TextButton>
+      {divider()}
+      <Row verticalAlignment="center" modifiers={[fillMaxWidth(), padding(16, 14, 16, 14)]}>
+        <Text color={colors.onSurface} modifiers={[weight(1)]}>{t('appUpdateInstalledVersion')}</Text>
+        <Text color={colors.onSurfaceVariant}>{Constants.expoConfig?.version ?? '—'}</Text>
+      </Row>
+    </Column>
+    <Column modifiers={cardModifiers}>
+      <TextButton onClick={onLogout} contentPadding={rowPadding} modifiers={[fillMaxWidth(), testID('profile-disconnect')]}><Row modifiers={[fillMaxWidth()]}>
+        <Column verticalArrangement={{ spacedBy: 3 }}><Text color={colors.error}>{t('disconnectSessionTitle')}</Text>
+          <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t('disconnectSessionBody')}</Text></Column>
+      </Row></TextButton>
+    </Column>
   </Column>;
 }
