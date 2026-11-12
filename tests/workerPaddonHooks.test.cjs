@@ -65,7 +65,8 @@ test('Paddon print physically succeeds before lock, reloads authority, then asks
   try { const operation = h.model.print(); await tick(); h.render();
     const events = h.events.map(e => e[0]); assert(events.indexOf('physicalPrint') < events.indexOf('confirmPrint'));
     assert(events.lastIndexOf('read') > events.indexOf('confirmPrint')); assert.equal(h.model.state.snapshot.paddon.locked_at_unix, 2);
-    assert.equal(h.model.presentation.data.title, 'worker.paddon.next.title'); assert.equal(h.events.some(e => e[0] === 'successor'), false);
+    assert.equal(h.model.presentation.data.title, 'worker.paddon.next.title'); assert.equal(h.model.presentation.data.kind, 'successor');
+    assert.equal(h.events.some(e => e[0] === 'successor'), false);
     await h.close(); await operation; assert.deepEqual(h.events.find(e => e[0] === 'successor'), ['successor', 'P1', 'cut']);
   } finally { h.dispose(); }
 });

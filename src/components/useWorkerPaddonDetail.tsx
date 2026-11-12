@@ -43,7 +43,7 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '' }: WorkerP
     confirm: valid => confirmPaddonPrint(session, code, valid), refresh: () => controller.load(), changed: owner.changed,
     chooseNext: async completion => {
       controller.setPrinting(false); const { p, locale } = strings.current, permit = controller.capture();
-      if (await presenter.current.open({ title: p('worker.paddon.next.title'), message: p('worker.paddon.next.body', { code }),
+      if (await presenter.current.open({ kind: 'successor', title: p('worker.paddon.next.title'), message: p('worker.paddon.next.body', { code }),
         cancelLabel: localizedGetter('no', locale), confirmLabel: localizedGetter('yes', locale) }) !== 'confirm' || !permit()) return null;
       const apparatus = completion.paddon.apparatus_id.trim() || owner.list.getSnapshot().apparatus || completion.apparatus;
       if (apparatus) return apparatus;

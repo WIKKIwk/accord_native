@@ -7,7 +7,8 @@ const mods = new Proxy({}, { get: (_target, key) => key === 'shapes' ? { rectang
 function native(h) {
   const runner = hooks(), events = h.events;
   h.packages.react = runner.react;
-  h.packages['@expo/ui/swift-ui'] = { ...proxy, Button: 'Button', HStack: 'HStack', Image: 'Image', List: 'List', ProgressView: 'ProgressView', RNHostView: 'RNHostView', Section: 'Section', Spacer: 'Spacer', SwipeActions: Object.assign(() => {}, { Actions: 'SwipeActions.Actions' }), Text: 'Text', VStack: 'VStack' };
+  h.packages['@expo/ui/swift-ui'] = { ...proxy, Alert: Object.assign(() => {}, { Trigger: 'Alert.Trigger', Message: 'Alert.Message', Actions: 'Alert.Actions' }),
+    Host: 'Host', Button: 'Button', HStack: 'HStack', Image: 'Image', List: 'List', ProgressView: 'ProgressView', RNHostView: 'RNHostView', Section: 'Section', Spacer: 'Spacer', SwipeActions: Object.assign(() => {}, { Actions: 'SwipeActions.Actions' }), Text: 'Text', VStack: 'VStack' };
   h.packages['@expo/ui/swift-ui/modifiers'] = mods;
   h.packages['@expo/ui/jetpack-compose'] = { Host: 'Host', Text: 'Text', Column: 'Column', Row: 'Row', TextButton: 'TextButton',
     AlertDialog: Object.assign(() => {}, { Title: 'AlertDialog.Title', Text: 'AlertDialog.Text', DismissButton: 'AlertDialog.DismissButton', ConfirmButton: 'AlertDialog.ConfirmButton' }), RNHostView: 'RNHostView',
@@ -173,6 +174,52 @@ for (const platform of ['ios', 'android']) {
     } finally { n.runner.dispose(); h.dispose(); }
   });
 }
+for (const order of ['button-first', 'dismissal-first']) test(`iOS successor alert resolves the choice after native dismissal (${order})`, async () => {
+  const h = await setup('detail', 'ios'), n = native(h), Component = h.load('components/WorkerPaddonDialog.ios').WorkerPaddonDialog;
+  try {
+    const operation = h.model.presentation.open({ kind: 'successor', title: 'New pallet?', message: 'P1 locked', cancelLabel: 'No', confirmLabel: 'Yes' }); h.render();
+    let settled = false; operation.then(() => { settled = true; });
+    const outer = n.render(Component, { data: h.model.presentation.data, visible: h.model.presentation.visible, close: h.model.presentation.close, dismissed: h.model.presentation.dismissed });
+    const tree = n.render(outer.type, outer.props), alert = node(tree, h.packages['@expo/ui/swift-ui'].Alert);
+    assert.equal(alert.props.title, 'New pallet?'); assert(node(tree, 'Alert.Message'));
+    const buttons = walk(node(tree, 'Alert.Actions')).filter(row => row.type === 'Button');
+    assert.deepEqual(buttons.map(row => row.props.label), ['No', 'Yes']);
+    assert.equal(buttons[0].props.role, 'cancel');
+    if (order === 'button-first') {
+      buttons[1].props.onPress(); h.render(); await tick(); assert.equal(settled, false);
+      alert.props.onIsPresentedChange(false);
+    } else {
+      alert.props.onIsPresentedChange(false); await tick(); assert.equal(settled, false);
+      buttons[1].props.onPress();
+    }
+    assert.equal(await operation, 'confirm');
+    alert.props.onIsPresentedChange(false); buttons[1].props.onPress();
+    assert.equal(h.model.presentation.isOpen(), false);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('iOS successor alert treats dismissal without a button as cancellation', async () => {
+  const h = await setup('detail', 'ios'), n = native(h), Component = h.load('components/WorkerPaddonDialog.ios').WorkerPaddonDialog;
+  try {
+    const operation = h.model.presentation.open({ kind: 'successor', title: 'New pallet?', cancelLabel: 'No', confirmLabel: 'Yes' }); h.render();
+    const outer = n.render(Component, { data: h.model.presentation.data, visible: h.model.presentation.visible, close: h.model.presentation.close, dismissed: h.model.presentation.dismissed });
+    const tree = n.render(outer.type, outer.props);
+    node(tree, h.packages['@expo/ui/swift-ui'].Alert).props.onIsPresentedChange(false);
+    assert.equal(await operation, null);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+for (const answer of ['No', 'Yes']) test(`iOS successor alert ${answer} preserves the print workflow`, async () => {
+  const h = await setup('detail', 'ios'), n = native(h), Component = h.load('components/WorkerPaddonDialog.ios').WorkerPaddonDialog;
+  try {
+    const operation = h.model.print(); await tick(); h.render();
+    assert.equal(h.model.presentation.data.kind, 'successor');
+    const outer = n.render(Component, { data: h.model.presentation.data, visible: h.model.presentation.visible, close: h.model.presentation.close, dismissed: h.model.presentation.dismissed });
+    const tree = n.render(outer.type, outer.props), alert = node(tree, h.packages['@expo/ui/swift-ui'].Alert);
+    node(tree, 'Button', row => row.props.label === (answer === 'Yes' ? 'Ha' : 'Yo‘q')).props.onPress();
+    h.render(); await tick(); assert.equal(h.events.some(event => event[0] === 'successor'), false);
+    alert.props.onIsPresentedChange(false); await operation;
+    assert.equal(h.events.some(event => event[0] === 'successor'), answer === 'Yes');
+  } finally { n.runner.dispose(); h.dispose(); }
+});
 test('long-press transfer checks the opposite native drop zone and rechecks its original account after asynchronous measurement', async () => {
   const h = await setup('transfer'), n = native(h); h.paddons.get('P1').items = [batch('A'), batch('B')]; await h.model.controller.load(); h.render();
   const useDrag = h.load('components/useWorkerPaddonDrag').useWorkerPaddonDrag, root = { current: { measureInWindow: callback => callback(0, 20) } };
