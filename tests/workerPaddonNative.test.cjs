@@ -152,3 +152,42 @@ test('drawer destinations include only current assigned active cutting apparatus
     h.session = { ...h.session, token: 'other', assigned_apparatus: ['print'] }; h.expire(); assert.deepEqual(render(true), []); await tick(); assert.deepEqual(render(true), []);
   } finally { runner.dispose(); h.dispose(); }
 });
+test('FAB eligibility follows assigned active cutters and the current account, not other visible machines', async () => {
+  const h = await setup('list'), runner = hooks(); h.packages.react = runner.react;
+  const useNavigation = h.load('components/useWorkerPaddonNavigation').useWorkerPaddonNavigation;
+  const render = owner => { runner.begin(); const value = useNavigation(true, owner); runner.flush(); return value; };
+  try {
+    h.catalog.push({ id: 'lam', name: 'Lamination', operation: 'laminate', lifecycle_state: 'active', sort_order: 0 },
+      { id: 'retired', name: 'Old cutter', operation: 'cut', lifecycle_state: 'retired', sort_order: 0 },
+      { id: 'unassigned', name: 'Other cutter', operation: 'cut', lifecycle_state: 'active', sort_order: 0 });
+    h.session.assigned_apparatus = ['lam', 'retired']; h.expire(); render(h.session); await tick();
+    assert.deepEqual(render(h.session), []);
+    h.session.assigned_apparatus = ['lam', 'cut']; h.expire(); render(h.session); await tick();
+    assert.deepEqual(render(h.session).map(item => item.id), ['paddons:cut']);
+    h.session.assigned_apparatus = ['lam']; h.expire();
+    assert.deepEqual(render(h.session), []); await tick(); assert.deepEqual(render(h.session), []);
+    h.session.assigned_apparatus = []; h.expire();
+    const reads = h.events.filter(event => event[0] === 'catalog').length;
+    assert.deepEqual(render(h.session), []); await tick();
+    assert.equal(h.events.filter(event => event[0] === 'catalog').length, reads);
+    h.session.assigned_apparatus = ['cut']; h.expire(); render(h.session); await tick();
+    assert.equal(render(h.session).length, 1);
+    const previous = h.session;
+    h.session = { ...previous, token: 'other', assigned_apparatus: ['lam'] }; h.expire();
+    assert.deepEqual(render(previous), []);
+    assert.deepEqual(render(h.session), []); await tick(); assert.deepEqual(render(h.session), []);
+  } finally { runner.dispose(); h.dispose(); }
+});
+test('FAB eligibility can recover on a refreshed queue catalog after an apparatus read fails', async () => {
+  const h = await setup('list'), runner = hooks(), pending = []; h.packages.react = runner.react;
+  h.files.apparatusApi.adminApparatus = (_session, options) => { options.beforeSend(); assert.equal(options.retryTransient, true);
+    const read = {}; read.promise = new Promise((resolve, reject) => { read.resolve = resolve; read.reject = reject; }); pending.push(read); return read.promise; };
+  const useNavigation = h.load('components/useWorkerPaddonNavigation').useWorkerPaddonNavigation;
+  const render = key => { runner.begin(); const value = useNavigation(true, h.session, key); runner.flush(); return value; };
+  try {
+    assert.deepEqual(render('initial'), []); pending[0].reject(Error('offline')); await tick();
+    assert.deepEqual(render('initial'), []); assert.deepEqual(render('reconnected'), []);
+    pending[1].resolve(h.catalog); await tick();
+    assert.deepEqual(render('reconnected').map(item => item.id), ['paddons:cut', 'paddons:cut2']);
+  } finally { runner.dispose(); h.dispose(); }
+});

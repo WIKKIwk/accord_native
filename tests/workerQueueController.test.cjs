@@ -167,7 +167,7 @@ test('pending writes prevent a successful-looking row snapshot from being handed
 
 function workerScreenHarness(platform, nativeNavigation = true) {
   const hooks = [], effects = [], opened = [], updates = [], actionOptions = [], presentations = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
-  const preparation = { calls: [], feedback: 0, result: { kind: 'menu', menu: { kind: 'bosma', actions: ['astatka', 'finish'], operation: 'print' } }, pending: null, error: null };
+  const preparation = { calls: [], feedback: 0, result: { kind: 'menu', menu: { kind: 'bosma', actions: ['astatka', 'finish'], operation: 'print' } }, pending: null, error: null, paddonOptions: [] };
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
     useState(initial) { const id = cursor++; if (!hooks[id]) hooks[id] = { value: typeof initial === 'function' ? initial() : initial }; return [hooks[id].value, value => { hooks[id].value = typeof value === 'function' ? value(hooks[id].value) : value; }]; },
@@ -193,6 +193,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     'expo-font': { useFonts: () => [true] }, 'expo-router': { router: { push: route => routes.push(route) }, useFocusEffect: effect => { preparation.blur = effect(); } },
     'react-native-reanimated': { useSharedValue: () => ({ set() {} }) },
     './components/useWorkerQueue': { useWorkerQueue: () => queueState },
+    './components/useWorkerPaddonNavigation': { useWorkerPaddonNavigation: (_visible, owner) => { preparation.paddonOwner = owner; return preparation.paddonOptions; } },
     './workerQueueReadError': { workerQueueReadCanRetry: () => true },
     './workerApi': api,
     './workerLongPressFeedback': { workerLongPressFeedback() { preparation.feedback++; } },
@@ -232,6 +233,18 @@ function nodes(tree, type, result = []) {
   if (tree.type === type) result.push(tree);
   nodes(tree.props?.children, type, result); return result;
 }
+for (const platform of ['ios', 'android']) test(`${platform}: worker FAB uses assigned cutter eligibility independent of the selected queue tab`, () => {
+  const x = workerScreenHarness(platform);
+  let tree = x.render();
+  assert.equal(nodes(tree, 'WorkerFab')[0].props.showPaddons, false);
+  assert.equal(x.preparation.paddonOwner, x.session);
+  x.preparation.paddonOptions = [{ id: 'paddons:another-cut' }];
+  tree = x.render();
+  assert.equal(nodes(tree, 'WorkerTabs')[0].props.selected, station);
+  assert.equal(nodes(tree, 'WorkerFab')[0].props.showPaddons, true);
+  x.preparation.paddonOptions = [];
+  assert.equal(nodes(x.render(), 'WorkerFab')[0].props.showPaddons, false);
+});
 for (const platform of ['ios', 'android']) test(`${platform}: FAB scanner overlays the mounted queue and closing it preserves the list`, async () => {
   const x = workerScreenHarness(platform, platform === 'ios');
   x.render(); await flush(); let tree = x.render();

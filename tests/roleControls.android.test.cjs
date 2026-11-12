@@ -28,7 +28,7 @@ test('worker FAB and navigation retain their destinations when using shared cont
     './useWorkerOrderText': { useWorkerOrderText: () => ({ t: value => value }) },
     '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
   });
-  const fab = WorkerFab({ onScan: () => calls.push('scan'), onSelect: id => calls.push(id), bottomOffset: 120 });
+  const fab = WorkerFab({ onScan: () => calls.push('scan'), onSelect: id => calls.push(id), showPaddons: true, bottomOffset: 120 });
   assert.equal(fab.type, 'RoleFab');
   assert.deepEqual(fab.props.actions.map(action => action.id), ['scan', 'daily', 'paddons']);
   assert.equal(fab.props.testIDPrefix, 'worker-fab');
@@ -46,6 +46,31 @@ test('worker FAB and navigation retain their destinations when using shared cont
   assert.deepEqual(bar.props.items.map(item => item.id), ['home', 'profile', 'chat']);
   bar.props.onSelect('chat');
   assert.equal(calls.at(-1), 'chat');
+});
+
+for (const platform of ['android', 'ios']) test(`${platform} worker FAB exposes Paddons only for an eligible worker`, () => {
+  const calls = [];
+  const { WorkerFab } = load(`components/WorkerFab.${platform}.tsx`, {
+    './useWorkerOrderText': { useWorkerOrderText: () => ({ t: value => value }) },
+    '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
+    '@expo/ui/community/menu': { MenuView: 'MenuView' },
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { View: 'View', PlatformColor: value => value, StyleSheet: { absoluteFill: {}, create: value => value } },
+  });
+  const render = showPaddons => {
+    const tree = WorkerFab({ showPaddons, onScan: () => calls.push('scan'), onSelect: id => calls.push(id) });
+    return platform === 'android' ? tree : nodes(tree, node => node.type === 'MenuView')[0];
+  };
+  const press = (menu, id) => platform === 'android' ? menu.props.onSelect(id) : menu.props.onPressAction({ nativeEvent: { event: id } });
+  let menu = render(false);
+  assert.deepEqual(menu.props.actions.map(action => action.id), ['scan', 'daily']);
+  press(menu, 'scan'); press(menu, 'daily'); press(menu, 'paddons');
+  assert.deepEqual(calls, ['scan', 'daily']);
+  menu = render(true);
+  assert.deepEqual(menu.props.actions.map(action => action.id), ['scan', 'daily', 'paddons']);
+  press(menu, 'paddons');
+  assert.deepEqual(calls, ['scan', 'daily', 'paddons']);
+  assert.deepEqual(render(false).props.actions.map(action => action.id), ['scan', 'daily']);
 });
 
 test('shared navigation fills only the selected Google icon and keeps all destinations clickable', () => {

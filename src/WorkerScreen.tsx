@@ -27,6 +27,7 @@ import { WorkerDrawer } from './components/WorkerDrawer';
 import { WorkerTabs } from './components/WorkerTabs';
 import { WorkerBottomBar } from './components/WorkerBottomBar';
 import { WorkerFab } from './components/WorkerFab';
+import { useWorkerPaddonNavigation } from './components/useWorkerPaddonNavigation';
 import { WorkerQrScanner } from './components/WorkerQrScanner';
 import { WorkerWorkInstructions } from './components/WorkerWorkInstructions';
 import { ProfileScreen } from './components/ProfileScreen';
@@ -142,6 +143,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const currentWindow = useRef(windowScope);
   const queueState = useWorkerQueue(session, searchScope, queueLimit, limitReady);
   const { queue, loading, loadedWindow: loadedScope, reload } = queueState;
+  const showPaddons = useWorkerPaddonNavigation(true, session, queue?.catalog).length > 0;
   const machineId = machineSelection === 'completed' || queue?.machines.some(machine => machine.id === machineSelection) ? machineSelection : (queue?.machines[0]?.id ?? '');
   const retryingQueue = !!queueState.error && workerQueueReadCanRetry(queueState.error);
   const error = queueState.error && !retryingQueue ? (queueState.error instanceof Error ? queueState.error.message : p('worker.error.sync')) : '';
@@ -557,7 +559,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       {!nativeNavigation && section !== 'paddons' && section !== 'inventory' && <View onLayout={event => setNavBarHeight(event.nativeEvent.layout.height)}>
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
       </View>}
-      {section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
+      {section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} showPaddons={showPaddons} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
       {activeOrder ? <WorkerOrderSheet key={activeOrder.presentationId} onClose={activeOrder.onClose!}>
         {renderOrderRoute(activeOrder, activeOrder.onClose!, queue)}
       </WorkerOrderSheet> : null}
