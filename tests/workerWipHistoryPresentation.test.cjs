@@ -36,28 +36,32 @@ test('history card rows retain source action, two-decimal quantity, both activit
   assert.equal(actual[0][1], '100.12 m'); assert.equal(actual[3][1], 'Bosma'); assert.equal(actual[4][1], 'worker.wip.action.pause');
   assert.equal(actual[6][1], '—'); assert.equal(actual[7][1], 'worker:123456', 'source list card deliberately retains the legacy worker fallback');
 });
-function harness(platform = 'ios', initial = [], role = 'aparatchi') {
-  const runner = hooks(), state = { rows: initial, error: null, opened: [], actions: [], longPressDetails: false };
+function harness(platform = 'ios', initial = [], role = 'aparatchi', inline = false) {
+  const runner = hooks(), state = { rows: initial, error: null, opened: [], actions: [], longPressDetails: false, parentCloses: 0, reads: 0 };
   runner.react.useContext = () => null;
   runner.react.useImperativeHandle = () => {};
   const sheet = { isOpen: () => false, close() {}, open: (content, options) => state.opened.push({ content, options }) };
+  const inlinePresenter = inline ? load('components/useWorkerWipSheet.ios.tsx', {
+    react: runner.react, './WorkerOrderSheet': { WorkerOrderSheet: 'InlineSheet' }, './workerSheetContext': { WorkerSheetCloseContext: {} },
+  }) : null;
   const { WorkerWipHistory } = load('components/WorkerWipHistory.tsx', {
     react: runner.react, '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host', RNHostView: 'RNHostView', Row: 'Row', Text: 'NativeText' },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-camera': { CameraView: 'Camera', useCameraPermissions: () => [{ granted: false, status: 'undetermined' }, async () => {}] },
     'react-native': { ActivityIndicator: 'Spinner', FlatList: 'FlatList', Platform: { OS: platform }, PlatformColor: value => value, Pressable: 'Pressable', StyleSheet: { create: value => value }, Text: 'Text', View: 'View' },
-    '../authorizedFetch': {}, '../nativeSheet': { useNativeSheet: () => sheet }, './useWorkerColors': { useWorkerColors: () => ({}) }, './workerSheetContext': { WorkerSheetCloseContext: {} },
+    '../authorizedFetch': {}, './useWorkerWipSheet': inlinePresenter ?? { useWorkerWipSheet: () => ({ sheet, dialogs: null }) }, './WorkerOrderControls': { WorkerOrderButton: 'Button' },
+    './useWorkerColors': { useWorkerColors: () => ({}) }, './workerSheetContext': { WorkerSheetCloseContext: {} },
     './useWorkerWipHistoryPalette': { useWorkerWipHistoryPalette: () => ({ summary: 'summary', summaryText: 'on-summary', summaryChip: 'summary-chip',
       card: 'card', cardText: 'card-text', cardMuted: 'card-muted', number: 'number', numberText: 'number-text', onPrimary: 'on-primary',
       status: { waiting: { backgroundColor: 'waiting', color: 'on-waiting' }, inUse: { backgroundColor: 'in-use', color: 'on-in-use' }, processed: { backgroundColor: 'processed', color: 'on-processed' } } }) },
     './WorkerAlert': { WorkerAlert: 'Alert' }, './WorkerFormDialog': { WorkerFormDialog: 'Search' }, './WorkerFormField': { WorkerFormField: 'Field' }, './WorkerIconButton': { WorkerIconButton: 'IconButton' },
-    './WorkerOrderSheet': {}, '../workerWip': { ...wip, loadWorkerWipBatches: async () => { if (state.error) throw state.error; return state.rows; } },
+    './WorkerOrderSheet': {}, '../workerWip': { ...wip, loadWorkerWipBatches: async () => { state.reads++; if (state.error) throw state.error; return state.rows; } },
     './WorkerWipBatchDetails': { WorkerWipBatchDetails: 'Details' }, './WorkerOrderDetails': {}, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: key => key }) },
     './useWorkerWipReactivation': { useWorkerWipReactivation: options => ({ isBusy: () => false, open: item => {
       state.actions.push(item); if (state.longPressDetails) options.showDetails(item);
     }, dialogs: null }) },
     '../workerWipHistoryPresentation': api, '../workerWipDetailsPresentation': details,
   });
-  const props = { session: { profile: { ref: 'worker', role } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() {} };
+  const props = { session: { profile: { ref: 'worker', role } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() { state.parentCloses++; } };
   return { state, render() { runner.begin(); const tree = WorkerWipHistory(props); runner.flush(); return tree; }, dispose: runner.dispose };
 }
 for (const platform of ['ios', 'android']) test(`${platform}: history renders localized summary, partial totals, states and QR details with no lost source action row`, async () => {
@@ -78,6 +82,44 @@ for (const platform of ['ios', 'android']) test(`${platform}: history renders lo
     const search = find(tree, node => node.type === 'Button' && node.props.label === 'worker.wip.history.search_qr'); search.props.onPress(); tree = h.render();
     assert.equal(find(tree, node => node.type === 'Search').props.title, 'worker.wip.history.search_qr');
     assert.equal(find(tree, node => node.type === 'Field').props.label, 'worker.wip.history.enter_qr');
+  } finally { h.dispose(); }
+});
+
+test('iOS history uses a bounded scroll viewport and the standard full-width QR action', async () => {
+  const h = harness('ios', [batch()]);
+  try {
+    h.render(); await tick(); const tree = h.render();
+    const list = find(tree, node => node.type === 'FlatList');
+    assert.deepEqual(list.props.style, { flex: 1, minHeight: 0 });
+    assert.equal(list.props.contentInsetAdjustmentBehavior, 'never');
+    assert.equal(list.props.automaticallyAdjustContentInsets, false);
+    const search = find(tree, node => node.type === 'Button' && node.props.label === 'worker.wip.history.search_qr');
+    assert.equal(search.props.variant, 'filled'); assert.equal(search.props.height, 52);
+    assert.equal(search.props.icon.ios, 'qrcode.viewfinder');
+    assert.equal(search.props.disabled, false);
+    search.props.onPress();
+    assert.equal(find(h.render(), node => node.type === 'Search').props.visible, true);
+  } finally { h.dispose(); }
+});
+
+for (const gesture of ['press', 'longPress']) test(`iOS WIP ${gesture} opens inline details and closing them retains the history list`, async () => {
+  const h = harness('ios', [batch(), batch({ batch_id: 'second', qr_payload: 'SECOND' })], 'aparatchi', true);
+  try {
+    h.state.longPressDetails = true;
+    h.render(); await tick(); let tree = h.render();
+    const row = find(tree, node => node.type === 'FlatList').props.renderItem({ item: h.state.rows[0], index: 0 });
+    if (gesture === 'press') row.props.onPress(); else { row.props.onLongPress(); row.props.onPress(); }
+    tree = h.render();
+    const children = nodes(tree, node => node.type === 'InlineSheet');
+    assert.equal(children.length, 1);
+    const child = children[0];
+    assert.equal(child.props.children.props.children.type, 'Details');
+    assert.equal(child.props.children.props.children.props.batch, h.state.rows[0]);
+    assert.equal(h.state.parentCloses, 0); assert.deepEqual(h.state.opened, [], 'iOS must not push a root route over the history sheet');
+    child.props.onClose(); tree = h.render();
+    assert.equal(find(tree, node => node.type === 'InlineSheet'), undefined);
+    assert.equal(find(tree, node => node.type === 'FlatList').props.data.length, 2);
+    assert.equal(h.state.parentCloses, 0); assert.equal(h.state.reads, 1);
   } finally { h.dispose(); }
 });
 

@@ -17,7 +17,7 @@ function setup(extra = {}) {
     react: runner.react, 'react/jsx-runtime': jsx, 'react-native': { Text: 'Text', View: 'View' },
     '../auth': { activeSessionToken: () => 'token', captureSessionWitness: () => ({ version: h.version }), isSessionWitnessCurrent: witness => witness.version === h.version,
       subscribeSessionWitness: fn => { h.witnessChanged = fn; return () => {}; } },
-    '../sessionReadScope': { sessionReadScope: () => `scope:${h.version}` }, '../nativeSheet': { useNativeSheet: () => sheet },
+    '../sessionReadScope': { sessionReadScope: () => `scope:${h.version}` }, './useWorkerWipSheet': { useWorkerWipSheet: () => ({ sheet, dialogs: null }) },
     '../workerDetailApi': { workerProductionOrderDetail: async () => { h.reads++; if (h.mapError) throw h.mapError; if (h.mapRead) return h.mapRead.promise; return { maps: [{ map: { id: 'o', nodes: [] } }] }; } },
     '../workerWipReactivation': { prepareWorkerWipReactivation: async (_session, input) => { h.previews.push(input); return h.review; }, workerReactivationDenialKey: reason => `worker.reactivate.reason.${reason || 'unavailable'}`,
       runWorkerWipReactivation: async () => { h.writes++; return h.write ? h.write.promise : { attempted: true, succeeded: true, reason: '' }; } },

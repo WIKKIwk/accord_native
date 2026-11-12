@@ -314,6 +314,23 @@ test('order actions use system glass controls on iOS 26 and native bordered cont
   }
 });
 
+test('iOS full-height sheets use the native large detent in compact and tall viewports', () => {
+  for (const height of [568, 844]) {
+    const { WorkerOrderSheet } = load('components/WorkerOrderSheet.ios.tsx', {
+      ...mocks, react: { useCallback: fn => fn, useState: value => [value, () => {}], useRef: value => ({ current: value }) },
+      'react-native': { PlatformColor: name => name, View: 'View', ScrollView: 'ScrollView', VirtualizedList: {}, useWindowDimensions: () => ({ width: 390, height }) },
+      'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) },
+      './useBaseTheme': { useBaseTheme: () => ({ mode: 'dark', colors: {}, direction: 'leftToRight' }) },
+      './workerSheetContext': { WorkerSheetCloseContext: { Provider: 'CloseProvider' } },
+    });
+    const tree = WorkerOrderSheet({ children: 'scrollable history', onClose() {}, dismissible: true, heightFraction: 1 });
+    const detents = nodes(tree, node => node.type === 'Group')[0].props.modifiers.find(modifier => modifier.name === 'presentationDetents');
+    assert.deepEqual(detents.args[0], ['large']); assert.equal(detents.args[1].selection, 'large');
+    assert.equal(nodes(tree, node => node.type === 'RNHostView')[0].props.matchContents, false);
+    assert.equal(nodes(tree, node => node.type === 'BottomSheet')[0].props.fitToContents, false);
+  }
+});
+
 test('iOS action sheet fits measured content with bounded scrolling and no half/full-screen snap points', () => {
   const { WorkerOrderSheet } = load('components/WorkerOrderSheet.ios.tsx', {
     ...mocks, react: { useCallback: fn => fn, useState: value => [value, () => {}], useRef: value => ({ current: value }) },

@@ -13,7 +13,7 @@ function harness() {
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
   const mocks = {
     react: { useState: () => [selected, value => { selected = typeof value === 'function' ? value(selected) : value; }], useImperativeHandle: (target, create) => { target.current = create(); } },
-    'react-native': { StyleSheet: { create: value => value } },
+    'react-native': { Platform: { OS: 'ios' }, StyleSheet: { create: value => value } },
     './WorkerOrderSheet': { WorkerOrderSheet: 'OrderSheet' },
     './WorkerOrderDetails': { WorkerOrderFreezeDetails: 'FreezeDetails' },
   };
@@ -41,6 +41,7 @@ test('completed history without an issue keeps the regular WIP list', () => {
   h.ref.current.open(order);
   const tree = h.render();
   assert.equal(tree.props.compact, false);
+  assert.equal(tree.props.heightFraction, 1, 'the scrollable iOS history uses the native large detent');
   assert.equal(tree.props.children.type.name, 'WorkerWipHistory');
   assert.equal(tree.props.children.props.order, order);
   tree.props.onClose(); assert.equal(h.render(), null);

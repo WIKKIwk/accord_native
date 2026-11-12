@@ -5,7 +5,6 @@ import { useContext, useEffect, useImperativeHandle, useRef, useState, type Ref 
 import { ActivityIndicator, FlatList, Platform, PlatformColor, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
-import { useNativeSheet } from '../nativeSheet';
 import type { Apparatus, CompletedOrder } from '../workerApi';
 import { useWorkerColors } from './useWorkerColors';
 import { useWorkerWipHistoryPalette } from './useWorkerWipHistoryPalette';
@@ -23,6 +22,8 @@ import { useWorkerOrderText } from './useWorkerOrderText';
 import { workerWipHistoryRows, workerWipHistoryTotals, workerWipHistoryTotalText } from '../workerWipHistoryPresentation';
 import { workerWipStatusLabel } from '../workerWipDetailsPresentation';
 import { useWorkerWipReactivation } from './useWorkerWipReactivation';
+import { useWorkerWipSheet } from './useWorkerWipSheet';
+import { WorkerOrderButton } from './WorkerOrderControls';
 
 type Props = { session: Session; order: WipOrder; onClose: () => void; stageHistory?: boolean; apparatusNames?: WipApparatusNames;
   operation?: string; allowReactivation?: boolean; onReactivationAttempted?: () => void; onWritePending?: (pending: boolean) => void };
@@ -45,7 +46,8 @@ export function WorkerWipHistorySheet({ ref, session, onDismiss, presentationId 
     setSelection(current => current === selection ? null : current);
     onDismiss();
   };
-  return <WorkerOrderSheet key={JSON.stringify([order.apparatusId, order.id, presentationId])} dismissible compact={!!order.issueNote} onClose={close}>
+  return <WorkerOrderSheet key={JSON.stringify([order.apparatusId, order.id, presentationId])} dismissible compact={!!order.issueNote}
+    heightFraction={!order.issueNote && Platform.OS === 'ios' ? 1 : undefined} onClose={close}>
     {order.issueNote
       ? <WorkerOrderFreezeDetails order={order} apparatusName={apparatusNames[order.apparatusId] ?? ''} onClose={close} />
       : <WorkerWipHistory session={session} order={order} apparatusNames={apparatusNames} onClose={close}
@@ -84,7 +86,7 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
   const [alert, setAlert] = useState<WorkerAlertData | null>(null);
-  const detailsSheet = useNativeSheet();
+  const { sheet: detailsSheet, dialogs: detailDialogs } = useWorkerWipSheet();
   const [permission, requestPermission] = useCameraPermissions();
   const [searching, setSearching] = useState(false);
   const [manualQr, setManualQr] = useState('');
@@ -142,6 +144,11 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
     detailsSheet.open(<WorkerWipBatchDetails session={session} order={order} batch={batch}
       apparatusNames={apparatusNames} onClose={detailsSheet.close} allowReprint={operatorReprint ? true : undefined} />, { dismissible: true });
   }
+  function beginSearch() {
+    searchHandled.current = false;
+    setManualQr(''); setNotFound(false); setSearching(true);
+    if (permission?.status === 'undetermined') void requestPermission();
+  }
   const heading = <View style={[styles.header, android && styles.androidHeader]}>
     <View style={styles.flex}>
       <Text style={[styles.heading, { color: colors.text }, android && styles.androidTitle]}>{p('worker.wip.history.title')}</Text>
@@ -166,6 +173,9 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
     {android && heading}
     {android && batches.length === 0 ? <View style={[styles.content, styles.flex]}>{status}</View> : <FlatList
       nestedScrollEnabled
+      style={!android ? styles.iosList : undefined}
+      contentInsetAdjustmentBehavior={!android ? 'never' : undefined}
+      automaticallyAdjustContentInsets={android ? undefined : false}
       contentContainerStyle={[styles.content, android && styles.androidContent]}
       data={filtered}
       keyExtractor={batch => String(batch.batch_id)}
@@ -191,19 +201,17 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
       }} />}
     <View style={[styles.footer, android && styles.androidFooter]}>
       {notFound && <Text style={styles.error}>{p('worker.wip.history.qr_not_found')}</Text>}
-      <Host matchContents={{ vertical: true }} style={android ? styles.fullWidth : undefined}>
+      {android ? <Host matchContents={{ vertical: true }} style={styles.fullWidth}>
         <Column spacing={6} style={android ? { width: '100%' } : undefined}>
           {!!foundId && <Button label={p('worker.wip.history.show_all')} variant="text" onPress={() => { setFoundId(''); setNotFound(false); }} />}
-          <Button label={p('worker.wip.history.search_qr')} style={android ? { width: '100%', height: 56 } : undefined} disabled={searching || loading || !!error || !batches.length} onPress={() => {
-            searchHandled.current = false;
-            setManualQr('');
-            setNotFound(false);
-            setSearching(true);
-            if (permission?.status === 'undetermined') void requestPermission();
-          }}>{android ? <Row spacing={8} alignment="center"><RNHostView matchContents><SymbolView name={{ android: 'qr_code_scanner', ios: 'qrcode.viewfinder' }} size={20}
+          <Button label={p('worker.wip.history.search_qr')} style={android ? { width: '100%', height: 56 } : undefined} disabled={searching || loading || !!error || !batches.length} onPress={beginSearch}>{android ? <Row spacing={8} alignment="center"><RNHostView matchContents><SymbolView name={{ android: 'qr_code_scanner', ios: 'qrcode.viewfinder' }} size={20}
             tintColor={searching || loading || !!error || !batches.length ? palette.cardMuted : palette.onPrimary} /></RNHostView><NativeText>{p('worker.wip.history.search_qr')}</NativeText></Row> : undefined}</Button>
         </Column>
-      </Host>
+      </Host> : <>
+        {!!foundId && <WorkerOrderButton label={p('worker.wip.history.show_all')} variant="text" onPress={() => { setFoundId(''); setNotFound(false); }} />}
+        <WorkerOrderButton label={p('worker.wip.history.search_qr')} variant="filled" height={52}
+          icon={{ ios: 'qrcode.viewfinder', android: 'qr_code_scanner' }} disabled={searching || loading || !!error || !batches.length} onPress={beginSearch} />
+      </>}
     </View>
     <WorkerFormDialog visible={searching} title={p('worker.wip.history.search_qr')} onCancel={() => setSearching(false)}
       cancelLabel={p('worker.action.cancel')} confirmLabel={t('Qidirish')} confirmDisabled={!manualQr.trim()} onConfirm={() => searchQr(manualQr)}>
@@ -212,7 +220,7 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
       {searching && !permission?.granted && <Host matchContents={{ vertical: true }}><Button label={t('Kameraga ruxsat berish')} onPress={() => { void requestPermission(); }} /></Host>}
       {searching && <WorkerFormField label={p('worker.wip.history.enter_qr')} onChangeText={setManualQr} />}
     </WorkerFormDialog>
-    <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />{reactivation.dialogs}
+    <WorkerAlert alert={alert} onDismiss={() => setAlert(null)} />{reactivation.dialogs}{detailDialogs}
   </View>;
 }
 
@@ -222,6 +230,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   androidHeader: { paddingTop: 12, paddingHorizontal: 16, marginBottom: 0 },
   flex: { flex: 1 },
+  iosList: { flex: 1, minHeight: 0 },
   fullWidth: { width: '100%' },
   heading: { fontSize: 17, fontWeight: '700' },
   androidTitle: { fontSize: 20, lineHeight: 26 },

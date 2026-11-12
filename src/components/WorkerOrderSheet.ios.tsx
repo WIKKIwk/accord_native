@@ -12,8 +12,9 @@ const listContext = (VirtualizedList as unknown as { contextType?: Context<unkno
 
 export function WorkerOrderSheet({ children, onClose, dismissible = false, preventDismiss = false, compact = false, fitContent = false, measureContent = false, heightFraction }: Props) {
   const fraction = heightFraction ?? (compact ? 0.5 : 0.9);
+  const fixedDetent: PresentationDetent = fraction === 1 ? 'large' : { fraction };
   const [presented, setPresented] = useState(true);
-  const [detent, setDetent] = useState<PresentationDetent>({ fraction });
+  const [detent, setDetent] = useState<PresentationDetent>(fixedDetent);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   const closed = useRef(false), theme = useBaseTheme();
   const close = useCallback(() => setPresented(false), []);
@@ -47,7 +48,7 @@ export function WorkerOrderSheet({ children, onClose, dismissible = false, preve
         presentationBackground(backgroundColor), presentationDragIndicator(dismissible ? 'visible' : 'hidden'), interactiveDismissDisabled(preventDismiss || !dismissible),
         ...(measured ? [presentationDetents([measuredDetent], { selection: measuredDetent })]
           : fitContent ? [presentationSizing('automatic', { fitted: { horizontal: false, vertical: true } })]
-          : [presentationDetents(compact && heightFraction == null ? [{ fraction: 0.5 }, { fraction: 0.9 }] : [{ fraction }], { selection: detent, onSelectionChange: setDetent })]),
+          : [presentationDetents(compact && heightFraction == null ? [{ fraction: 0.5 }, { fraction: 0.9 }] : [fixedDetent], { selection: detent, onSelectionChange: setDetent })]),
       ]}>
         <RNHostView matchContents={fitContent && !measured ? { vertical: true } : false}>
           <View style={{ ...(fitContent && !measured ? {} : { flexGrow: 1, height: 0 }), paddingTop: topPadding, backgroundColor }}>

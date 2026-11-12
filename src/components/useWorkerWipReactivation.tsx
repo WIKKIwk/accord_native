@@ -5,7 +5,7 @@ import { sessionReadScope } from '../sessionReadScope';
 import { workerProductionOrderDetail } from '../workerDetailApi';
 import { prepareWorkerWipReactivation, runWorkerWipReactivation, workerReactivationDenialKey, type WorkerWipReactivationReview } from '../workerWipReactivation';
 import type { WipApparatusNames, WipBatch, WipOrder } from '../workerWip';
-import { useNativeSheet } from '../nativeSheet';
+import { useWorkerWipSheet } from './useWorkerWipSheet';
 import { WorkerSheetButton } from './WorkerSheetButton';
 import { WorkerPaddonDialog } from './WorkerPaddonDialog';
 import { WorkerPaddonFeedback } from './WorkerPaddonFeedback';
@@ -48,7 +48,7 @@ export function useWorkerWipReactivation(props: Props) {
   const { session, order, apparatusNames, operation = '', allowReactivation = false, showDetails, onAttempted, onWritePending } = props;
   const { p } = useWorkerOrderText(), scope = sessionReadScope(session);
   const owner = useMemo(() => ownerFor(session, scope), [session, scope]);
-  const sheet = useNativeSheet(), presentation = useWorkerPaddonPresentation(owner.current);
+  const { sheet, dialogs: sheetDialogs } = useWorkerWipSheet(), presentation = useWorkerPaddonPresentation(owner.current);
   const busy = useRef(false), request = useRef<AbortController | null>(null), pendingChoice = useRef<((choice: Choice) => void) | null>(null);
   useLayoutEffect(() => { owner.mount(true); return () => owner.mount(false); }, [owner]);
   useEffect(() => {
@@ -96,6 +96,6 @@ export function useWorkerWipReactivation(props: Props) {
       presentation.message(outcome.succeeded ? p('worker.reactivate.success') : `${p(workerReactivationDenialKey(outcome.reason))}\n${p('worker.reactivate.unconfirmed')}`);
     } finally { if (request.current === controller) request.current = null; busy.current = false; }
   }
-  return { open, isBusy: () => busy.current, dialogs: <><WorkerPaddonDialog data={presentation.data} visible={presentation.visible} close={presentation.close} dismissed={presentation.dismissed} />
+  return { open, isBusy: () => busy.current, dialogs: <>{sheetDialogs}<WorkerPaddonDialog data={presentation.data} visible={presentation.visible} close={presentation.close} dismissed={presentation.dismissed} />
     <WorkerPaddonFeedback message={presentation.notice} /></> };
 }
