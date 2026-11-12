@@ -79,6 +79,7 @@ import { WorkerOrderMergeDialog } from './components/WorkerOrderMergeDialog';
 import { workerOrderPresentationDenied } from './workerOrderPresentation';
 import { useWorkerOrderPresentation } from './components/useWorkerOrderPresentation';
 import { WorkerOrderSyncProgress } from './components/WorkerOrderSyncProgress';
+import { WorkerOrderPauseStatus } from './components/WorkerOrderPauseStatus';
 import { workerOrderRezkaInstructions } from './workerOrderRezkaInstructions';
 
 type Obj = Record<string, any>;
@@ -1066,7 +1067,8 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     </View>}
     <View style={[styles.card, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.actionCard]}>
     <WorkerOrderSyncProgress pending={loading || (!synchronized && !busy && !presentationDenied)} color={colors.icon} />
-    {view.temporarilyPaused && <Text style={[styles.detailText, { color: colors.muted }, Platform.OS === 'ios' && iosStyles.temporaryPause]}>{t("Vaqtincha yechilgan")}</Text>}
+    {view.temporarilyPaused && <WorkerOrderPauseStatus message={t("Vaqtincha yechilgan")}
+      style={[styles.detailText, { color: colors.muted }, Platform.OS === 'ios' && iosStyles.temporaryPause]} />}
     {['frozen', 'freeze_requested'].includes(effectiveOrderControl) && <Text style={errorTextStyle}>{p(effectiveOrderControl === 'frozen' ? 'worker.freeze.active' : 'worker.freeze.requested')}</Text>}
     {!!error && !selected && !delivery && <Text style={errorTextStyle}>{t(error)}</Text>}
     {!!success && <Text style={successTextStyle}>{t(success)}</Text>}
