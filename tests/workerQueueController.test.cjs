@@ -232,6 +232,18 @@ function nodes(tree, type, result = []) {
   if (tree.type === type) result.push(tree);
   nodes(tree.props?.children, type, result); return result;
 }
+for (const platform of ['ios', 'android']) test(`${platform}: FAB scanner overlays the mounted queue and closing it preserves the list`, async () => {
+  const x = workerScreenHarness(platform, platform === 'ios');
+  x.render(); await flush(); let tree = x.render();
+  const queueBefore = x.queueState.queue;
+  nodes(tree, 'WorkerFab')[0].props.onScan(); tree = x.render();
+  const scanner = nodes(tree, 'WorkerQrScanner')[0];
+  assert.ok(scanner); assert.equal(nodes(tree, 'WorkerTabs').length, 1); assert.equal(nodes(tree, 'Modal').length, 0);
+  assert.deepEqual(x.routes, []); assert.equal(scanner.props.current(), true);
+  scanner.props.onClose(); tree = x.render();
+  assert.equal(nodes(tree, 'WorkerQrScanner').length, 0); assert.equal(nodes(tree, 'WorkerTabs').length, 1);
+  assert.equal(x.queueState.queue, queueBefore); assert.deepEqual(x.routes, []);
+});
 for (const platform of ['ios', 'android']) test(`${platform} real WorkerScreen opens order sheet from retained unsynchronized rows with no stale action cursor`, async () => {
   const x = workerScreenHarness(platform); let tree = x.render(); await flush(); tree = x.render();
   const list = nodes(tree, 'WorkerTabs')[0].props.children(station, undefined, undefined);
