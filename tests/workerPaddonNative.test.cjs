@@ -26,6 +26,7 @@ function native(h) {
   h.files['shared/navigation/RoleHeader.android'] = { RoleHeader: 'RoleHeader' };
   h.files['shared/navigation/RoleHeaderButton'] = { RoleHeaderButton: 'RoleHeaderButton' };
   h.files['shared/navigation/RoleFab.android'] = { RoleFab: 'RoleFab' };
+  h.files['components/WorkerBottomBar'] = { WorkerBottomBar: 'WorkerBottomBar' };
   h.files['components/WorkerOrderControls'] = { WorkerOrderButton: 'Action' };
   h.files['components/WorkerPaddonWip'] = { WorkerPaddonWipCard: 'WipCard', WorkerPaddonWipContent: 'WipContent' };
   h.files['components/useWorkerColors'] = { useWorkerColors: () => ({ background: 'bg', surface: 'surface' }) };
@@ -152,6 +153,34 @@ test('Android Paddon FAB keeps scan and selection actions available in their pro
     assert.equal(h.model.presentation.data.title, 'worker.paddon.confirm.add.title');
     await h.close(); await tick(); h.render();
     assert.deepEqual(h.events.find(event => event[0] === 'add'), ['add', ['A']]);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('Android Paddon detail receives the worker navigation callback', async () => {
+  const h = await setup('list', 'android'), n = native(h), onSelect = () => {};
+  for (const name of ['WorkerPaddonList', 'WorkerPaddonDetail', 'WorkerPaddonTransfer']) h.files[`components/${name}`] = { [name]: name };
+  const Component = h.load('components/WorkerPaddons.android').WorkerPaddons;
+  try {
+    const props = { ...h.props, onSelect };
+    let tree = n.render(Component, props); node(tree, 'WorkerPaddonList').props.onDetail('P1', 'cut');
+    tree = n.render(Component, props); assert.equal(node(tree, 'WorkerPaddonDetail').props.onSelect, onSelect);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('Android Paddon detail keeps navigation below the FAB and protects pending scans', async () => {
+  const h = await setup('detail', 'android'), n = native(h), selected = [];
+  h.files['components/useWorkerPaddonDetail'] = { useWorkerPaddonDetail: () => h.model };
+  const Component = h.load('components/WorkerPaddonDetail.android').WorkerPaddonDetail;
+  try {
+    const props = { ...h.props, onSelect: id => selected.push(id) };
+    let tree = n.render(Component, props), bar = node(tree, 'WorkerBottomBar');
+    assert.equal(tree.props.children[1], bar); assert(node(tree.props.children[0], 'RoleFab'));
+    bar.props.onSelect('profile'); assert.deepEqual(selected, ['profile']);
+    h.model.controller.startScan(); await h.model.controller.stage('A'); h.render();
+    tree = n.render(Component, props); node(tree, 'WorkerBottomBar').props.onSelect('chat'); h.render();
+    assert.equal(h.model.presentation.data.title, 'worker.paddon.scan.discard.title');
+    await h.close(null); assert.deepEqual(selected, ['profile']); assert.equal(h.model.state.scanning, true);
+    tree = n.render(Component, props); node(tree, 'WorkerBottomBar').props.onSelect('chat'); h.render();
+    await h.close(); await tick(); h.render();
+    assert.deepEqual(selected, ['profile', 'chat']); assert.equal(h.model.state.scanning, false);
   } finally { n.runner.dispose(); h.dispose(); }
 });
 test('Android Paddon FAB disables actions for a locked Paddon', async () => {

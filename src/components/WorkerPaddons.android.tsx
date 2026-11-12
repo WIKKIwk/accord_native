@@ -14,7 +14,7 @@ export function WorkerPaddons({ session, apparatus = '', name = '', onBack, onSe
         onDetail={(code, apparatus) => setPage({ kind: 'detail', code, apparatus })} onTransfer={apparatus => setPage({ kind: 'transfer', apparatus })} />
         {onSelect ? <WorkerBottomBar active="" onSelect={onSelect} onScan={() => {}} /> : null}
       </View>
-      {page.kind === 'detail' ? <WorkerPaddonDetail session={session} code={page.code} apparatus={page.apparatus} onBack={list} />
+      {page.kind === 'detail' ? <WorkerPaddonDetail session={session} code={page.code} apparatus={page.apparatus} onBack={list} onSelect={onSelect} />
         : page.kind === 'transfer' ? <WorkerPaddonTransfer session={session} apparatus={page.apparatus} onBack={list} /> : null}
     </>;
 }

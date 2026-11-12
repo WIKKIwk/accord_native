@@ -4,6 +4,7 @@ import { ActivityIndicator, BackHandler, FlatList, Pressable, RefreshControl, Sc
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { RoleFab, type RoleFabAction } from '../shared/navigation/RoleFab.android';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { WorkerBottomBar } from './WorkerBottomBar';
 import { WorkerQueueCard } from './WorkerQueueCard.android';
 import { WorkerOrderButton } from './WorkerOrderControls';
 import { WorkerPaddonCamera } from './WorkerPaddonCamera';
@@ -12,7 +13,7 @@ import { WorkerPaddonWipCard } from './WorkerPaddonWip';
 import { useWorkerPaddonDetail, type WorkerPaddonDetailProps } from './useWorkerPaddonDetail';
 
 // @v2 AparatchiPaddonDetailScreen
-export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
+export function WorkerPaddonDetail(props: WorkerPaddonDetailProps & { onSelect?: (id: string) => void }) {
   const h = useWorkerPaddonDetail(props), { state, p, header } = h, colors = useMaterialColors();
   const list = useRef<FlatList>(null), scannerTop = useRef(0), requestBack = useRef(h.requestBack);
   useLayoutEffect(() => { requestBack.current = h.requestBack; }, [h.requestBack]);
@@ -63,7 +64,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
   </>;
   const reviewData = h.presentation.data?.kind === 'review' ? { ...h.presentation.data, title: p('worker.paddon.scan.pending', { count: state.scanned.length }),
     confirmLabel: p('worker.paddon.scan.confirm', { count: state.scanned.length }), confirmDisabled: !h.canConfirmScan } : h.presentation.data;
-  return <View style={{ flex: 1, backgroundColor: colors.background }}>
+  return <View style={{ flex: 1, backgroundColor: colors.background }}><View style={{ flex: 1 }}>
     <RoleHeader title={props.code} subtitle={p('worker.paddon.detail.subtitle')} navigation={{ icon: 'back', label: h.t('Orqaga'), onPress: () => { void h.requestBack(props.onBack); } }} />
     {state.phase === 'loading' ? <ActivityIndicator style={{ flex: 1 }} /> : state.phase === 'error' ? <View style={{ flex: 1, padding: 20, gap: 16 }}>
       <Host matchContents><Text>{p('worker.paddon.load_failed')}</Text></Host><WorkerOrderButton label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} />
@@ -93,5 +94,10 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
       {h.presentation.data?.kind === 'review' ? <ScrollView contentContainerStyle={{ gap: 10 }}>{h.scanned.map(row => <Pressable key={row.batch.batch_id} onPress={() => h.controller.unstage(row.batch.batch_id)}>
         <WorkerPaddonWipCard content={row} selectable selectionIcon="close" /></Pressable>)}</ScrollView> : null}
     </WorkerPaddonDialog>{h.printerDialogs}
+  </View>
+    {props.onSelect ? <WorkerBottomBar active="" onSelect={id => {
+      if (!h.current() || h.blocked || h.presentation.isOpen()) return;
+      void h.requestBack(() => props.onSelect?.(id));
+    }} onScan={() => {}} /> : null}
   </View>;
 }
