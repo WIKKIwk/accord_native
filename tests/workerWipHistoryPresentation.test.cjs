@@ -36,8 +36,8 @@ test('history card rows retain source action, two-decimal quantity, both activit
   assert.equal(actual[0][1], '100.12 m'); assert.equal(actual[3][1], 'Bosma'); assert.equal(actual[4][1], 'worker.wip.action.pause');
   assert.equal(actual[6][1], '—'); assert.equal(actual[7][1], 'worker:123456', 'source list card deliberately retains the legacy worker fallback');
 });
-function harness(platform = 'ios', initial = []) {
-  const runner = hooks(), state = { rows: initial, error: null, opened: [], actions: [] };
+function harness(platform = 'ios', initial = [], role = 'aparatchi') {
+  const runner = hooks(), state = { rows: initial, error: null, opened: [], actions: [], longPressDetails: false };
   runner.react.useContext = () => null;
   runner.react.useImperativeHandle = () => {};
   const sheet = { isOpen: () => false, close() {}, open: (content, options) => state.opened.push({ content, options }) };
@@ -52,10 +52,12 @@ function harness(platform = 'ios', initial = []) {
     './WorkerAlert': { WorkerAlert: 'Alert' }, './WorkerFormDialog': { WorkerFormDialog: 'Search' }, './WorkerFormField': { WorkerFormField: 'Field' }, './WorkerIconButton': { WorkerIconButton: 'IconButton' },
     './WorkerOrderSheet': {}, '../workerWip': { ...wip, loadWorkerWipBatches: async () => { if (state.error) throw state.error; return state.rows; } },
     './WorkerWipBatchDetails': { WorkerWipBatchDetails: 'Details' }, './WorkerOrderDetails': {}, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: key => key }) },
-    './useWorkerWipReactivation': { useWorkerWipReactivation: () => ({ isBusy: () => false, open: item => state.actions.push(item), dialogs: null }) },
+    './useWorkerWipReactivation': { useWorkerWipReactivation: options => ({ isBusy: () => false, open: item => {
+      state.actions.push(item); if (state.longPressDetails) options.showDetails(item);
+    }, dialogs: null }) },
     '../workerWipHistoryPresentation': api, '../workerWipDetailsPresentation': details,
   });
-  const props = { session: { profile: { ref: 'worker' } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() {} };
+  const props = { session: { profile: { ref: 'worker', role } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() {} };
   return { state, render() { runner.begin(); const tree = WorkerWipHistory(props); runner.flush(); return tree; }, dispose: runner.dispose };
 }
 for (const platform of ['ios', 'android']) test(`${platform}: history renders localized summary, partial totals, states and QR details with no lost source action row`, async () => {
@@ -124,6 +126,30 @@ test('Android WIP surfaces follow the current Material palette in light and dark
     assert.equal(palette.status.waiting.backgroundColor, colors.secondaryContainer);
     assert.equal(palette.status.inUse.backgroundColor, colors.primaryContainer);
     assert.equal(palette.status.processed.backgroundColor, colors.secondaryContainer);
+  }
+});
+
+test('Android operators can open a reprint for another worker’s ordinary WIP without changing other roles or opening WIP', async () => {
+  for (const scenario of [
+    { platform: 'android', role: 'aparatchi', source: '', expected: true },
+    { platform: 'android', role: 'aparatchi', source: ' OPENING_WIP ', expected: undefined },
+    { platform: 'android', role: 'rezka_master', source: '', expected: undefined },
+    { platform: 'ios', role: 'aparatchi', source: '', expected: undefined },
+  ]) {
+    for (const gesture of ['press', 'longPress']) {
+      const item = batch({ worker_ref: 'another-worker', payload_json: { input_wip_source_kind: scenario.source } });
+      const h = harness(scenario.platform, [item], scenario.role);
+      try {
+        h.state.longPressDetails = true;
+        h.render(); await tick(); const tree = h.render();
+        const row = find(tree, node => node.type === 'FlatList').props.renderItem({ item, index: 0 });
+        if (gesture === 'press') row.props.onPress(); else row.props.onLongPress();
+        const detail = h.state.opened[0].content;
+        assert.equal(detail.type, 'Details');
+        assert.equal(detail.props.batch, item);
+        assert.equal(detail.props.allowReprint, scenario.expected, JSON.stringify({ ...scenario, gesture }));
+      } finally { h.dispose(); }
+    }
   }
 });
 

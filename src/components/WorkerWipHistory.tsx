@@ -137,8 +137,10 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
       setAlert({ title: p('worker.daily.wip_qr_missing'), message: p('worker.daily.wip_qr_missing.body'), confirmLabel: p('worker.action.close') });
       return;
     }
+    const operatorReprint = android && session.profile.role === 'aparatchi' &&
+      wipText(batch.payload_json?.input_wip_source_kind).toLowerCase() !== 'opening_wip';
     detailsSheet.open(<WorkerWipBatchDetails session={session} order={order} batch={batch}
-      apparatusNames={apparatusNames} onClose={detailsSheet.close} />, { dismissible: true });
+      apparatusNames={apparatusNames} onClose={detailsSheet.close} allowReprint={operatorReprint ? true : undefined} />, { dismissible: true });
   }
   const heading = <View style={[styles.header, android && styles.androidHeader]}>
     <View style={styles.flex}>
