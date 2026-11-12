@@ -36,5 +36,12 @@ export function useWorkerScannedWips({ session, apparatus, orderId, stage, onMut
       details: [p(labels.state), [item.worker_display_name, item.linked_at_unix > 0 ? new Date(item.linked_at_unix * 1000).toLocaleString() : ''].filter(Boolean).join(' · '),
         ...(!canReturn && item.state !== 'returned' ? [p(labels.reason)] : [])].filter(Boolean) };
   });
-  return { state, controller, rows, alert, p, t };
+  return { state, controller, rows, alert, p, t, presentation: {
+    fitContent: rows.length === 0,
+    canReload: state.phase !== 'loading' && state.phase !== 'invalid' && !state.writing,
+    canRetry: state.phase !== 'invalid' && !state.writing,
+    loading: state.phase === 'loading',
+    failed: state.phase === 'error' || state.phase === 'invalid',
+    empty: state.phase === 'ready' && rows.length === 0,
+  } };
 }
