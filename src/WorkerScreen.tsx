@@ -508,9 +508,9 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
           {error ? <ListItem supportingText={error} onPress={() => { void reload(true); }}>{p('worker.action.retry')}</ListItem> : null}
           {queue && !queue.machines.length ? <ListItem>{p('worker.queue.empty.apparatus')}</ListItem> : null}
           {tabId === 'completed' && !completed.length && !loading ? <ListItem>{p('worker.queue.completed.empty')}</ListItem> : null}
-          {tabId !== 'completed' && canWork ? <ListItem>{p('worker.queue.your.apparatus')}</ListItem> : null}
+          {Platform.OS !== 'android' && tabId !== 'completed' && canWork ? <ListItem>{p('worker.queue.your.apparatus')}</ListItem> : null}
           {tabId === 'completed' ? completed.map((order, index) => (
-            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} first={index === 0} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} first={Platform.OS !== 'android' && index === 0} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
@@ -521,7 +521,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
           )) : null}
           {pageMachine && !pageOrders.length && !loading ? <ListItem>{p('worker.queue.empty.orders', { apparatus: pageMachine.name.trim() })}</ListItem> : null}
           {tabId !== 'completed' ? pageOrders.map((order, index) => (
-            <WorkerOrderListItem key={order.id} first={index === 0} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+            <WorkerOrderListItem key={order.id} first={Platform.OS !== 'android' && index === 0} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
               session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
               headline={[order.code, order.title].filter(Boolean).join(' · ')}
               supportingText={[order.temporarilyPaused ? p('worker.temporary_pause.status') : '', order.customer].filter(Boolean).join(' • ')}
