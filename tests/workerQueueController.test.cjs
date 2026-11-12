@@ -517,7 +517,7 @@ for (const platform of ['ios', 'android']) {
     const row = screenRows(x.render())[0]; x.preparation.error = new TypeError('Network request failed');
     await row.props.onLongPress(); let tree = x.render();
     assert.equal(nodes(tree, 'WorkerOrderSheet').length, 0); assert.equal(x.opened.length, 0);
-    assert.equal(nodes(tree, 'WorkerPaddonFeedback')[0].props.message, 'worker.error.sync');
+    assert.equal(nodes(tree, 'WorkerCutSheets')[0].props.notice, 'worker.error.sync');
     assert.equal(nodes(tree, 'WorkerAlert')[0].props.alert, null);
     x.preparation.error = null; await screenRows(tree)[0].props.onLongPress(); tree = x.render();
     assert.equal(platform === 'ios' ? nodes(tree, 'WorkerLongPressActions').length : x.opened.length, 1);
@@ -532,7 +532,7 @@ for (const platform of ['ios', 'android']) {
     assert.equal(x.preparation.calls[0][6].aborted, true);
     read.resolve(x.preparation.result); await opening;
     let tree = x.render(); assert.equal(nodes(tree, 'WorkerOrderSheet').length, 0); assert.equal(x.opened.length, 0);
-    assert.equal(nodes(tree, 'WorkerPaddonFeedback')[0].props.message, '');
+    assert.equal(nodes(tree, 'WorkerCutSheets')[0].props.notice, '');
     x.preparation.pending = null; await screenRows(tree)[0].props.onLongPress(); tree = x.render();
     assert.equal(platform === 'ios' ? nodes(tree, 'WorkerLongPressActions').length : x.opened.length, 1);
   });
