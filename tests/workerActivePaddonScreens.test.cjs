@@ -13,14 +13,15 @@ function setup(platform) {
   const native = new Proxy({}, { get: (_, key) => key === 'useMaterialColors' ? () => ({}) : key === 'ListItem' ? Object.assign('Item', {}) : key });
   const Item = { HeadlineContent: 'Headline', SupportingContent: 'Supporting', LeadingContent: 'Leading', TrailingContent: 'Trailing' };
   const modifiers = new Proxy({}, { get: (_, key) => key === 'shapes' ? { rectangle: () => ({ shape: 'rectangle' }) } : (...args) => ({ kind: key, args }) });
-  const compose = { ...Object.fromEntries(['Badge', 'BadgedBox', 'Box', 'CircularProgressIndicator', 'Column', 'IconButton', 'LazyColumn', 'ModalBottomSheet', 'RNHostView', 'Text'].map(key => [key, key])),
+  const compose = { ...Object.fromEntries(['Badge', 'BadgedBox', 'Box', 'CircularProgressIndicator', 'Column', 'Icon', 'IconButton', 'LazyColumn', 'ModalBottomSheet', 'RNHostView', 'Text'].map(key => [key, key])),
     ListItem: Object.assign(function ItemView() {}, Item), useMaterialColors: () => ({}) };
   compose.BadgedBox = Object.assign(function BadgeBox() {}, { Badge: 'BadgeSlot' });
   const mocks = { 'react/jsx-runtime': jsx, react: { useRef: value => ({ current: value === null ? { hide: async () => { h.events.push('hide'); } } : value }) },
     '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
     'expo-symbols': { SymbolView: 'Symbol' }, 'react-native': { PlatformColor: value => value, useWindowDimensions: () => ({ width: 390, height: 840 }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 44, bottom: 34 }) }, './BaseHost': { BaseHost: 'Host' },
-    './useWorkerOrderText': { useWorkerOrderText: () => ({ p: (key, values) => values ? `${key}:${values.count}` : key }) } };
+    './useWorkerOrderText': { useWorkerOrderText: () => ({ p: (key, values) => values ? `${key}:${values.count}` : key }) },
+    '../../assets/icons/worker/pallet.xml': 'pallet.xml' };
   h.views = compile(`components/WorkerActivePaddon.${platform}.tsx`, mocks);
   h.props = { state, label: 'selected', controller: { open: async () => h.events.push('open'), choose: async code => h.events.push(['choose', code]), close: () => h.events.push('close') } };
   h.state = state; h.itemType = platform === 'ios' ? 'Button' : compose.ListItem; return h;
@@ -57,6 +58,17 @@ for (const platform of ['ios', 'android']) {
     else { assert.equal(button.props.enabled, false); assert(button.props.modifiers.some(m => m.kind === 'semantics' && m.args[0].contentDescription === 'selected')); }
   });
 }
+
+test('Android pallet toolbar keeps the whole 48 dp target native so its icon cannot intercept the press', () => {
+  const h = setup('android'), tree = h.views.WorkerActivePaddonButton(h.props);
+  const button = nodes(tree, 'IconButton')[0];
+  assert.equal(button.props.enabled, true);
+  assert.deepEqual(nodes(tree, 'Host')[0].props.style, { width: 48, height: 48 });
+  assert(button.props.modifiers.some(m => m.kind === 'size' && m.args[0] === 48 && m.args[1] === 48));
+  assert.equal(nodes(button, 'RNHostView').length, 0);
+  assert.equal(nodes(button, 'Icon')[0].props.source, 'pallet.xml');
+  button.props.onClick(); assert.deepEqual(h.events, ['open']);
+});
 
 test('iOS picker makes each full-width choice, including its trailing space, interactive', () => {
   const h = setup('ios'), rows = nodes(h.views.WorkerActivePaddonPicker(h.props), 'Button');

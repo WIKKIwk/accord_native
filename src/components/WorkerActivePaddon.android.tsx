@@ -1,4 +1,4 @@
-import { Badge, BadgedBox, Box, CircularProgressIndicator, Column, IconButton, LazyColumn, ListItem, ModalBottomSheet, RNHostView, Text, useMaterialColors, type ModalBottomSheetRef } from '@expo/ui/jetpack-compose';
+import { Badge, BadgedBox, Box, CircularProgressIndicator, Column, Icon, IconButton, LazyColumn, ListItem, ModalBottomSheet, RNHostView, Text, useMaterialColors, type ModalBottomSheetRef } from '@expo/ui/jetpack-compose';
 import { clickable, fillMaxSize, fillMaxWidth, height, padding, semantics, size, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useRef } from 'react';
@@ -10,9 +10,9 @@ import { useWorkerOrderText } from './useWorkerOrderText';
 
 export function WorkerActivePaddonButton({ state, controller, label, onOpen }: WorkerActivePaddonProps) {
   const colors = useMaterialColors();
-  return <BaseHost matchContents style={{ width: 44, height: 48 }}>
-    <IconButton enabled={!state.busy} onClick={onOpen ?? (() => { void controller.open(); })} modifiers={[size(44, 48), semantics({ contentDescription: label })]}>
-      <BadgedBox><RNHostView matchContents><SymbolView name={{ android: 'pallet' }} size={22} tintColor={state.code === null ? colors.onSurfaceVariant : colors.primary} /></RNHostView>
+  return <BaseHost matchContents style={{ width: 48, height: 48 }}>
+    <IconButton enabled={!state.busy} onClick={onOpen ?? (() => { void controller.open(); })} modifiers={[size(48, 48), semantics({ contentDescription: label })]}>
+      <BadgedBox><Icon source={require('../../assets/icons/worker/pallet.xml')} size={22} tint={state.code === null ? colors.onSurfaceVariant : colors.primary} />
         {state.code !== null || state.selection === 'error' ? <BadgedBox.Badge><Badge containerColor={state.selection === 'error' ? colors.error : colors.primary}>
           {state.selection === 'error' ? <Text>!</Text> : null}
         </Badge></BadgedBox.Badge> : null}
