@@ -97,6 +97,24 @@ test('iOS Paddon list keeps all rows in the full-height scroll area with its FAB
     assert.deepEqual(h.events.find(event => event[0] === 'detail'), ['detail', 'P5', 'cut', 'cut']);
   } finally { n.runner.dispose(); h.dispose(); }
 });
+test('Android Paddon header keeps print, lock and bobina controls within the card', async () => {
+  const h = await setup('detail', 'android'), n = native(h), data = h.paddons.get('P1');
+  data.paddon.locked_at_unix = 2; data.can_manage_items = false; data.can_unlock = true;
+  data.items = [batch('A', { bobina_kg: 1 }), batch('B', { bobina_kg: 12 }), batch('C', { bobina_kg: 151 }), batch('D', { bobina_kg: null })];
+  await h.model.controller.load(); h.render(); h.files['components/useWorkerPaddonDetail'] = { useWorkerPaddonDetail: () => h.model };
+  const Component = h.load('components/WorkerPaddonDetail.android').WorkerPaddonDetail;
+  try {
+    const tree = n.render(Component, h.props), card = node(tree, 'WorkerQueueCard.android'), body = card.props.children;
+    assert.equal(body.type, 'View'); assert.equal(body.props.style.width, '100%');
+    assert(node(body, 'Text', row => row.props.children === 'P1'));
+    const print = node(body, 'Action', row => row.props.label === 'worker.paddon.print.short');
+    assert.equal(print.props.disabled, false); assert.deepEqual(print.props.icon, { android: 'qr_code_2' });
+    assert.equal(node(body, 'Action', row => row.props.label === 'worker.paddon.locked').props.disabled, false);
+    const bobina = walk(body).filter(row => row.type === 'Action' && h.model.header.bobina.some(group => row.props.label === `${group.label} · ${group.countText}`));
+    assert.equal(bobina.length, 4); bobina[0].props.onPress(); h.render();
+    assert.equal(h.model.state.bobina, h.model.header.bobina[0].units);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
 test('iOS Paddon scan activation targets the inline camera while preserving the native List and row swipe actions', async () => {
   const h = await setup('detail', 'ios'), n = native(h);
   h.paddons.get('P1').items = [batch('A')]; await h.model.controller.load(); h.render();

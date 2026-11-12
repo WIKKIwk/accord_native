@@ -16,17 +16,26 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
   const list = useRef<FlatList>(null), scannerTop = useRef(0);
   useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { void h.requestBack(props.onBack); return true; }); return () => sub.remove(); }, [h, props.onBack]);
   if (!h.current()) return null;
-  const content = <>{header ? <WorkerQueueCard first last backgroundColor={colors.surfaceContainerLowest}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
-    <Column verticalArrangement={{ spacedBy: 10 }}><Text style={{ typography: 'headlineSmall', fontWeight: 'bold' }}>{header.code}</Text>
-      {header.peremotka ? <Text color={colors.error}>{header.peremotka}</Text> : null}{header.location ? <Text>{header.location}</Text> : null}
-      <Text color={colors.onSurfaceVariant}>{header.creatorLabel}</Text><Text>{header.creator}</Text><Text>{header.gross}</Text><Text>{header.net}</Text><Text>{header.wip}</Text>
-    </Column>
-  </Host><View style={{ marginTop: 12, gap: 8 }}><WorkerOrderButton label={p('worker.paddon.print.short')} disabled={!h.canPrint} variant="filled" onPress={() => { void h.print(); }} />
+  const content = <>{header ? <WorkerQueueCard first last backgroundColor={colors.surfaceContainerLowest}><View style={{ width: '100%', paddingVertical: 6, gap: 12 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+      <Host matchContents={{ vertical: true }} style={{ flexGrow: 1, flexShrink: 1, minWidth: 100 }}>
+        <Column verticalArrangement={{ spacedBy: 4 }}><Text style={{ typography: 'headlineSmall', fontWeight: 'bold' }}>{header.code}</Text>
+          {header.peremotka ? <Text color={colors.error}>{header.peremotka}</Text> : null}{header.location ? <Text>{header.location}</Text> : null}
+        </Column>
+      </Host>
+      <View style={{ flexBasis: 150, flexShrink: 1, maxWidth: '100%' }}><WorkerOrderButton label={p('worker.paddon.print.short')}
+        icon={{ android: 'qr_code_2' }} disabled={!h.canPrint} variant="filled" onPress={() => { void h.print(); }} /></View>
+    </View>
+    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column verticalArrangement={{ spacedBy: 8 }}>
+      <Text color={colors.onSurfaceVariant}>{header.creatorLabel}</Text><Text>{header.creator}</Text>
+      <Text>{header.gross}</Text><Text>{header.net}</Text><Text>{header.wip}</Text>
+    </Column></Host>
     {header.locked ? <WorkerOrderButton label={header.locked} disabled={!h.canUnlock} onPress={() => { void h.unlock(); }} /> : null}
     {state.scanning ? <WorkerOrderButton label={p('worker.paddon.scan.pending', { count: state.scanned.length })} disabled={!h.canReview} onPress={() => { void h.review(); }} /> : null}
-    {header.bobinaTitle ? <><Host matchContents><Text>{header.bobinaTitle}</Text></Host><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{header.bobina.map(group => <View key={group.units} style={{ minWidth: 110 }}>
-      <WorkerOrderButton label={`${group.label} · ${group.countText}`} disabled={h.blocked} variant={state.bobina === group.units ? 'filled' : 'outlined'} onPress={() => h.controller.filter(group.units)} />
-    </View>)}</View></> : null}{header.note ? <Host matchContents><Text>{header.note}</Text></Host> : null}
+    {header.bobinaTitle ? <><Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Text>{header.bobinaTitle}</Text></Host>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{header.bobina.map(group => <View key={group.units} style={{ flexBasis: '45%', flexGrow: 1, minWidth: 110, maxWidth: '100%' }}>
+        <WorkerOrderButton label={`${group.label} · ${group.countText}`} disabled={h.blocked} variant={state.bobina === group.units ? 'filled' : 'outlined'} onPress={() => h.controller.filter(group.units)} />
+      </View>)}</View></> : null}{header.note ? <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Text>{header.note}</Text></Host> : null}
   </View></WorkerQueueCard> : null}
     {state.scanning ? <View onLayout={event => { scannerTop.current = event.nativeEvent.layout.y; list.current?.scrollToOffset({ offset: scannerTop.current, animated: true }); }} style={{ marginTop: 12, gap: 10 }}>
       <WorkerPaddonCamera enabled={h.canManage && !state.review} current={h.current} accept={qr => { void h.controller.stage(qr); }} />
