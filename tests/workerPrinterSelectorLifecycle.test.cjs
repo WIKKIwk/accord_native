@@ -99,16 +99,62 @@ test('Expo Go missing printer module stays visible in the picker until explicit 
     react: runner.react,
     '@expo/ui/swift-ui': new Proxy({}, { get: (_target, name) => String(name) }),
     '@expo/ui/swift-ui/modifiers': { disabled: value => value },
+    expo: { isRunningInExpoGo: () => true },
     '../printing/nativePrinter': { NativeBluetoothPrinter: { discoverPrinters: listener => AccordPrinter.startDiscovery(1, listener) } },
     './PreparationUI': { usePreparationText: () => value => value },
   });
   const render = () => { runner.begin(); const tree = PreparationPrinterPicker(props); runner.flush(); return tree; };
   render(); await tick(); const tree = render();
-  assert.ok(nodes(tree, node => node.type === 'Text' && node.props.children === 'Accord printer requires a development build').length);
+  assert.ok(nodes(tree, node => node.type === 'Text' && node.props.children === 'Expo Go’da Bluetooth printer ishlamaydi. Chop etish uchun printer qo‘llab-quvvatlanadigan Accord ilovasini oching.').length);
+  assert.equal(nodes(tree, node => node.props?.label === 'Qayta qidirish').length, 0);
   assert.equal(settled, false); assert.deepEqual(h.calls, []);
   assert.equal(h.render().dialogs.key, sheet.key);
   nodes(tree, node => node.props?.role === 'cancel')[0].props.onPress();
   assert.deepEqual(h.calls, ['native-close']); assert.equal(settled, false);
   sheet.props.onClose(); assert.equal(await pending, null);
   runner.dispose(); h.runner.dispose();
+});
+
+test('recoverable printer discovery errors can be retried and a printer selected', async () => {
+  const runner = hooks(), selections = []; let scans = 0, stopped = 0;
+  const { PreparationPrinterPicker } = load('src/preparation/PreparationPrinterPicker.ios.tsx', {
+    react: runner.react,
+    '@expo/ui/swift-ui': new Proxy({}, { get: (_target, name) => String(name) }),
+    '@expo/ui/swift-ui/modifiers': { disabled: value => value },
+    expo: { isRunningInExpoGo: () => false },
+    '../printing/nativePrinter': { NativeBluetoothPrinter: { discoverPrinters: async listener => {
+      if (++scans === 1) throw new Error('Bluetooth off');
+      listener({ printer: { address: 'unit', displayName: 'Printer' } });
+      listener({ completed: true });
+      return () => { stopped++; };
+    } } },
+    './PreparationUI': { usePreparationText: () => value => value },
+  });
+  const render = () => { runner.begin(); const tree = PreparationPrinterPicker({ select: value => selections.push(value) }); runner.flush(); return tree; };
+  render(); await tick(); let tree = render();
+  assert.ok(nodes(tree, node => node.type === 'Text' && node.props.children === 'Bluetooth off').length);
+  nodes(tree, node => node.props?.label === 'Qayta qidirish')[0].props.onPress();
+  render(); await tick(); tree = render();
+  nodes(tree, node => node.props?.label === 'Printer')[0].props.onPress();
+  assert.deepEqual(selections, [{ transport: 'bluetooth', printer: { address: 'unit', displayName: 'Printer' } }]);
+  runner.dispose(); assert.equal(stopped, 1);
+});
+
+test('a missing module in an older Accord build is not blamed on Expo Go', async () => {
+  const runner = hooks();
+  const { PreparationPrinterPicker } = load('src/preparation/PreparationPrinterPicker.ios.tsx', {
+    react: runner.react,
+    '@expo/ui/swift-ui': new Proxy({}, { get: (_target, name) => String(name) }),
+    '@expo/ui/swift-ui/modifiers': { disabled: value => value },
+    expo: { isRunningInExpoGo: () => false },
+    '../printing/nativePrinter': { NativeBluetoothPrinter: { discoverPrinters: async () => {
+      throw Object.assign(new Error('native module missing'), { code: 'printer_module_unavailable' });
+    } } },
+    './PreparationUI': { usePreparationText: () => value => value },
+  });
+  const render = () => { runner.begin(); const tree = PreparationPrinterPicker({ select: () => {} }); runner.flush(); return tree; };
+  render(); await tick(); const tree = render();
+  assert.ok(nodes(tree, node => node.type === 'Text' && node.props.children === 'Bu Accord ilovasida Bluetooth printer mavjud emas. Chop etish uchun ilovaning yangi versiyasini oching.').length);
+  assert.equal(nodes(tree, node => node.props?.label === 'Qayta qidirish').length, 0);
+  runner.dispose();
 });
