@@ -180,19 +180,20 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   }, [readScope, orderRoute, actionsRoute, historyRoute, dailyRoute]);
   useEffect(() => { screenMounted.current = true; return () => { screenMounted.current = false; }; }, []);
   useLayoutEffect(() => { qrLocation.current = { machine: machineId, window: windowScope }; }, [machineId, windowScope]);
-  const renderOrderRoute = useCallback((target: ActiveOrder, onClose = orderRoute.close) => {
+  // Render from an explicit snapshot; queueRef is updated only after children render.
+  const renderOrderRoute = useCallback((target: ActiveOrder, onClose: () => void, renderQueue: WorkerQueue | null) => {
     if (target.readOnly && target.preview) return <WorkerOrderDetails session={session}
       apparatusId={target.apparatusId}
-      order={target.preview} queueCursor={queueState.synchronized ? queueRef.current?.snapshot ?? null : null} queueWindow={windowScope} onClose={onClose} />;
+      order={target.preview} queueCursor={queueState.synchronized ? renderQueue?.snapshot ?? null : null} queueWindow={windowScope} onClose={onClose} />;
     return <OrderScreen key={`${target.apparatusId}:${target.orderId}`} session={session} apparatusId={target.apparatusId} orderId={target.orderId} preview={target.preview}
       initialScanQr={target.initialScanQr} initialSwitchQr={target.initialSwitchQr}
       onSwitchCommitted={() => { const pending = pendingQrSwitch.current; if (pending && isSessionWitnessCurrent(pending.witness)) pending.committed = true; }}
-      queueCursor={queueState.synchronized ? queueRef.current?.snapshot ?? null : null} busyOrderTitle={workerOrderBusyTitle(queueRef.current, target.apparatusId, target.orderId)}
-      apparatusCatalog={queueRef.current?.catalog} apparatus={queueRef.current?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction} queueWindow={windowScope}
+      queueCursor={queueState.synchronized ? renderQueue?.snapshot ?? null : null} busyOrderTitle={workerOrderBusyTitle(renderQueue, target.apparatusId, target.orderId)}
+      apparatusCatalog={renderQueue?.catalog} apparatus={renderQueue?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction} queueWindow={windowScope}
       onWritePending={onWritePending} onNotice={setOrderNotice} onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
-  }, [session, orderRoute, windowScope, queueState.synchronized, onWritePending]);
+  }, [session, windowScope, queueState.synchronized, onWritePending]);
   useEffect(() => {
-    if (nativeOrder.current) orderRoute.update(renderOrderRoute(nativeOrder.current));
+    if (nativeOrder.current) orderRoute.update(renderOrderRoute(nativeOrder.current, orderRoute.close, queue));
   }, [queue, orderRoute, renderOrderRoute]);
   function openOrder(target: ActiveOrder) {
     if (actionOpening.current) return;
@@ -211,7 +212,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     preflightCheck.current++;
     nativeOrder.current = target;
     setNativeOverlayOpen(true);
-    orderRoute.open(renderOrderRoute(target), { onDismiss: () => {
+    orderRoute.open(renderOrderRoute(target, orderRoute.close, queueRef.current), { onDismiss: () => {
       nativeOrder.current = null;
       setNativeOverlayOpen(false);
       preflightCheck.current++;
@@ -568,7 +569,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       </View>}
       {section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
       {activeOrder ? <WorkerOrderSheet key={activeOrder.presentationId} onClose={activeOrder.onClose!}>
-        {renderOrderRoute(activeOrder, activeOrder.onClose)}
+        {renderOrderRoute(activeOrder, activeOrder.onClose!, queue)}
       </WorkerOrderSheet> : null}
       {Platform.OS !== 'android' && <WorkerWipHistorySheet key={readScope} ref={historySheet} session={session} presentationId={historyPresentation ?? undefined} onDismiss={() => {
         const id = historyPresentation;

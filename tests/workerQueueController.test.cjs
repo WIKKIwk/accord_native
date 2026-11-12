@@ -166,7 +166,7 @@ test('pending writes prevent a successful-looking row snapshot from being handed
 });
 
 function workerScreenHarness(platform, nativeNavigation = true) {
-  const hooks = [], effects = [], opened = [], actionOptions = [], presentations = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
+  const hooks = [], effects = [], opened = [], updates = [], actionOptions = [], presentations = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
   const preparation = { calls: [], feedback: 0, result: { kind: 'menu', menu: { kind: 'bosma', actions: ['astatka', 'finish'], operation: 'print' } }, pending: null, error: null };
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
@@ -176,7 +176,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     useEffect(fn, deps) { const id = cursor++; if (!hooks[id] || !equal(deps, hooks[id].deps)) { const previous = hooks[id]; hooks[id] = { deps, cleanup: previous?.cleanup }; effects.push(() => { previous?.cleanup?.(); hooks[id].cleanup = fn(); }); } },
   };
   react.useLayoutEffect = react.useEffect;
-  const sheet = { close() {}, open(value, options) { opened.push(value); actionOptions.push(options); presentations.push({ value, options }); }, update() {}, isOpen: () => false };
+  const sheet = { close() {}, open(value, options) { opened.push(value); actionOptions.push(options); presentations.push({ value, options }); }, update(value) { updates.push(value); }, isOpen: () => false };
   const currentQueue = queue();
   currentQueue.orders[station][0].state = 'in_progress';
   currentQueue.snapshot.order_controls['work-1'] = { state: 'active' };
@@ -224,7 +224,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const s = session();
   s.capabilities.push('apparatus.queue.manage');
-  return { opened, actionOptions, presentations, historyOpened, queueState, session: s, routes, preparation, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
+  return { opened, updates, actionOptions, presentations, historyOpened, queueState, session: s, routes, preparation, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
 }
 function nodes(tree, type, result = []) {
   if (!tree) return result;
@@ -257,6 +257,47 @@ async function readyIosScreen() {
   return x;
 }
 const screenRows = (tree, tab = station) => nodes(nodes(tree, 'WorkerTabs')[0].props.children(tab, undefined, undefined), 'WorkerOrderListItem');
+
+for (const platform of ['ios', 'android']) test(`${platform} open order receives each remote queue revision immediately without remounting its sheet`, async () => {
+  const x = workerScreenHarness(platform, platform === 'ios');
+  x.queueState.synchronized = true; x.queueState.error = null; x.queueState.loadedWindow = JSON.stringify(['', 10]);
+  x.render(); await flush(); let tree = x.render();
+  screenRows(tree)[0].props.onPress(); tree = x.render();
+  const initial = platform === 'ios' ? nodes(tree, 'OrderScreen')[0] : x.opened.at(-1);
+  const presentation = nodes(tree, 'WorkerOrderSheet')[0];
+  const initialEpoch = initial.props.queueCursor.epoch;
+  for (const [revision, epoch] of [[8, initialEpoch], [9, initialEpoch], [1, 'new-epoch']]) {
+    const next = structuredClone(x.queueState.queue);
+    next.snapshot.rev = revision; next.snapshot.epoch = epoch;
+    next.machines[0].name = `Current apparatus ${epoch}/${revision}`;
+    next.catalog[0].name = `Current catalog ${epoch}/${revision}`;
+    x.queueState.queue = next; tree = x.render();
+    const detail = platform === 'ios' ? nodes(tree, 'OrderScreen')[0] : x.updates.at(-1);
+    assert.equal(detail.props.queueCursor, next.snapshot, 'the first render after a remote update must carry the current snapshot');
+    assert.equal(detail.props.queueCursor.rev, revision); assert.equal(detail.props.queueCursor.epoch, epoch);
+    assert.equal(detail.props.apparatus, next.machines[0]); assert.equal(detail.props.apparatusCatalog, next.catalog);
+    assert.equal(detail.key, initial.key, 'live refresh must preserve the order component and unfinished form state');
+    assert.equal(detail.props.onClose, initial.props.onClose);
+    if (platform === 'ios') assert.equal(nodes(tree, 'WorkerOrderSheet')[0].key, presentation.key);
+  }
+  x.queueState.synchronized = false; tree = x.render();
+  const retired = platform === 'ios' ? nodes(tree, 'OrderScreen')[0] : x.updates.at(-1);
+  assert.equal(retired.props.queueCursor, null, 'connection loss must immediately withdraw the list cursor');
+  x.queueState.synchronized = true; tree = x.render();
+  const recovered = platform === 'ios' ? nodes(tree, 'OrderScreen')[0] : x.updates.at(-1);
+  assert.equal(recovered.props.queueCursor, x.queueState.queue.snapshot);
+});
+
+test('Android delayed row callbacks still open detail from the latest committed queue', async () => {
+  const x = workerScreenHarness('android', false);
+  x.queueState.synchronized = true; x.queueState.error = null; x.queueState.loadedWindow = JSON.stringify(['', 10]);
+  x.render(); await flush(); let tree = x.render();
+  const delayedPress = screenRows(tree)[0].props.onPress;
+  const next = structuredClone(x.queueState.queue); next.snapshot.rev = 8;
+  x.queueState.queue = next; x.render();
+  delayedPress();
+  assert.equal(x.opened.at(-1).props.queueCursor, next.snapshot);
+});
 
 test('worker drawer transfer opens the real inventory screen and permission loss blocks entry', async () => {
   const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();

@@ -152,6 +152,51 @@ for (const platform of ['ios', 'android']) test(`${platform}: actual OrderScreen
   assert.equal(h.values.get('completionNote'), 'Unfinished report');
   const cleanup = h.effects.find(effect => /recovery\.dispose\(\)/.test(effect.toString()))?.(); cleanup?.();
 });
+
+for (const platform of ['ios', 'android']) test(`${platform}: fresh live cursors update an open order from running to detached and resumed while preserving its draft`, async () => {
+  let revision = 1, mode = 'in_progress';
+  const h = harness(platform, {
+    states: { detail: null, bootstrap: null, detailReadScope: '', loading: true },
+    control: { state: 'in_progress', allowed_actions: ['pause', 'complete'] },
+    interaction: { mode: 'in_progress', blocking_reason_code: '', material_intake_allowed: false },
+    readDetail: async () => ({ epoch: 'epoch', rev: revision, maps: [{ map: { id: '0198', title: 'Live order' } }] }),
+    readBootstrap: async () => {
+      const data = structuredClone(h.bootstrap);
+      data.control_state.rev = revision;
+      data.control_state.control.state = mode;
+      data.control_state.control.allowed_actions = mode === 'paused' ? ['resume'] : ['pause', 'complete'];
+      data.control_state.control.interaction.mode = mode;
+      return data;
+    },
+  });
+  const refreshFromCursor = () => {
+    h.props.queueCursor = { epoch: 'epoch', rev: revision };
+    h.render();
+    h.effects.find(effect => /recovery\.invalidate\(busy\)/.test(effect.toString()))();
+  };
+  const labels = () => nodes(main(h.render()), node => node.type?.name === 'NativeButton').map(node => node.props.label);
+  try {
+    refreshFromCursor(); await wait();
+    assert.ok(labels().includes(h.p('worker.action.complete')));
+    h.values.set('completionNote', 'Unfinished report');
+    mode = 'paused'; revision = 2;
+    refreshFromCursor(); await wait();
+    assert.ok(labels().includes(h.p('worker.action.resume')));
+    assert.equal(labels().includes(h.p('worker.action.complete')), false);
+    assert.equal(labels().includes('Rulonni yechish'), false);
+    mode = 'in_progress'; revision = 3;
+    refreshFromCursor(); await wait();
+    assert.ok(labels().includes('Rulonni yechish'));
+    assert.ok(labels().includes(h.p('worker.action.complete')));
+    assert.equal(labels().includes(h.p('worker.action.resume')), false);
+    assert.equal(h.values.get('bootstrap').control_state.rev, 3);
+    assert.equal(h.values.get('completionNote'), 'Unfinished report');
+    assert.deepEqual(h.actions, [], 'external updates must never submit a production action');
+  } finally {
+    const cleanup = h.effects.find(effect => /recovery\.dispose\(\)/.test(effect.toString()))?.(); cleanup?.();
+  }
+});
+
 for (const platform of ['ios', 'android']) test(`${platform}: actual OrderScreen initial detail failure leaves preview, error and manual retry`, async () => {
   const h = harness(platform, { states: { detail: null, bootstrap: null, detailReadScope: '', loading: true },
     readDetail: async () => { throw Error('Detail unavailable'); } });
