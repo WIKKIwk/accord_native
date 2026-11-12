@@ -37,18 +37,22 @@ test('history card rows retain source action, two-decimal quantity, both activit
   assert.equal(actual[6][1], '—'); assert.equal(actual[7][1], 'worker:123456', 'source list card deliberately retains the legacy worker fallback');
 });
 function harness(platform = 'ios', initial = []) {
-  const runner = hooks(), state = { rows: initial, error: null, opened: [] };
+  const runner = hooks(), state = { rows: initial, error: null, opened: [], actions: [] };
   runner.react.useContext = () => null;
   runner.react.useImperativeHandle = () => {};
   const sheet = { isOpen: () => false, close() {}, open: (content, options) => state.opened.push({ content, options }) };
   const { WorkerWipHistory } = load('components/WorkerWipHistory.tsx', {
-    react: runner.react, '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host' }, 'expo-camera': { CameraView: 'Camera', useCameraPermissions: () => [{ granted: false, status: 'undetermined' }, async () => {}] },
+    react: runner.react, '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host', RNHostView: 'RNHostView', Row: 'Row', Text: 'NativeText' },
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-camera': { CameraView: 'Camera', useCameraPermissions: () => [{ granted: false, status: 'undetermined' }, async () => {}] },
     'react-native': { ActivityIndicator: 'Spinner', FlatList: 'FlatList', Platform: { OS: platform }, PlatformColor: value => value, Pressable: 'Pressable', StyleSheet: { create: value => value }, Text: 'Text', View: 'View' },
     '../authorizedFetch': {}, '../nativeSheet': { useNativeSheet: () => sheet }, './useWorkerColors': { useWorkerColors: () => ({}) }, './workerSheetContext': { WorkerSheetCloseContext: {} },
+    './useWorkerWipHistoryPalette': { useWorkerWipHistoryPalette: () => ({ summary: 'summary', summaryText: 'on-summary', summaryChip: 'summary-chip',
+      card: 'card', cardText: 'card-text', cardMuted: 'card-muted', number: 'number', numberText: 'number-text', onPrimary: 'on-primary',
+      status: { waiting: { backgroundColor: 'waiting', color: 'on-waiting' }, inUse: { backgroundColor: 'in-use', color: 'on-in-use' }, processed: { backgroundColor: 'processed', color: 'on-processed' } } }) },
     './WorkerAlert': { WorkerAlert: 'Alert' }, './WorkerFormDialog': { WorkerFormDialog: 'Search' }, './WorkerFormField': { WorkerFormField: 'Field' }, './WorkerIconButton': { WorkerIconButton: 'IconButton' },
     './WorkerOrderSheet': {}, '../workerWip': { ...wip, loadWorkerWipBatches: async () => { if (state.error) throw state.error; return state.rows; } },
     './WorkerWipBatchDetails': { WorkerWipBatchDetails: 'Details' }, './WorkerOrderDetails': {}, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: key => key }) },
-    './useWorkerWipReactivation': { useWorkerWipReactivation: () => ({ isBusy: () => false, open() {}, dialogs: null }) },
+    './useWorkerWipReactivation': { useWorkerWipReactivation: () => ({ isBusy: () => false, open: item => state.actions.push(item), dialogs: null }) },
     '../workerWipHistoryPresentation': api, '../workerWipDetailsPresentation': details,
   });
   const props = { session: { profile: { ref: 'worker' } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() {} };
@@ -74,6 +78,55 @@ for (const platform of ['ios', 'android']) test(`${platform}: history renders lo
     assert.equal(find(tree, node => node.type === 'Field').props.label, 'worker.wip.history.enter_qr');
   } finally { h.dispose(); }
 });
+
+test('Android WIP cards keep long titles readable, align facts and retain both row actions', async () => {
+  const title = '120 sht detskiy (kok yashil) yarim tayyor mahsulot, apparat: apparatus:default:bosma_7, rulon yechildi';
+  const h = harness('android', [batch({ label_item_name: title, action: 'pause', finished_goods_kg: 100, bobina_kg: 1 })]);
+  const flatten = style => Object.assign({}, ...[style].flat(Infinity).filter(value => value && typeof value === 'object'));
+  try {
+    h.render(); await tick(); const tree = h.render();
+    const list = find(tree, node => node.type === 'FlatList');
+    const summary = find(list.props.ListHeaderComponent, node => node.type === 'View' && flatten(node.props.style).backgroundColor === 'summary');
+    assert.ok(summary, 'summary is visually distinct and uses the system tertiary container');
+    const row = list.props.renderItem({ item: h.state.rows[0], index: 0 });
+    assert.equal(flatten(row.props.style).backgroundColor, 'card');
+    assert.equal(find(row, node => node.type === 'Text' && node.props.children === title).props.numberOfLines, 2);
+    const status = find(row, node => node.type === 'Text' && node.props.children === 'worker.wip.status.waiting');
+    assert.equal(status.props.numberOfLines, 1);
+    assert.equal(flatten(status.props.style).backgroundColor, 'waiting');
+    const facts = nodes(row, node => node.type === 'View' && Array.isArray(node.props.children)
+      && node.props.children[0]?.props?.children === 'worker.wip.info.quantity')[0];
+    assert.equal(flatten(facts.props.children[0].props.style).width, 108);
+    assert.equal(facts.props.children[1].props.children, '100.12 m');
+    assert.equal(flatten(facts.props.children[1].props.style).fontWeight, '600');
+    const search = find(tree, node => node.type === 'Button' && node.props.label === 'worker.wip.history.search_qr');
+    assert.deepEqual(search.props.style, { width: '100%', height: 56 });
+    assert.equal(find(search, node => node.type === 'SymbolView').props.name.android, 'qr_code_scanner');
+    row.props.onLongPress(); assert.deepEqual(h.state.actions, [h.state.rows[0]]);
+    row.props.onPress(); assert.equal(h.state.opened[0].content.type, 'Details');
+  } finally { h.dispose(); }
+});
+
+test('Android WIP surfaces follow the current Material palette in light and dark mode', () => {
+  for (const mode of ['light', 'dark']) {
+    const colors = Object.fromEntries(['tertiaryContainer', 'onTertiaryContainer', 'surfaceContainerHighest', 'surface', 'onSurface', 'onSurfaceVariant',
+      'secondaryContainer', 'onSecondaryContainer', 'primaryContainer', 'onPrimaryContainer', 'onPrimary'].map(role => [role, `${mode}-${role}`]));
+    colors.onTertiaryContainer = mode === 'light' ? '#112233FF' : '#DDEEFFff';
+    let options;
+    const { useWorkerWipHistoryPalette } = load('components/useWorkerWipHistoryPalette.android.ts', {
+      '@expo/ui/jetpack-compose': { useMaterialColors: value => { options = value; return colors; } },
+    });
+    const palette = useWorkerWipHistoryPalette();
+    assert.deepEqual(options, {});
+    assert.equal(palette.summary, colors.tertiaryContainer);
+    assert.equal(palette.summaryChip, `${colors.onTertiaryContainer.slice(0, 7)}1F`);
+    assert.equal(palette.card, colors.surface);
+    assert.equal(palette.status.waiting.backgroundColor, colors.tertiaryContainer);
+    assert.equal(palette.status.inUse.backgroundColor, colors.primaryContainer);
+    assert.equal(palette.status.processed.backgroundColor, colors.secondaryContainer);
+  }
+});
+
 for (const scenario of ['empty', 'error', 'forbidden']) test(`history ${scenario} state preserves the source translated message and retry condition`, async () => {
   const h = harness(); if (scenario !== 'empty') h.state.error = Object.assign(Error('private transport details'), { statusCode: scenario === 'forbidden' ? 403 : 500 });
   try {

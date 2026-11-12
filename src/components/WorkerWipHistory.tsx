@@ -1,5 +1,6 @@
-import { Button, Column, Host } from '@expo/ui';
+import { Button, Column, Host, RNHostView, Row, Text as NativeText } from '@expo/ui';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { SymbolView } from 'expo-symbols';
 import { useContext, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ActivityIndicator, FlatList, Platform, PlatformColor, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Session } from '../auth';
@@ -7,6 +8,7 @@ import { authorizedFetch } from '../authorizedFetch';
 import { useNativeSheet } from '../nativeSheet';
 import type { Apparatus, CompletedOrder } from '../workerApi';
 import { useWorkerColors } from './useWorkerColors';
+import { useWorkerWipHistoryPalette } from './useWorkerWipHistoryPalette';
 import { WorkerSheetCloseContext } from './workerSheetContext';
 import { WorkerAlert } from './WorkerAlert';
 import { WorkerFormDialog } from './WorkerFormDialog';
@@ -72,7 +74,7 @@ async function loadOpeningWip(session: Session, order: WipOrder, signal: AbortSi
 }
 
 export function WorkerWipHistory({ session, order, onClose, stageHistory = false, apparatusNames = {}, operation, allowReactivation, onReactivationAttempted, onWritePending }: Props) {
-  const colors = useWorkerColors(), { p, t } = useWorkerOrderText();
+  const colors = useWorkerColors(), palette = useWorkerWipHistoryPalette(), { p, t } = useWorkerOrderText();
   const android = Platform.OS === 'android';
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
   const sheetCard = Platform.OS === 'ios' ? PlatformColor('secondarySystemGroupedBackground') : colors.surface;
@@ -115,8 +117,8 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
   const outputLines = (['gross', 'net', 'meters'] as const).map(kind => {
     const total = outputTotals[kind];
     return <View key={kind}>
-      <Text style={{ color: colors.text }}>{p(`worker.wip.history.total_${kind}`)}: {workerWipHistoryTotalText(total, kind === 'meters' ? 'm' : 'kg', p)}</Text>
-      {total.known && total.missing ? <Text style={{ color: colors.muted }}>{p('worker.wip.history.partial_total', { count: total.missing })}</Text> : null}
+      <Text style={[{ color: android ? palette.summaryText : colors.text }, android && styles.androidTotal]}>{p(`worker.wip.history.total_${kind}`)}: {workerWipHistoryTotalText(total, kind === 'meters' ? 'm' : 'kg', p)}</Text>
+      {total.known && total.missing ? <Text style={{ color: android ? palette.summaryText : colors.muted }}>{p('worker.wip.history.partial_total', { count: total.missing })}</Text> : null}
     </View>;
   });
   const filtered = foundId ? batches.filter(batch => batch.batch_id === foundId) : batches;
@@ -140,21 +142,21 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
   }
   const heading = <View style={[styles.header, android && styles.androidHeader]}>
     <View style={styles.flex}>
-      <Text style={[styles.heading, { color: colors.text }]}>{p('worker.wip.history.title')}</Text>
-      <Text style={{ color: colors.muted }}>{[order.code, order.title, apparatusNames[order.apparatusId]].filter(Boolean).join(' • ')}</Text>
+      <Text style={[styles.heading, { color: colors.text }, android && styles.androidTitle]}>{p('worker.wip.history.title')}</Text>
+      <Text numberOfLines={android ? 2 : undefined} style={[{ color: colors.muted }, android && styles.androidSubtitle]}>{[order.code, order.title, apparatusNames[order.apparatusId]].filter(Boolean).join(' • ')}</Text>
     </View>
     <WorkerIconButton icon="close" label={p('worker.action.close')} onPress={close} tonal />
   </View>;
   const status = <>
     {loading ? <ActivityIndicator color={colors.icon} /> : null}
     {!!error && <><Text style={styles.error}>{p(error)}</Text><Host matchContents={{ vertical: true }}><Button label={p('worker.action.retry')} onPress={() => { setLoading(true); setError(''); setFoundId(''); setNotFound(false); setReload(old => old + 1); }} /></Host></>}
-    {!loading && !error && (batches.length ? <View style={[styles.card, { backgroundColor: sheetCard }]}>
-      <Text style={[styles.heading, { color: colors.text }]}>{p('worker.wip.history.summary', { count: batches.length })}</Text>
-      <Text style={{ color: colors.muted }}>{p('worker.wip.history.description')}</Text>
+    {!loading && !error && (batches.length ? <View style={[styles.card, { backgroundColor: android ? palette.summary : sheetCard }]}>
+      <Text style={[styles.heading, { color: android ? palette.summaryText : colors.text }]}>{p('worker.wip.history.summary', { count: batches.length })}</Text>
+      <Text style={{ color: android ? palette.summaryText : colors.muted }}>{p('worker.wip.history.description')}</Text>
       {!stageHistory ? outputLines : null}
       <View style={styles.chips}>
         {[[p('worker.wip.status.waiting'), totals.waiting], [p('worker.wip.status.in_progress'), totals.inUse], [p('worker.wip.status.used'), totals.processed]].map(([label, count]) =>
-          <Text key={label} style={[styles.chip, { backgroundColor: colors.field, color: colors.text }]}>{label}: {count}</Text>)}
+          <Text key={label} style={[styles.chip, { backgroundColor: android ? palette.summaryChip : colors.field, color: android ? palette.summaryText : colors.text }, android && styles.androidCountChip]}>{label}: {count}</Text>)}
       </View>
     </View> : <Text style={{ color: colors.muted }}>{p('worker.wip.history.empty')}</Text>)}
   </>;
@@ -162,7 +164,7 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
     {android && heading}
     {android && batches.length === 0 ? <View style={[styles.content, styles.flex]}>{status}</View> : <FlatList
       nestedScrollEnabled
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, android && styles.androidContent]}
       data={filtered}
       keyExtractor={batch => String(batch.batch_id)}
       ListHeaderComponent={android ? status : <>{heading}{status}</>}
@@ -171,29 +173,33 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
         const title = wipText(item.label_item_name) || wipText(item.label_item_code) || `${p('worker.daily.wip')} ${position}`;
         const rows = workerWipHistoryRows(item, apparatusNames, p);
         return <Pressable accessibilityRole="button" android_ripple={{}} onPress={() => openBatch(item)} onLongPress={() => { if (!detailsSheet.isOpen()) void reactivation.open(item); }}
-          style={[styles.card, { backgroundColor: colors.field }]}>
-          <View style={styles.rowHeader}>
-            <Text style={[styles.chip, { color: colors.text, backgroundColor: sheetCard }]}>{position}</Text>
-            <Text style={[styles.heading, styles.flex, { color: colors.text }]}>{title}</Text>
-            <Text style={[styles.chip, { color: colors.text, backgroundColor: sheetCard }]}>{workerWipStatusLabel(item, p)}</Text>
+          style={[styles.card, { backgroundColor: android ? palette.card : colors.field }]}>
+          <View style={[styles.rowHeader, android && styles.androidRowHeader]}>
+            <Text style={[styles.chip, { color: android ? palette.numberText : colors.text, backgroundColor: android ? palette.number : sheetCard }, android && styles.androidNumber]}>{position}</Text>
+            <Text numberOfLines={android ? 2 : undefined} style={[styles.heading, styles.flex, { color: android ? palette.cardText : colors.text }, android && styles.androidItemTitle]}>{title}</Text>
+            <Text numberOfLines={android ? 1 : undefined} style={[styles.chip, android ? palette.status[wipBatchKind(item)] : { color: colors.text, backgroundColor: sheetCard }, android && styles.androidStatus]}>{workerWipStatusLabel(item, p)}</Text>
           </View>
-          {rows.map(([label, text]) => <Text key={label} style={{ color: colors.muted }}>{label}: {text}</Text>)}
-          {!!wipText(item.qr_payload) && <Text numberOfLines={2} style={{ color: colors.muted }}>{p('worker.wip.info.qr')} {item.qr_payload.trim()}</Text>}
-          {!!wipText(item.description) && <Text style={{ color: colors.muted }}>{p('worker.wip.info.note')}: {item.description.trim()}</Text>}
+          {rows.map(([label, text]) => android ? <View key={label} style={styles.androidInfoRow}>
+            <Text style={[styles.androidInfoLabel, { color: palette.cardMuted }]}>{label}</Text>
+            <Text style={[styles.androidInfoValue, { color: palette.cardText }]}>{text}</Text>
+          </View> : <Text key={label} style={{ color: colors.muted }}>{label}: {text}</Text>)}
+          {!!wipText(item.qr_payload) && <Text numberOfLines={2} style={[{ color: android ? palette.cardMuted : colors.muted }, android && styles.androidQr]}>{p('worker.wip.info.qr')} {item.qr_payload.trim()}</Text>}
+          {!!wipText(item.description) && <Text style={{ color: android ? palette.cardMuted : colors.muted }}>{p('worker.wip.info.note')}: {item.description.trim()}</Text>}
         </Pressable>;
       }} />}
-    <View style={styles.footer}>
+    <View style={[styles.footer, android && styles.androidFooter]}>
       {notFound && <Text style={styles.error}>{p('worker.wip.history.qr_not_found')}</Text>}
-      <Host matchContents={{ vertical: true }}>
-        <Column spacing={6}>
+      <Host matchContents={{ vertical: true }} style={android ? styles.fullWidth : undefined}>
+        <Column spacing={6} style={android ? { width: '100%' } : undefined}>
           {!!foundId && <Button label={p('worker.wip.history.show_all')} variant="text" onPress={() => { setFoundId(''); setNotFound(false); }} />}
-          <Button label={p('worker.wip.history.search_qr')} disabled={searching || loading || !!error || !batches.length} onPress={() => {
+          <Button label={p('worker.wip.history.search_qr')} style={android ? { width: '100%', height: 56 } : undefined} disabled={searching || loading || !!error || !batches.length} onPress={() => {
             searchHandled.current = false;
             setManualQr('');
             setNotFound(false);
             setSearching(true);
             if (permission?.status === 'undetermined') void requestPermission();
-          }} />
+          }}>{android ? <Row spacing={8} alignment="center"><RNHostView matchContents><SymbolView name={{ android: 'qr_code_scanner', ios: 'qrcode.viewfinder' }} size={20}
+            tintColor={searching || loading || !!error || !batches.length ? palette.cardMuted : palette.onPrimary} /></RNHostView><NativeText>{p('worker.wip.history.search_qr')}</NativeText></Row> : undefined}</Button>
         </Column>
       </Host>
     </View>
@@ -210,15 +216,30 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
 
 const styles = StyleSheet.create({
   content: { padding: 12, gap: 10, paddingBottom: 28 },
+  androidContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 0 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  androidHeader: { paddingTop: 12, paddingHorizontal: 12, marginBottom: 0 },
+  androidHeader: { paddingTop: 12, paddingHorizontal: 16, marginBottom: 0 },
   flex: { flex: 1 },
+  fullWidth: { width: '100%' },
   heading: { fontSize: 17, fontWeight: '700' },
+  androidTitle: { fontSize: 20, lineHeight: 26 },
+  androidSubtitle: { fontSize: 14, lineHeight: 20, marginTop: 4 },
+  androidTotal: { fontWeight: '700' },
   card: { padding: 16, borderRadius: 16, gap: 5, marginBottom: 10 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   chip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 16, fontSize: 12 },
+  androidCountChip: { fontWeight: '700', paddingHorizontal: 10, paddingVertical: 5 },
   rowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  androidRowHeader: { alignItems: 'flex-start', marginBottom: 10 },
+  androidNumber: { width: 32, height: 32, paddingHorizontal: 0, paddingVertical: 0, lineHeight: 32, textAlign: 'center', fontSize: 14 },
+  androidItemTitle: { minWidth: 0, fontSize: 14, lineHeight: 20, fontWeight: '700' },
+  androidStatus: { maxWidth: '42%', flexShrink: 1, fontWeight: '700', paddingVertical: 5 },
+  androidInfoRow: { flexDirection: 'row', alignItems: 'flex-start', paddingTop: 3 },
+  androidInfoLabel: { width: 108, fontSize: 13, lineHeight: 19 },
+  androidInfoValue: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: '600' },
+  androidQr: { marginTop: 6, fontSize: 12, lineHeight: 18 },
   footer: { paddingHorizontal: 12, paddingBottom: 12, gap: 6 },
+  androidFooter: { paddingHorizontal: 16 },
   camera: { height: 200, borderRadius: 12, overflow: 'hidden' },
   error: { color: '#a52626', marginVertical: 8 },
 });
