@@ -40,14 +40,15 @@ export function useDailyWorkActions(session: Session, model: ReturnType<typeof u
   }, [owner, controller]);
   const { p } = useWorkerOrderText();
   const canEdit = (batch: DailyWorkBatch) => controller.current() && !state.edit && canCorrectDailyWip(session, batch);
-  const showQr = (batch: DailyWorkBatch) => {
+  const showQr = (batch: DailyWorkBatch, { nativeFeedback = false }: { nativeFeedback?: boolean } = {}) => {
     if (!controller.current() || state.edit || qrPresentation.current.isOpen()) return;
     if (!batch.qr.trim()) setMissingQr(true);
     else {
       const presentationId = qrPresentation.current.open();
       if (presentationId !== null) {
         setQrSelection({ batch, presentationId });
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        // Compose long presses already produce system feedback.
+        if (!nativeFeedback) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       }
     }
   };

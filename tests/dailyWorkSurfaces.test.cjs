@@ -174,6 +174,25 @@ test('daily QR presentations haptic once per accepted open, serialize rapid open
   runner.dispose();
 });
 
+test('Compose daily WIP long press uses native feedback without a second JS haptic', () => {
+  const runner = hooks(), row = batch({ revision: 2 }), haptics = [];
+  const correction = load('dailyWorkCorrection.ts'), sheets = load('workerSheetPresentation.ts');
+  const modelValue = { current: () => true, batches: [row], catalog: [], replaceBatch() {}, refresh() {} };
+  const { useDailyWorkActions } = load('components/useDailyWorkActions.ts', {
+    react: runner.react, '../auth': { subscribeSessionWitness: () => () => {} }, '../dailyWork': model,
+    '../dailyWorkCorrection': correction, '../productionProgressCorrectionApi': {}, '../workerSheetPresentation': sheets,
+    'expo-haptics': { ImpactFeedbackStyle: { Medium: 'medium' }, impactAsync: style => { haptics.push(style); return Promise.resolve(); } },
+    './useWorkerOrderText': { useWorkerOrderText: () => ({ p }) },
+  });
+  const session = { profile: { role: 'aparatchi', ref: 'worker' } };
+  const render = () => { runner.begin(); const value = useDailyWorkActions(session, modelValue); runner.flush(); return value; };
+  let actions = render(); actions.showQr(row, { nativeFeedback: true }); actions = render();
+  assert.equal(actions.qrBatch.id, row.id); assert.deepEqual(haptics, []);
+  actions.qrClosed(); actions = render(); actions.showQr(row); actions = render();
+  assert.equal(actions.qrBatch.id, row.id); assert.deepEqual(haptics, ['medium']);
+  runner.dispose();
+});
+
 test('daily QR sheet retains source detail order without generic history fields', () => {
   const row = batch({ description: 'note', next_apparatus: 'next', current_location: 'location' });
   const rows = presentation.dailyWorkQrRows(row, {}, p);
