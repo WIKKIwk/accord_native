@@ -166,7 +166,7 @@ test('pending writes prevent a successful-looking row snapshot from being handed
 });
 
 function workerScreenHarness(platform, nativeNavigation = true) {
-  const hooks = [], effects = [], opened = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
+  const hooks = [], effects = [], opened = [], actionOptions = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
   const preparation = { calls: [], feedback: 0, result: { kind: 'menu', menu: { kind: 'bosma', actions: ['astatka', 'finish'], operation: 'print' } }, pending: null, error: null };
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
@@ -176,7 +176,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     useEffect(fn, deps) { const id = cursor++; if (!hooks[id] || !equal(deps, hooks[id].deps)) { const previous = hooks[id]; hooks[id] = { deps, cleanup: previous?.cleanup }; effects.push(() => { previous?.cleanup?.(); hooks[id].cleanup = fn(); }); } },
   };
   react.useLayoutEffect = react.useEffect;
-  const sheet = { close() {}, open: value => opened.push(value), update() {}, isOpen: () => false };
+  const sheet = { close() {}, open(value, options) { opened.push(value); actionOptions.push(options); }, update() {}, isOpen: () => false };
   const currentQueue = queue();
   currentQueue.orders[station][0].state = 'in_progress';
   currentQueue.snapshot.order_controls['work-1'] = { state: 'active' };
@@ -224,7 +224,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const s = session();
   s.capabilities.push('apparatus.queue.manage');
-  return { opened, historyOpened, queueState, session: s, routes, preparation, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
+  return { opened, actionOptions, historyOpened, queueState, session: s, routes, preparation, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
 }
 function nodes(tree, type, result = []) {
   if (!tree) return result;
@@ -351,6 +351,10 @@ for (const platform of ['ios', 'android']) {
     read.resolve(x.preparation.result); await opening;
     const menu = platform === 'ios' ? nodes(x.render(), 'WorkerLongPressActions')[0] : x.opened[0];
     assert.equal(menu.props.prepared, x.preparation.result);
+    if (platform === 'android') {
+      const { dismissible, compact, fitContent, heightFraction } = x.actionOptions[0];
+      assert.deepEqual({ dismissible, compact, fitContent, heightFraction }, { dismissible: true, compact: true, fitContent: true, heightFraction: 0.86 });
+    }
     x.render(); x.setLocale('uz'); x.render(); assert.equal(x.preparation.calls.length, 1);
   });
 

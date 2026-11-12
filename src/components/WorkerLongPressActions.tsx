@@ -40,6 +40,7 @@ export function WorkerLongPressActions({ session, apparatusId, operation, order,
   const colors = useWorkerColors();
   const titleStyle = [styles.title, Platform.OS === 'ios' && iosStyles.title, { color: colors.text }];
   const bodyStyle = [styles.body, Platform.OS === 'ios' && iosStyles.body, { color: colors.muted }];
+  const actionHeight = Platform.OS === 'android' ? 56 : undefined;
   const { p } = useWorkerOrderText();
   const close = useContext(WorkerSheetCloseContext);
   const menu = prepared.kind === 'menu' ? prepared.menu : null;
@@ -95,7 +96,7 @@ export function WorkerLongPressActions({ session, apparatusId, operation, order,
     });
   }
   const actionButton = (action: WorkerMenuAction, variant: 'filled' | 'outlined' = 'outlined') =>
-    <WorkerSheetButton key={action} label={action === 'cancel_start' ? p('worker.cancel_start.action') : p(labels[action])} orderAction={actionTints[action]} variant={variant} icon={icons[action]} onPress={() => choose(action)} />;
+    <WorkerSheetButton key={action} label={action === 'cancel_start' ? p('worker.cancel_start.action') : p(labels[action])} orderAction={actionTints[action]} variant={variant} icon={icons[action]} height={actionHeight} onPress={() => choose(action)} />;
 
   return <View style={[styles.content, Platform.OS === 'ios' && iosStyles.content]}>
     {Platform.OS === 'ios' && <View style={styles.header}>
@@ -109,15 +110,15 @@ export function WorkerLongPressActions({ session, apparatusId, operation, order,
       <Text style={titleStyle}>{reactivation.identity}</Text>
       {!reactivation.target && <Text style={bodyStyle}>{p(workerReactivationDenialKey(reactivation.reason))}</Text>}
       <WorkerSheetButton label={p(reactivation.actionKey)} variant="filled" orderAction="resume"
-        icon={{ android: 'restart_alt', ios: 'arrow.counterclockwise' }} disabled={!reactivation.target} onPress={confirmReactivation} />
+        icon={{ android: 'restart_alt', ios: 'arrow.counterclockwise' }} height={actionHeight} disabled={!reactivation.target} onPress={confirmReactivation} />
       {!reactivation.target && ['final_stage_closed', 'order_closed'].includes(reactivation.reason) && <Host matchContents={{ vertical: true }} style={styles.host}><Button label={p('worker.reactivate.reason_details')} variant="text" onPress={() => setAlert({ title: p(reactivation.actionKey), message: p(workerReactivationDenialKey(reactivation.reason)), confirmLabel: p('worker.action.close') })} /></Host>}
     </>}
     {menu?.kind === 'reopen' && actionButton('reopen')}
     {menu?.kind === 'handoff' && <>
       <Text style={titleStyle}>{p('worker.handoff.title')}</Text>
       <Text style={bodyStyle}>{p('worker.handoff.description')}</Text>
-      <WorkerSheetButton label={p('worker.handoff.continue')} orderAction="resume" variant="filled" icon={icons.resume} onPress={() => choose('resume')} />
-      <WorkerSheetButton label={p('worker.handoff.detach')} orderAction="pause" icon={icons.detach_roll} onPress={() => choose('detach_roll')} />
+      <WorkerSheetButton label={p('worker.handoff.continue')} orderAction="resume" variant="filled" icon={icons.resume} height={actionHeight} onPress={() => choose('resume')} />
+      <WorkerSheetButton label={p('worker.handoff.detach')} orderAction="pause" icon={icons.detach_roll} height={actionHeight} onPress={() => choose('detach_roll')} />
       {menu.actions.includes('astatka') && actionButton('astatka')}
     </>}
     {menu?.kind === 'report' && <>
@@ -125,7 +126,7 @@ export function WorkerLongPressActions({ session, apparatusId, operation, order,
       <Text style={bodyStyle}>{p(operation === 'laminate' ? 'worker.lamination_astatka.description' : 'worker.finish.description')}</Text>
       {menu.actions.filter(action => ['cancel_start', 'temporary_pause', 're_pause', 'reclose'].includes(action)).map(action => actionButton(action))}
       <WorkerSheetButton label={p(menu.actions.includes('reclose') ? 'worker.action.complete' : operation === 'cut' ? 'worker.rezka.astatka.title' : 'worker.laminatsiya.astatka.title')}
-        orderAction={menu.actions.includes('reclose') ? 'complete' : 'report'} variant="filled" icon={icons.finish} onPress={() => choose('finish')} />
+        orderAction={menu.actions.includes('reclose') ? 'complete' : 'report'} variant="filled" icon={icons.finish} height={actionHeight} onPress={() => choose('finish')} />
     </>}
     {menu?.kind === 'bosma' && <>
       <Text style={titleStyle}>{p('worker.bosma.astatka.title')}</Text>

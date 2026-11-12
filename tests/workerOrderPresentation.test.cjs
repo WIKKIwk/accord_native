@@ -105,6 +105,42 @@ const mocks = { '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modi
   'react-native': { Platform: { Version: '26.1.1' }, PlatformColor: name => name, Text: 'Text', View: 'View' }, './BaseHost': { BaseHost: 'Host' }, './workerOrderLayout': layout };
 const byId = (tree, id) => nodes(tree, item => item.props.modifiers?.some(modifier => modifier.name === 'accessibilityIdentifier' && modifier.args[0] === id))[0];
 
+test('Android compact sheet fits its content and limits tall menus to the available screen', () => {
+  const { WorkerOrderSheet } = load('components/WorkerOrderSheet.android.tsx', {
+    '@expo/ui/jetpack-compose': { Host: 'Host', ModalBottomSheet: 'ModalBottomSheet', RNHostView: 'RNHostView' },
+    'react-native': { ScrollView: 'ScrollView', View: 'View', useWindowDimensions: () => ({ width: 400, height: 800 }) },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
+    './useWorkerColors': { useWorkerColors: () => ({ field: 'surface' }) },
+    './workerSheetContext': { WorkerSheetCloseContext: { Provider: 'Provider' } },
+  });
+  let closed = 0;
+  const tree = WorkerOrderSheet({ children: 'actions', onClose: () => closed++, dismissible: true, compact: true, fitContent: true, heightFraction: 0.86 });
+  const sheet = nodes(tree, item => item.type === 'ModalBottomSheet')[0];
+  const container = nodes(tree, item => item.type === 'View')[0];
+  const scroll = nodes(tree, item => item.type === 'ScrollView')[0];
+  assert.deepEqual(container.props.style, { width: 400, maxHeight: Math.round((800 - 24) * 0.86), paddingBottom: 16 });
+  assert.deepEqual(scroll.props.style, { flexGrow: 0, flexShrink: 1 });
+  assert.equal(sheet.props.sheetGesturesEnabled, true);
+  sheet.props.onDismissRequest(); assert.equal(closed, 1);
+  const fixed = WorkerOrderSheet({ children: 'other sheet', onClose: () => {}, compact: true });
+  assert.equal(nodes(fixed, item => item.type === 'View')[0].props.style.height, Math.round((800 - 24) * 0.65));
+});
+
+test('Android action button applies the standard height inside a full-width host', () => {
+  const { WorkerSheetButton } = load('components/WorkerSheetButton.tsx', {
+    '@expo/ui': { Button: 'Button', Host: 'Host', RNHostView: 'RNHostView', Row: 'Row', Text: 'ComposeText' },
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { StyleSheet: { create: value => value }, useColorScheme: () => 'dark' },
+    './useWorkerColors': { useWorkerColors: () => ({ icon: 'icon' }) },
+  });
+  let selected = 0;
+  const tree = WorkerSheetButton({ label: 'Astatka', icon: { android: 'logout' }, height: 56, onPress: () => selected++ });
+  assert.equal(tree.props.style.width, '100%');
+  const button = nodes(tree, item => item.type === 'Button')[0];
+  assert.deepEqual(button.props.style, { height: 56 });
+  button.props.onPress(); assert.equal(selected, 1);
+});
+
 test('native iOS summary expands all metrics and six production stages, keeping apparatus rows actionable', () => {
   const h = harness();
   const { WorkerOrderOverview } = load('components/WorkerOrderOverview.ios.tsx', { ...mocks,

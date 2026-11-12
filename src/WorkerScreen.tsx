@@ -416,7 +416,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
         setNativeOverlayOpen(true);
         actionsRoute.open(<WorkerLongPressActions session={session} apparatusId={apparatusId} operation={apparatus.operation}
           order={order} prepared={prepared} onChoose={chooseOrderAction} />,
-        { dismissible: true, compact: true, onDismiss: closeOrderActions });
+        { dismissible: true, compact: true, fitContent: true, heightFraction: 0.86, onDismiss: closeOrderActions });
       } else setActionOrder(target);
       presented = true;
     } catch (error) {

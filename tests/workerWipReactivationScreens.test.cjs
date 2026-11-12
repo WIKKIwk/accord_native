@@ -113,7 +113,7 @@ test('read-only and unsupported operations retain ordinary details without a rea
   }
 });
 
-function completedMenu(completed = true) {
+function completedMenu(completed = true, platform = 'ios') {
   const runner = hooks(), h = { version: 1, reads: 0, previews: 0, writes: 0, choices: [], closes: 0 };
   const p = key => key, close = () => h.closes++;
   runner.react.useContext = () => close;
@@ -121,7 +121,7 @@ function completedMenu(completed = true) {
   const file = path.resolve(__dirname, '../src/components/WorkerLongPressActions.tsx'), mod = new Module(file, module); mod.paths = module.paths;
   const mocks = {
     react: runner.react, 'react/jsx-runtime': jsx, '@expo/ui': { Button: 'Button', Host: 'Host' },
-    'react-native': { ActivityIndicator: 'Spinner', Platform: { OS: 'ios' }, StyleSheet: { create: value => value }, Text: 'Text', View: 'View' },
+    'react-native': { ActivityIndicator: 'Spinner', Platform: { OS: platform }, StyleSheet: { create: value => value }, Text: 'Text', View: 'View' },
     '../auth': { activeSessionToken: () => 'token', captureSessionWitness: () => ({ version: h.version }), isSessionWitnessCurrent: witness => witness.version === h.version },
     '../sessionReadScope': { sessionReadScope: () => `scope:${h.version}` },
     '../workerLongPress': { readWorkerActionControl: async () => ({}), workerLongPressMenu: () => ({ kind: 'bosma', operation: 'print',
@@ -140,8 +140,37 @@ function completedMenu(completed = true) {
       actions: ['temporary_pause', 're_pause', 'astatka', 'finish'], control: { state: 'in_progress' } } },
     onChoose: choice => h.choices.push(choice) };
   const render = () => { runner.begin(); const tree = mod.exports.WorkerLongPressActions(props); runner.flush(); return tree; };
-  return Object.assign(h, { render, unmount: runner.dispose, review });
+  return Object.assign(h, { props, render, unmount: runner.dispose, review });
 }
+
+test('Android long-press actions use full-size buttons across worker menus and retain their choices', () => {
+  const cases = [
+    { kind: 'report', operation: 'laminate', actions: ['temporary_pause', 're_pause', 'finish'], labels: ['worker.temporary_pause.action', 'worker.re_pause.action', 'worker.laminatsiya.astatka.title'], choice: 'astatka' },
+    { kind: 'bosma', operation: 'print', actions: ['temporary_pause', 're_pause', 'astatka', 'finish'], labels: ['worker.temporary_pause.action', 'worker.re_pause.action', 'worker.bosma.astatka.title', 'worker.finish.title'], choice: 'complete' },
+    { kind: 'handoff', operation: 'laminate', actions: ['resume', 'detach_roll', 'astatka'], labels: ['worker.handoff.continue', 'worker.handoff.detach', 'worker.bosma.astatka.title'], choice: 'resume', button: 0 },
+    { kind: 'reopen', operation: 'print', actions: ['reopen'], labels: ['worker.print_preflight.reopen.action'] },
+  ];
+  for (const item of cases) {
+    const h = completedMenu(false, 'android');
+    try {
+      h.props.operation = item.operation;
+      h.props.prepared = { kind: 'menu', menu: { kind: item.kind, operation: item.operation, actions: item.actions } };
+      const buttons = nodes(h.render(), node => node.type === 'Action');
+      assert.deepEqual(buttons.map(button => button.props.label), item.labels);
+      assert.ok(buttons.every(button => button.props.height === 56));
+      if (item.choice) {
+        buttons[item.button ?? buttons.length - 1].props.onPress();
+        assert.deepEqual(h.choices, [item.choice]); assert.equal(h.closes, 1);
+      }
+    } finally { h.unmount(); }
+  }
+  const h = completedMenu(true, 'android');
+  try {
+    const button = nodes(h.render(), node => node.type === 'Action')[0];
+    assert.equal(button.props.height, 56);
+    button.props.onPress(); assert.equal(h.choices.length, 1); assert.equal(h.closes, 1);
+  } finally { h.unmount(); }
+});
 
 test('iOS long-press menu renders all four full-width platform actions with separate order identity and semantic colors', async () => {
   const h = completedMenu(false);
@@ -152,6 +181,7 @@ test('iOS long-press menu renders all four full-width platform actions with sepa
       ['worker.temporary_pause.action', 'pause'], ['worker.re_pause.action', 'pause'],
       ['worker.bosma.astatka.title', 'report'], ['worker.finish.title', 'complete'],
     ]);
+    assert.ok(buttons.every(button => button.props.height === undefined));
     const code = nodes(tree, node => node.type === 'Text' && node.props.children === '0304')[0];
     assert.equal(code.props.style[0].fontSize, 22);
     assert.ok(nodes(tree, node => node.type === 'Text' && node.props.children === 'Film')[0]);
