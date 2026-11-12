@@ -6,7 +6,7 @@ const test = require('node:test');
 const ts = require('typescript');
 const jsx = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 const AlertDialog = Object.assign(() => null, { Title: 'Title', Text: 'DialogText', DismissButton: 'DismissButton', ConfirmButton: 'ConfirmButton' });
-function load(platform) {
+function load(platform, screenWidth = 400) {
   const filename = path.resolve(__dirname, `../src/components/WorkerFormDialog${platform ? `.${platform}` : ''}.tsx`), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
   const native = { AlertDialog, Box: 'Box', Button: 'Button', OutlinedButton: 'OutlinedButton', Row: 'Row', Icon: 'Icon', Host: 'Host', RNHostView: 'RNHostView', Text: 'Text', TextButton: 'TextButton',
@@ -16,7 +16,7 @@ function load(platform) {
   const composeModifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name, args }) });
   const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': native, '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': composeModifiers, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
     './BaseHost': { BaseHost: 'Host' }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 20 }) },
-    'react-native': { Platform: { Version: '26' }, PlatformColor: value => value, Pressable: 'Pressable', KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', View: 'View', Text: 'Text', ScrollView: 'ScrollView', StyleSheet: { create: value => value, absoluteFill: {} }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
+    'react-native': { Platform: { Version: '26' }, PlatformColor: value => value, Pressable: 'Pressable', KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', View: 'View', Text: 'Text', ScrollView: 'ScrollView', StyleSheet: { create: value => value, absoluteFill: {} }, useWindowDimensions: () => ({ width: screenWidth, height: 800 }) },
     './useWorkerOrderText': { useWorkerOrderText: () => ({ t: key => key }) }, './useWorkerColors': { useWorkerColors: () => ({ surface: 'white', text: 'black' }) } };
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.endsWith('.xml') ? id : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
@@ -48,6 +48,8 @@ for (const progressAction of ['pause', 'complete']) test(`Android ${progressActi
     confirmLabel: 'Tasdiqlash', onConfirm: () => calls.push('confirm'), onCancel: () => calls.push('cancel') });
   const dialog = nodes(tree, node => node.type === AlertDialog)[0];
   assert.equal(dialog.props.properties.dismissOnBackPress, false);
+  assert.equal(dialog.props.properties.usePlatformDefaultWidth, false);
+  assert.equal(dialog.props.modifiers.find(mod => mod.name === 'width').args[0], 368);
   dialog.props.onDismissRequest(); assert.deepEqual(calls, []);
   const icon = nodes(tree, node => node.type === 'Icon')[0];
   assert.match(icon.props.source, progressAction === 'pause' ? /pause_circle\.xml$/ : /check_circle\.xml$/);
@@ -55,7 +57,8 @@ for (const progressAction of ['pause', 'complete']) test(`Android ${progressActi
   const content = nodes(tree, node => node.type === 'ScrollView')[0];
   assert.equal(content.props.ref, scrollRef);
   assert.equal(content.props.style.maxHeight, 480);
-  assert.equal(nodes(tree, node => node.type === 'View')[0].props.style.width, 320);
+  assert.deepEqual(nodes(tree, node => node.type === 'RNHostView')[0].props.matchContents, { vertical: true });
+  assert.equal(nodes(tree, node => node.type === 'View')[0].props.style.width, '100%');
   const cancel = nodes(tree, node => node.type === 'OutlinedButton')[0], confirm = nodes(tree, node => node.type === 'Button')[0];
   cancel.props.onClick(); confirm.props.onClick(); assert.deepEqual(calls, ['cancel', 'confirm']);
   assert.equal(cancel.props.modifiers.find(mod => mod.name === 'height').args[0], 48);
@@ -64,6 +67,17 @@ for (const progressAction of ['pause', 'complete']) test(`Android ${progressActi
   assert.equal(nodes(busy, node => node.type === 'OutlinedButton')[0].props.enabled, false);
   assert.equal(nodes(busy, node => node.type === 'Button')[0].props.enabled, false);
 });
+for (const [screen, expected] of [[320, 288], [360, 328], [384, 352], [430, 398], [600, 480], [900, 480]]) {
+  test(`Android quantity dialog fits ${screen}dp screen while its content follows the native inset`, () => {
+    const tree = load('android', screen)({ visible: true, title: 'Miqdor', children: 'Fields', progressAction: 'pause',
+      confirmLabel: 'Tasdiqlash', onConfirm() {}, onCancel() {} });
+    const dialog = nodes(tree, node => node.type === AlertDialog)[0];
+    assert.equal(dialog.props.modifiers.find(mod => mod.name === 'width').args[0], expected);
+    assert.equal(dialog.props.properties.usePlatformDefaultWidth, false);
+    assert.deepEqual(nodes(tree, node => node.type === 'RNHostView')[0].props.matchContents, { vertical: true });
+    assert.equal(nodes(tree, node => node.type === 'View')[0].props.style.width, '100%');
+  });
+}
 test('fallback report also honors preventDismiss and forwards the actual native modal dismissal', () => {
   const render = load(); let cancels = 0, dismissals = 0;
   const tree = render({ visible: true, title: 'Report', preventDismiss: true, onCancel: () => cancels++, onDismiss: () => dismissals++, confirmLabel: 'Save', onConfirm() {} });

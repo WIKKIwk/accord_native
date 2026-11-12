@@ -54,11 +54,20 @@ function setup(platform, options = {}) {
     './useWorkerColors': { useWorkerColors: () => ({ text: '#111', muted: '#666', error: '#f00', field: '#eee' }) },
     './useWorkerOrderText': { useWorkerOrderText: () => ({ p: (key, values) => values ? `${key}:${JSON.stringify(values)}` : key, t: key => key }) } };
   const Component = compile('components/WorkerRezkaOutputReport.tsx', mocks).WorkerRezkaOutputReport;
-  const props = { session, apparatus: session.assigned_apparatus[0], orderId: 'order', stage: 'cut', action: 'complete', map: { products: [] },
+  const props = { session, apparatus: session.assigned_apparatus[0], orderId: 'order', stage: 'cut', action: options.action ?? 'complete', map: { products: [] },
     fullCompletionReportRequired: options.fullCompletionReportRequired,
     getCursor: () => h.cursor ?? { epoch: 'epoch', rev: 5 }, onClose: value => h.closes.push(value), onAttempted() {}, onCommitted() {} };
   h.render = () => { react.begin(); h.tree = Component(props); react.flush(); h.dialog = nodes(h.tree, value => value.type === 'Dialog')[0]; return h.tree; };
   h.all = type => nodes(h.tree, value => value.type === type); h.dispose = react.dispose; h.render(); return h;
+}
+
+for (const [action, expected] of [['pause', 'pause'], ['detach_roll', 'pause'], ['roll_complete', 'complete'], ['complete', 'complete']]) {
+  test(`Android rezka ${action} report uses the native quantity dialog`, () => {
+    const h = setup('android', { action });
+    assert.equal(h.dialog.props.progressAction, expected);
+    assert.ok(h.all('Field').length > 0);
+    h.dispose();
+  });
 }
 
 // @v2-test test/admin_production_map_rezka_deviation_warning_test_part.dart

@@ -52,6 +52,41 @@ for (const platform of ['android', 'ios']) for (const action of ['pause', 'compl
   assert.deepEqual([h.values.get('bobina'), h.values.get('meter'), h.values.get('kg')], ['1', '12,5', '10']);
 });
 
+for (const [name, operation, technology] of [
+  ['rangli bosma', 'print', 'rotogravure'], ['flexo bosma', 'print', 'flexographic'],
+  ['laminatsiya', 'laminate', 'adhesive_lamination'], ['ekstruzion laminatsiya', 'laminate', 'extrusion_lamination'],
+  ['rezka', 'cut', 'slitting'], ['kley', 'glue', 'cold_glue'], ['paket', 'package', 'bag_making'],
+]) for (const action of ['pause', 'complete']) test(`Android ${name}: ${action} uses the native quantity dialog`, () => {
+  const h = harness('android', { states: { selected: action }, apparatus: { operation, technology },
+    control: { allowed_actions: ['pause', 'complete'], complete_requires_full_report: false },
+    interaction: { mode: 'in_progress', blocking_reason_code: '' } });
+  const tree = h.render(), dialog = nodes(tree, node => node.type === 'WorkerFormDialog')[0];
+  if (operation === 'cut') {
+    assert.equal(dialog.props.visible, false);
+    const report = nodes(tree, node => node.type === 'WorkerRezkaOutputReport')[0];
+    assert.equal(report.props.action, action);
+  } else {
+    assert.equal(dialog.props.visible, true);
+    assert.equal(dialog.props.progressAction, action);
+    const fields = nodes(dialog, node => node.type?.name === 'Field');
+    assert.deepEqual(fields.slice(0, 3).map(field => field.props.label), ['Babina, kg', 'Metraj, metr', 'Og‘irlik, kg']);
+  }
+});
+
+for (const [operation, expected] of [
+  ['print', ['Babina, kg', 'Metraj, metr', 'Og‘irlik, kg', 'Jami chiqindi, kg']],
+  ['glue', ['Babina, kg', 'Metraj, metr', 'Og‘irlik, kg', 'Bosmadan ortgan rulon (kg)', 'Plyonkadan ortgan rulon (kg)', 'Jami chiqindi, kg']],
+  ['package', ['Babina, kg', 'Metraj, metr', 'Og‘irlik, kg', 'Jami chiqindi, kg']],
+]) test(`Android ${operation}: full completion keeps every field in the same dialog`, () => {
+  const h = harness('android', { states: { selected: 'complete' }, apparatus: { operation },
+    control: { allowed_actions: ['pause', 'complete'], complete_requires_full_report: true },
+    interaction: { mode: 'in_progress', blocking_reason_code: '' } });
+  const dialog = nodes(h.render(), node => node.type === 'WorkerFormDialog')[0];
+  assert.equal(dialog.props.visible, true);
+  assert.equal(dialog.props.progressAction, 'complete');
+  assert.deepEqual(nodes(dialog, node => node.type?.name === 'Field').map(field => field.props.label), expected);
+});
+
 test('Android astatka keeps its existing dialog and fields', () => {
   const h = harness('android', { states: { selected: 'astatka' }, apparatus: { operation: 'glue' },
     control: { allowed_actions: ['pause', 'complete'] }, interaction: { mode: 'in_progress', blocking_reason_code: '' } });
