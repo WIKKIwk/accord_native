@@ -92,6 +92,8 @@ test('stage history retains the current order, identity, apparatus labels and na
 });
 
 const native = new Proxy({}, { get: (_target, key) => String(key) });
+const androidNative = new Proxy({ useMaterialColors: () => ({ onSurfaceVariant: 'label', surfaceContainerHighest: 'surface' }) },
+  { get: (target, key) => target[key] ?? String(key) });
 const layout = load('components/workerOrderLayout.ts');
 const noticeHyphenation = load('workerNoticeHyphenation.ts');
 const modifiers = new Proxy({}, { get: (_target, key) => key === 'shapes'
@@ -216,7 +218,7 @@ test('native order controls retain callbacks and busy state, with pause above co
 
 for (const platform of ['ios', 'android']) test(`${platform}: blocked paused orders show native information without creating an action`, () => {
   const { WorkerOrderBlockingNotice } = load(`components/WorkerOrderControls.${platform}.tsx`, { ...mocks,
-    '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifiers,
+    '@expo/ui/jetpack-compose': androidNative, '@expo/ui/jetpack-compose/modifiers': modifiers,
     './WorkerSheetButton': { WorkerSheetButton: 'Button' } });
   const message = '8 ta rangli bosma apparat — shashoqcha';
   const tree = WorkerOrderBlockingNotice({ message });
