@@ -31,7 +31,7 @@ function InfoRow({ row, colors }: { row: [string, string]; colors: MaterialColor
   </Row>;
 }
 
-function Symbol({ name, color, size: iconSize = 22 }: { name: 'receipt_long' | 'expand_less' | 'expand_more' | 'edit'; color: string; size?: number }) {
+function DailyWorkIcon({ name, color, size: iconSize = 22 }: { name: 'receipt_long' | 'expand_less' | 'expand_more' | 'edit'; color: string; size?: number }) {
   return <RNHostView matchContents><SymbolView name={{ android: name }} size={iconSize} tintColor={color} accessible={false} /></RNHostView>;
 }
 
@@ -63,13 +63,13 @@ function BatchCard({ batch, index, names, assigned, showWorker, actions, p, colo
         <Box modifiers={[clip(Shapes.RoundedCorner(999)), background(statusBackground), padding(8, 5, 8, 5)]}>
           <ComposeText color={statusForeground} style={{ typography: 'labelSmall', fontWeight: '800' }}>{dailyWorkStatusLabel(batch, p)}</ComposeText>
         </Box>
-        <Symbol name={expanded ? 'expand_less' : 'expand_more'} color={colors.onSurfaceVariant} />
+        <DailyWorkIcon name={expanded ? 'expand_less' : 'expand_more'} color={colors.onSurfaceVariant} />
       </Row>
       {showWorker ? <InfoRow row={[p('worker.wip.info.worker'), batch.worker || '—']} colors={colors} /> : null}
       {expanded ? <>
         {actions.canEdit(batch) ? <Row horizontalArrangement="end" modifiers={[fillMaxWidth(), padding(0, 6, 0, 0)]}>
           <FilledTonalIconButton onClick={() => actions.edit(batch)} modifiers={[size(40, 40), semantics({ contentDescription: p('worker.daily.edit_wip') })]}>
-            <Symbol name="edit" color={colors.onSecondaryContainer} size={20} />
+            <DailyWorkIcon name="edit" color={colors.onSecondaryContainer} size={20} />
           </FilledTonalIconButton>
         </Row> : null}
         <InfoRow row={rows[0]} colors={colors} />
@@ -98,7 +98,7 @@ function OrderGroup({ group, names, assigned, showWorker, actions, p, colors }: 
       <Column modifiers={[fillMaxWidth(), padding(8, 8, 8, 2)]}>
         <Row verticalAlignment="top" horizontalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 44 }),
           clip(Shapes.RoundedCorner(12)), testID(`daily-work-order-header-${group.key}`), clickable(() => setExpanded(value => !value)), padding(8, 4, 4, 10)]}>
-          <Symbol name="receipt_long" size={20} color={colors.primary} />
+          <DailyWorkIcon name="receipt_long" size={20} color={colors.primary} />
           <Column verticalArrangement={{ spacedBy: 3 }} modifiers={[weight(1)]}>
             <ComposeText color={colors.onSurfaceVariant} maxLines={1} overflow="ellipsis" style={{ typography: 'labelSmall' }}>
               {p('worker.daily.order')}{hasTitle && orderId ? <ComposeText color={colors.primary} style={{ fontWeight: '700' }}>{` • ${orderId}`}</ComposeText> : null}
@@ -108,7 +108,7 @@ function OrderGroup({ group, names, assigned, showWorker, actions, p, colors }: 
           <Box modifiers={[clip(Shapes.RoundedCorner(999)), background(colors.secondaryContainer), padding(9, 5, 9, 5)]}>
             <ComposeText color={colors.onSecondaryContainer} style={{ typography: 'labelSmall', fontWeight: '800' }}>{`${group.batches.length} ${p('worker.daily.wip')}`}</ComposeText>
           </Box>
-          <Symbol name={expanded ? 'expand_less' : 'expand_more'} color={colors.onSurfaceVariant} />
+          <DailyWorkIcon name={expanded ? 'expand_less' : 'expand_more'} color={colors.onSurfaceVariant} />
         </Row>
         {expanded ? <Column verticalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth(), padding(0, 2, 0, 10)]}>
           {group.batches.map((batch, index) => <BatchCard key={`${batch.id}:${index}`} batch={batch} index={index} names={names} assigned={assigned} showWorker={showWorker} actions={actions} p={p} colors={colors} />)}

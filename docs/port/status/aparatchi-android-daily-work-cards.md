@@ -1,6 +1,6 @@
 # Aparatchi Android: daily-work order cards
 
-Status: implementation complete on `main`; physical Android verification remains open.
+Status: the list renders on a connected Android phone; visual review across themes and text sizes remains open.
 
 ## Surface audit
 
@@ -14,16 +14,25 @@ Compose `combinedClickable` supplies the long-press haptic, so the Android card 
 iOS and other callers keep their existing feedback. Android's default is documented in the
 [combinedClickable reference](https://developer.android.com/reference/kotlin/androidx/compose/foundation/combinedClickable.modifier).
 
+## Runtime correction
+
+The running Metro graph initially retained the older fallback screen after the Android-specific file was added. Once the
+import was refreshed, the new screen failed because its local `Symbol` component shadowed the global `Symbol` used by
+the React Compiler's memo cache. The icon component was renamed and the actual React Compiler output is now exercised
+by a regression test. The active Metro graph resolves `WorkerDailyPage` to the Android-specific screen.
+
 ## Verification
 
-- Focused daily-work, QR, corrections and queue tests: 82 passed.
+- Focused daily-work, QR, corrections and queue tests: 83 passed, including the React Compiler regression.
 - Android and iOS TypeScript checks: passed. Expo lint: passed with one existing unrelated Admin hook warning.
 - Android Expo export: passed; the source map resolves the new Android daily-work screen.
 - Ledger check passed with 1243 resolved V2 tags and 115 test tags; the eleven existing dynamic-endpoint diagnostics remain.
+- A connected Android phone rendered an order and WIP card without LogBox; the WIP expanded, collapsed and reopened
+  through its actual interaction callback. The native screen's visual appearance was not captured for review.
 - The ledger page lookup does not recognize the private V2 group widget. Its UI and text were checked directly against
   the source; no whole-role audit or text-gate completion is claimed.
 
 ## Open item
 
 Check light/dark themes, multiple WIPs, expanded long QR and notes, edit, and QR long press on a real Android phone.
-No device or emulator was used.
+No emulator was used.

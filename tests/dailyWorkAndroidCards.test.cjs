@@ -13,6 +13,18 @@ function load(file, mocks = {}, extra = '') {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8') + extra, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   return mod.exports;
 }
+function loadWithReactCompiler(file, mocks, extra) {
+  const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module); mod.paths = module.paths;
+  const compiled = require('@babel/core').transformSync(fs.readFileSync(filename, 'utf8') + extra, {
+    filename, babelrc: false, configFile: false,
+    plugins: [[require('babel-plugin-react-compiler'), { target: '19', environment: { enableResetCacheOnSourceFileChanges: true } }],
+      [require('@babel/plugin-transform-react-jsx'), { runtime: 'automatic' }], require('@babel/plugin-transform-modules-commonjs')],
+    presets: [[require('@babel/preset-typescript'), { allExtensions: true, isTSX: true }]],
+  }).code;
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod._compile(compiled, filename);
+  return { compiled, exports: mod.exports };
+}
 function nodes(tree, predicate) {
   if (!tree || typeof tree !== 'object') return [];
   if (Array.isArray(tree)) return tree.flatMap(child => nodes(child, predicate));
@@ -37,7 +49,7 @@ function setup(extra = {}) {
   const actions = { canEdit: () => true, edit: item => calls.push(['edit', item.id]), showQr: (item, options) => calls.push(['qr', item.id, options]) };
   const value = { day: new Date(2026, 9, 27), setDay: date => calls.push(['date', date]), batches: [row], apparatusNames: { cut: 'Kesish', stock: 'Ombor' }, groups: [group],
     totals: { orders: 1, wips: 1, used: 0 }, error: '', refreshing: false, refresh() {} };
-  const exports = load('components/DailyWorkScreen.android.tsx', {
+  const mocks = {
     react: runner.react, 'react-native': { StyleSheet: { create: x => x }, BackHandler: { addEventListener: () => ({ remove() {} }) },
       ActivityIndicator: 'Spinner', Pressable: 'Pressable', RefreshControl: 'Refresh', ScrollView: 'ScrollView', Text: 'Text', View: 'View' },
     '@expo/ui/community/datetime-picker': { DateTimePicker: 'DatePicker' }, '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
@@ -45,11 +57,27 @@ function setup(extra = {}) {
     './useDailyWork': { useDailyWork: () => value }, './useDailyWorkActions': { useDailyWorkActions: () => actions },
     './DailyWorkDialogs': { DailyWorkDialogs: 'Dialogs' }, './WorkerIconButton': { WorkerIconButton: 'IconButton' },
     './useWorkerColors': { useWorkerColors: () => ({}) }, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: p }) }, ...extra,
-  }, '\nexport { OrderGroup, BatchCard, CompactValue, InfoRow };');
+  };
+  const exports = load('components/DailyWorkScreen.android.tsx', mocks, '\nexport { OrderGroup, BatchCard, CompactValue, InfoRow };');
   const render = (component, props) => { runner.begin(); const tree = component(props); runner.flush(); return tree; };
   const props = { group, names: value.apparatusNames, assigned: ['cut'], showWorker: false, actions, p, colors: palette };
-  return { ...exports, row, group, actions, props, calls, value, render, dispose: runner.dispose };
+  return { ...exports, row, group, actions, props, calls, value, render, mocks, dispose: runner.dispose };
 }
+
+test('Android daily cards render with React Compiler enabled', () => {
+  const h = setup();
+  try {
+    const { compiled, exports } = loadWithReactCompiler('components/DailyWorkScreen.android.tsx', {
+      ...h.mocks, 'react/compiler-runtime': { c: size => Array(size).fill(null) },
+    }, '\nexport { DailyWorkIcon, OrderGroup, BatchCard, CompactValue };');
+    assert.match(compiled, /Symbol\.for\(["']react\.memo_cache_sentinel["']\)/);
+    const icon = exports.DailyWorkIcon({ name: 'receipt_long', color: 'primary' });
+    assert.equal(icon.type, 'RNHostView'); assert.equal(icon.props.children.props.name.android, 'receipt_long');
+    assert.doesNotThrow(() => h.render(exports.OrderGroup, h.props));
+    assert.doesNotThrow(() => h.render(exports.BatchCard, { batch: h.row, index: 0, names: {}, assigned: [], showWorker: false, actions: h.actions, p, colors: palette }));
+    assert.doesNotThrow(() => h.render(exports.CompactValue, { label: 'QR', value: '123', colors: palette }));
+  } finally { h.dispose(); }
+});
 
 test('Android daily order has the V2 identity, count badge and separate expandable WIP cards', () => {
   const h = setup();
@@ -66,7 +94,7 @@ test('Android daily order has the V2 identity, count badge and separate expandab
     assert.equal(card.props.colors.containerColor, 'group'); assert.equal(card.props.border.color, 'outline');
     const header = find(tree, node => modifier(node, 'testID') === 'daily-work-order-header-order:zakaz-0306');
     assert.ok(header);
-    assert.equal(find(tree, node => node.type?.name === 'Symbol').props.name, 'receipt_long');
+    assert.equal(find(tree, node => node.type?.name === 'DailyWorkIcon').props.name, 'receipt_long');
     assert.ok(find(tree, node => node.type === 'ComposeText' && node.props.children === 'Hamroh qizil 80 gr tuzli'));
     const label = find(tree, node => node.type === 'ComposeText' && Array.isArray(node.props.children) && node.props.children[0] === 'worker.daily.order');
     assert.equal(label.props.children[1].props.children, ' • zakaz-0306');
