@@ -1,6 +1,6 @@
 import { Button, HStack, Image, List, ProgressView, Section, Text, VStack } from '@expo/ui/swift-ui';
 import { buttonStyle, contentShape, controlSize, disabled,
-  fixedSize, font, foregroundStyle, frame, lineLimit, listStyle, multilineTextAlignment, onLongPressGesture, shapes } from '@expo/ui/swift-ui/modifiers';
+  fixedSize, font, foregroundStyle, frame, lineLimit, listRowInsets, listRowSpacing, listSectionSpacing, listStyle, multilineTextAlignment, onLongPressGesture, shapes } from '@expo/ui/swift-ui/modifiers';
 import { useContext } from 'react';
 import { PlatformColor, StyleSheet, View } from 'react-native';
 import { BaseHost } from './BaseHost';
@@ -36,6 +36,12 @@ export function WorkerScannedWipHistory(props: WorkerScannedWipsProps) {
         <Text modifiers={[font({ textStyle: 'subheadline' }), fixedSize({ horizontal: false, vertical: true })]}>{p(state.notice)}</Text>
       </BaseHost></View>}
       {state.writing && <BaseHost matchContents={{ vertical: true }} style={styles.host}><ProgressView /></BaseHost>}
+      {!presentation.fitContent && <View style={styles.inset}>
+        <BaseHost matchContents={{ vertical: true }} style={styles.host}>
+          <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('secondary'),
+            fixedSize({ horizontal: false, vertical: true })]}>{p('worker.scanned_wip.hint')}</Text>
+        </BaseHost>
+      </View>}
       {presentation.fitContent ? <View style={styles.inset}>
         <BaseHost matchContents={{ vertical: true }} style={styles.host}>
           <VStack spacing={12} modifiers={[frame({ maxWidth: Infinity, minHeight: 104 })]}>
@@ -52,19 +58,20 @@ export function WorkerScannedWipHistory(props: WorkerScannedWipsProps) {
           </VStack>
         </BaseHost>
       </View> : <BaseHost style={styles.expanded}>
-        <List modifiers={[listStyle('insetGrouped')]}>
-          <Section><Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('secondary')]}>{p('worker.scanned_wip.hint')}</Text></Section>
-          {rows.map(row => <Section key={row.key}>
-            <HStack modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' }), contentShape(shapes.rectangle()),
-              ...(row.canReturn ? [onLongPressGesture(() => controller.requestReturn(row.item), 0.5)] : [])]}>
-              <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+        <List modifiers={[listStyle('insetGrouped'), listRowSpacing(0), listSectionSpacing('compact')]}>
+          <Section>
+            {rows.map(row => <HStack key={row.key} alignment="top" spacing={12}
+              modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' }), listRowInsets({ top: 12, leading: 16, bottom: 12, trailing: 16 }),
+                contentShape(shapes.rectangle()), ...(row.canReturn ? [onLongPressGesture(() => controller.requestReturn(row.item), 0.5)] : [])]}>
+              <Image systemName="qrcode" size={22} color={PlatformColor('secondaryLabel')} />
+              <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
                 <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold', design: 'monospaced' }), lineLimit(2)]}>{row.title}</Text>
-                {row.details.map((line, i) => <Text key={i} modifiers={[font({ textStyle: 'caption' }), foregroundStyle('secondary'),
+                {row.details.map((line, i) => <Text key={i} modifiers={[font({ textStyle: i === 0 ? 'subheadline' : 'caption' }), foregroundStyle('secondary'),
                   fixedSize({ horizontal: false, vertical: true })]}>{line}</Text>)}
               </VStack>
               {row.canReturn && <Image systemName="arrow.uturn.backward" size={20} />}
-            </HStack>
-          </Section>)}
+            </HStack>)}
+          </Section>
         </List>
       </BaseHost>}
     </View>

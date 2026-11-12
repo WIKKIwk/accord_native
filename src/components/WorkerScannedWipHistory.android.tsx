@@ -1,7 +1,8 @@
+import { FieldGroup, ListItem } from '@expo/ui';
 import { Button, CircularProgressIndicator, Column, FilledTonalIconButton, Icon, LinearProgressIndicator, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { combinedClickable, fillMaxWidth, padding, semantics, size, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { combinedClickable, fillMaxSize, fillMaxWidth, padding, semantics, size, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { BaseHost } from './BaseHost';
 import { WorkerAlert } from './WorkerAlert';
 import { WorkerOrderSheet } from './WorkerOrderSheet';
@@ -44,28 +45,30 @@ export function WorkerScannedWipHistory(props: WorkerScannedWipsProps) {
             </> : null}
           </Column>
         </BaseHost>
-      </View> : <ScrollView style={styles.expanded} contentContainerStyle={styles.list}>
-        <BaseHost matchContents={{ vertical: true }} style={styles.host}>
-          <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{p('worker.scanned_wip.hint')}</Text>
-        </BaseHost>
-        {rows.map(row => <View key={row.key} style={[styles.card, { backgroundColor: colors.surface }]}>
-          <BaseHost matchContents={{ vertical: true }} style={styles.host}>
-            <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), padding(14, 14, 14, 14),
-              ...(row.canReturn ? [combinedClickable({ onLongClick: () => controller.requestReturn(row.item) })] : [])]}>
-              <Column verticalArrangement={{ spacedBy: 6 }} modifiers={[weight(1)]}>
-                <Text color={colors.onSurface} maxLines={2} overflow="ellipsis" style={{ typography: 'bodyMedium', fontFamily: 'monospace', fontWeight: '700' }}>{row.title}</Text>
-                {row.details.map((line, i) => <Text key={i} color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{line}</Text>)}
-              </Column>
-              {row.canReturn && <RNHostView matchContents><SymbolView name={{ android: 'undo' }} size={22} tintColor={colors.primary} /></RNHostView>}
-            </Row>
-          </BaseHost>
-        </View>)}
-      </ScrollView>}
+      </View> : <BaseHost style={styles.expanded}>
+        <FieldGroup testID="scanned-wip-history-list" style={{ backgroundColor: colors.surfaceContainerHighest }} modifiers={[fillMaxSize()]}>
+          <FieldGroup.Section>
+            <FieldGroup.SectionHeader>
+              <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{p('worker.scanned_wip.hint')}</Text>
+            </FieldGroup.SectionHeader>
+            {rows.map(row => <ListItem key={row.key} testID={`scanned-wip-${row.key}`}
+              modifiers={row.canReturn ? [combinedClickable({ onLongClick: () => controller.requestReturn(row.item) })] : undefined}
+              leading={<Icon source={require('../../assets/icons/worker/qr_code_scanner.xml')} size={24} tint={colors.onSurfaceVariant} />}
+              trailing={row.canReturn ? <Icon source={require('../../assets/icons/gscale/arrow_back.xml')} size={22} tint={colors.primary} /> : undefined}
+              supportingText={<Column verticalArrangement={{ spacedBy: 4 }}>
+                {row.details.map((line, i) => <Text key={i} color={colors.onSurfaceVariant}
+                  style={{ typography: i === 0 ? 'bodyMedium' : 'bodySmall' }}>{line}</Text>)}
+              </Column>}>
+              <Text color={colors.onSurface} maxLines={2} overflow="ellipsis" style={{ typography: 'bodyMedium', fontFamily: 'monospace', fontWeight: '600' }}>{row.title}</Text>
+            </ListItem>)}
+          </FieldGroup.Section>
+        </FieldGroup>
+      </BaseHost>}
     </View>
     <View><WorkerAlert alert={alert} onDismiss={controller.cancelReturn} /></View>
   </WorkerOrderSheet>;
 }
 const styles = StyleSheet.create({
   host: { width: '100%' }, content: { gap: 12, paddingBottom: 16 }, expanded: { flex: 1 }, inset: { paddingHorizontal: 20 },
-  status: { minHeight: 112, paddingVertical: 12, justifyContent: 'center' }, list: { padding: 16, gap: 12 }, card: { borderRadius: 14, overflow: 'hidden' },
+  status: { minHeight: 112, paddingVertical: 12, justifyContent: 'center' },
 });
