@@ -31,6 +31,7 @@ import { WorkerQrScanner } from './components/WorkerQrScanner';
 import { WorkerWorkInstructions } from './components/WorkerWorkInstructions';
 import { ProfileScreen } from './components/ProfileScreen';
 import { DailyWorkScreen } from './components/DailyWorkScreen';
+import { WorkerDailyPage } from './components/WorkerDailyPage';
 import { WorkerOrderListItem } from './components/WorkerOrderListItem';
 import { useWorkerColors } from './components/useWorkerColors';
 import { WorkerQueueList } from './components/WorkerQueueList';
@@ -102,6 +103,9 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const orderRoute = useNativeSheet();
   const historyRoute = useNativeSheet();
   const actionsRoute = useNativeSheet();
+  const dailyRoute = useNativeSheet();
+  const dailyDestination = useRef<string | null>(null);
+  const dailyNavigation = useRef<{ select: (id: string) => void; scan: () => void } | null>(null);
   const nativeOrder = useRef<ActiveOrder | null>(null);
   const nativeActions = useRef<ActionOrder | null>(null);
   const [section, setSection] = useState<'home' | 'profile' | 'daily' | 'instructions' | 'paddons' | 'inventory'>('home');
@@ -160,6 +164,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   }, [section, headerOffset]);
   const latestReload = useRef(reload);
   useEffect(() => { latestReload.current = reload; }, [reload]);
+  useLayoutEffect(() => { dailyNavigation.current = { select: selectDestination, scan: openScanner }; });
   const onWritePending = useCallback((pending: boolean) => queueState.controller.setWritePending(pending), [queueState.controller]);
   const readScope = sessionReadScope(session), previousReadScope = useRef(readScope);
   useLayoutEffect(() => () => cancelActionOpening(),
@@ -171,7 +176,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     nativeOrder.current = null; nativeActions.current = null;
     sheetPresentation.current.reset(); setHistoryPresentation(null);
     orderRoute.close(); actionsRoute.close(); historyRoute.close();
-  }, [readScope, orderRoute, actionsRoute, historyRoute]);
+    dailyDestination.current = null; dailyRoute.close();
+  }, [readScope, orderRoute, actionsRoute, historyRoute, dailyRoute]);
   useEffect(() => { screenMounted.current = true; return () => { screenMounted.current = false; }; }, []);
   useLayoutEffect(() => { qrLocation.current = { machine: machineId, window: windowScope }; }, [machineId, windowScope]);
   const renderOrderRoute = useCallback((target: ActiveOrder, onClose = orderRoute.close) => {
@@ -306,7 +312,27 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     }
     if (id === 'home' || id === 'queue') { setSection('home'); return; }
     if (id === 'profile') { if (nativeNavigation) onNavigate?.('profile'); else setSection('profile'); return; }
-    if (id === 'daily') { if (nativeNavigation) onNavigate?.('daily'); else setSection('daily'); return; }
+    if (id === 'daily') {
+      if (nativeNavigation) onNavigate?.('daily');
+      else if (Platform.OS === 'android') {
+        if (dailyRoute.isOpen() || !workerDailyWorkVisible(session)) return;
+        const witness = captureSessionWitness(session);
+        if (!witness) return;
+        const scope = sessionReadScope(session);
+        dailyDestination.current = null;
+        dailyRoute.open(<WorkerDailyPage session={session} onBack={dailyRoute.close} onSelect={destination => {
+          if (destination === 'daily') return;
+          dailyDestination.current = destination; dailyRoute.close();
+        }} />, { presentation: 'page', onDismiss: () => {
+          const destination = dailyDestination.current;
+          dailyDestination.current = null;
+          if (!destination || !screenMounted.current || !activeSessionToken(session) || scope !== sessionReadScope(session)) return;
+          if (destination === 'scan') dailyNavigation.current?.scan();
+          else dailyNavigation.current?.select(destination);
+        } });
+      } else setSection('daily');
+      return;
+    }
     if (id === 'chat') {
       if (nativeNavigation) onNavigate?.('chat');
       else router.push((Platform.OS === 'ios' ? '/ios-chat' : '/android-chat') as Href);
@@ -489,7 +515,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const content = (
     <SafeAreaView edges={nativeNavigation ? [] : Platform.OS === 'android' || Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined} style={[styles.safe, { backgroundColor: colors.background }]}>
       {!nativeNavigation && section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
-      {section === 'inventory' ? <WorkerInventoryScreen session={session} onBack={() => setSection('home')} /> : section === 'paddons' ? <WorkerPaddons key={paddonApparatus} session={session} apparatus={paddonApparatus} onBack={() => setSection('home')} /> : section === 'instructions' ? <WorkerWorkInstructions session={session} onBack={() => setSection('home')} /> : section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => setSection('daily')} /> : section === 'daily'
+      {section === 'inventory' ? <WorkerInventoryScreen session={session} onBack={() => setSection('home')} /> : section === 'paddons' ? <WorkerPaddons key={paddonApparatus} session={session} apparatus={paddonApparatus} onBack={() => setSection('home')} /> : section === 'instructions' ? <WorkerWorkInstructions session={session} onBack={() => setSection('home')} /> : section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => selectDestination('daily')} /> : section === 'daily'
         ? <DailyWorkScreen session={session} onOpenDrawer={openDrawer} onBack={() => setSection('home')} /> : <>
       <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
         toolbarActions={cutActions} completedLabel={p('worker.queue.tab.completed')} title={t('Buyurtmalar')} searchPlaceholder={p('worker.queue.search.open')}>

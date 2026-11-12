@@ -166,7 +166,7 @@ test('pending writes prevent a successful-looking row snapshot from being handed
 });
 
 function workerScreenHarness(platform, nativeNavigation = true) {
-  const hooks = [], effects = [], opened = [], actionOptions = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
+  const hooks = [], effects = [], opened = [], actionOptions = [], presentations = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
   const preparation = { calls: [], feedback: 0, result: { kind: 'menu', menu: { kind: 'bosma', actions: ['astatka', 'finish'], operation: 'print' } }, pending: null, error: null };
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
@@ -176,7 +176,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     useEffect(fn, deps) { const id = cursor++; if (!hooks[id] || !equal(deps, hooks[id].deps)) { const previous = hooks[id]; hooks[id] = { deps, cleanup: previous?.cleanup }; effects.push(() => { previous?.cleanup?.(); hooks[id].cleanup = fn(); }); } },
   };
   react.useLayoutEffect = react.useEffect;
-  const sheet = { close() {}, open(value, options) { opened.push(value); actionOptions.push(options); }, update() {}, isOpen: () => false };
+  const sheet = { close() {}, open(value, options) { opened.push(value); actionOptions.push(options); presentations.push({ value, options }); }, update() {}, isOpen: () => false };
   const currentQueue = queue();
   currentQueue.orders[station][0].state = 'in_progress';
   currentQueue.snapshot.order_controls['work-1'] = { state: 'active' };
@@ -203,7 +203,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     } },
     './shared/mobileApiException': load('shared/mobileApiException'),
     './workerControlsApi': { WorkerControlException: class extends Error {} },
-    './auth': { activeSessionToken: () => 'token', captureSessionWitness: () => ({}), isSessionWitnessCurrent: () => true },
+    './auth': { activeSessionToken: () => preparation.current === false ? null : 'token', captureSessionWitness: () => preparation.current === false ? null : ({}), isSessionWitnessCurrent: () => preparation.current !== false && preparation.witnessCurrent !== false },
     './nativeSheet': { useNativeSheet: () => sheet },
     './components/useWorkerColors': { useWorkerColors: () => ({ background: '#000', surface: '#111' }) },
     './components/useWorkerOrderText': { useWorkerOrderText: () => ({ p: value => locale === 'uz' ? value : `${locale}:${value}`, t: value => value, locale }) },
@@ -224,7 +224,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const s = session();
   s.capabilities.push('apparatus.queue.manage');
-  return { opened, actionOptions, historyOpened, queueState, session: s, routes, preparation, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
+  return { opened, actionOptions, presentations, historyOpened, queueState, session: s, routes, preparation, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
 }
 function nodes(tree, type, result = []) {
   if (!tree) return result;
@@ -272,6 +272,67 @@ test('worker drawer transfer opens the real inventory screen and permission loss
   nodes(tree, 'WorkerInventoryScreen')[0].props.onBack(); tree = x.render();
   assert.equal(nodes(tree, 'WorkerInventoryScreen').length, 0);
   assert.equal(nodes(tree, 'WorkerTabs').length, 1);
+});
+
+test('Android daily work opens above the existing queue and repeated Home returns retain its tab and search', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush();
+  let tree = x.render(), reloads = 0;
+  x.queueState.reload = async () => { reloads++; };
+  const queue = x.queueState.queue;
+  nodes(tree, 'WorkerTabs')[0].props.onSelect('completed');
+  nodes(tree, 'WorkerTabs')[0].props.onSearchChange('film');
+  for (let cycle = 0; cycle < 3; cycle++) {
+    tree = x.render();
+    nodes(tree, 'WorkerDrawer')[0].props.onSelect('daily'); tree = x.render();
+    const tabs = nodes(tree, 'WorkerTabs');
+    assert.equal(tabs.length, 1, 'the queue subtree must stay mounted while daily work covers it');
+    assert.equal(tabs[0].props.selected, 'completed'); assert.equal(tabs[0].props.search, 'film');
+    assert.equal(nodes(tree, 'DailyWorkScreen').length, 0, 'daily work must not replace the queue inline');
+    const page = x.presentations.at(-1);
+    assert.equal(page.value.type, 'WorkerDailyPage'); assert.equal(page.options.presentation, 'page');
+    page.value.props.onSelect('home'); page.options.onDismiss(); tree = x.render();
+    assert.equal(nodes(tree, 'WorkerTabs')[0].props.selected, 'completed');
+    assert.equal(nodes(tree, 'WorkerTabs')[0].props.search, 'film');
+    assert.equal(x.queueState.queue, queue);
+  }
+  assert.equal(reloads, 0);
+});
+
+test('Android daily work defers destination navigation until its native page is removed', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerDrawer')[0].props.onSelect('daily');
+  const page = x.presentations.at(-1);
+  page.value.props.onSelect('chat'); assert.deepEqual(x.routes, []);
+  page.options.onDismiss(); assert.deepEqual(x.routes, ['/android-chat']);
+  tree = x.render(); assert.equal(nodes(tree, 'WorkerTabs').length, 1);
+});
+
+test('Android profile opens the same daily page and native Back retains the previous profile', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerDrawer')[0].props.onSelect('profile'); tree = x.render();
+  nodes(tree, 'ProfileScreen')[0].props.onDailyWork(); tree = x.render();
+  const page = x.presentations.at(-1);
+  assert.equal(page.value.type, 'WorkerDailyPage');
+  assert.equal(nodes(tree, 'ProfileScreen').length, 1);
+  page.value.props.onBack(); page.options.onDismiss(); tree = x.render();
+  assert.equal(nodes(tree, 'ProfileScreen').length, 1);
+  assert.equal(nodes(tree, 'DailyWorkScreen').length, 0);
+});
+
+test('Android daily page cannot navigate or reopen after its session expires', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerDrawer')[0].props.onSelect('daily'); const page = x.presentations.at(-1);
+  page.value.props.onSelect('profile'); x.preparation.current = false; page.options.onDismiss();
+  tree = x.render(); assert.equal(nodes(tree, 'WorkerTabs').length, 1); assert.equal(nodes(tree, 'ProfileScreen').length, 0);
+  nodes(tree, 'WorkerDrawer')[0].props.onSelect('daily'); assert.equal(x.presentations.length, 1);
+});
+
+test('Android daily page navigation survives a token refresh within the same account scope', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
+  nodes(tree, 'WorkerDrawer')[0].props.onSelect('daily'); const page = x.presentations.at(-1);
+  x.preparation.witnessCurrent = false; x.session.token = 'refreshed-same-account';
+  page.value.props.onSelect('profile'); page.options.onDismiss(); tree = x.render();
+  assert.equal(nodes(tree, 'ProfileScreen').length, 1);
 });
 
 test('worker queue subtitles preserve the V2 temporary-pause label instead of invented status text', async () => {

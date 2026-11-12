@@ -46,7 +46,9 @@ test('worker instructions entry opens the iOS stack or the existing Android secu
   const source = fs.readFileSync(path.resolve(__dirname, '../src/WorkerScreen.tsx'), 'utf8');
   const ast = ts.createSourceFile('screen.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX); let declaration;
   const visit = node => { if (ts.isFunctionDeclaration(node) && node.name?.text === 'selectDestination') declaration = node; ts.forEachChild(node, visit); }; visit(ast);
-  const js = ts.transpileModule(`${declaration.getText(ast)}; return selectDestination;`, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const js = ts.transpileModule(`${declaration.getText(ast)}; return selectDestination;`, {
+    fileName: 'screen.tsx', compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React },
+  }).outputText;
   for (const native of [true, false]) {
     const pushed = [], sections = [];
     const choose = new Function('nativeNavigation', 'router', 'setSection', js)(native, { push: route => pushed.push(route) }, section => sections.push(section));

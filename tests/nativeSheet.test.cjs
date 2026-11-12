@@ -51,6 +51,61 @@ test('opening pushes immediately and duplicate taps share one route', () => {
   assert.equal(h.api.getNativeSheet('1').security, h.security);
 });
 
+test('a full page pushes onto the stack once and carries the existing security context', async () => {
+  const h = harness(); let pops = 0, dismissals = 0;
+  h.sheet.open('daily work', { presentation: 'page', onDismiss: () => { dismissals++; } });
+  h.sheet.open('duplicate daily work', { presentation: 'page' });
+  assert.deepEqual(h.pushes, [{ pathname: '/page/[id]', params: { id: '1' } }]);
+  assert.equal(h.api.getNativeSheet('1').security, h.security);
+  const unmount = h.api.mountNativeSheet('1', () => { pops++; });
+  h.sheet.close(); assert.equal(pops, 1); assert.equal(dismissals, 0);
+  unmount(); await flush(); assert.equal(dismissals, 1);
+  h.sheet.open('daily work again', { presentation: 'page' });
+  assert.equal(h.pushes.length, 2); assert.equal(h.api.getNativeSheet('2').content, 'daily work again');
+});
+
+function pageRoute(h, id) {
+  const routeFilename = path.resolve(__dirname, '../src/app/page/[id].tsx');
+  const effects = [], pops = [];
+  const navigation = { goBack: () => pops.push('back') };
+  const jsx = (type, props) => ({ type, props });
+  const loaded = new Module(routeFilename, module);
+  loaded.require = name => ({
+    'react/jsx-runtime': { jsx, jsxs: jsx },
+    react: { useCallback: fn => fn, useEffect: fn => effects.push(fn), useSyncExternalStore: (_subscribe, get) => get() },
+    'expo-router': { Redirect: 'Redirect', useLocalSearchParams: () => ({ id }), useNavigation: () => navigation },
+    '../../components/WorkerSecurity': { SecurityContext: { Provider: 'SecurityProvider' } },
+    '../../nativeSheet': h.api,
+  })[name];
+  loaded._compile(ts.transpileModule(fs.readFileSync(routeFilename, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText, routeFilename);
+  const tree = loaded.exports.default();
+  const cleanups = effects.map(fn => fn());
+  return { tree, pops, unmount: () => cleanups.forEach(cleanup => cleanup?.()) };
+}
+
+test('the page route renders its content directly and native Back removes only the pushed page', async () => {
+  const h = harness(); let dismissed = 0;
+  h.sheet.open('daily work', { presentation: 'page', onDismiss: () => { dismissed++; } });
+  const route = pageRoute(h, '1');
+  assert.equal(route.tree.type, 'SecurityProvider');
+  assert.equal(route.tree.props.value, h.security); assert.equal(route.tree.props.children, 'daily work');
+  route.unmount(); await flush();
+  assert.equal(dismissed, 1); assert.equal(h.sheet.isOpen(), false);
+  h.sheet.open('next daily work', { presentation: 'page' });
+  assert.equal(h.api.getNativeSheet('2').content, 'next daily work', 'the queue owner remains mounted after Back');
+});
+
+test('unknown page links and sheet-only entries return to the app entry', () => {
+  const h = harness(); h.sheet.open('order sheet');
+  for (const id of ['missing', '1']) {
+    const route = pageRoute(h, id);
+    assert.equal(route.tree.type, 'Redirect'); assert.equal(route.tree.props.href, '/');
+    assert.deepEqual(route.pops, []); route.unmount();
+  }
+});
+
 test('X pops once immediately and dismissal callback runs after route removal', async () => {
   const h = harness();
   let pops = 0;

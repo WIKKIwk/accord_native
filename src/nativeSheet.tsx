@@ -3,6 +3,7 @@ import { useContext, useEffect, useLayoutEffect, useMemo, useRef, type ContextTy
 import { SecurityContext } from './components/WorkerSecurity';
 
 export type NativeSheetOptions = {
+  presentation?: 'sheet' | 'page';
   onDismiss?: () => void;
   compact?: boolean;
   fitContent?: boolean;
@@ -126,7 +127,7 @@ export function useNativeSheet() {
       };
       sheets.set(id, entry);
       try {
-        router.push({ pathname: '/sheet/[id]', params: { id } });
+        router.push({ pathname: options.presentation === 'page' ? '/page/[id]' : '/sheet/[id]', params: { id } });
       } catch (error) {
         sheets.delete(id);
         current.id = null;
