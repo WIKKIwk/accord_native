@@ -1,7 +1,8 @@
 import { Column, Host, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { ActivityIndicator, BackHandler, FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { RoleFab, type RoleFabAction } from '../shared/navigation/RoleFab.android';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { WorkerQueueCard } from './WorkerQueueCard.android';
 import { WorkerOrderButton } from './WorkerOrderControls';
@@ -13,9 +14,21 @@ import { useWorkerPaddonDetail, type WorkerPaddonDetailProps } from './useWorker
 // @v2 AparatchiPaddonDetailScreen
 export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
   const h = useWorkerPaddonDetail(props), { state, p, header } = h, colors = useMaterialColors();
-  const list = useRef<FlatList>(null), scannerTop = useRef(0);
-  useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { void h.requestBack(props.onBack); return true; }); return () => sub.remove(); }, [h, props.onBack]);
+  const list = useRef<FlatList>(null), scannerTop = useRef(0), requestBack = useRef(h.requestBack);
+  useLayoutEffect(() => { requestBack.current = h.requestBack; }, [h.requestBack]);
+  useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { void requestBack.current(props.onBack); return true; }); return () => sub.remove(); }, [props.onBack]);
   if (!h.current()) return null;
+  const actions: RoleFabAction[] = state.scanning ? [
+    { id: 'confirm', label: p('worker.paddon.scan.confirm', { count: state.scanned.length }), icon: 'check', width: 300, disabled: !h.canConfirmScan || state.review },
+    { id: 'close', label: p('worker.paddon.scan.close'), icon: 'close', width: 210, disabled: h.blocked || state.review },
+  ] : [
+    ...(!state.selected.length ? [{ id: 'scan', label: p('worker.paddon.add_wip'), icon: 'qr_code_scanner' as const, width: 330, disabled: !h.canManage }] : []),
+    ...(['add', 'remove'] as const).map(mode => ({ id: mode,
+      label: `${p(`worker.paddon.${mode}`)}${state.mode === mode && state.selected.length ? ` (${state.selected.length})` : ''}`,
+      icon: mode === 'add' ? 'playlist_add' as const : 'playlist_remove' as const, width: 220,
+      disabled: !h.canManage || !!state.selected.length && state.mode !== mode })),
+    ...(state.selected.length ? [{ id: 'cancel', label: p('worker.action.cancel'), icon: 'close' as const, width: 200, disabled: !h.canManage }] : []),
+  ];
   const content = <>{header ? <WorkerQueueCard first last backgroundColor={colors.surfaceContainerLowest}><View style={{ width: '100%', paddingVertical: 6, gap: 12 }}>
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
       <Host matchContents={{ vertical: true }} style={{ flexGrow: 1, flexShrink: 1, minWidth: 100 }}>
@@ -54,7 +67,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
     <RoleHeader title={props.code} subtitle={p('worker.paddon.detail.subtitle')} navigation={{ icon: 'back', label: h.t('Orqaga'), onPress: () => { void h.requestBack(props.onBack); } }} />
     {state.phase === 'loading' ? <ActivityIndicator style={{ flex: 1 }} /> : state.phase === 'error' ? <View style={{ flex: 1, padding: 20, gap: 16 }}>
       <Host matchContents><Text>{p('worker.paddon.load_failed')}</Text></Host><WorkerOrderButton label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} />
-    </View> : <FlatList ref={list} data={h.rows} keyExtractor={row => row.batch.batch_id} ListHeaderComponent={content} contentContainerStyle={{ padding: 12, gap: 3, paddingBottom: 24 }}
+    </View> : <FlatList ref={list} data={h.rows} keyExtractor={row => row.batch.batch_id} ListHeaderComponent={content} contentContainerStyle={{ padding: 12, gap: 3, paddingBottom: 112 }}
       refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void h.controller.load(); }} tintColor={colors.primary} colors={[colors.primary]} />}
       ListEmptyComponent={<Host matchContents><Text>{h.itemsEmpty}</Text></Host>}
       renderItem={({ item: row, index }) => {
@@ -65,16 +78,17 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
         return row.removable ? <ReanimatedSwipeable overshootRight={false} renderRightActions={() => <View style={{ width: 125, justifyContent: 'center', padding: 8 }}>
           <WorkerOrderButton label={p('worker.paddon.remove')} onPress={() => { void h.remove(row.batch); }} /></View>}>{card}</ReanimatedSwipeable> : card;
       }} />}
-    {header ? <View style={{ padding: 12, gap: 8 }}>{state.scanning ? <>
-      <WorkerOrderButton label={p('worker.paddon.scan.confirm', { count: state.scanned.length })} disabled={!h.canConfirmScan} variant="filled" onPress={() => { void h.controller.confirmScan(); }} />
-      <WorkerOrderButton label={p('worker.paddon.scan.close')} disabled={h.blocked} onPress={() => { void h.cancelScan(); }} />
-    </> : <>
-      {!state.selected.length ? <WorkerOrderButton label={p('worker.paddon.add_wip')} disabled={!h.canManage} onPress={() => h.controller.startScan()} /> : null}
-      <View style={{ flexDirection: 'row', gap: 8 }}>{(['add', 'remove'] as const).map(mode => <View key={mode} style={{ flex: 1 }}><WorkerOrderButton
-        label={`${p(`worker.paddon.${mode}`)}${state.mode === mode && state.selected.length ? ` (${state.selected.length})` : ''}`}
-        disabled={!h.canManage || !!state.selected.length && state.mode !== mode} variant={state.mode === mode ? 'filled' : 'outlined'} onPress={() => { void h.edit(mode); }} /></View>)}</View>
-      {state.selected.length ? <WorkerOrderButton label={p('worker.action.cancel')} disabled={h.blocked} variant="text" onPress={() => { void h.cancelSelection(); }} /> : null}
-    </>}</View> : null}
+    {header ? <RoleFab actions={actions} bottomOffset={16} testIDPrefix="worker-paddon-detail-fab"
+      openLabel={h.t('Amallarni ochish')} closeLabel={h.t('Amallarni yopish')} resetKey={`${state.scanning}:${state.mode ?? ''}`}
+      onSelect={id => {
+        const action = actions.find(item => item.id === id);
+        if (!action || action.disabled || !h.current() || h.presentation.isOpen()) return;
+        if (id === 'scan') h.controller.startScan();
+        else if (id === 'add' || id === 'remove') void h.edit(id);
+        else if (id === 'cancel') void h.cancelSelection();
+        else if (id === 'confirm') void h.controller.confirmScan();
+        else if (id === 'close') void h.cancelScan();
+      }} /> : null}
     <WorkerPaddonDialog data={reviewData} visible={h.presentation.visible} close={h.presentation.close} dismissed={h.presentation.dismissed}>
       {h.presentation.data?.kind === 'review' ? <ScrollView contentContainerStyle={{ gap: 10 }}>{h.scanned.map(row => <Pressable key={row.batch.batch_id} onPress={() => h.controller.unstage(row.batch.batch_id)}>
         <WorkerPaddonWipCard content={row} selectable selectionIcon="close" /></Pressable>)}</ScrollView> : null}

@@ -115,6 +115,57 @@ test('Android Paddon header keeps print, lock and bobina controls within the car
     assert.equal(h.model.state.bobina, h.model.header.bobina[0].units);
   } finally { n.runner.dispose(); h.dispose(); }
 });
+test('Android Paddon FAB keeps scan and selection actions available in their proper states', async () => {
+  const h = await setup('detail', 'android'), n = native(h);
+  h.files['components/useWorkerPaddonDetail'] = { useWorkerPaddonDetail: () => h.model };
+  const Component = h.load('components/WorkerPaddonDetail.android').WorkerPaddonDetail;
+  try {
+    let tree = n.render(Component, h.props), fab = node(tree, 'RoleFab');
+    assert.deepEqual(fab.props.actions.map(action => action.id), ['scan', 'add', 'remove']);
+    assert(fab.props.actions.every(action => !action.disabled));
+    assert.equal(node(tree, 'FlatList').props.contentContainerStyle.paddingBottom, 112);
+    assert.equal(node(tree, 'Action', row => row.props.label === 'worker.paddon.add_wip'), undefined);
+    const back = h.hardwareBack;
+    fab.props.onSelect('add'); h.render(); tree = n.render(Component, h.props);
+    assert.equal(h.hardwareBack, back); assert.equal(h.model.state.mode, 'add');
+    h.model.controller.toggle('A'); h.render(); tree = n.render(Component, h.props); fab = node(tree, 'RoleFab');
+    assert.deepEqual(fab.props.actions.map(action => action.id), ['add', 'remove', 'cancel']);
+    assert.match(fab.props.actions[0].label, /\(1\)$/); assert.equal(fab.props.actions[1].disabled, true);
+    fab.props.onSelect('remove'); assert.equal(h.model.state.mode, 'add');
+    fab.props.onSelect('add'); await tick(); h.render();
+    assert.equal(h.model.presentation.data.title, 'worker.paddon.confirm.add.title');
+    await h.close(); await tick(); h.render();
+    assert.deepEqual(h.events.find(event => event[0] === 'add'), ['add', ['A']]);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('Android Paddon FAB disables actions for a locked Paddon', async () => {
+  const h = await setup('detail', 'android'), n = native(h), data = h.paddons.get('P1');
+  data.paddon.locked_at_unix = 2; data.can_manage_items = false; data.can_unlock = true;
+  await h.model.controller.load(); h.render(); h.files['components/useWorkerPaddonDetail'] = { useWorkerPaddonDetail: () => h.model };
+  const Component = h.load('components/WorkerPaddonDetail.android').WorkerPaddonDetail;
+  try {
+    const fab = node(n.render(Component, h.props), 'RoleFab');
+    assert.deepEqual(fab.props.actions.map(action => action.id), ['scan', 'add', 'remove']);
+    assert(fab.props.actions.every(action => action.disabled));
+    fab.props.onSelect('scan'); fab.props.onSelect('add'); fab.props.onSelect('remove'); h.render();
+    assert.equal(h.model.state.scanning, false); assert.equal(h.model.state.mode, null);
+    assert.equal(h.events.some(event => event[0] === 'add' || event[0] === 'remove'), false);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
+test('Android Paddon FAB switches to scan confirmation and close actions', async () => {
+  const h = await setup('detail', 'android'), n = native(h);
+  h.files['components/useWorkerPaddonDetail'] = { useWorkerPaddonDetail: () => h.model };
+  const Component = h.load('components/WorkerPaddonDetail.android').WorkerPaddonDetail;
+  try {
+    let tree = n.render(Component, h.props); node(tree, 'RoleFab').props.onSelect('scan'); h.render(); tree = n.render(Component, h.props);
+    let fab = node(tree, 'RoleFab'); assert.deepEqual(fab.props.actions.map(action => action.id), ['confirm', 'close']);
+    assert.equal(fab.props.actions[0].disabled, true); assert.equal(fab.props.actions[1].disabled, false);
+    fab.props.onSelect('confirm'); assert.equal(h.events.some(event => event[0] === 'add'), false);
+    node(tree, 'WorkerPaddonCamera').props.accept('A'); await tick(); h.render(); tree = n.render(Component, h.props); fab = node(tree, 'RoleFab');
+    assert.equal(fab.props.actions[0].disabled, false); fab.props.onSelect('confirm'); await tick(); h.render();
+    assert.deepEqual(h.events.find(event => event[0] === 'add'), ['add', ['A']]); assert.equal(h.model.state.scanning, false);
+  } finally { n.runner.dispose(); h.dispose(); }
+});
 test('iOS Paddon scan activation targets the inline camera while preserving the native List and row swipe actions', async () => {
   const h = await setup('detail', 'ios'), n = native(h);
   h.paddons.get('P1').items = [batch('A')]; await h.model.controller.load(); h.render();
@@ -147,12 +198,12 @@ for (const platform of ['ios', 'android']) {
     try {
       let tree = n.render(Component, h.props);
       if (platform === 'ios') node(tree, 'MenuView').props.onPressAction({ nativeEvent: { event: 'scan' } });
-      else node(tree, 'Action', row => row.props.label === 'worker.paddon.add_wip').props.onPress();
+      else node(tree, 'RoleFab').props.onSelect('scan');
       h.render();
       tree = n.render(Component, h.props); const camera = node(tree, 'WorkerPaddonCamera'); assert(camera.props.enabled);
       await camera.props.accept('A'); await tick(); h.render(); tree = n.render(Component, h.props);
       const dock = platform === 'ios' ? node(tree, 'MenuView').props.actions.map(row => row.title)
-        : walk(tree).filter(row => row.type === 'Action').map(row => row.props.label);
+        : node(tree, 'RoleFab').props.actions.map(row => row.label);
       assert.deepEqual(dock.slice(-2), ['worker.paddon.scan.confirm|{"count":1}', 'worker.paddon.scan.close']);
       const review = platform === 'ios' ? node(tree, 'Button', row => row.props.label === 'worker.paddon.scan.pending|{"count":1}') : node(tree, 'Action', row => row.props.label === 'worker.paddon.scan.pending|{"count":1}');
       review.props.onPress(); h.render(); tree = n.render(Component, h.props);

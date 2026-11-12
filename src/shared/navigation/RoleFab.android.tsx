@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { type SharedValue, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-export type RoleFabAction = { id: string; label: string; icon: AndroidSymbol; width: number };
+export type RoleFabAction = { id: string; label: string; icon: AndroidSymbol; width: number; disabled?: boolean };
 type Props = { actions: readonly RoleFabAction[]; onSelect: (id: string) => void; bottomOffset?: number;
   testIDPrefix?: string; openLabel?: string; closeLabel?: string; resetKey?: string };
 
@@ -21,6 +21,7 @@ function MenuItem({ action, index, count, visibleCount, open, width, onSelect, t
   width: number; onSelect: (id: string) => void; testIDPrefix: string;
 }) {
   const colors = useMaterialColors();
+  const contentColor = action.disabled ? colors.onSurfaceVariant : colors.onSecondaryContainer;
   const widthProgress = useSharedValue(0), alpha = useSharedValue(0);
   useAnimatedReaction(
     () => index >= count - Math.round(visibleCount.value),
@@ -34,13 +35,14 @@ function MenuItem({ action, index, count, visibleCount, open, width, onSelect, t
   return <Animated.View pointerEvents={open ? 'auto' : 'none'} accessibilityElementsHidden={!open}
     importantForAccessibility={open ? 'auto' : 'no-hide-descendants'} style={[styles.action, motion]}>
     <Host style={[styles.actionHost, { width }]}>
-      <Button onClick={() => onSelect(action.id)} shape={Shape.Pill({})}
-        colors={{ containerColor: colors.secondaryContainer, contentColor: colors.onSecondaryContainer }}
+      <Button enabled={!action.disabled} onClick={() => { if (!action.disabled) onSelect(action.id); }} shape={Shape.Pill({})}
+        colors={{ containerColor: colors.secondaryContainer, contentColor: colors.onSecondaryContainer,
+          disabledContainerColor: colors.surfaceContainerHighest, disabledContentColor: colors.onSurfaceVariant }}
         contentPadding={{ start: 24, end: 24, top: 0, bottom: 0 }}
         modifiers={[fillMaxWidth(), height(56), testID(`${testIDPrefix}-${action.id}`), semantics({ contentDescription: action.label })]}>
         <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
-          <RNHostView matchContents><SymbolView name={{ android: action.icon }} size={24} tintColor={colors.onSecondaryContainer} /></RNHostView>
-          <Text color={colors.onSecondaryContainer} style={{ fontSize: 16, fontWeight: '500' }} maxLines={1}>{action.label}</Text>
+          <RNHostView matchContents><SymbolView name={{ android: action.icon }} size={24} tintColor={contentColor} /></RNHostView>
+          <Text color={contentColor} style={{ fontSize: 16, fontWeight: '500' }} maxLines={1}>{action.label}</Text>
         </Row>
       </Button>
     </Host>
@@ -75,7 +77,11 @@ export function RoleFab({ actions, onSelect, bottomOffset = 96, testIDPrefix = '
     const progress = checkedProgress.value;
     return { width: 80 - 24 * progress, height: 80 - 24 * progress, borderRadius: 20 + 8 * progress };
   });
-  const select = useCallback((id: string) => { close(); onSelect(id); }, [close, onSelect]);
+  const select = useCallback((id: string) => {
+    const action = actions.find(item => item.id === id);
+    if (!action || action.disabled) return;
+    close(); onSelect(id);
+  }, [actions, close, onSelect]);
   const menuWidth = Math.max(1, Math.min(screenWidth - 32, Math.max(0, ...actions.map(action => action.width))));
   const contentHeight = Math.max(0, actions.length * 60 - 4);
   const menuHeight = Math.min(contentHeight, availableHeight > 0 ? Math.max(56, availableHeight - bottomOffset - 104) : contentHeight);
