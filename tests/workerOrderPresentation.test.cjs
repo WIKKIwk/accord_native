@@ -121,6 +121,72 @@ test('native iOS summary expands all metrics and six production stages, keeping 
   assert.equal(byId(tree, 'worker-order-metric-length'), undefined);
 });
 
+test('Android expected result uses compact V2 label/value rows and keeps stage navigation', () => {
+  const h = harness();
+  let palette = { surface: 'surface', text: 'onSurface', muted: 'onSurfaceVariant', icon: 'icon' };
+  const { WorkerOrderOverview } = load('components/WorkerOrderOverview.android.tsx', {
+    '@expo/ui': { Column: 'UniversalColumn', Host: 'UniversalHost', ListItem: 'ListItem', RNHostView: 'UniversalRNHostView', Text: 'UniversalText' },
+    '@expo/ui/jetpack-compose': { Column: 'ComposeColumn', Row: 'ComposeRow', RNHostView: 'ComposeRNHostView', Text: 'ComposeText' },
+    '@expo/ui/jetpack-compose/modifiers': modifiers,
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { View: 'View', StyleSheet: { create: value => value } },
+    './BaseHost': { BaseHost: 'BaseHost' },
+    './useWorkerColors': { useWorkerColors: () => palette },
+    './useWorkerOrderOverview': { useWorkerOrderOverview: () => h.render() },
+  });
+  let tree = WorkerOrderOverview(h.props);
+  const header = nodes(tree, node => node.type === 'ListItem')[0];
+  assert.equal(text(header), 'Kutilayotgan natija');
+  assert.equal(header.props.supportingText, 'Buyurtma bo‘yicha taxminiy ma’lumotlar');
+  assert.equal(nodes(tree, node => node.type === 'ComposeRow').length, 0);
+  header.props.onPress(); tree = WorkerOrderOverview(h.props);
+  const rows = nodes(tree, node => node.type === 'ComposeRow' && node.props.horizontalArrangement?.spacedBy === 10);
+  assert.equal(rows.length, 4);
+  assert.deepEqual(rows.map(row => nodes(row, node => node.type === 'ComposeText').map(text)), [
+    ['Metraj', '26000 m'], ['Og‘irlik', '100 kg'], ['Val', '6 ta 375 mm eniga ega bo‘lgan val ishlatiladi'], ['Taraf', 'Nostandart'],
+  ]);
+  for (const row of rows) {
+    const spacing = row.props.modifiers.find(modifier => modifier.name === 'padding').args;
+    assert.ok(spacing[1] <= 8 && spacing[3] <= 8, 'each information row keeps a compact vertical inset');
+    const [label, value] = nodes(row, node => node.type === 'ComposeText');
+    assert.equal(label.props.color, 'onSurfaceVariant'); assert.equal(value.props.color, 'onSurface');
+    assert.equal(value.props.maxLines, undefined, 'long values may wrap without truncation');
+    assert.equal(value.props.modifiers.some(modifier => modifier.name === 'weight' && modifier.args[0] === 1), true);
+  }
+  assert.deepEqual(nodes(tree, node => node.type === 'SymbolView').slice(0, 4).map(node => node.props.name.android),
+    ['straighten', 'scale', 'view_column', 'explore']);
+  const stageRows = nodes(tree, node => node.type === 'ListItem').slice(1);
+  assert.equal(stageRows.length, 6);
+  stageRows.filter(row => row.props.onPress).forEach(row => row.props.onPress());
+  assert.deepEqual(h.opened.map(entry => entry.element.props.order.apparatusId), ['machine-2', 'machine-3', 'machine-4']);
+  palette = { surface: 'lightSurface', text: 'lightText', muted: 'lightSecondary', icon: 'lightIcon' };
+  tree = WorkerOrderOverview(h.props);
+  const lightLabels = nodes(tree, node => node.type === 'ComposeText');
+  assert.equal(lightLabels[0].props.color, 'lightSecondary'); assert.equal(lightLabels[1].props.color, 'lightText');
+  nodes(tree, node => node.type === 'ListItem')[0].props.onPress(); tree = WorkerOrderOverview(h.props);
+  assert.equal(nodes(tree, node => node.type === 'ComposeRow').length, 0);
+});
+
+test('Android expected result remains disabled until details are available and omits missing values', () => {
+  const h = harness(null);
+  const { WorkerOrderOverview } = load('components/WorkerOrderOverview.android.tsx', {
+    '@expo/ui': { Column: 'UniversalColumn', Host: 'UniversalHost', ListItem: 'ListItem', RNHostView: 'UniversalRNHostView', Text: 'UniversalText' },
+    '@expo/ui/jetpack-compose': { Column: 'ComposeColumn', Row: 'ComposeRow', RNHostView: 'ComposeRNHostView', Text: 'ComposeText' },
+    '@expo/ui/jetpack-compose/modifiers': modifiers,
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { View: 'View', StyleSheet: { create: value => value } },
+    './BaseHost': { BaseHost: 'BaseHost' },
+    './useWorkerColors': { useWorkerColors: () => ({ surface: 'surface', text: 'onSurface', muted: 'onSurfaceVariant', icon: 'icon' }) },
+    './useWorkerOrderOverview': { useWorkerOrderOverview: () => h.render() },
+  });
+  let tree = WorkerOrderOverview(h.props);
+  assert.equal(nodes(tree, node => node.type === 'ListItem')[0].props.onPress, undefined);
+  h.props.detail = { ...detail, map: {} };
+  tree = WorkerOrderOverview(h.props); nodes(tree, node => node.type === 'ListItem')[0].props.onPress(); tree = WorkerOrderOverview(h.props);
+  const values = nodes(tree, node => node.type === 'ComposeText').map(text);
+  assert.deepEqual(values, ['Taraf', 'Standart']);
+});
+
 test('overview metadata uses the active locale without changing the order values', () => {
   const h = harness();
   for (const locale of ['uz', 'en', 'ru', 'ur']) {
