@@ -44,3 +44,7 @@ Camera and manual scanner completion close the scanner and look up directly, wit
 ## Session integration boundary
 
 The role shell captures a main `SessionWitness` and epoch when it mounts, subscribes and rechecks, and disposes its controllers and picker on invalidation. A stale ticket is never recaptured. API, storage and print operations require that original ticket. Pending command keys remain account-scoped across login sessions. The witness is not a server or native-dispatch lock and cannot undo an already sent operation; unsupported in-place scope changes and native/device timing remain open. Demo-token actions fail closed. See the status file for the remaining test-mode, response identity and PIN limitations.
+
+## Visual layout checkpoint
+
+The current views preserve Home's 16/20/16/120 outer padding and source section dividers/spacings, balanced numeric columns, trailing remove actions, compact add-roll and muted small metadata. Printer Wi-Fi selection stays in the printer row, and barcode lookup is inside the native input boundary. History uses the source title/subtitle/time hierarchy; Android's reused card accepts opt-in 4-point inset, 18/6 corners and 16/13/12 padding. Details use colored 44-point header tiles, prominent titles and measured row spacing; the shared native sheet owns scrolling and fits short content, capped by the safe available height for long content. Native iOS shaping and field-counter differences and actual rendering verification remain documented in status/homashyo.md.

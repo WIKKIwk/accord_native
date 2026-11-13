@@ -5,6 +5,7 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsx
 function children(node) { return typeof node?.type === 'function' && node.type.name === 'RawSplitDetailLine' ? node.type(node.props) : node?.props?.children; }
 function find(node, predicate) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(n => find(n, predicate));
   return [...(predicate(node) ? [node] : []), ...find(children(node), predicate)]; }
+function buttonLabel(node) { return node.props?.label ?? node.props?.modifiers?.find(m => (m.modifier ?? m.type) === 'accessibilityLabel')?.args?.[0]; }
 function text(node) { if (typeof node === 'string' || typeof node === 'number') return String(node); if (Array.isArray(node)) return node.map(text).join('');
   return node && typeof node === 'object' ? text(children(node)) : ''; }
 function load(name, mocks = {}, jsxEnabled = false) { const filename = path.resolve(__dirname, `../src/homashyo/${name}`), mod = new Module(filename, module);
@@ -25,9 +26,10 @@ function history(platform, translate = value => value) {
   const react = { useLayoutEffect: fn => effects.push(fn), useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': new Proxy({}, { get: (_, name) => name }),
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surface: 'surface', primary: 'primary', onSurface: 'text', onSurfaceVariant: 'muted' }) },
-    '@expo/ui/swift-ui/modifiers': { lineLimit: value => ({ type: 'lineLimit', value }), disabled: value => ({ type: 'disabled', value }) }, 'expo-symbols': { SymbolView: 'SymbolView' },
+    '@expo/ui/swift-ui/modifiers': new Proxy({ shapes: { roundedRectangle: value => ({ shape: 'roundedRectangle', ...value }) } }, { get: (target, name) => target[name] ?? (value => ({ type: name, value })) }), 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'NativeText', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ mode: 'light', colors: { onSurface: 'text', onSurfaceVariant: 'muted', primary: 'primary', secondaryContainer: 'tile', onSecondaryContainer: 'tileText', surfaceContainerLowest: 'surface' } }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../preparation/PreparationUI': { PreparationList: 'PreparationList', usePreparationText: () => translate },
     '../preparation/PreparationUI.android': { usePreparationText: () => translate }, './rawSplitHistoryPresentation': presentation };
@@ -58,8 +60,8 @@ for (const platform of ['ios', 'android']) {
       : ['content_cut', 'chevron_right', 'warning_amber', 'chevron_right']);
     const title = find(tree, n => n.type === (platform === 'ios' ? 'Text' : 'NativeText') && text(n) === '100 → 98 kg')[0];
     const subtitle = find(tree, n => n.type === (platform === 'ios' ? 'Text' : 'NativeText') && text(n) === 'Raw W • 1 rulon • 2 kg chiqindi')[0];
-    if (platform === 'ios') { assert.deepEqual(title.props.modifiers, [{ type: 'lineLimit', value: 1 }]);
-      assert.deepEqual(subtitle.props.modifiers, [{ type: 'lineLimit', value: 2 }]); }
+    if (platform === 'ios') { assert.ok(title.props.modifiers.some(m => m.type === 'lineLimit' && m.value === 1));
+      assert.ok(subtitle.props.modifiers.some(m => m.type === 'lineLimit' && m.value === 2)); }
     else { assert.equal(title.props.numberOfLines, 1); assert.equal(subtitle.props.numberOfLines, 2); }
   });
   test(`${platform} history preserves existing issues while showing a reload error`, () => {
@@ -143,15 +145,17 @@ function home(platform, translate = value => value) {
     save: async retry => calls.push(['save', retry]), saveIssue: async retry => calls.push(['issue', retry]) };
   const swift = new Proxy({ useNativeState: value => ({ get: () => value, set() {} }) }, { get: (o, name) => o[name] ?? name });
   const compose = new Proxy({ useNativeState: value => ({ get: () => value, set() {} }),
+    Shape: { RoundedCorner: props => props },
     OutlinedTextField: Object.assign('OutlinedTextField', { Label: 'OutlinedTextField.Label' }),
     useMaterialColors: () => ({ error: 'error', surface: 'surface', onSurfaceVariant: 'muted' }) }, { get: (o, name) => o[name] ?? name });
   const react = { useEffect() {}, useLayoutEffect: effect => layoutEffects.push(effect), useRef: value => ({ current: value }),
     useState: value => [value, () => {}], useSyncExternalStore: (_subscribe, get) => get() };
-  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ modifier: name, args }) }),
+  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({ shapes: { roundedRectangle: value => ({ shape: 'roundedRectangle', ...value }) } }, { get: (target, name) => target[name] ?? ((...args) => ({ modifier: name, args })) }),
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View', PlatformColor: name => `native(${name})` },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => translate },
     '../preparation/PreparationUI': { usePreparationText: () => translate },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ mode: 'light', colors: { onSurface: 'text', onSurfaceVariant: 'muted', secondaryContainer: 'tile', onSecondaryContainer: 'tileText', surfaceContainerHighest: 'fieldFill' } }) },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitHomePresentation': homePresentation,
     './useRawSplitWriteHoldText': { useRawSplitWriteHoldText: () => 'saving paused' },
     './useRawSplitIssueScroll.ios': { useRawSplitIssueScroll: () => ({ scroll: { current: null }, measureContent() {}, measureIssueOrigin() {} }) } };
@@ -171,8 +175,8 @@ for (const platform of ['ios', 'android']) {
     const field = find(tree, n => n.props?.label === 'Eni (mm)')[0]; field.props.onChange('500'); field.props.onDone();
     assert.deepEqual(h.calls.slice(0, 2), [['output', 0, 'width', '500'], 'confirmWidth']);
     const actionType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
-    find(tree, n => n.type === actionType && n.props.label === 'Skanerlash')[0].props.onPress();
-    find(tree, n => n.type === actionType && n.props.label === 'Saqlash va chop etish')[0].props.onPress();
+    find(tree, n => n.type === actionType && buttonLabel(n) === 'Skanerlash')[0].props.onPress();
+    find(tree, n => n.type === actionType && buttonLabel(n) === 'Saqlash va chop etish')[0].props.onPress();
     assert.ok(h.calls.includes('scan')); assert.ok(h.calls.some(call => Array.isArray(call) && call[0] === 'save'));
   });
   test(`${platform} home exposes discrepancy note only when required and respects pending lock`, () => {
@@ -180,7 +184,7 @@ for (const platform of ['ios', 'android']) {
     let tree = h.render(); assert.match(text(tree), /1 kg hisobga olinmagan/);
     assert.ok(find(tree, n => n.props?.label === 'Farq sababi').length);
     const actionType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
-    find(tree, n => n.type === actionType && n.props.label === 'Muammoni saqlash')[0].props.onPress();
+    find(tree, n => n.type === actionType && buttonLabel(n) === 'Muammoni saqlash')[0].props.onPress();
     assert.ok(h.calls.some(call => Array.isArray(call) && call[0] === 'issue'));
     h.state.pending = { request_id: 'pending' }; h.controller.locked = true; tree = h.render();
     assert.match(text(tree), /Oldingi saqlash natijasini tekshiring/);
@@ -191,7 +195,7 @@ test('iOS home keeps one visible field label and names the native input for acce
   const h = home('ios', value => `translated(${value})`); h.state.showIssue = true; h.state.waste = '1';
   const tree = h.render();
   for (const label of ['Rulon QR / shtrix-kodi', 'Eni (mm)', 'Og‘irlik (kg)', 'Babina (kg)', 'Metraj (m)', 'Atxot (kg) *', 'translated(Farq sababi)']) {
-    const input = find(tree, n => typeof n.type === 'function' && n.type.name === 'Input' && n.props.label === label)[0];
+    const input = find(tree, n => typeof n.type === 'function' && n.type.name === 'Input' && buttonLabel(n) === label)[0];
     const rendered = input.type(input.props), field = find(rendered, n => n.type === 'TextField')[0];
     assert.equal(find(rendered, n => n.type === 'Text' && text(n) === label).length, 1);
     assert.equal(field.props.placeholder, undefined);
@@ -204,7 +208,7 @@ for (const platform of ['ios', 'android']) {
   const isDisabled = button => platform === 'ios' ? button.props.modifiers.some(m => m.modifier === 'disabled' && m.args[0] === true)
     : button.props.disabled;
   const nativeField = (tree, label, index = 0) => {
-    const field = find(tree, n => typeof n.type === 'function' && n.type.name === 'Input' && n.props.label === label)[index];
+    const field = find(tree, n => typeof n.type === 'function' && n.type.name === 'Input' && buttonLabel(n) === label)[index];
     const rendered = field.type(field.props);
     return find(rendered, n => platform === 'ios' ? n.type === 'TextField' : String(n.type) === 'OutlinedTextField')[0];
   };
@@ -271,16 +275,16 @@ for (const platform of ['ios', 'android']) {
   test(`${platform} home preserves source action and selected-printer icons without changing enable conditions`, () => {
     const h = home(platform); let tree = h.render();
     assert.equal(find(tree, n => n.type === (platform === 'ios' ? 'Image' : 'SymbolView') &&
-      (platform === 'ios' ? n.props.systemName === 'printer' : n.props.name.android === 'print')).length, 0);
+      (platform === 'ios' ? n.props.systemName === 'printer' && n.props.size === 20 : n.props.name.android === 'print')).length, 0);
     h.state.printer = { transport: 'wifi' }; tree = h.render();
     const printer = find(tree, n => n.type === (platform === 'ios' ? 'Image' : 'SymbolView') &&
-      (platform === 'ios' ? n.props.systemName === 'printer' : n.props.name.android === 'print'))[0];
+      (platform === 'ios' ? n.props.systemName === 'printer' && n.props.size === 20 : n.props.name.android === 'print'))[0];
     assert.equal(printer.props.size, 20); assert.match(text(tree), /Printer: wifi/);
     for (const [label, icon] of [['Skanerlash', platform === 'ios' ? 'qrcode.viewfinder' : 'qr_code_scanner'],
       ['Saqlash va chop etish', platform === 'ios' ? 'printer' : 'print']]) {
-      let button = find(tree, n => n.type === buttonType && n.props.label === label)[0];
-      assert.equal(platform === 'ios' ? button.props.systemImage : button.props.icon.android, icon); assert.equal(isDisabled(button), false);
-      h.controller.locked = true; button = find(h.render(), n => n.type === buttonType && n.props.label === label)[0];
+      let button = find(tree, n => n.type === buttonType && buttonLabel(n) === label)[0];
+      assert.equal(platform === 'ios' ? button.props.systemImage ?? find(button, n => n.type === 'Image')[0]?.props.systemName : button.props.icon.android, icon); assert.equal(isDisabled(button), false);
+      h.controller.locked = true; button = find(h.render(), n => n.type === buttonType && buttonLabel(n) === label)[0];
       assert.equal(isDisabled(button), true); h.controller.locked = false;
     }
     h.state.busy = true; tree = h.render();
@@ -297,11 +301,12 @@ function details(platform, printerLabel = null, translate = value => value, issu
   const calls = [], react = reactOverride ?? { useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => { fn(); } };
   const swift = new Proxy({}, { get: (_, name) => name });
   const compose = new Proxy({ useMaterialColors: () => ({ onSurface: 'text', onSurfaceVariant: 'muted', surface: 'surface' }) }, { get: (o, name) => o[name] ?? name });
-  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ modifier: name, args }) }),
+  const mocks = { 'react/jsx-runtime': jsx, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({ shapes: { roundedRectangle: value => ({ shape: 'roundedRectangle', ...value }) } }, { get: (target, name) => target[name] ?? ((...args) => ({ modifier: name, args })) }),
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ modifier: name, args }) }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ScrollView: 'ScrollView', Text: 'NativeText', View: 'View' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => translate },
     '../preparation/PreparationUI': { usePreparationText: () => translate },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ mode: 'light', colors: { onSurface: 'text', onSurfaceVariant: 'muted', secondaryContainer: 'tile', onSecondaryContainer: 'tileText', surfaceContainerHighest: 'fieldFill' } }) },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitModel': model, './rawSplitHistoryPresentation': presentation };
   const views = load(`RawSplitDetails.${platform}.tsx`, mocks, true);
   const props = { result, printerLabel, showWifiSelector: printerLabel === 'wifi', wifiPrinter: 'zebra', onSelectPrinter: () => calls.push('picker'),
@@ -315,11 +320,11 @@ for (const platform of ['ios', 'android']) {
     assert.match(text(tree), /100 → 98 kg/); assert.match(text(tree), /Manba QRparent/);
     assert.match(text(tree), /Brutto: 99 kg/); assert.match(text(tree), /Babina: 1 kg/); assert.match(text(tree), /child/);
     const buttonType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
-    find(tree, n => n.type === buttonType && n.props.label === 'Printer tanlash')[0].props.onPress();
-    if (platform === 'ios') find(tree, n => n.type === 'Button' && n.props.label === 'Shu rulonni qayta chop etish')[0].props.onPress();
+    find(tree, n => n.type === buttonType && buttonLabel(n) === 'Printer tanlash')[0].props.onPress();
+    if (platform === 'ios') find(tree, n => n.type === 'Button' && buttonLabel(n) === 'Shu rulonni qayta chop etish')[0].props.onPress();
     else find(tree, n => n.type === 'IconButton')[0].props.onClick();
     await new Promise(resolve => setImmediate(resolve));
-    find(tree, n => n.type === buttonType && n.props.label === 'Barchasini qayta chop etish')[0].props.onPress();
+    find(tree, n => n.type === buttonType && buttonLabel(n) === 'Barchasini qayta chop etish')[0].props.onPress();
     await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(h.calls, ['picker', ['one', 'child'], 'all']);
     const issueTree = h.issueTree(); assert.match(text(issueTree), /Muammo bo‘yicha rulonlar saqlangan/);
@@ -327,7 +332,7 @@ for (const platform of ['ios', 'android']) {
   });
   test(`${platform} detail sheet changes Wi-Fi printer using native selector`, () => {
     const h = details(platform, 'wifi'), tree = h.resultTree();
-    if (platform === 'ios') find(tree, n => n.type === 'Button' && n.props.label === 'GoDEX')[0].props.onPress();
+    if (platform === 'ios') find(tree, n => n.type === 'Button' && buttonLabel(n) === 'GoDEX')[0].props.onPress();
     else find(tree, n => n.type === 'DropdownFilter')[0].props.onChange('godex');
     assert.deepEqual(h.calls, [['wifi', 'godex']]);
   });
@@ -338,9 +343,9 @@ for (const platform of ['ios', 'android']) {
     const h = details(platform); h.props.result = new model.RawSplitResult({ id: 'result', source: { ...source, warehouse: ' Raw W ' },
       source_kg: '100', output_kg: '98', waste_kg: '2', created_at: 'raw timestamp', issue_id: 'issue', issue_note: '  note\nline  ', outputs: [{ ...output, warehouse: ' Raw W ' }] });
     const rows = detailRows(h.resultTree());
-    assert.deepEqual(rows.map(n => [n.props.label, n.props.value]), [['Manba QR', 'parent'], ['Ombor', ' Raw W '], ['Vaqti', 'raw timestamp'],
+    assert.deepEqual(rows.map(n => [buttonLabel(n), n.props.value]), [['Manba QR', 'parent'], ['Ombor', ' Raw W '], ['Vaqti', 'raw timestamp'],
       ['Farq', 'Muammo izoh bilan qayd etilgan'], ['Sabab', '  note\nline  ']]);
-    for (const node of rows) assert.ok(!node.props.label.endsWith(':'), node.props.label);
+    for (const node of rows) assert.ok(!buttonLabel(node).endsWith(':'), buttonLabel(node));
   });
   test(`${platform} detail metadata uses native wrapping columns rather than a flattened sentence`, () => {
     const row = detailRows(details(platform).resultTree())[0], rendered = row.type(row.props);
@@ -370,11 +375,11 @@ for (const platform of ['ios', 'android']) {
   });
   test(`${platform} metadata stays ordinary Text while V2 Urdu-aware summaries and issue footers are localized`, () => {
     const t = value => `localized(${value})`, h = details(platform, null, t), tree = h.resultTree();
-    const rows = detailRows(tree); assert.deepEqual(rows.map(n => n.props.label), ['Manba QR', 'Ombor', 'Farq', 'Sabab']);
+    const rows = detailRows(tree); assert.deepEqual(rows.map(n => buttonLabel(n)), ['Manba QR', 'Ombor', 'Farq', 'Sabab']);
     assert.deepEqual(rows.map(n => text(n.type(n.props))), ['Manba QRparent', 'OmborRaw W', 'FarqMuammo izoh bilan qayd etilgan', 'Sababnote']);
     assert.match(text(tree), /localized\(98 kg · 1000 mm · 20 mkm · 1000 m\)/);
     const issueTree = h.issueTree(false);
-    assert.deepEqual(detailRows(issueTree).map(n => n.props.label), ['QR', 'Asl', '1-rulon']);
+    assert.deepEqual(detailRows(issueTree).map(n => buttonLabel(n)), ['QR', 'Asl', '1-rulon']);
     assert.match(text(issueTree), /localized\(Sabab: note\)/);
     assert.match(text(issueTree), /localized\(Muammo sababi qayd etilgan\.\)/);
     assert.match(text(h.issueTree(true)), /localized\(Muammo bo‘yicha rulonlar saqlangan\.\)/);
@@ -383,7 +388,7 @@ for (const platform of ['ios', 'android']) {
   test(`${platform} missing optional result measurements and metadata add no placeholder rows`, () => {
     const h = details(platform); h.props.result = new model.RawSplitResult({ id: 'result', source, source_kg: '100', output_kg: '98', waste_kg: '2',
       outputs: [{ ...output, gross_kg: null, bobina_kg: null, length_m: null }] });
-    const tree = h.resultTree(); assert.deepEqual(detailRows(tree).map(n => n.props.label), ['Manba QR', 'Ombor']);
+    const tree = h.resultTree(); assert.deepEqual(detailRows(tree).map(n => buttonLabel(n)), ['Manba QR', 'Ombor']);
     assert.doesNotMatch(text(tree), /Brutto:|Babina:|Metri:|Vaqti|Farq|Sabab/);
     assert.match(text(tree), /98 kg · 1000 mm · 20 mkm/);
   });
@@ -398,7 +403,7 @@ for (const platform of ['ios', 'android']) {
 for (const platform of ['ios', 'android']) test(`${platform} reprint errors return to the parent instead of becoming unhandled`, async () => {
   const h = details(platform), error = new Error('printer unavailable'); h.props.onReprint = async () => { throw error; };
   const tree = h.resultTree();
-  if (platform === 'ios') find(tree, n => n.type === 'Button' && n.props.label === 'Shu rulonni qayta chop etish')[0].props.onPress();
+  if (platform === 'ios') find(tree, n => n.type === 'Button' && buttonLabel(n) === 'Shu rulonni qayta chop etish')[0].props.onPress();
   else find(tree, n => n.type === 'IconButton')[0].props.onClick();
   await new Promise(resolve => setImmediate(resolve)); assert.deepEqual(h.calls, [['error', error]]);
 });
@@ -414,9 +419,9 @@ function mountedHooks() {
     unmount: () => { mounted = false; cleanups.forEach(cleanup => cleanup?.()); } };
 }
 function reprintButtons(tree, platform) {
-  const one = platform === 'ios' ? find(tree, n => n.type === 'Button' && n.props.label === 'Shu rulonni qayta chop etish')[0]
+  const one = platform === 'ios' ? find(tree, n => n.type === 'Button' && buttonLabel(n) === 'Shu rulonni qayta chop etish')[0]
     : find(tree, n => n.type === 'IconButton')[0];
-  const all = find(tree, n => n.type === (platform === 'ios' ? 'Button' : 'WorkerSheetButton') && n.props.label === 'Barchasini qayta chop etish')[0];
+  const all = find(tree, n => n.type === (platform === 'ios' ? 'Button' : 'WorkerSheetButton') && buttonLabel(n) === 'Barchasini qayta chop etish')[0];
   return { one, all, clickOne: () => platform === 'ios' ? one.props.onPress() : one.props.onClick(), clickAll: () => all.props.onPress(),
     isDisabled: button => platform === 'ios' ? button.props.modifiers.some(m => m.modifier === 'disabled' && m.args[0] === true)
       : button.type === 'IconButton' ? button.props.enabled === false : button.props.disabled === true };
@@ -427,10 +432,10 @@ for (const platform of ['ios', 'android']) {
     h.props.onReprint = () => new Promise(done => { resolve = done; });
     const actionType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
     const actions = tree => ['Printer tanlash', 'Barchasini qayta chop etish'].map(label =>
-      find(tree, n => n.type === actionType && n.props.label === label)[0]);
+      find(tree, n => n.type === actionType && buttonLabel(n) === label)[0]);
     const idle = hooks.render(h.resultTree);
     for (const button of actions(idle)) {
-      assert.equal(platform === 'ios' ? button.props.systemImage : button.props.icon.android, platform === 'ios' ? 'printer' : 'print');
+      assert.equal(platform === 'ios' ? button.props.systemImage ?? find(button, n => n.type === 'Image')[0]?.props.systemName : button.props.icon.android, platform === 'ios' ? 'printer' : 'print');
       assert.equal(reprintButtons(idle, platform).isDisabled(button), false);
     }
     reprintButtons(idle, platform).clickOne(); const busy = hooks.render(h.resultTree);
@@ -503,7 +508,7 @@ for (const platform of ['ios', 'android']) {
     const h = scanner(platform, true), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
     assert.ok(camera); assert.deepEqual(camera.props.barcodeTypes, ['qr', 'datamatrix']);
     camera.props.onDetection({ raw: 'raw-code', data: 'display-code' });
-    const manualButton = find(h.tree, n => n.type === 'WorkerSheetButton' && n.props.label === 'OK')[0];
+    const manualButton = find(h.tree, n => n.type === 'WorkerSheetButton' && buttonLabel(n) === 'OK')[0];
     assert.deepEqual(manualButton.props.icon, { ios: 'checkmark', android: 'check' });
     manualButton.props.onPress();
     find(h.tree, n => n.type === 'Modal')[0].props.onRequestClose();
@@ -511,7 +516,7 @@ for (const platform of ['ios', 'android']) {
   });
   test(`${platform} scanner permission failure retains manual entry`, () => {
     const h = scanner(platform, false); assert.equal(find(h.tree, n => n.type === 'CameraSurface').length, 0);
-    assert.match(text(h.tree), /Kamera ochilmadi/); assert.ok(find(h.tree, n => n.type === 'WorkerSheetButton' && n.props.label === 'OK').length);
+    assert.match(text(h.tree), /Kamera ochilmadi/); assert.ok(find(h.tree, n => n.type === 'WorkerSheetButton' && buttonLabel(n) === 'OK').length);
   });
 }
 
@@ -522,14 +527,14 @@ const translateUrdu = value => localeModule.exports.uiText(value, 'ur');
 for (const platform of ['ios', 'android']) test(`${platform} reuses actual Urdu translations where V2 uses UrduAwareText`, () => {
   const homeView = home(platform, translateUrdu), homeTree = homeView.render();
   const buttonType = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
-  assert.ok(find(homeTree, n => n.type === buttonType && n.props.label === translateUrdu('Skanerlash')).length);
-  assert.ok(find(homeTree, n => n.type === buttonType && n.props.label === translateUrdu('Saqlash va chop etish')).length);
+  assert.ok(find(homeTree, n => n.type === buttonType && buttonLabel(n) === translateUrdu('Skanerlash')).length);
+  assert.ok(find(homeTree, n => n.type === buttonType && buttonLabel(n) === translateUrdu('Saqlash va chop etish')).length);
   // V2 leaves ordinary numeric field labels as TextField labels, not UrduAwareText.
   assert.ok(find(homeTree, n => n.props?.label === 'Eni (mm)').length);
   const h = history(platform, translateUrdu); h.state.snapshot = { warehouses: [], history: [], issues: [issue] }; const historyTree = h.render();
   assert.ok(platform === 'ios' ? find(historyTree, n => n.type === 'Section' && n.props.title === translateUrdu('Muammolar')).length
     : text(historyTree).includes(translateUrdu('Muammolar')));
-  const d = details(platform, null, translateUrdu); assert.ok(find(d.resultTree(), n => n.type === buttonType && n.props.label === translateUrdu('Printer tanlash')).length);
+  const d = details(platform, null, translateUrdu); assert.ok(find(d.resultTree(), n => n.type === buttonType && buttonLabel(n) === translateUrdu('Printer tanlash')).length);
   assert.notEqual(translateUrdu('Skanerlash'), 'Skanerlash'); assert.notEqual(translateUrdu('Muammolar'), 'Muammolar');
 });
 
@@ -563,14 +568,14 @@ for (const platform of ['ios', 'android']) {
     h.state.pendingCheck = 'failed'; h.state.pendingCheckError = 'storage error'; h.state.pending = { request_id: 'old' }; tree = h.render();
     assert.match(text(tree), /t\(Xatolik yuz berdi\)/); assert.match(text(tree), /storage error/);
     assert.equal(find(tree, n => n.props?.label === 't(Tekshirish va chop etish)').length, 0);
-    const retry = find(tree, n => n.type === type && n.props.label === 't(Qayta urinish)')[0]; assert.ok(retry); retry.props.onPress();
+    const retry = find(tree, n => n.type === type && buttonLabel(n) === 't(Qayta urinish)')[0]; assert.ok(retry); retry.props.onPress();
     assert.deepEqual(h.calls, ['recheck']);
   });
   test(`${platform} detail controls disable while the shared pending gate is blocked`, async () => {
     const h = details(platform); h.props.printBlocked = true; const tree = h.resultTree(), buttons = reprintButtons(tree, platform);
     assert.equal(buttons.isDisabled(buttons.one), true); assert.equal(buttons.isDisabled(buttons.all), true);
     buttons.clickOne(); buttons.clickAll(); const type = platform === 'ios' ? 'Button' : 'WorkerSheetButton';
-    const picker = find(tree, n => n.type === type && n.props.label === 'Printer tanlash')[0];
+    const picker = find(tree, n => n.type === type && buttonLabel(n) === 'Printer tanlash')[0];
     assert.ok(picker); picker.props.onPress(); await new Promise(done => setImmediate(done)); assert.deepEqual(h.calls, []);
   });
 }
@@ -584,8 +589,8 @@ for (const platform of ['ios', 'android']) test(`${platform} production write ho
   h.state.showIssue = true; h.state.waste = '1'; const tree = h.render(); assert.match(text(tree), /saving paused/);
   const isDisabled = button => platform === 'ios' ? button.props.modifiers.some(m => m.modifier === 'disabled' && m.args[0] === true) : button.props.disabled;
   for (const label of ['Tekshirish va chop etish', 'Muammo qaydini tekshirish', 'Muammoni saqlash', 'Saqlash va chop etish'])
-    assert.equal(isDisabled(find(tree, n => n.type === type && n.props.label === label)[0]), true, label);
-  find(tree, n => n.type === type && n.props.label === 'Tekshirish')[0].props.onPress(); assert.deepEqual(h.calls, ['recheck']);
+    assert.equal(isDisabled(find(tree, n => n.type === type && buttonLabel(n) === label)[0]), true, label);
+  find(tree, n => n.type === type && buttonLabel(n) === 'Tekshirish')[0].props.onPress(); assert.deepEqual(h.calls, ['recheck']);
 });
 for (const platform of ['ios', 'android']) test(`${platform} keeps committed-stock print failure and snapshot failure visible separately`, () => {
   const h = home(platform); h.state.error = 'Omborga saqlandi. Chop etish: printer failed'; h.state.snapshotError = 'old snapshot failed';

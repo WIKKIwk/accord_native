@@ -1,7 +1,7 @@
 # homashyo
 
 Status: functional port integrated on main; device verification and documented parity items remain open
-Stopped at: Real-account stock save, issue save, exact pending-command retry, printer selection and reprint now run through the existing APIs and native components. Code and automated gates are complete for this checkpoint; phone/printer verification and the explicit parity items below remain open.
+Stopped at: The functional flow and the follow-up V2 visual alignment are integrated on main. See the latest visual checkpoint below; phone/printer verification and the explicit parity items remain open.
 
 ## Scope and source
 
@@ -60,3 +60,18 @@ The existing paired pending-status read gate blocks controls on failed local rea
 ## Phone smoke check
 
 Sign in as Homashyo rezkachisi; look up/scan a source; enter width/gross/core/length/waste; cancel and select the printer; save a balanced split; report and then save a measured discrepancy; open History/details and reprint a single roll/all without another stock write. Check Settings/PIN, account switching, swipe/back/outside dismissal and keyboards on both platforms.
+
+## 2026-11-13 visual alignment follow-up
+
+The user requested closer V2 appearance using existing V4 components. Compared the source Home build, History cards and both detail sheets, then implemented the reported layout differences without changing commands, text or state transitions.
+
+- Home on both platforms now uses V2 section dividers, explicit 4/8/12/16/20/32 spacing, muted small warehouse/printer/net labels, source/roll heading hierarchy and centered waste-width feedback. Numeric rows and Netto/add-roll share equal-width columns; remove actions are trailing.
+- Android reuses native OutlinedTextField's TrailingIcon slot for the barcode lookup, source semantic fill colors, 16-point field corners, 56-point shared main buttons and compact add-roll. The Wi-Fi selector reuses the existing DropdownFilter via an opt-in inline mode inside the printer row.
+- iOS keeps existing SwiftUI controls and places the barcode action inside the same input border. Native action labels expand across the available width. Custom-content Buttons intentionally omit `label`, because the installed SwiftUI implementation otherwise ignores their children; accessibility labels and actual native printer/scanner glyphs are retained.
+- Android History reuses WorkerQueueCard with opt-in style/containerStyle for source 4-point edges, 18/6 joined corners, 16/13/12 padding and 14/12/11 typography. Default callers retain their existing geometry. iOS keeps a native List with plain rows, source edge spacing, card backgrounds and title/subtitle/time hierarchy.
+- Both detail sheets restore 44-point colored icon tiles, prominent headings, emphasized output measurements, source metadata/row spacing and inline printer selection. They pass natural content to the existing sheet scroll owner; no nested scroll views or artificial minimum height remain. Both open with compact/fitContent and a safe-area available-height cap instead of forcing an 86–90% sheet.
+- Reused shared controls: WorkerQueueCard, DropdownFilter, WorkerSheetButton, WorkerOrderSheet, Expo fields/icons/lists. The only shared source extensions are optional card style props and inline dropdown mode. No package or new component system was added.
+
+Verification: all 400 Homashyo tests passed, including native control/state, deferred printing/dismissal, issue-scroll, translated text, default shared-card behavior and actual custom-button label coverage. Both platform typechecks passed; Expo lint passed with the same existing Admin hook warning and zero errors. Ledger check passed. Text gate is unchanged from the functional checkpoint: no missing V2 strings, with the same 13/12 added-string and 58 global-scope diagnostics per platform; no exception row was added. Full Node suite: 6,441 passed, zero failed and 12 existing TODO cases (6,453 total), exit 0. `git diff --check` passed.
+
+Visual limits: no phone, simulator or screenshot comparison was used, so rendered glyphs, wrapping, keyboard and actual sheet measurement remain device checks. iOS retains native rounded-card shaping rather than Flutter's asymmetric joined corners. The issue-note field's Flutter grapheme counter is not reproduced by the native field's automatic maxLength handling; the existing cap and visible line limits are preserved. These limits are not claimed visually identical.

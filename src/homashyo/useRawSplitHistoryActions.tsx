@@ -22,14 +22,15 @@ export function useRawSplitHistoryActions() {
     };
     sheet.open(<RawSplitResultBinding controller={controller} pendingController={runtime.home} result={result} onError={onError} onReprintRequest={reprint}
       onSelectPrinterAfterDismiss={() => { const lease = controller.capturePrinterLease(); if (lease) defer(() => { void controller.selectPrinter().catch(onError); }, lease); }} />,
-    { dismissible: true, onDismiss: () => {
+    { dismissible: true, compact: true, fitContent: true, heightFraction: 1, onDismiss: () => {
       const action = afterDismiss; afterDismiss = null;
       if (action && rawSplitSessionIsCurrent(ticket) && action.lease()) action.action();
     } });
   };
   const onIssue = (issue: RawSplitIssue, hasResult: boolean) => {
     if (!rawSplitSessionIsCurrent(ticket) || sheet.isOpen()) return;
-    sheet.open(<RawSplitIssueDetails issue={issue} hasResult={hasResult} />, { dismissible: true });
+    sheet.open(<RawSplitIssueDetails issue={issue} hasResult={hasResult} />,
+      { dismissible: true, compact: true, fitContent: true, heightFraction: 1 });
   };
   return { controller, pendingController: runtime.home, isCurrent: () => rawSplitSessionIsCurrent(ticket), onResult, onIssue };
 }

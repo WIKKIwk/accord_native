@@ -33,6 +33,7 @@ function environment(platform) {
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
     'react-native': { ScrollView: 'ScrollView', Text: 'Text', View: 'View', PlatformColor: name => `native(${name})` }, 'expo-symbols': { SymbolView: 'Symbol' },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'Button' }, '../preparation/PreparationUI': { usePreparationText: () => s => s },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ mode: 'light' }) },
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => s => s },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'Dropdown' }, './rawSplitHomePresentation': new Proxy({}, { get: () => () => '' }), './useRawSplitWriteHoldText': { useRawSplitWriteHoldText: () => 'hold' } };
   mocks['./useRawSplitIssueScroll.ios'] = load('useRawSplitIssueScroll.ios.ts', { react: h.react, 'react-native': { ScrollView: 'ScrollView' } });

@@ -140,11 +140,13 @@ test('history detail reuses native sheet and defers printer picker until sheet d
     './RawSplitDetails': { RawSplitIssueDetails: 'IssueDetails' }, './RawSplitResultBinding': { RawSplitResultBinding: 'ResultBinding' } };
   const { useRawSplitHistoryActions } = load('homashyo/useRawSplitHistoryActions.tsx', mocks, true), flow = useRawSplitHistoryActions();
   flow.onResult({ id: 'result' }); assert.equal(opened.type, 'ResultBinding'); assert.equal(options.dismissible, true);
+  assert.equal(options.compact, true); assert.equal(options.fitContent, true); assert.equal(options.heightFraction, 1);
   opened.props.onSelectPrinterAfterDismiss(); assert.equal(closes, 1); assert.equal(selections, 0); options.onDismiss(); await flush(); assert.equal(selections, 1);
   flow.onResult({ id: 'reprint' }); await opened.props.onReprintRequest(); await opened.props.onReprintRequest();
   assert.equal(reprints, 0); options.onDismiss(); await flush(); assert.equal(reprints, 1);
   flow.onResult({ id: 'second' }); opened.props.onSelectPrinterAfterDismiss(); current = false; options.onDismiss(); await flush(); assert.equal(selections, 1);
   current = true; const issue = { id: 'issue' }; flow.onIssue(issue, true); assert.equal(opened.type, 'IssueDetails'); assert.equal(opened.props.issue, issue);
+  assert.equal(options.dismissible, true); assert.equal(options.compact, true); assert.equal(options.fitContent, true); assert.equal(options.heightFraction, 1);
 });
 
 test('a stale camera callback cannot look up after a second scan, Back, or background/resume', async () => {

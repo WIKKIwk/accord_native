@@ -19,6 +19,11 @@ export function RawSplitHistory({ controller, onResult, onIssue }: RawSplitHisto
   const history = state.snapshot?.history ?? [], issues = state.snapshot?.issues ?? [];
   const isEmpty = history.length === 0 && issues.length === 0;
   const primary = { color: colors.onSurface }, secondary = { color: colors.onSurfaceVariant };
+  const title = { ...primary, fontSize: 14, fontWeight: '700' as const }, subtitle = { ...secondary, fontSize: 12, lineHeight: 15 }, time = { ...secondary, fontSize: 11 };
+  const card = (index: number, count: number) => ({ style: { paddingStart: 16, paddingEnd: 12, paddingVertical: 13, alignItems: 'flex-start' as const,
+    borderTopLeftRadius: index === 0 ? 18 : 6, borderTopRightRadius: index === 0 ? 18 : 6,
+    borderBottomLeftRadius: count > 1 && index === count - 1 ? 18 : 6, borderBottomRightRadius: count > 1 && index === count - 1 ? 18 : 6 },
+    containerStyle: { paddingHorizontal: 4, paddingTop: index === 0 ? 0 : 2, paddingBottom: 0 } });
   const rows: ReactNode[] = [];
   if (state.error !== null) rows.push(<WorkerQueueCard key="error" first last backgroundColor={colors.surface}
     onPress={state.busy ? undefined : () => { void controller.reload(); }}>
@@ -35,20 +40,20 @@ export function RawSplitHistory({ controller, onResult, onIssue }: RawSplitHisto
           <Text style={secondary}>Wi-Fi printer: {state.wifiPrinter}</Text>}
       </View></WorkerQueueCard>);
     rows.push(...history.map((result, index) => <WorkerQueueCard key={`result:${result.id}`} first={index === 0} last={index === history.length - 1}
-      backgroundColor={colors.surface} onPress={() => onResult(result)}><SymbolView name={{ android: 'content_cut' }} size={22} tintColor={colors.primary} />
-    <View style={{ flex: 1, padding: 8 }}><Text style={primary} numberOfLines={1}>{rawSplitHistoryTitle(result)}</Text>
-      <Text style={secondary} numberOfLines={2}>{rawSplitHistorySubtitle(result)}</Text></View>
-    <View style={{ alignItems: 'flex-end' }}><Text style={secondary}>{rawSplitHistoryTime(result.createdAt)}</Text>
+      {...card(index, history.length)} backgroundColor={colors.surfaceContainerLowest ?? colors.surface} onPress={() => onResult(result)}><SymbolView name={{ android: 'content_cut' }} size={22} tintColor={colors.primary} />
+    <View style={{ flex: 1, marginStart: 12, gap: 3 }}><Text style={title} numberOfLines={1}>{rawSplitHistoryTitle(result)}</Text>
+      <Text style={subtitle} numberOfLines={2}>{rawSplitHistorySubtitle(result)}</Text></View>
+    <View style={{ alignItems: 'flex-end', marginStart: 10, gap: 3 }}><Text style={time}>{rawSplitHistoryTime(result.createdAt)}</Text>
       <SymbolView name={{ android: 'chevron_right' }} size={20} tintColor={colors.onSurfaceVariant} /></View></WorkerQueueCard>));
   }
   if (issues.length) rows.push(<View key="issues" style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 }}>
-    <Text style={primary}>{t('Muammolar')}</Text></View>);
+    <Text style={title}>{t('Muammolar')}</Text></View>);
   rows.push(...issues.map((issue, index) => <WorkerQueueCard key={`issue:${issue.id}`} first={index === 0} last={index === issues.length - 1}
-    backgroundColor={colors.surface} onPress={() => onIssue(issue, history.some(result => result.issueId === issue.id))}>
+    {...card(index, issues.length)} backgroundColor={colors.surfaceContainerLowest ?? colors.surface} onPress={() => onIssue(issue, history.some(result => result.issueId === issue.id))}>
     <SymbolView name={{ android: 'warning_amber' }} size={22} tintColor={colors.primary} />
-    <View style={{ flex: 1, padding: 8 }}><Text style={primary} numberOfLines={1}>{issue.source.itemName}</Text>
-      <Text style={secondary} numberOfLines={2}>{issue.check.message}</Text></View>
-    <View style={{ alignItems: 'flex-end' }}><Text style={secondary}>{t(rawSplitIssueTime(issue))}</Text>
+    <View style={{ flex: 1, marginStart: 12, gap: 3 }}><Text style={title} numberOfLines={1}>{issue.source.itemName}</Text>
+      <Text style={subtitle} numberOfLines={2}>{issue.check.message}</Text></View>
+    <View style={{ alignItems: 'flex-end', marginStart: 10, gap: 3 }}><Text style={time}>{t(rawSplitIssueTime(issue))}</Text>
       <SymbolView name={{ android: 'chevron_right' }} size={20} tintColor={colors.onSurfaceVariant} /></View>
   </WorkerQueueCard>));
   return <OrdersList onRefresh={() => controller.reload()} active headerOffset={headerOffset} headerHeight={headerHeight} topInset={8}

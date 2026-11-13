@@ -22,7 +22,7 @@ function find(node, predicate) {
   return [...(predicate(node) ? [node] : []), ...find(node.props?.children, predicate)];
 }
 const colors = { surfaceContainerLow: 'surface', onSurfaceVariant: 'muted' };
-const compose = new Proxy({ useMaterialColors: () => colors, useNativeState: initial => {
+const compose = new Proxy({ Shape: { RoundedCorner: props => props }, useMaterialColors: () => colors, useNativeState: initial => {
   let value = initial; return { get: () => value, set: next => { value = next; } };
 } }, { get: (target, name) => target[name] ?? name });
 
@@ -74,6 +74,7 @@ test('Android width Done and add-roll dismiss the keyboard before changing the d
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth() {}, semantics() {}, testID() {} },
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { ScrollView: 'ScrollView', Text: 'Text', View: 'View' },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ mode: 'light' }) },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => value => value },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' },
@@ -100,6 +101,7 @@ test('Android printer picker reuses the native bottom sheet and shared device co
   const { RawSplitPickerOverlay } = load('RawSplitPickerOverlay.android.tsx', {
     'react/jsx-runtime': jsx,
     '../components/WorkerOrderSheet': { WorkerOrderSheet: 'WorkerOrderSheet' },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ mode: 'light' }) },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => value => value },
     '../shared/printing/DeviceSheet': { DeviceSheet: 'DeviceSheet' },
