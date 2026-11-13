@@ -1,6 +1,7 @@
 import { Button, CircularProgressIndicator, Host, IconButton, OutlinedTextField, RNHostView, Row, Shape, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, height, semantics, size, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
+import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
@@ -21,6 +22,8 @@ export function MetalayzerHome() {
       <Text style={{ color: colors.onSurface, marginBottom: 4 }}>Xomashyoni skan qiling yoki QR kodini kiriting.</Text>
       <WorkerSheetButton label={next ? 'Keyingi xomashyoni skan qilish' : 'Xomashyoni skan qilish'} icon={{ android: 'qr_code_scanner' }}
         variant={!material || next ? 'filled' : 'outlined'} height={52} disabled={!h.enabled} onPress={scan} />
+      <WorkerSheetButton label="Metallangan xomashyolar" icon={{ android: 'list' }} variant="outlined" height={52}
+        disabled={!h.enabled} onPress={() => router.push('/android-metalayzer/materials' as Href)} />
       <Host matchContents={{ vertical: true }}><OutlinedTextField value={barcode} onValueChange={h.setBarcode} enabled={h.enabled} singleLine
         isError={h.inputError !== null} shape={Shape.RoundedCorner({ cornerRadii: { topStart: 16, topEnd: 16, bottomStart: 16, bottomEnd: 16 } })}
         keyboardOptions={{ imeAction: 'search' }} keyboardActions={{ onSearch: () => { void h.lookup(); } }} modifiers={[fillMaxWidth()]}>

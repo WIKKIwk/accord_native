@@ -1,6 +1,6 @@
 import { Button, Host, HStack, List, ProgressView, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { autocorrectionDisabled, buttonStyle, disabled, listStyle, onSubmit, submitLabel } from '@expo/ui/swift-ui/modifiers';
-import { Stack } from 'expo-router';
+import { router, Stack, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useMetalayzerContext } from './MetalayzerContext';
 import { MetalayzerScanner } from './MetalayzerScanner';
@@ -29,6 +29,8 @@ export function MetalayzerHome() {
         <Button label={material?.isMetalayzer ? 'Keyingi xomashyoni skan qilish' : 'Xomashyoni skan qilish'}
           systemImage="qrcode.viewfinder" onPress={scan}
           modifiers={[buttonStyle(material && !material.isMetalayzer ? 'bordered' : 'borderedProminent'), disabled(!model.enabled)]} />
+        <Button label="Metallangan xomashyolar" systemImage="list.bullet" onPress={() => router.push('/ios-metalayzer/materials' as Href)}
+          modifiers={[buttonStyle('bordered'), disabled(!model.enabled)]} />
         <HStack><TextField text={barcodeField} placeholder="Xomashyo QR kodi" onTextChange={value => {
           if (value === lastInput.current) return;
           lastInput.current = value; model.setBarcode(value);

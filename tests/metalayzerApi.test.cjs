@@ -56,3 +56,20 @@ test('warehouse assignments still load when a Metalayzer user is assigned', asyn
     './searchActivityStore': { SearchActivityStore: class {} } });
   assert.deepEqual(await catalog.adminWarehouseAssignments({}), assignments);
 });
+test('marked material list requests pages and validates the response', async () => {
+  const h = setup(), witness = { session: h.session };
+  h.reply({ items: [{ barcode: 'ABC', item_name: 'Film', warehouse: 'test', qty: 0, is_metalayzer: true }], next_cursor: 'raw:a' });
+  const first = await h.api.metalayzerMaterials(h.session, null, witness, () => true);
+  assert.equal(first.items[0].qty, 0);
+  assert.equal(first.nextCursor, 'raw:a');
+  assert.equal(h.requests[0].url, '/v1/mobile/metalayzer/materials?limit=50');
+  h.reply({ items: [], next_cursor: null });
+  const last = await h.api.metalayzerMaterials(h.session, first.nextCursor, witness, () => true);
+  assert.deepEqual(last, { items: [], nextCursor: null });
+  assert.equal(h.requests[1].url, '/v1/mobile/metalayzer/materials?limit=50&cursor=raw%3Aa');
+  h.reply({ items: [{ barcode: 'ABC', qty: 12, is_metalayzer: false }], next_cursor: null });
+  await assert.rejects(h.api.metalayzerMaterials(h.session, null, witness, () => true), /tasdiqlanmadi/);
+  h.reply({ items: [], next_cursor: 'raw:a' });
+  await assert.rejects(h.api.metalayzerMaterials(h.session, 'raw:a', witness, () => true), /tasdiqlanmadi/);
+  await assert.rejects(h.api.metalayzerMaterials(h.session, null, witness, () => false), /o‘zgargan/);
+});
