@@ -1,5 +1,5 @@
 /**
- * Real stock/issue dispatch remains held until durable result acknowledgement and
- * same-scope reconciliation are proven. This has no runtime or UI override.
+ * V2 permits real-account commands. Session ownership, persisted retry payloads
+ * and printer support are checked at their existing dispatch boundaries.
  */
-export function rawSplitWriteDispatchAllowed(): boolean { return false; }
+export function rawSplitWriteDispatchAllowed(): boolean { return true; }

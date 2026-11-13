@@ -64,7 +64,7 @@ export class RawSplitController {
     if (this.writesHeld || !this.writeAllowed()) throw new Error('Sessiya xavfsizligi tasdiqlanmagan');
     this.checkPendingLease(generation);
   };
-  /** The production role leaves writes held until a durable, authoritative acknowledgment exists. */
+  /** All actions still require the current session and a successfully checked pending pair. */
   get writesHeld(): boolean { return !isSynchronouslyTrue(rawSplitWriteDispatchAllowed); }
   get locked(): boolean { return this.state.pendingCheck !== 'ready' || this.state.busy || this.state.pending !== null || this.state.pendingIssue !== null; }
   /** A lease never becomes current again after a recheck, even if the same keys are later empty. */

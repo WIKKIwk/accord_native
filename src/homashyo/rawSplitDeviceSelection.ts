@@ -14,11 +14,8 @@ export function rawSplitDeviceSelection(selection: PrintDeviceSelection): RawSpl
   return { transport: 'offline', printer: selection.offlinePrinter };
 }
 
-/** USB detection only preserves printer kind, not an exact identity at native dispatch. */
+/** Validate the shared picker's native profile without adding a second device picker. */
 export function validateRawSplitDeviceSelection(selection: PrintDeviceSelection): void {
-  if (selection.transport === 'offline') {
-    throw new RawSplitUnsupportedPrinter(rawSplitUnsupportedReason('offline'));
-  }
   if (!rawSplitPrinterSupported(rawSplitDeviceSelection(selection), 'zebra')) {
     throw new RawSplitUnsupportedPrinter(rawSplitUnsupportedReason(selection.transport));
   }

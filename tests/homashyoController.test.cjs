@@ -11,7 +11,7 @@ const inventory = load('preparation/preparationInventory', { '../auth': {}, '../
 const sharedBarcode = load('shared/barcode/rawMaterialBarcode');
 const barcode = load('homashyo/rawSplitBarcode', { '../preparation/preparationInventory': inventory, '../shared/barcode/rawMaterialBarcode': sharedBarcode });
 const syncGuard = load('shared/camera/synchronousGuard');
-const { RawSplitController } = load('homashyo/rawSplitController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, './rawSplitBarcode': barcode,
+const { RawSplitController } = load('homashyo/rawSplitController', { '../shared/camera/synchronousGuard': syncGuard, './rawSplitWritePolicy': load('homashyo/rawSplitWritePolicy'), './rawSplitBarcode': barcode,
   './rawSplitApi': {}, './rawSplitDraft': draft, './rawSplitModel': model, './rawSplitWidthPlan': width });
 const raw = { revision: '1.000000', stock_id: 'parent', barcode: 'parent', warehouse: 'Raw W', item_code: 'FILM',
   item_name: 'Film', kg: '100', width_mm: '1000', micron: '20' };
@@ -189,19 +189,19 @@ test('read-only mode still performs local waste validation and reveals the issue
   assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.issueCalls, []); assert.deepEqual(h.prints, []);
 });
 
-test('same-kind USB Zebra replacement cannot reach stock save or a print bridge', async () => {
+test('Android Zebra USB reuses the selected profile for stock save and printing', async () => {
   const runtime = load('homashyo/rawSplitPrintRuntime', { './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, 'react-native': { Platform: { OS: 'android' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
   for (const deviceName of ['Zebra-A', 'Zebra-B']) {
     const h = setup(); h.setPick({ transport: 'offline', printer: { kind: 'zebra', deviceName } });
     h.options.printerSupported = runtime.rawSplitPrinterSupported; await fill(h.controller); await h.controller.save();
-    assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []); assert.ok(h.notices.includes('unsupported-printer'));
+    assert.equal(h.stockCalls.length, 1); assert.equal(h.prints.length, 1); assert.equal(h.prints[0][1].printer.deviceName, deviceName);
   }
 });
 
-test('iOS Bluetooth without native selected-UUID recheck cannot commit stock', async () => {
+test('iOS Bluetooth can save stock and reuse the shared native print bridge', async () => {
   const runtime = load('homashyo/rawSplitPrintRuntime', { './rawSplitWritePolicy': { rawSplitWriteDispatchAllowed: () => true }, 'react-native': { Platform: { OS: 'ios' } }, '../printing/printService': {}, './rawSplitApi': {}, './rawSplitPrinting': {} });
   const h = setup(); h.setPick({ transport: 'bluetooth', printer: { address: 'A' } }); h.options.printerSupported = runtime.rawSplitPrinterSupported;
-  await fill(h.controller); await h.controller.save(); assert.deepEqual(h.stockCalls, []); assert.deepEqual(h.prints, []); assert.ok(h.notices.includes('unsupported-printer'));
+  await fill(h.controller); await h.controller.save(); assert.equal(h.stockCalls.length, 1); assert.equal(h.prints.length, 1); assert.equal(h.prints[0][1].printer.address, 'A');
 });
 
 test('a rejected mismatched stock response cannot start any label printing', async () => {

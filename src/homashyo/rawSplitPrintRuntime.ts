@@ -7,21 +7,17 @@ import { rawMaterialSplitPrintRequest } from './rawSplitPrinting';
 import { rawSplitWriteDispatchAllowed } from './rawSplitWritePolicy';
 
 export class RawSplitUnsupportedPrinter extends Error {}
-/** USB cannot bind exact identity; iOS Bluetooth does not recheck the selected UUID at dispatch. */
+/** Reuse the shared native transports; GoDEX remains excluded from this port. */
 export function rawSplitPrinterSupported(device: PreparationDeviceSelection, wifiPrinter: string): boolean {
-  if (device.transport === 'bluetooth') return Platform.OS === 'android';
-  if (device.transport === 'offline') return false;
+  if (device.transport === 'bluetooth') return true;
+  if (device.transport === 'offline') return Platform.OS === 'android' && device.printer.kind === 'zebra';
   return wifiPrinter === 'zebra' && !!device.driverBaseUrl;
 }
 
 /** Explain only choices that are actually available on the current platform. */
 export function rawSplitUnsupportedReason(transport: PreparationDeviceSelection['transport']): string {
-  if (transport === 'offline') return Platform.OS === 'ios'
-    ? 'USB printer qurilmasini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.'
-    : 'USB printer qurilmasini aniq tekshirib bo‘lmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.';
-  if (transport === 'bluetooth') return 'iOS Bluetooth printerini aniq tekshirib bo‘lmaydi. Wi-Fi Zebra tanlang.';
-  return Platform.OS === 'ios' ? 'GoDEX qo‘llab-quvvatlanmaydi. Wi-Fi Zebra tanlang.'
-    : 'GoDEX qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.';
+  if (transport === 'offline' && Platform.OS === 'ios') return 'iOS qurilmada USB printer qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.';
+  return 'GoDEX qo‘llab-quvvatlanmaydi. Bluetooth yoki Wi-Fi Zebra tanlang.';
 }
 
 /** Print one existing child roll through the existing native bridge or V2 Wi-Fi API. */

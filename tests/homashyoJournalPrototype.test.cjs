@@ -69,10 +69,8 @@ async function uncertainState(journal, cmd = command()) {
   return journal.markUncertain(prepared.revision, cmd.requestId);
 }
 
-// The production safety switch remains non-configurable, and no runtime imports this experiment.
-test('conditional model is test-only and production write hold is unchanged', () => {
-  const policy = fs.readFileSync(path.resolve(__dirname, '../src/homashyo/rawSplitWritePolicy.ts'), 'utf8');
-  assert.match(policy, /rawSplitWriteDispatchAllowed\(\): boolean \{ return false; \}/);
+// The production role uses its existing V2 command flow, never this experiment.
+test('conditional journal model and prototype stay unconnected to the real role', () => {
   const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(item => {
     const file = path.join(dir, item.name);
     return item.isDirectory() ? walk(file) : /\.[cm]?[jt]sx?$/.test(item.name) ? [file] : [];

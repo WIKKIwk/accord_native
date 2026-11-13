@@ -13,7 +13,7 @@ const issueRecord = fixture.records.filter(r => r.test === 'issue retry survives
   r.status === 200 && r.url.endsWith('/issues')).at(-1);
 const sourceRecord = record('scan lookup and measured weights show 98 stock plus 2 waste', '/source');
 const printRecord = record('printer failure and reprint do not submit stock again', '/print');
-function setup(writeAllowed = true) {
+function setup(writeAllowed = load('homashyo/rawSplitWritePolicy').rawSplitWriteDispatchAllowed()) {
   const session = { baseUrl: 'https://example.invalid', token: 'not-a-credential', profile: { role: 'homashyo_rezkachi', ref: 'same' },
     capabilities: ['raw_material.split'] }, replacement = { ...session, profile: { ...session.profile } }, saved = new Map(), calls = [];
   let current = session, epoch = 0, witnessCurrent = true, beforeSend, respond = async () => { throw new Error('No fake response provided'); };
@@ -26,6 +26,7 @@ function setup(writeAllowed = true) {
     './rawSplitModel': load('homashyo/rawSplitModel'), './rawSplitResultMatch': load('homashyo/rawSplitResultMatch', { './rawSplitModel': load('homashyo/rawSplitModel') }) });
   const ticket = api.createRawSplitSessionTicket(session, candidate => current === candidate ? epoch : null, () => witnessCurrent);
   return { api, store, saved, calls, session, ticket, replacement, switchSession: () => { current = replacement; epoch++; },
+    ticketForCurrent: () => api.createRawSplitSessionTicket(current, candidate => current === candidate ? epoch : null, () => witnessCurrent),
     bumpEpoch: () => { epoch++; }, setWitness: value => { witnessCurrent = value; }, restoreSameObject: () => { current = session; },
     setResponse: fn => { respond = fn; }, retryGuard: () => beforeSend() };
 }
@@ -143,9 +144,9 @@ test('missing or asynchronous witness fails closed without unhandled rejections'
 test('demo token blocks stock, issue and remote print before storage or network', async () => {
   const h = setup(); h.session.token = 'test-mode-token'; let storageCalls = 0;
   h.store.getItemAsync = async () => { storageCalls++; return null; };
-  await assert.rejects(h.api.rawSplitSave(h.ticket, {}), /Demo\/test/);
-  await assert.rejects(h.api.rawSplitReportIssue(h.ticket, {}), /Demo\/test/);
-  await assert.rejects(h.api.rawSplitPrint(h.ticket, { splitId: 'x', barcode: 'x', driverUrl: 'x', printer: 'zebra', printMode: 'label' }), /Demo\/test/);
+  await assert.rejects(h.api.rawSplitSave(h.ticket, {}), /Haqiqiy akkaunt kerak/);
+  await assert.rejects(h.api.rawSplitReportIssue(h.ticket, {}), /Haqiqiy akkaunt kerak/);
+  await assert.rejects(h.api.rawSplitPrint(h.ticket, { splitId: 'x', barcode: 'x', driverUrl: 'x', printer: 'zebra', printMode: 'label' }), /Haqiqiy akkaunt kerak/);
   assert.equal(storageCalls, 0); assert.deepEqual(h.calls, []);
 });
 test('demo token introduced during key removal restores the sent command without another send', async () => {
@@ -236,9 +237,8 @@ for (const kind of ['stock', 'issue']) for (const newer of [false, true]) for (c
     assert.deepEqual(JSON.parse(h.saved.get(key)), newer ? replacement : payload);
   });
 
-test('production write policy blocks direct stock and issue API calls, including explicit retries, before storage or network', async () => {
-  const policy = load('homashyo/rawSplitWritePolicy'); assert.equal(policy.rawSplitWriteDispatchAllowed(), false);
-  const h = setup(policy.rawSplitWriteDispatchAllowed()); let storage = 0;
+test('a denied dispatch policy blocks direct stock and issue calls before storage or network', async () => {
+  const h = setup(false); let storage = 0;
   h.store.getItemAsync = async () => { storage++; return null; }; h.store.setItemAsync = async () => { storage++; };
   for (const retry of [false, true]) {
     await assert.rejects(h.api.rawSplitSave(h.ticket, { request_id: 'old' }, () => {}, retry), /to‘xtatilgan/);
@@ -302,29 +302,25 @@ test('production policy blocks direct Wi-Fi print before its authenticated reque
   const h = setup(false); await assert.rejects(h.api.rawSplitPrint(h.ticket, { splitId: 's', barcode: 'b', driverUrl: 'https://printer.invalid', printer: 'zebra', printMode: 'label' }), /to‘xtatilgan/);
   assert.deepEqual(h.calls, []); assert.equal(h.saved.size, 0);
 });
-test('same-scope old issue removal can look clear, but the production hold blocks new stock and print until restoration settles', async () => {
-  // Simulate a legacy in-flight owner with the policy mocked on; the new production owner stays held.
-  const h = setup(true), payload = JSON.parse(issueRecord.requestBody.text), gate = deferred(), removed = deferred(), scope = h.api.rawSplitScope();
+test('new role waits for an old in-flight issue to restore its pending key after an account switch', async () => {
+  const h = setup(), payload = JSON.parse(issueRecord.requestBody.text), gate = deferred(), removed = deferred(), scope = h.api.rawSplitScope();
   h.setResponse(async () => fakeResponse(JSON.parse(issueRecord.responseBody.text)));
   h.store.removeItemAsync = async key => { const result = h.saved.delete(key); removed.resolve(); await gate.promise; return result; };
   const old = h.api.rawSplitReportIssue(h.ticket, payload); await removed.promise; h.switchSession();
-  let newRequests = 0; const model = load('homashyo/rawSplitModel'), width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
+  const model = load('homashyo/rawSplitModel'), width = load('homashyo/rawSplitWidthPlan', { './rawSplitModel': model });
   const sync = load('shared/camera/synchronousGuard'), draft = load('homashyo/rawSplitDraft', { './rawSplitModel': model, './rawSplitWidthPlan': width, '../../modules/accord-native-clock/src/AccordNativeClockModule': {}, 'expo-crypto': {} });
-  const safeApi = load('homashyo/rawSplitApi', { './rawSplitWritePolicy': load('homashyo/rawSplitWritePolicy'),
-    'expo-sqlite/kv-store': { default: h.store, __esModule: true }, '../auth': { currentSession: () => h.replacement },
-    '../shared/camera/synchronousGuard': sync, '../authorizedFetch': { authorizedFetch: async () => { newRequests++; throw new Error('unexpected'); } },
-    '../shared/mobileApiException': load('shared/mobileApiException'), './rawSplitModel': model,
-    './rawSplitResultMatch': load('homashyo/rawSplitResultMatch', { './rawSplitModel': model }) });
-  const ticket = safeApi.createRawSplitSessionTicket(h.replacement, () => 0, () => true);
-  const { RawSplitController } = load('homashyo/rawSplitController', { './rawSplitApi': safeApi, './rawSplitWritePolicy': load('homashyo/rawSplitWritePolicy'),
+  const ticket = h.ticketForCurrent();
+  const { RawSplitController } = load('homashyo/rawSplitController', { './rawSplitApi': h.api, './rawSplitWritePolicy': load('homashyo/rawSplitWritePolicy'),
     '../shared/camera/synchronousGuard': sync, './rawSplitBarcode': { rawSplitBarcode: value => value }, './rawSplitDraft': draft,
     './rawSplitModel': model, './rawSplitWidthPlan': width });
   let picks = 0, prints = 0; const c = new RawSplitController({ ticket, canMutate: () => true,
     selectPrinter: async () => { picks++; return null; }, print: async () => { prints++; }, onMessage() {}, onIssueVisible() {}, printerSupported: () => true, onUnsupportedPrinter() {} });
-  await c.recheckPending(); assert.equal(c.getSnapshot().pendingCheck, 'ready'); assert.equal(c.getSnapshot().pendingIssue, null);
+  await c.recheckPending(); assert.equal(c.getSnapshot().pendingCheck, 'failed'); assert.equal(c.locked, true);
   await c.save(); await c.save(true); await c.saveIssue(); await c.saveIssue(true); await c.selectPrinter();
-  await assert.rejects(safeApi.rawSplitSave(ticket, { request_id: 'new-stock' }), /to‘xtatilgan/);
-  await assert.rejects(safeApi.rawSplitPrint(ticket, { splitId: 's', barcode: 'b', driverUrl: 'https://printer.invalid', printer: 'zebra', printMode: 'label' }), /to‘xtatilgan/);
-  assert.deepEqual([newRequests, picks, prints, h.calls.length], [0, 0, 0, 1]); gate.resolve(); await assert.rejects(old, /Akkaunt o‘zgargan/);
-  assert.deepEqual(JSON.parse(h.saved.get(`${scope}:issue`)), payload); c.dispose();
+  await assert.rejects(h.api.rawSplitSave(ticket, { request_id: 'new-stock' }), /Muammo saqlanmoqda/);
+  assert.deepEqual([picks, prints, h.calls.length], [0, 0, 1]);
+  gate.resolve(); await assert.rejects(old, /Akkaunt o‘zgargan/);
+  assert.deepEqual(JSON.parse(h.saved.get(`${scope}:issue`)), payload);
+  await c.recheckPending(); assert.equal(c.getSnapshot().pendingCheck, 'ready');
+  assert.deepEqual(c.getSnapshot().pendingIssue, payload); assert.equal(c.locked, true); c.dispose();
 });

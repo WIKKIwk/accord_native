@@ -4,11 +4,16 @@ import { currentSession } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
-import { RawSplitFormatException, RawSplitIssue, RawSplitResult, RawSplitRoll, RawSplitSnapshot } from './rawSplitModel';
+import { RawSplitFormatException, RawSplitIssue, RawSplitResult, RawSplitRoll, RawSplitSnapshot, RawSplitStateError } from './rawSplitModel';
 import { assertRawSplitResultMatchesPending } from './rawSplitResultMatch';
 import { rawSplitWriteDispatchAllowed } from './rawSplitWritePolicy';
 
 type Json = Record<string, unknown>;
+let saving = false, issueSaving = false;
+function checkPendingWriter(): void {
+  if (saving) throw new Error('Saqlash davom etmoqda');
+  if (issueSaving) throw new Error('Muammo saqlanmoqda');
+}
 function object(value: unknown): Json {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Invalid object');
   return value as Json;
@@ -46,7 +51,7 @@ export function createRawSplitSessionTicket(session: Session, readEpoch: RawSpli
 }
 /** Native has no full V2 test-mode store yet. Never transmit a demo-token mutation or print. */
 export function requireRawSplitRealAccount(ticket: RawSplitSessionTicket): void {
-  if (ticket.session.token === 'test-mode-token') throw new Error('Demo/test rejimi hozir mavjud emas.');
+  if (ticket.session.token === 'test-mode-token') throw new RawSplitStateError('Haqiqiy akkaunt kerak');
 }
 export function rawSplitSessionIsCurrent(ticket: RawSplitSessionTicket): boolean {
   try { if (!issuedTickets.has(ticket)) return false; ticket.check(); return currentSession() === ticket.session; } catch { return false; }
@@ -65,13 +70,13 @@ function parsePending(raw: string | null): Json | null { return raw === null ? n
 
 /** @v2 rawSplitPending */
 export async function rawSplitPending(ticket: RawSplitSessionTicket): Promise<Json | null> {
-  const scope = rawSplitScope(); guard(scope, ticket);
-  const raw = await Storage.getItemAsync(scope); guard(scope, ticket); return parsePending(raw);
+  const scope = rawSplitScope(); guard(scope, ticket); checkPendingWriter();
+  const raw = await Storage.getItemAsync(scope); guard(scope, ticket); checkPendingWriter(); return parsePending(raw);
 }
 /** @v2 rawSplitIssuePending */
 export async function rawSplitIssuePending(ticket: RawSplitSessionTicket): Promise<Json | null> {
-  const scope = rawSplitScope(); guard(scope, ticket);
-  const raw = await Storage.getItemAsync(`${scope}:issue`); guard(scope, ticket); return parsePending(raw);
+  const scope = rawSplitScope(); guard(scope, ticket); checkPendingWriter();
+  const raw = await Storage.getItemAsync(`${scope}:issue`); guard(scope, ticket); checkPendingWriter(); return parsePending(raw);
 }
 async function responseObject(response: Response): Promise<Json> {
   let row: Json | null;
@@ -136,13 +141,12 @@ async function clearDefinitiveRejection(response: Response, key: string, seriali
   return typeof code === 'string' && definitiveErrors.has(code)
     ? await removePending(key, serialized, scope, ticket, actionGuard) : false;
 }
-let saving = false, issueSaving = false;
 /** @v2 rawSplitSave */
 export async function rawSplitSave(ticket: RawSplitSessionTicket, payload: Json, actionGuard?: () => void, requireExisting = false): Promise<RawSplitResult> {
   requireRawSplitRealAccount(ticket);
   if (!rawSplitWriteDispatchAllowed()) throw new Error('Saqlash xavfsizlik tekshiruvi tugaguncha to‘xtatilgan');
   const { session } = ticket;
-  if (saving) throw new Error('Saqlash davom etmoqda');
+  checkPendingWriter();
   saving = true;
   try {
     const scope = rawSplitScope(); guard(scope, ticket, actionGuard);
@@ -173,7 +177,7 @@ export async function rawSplitReportIssue(ticket: RawSplitSessionTicket, payload
   requireRawSplitRealAccount(ticket);
   if (!rawSplitWriteDispatchAllowed()) throw new Error('Muammo qaydi xavfsizlik tekshiruvi tugaguncha to‘xtatilgan');
   const { session } = ticket;
-  if (issueSaving) throw new Error('Muammo saqlanmoqda');
+  checkPendingWriter();
   issueSaving = true;
   try {
     const scope = rawSplitScope(), key = `${scope}:issue`; guard(scope, ticket, actionGuard);
