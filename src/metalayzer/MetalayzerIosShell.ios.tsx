@@ -17,12 +17,14 @@ export function MetalayzerIosShell() {
     if (!isCurrent()) return;
     if (id === 'logout') { confirmRoleDrawerLogout(onLogout); return; }
     if (id === 'home') router.navigate('/ios-metalayzer' as Href);
+    if (id === 'materials') router.navigate('/ios-metalayzer/materials' as Href);
     if (id === 'profile') router.navigate('/ios-metalayzer/profile' as Href);
   };
   return <ChatClosingContext.Provider value={setChatClosing}>
     <RoleDrawer {...drawer} title="Metalayzer" closeAccessibilityLabel="Yopish"
-      items={[{ id: 'home', label: 'Metalayzer', symbol: 'checkmark.circle' }, { id: 'profile', label: 'Profil', symbol: 'person' }]}
-      active={pathname === '/ios-metalayzer' ? 'home' : pathname === '/ios-metalayzer/profile' ? 'profile' : ''}
+      items={[{ id: 'home', label: 'Metalayzer', symbol: 'checkmark.circle' },
+        { id: 'materials', label: 'Metallangan xomashyolar', symbol: 'list.bullet' }, { id: 'profile', label: 'Profil', symbol: 'person' }]}
+      active={pathname === '/ios-metalayzer' ? 'home' : pathname === '/ios-metalayzer/materials' ? 'materials' : pathname === '/ios-metalayzer/profile' ? 'profile' : ''}
       footerAction={{ id: 'logout', label: 'Chiqish', symbol: 'rectangle.portrait.and.arrow.right', destructive: true }} onSelect={navigate}>
       <NativeTabs hidden={pathname.startsWith('/ios-metalayzer/chat/') && !chatClosing} disableHiddenAnimation>
         <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'checkmark.circle', selected: 'checkmark.circle.fill' }} />

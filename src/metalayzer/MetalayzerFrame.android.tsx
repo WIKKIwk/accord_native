@@ -23,11 +23,12 @@ export function MetalayzerDock({ active = 'home' }: { active?: 'home' | 'profile
     else if (id === 'chat') router.navigate('/android-metalayzer/chat' as Href);
   }} />;
 }
-export function MetalayzerFrame({ title, busy = false, profile = false, children }: { title: string; busy?: boolean; profile?: boolean; children: ReactNode }) {
+export function MetalayzerFrame({ title, busy = false, profile = false, back = false, children }: { title: string; busy?: boolean; profile?: boolean; back?: boolean; children: ReactNode }) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), drawer = useRoleDrawer();
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
-    <RoleHeader title={title} navigation={{ icon: profile ? 'back' : 'menu', label: profile ? 'Orqaga' : 'Bo‘limlar',
-      onPress: profile ? () => router.navigate('/android-metalayzer' as Href) : drawer.open }} />
+    <RoleHeader title={title} navigation={{ icon: profile || back ? 'back' : 'menu', label: profile || back ? 'Orqaga' : 'Bo‘limlar',
+      onPress: profile ? () => router.navigate('/android-metalayzer' as Href) : back
+        ? () => { if (router.canGoBack()) router.back(); else router.navigate('/android-metalayzer' as Href); } : drawer.open }} />
     {busy && <RawSplitBusy />}
     <View style={{ flex: 1 }}>{children}</View><MetalayzerDock active={profile ? 'profile' : 'home'} />
   </View>;
