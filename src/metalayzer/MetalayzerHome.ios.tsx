@@ -3,6 +3,7 @@ import { autocorrectionDisabled, buttonStyle, disabled, listStyle, onSubmit, sub
 import { router, Stack, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useMetalayzerContext } from './MetalayzerContext';
+import { MetalayzerHeaderProfile } from './MetalayzerHeaderProfile.ios';
 import { MetalayzerScanner } from './MetalayzerScanner';
 import { formatMetalayzerQuantity, useMetalayzerLogic } from './useMetalayzerLogic';
 
@@ -24,6 +25,7 @@ export function MetalayzerHome() {
     model.lookupScanned(value);
   };
   return <><Stack.Screen options={{ title: 'Metalayzer' }} />
+    <Stack.Toolbar placement="right"><Stack.Toolbar.View><MetalayzerHeaderProfile /></Stack.Toolbar.View></Stack.Toolbar>
     <Host style={{ flex: 1 }}><List modifiers={[listStyle('plain')]}>
       <Section><Text>Xomashyoni skan qiling yoki QR kodini kiriting.</Text>
         <Button label={material?.isMetalayzer ? 'Keyingi xomashyoni skan qilish' : 'Xomashyoni skan qilish'}

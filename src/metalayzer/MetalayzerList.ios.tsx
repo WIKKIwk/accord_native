@@ -5,6 +5,7 @@ import { PlatformColor } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { formatMetalayzerQuantity, type MetalayzerMaterial } from './metalayzerApi';
+import { MetalayzerHeaderProfile } from './MetalayzerHeaderProfile.ios';
 import { useMetalayzerList } from './useMetalayzerList';
 
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
@@ -19,7 +20,9 @@ export function MetalayzerList() {
       <Text modifiers={[font({ textStyle: 'caption' }), secondary]}>QR: {item.barcode}</Text>
     </VStack><Text modifiers={[font({ textStyle: 'caption' }), secondary]}>{formatMetalayzerQuantity(item.qty, item.uom)}</Text>
   </HStack>;
-  return <><Stack.Screen options={{ title: 'Metallangan xomashyolar' }} /><Host style={{ flex: 1 }}>
+  return <><Stack.Screen options={{ title: 'Metallangan xomashyolar' }} />
+    <Stack.Toolbar placement="right"><Stack.Toolbar.View><MetalayzerHeaderProfile /></Stack.Toolbar.View></Stack.Toolbar>
+    <Host style={{ flex: 1 }}>
     <OrdersList rows={state.items} renderRow={row} rowKey={item => item.barcode} active onRefresh={state.reload}
       headerOffset={headerOffset} headerHeight={headerHeight} topInset={0}
       footer={state.cursor ? <Section>{state.moreError && <Text>{state.moreError}</Text>}
