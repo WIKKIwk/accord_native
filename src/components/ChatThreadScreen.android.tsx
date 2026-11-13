@@ -3,8 +3,9 @@ import { background, fillMaxWidth, padding, paddingAll, semantics, size, testID,
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { draftAfterSending } from '../chatComposer';
 import { discardChatMedia, prepareChatDocument, prepareChatMedia, type ChatMediaDraft } from '../chatMedia';
@@ -14,7 +15,7 @@ import { useChatThread } from '../useChatThread';
 import { ChatMediaThumbnail, openChatMedia, SelectedChatMediaPreview } from './ChatMediaPreview';
 
 export function ChatThreadScreen({ session, conversationId, title }: ChatThreadProps) {
-  const thread = useChatThread(session, conversationId), colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const thread = useChatThread(session, conversationId), colors = useMaterialColors(), insets = useSafeAreaInsets(), headerHeight = useHeaderHeight();
   const [draft, setDraft] = useState(''), [media, setMedia] = useState<ChatMediaDraft[]>([]), [selecting, setSelecting] = useState(false), [batchSending, setBatchSending] = useState(false);
   const input = useNativeState(''), mounted = useRef(true), sending = useRef(false), selection = useRef<ChatMediaDraft[]>([]);
   const followLatest = useRef(true), list = useRef<FlatList>(null);
@@ -87,7 +88,8 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
     } finally { sending.current = false; if (mounted.current) { setBatchSending(false); scrollToLatest(); } }
   };
   const rows = chatTimeline(session, thread.messages ?? [], thread.pending);
-  return <View testID="chat-thread" style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}>
+  return <KeyboardAvoidingView testID="chat-thread" behavior="padding" keyboardVerticalOffset={headerHeight}
+    style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}>
     <Stack.Screen options={{ title: title || 'Suhbat' }} />
     <FlatList ref={list} style={styles.messages} data={rows} keyExtractor={item => item.key} keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ flexGrow: 1, padding: 12 }} maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
@@ -145,7 +147,7 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
         </FilledIconButton>
       </Row>
     </Host>
-  </View>;
+  </KeyboardAvoidingView>;
 }
 
 const styles = StyleSheet.create({

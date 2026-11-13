@@ -46,6 +46,7 @@ function fixture(send = async () => true) {
       useNativeState: initial => react.useRef({ get: () => initial, set: value => { initial = value; } }).current },
     '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: (_, name) => (...args) => ({ name, args }) }),
     'expo-document-picker': {}, 'expo-image-picker': {}, 'expo-router': { Stack: { Screen: 'Screen' } },
+    'expo-router/react-navigation': { useHeaderHeight: () => 80 },
     'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', FlatList: 'FlatList', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl',
       ActivityIndicator: 'ActivityIndicator', KeyboardAvoidingView: 'KeyboardAvoidingView', StyleSheet: { create: value => value }, Alert: { alert: (...args) => calls.push(['alert', ...args]) } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 24 }) },
@@ -59,9 +60,10 @@ function fixture(send = async () => true) {
   return { calls, thread, render, input, button, flushFrames };
 }
 
-test('Android composer keeps native text and send controls visible while the message list flexes with resize', () => {
+test('Android composer avoids the keyboard beneath the native header while its message list flexes', () => {
   const x = fixture(), tree = x.render();
-  assert.equal(tree.type, 'View');
+  assert.equal(tree.type, 'KeyboardAvoidingView');
+  assert.equal(tree.props.behavior, 'padding'); assert.equal(tree.props.keyboardVerticalOffset, 80);
   const composer = nodes(tree, node => node.type === 'Host')[0];
   assert.equal(composer.props.matchContents.vertical, true); assert.equal(composer.props.style.flexShrink, 0);
   const list = nodes(tree, node => node.type === 'FlatList')[0];
