@@ -130,11 +130,12 @@ test('iOS scanned-WIP close requests native dismissal before releasing its paren
   const { CloseHistory } = load('components/WorkerScannedWipHistory.ios.tsx', {
     react: { useContext: () => () => calls.push('native-close') },
     '@expo/ui/swift-ui': { Button: 'Button' }, '@expo/ui/swift-ui/modifiers': modifiers,
-    'react-native': { View: 'View' }, './BaseHost': {}, './WorkerAlert': {}, './WorkerOrderSheet': {}, './useWorkerScannedWips': {}, './workerSheetContext': { WorkerSheetCloseContext: {} },
+    './WorkerHistoryButton': { WorkerHistoryButton: 'HistoryButton' },
+    'react-native': { View: 'View', StyleSheet: { create: value => value } }, './BaseHost': {}, './WorkerAlert': {}, './WorkerOrderSheet': {}, './useWorkerScannedWips': {}, './workerSheetContext': { WorkerSheetCloseContext: {} },
   }, '\nexport { CloseHistory };');
   const tree = CloseHistory({ onClose: () => calls.push('parent-unmount'), writing: false, label: 'Close' });
   tree.props.onPress(); assert.deepEqual(calls, ['native-close']);
-  assert.equal(tree.props.modifiers.find(mod => mod.name === 'disabled').args[0], false);
+  assert.equal(tree.props.disabled, false);
 });
 
 test('daily QR presentations haptic once per accepted open, serialize rapid opens and defer editing until native dismissal', async () => {

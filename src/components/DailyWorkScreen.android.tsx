@@ -2,8 +2,8 @@ import { DateTimePicker } from '@expo/ui/community/datetime-picker';
 import { Box, Column, FilledTonalIconButton, Host, OutlinedCard, RNHostView, Row, Text as ComposeText, useMaterialColors, type MaterialColors } from '@expo/ui/jetpack-compose';
 import { background, clickable, clip, combinedClickable, defaultMinSize, fillMaxWidth, padding, semantics, Shapes, size, testID, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, BackHandler, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, BackHandler, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import type { Session } from '../auth';
 import { dailyWorkQuantity, dailyWorkStatus, type DailyWorkBatch, type DailyWorkGroup } from '../dailyWork';
 import { dailyWorkDateDraft, dailyWorkDayLabel, dailyWorkDisplayCode, dailyWorkExpandedRows, dailyWorkProductTitle, dailyWorkStatusLabel } from '../dailyWorkPresentation';
@@ -16,6 +16,19 @@ import { useWorkerOrderText } from './useWorkerOrderText';
 type Props = { session: Session; onOpenDrawer?: () => void; onBack: () => void };
 type Actions = ReturnType<typeof useDailyWorkActions>;
 type Translate = ReturnType<typeof useWorkerOrderText>['p'];
+
+// FlatList may unmount a row outside its window. Keep the user's open cards
+// with the page so revisiting that row does not collapse it.
+function useRowExpansion(key: string, saved?: Map<string, boolean>) {
+  const [expanded, setExpanded] = useState(() => saved?.get(key) ?? false);
+  const toggle = () => {
+    if (!saved) { setExpanded(value => !value); return; }
+    const next = !(saved.get(key) ?? expanded);
+    saved.set(key, next);
+    setExpanded(next);
+  };
+  return { expanded, toggle };
+}
 
 function CompactValue({ label, value, colors }: { label: string; value: string; colors: MaterialColors }) {
   return <Column verticalArrangement={{ spacedBy: 2 }} modifiers={[weight(1)]}>
@@ -36,11 +49,11 @@ function DailyWorkIcon({ name, color, size: iconSize = 22 }: { name: 'receipt_lo
 }
 
 /** @v2 _DailyWorkWipCardState */
-function BatchCard({ batch, index, names, assigned, showWorker, actions, p, colors }: {
+function BatchCard({ batch, index, names, assigned, showWorker, actions, p, colors, expansion, expansionKey = batch.id }: {
   batch: DailyWorkBatch; index: number; names: Record<string, string>; assigned: readonly string[];
-  showWorker: boolean; actions: Actions; p: Translate; colors: MaterialColors;
+  showWorker: boolean; actions: Actions; p: Translate; colors: MaterialColors; expansion?: Map<string, boolean>; expansionKey?: string;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const { expanded, toggle } = useRowExpansion(expansionKey, expansion);
   const status = dailyWorkStatus(batch);
   const statusBackground = status === 'Ishlatilgan' ? colors.secondaryContainer : status === 'Jarayonda' ? colors.tertiaryContainer : colors.primaryContainer;
   const statusForeground = status === 'Ishlatilgan' ? colors.onSecondaryContainer : status === 'Jarayonda' ? colors.onTertiaryContainer : colors.onPrimaryContainer;
@@ -54,7 +67,7 @@ function BatchCard({ batch, index, names, assigned, showWorker, actions, p, colo
   const hint = p(expanded ? 'worker.daily.card.collapse_hint' : 'worker.daily.card.expand_hint');
 
   return <Column modifiers={[fillMaxWidth(), clip(Shapes.RoundedCorner(16)), background(colors.surfaceContainerHighest),
-    testID(`daily-work-wip-card-${batch.id}`), combinedClickable({ onClick: () => setExpanded(value => !value), onLongClick: () => actions.showQr(batch, { nativeFeedback: true }) }), padding(14, 14, 10, 14)]}>
+    testID(`daily-work-wip-card-${batch.id}`), combinedClickable({ onClick: toggle, onLongClick: () => actions.showQr(batch, { nativeFeedback: true }) }), padding(14, 14, 10, 14)]}>
       <Row verticalAlignment="top" horizontalArrangement={{ spacedBy: 6 }} modifiers={[fillMaxWidth()]}>
         <Box contentAlignment="center" modifiers={[size(32, 32), clip(Shapes.Circle), background(colors.secondaryContainer)]}>
           <ComposeText color={colors.onSecondaryContainer} style={{ typography: 'labelLarge', fontWeight: '700' }}>{String(index + 1)}</ComposeText>
@@ -86,18 +99,22 @@ function BatchCard({ batch, index, names, assigned, showWorker, actions, p, colo
 }
 
 /** @v2 _DailyWorkOrderGroupCardState */
-function OrderGroup({ group, names, assigned, showWorker, actions, p, colors }: {
+function OrderGroup({ group, names, assigned, showWorker, actions, p, colors, expansion }: {
   group: DailyWorkGroup; names: Record<string, string>; assigned: readonly string[]; showWorker: boolean;
-  actions: Actions; p: Translate; colors: MaterialColors;
+  actions: Actions; p: Translate; colors: MaterialColors; expansion?: Map<string, boolean>;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const { expanded, toggle } = useRowExpansion(`group:${group.key}`, expansion);
+  const batchKey = (batch: DailyWorkBatch, index: number) => `batch:${group.key}:${batch.id}:${index}`;
   const title = group.title.trim(), orderId = group.orderId.trim();
   const hasTitle = !!title && title.toLowerCase() !== orderId.toLowerCase();
   return <Host matchContents={{ vertical: true }} style={styles.groupHost}>
     <OutlinedCard colors={{ containerColor: colors.surfaceContainerLow }} border={{ color: colors.outlineVariant, width: 1 }} modifiers={[fillMaxWidth()]}>
       <Column modifiers={[fillMaxWidth(), padding(8, 8, 8, 2)]}>
         <Row verticalAlignment="top" horizontalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 44 }),
-          clip(Shapes.RoundedCorner(12)), testID(`daily-work-order-header-${group.key}`), clickable(() => setExpanded(value => !value)), padding(8, 4, 4, 10)]}>
+          clip(Shapes.RoundedCorner(12)), testID(`daily-work-order-header-${group.key}`), clickable(() => {
+            if (expanded) group.batches.forEach((batch, index) => expansion?.delete(batchKey(batch, index)));
+            toggle();
+          }), padding(8, 4, 4, 10)]}>
           <DailyWorkIcon name="receipt_long" size={20} color={colors.primary} />
           <Column verticalArrangement={{ spacedBy: 3 }} modifiers={[weight(1)]}>
             <ComposeText color={colors.onSurfaceVariant} maxLines={1} overflow="ellipsis" style={{ typography: 'labelSmall' }}>
@@ -111,7 +128,8 @@ function OrderGroup({ group, names, assigned, showWorker, actions, p, colors }: 
           <DailyWorkIcon name={expanded ? 'expand_less' : 'expand_more'} color={colors.onSurfaceVariant} />
         </Row>
         {expanded ? <Column verticalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth(), padding(0, 2, 0, 10)]}>
-          {group.batches.map((batch, index) => <BatchCard key={`${batch.id}:${index}`} batch={batch} index={index} names={names} assigned={assigned} showWorker={showWorker} actions={actions} p={p} colors={colors} />)}
+          {group.batches.map((batch, index) => <BatchCard key={`${batch.id}:${index}`} batch={batch} index={index} names={names} assigned={assigned} showWorker={showWorker} actions={actions} p={p} colors={colors}
+            expansion={expansion} expansionKey={batchKey(batch, index)} />)}
         </Column> : null}
       </Column>
     </OutlinedCard>
@@ -124,6 +142,7 @@ export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
   const { day, setDay, batches, apparatusNames, groups, totals, error, refreshing, refresh } = model;
   const actions = useDailyWorkActions(session, model), { p, t } = useWorkerOrderText();
   const [showDate, setShowDate] = useState(false);
+  const { expansion } = useMemo(() => ({ session, expansion: new Map<string, boolean>() }), [session]);
   const workerName = String(session.profile.display_name || session.profile.legal_name || '').trim();
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => { onBack(); return true; });
@@ -137,7 +156,9 @@ export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
       </Pressable>
       <Text style={[styles.title, { color: colors.text }]}>{p('worker.daily')}</Text>
     </View>
-    <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing && batches !== null} onRefresh={() => { void refresh(); }} />}>
+    <FlatList style={styles.list} contentContainerStyle={styles.content} data={groups} keyExtractor={group => group.key} removeClippedSubviews={false}
+      refreshControl={<RefreshControl refreshing={refreshing && batches !== null} onRefresh={() => { void refresh(); }} />}
+      ListHeaderComponent={<View style={styles.headingContent}>
       <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
         <Pressable onPress={() => setShowDate(true)} accessibilityRole="button" style={styles.dateRow}>
           <Text style={{ color: colors.text, fontSize: 16 }}>{p('worker.action.select')}</Text>
@@ -157,10 +178,10 @@ export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
         <Pressable accessibilityRole="button" onPress={() => { void refresh(); }}><Text style={{ color: colors.icon }}>{t('Qayta urinish')}</Text></Pressable>
       </View> : null}
       {batches !== null ? <Text style={[styles.section, { color: colors.muted }]}>{p('worker.daily.produced_wips')}</Text> : null}
-      {batches !== null && !groups.length ? <Text style={{ color: colors.muted }}>{p('worker.daily.empty')}</Text> : null}
-      {groups.map(group => <OrderGroup key={group.key} group={group} names={apparatusNames} assigned={session.assigned_apparatus}
-        showWorker={session.profile.role === 'rezka_master'} actions={actions} p={p} colors={material} />)}
-    </ScrollView>
+      </View>}
+      ListEmptyComponent={batches !== null ? <Text style={{ color: colors.muted }}>{p('worker.daily.empty')}</Text> : undefined}
+      renderItem={({ item: group }) => <OrderGroup group={group} names={apparatusNames} assigned={session.assigned_apparatus}
+        showWorker={session.profile.role === 'rezka_master'} actions={actions} p={p} colors={material} expansion={expansion} />} />
     {showDate ? <DateTimePicker value={dailyWorkDateDraft(day, new Date())} mode="date" minimumDate={new Date(2020, 0, 1)} maximumDate={new Date()}
       positiveButton={{ label: p('worker.action.select') }} negativeButton={{ label: p('worker.action.cancel') }}
       onValueChange={(_event, date) => { setDay(dailyWorkDateDraft(date, new Date())); setShowDate(false); }} onDismiss={() => setShowDate(false)} /> : null}
@@ -171,6 +192,7 @@ export function DailyWorkScreen({ session, onOpenDrawer, onBack }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, minHeight: 56, gap: 12 },
   headerButton: { minWidth: 40, minHeight: 44, justifyContent: 'center' }, headerIcon: { fontSize: 26 }, title: { fontSize: 23, fontWeight: '700' },
+  list: { flex: 1, minHeight: 0 }, headingContent: { gap: 12 },
   content: { padding: 16, gap: 12, paddingBottom: 32 }, summaryCard: { borderRadius: 16, padding: 16, gap: 12 },
   dateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 36 }, metrics: { flexDirection: 'row', gap: 12 },
   metric: { flex: 1, gap: 3 }, metricValue: { fontSize: 21, fontWeight: '700' }, section: { fontSize: 13, fontWeight: '600', marginTop: 4 },

@@ -28,7 +28,7 @@ function loadWithReactCompiler(file, mocks, extra) {
 function nodes(tree, predicate) {
   if (!tree || typeof tree !== 'object') return [];
   if (Array.isArray(tree)) return tree.flatMap(child => nodes(child, predicate));
-  return [...(predicate(tree) ? [tree] : []), ...nodes(tree.props?.children, predicate)];
+  return [...(predicate(tree) ? [tree] : []), ...nodes(tree.props?.children, predicate), ...nodes(tree.props?.ListHeaderComponent, predicate)];
 }
 const find = (tree, predicate) => nodes(tree, predicate)[0];
 const modifiers = new Proxy({}, { get: (_, name) => name === 'Shapes' ? { RoundedCorner: radius => ({ radius }), Circle: 'circle' } : (...args) => ({ name, args }) });
@@ -51,7 +51,7 @@ function setup(extra = {}) {
     totals: { orders: 1, wips: 1, used: 0 }, error: '', refreshing: false, refresh() {} };
   const mocks = {
     react: runner.react, 'react-native': { StyleSheet: { create: x => x }, BackHandler: { addEventListener: () => ({ remove() {} }) },
-      ActivityIndicator: 'Spinner', Pressable: 'Pressable', RefreshControl: 'Refresh', ScrollView: 'ScrollView', Text: 'Text', View: 'View' },
+      ActivityIndicator: 'Spinner', FlatList: 'FlatList', Pressable: 'Pressable', RefreshControl: 'Refresh', ScrollView: 'ScrollView', Text: 'Text', View: 'View' },
     '@expo/ui/community/datetime-picker': { DateTimePicker: 'DatePicker' }, '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
     'expo-symbols': { SymbolView: 'SymbolView' }, '../dailyWork': model, '../dailyWorkPresentation': presentation,
     './useDailyWork': { useDailyWork: () => value }, './useDailyWorkActions': { useDailyWorkActions: () => actions },
@@ -84,7 +84,8 @@ test('Android daily order has the V2 identity, count badge and separate expandab
   try {
     const session = { profile: { role: 'aparatchi' }, assigned_apparatus: ['cut'] };
     const screen = h.render(h.DailyWorkScreen, { session, onBack() {} });
-    const group = find(screen, node => node.type === h.OrderGroup);
+    const list = find(screen, node => node.type === 'FlatList');
+    const group = list.props.renderItem({ item: list.props.data[0], index: 0 });
     assert.equal(group.props.group, h.group); assert.deepEqual(group.props.assigned, ['cut']);
     const runner = hooks();
     const exports = setup({ react: runner.react });
@@ -171,11 +172,13 @@ test('Android date selection renders only the supplied day groups and keeps mult
     const session = { profile: { role: 'aparatchi' }, assigned_apparatus: ['cut'] };
     const screen = () => h.render(h.DailyWorkScreen, { session, onBack() {} });
     let tree = screen();
-    assert.deepEqual(nodes(tree, node => node.type === h.OrderGroup).map(item => item.props.group.key), ['order:zakaz-0306']);
+    let list = find(tree, node => node.type === 'FlatList');
+    assert.deepEqual(list.props.data.map(group => group.key), ['order:zakaz-0306']);
     const date = find(tree, node => node.type === 'Pressable' && find(node, child => child.type === 'Text' && child.props.children === 'worker.action.select'));
     date.props.onPress(); tree = screen();
     find(tree, node => node.type === 'DatePicker').props.onValueChange({}, new Date(2025, 3, 9)); tree = screen();
-    assert.deepEqual(nodes(tree, node => node.type === h.OrderGroup).map(item => item.props.group.key), ['order:zakaz-0210']);
+    list = find(tree, node => node.type === 'FlatList');
+    assert.deepEqual(list.props.data.map(group => group.key), ['order:zakaz-0210']);
     assert.equal(h.value.day.getTime(), new Date(2025, 3, 9).getTime());
 
     const groupHarness = setup(), props = { ...groupHarness.props, group: nextGroup };
@@ -187,6 +190,41 @@ test('Android date selection renders only the supplied day groups and keeps mult
     assert.equal(new Set(cards.map(card => card.key)).size, 2);
     groupHarness.dispose();
   } finally { h.dispose(); }
+});
+
+test('Android daily history renders order groups on demand instead of mounting all native hosts', () => {
+  const h = setup();
+  try {
+    h.value.groups = Array.from({ length: 200 }, (_, index) => ({ ...h.group, key: `order:${index}` }));
+    const screen = h.render(h.DailyWorkScreen, { session: { profile: { role: 'aparatchi' }, assigned_apparatus: [] }, onBack() {} });
+    assert.equal(nodes(screen, node => node.type === h.OrderGroup).length, 0);
+    const list = find(screen, node => node.type === 'FlatList');
+    assert.equal(list.props.data.length, 200);
+    assert.equal(list.props.style.flex, 1);
+    assert.equal(list.props.removeClippedSubviews, false, 'expanding Compose hosts must not be detached by native clipping');
+    assert.equal(list.props.keyExtractor(list.props.data[199]), 'order:199');
+    const requested = list.props.renderItem({ item: list.props.data[199], index: 199 });
+    assert.equal(requested.type, h.OrderGroup); assert.equal(requested.props.group.key, 'order:199');
+  } finally { h.dispose(); }
+});
+
+test('virtualized daily groups and WIPs retain expansion after remount, while collapsing the group resets its WIPs', () => {
+  const saved = new Map(), first = setup(), second = setup(), wipFirst = setup(), wipSecond = setup();
+  try {
+    const props = { ...first.props, expansion: saved };
+    let group = first.render(first.OrderGroup, props);
+    const header = tree => find(tree, node => modifier(node, 'testID') === 'daily-work-order-header-order:zakaz-0306');
+    modifier(header(group), 'clickable')(); group = first.render(first.OrderGroup, props);
+    const wipProps = find(group, node => node.type === first.BatchCard).props;
+    let wip = wipFirst.render(wipFirst.BatchCard, wipProps); modifier(wip, 'combinedClickable').onClick();
+    wip = wipFirst.render(wipFirst.BatchCard, wipProps); assert(find(wip, node => node.type === 'FilledTonalIconButton'));
+    group = second.render(second.OrderGroup, props);
+    assert(find(group, node => node.type === second.BatchCard), 'an order scrolled back into view must remain expanded');
+    wip = wipSecond.render(wipSecond.BatchCard, wipProps);
+    assert(find(wip, node => node.type === 'FilledTonalIconButton'), 'its WIP must also remain expanded');
+    modifier(header(group), 'clickable')();
+    assert.equal(saved.get(wipProps.expansionKey), undefined, 'an explicit group collapse still clears child expansion');
+  } finally { first.dispose(); second.dispose(); wipFirst.dispose(); wipSecond.dispose(); }
 });
 
 test('Android expanded WIP keeps optional dates, location, next apparatus and note in source order', () => {

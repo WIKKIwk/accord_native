@@ -31,6 +31,8 @@ const fab = load('workerFabQr.ts', { './workerControlsApi': controls, './workerO
 const merge = load('workerOrderMerge.ts', { './workerControlsApi': controls, './workerOrderLogic': rules, './workerFabQr': fab });
 const presentation = load('workerOrderPresentation.ts');
 const detailRecovery = load('workerDetailRecovery.ts');
+const inputProgress = load('workerInputProgress.ts', { './workerControlsApi': controls, './workerOpeningWipCandidatesApi': {},
+  './workerOutputProgress': {}, './workerPeremotka': load('workerPeremotka.ts'), './workerProgressBatch': {}, './workerProgressApi': {}, './workerWipApi': {} });
 const api = load('workerApi.ts', { './authorizedFetch': {}, './workerQueueLimit': {}, './workerOrderAppearance': {}, './workerSnapshot': {},
   './workerDetailApi': {}, './sessionReadScope': scope, './apparatusApi': {}, './workerQueueReadApi': {}, './workerQueueReadError': {} });
 const instructions = load('workerOrderRezkaInstructions.ts', { './workerApi': api, './workerControlsApi': controls, './workerPeremotka': load('workerPeremotka.ts') });
@@ -91,6 +93,9 @@ function harness(platform, input = {}, locale = 'uz') {
     },
     './workerOrderMerge': merge, './workerFabQrReads': { workerFabQrReads: () => input.mergeReads },
     './workerOrderPresentation': presentation,
+    // This harness exercises the real order's presentation/commands. Input-progress
+    // reads have their own hook tests; retain its real model for this view fixture.
+    './components/useWorkerInputProgress': { useWorkerInputProgress: ({ source, label }) => inputProgress.workerInputProgressModel({ source, batches: [], loading: false, error: '' }, p, label) },
     './workerDetailRecovery': detailRecovery,
     './workerDetailRecoveryRead': {
       readWorkerDetailSnapshot: (...args) => input.readDetail ? input.readDetail(...args) : Promise.resolve(overrides.detail),

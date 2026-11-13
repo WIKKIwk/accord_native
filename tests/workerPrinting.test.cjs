@@ -88,6 +88,7 @@ test('iOS printer chooser has a Bluetooth list, rescan and cancel without USB/Wi
   const native = new Proxy({}, { get: (_target, key) => String(key) });
   const api = load('preparation/PreparationPrinterPicker.ios.tsx', {
     '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': { disabled: value => value },
+    expo: { isRunningInExpoGo: () => false },
     react: { useState: value => [typeof value === 'function' ? value() : value, () => {}], useRef: value => ({ current: value }), useEffect() {} },
     '../printing/nativePrinter': {}, './PreparationUI': { usePreparationText: () => value => value },
   });
