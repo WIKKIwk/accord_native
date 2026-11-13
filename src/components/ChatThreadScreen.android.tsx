@@ -4,8 +4,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type ListRenderItemInfo, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { draftAfterSending } from '../chatComposer';
 import { discardChatMedia, prepareChatDocument, prepareChatMedia, type ChatMediaDraft } from '../chatMedia';
@@ -87,7 +87,14 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
       }
     } finally { sending.current = false; if (mounted.current) { setBatchSending(false); scrollToLatest(); } }
   };
-  const rows = chatTimeline(session, thread.messages ?? [], thread.pending);
+  const rows = useMemo(() => chatTimeline(session, thread.messages ?? [], thread.pending), [session, thread.messages, thread.pending]);
+  const { primaryContainer, surfaceContainerHigh, onPrimaryContainer, onSurface, onSurfaceVariant } = colors;
+  const renderMessage = useCallback(({ item }: ListRenderItemInfo<ReturnType<typeof chatTimeline>[number]>) => <View style={{ alignSelf: item.mine ? 'flex-end' : 'flex-start', maxWidth: '82%', marginVertical: 5, gap: 4 }}>
+    {item.attachment ? <Pressable onPress={() => void openChatMedia(session, item.attachment!)}><ChatMediaThumbnail session={session} attachment={item.attachment} /></Pressable> : undefined}
+    {!!(item.attachment ? item.caption : item.body) && <View style={{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, backgroundColor: item.mine ? primaryContainer : surfaceContainerHigh }}>
+      <Text selectable style={{ color: item.mine ? onPrimaryContainer : onSurface, fontSize: 16 }}>{item.attachment ? item.caption : item.body}</Text></View>}
+    <Text style={{ color: onSurfaceVariant, fontSize: 11 }}>{new Date(item.timestamp * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}{item.pending ? ' · Yuborilmoqda…' : ''}</Text>
+  </View>, [session, primaryContainer, surfaceContainerHigh, onPrimaryContainer, onSurface, onSurfaceVariant]);
   return <KeyboardAvoidingView testID="chat-thread" behavior="padding" keyboardVerticalOffset={headerHeight}
     style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}>
     <Stack.Screen options={{ title: title || 'Suhbat' }} />
@@ -107,12 +114,7 @@ export function ChatThreadScreen({ session, conversationId, title }: ChatThreadP
         {!!thread.error && <Pressable onPress={() => void thread.refresh()} style={{ padding: 12 }}><Text style={{ color: colors.error }}>{thread.error}</Text><Text style={{ color: colors.primary }}>Qayta urinish</Text></Pressable>}
       </View>}
       ListEmptyComponent={thread.messages !== null && !thread.error ? <Text style={{ color: colors.onSurfaceVariant, padding: 16 }}>Hali xabarlar yo‘q</Text> : undefined}
-      renderItem={({ item }) => <View style={{ alignSelf: item.mine ? 'flex-end' : 'flex-start', maxWidth: '82%', marginVertical: 5, gap: 4 }}>
-        {item.attachment ? <Pressable onPress={() => void openChatMedia(session, item.attachment!)}><ChatMediaThumbnail session={session} attachment={item.attachment} /></Pressable> : undefined}
-        {!!(item.attachment ? item.caption : item.body) && <View style={{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, backgroundColor: item.mine ? colors.primaryContainer : colors.surfaceContainerHigh }}>
-          <Text selectable style={{ color: item.mine ? colors.onPrimaryContainer : colors.onSurface, fontSize: 16 }}>{item.attachment ? item.caption : item.body}</Text></View>}
-        <Text style={{ color: colors.onSurfaceVariant, fontSize: 11 }}>{new Date(item.timestamp * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}{item.pending ? ' · Yuborilmoqda…' : ''}</Text>
-      </View>} />
+      renderItem={renderMessage} />
     {!!thread.sendError && <Pressable onPress={thread.retry} style={{ padding: 12 }}><Text style={{ color: colors.error }}>{thread.sendError}</Text><Text style={{ color: colors.primary }}>Qayta urinish</Text></Pressable>}
     {!!thread.mediaError && <Text style={{ color: colors.error, padding: 12 }}>{thread.mediaError}</Text>}
     {!!thread.mediaProgress && <Text style={{ color: colors.onSurfaceVariant, paddingHorizontal: 12 }}>{thread.mediaProgress}</Text>}

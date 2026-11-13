@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { activeSessionToken, type Session } from './auth';
 import { ChatRequestError, loadChatMessages, markChatRead } from './chatApi';
@@ -43,11 +43,11 @@ export function useChatThread(session: Session, conversationId: string) {
   const retryBlocked = useRef(false);
   const restoreStorage = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!unreadRuntime) return;
     unreadRuntime.setActiveConversation(conversationId);
     return () => unreadRuntime.setActiveConversation('');
-  }, [conversationId, unreadRuntime]);
+  }, [conversationId, unreadRuntime]));
 
   const visible = useCallback(() => focused.current && activeSessionToken(session) !== null &&
     (AppState.currentState == null || AppState.currentState === 'active'), [session]);

@@ -9,7 +9,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 const message = sequence => ({ id: `m${sequence}`, conversationId: 'c1', sequence, clientMessageId: '',
   senderRole: 'customer', senderRef: 'other', body: 'Hello', timestamp: sequence });
 
-function fixture(runtime = null, role = 'customer') {
+function fixture(runtime = null, role = 'customer', conversationId = 'c1') {
   const effects = [], focusEffects = [], calls = [];
   const appState = { currentState: 'active', addEventListener: () => ({ remove() {} }) };
   const react = {
@@ -45,10 +45,12 @@ function fixture(runtime = null, role = 'customer') {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, filename);
   const session = { profile: { role, ref: 'one' }, token: 'token' };
-  const thread = loaded.exports.useChatThread(session, 'c1');
-  let cleanups = [];
-  return { thread, calls, session, mount() { cleanups = [...effects, ...focusEffects].map(effect => effect()).filter(Boolean); },
-    unmount() { for (const cleanup of cleanups.reverse()) cleanup(); } };
+  const thread = loaded.exports.useChatThread(session, conversationId);
+  let cleanups = [], focusCleanups = [];
+  const focus = () => { focusCleanups = focusEffects.map(effect => effect()).filter(Boolean); };
+  const blur = () => { for (const cleanup of focusCleanups.reverse()) cleanup(); focusCleanups = []; };
+  return { thread, calls, session, focus, blur, mount() { cleanups = effects.map(effect => effect()).filter(Boolean); focus(); },
+    unmount() { blur(); for (const cleanup of cleanups.reverse()) cleanup(); } };
 }
 
 test('without an opted-in runtime, the existing thread and direct read receipt remain unchanged', async () => {
@@ -88,4 +90,17 @@ test('an opted-in runtime receives active thread and newest messages instead of 
   } finally { f.unmount(); }
   assert.ok(events.some(event => event[0] === 'unsubscribe'));
   assert.deepEqual(events.at(-1), ['active', '']);
+});
+
+test('a retained thread releases its active conversation on blur and cannot clear the next thread on unmount', async () => {
+  let active = '';
+  const runtime = { setActiveConversation: id => { active = id; }, rememberThreadMessages: async () => {}, subscribeInvalidation: () => () => {} };
+  const first = fixture(runtime), second = fixture(runtime, 'customer', 'c2');
+  first.mount(); await tick(); assert.equal(active, 'c1');
+  first.blur(); assert.equal(active, '', 'leaving a retained route must stop marking its unseen messages read');
+  second.mount(); await tick(); assert.equal(active, 'c2');
+  first.unmount(); assert.equal(active, 'c2', 'disposing a previously blurred route cannot retire the active route');
+  second.blur(); assert.equal(active, '');
+  first.focus(); await tick(); assert.equal(active, 'c1');
+  first.unmount(); second.unmount(); assert.equal(active, '');
 });

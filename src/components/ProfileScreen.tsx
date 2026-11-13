@@ -80,11 +80,11 @@ function ProfileContent({ session, onLogout, onDailyWork, showDirectLogout, regi
     finally { refreshingRef.current = false; if (mounted.current && (!hasGuard || current())) setRefreshing(false); }
   }, [session, isCurrent, current, hasGuard]);
 
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    void refresh();
     const listener = AppState.addEventListener('change', state => { if (state === 'active') void refresh(); });
     return () => listener.remove();
-  }, [refresh]);
+  }, [refresh]));
 
   const openEditor = useCallback(() => {
     if (busy.current || !current()) return;

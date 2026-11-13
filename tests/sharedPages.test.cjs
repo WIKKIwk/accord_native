@@ -63,6 +63,7 @@ for (const platform of ['ios', 'android']) {
       'expo-router': { useLocalSearchParams: () => ({ conversationId: 'conversation', title: 'Fallback title' }), useFocusEffect: () => {},
         router: { canGoBack: () => canGoBack, back: () => closes.push('back'), replace: value => closes.push(value) } },
       react: { useCallback: callback => callback },
+      '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
       'react-native': {}, '../../auth': {}, '../../appLock': {}, '../../chatApi': {},
       '../../components/ChatConversationsScreen': { ChatConversationsScreen: 'Conversations' },
       '../../components/ChatDirectoryScreen': { ChatDirectoryScreen: 'Directory' },

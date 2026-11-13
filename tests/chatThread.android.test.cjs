@@ -25,7 +25,7 @@ function nodes(node, predicate) {
 const { draftAfterSending } = load('chatComposer.ts');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function fixture(send = async () => true) {
-  const calls = [], slots = [], effects = []; let cursor = 0;
+  const calls = [], slots = [], effects = []; let cursor = 0, timelineCalls = 0;
   const frames = new Map(); let frameId = 0;
   const animationFrames = { requestAnimationFrame: fn => { frames.set(++frameId, fn); return frameId; }, cancelAnimationFrame: id => frames.delete(id) };
   const flushFrames = () => { const next = [...frames.values()]; frames.clear(); next.forEach(fn => fn()); };
@@ -33,6 +33,10 @@ function fixture(send = async () => true) {
     useState: value => { const slot = cursor++; if (!(slot in slots)) slots[slot] = value;
       return [slots[slot], next => { slots[slot] = typeof next === 'function' ? next(slots[slot]) : next; }]; },
     useRef: value => { const slot = cursor++; return slots[slot] ??= { current: value }; },
+    useMemo: (factory, deps) => { const slot = cursor++, old = slots[slot];
+      if (!old || deps.some((value, index) => value !== old.deps[index])) slots[slot] = { value: factory(), deps };
+      return slots[slot].value; },
+    useCallback: (callback, deps) => react.useMemo(() => callback, deps),
     useEffect: fn => effects.push(fn),
   };
   const thread = { messages: [], pending: [], storageReady: true, queueing: false, mediaSending: false,
@@ -50,15 +54,29 @@ function fixture(send = async () => true) {
     'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', FlatList: 'FlatList', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl',
       ActivityIndicator: 'ActivityIndicator', KeyboardAvoidingView: 'KeyboardAvoidingView', StyleSheet: { create: value => value }, Alert: { alert: (...args) => calls.push(['alert', ...args]) } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 24 }) },
-    '../chatComposer': { draftAfterSending }, '../chatMedia': { discardChatMedia() {} }, '../chatModel': { chatTimeline: () => [] },
+    '../chatComposer': { draftAfterSending }, '../chatMedia': { discardChatMedia() {} }, '../chatModel': { chatTimeline: () => { timelineCalls++; return []; } },
     '../useChatThread': { useChatThread: () => thread }, './ChatMediaPreview': {},
   }, animationFrames);
-  const render = () => { cursor = 0; effects.length = 0; const tree = ChatThreadScreen({ session: {}, conversationId: 'conversation', title: 'Chat' });
+  const session = {};
+  const render = () => { cursor = 0; effects.length = 0; const tree = ChatThreadScreen({ session, conversationId: 'conversation', title: 'Chat' });
     effects.forEach(effect => effect()); return tree; };
   const input = tree => nodes(tree, node => node.type === field)[0];
   const button = tree => nodes(tree, node => node.type === 'FilledIconButton')[0];
-  return { calls, thread, render, input, button, flushFrames };
+  return { calls, thread, render, input, button, flushFrames, timelineCalls: () => timelineCalls };
 }
+
+test('typing leaves message history and row renderers stable until message data changes', () => {
+  const x = fixture(); let tree = x.render();
+  const list = nodes(tree, node => node.type === 'FlatList')[0];
+  for (const text of ['S', 'Sa', 'Salom']) {
+    x.input(tree).props.onValueChange(text); tree = x.render();
+    const next = nodes(tree, node => node.type === 'FlatList')[0];
+    assert.equal(next.props.data, list.props.data); assert.equal(next.props.renderItem, list.props.renderItem);
+  }
+  assert.equal(x.timelineCalls(), 1, 'composer keystrokes must not rebuild the entire message timeline');
+  x.thread.pending = [{ clientMessageId: 'next' }]; x.render();
+  assert.equal(x.timelineCalls(), 2, 'new pending messages must still refresh the timeline');
+});
 
 test('Android composer avoids the keyboard beneath the native header while its message list flexes', () => {
   const x = fixture(), tree = x.render();
