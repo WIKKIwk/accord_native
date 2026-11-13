@@ -1,7 +1,6 @@
-import { useRef, type ComponentRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ComponentRef } from 'react';
 import { Host, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { useEffect } from 'react';
-import { ActivityIndicator, BackHandler, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, BackHandler, FlatList, RefreshControl, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { WorkerQueueCard } from './WorkerQueueCard.android';
@@ -15,7 +14,9 @@ import { useWorkerPaddonTransfer, type WorkerPaddonTransferProps } from './useWo
 export function WorkerPaddonTransfer(props: WorkerPaddonTransferProps) {
   const { onBack } = props;
   const h = useWorkerPaddonTransfer(props), { state, p } = h, colors = useMaterialColors(), root = useRef<ComponentRef<typeof View>>(null), drag = useWorkerPaddonDrag(h, root);
-  useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { if (!h.blocked && !h.presentation.isOpen()) onBack(); return true; }); return () => sub.remove(); }, [h, onBack]);
+  const requestBack = useRef(() => {});
+  useLayoutEffect(() => { requestBack.current = () => { if (!h.blocked && !h.presentation.isOpen()) onBack(); }; }, [h.blocked, h.presentation, onBack]);
+  useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { requestBack.current(); return true; }); return () => sub.remove(); }, []);
   if (!h.current()) return null;
   return <GestureHandlerRootView style={{ flex: 1 }}><View ref={root} style={{ flex: 1, backgroundColor: colors.background }}>
     <RoleHeader title={h.title} navigation={{ icon: 'back', label: h.t('Orqaga'), onPress: () => { if (!h.blocked && !h.presentation.isOpen()) onBack(); } }} />
@@ -27,12 +28,12 @@ export function WorkerPaddonTransfer(props: WorkerPaddonTransferProps) {
       {h.sides.map(side => <View key={side.side} style={{ flex: 1, padding: 10, gap: 8 }}>
         <WorkerOrderButton label={side.title} disabled={h.blocked} onPress={() => { void h.pick(side.side); }} />
         <View ref={view => drag.zone(side.code, view)} collapsable={false} style={{ flex: 1, borderRadius: 20, backgroundColor: colors.surfaceContainerLow }}>
-          <ScrollView contentContainerStyle={{ padding: 10, gap: 3, flexGrow: 1 }} refreshControl={<RefreshControl refreshing={false} enabled={!h.blocked} onRefresh={() => { void h.controller.load(); }} colors={[colors.primary]} />}>
-            {side.rows.length ? side.rows.map((row, index) => <WorkerPaddonDraggable key={row.batch.batch_id} drag={drag} source={side.code} batch={row.batch} enabled={row.selectable}
+          <FlatList data={side.rows} keyExtractor={row => row.batch.batch_id} contentContainerStyle={{ padding: 10, gap: 3, flexGrow: 1 }} removeClippedSubviews={false}
+            refreshControl={<RefreshControl refreshing={false} enabled={!h.blocked} onRefresh={() => { void h.controller.load(); }} colors={[colors.primary]} />}
+            renderItem={({ item: row, index }) => <WorkerPaddonDraggable drag={drag} source={side.code} batch={row.batch} enabled={row.selectable}
               onPress={() => h.controller.toggle(side.code, row.batch.batch_id)}><WorkerQueueCard first={index === 0} last={index === side.rows.length - 1} backgroundColor={colors.surfaceContainerLowest}>
-                <WorkerPaddonWipCard content={row} selected={row.selected} selectable={row.selectable} /></WorkerQueueCard></WorkerPaddonDraggable>)
-              : <Host matchContents={{ vertical: true }} style={{ width: '100%', padding: 16 }}><Text>{side.empty}</Text></Host>}
-          </ScrollView>
+                <WorkerPaddonWipCard content={row} selected={row.selected} selectable={row.selectable} /></WorkerQueueCard></WorkerPaddonDraggable>}
+            ListEmptyComponent={<Host matchContents={{ vertical: true }} style={{ width: '100%', padding: 16 }}><Text>{side.empty}</Text></Host>} />
         </View>
       </View>)}
     </>}

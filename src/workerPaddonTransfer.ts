@@ -5,7 +5,7 @@ import { workerPaddonEditable, workerPaddonMovable, WorkerPaddonError, WorkerPad
 
 type State = { phase: 'loading' | 'ready' | 'error'; busy: boolean; catalog: AdminApparatus[]; rows: WorkerPaddon[];
   source: WorkerPaddonSnapshot | null; target: WorkerPaddonSnapshot | null; selectedCode: string; selected: string[]; error: unknown };
-type Dependencies = { session: Session; apparatus: string; current(): boolean; catalog(current: () => boolean): Promise<AdminApparatus[]>;
+type Dependencies = { session: Session; apparatus: string; current(): boolean; catalog(current: () => boolean, force?: boolean): Promise<AdminApparatus[]>;
   list(apparatus: string, current: () => boolean): Promise<WorkerPaddon[]>; read(code: string, current: () => boolean): Promise<WorkerPaddonSnapshot>;
   move(source: string, target: string, ids: string[], current: () => boolean): Promise<void>; changed(): void };
 
@@ -18,10 +18,10 @@ export class WorkerPaddonTransfer extends WorkerPaddonState<State> {
   private checked(snapshot: WorkerPaddonSnapshot, code: string) {
     if (snapshot.paddon.code !== code || !this.deps.session.assigned_apparatus.includes(snapshot.paddon.apparatus_id)) throw new Error('paddon_transfer_forbidden'); return snapshot;
   }
-  private async reload() {
+  private async reload(force = true) {
     this.revision++; const current = this.capture(); this.update({ phase: 'loading', selected: [], selectedCode: '', error: null });
     try {
-      const catalog = await this.deps.catalog(current); this.check(current);
+      const catalog = await this.deps.catalog(current, force); this.check(current);
       const assigned = assignedPaddonApparatus(catalog, this.deps.session.assigned_apparatus);
       const pages = await Promise.all(assigned.map(async row => {
         this.check(current); const page = await this.deps.list(row.id, current); this.check(current); return page.filter(item => item.apparatus_id === row.id);
@@ -36,7 +36,7 @@ export class WorkerPaddonTransfer extends WorkerPaddonState<State> {
       this.update({ phase: 'ready', catalog, rows, source: from, target: to });
     } catch (error) { if (current()) this.update({ phase: 'error', error }); }
   }
-  async load() { if (this.current() && !this.state.busy) await this.reload(); }
+  async load(force = true) { if (this.current() && !this.state.busy) await this.reload(force); }
   async pick(side: 'source' | 'target', code: string, permit = this.capture()) {
     const other = side === 'source' ? this.state.target : this.state.source;
     if (!permit() || this.state.busy || !this.state.rows.some(row => row.code === code) || other?.paddon.code === code) return;

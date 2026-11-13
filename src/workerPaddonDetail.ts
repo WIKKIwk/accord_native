@@ -23,7 +23,9 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
       scanned: [], pending: 0, review: false, feedback: '', feedbackKind: null }, deps.current);
   }
   private snapshot(value: WorkerPaddonSnapshot) {
-    if (value.paddon.code.trim() !== this.deps.code.trim()) throw new Error('paddon_not_found'); return value;
+    if (value.paddon.code.trim() !== this.deps.code.trim()) throw new Error('paddon_not_found');
+    // A successful read refreshes projections even when its source reuses an object.
+    return { ...value };
   }
   async load(force = true) {
     if (!this.current() || this.state.busy) return;

@@ -18,6 +18,34 @@ test('Android list stays quiet behind a detail and revalidates a changed Paddon 
   } finally { h.dispose(); }
 });
 for (const platform of ['ios', 'android']) {
+  test(`${platform}: Paddon details reuse formatted rows through dialog and feedback renders`, async () => {
+    const h = await setup('detail', platform);
+    try {
+      h.paddons.get('P1').items = Array.from({ length: 200 }, (_, index) => batch(`W${index}`));
+      await h.model.controller.load(); h.render();
+      const header = h.model.header, rows = h.model.rows;
+      const dialog = h.model.presentation.open({ title: 'Inspect', confirmLabel: 'OK' }); h.render();
+      assert.equal(h.model.header, header); assert.equal(h.model.rows, rows);
+      await h.close(null); await dialog; h.model.controller.clearFeedback(); h.render();
+      assert.equal(h.model.header, header); assert.equal(h.model.rows, rows);
+      await h.model.edit('add'); h.render(); const available = h.model.rows;
+      h.model.controller.toggle('A'); h.render();
+      assert.equal(h.model.rows[0].selected, true); assert.equal(h.model.rows[1].selected, false);
+      assert.equal(h.model.rows[0].rows, available[0].rows); assert.equal(h.model.rows[1].rows, available[1].rows);
+      assert.equal(h.model.header, header);
+    } finally { h.dispose(); }
+  });
+  test(`${platform}: transfer UI-only renders reuse rows, and selection still updates`, async () => {
+    const h = await setup('transfer', platform);
+    try {
+      h.paddons.get('P1').items = Array.from({ length: 200 }, (_, index) => batch(`W${index}`));
+      await h.model.controller.load(); h.render();
+      const sides = h.model.sides; h.render();
+      assert.equal(h.model.sides, sides); assert.equal(h.model.sides[0].rows, sides[0].rows);
+      h.model.controller.toggle('P1', 'W199'); h.render();
+      assert.notEqual(h.model.sides, sides); assert.equal(h.model.sides[0].rows[199].selected, true);
+    } finally { h.dispose(); }
+  });
   test(`${platform}: reopening a fresh Paddon immediately reuses its data and catalog without another read`, async () => {
     const h = await setup('detail', platform), events = h.events.length;
     const owner = h.load('workerPaddonRuntime').workerPaddonOwner(h.session, 'cut'); owner.mount(true);
@@ -40,6 +68,16 @@ for (const platform of ['ios', 'android']) {
       h.props.visible = true; h.render(); await tick(); h.render();
       assert.equal(h.events.length, before); assert.equal(h.model.state.phase, 'ready');
     } finally { h.dispose(); }
+  });
+  test(`${platform}: entering transfer reuses the fresh catalog and an explicit refresh reloads it`, async () => {
+    const h = await setup('detail', platform), owner = h.load('workerPaddonRuntime').workerPaddonOwner(h.session, 'cut'); owner.mount(true);
+    try {
+      const before = h.events.filter(event => event[0] === 'catalog').length, transfer = owner.transfer();
+      await transfer.load(false); assert.equal(transfer.getSnapshot().phase, 'ready');
+      assert.equal(h.events.filter(event => event[0] === 'catalog').length, before);
+      assert(h.events.some(event => event[0] === 'list' && event[1] === 'cut'));
+      await transfer.load(); assert.equal(h.events.filter(event => event[0] === 'catalog').length, before + 1);
+    } finally { owner.mount(false); h.dispose(); }
   });
   test(`${platform}: creating a Paddon navigates to its returned code and keeps the assigned apparatus`, async () => {
     const h = await setup('list', platform);

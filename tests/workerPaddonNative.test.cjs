@@ -334,6 +334,25 @@ for (const answer of ['No', 'Yes']) test(`iOS successor alert ${answer} preserve
     assert.equal(h.events.some(event => event[0] === 'successor'), answer === 'Yes');
   } finally { n.runner.dispose(); h.dispose(); }
 });
+test('Android Paddon transfer defers long-list rows while preserving selection and drag bindings', async () => {
+  const h = await setup('transfer', 'android'), n = native(h);
+  h.paddons.get('P1').items = Array.from({ length: 200 }, (_, index) => batch(`A${index}`));
+  await h.model.controller.load(); h.render();
+  h.files['components/useWorkerPaddonTransfer'] = { useWorkerPaddonTransfer: () => h.model };
+  h.files['components/useWorkerPaddonDrag'] = { useWorkerPaddonDrag: () => ({ drag: null, zone() {} }), WorkerPaddonDraggable: 'Draggable' };
+  const Component = h.load('components/WorkerPaddonTransfer.android').WorkerPaddonTransfer;
+  try {
+    let tree = n.render(Component, h.props), lists = walk(tree).filter(row => row.type === 'FlatList');
+    assert.equal(lists.length, 2); assert.equal(lists[0].props.data.length, 200);
+    assert.equal(node(tree, 'ScrollView'), undefined); assert.equal(node(tree, 'Draggable'), undefined);
+    const back = h.hardwareBack, item = lists[0].props.data[199], row = lists[0].props.renderItem({ item, index: 199 });
+    assert.equal(lists[0].props.keyExtractor(item), 'A199'); assert.equal(row.props.source, 'P1');
+    assert.equal(row.props.batch.batch_id, 'A199'); assert.equal(row.props.enabled, true);
+    row.props.onPress(); h.render(); tree = n.render(Component, h.props); lists = walk(tree).filter(row => row.type === 'FlatList');
+    assert.equal(lists[0].props.data[199].selected, true); assert.equal(h.hardwareBack, back);
+    assert(node(lists[1].props.ListEmptyComponent, 'Text'));
+  } finally { n.runner.dispose(); h.dispose(); }
+});
 test('long-press transfer checks the opposite native drop zone and rechecks its original account after asynchronous measurement', async () => {
   const h = await setup('transfer'), n = native(h); h.paddons.get('P1').items = [batch('A'), batch('B')]; await h.model.controller.load(); h.render();
   const useDrag = h.load('components/useWorkerPaddonDrag').useWorkerPaddonDrag, root = { current: { measureInWindow: callback => callback(0, 20) } };

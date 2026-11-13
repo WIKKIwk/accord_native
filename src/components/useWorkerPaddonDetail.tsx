@@ -8,7 +8,7 @@ import { confirmPaddonPrint } from '../paddonConfirmPrintApi';
 import { createActivePaddonSuccessor } from '../paddonSuccessorApi';
 import { WorkerPaddonPrint } from '../workerPaddonPrint';
 import { workerPaddonErrorText } from '../workerPaddonContent';
-import type { WorkerPaddonBatch } from '../workerPaddonModel';
+import { workerPaddonItems, type WorkerPaddonBatch } from '../workerPaddonModel';
 import { rezkaPaddonDetailHeader } from '../rezka/rezkaPaddonDetailModel';
 import { rezkaPaddonWipContent } from '../rezka/rezkaPaddonWipModel';
 import { pickWorkerPrinter, printWorkerJobs, workerPrinterFields, WorkerPrintCancelled } from '../workerPrinting';
@@ -26,7 +26,7 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '' }: WorkerP
   const printer = useWorkerPrinterSelector(owner.current), { p, t, locale } = useWorkerOrderText();
   const printing = useRef(false);
   const [catalogState, setCatalog] = useState<{ owner: typeof owner; rows: AdminApparatus[] } | null>(() => ({ owner, rows: owner.cachedCatalog() ?? [] }));
-  const catalog = catalogState?.owner === owner ? catalogState.rows : [];
+  const catalog = useMemo(() => catalogState?.owner === owner ? catalogState.rows : [], [catalogState, owner]);
   useEffect(() => { void controller.load(false); let alive = true;
     void owner.catalog(() => alive, false).then(rows => { if (alive && owner.current()) setCatalog({ owner, rows }); }).catch(() => {});
     return () => { alive = false; };
@@ -57,10 +57,20 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '' }: WorkerP
   /* eslint-enable react-hooks/refs */
   const blocked = !owner.current() || state.busy || state.printing;
   const canManage = !!state.snapshot?.can_manage_items && !blocked;
-  const header = state.snapshot ? rezkaPaddonDetailHeader(state.snapshot, catalog, p, adminText('wip.unspecified', locale), count => localizedMethod('productionCount', locale, { count })) : null;
-  const row = (batch: WorkerPaddonBatch) => ({ batch, ...rezkaPaddonWipContent(batch, catalog, session.profile, p),
-    selected: state.selected.includes(batch.batch_id), selectable: canManage && !!state.mode && !state.scanning,
-    removable: canManage && !state.mode && !state.scanning && !!batch.batch_id.trim() });
+  const header = useMemo(() => state.snapshot ? rezkaPaddonDetailHeader(state.snapshot, catalog, p, adminText('wip.unspecified', locale),
+    count => localizedMethod('productionCount', locale, { count })) : null, [state.snapshot, catalog, p, locale]);
+  const batches = useMemo(() => state.snapshot ? workerPaddonItems(state.snapshot, state.mode, state.bobina) : [], [state.snapshot, state.mode, state.bobina]);
+  const contents = useMemo(() => batches.map(batch => ({ batch, ...rezkaPaddonWipContent(batch, catalog, session.profile, p) })),
+    [batches, catalog, session.profile, p]);
+  const selected = useMemo(() => new Set(state.selected), [state.selected]);
+  const rows = useMemo(() => contents.map(row => ({ ...row, selected: selected.has(row.batch.batch_id),
+    selectable: canManage && !!state.mode && !state.scanning, removable: canManage && !state.mode && !state.scanning && !!row.batch.batch_id.trim() })),
+  [contents, selected, canManage, state.mode, state.scanning]);
+  const scannedContents = useMemo(() => state.scanned.map(batch => ({ batch, ...rezkaPaddonWipContent(batch, catalog, session.profile, p) })),
+    [state.scanned, catalog, session.profile, p]);
+  const scanned = useMemo(() => scannedContents.map(row => ({ ...row, selected: selected.has(row.batch.batch_id),
+    selectable: canManage && !!state.mode && !state.scanning, removable: canManage && !state.mode && !state.scanning && !!row.batch.batch_id.trim() })),
+  [scannedContents, selected, canManage, state.mode, state.scanning]);
   const yesNo = (title: string, message: string, values?: Record<string, unknown>, destructive = false) => presentation.open({ title: p(title), message: p(message, values),
     cancelLabel: localizedGetter('no', locale), confirmLabel: localizedGetter('yes', locale), destructive });
   const showError = (key: string) => presentation.message(workerPaddonErrorText(controller.getSnapshot().error, p, key));
@@ -85,14 +95,14 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '' }: WorkerP
     showError('worker.paddon.update_failed'); controller.clearError();
   } }, [state.error, state.scanning]); // eslint-disable-line react-hooks/exhaustive-deps
   return { state, controller, presentation, printerDialogs: printer.dialogs, header, p, t, current: controller.current, feedback,
-    rows: controller.items().map(row), scanned: state.scanned.map(row), blocked, canManage, title: code,
+    rows, scanned, blocked, canManage, title: code,
     canPrint: !!state.snapshot && !blocked && !state.scanning, canUnlock: !!state.snapshot?.can_unlock && !blocked && !state.scanning,
     canReview: !blocked && !state.review && state.pending === 0 && state.scanned.length > 0,
     canConfirmScan: canManage && state.pending === 0 && state.scanned.length > 0,
     itemsTitle: p(state.mode === 'add' ? 'worker.paddon.available.title' : 'worker.paddon.assigned.title'),
     itemsEmpty: p(state.mode === 'add' ? 'worker.paddon.available.empty' : 'worker.paddon.assigned.empty'),
     freeMovementHint: state.snapshot?.free_movement_enabled && state.snapshot.can_manage_items ? p('paddon.management.free_movement.hint') : '',
-    count: localizedMethod('productionCount', locale, { count: controller.items().length }),
+    count: localizedMethod('productionCount', locale, { count: batches.length }),
     blockBack: state.scanning && (state.busy || state.review || state.scanned.length > 0 || state.pending > 0),
     async requestBack(back: () => void) { if (!state.scanning) { back(); return; } if (blocked || presentation.isOpen()) return; if (await cancelScan()) back(); }, cancelScan,
     async print() { const fresh = controller.getSnapshot();

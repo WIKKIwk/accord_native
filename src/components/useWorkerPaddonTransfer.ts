@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '../auth';
 import { adminText, localizedGetter } from '../shared/localization';
 import { workerPaddonLocation, workerPaddonErrorText } from '../workerPaddonContent';
-import { workerPaddonMovable, type WorkerPaddonBatch } from '../workerPaddonModel';
+import { workerPaddonMovable, type WorkerPaddon, type WorkerPaddonBatch } from '../workerPaddonModel';
 import { rezkaPaddonWipContent } from '../rezka/rezkaPaddonWipModel';
 import { useWorkerPaddonOwner, useWorkerPaddonState } from './useWorkerPaddonOwner';
 import { useWorkerPaddonPresentation } from './useWorkerPaddonPresentation';
@@ -13,9 +13,10 @@ export function useWorkerPaddonTransfer({ session, apparatus = '' }: WorkerPaddo
   const owner = useWorkerPaddonOwner(session, apparatus), controller = useMemo(() => owner.transfer(), [owner]);
   const state = useWorkerPaddonState(controller), { p, t, locale } = useWorkerOrderText(), presentation = useWorkerPaddonPresentation(owner.current);
   const confirming = useRef(false), [confirmationOpen, setConfirmationOpen] = useState(false);
-  useEffect(() => { void controller.load(); }, [controller]);
+  useEffect(() => { void controller.load(false); }, [controller]);
   const blocked = !owner.current() || state.busy || confirmationOpen;
-  const location = (paddon: NonNullable<typeof state.source>['paddon']) => workerPaddonLocation(paddon, state.catalog, adminText('wip.unspecified', locale));
+  const location = useCallback((paddon: WorkerPaddon) => workerPaddonLocation(paddon, state.catalog,
+    adminText('wip.unspecified', locale)), [state.catalog, locale]);
   const errorText = () => {
     const error = controller.getSnapshot().error;
     return error && typeof error === 'object' && 'code' in error && error.code === 'paddon_transfer_forbidden'
@@ -32,14 +33,17 @@ export function useWorkerPaddonTransfer({ session, apparatus = '' }: WorkerPaddo
       else if (controller.current()) presentation.message(errorText());
     } finally { confirming.current = false; if (owner.current()) setConfirmationOpen(false); }
   }
-  const sides = (['source', 'target'] as const).map(side => {
-    const snapshot = state[side], editable = controller.editable(snapshot);
-    return { side, code: snapshot?.paddon.code ?? '', title: snapshot ? [snapshot.paddon.code, location(snapshot.paddon)].filter(Boolean).join(' • ')
-      : p(`worker.paddon.transfer.${side}`), empty: p(snapshot ? 'worker.paddon.transfer.empty' : 'worker.paddon.transfer.choose'),
-      rows: (snapshot?.items ?? []).map(batch => ({ batch, ...rezkaPaddonWipContent(batch, state.catalog, session.profile, p),
-        selected: state.selectedCode === snapshot?.paddon.code && state.selected.includes(batch.batch_id), selectable: editable && workerPaddonMovable(batch) && !blocked })),
-    };
-  });
+  const sides = useMemo(() => {
+    const selected = new Set(state.selected);
+    return (['source', 'target'] as const).map(side => {
+      const snapshot = side === 'source' ? state.source : state.target, editable = controller.editable(snapshot);
+      return { side, code: snapshot?.paddon.code ?? '', title: snapshot ? [snapshot.paddon.code, location(snapshot.paddon)].filter(Boolean).join(' • ')
+        : p(`worker.paddon.transfer.${side}`), empty: p(snapshot ? 'worker.paddon.transfer.empty' : 'worker.paddon.transfer.choose'),
+        rows: (snapshot?.items ?? []).map(batch => ({ batch, ...rezkaPaddonWipContent(batch, state.catalog, session.profile, p),
+          selected: state.selectedCode === snapshot?.paddon.code && selected.has(batch.batch_id), selectable: editable && workerPaddonMovable(batch) && !blocked })),
+      };
+    });
+  }, [state.source, state.target, state.selected, state.selectedCode, state.catalog, controller, session.profile, p, blocked, location]);
   return { state, controller, presentation, sides, blocked, confirmationOpen, p, t, current: controller.current,
     loadFailed: localizedGetter('serverDisconnectedRetry', locale), title: p('worker.paddon.transfer.title'), canMove: !blocked && state.selected.length > 0 && controller.editable(state.source) && controller.editable(state.target),
     async pick(side: 'source' | 'target') {
