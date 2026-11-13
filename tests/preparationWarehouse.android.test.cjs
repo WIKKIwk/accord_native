@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -44,6 +45,7 @@ function setupWarehouse() {
   }) }, { get: (object, key) => object[key] ?? key });
   const mocks = { 'react/jsx-runtime': jsx, react,
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
+    '@expo/ui/jetpack-compose/modifiers': { size: (...args) => ({ name: 'size', args }) },
     'expo-router': { router: { canGoBack: () => true, back: () => calls.push(['back']),
       navigate: route => calls.push(['navigate', route]), push: route => calls.push(['push', route]) }, useFocusEffect() {} },
     'expo-symbols': { SymbolView: 'SymbolView' },

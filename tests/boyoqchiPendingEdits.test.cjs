@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -129,12 +130,19 @@ test('role sheet changes its native dismissible option while a save is pending',
 
 test('iOS shared sheet disables pan-down when the role marks the save busy', () => {
   const { WorkerOrderSheet } = compile('components/WorkerOrderSheet.ios.tsx', {
-    react: { useCallback: fn => fn, useRef: value => ({ current: value }) },
-    '@expo/ui/community/bottom-sheet': { BottomSheet: 'BottomSheet' }, 'react-native': { ScrollView: 'ScrollView', View: 'View' },
+    react: { useCallback: fn => fn, useRef: value => ({ current: value }), useState: value => [value, () => {}] },
+    '@expo/ui/swift-ui': { BottomSheet: 'BottomSheet', Host: 'Host', Group: 'Group', RNHostView: 'RNHostView' },
+    '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_target, name) => (...args) => ({ name, args }) }),
+    'react-native': { ScrollView: 'ScrollView', View: 'View', VirtualizedList: 'VirtualizedList', PlatformColor: value => value,
+      useWindowDimensions: () => ({ width: 400, height: 800 }) },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     './workerSheetContext': { WorkerSheetCloseContext: { Provider: 'Provider' } },
+    './useBaseTheme': { useBaseTheme: () => ({ mode: 'light', colors: {}, direction: 'ltr' }) },
   });
   const tree = WorkerOrderSheet({ children: null, onClose() {}, dismissible: false });
-  assert.equal(tree.props.enablePanDownToClose, false); assert.equal(tree.props.handleComponent, null);
+  const group = nodes(tree, node => node.type === 'Group')[0];
+  assert.deepEqual(group.props.modifiers.find(value => value.name === 'interactiveDismissDisabled').args, [true]);
+  assert.deepEqual(group.props.modifiers.find(value => value.name === 'presentationDragIndicator').args, ['hidden']);
 });
 
 test('native sheet dismissal while saving cannot reopen or replace a newer draft form', async () => {

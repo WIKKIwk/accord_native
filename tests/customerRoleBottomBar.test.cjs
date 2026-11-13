@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -12,7 +13,11 @@ const palette = { onSecondaryContainer: 'selected', onSurface: 'surface', second
 const mocks = { 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { Badge: 'Badge', BadgedBox, Host: 'Host', Icon: 'Icon',
   NavigationBar: 'NavigationBar', NavigationBarItem, RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => palette },
   '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fillMaxWidth', testID: id => `testID:${id}` },
-  'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { View: 'View', StyleSheet: { create: value => value } } };
+  react: { useEffect() {} },
+  'react-native-reanimated': { default: { View: 'Animated.View' }, __esModule: true,
+    useSharedValue: value => ({ get: () => value, set: next => { value = next; } }), useAnimatedStyle: fn => fn() },
+  'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { View: 'View', StyleSheet: { create: value => value },
+    Keyboard: { metrics: () => undefined, addListener: () => ({ remove() {} }) } } };
 function load(source) {
   const filename = path.resolve(__dirname, '../src/shared/navigation/RoleBottomBar.android.tsx');
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
@@ -23,9 +28,9 @@ function load(source) {
 const newBar = load(fs.readFileSync(path.resolve(__dirname, '../src/shared/navigation/RoleBottomBar.android.tsx'), 'utf8'));
 function renderedItem(Bar, item, active, select = () => {}) {
   const bar = Bar({ active, items: [item], onSelect: select, bottomInset: 9 });
-  const nav = bar.props.children.props.children;
+  const surface = bar.props.children, nav = surface.props.children.props.children;
   const itemElement = nav.props.children[0];
-  return { bar, nav, item: itemElement.type(itemElement.props) };
+  return { bar, surface, nav, item: itemElement.type(itemElement.props) };
 }
 test('no badge keeps existing selected/unselected icons, labels, styles and interaction', () => {
   for (const [item, selectedSource, unselectedSource] of [
@@ -36,7 +41,8 @@ test('no badge keeps existing selected/unselected icons, labels, styles and inte
   ]) {
     for (const selected of [true, false]) {
       const calls = [], rendered = renderedItem(newBar, item, selected ? item.id : 'other', id => calls.push(id));
-      assert.deepEqual(rendered.bar.props.style, [{ width: '100%' }, { backgroundColor: 'background', paddingBottom: 9 }]);
+      assert.deepEqual(rendered.bar.props.style, [{ width: '100%' }, { height: 89, transform: [{ translateY: 0 }] }]);
+      assert.deepEqual(rendered.surface.props.style, [{ position: 'absolute', top: 0, left: 0, right: 0 }, { backgroundColor: 'background', paddingBottom: 9 }]);
       assert.deepEqual(rendered.nav.props.modifiers, ['fillMaxWidth']);
       assert.equal(rendered.item.props.selected, selected);
       assert.deepEqual(rendered.item.props.modifiers, item.testID ? [`testID:${item.testID}`] : undefined);

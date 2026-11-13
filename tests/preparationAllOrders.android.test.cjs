@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -26,6 +27,7 @@ test('Android preparation orders use one tab and a back button without machine s
     react: { useCallback: fn => fn, useEffect() {}, useMemo: fn => fn(), useRef: value => ({ current: value }),
       useState: value => [value, () => {}], useSyncExternalStore: (_subscribe, get) => get() },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
+    '@expo/ui/jetpack-compose/modifiers': {},
     '@expo/ui': { Button: 'Button', ListItem: 'ListItem' },
     'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { router: { canGoBack: () => canGoBack, back: () => calls.push(['back']),
@@ -101,6 +103,7 @@ test('preparation orders keep navigation available on the list and order detail'
     react: { useCallback: fn => fn, useEffect() {}, useMemo: fn => fn(), useRef: value => ({ current: value }),
       useState: () => [selected, value => { selected = value; }] },
     '@expo/ui/jetpack-compose': { Host: 'Host', ModalBottomSheet: 'ModalBottomSheet', RNHostView: 'RNHostView', useMaterialColors: () => ({}) },
+    '@expo/ui/jetpack-compose/modifiers': {},
     '@expo/ui': { Button: 'Button', ListItem: 'ListItem' },
     'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { router: {}, useFocusEffect: effect => focusEffects.push(effect) },
@@ -130,7 +133,8 @@ test('preparation orders keep navigation available on the list and order detail'
   const sheet = nodes(page, node => typeof node.type === 'function' && node.type.name === 'PreparationDetailSheet')[0];
   assert.ok(sheet);
   const sheetTree = sheet.type(sheet.props);
-  const modal = nodes(sheetTree, node => node.type === 'ModalBottomSheet')[0];
+  const surface = nodes(sheetTree, node => typeof node.type === 'function' && node.type.name === 'PreparationDetailSurface')[0];
+  const modal = nodes(surface.type(surface.props), node => node.type === 'ModalBottomSheet')[0];
   assert.equal(nodes(modal, node => node.type === 'PreparationDock').length, 1);
   focusEffects.at(-1)()();
   assert.equal(selected, null);

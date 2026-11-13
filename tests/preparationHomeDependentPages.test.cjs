@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -15,20 +16,20 @@ function findAll(node, predicate) {
 function setup(platform, screen) {
   const home = { snapshot: null, warehouse: null, loading: true, error: null, locked: true, saving: false };
   let loads = 0, focus = () => {}, index = 0, effects = [], sheetContent, sheetOptions;
-  const slots = [];
+  const slots = [], childSlots = new Map(); let activeSlots = slots;
   home.controller = { loadForPage() { loads++; }, reload() {}, getSnapshot: () => home };
   const react = {
     useCallback: fn => fn,
-    useRef(value) { const at = index++; return slots[at] ??= { current: value }; },
+    useRef(value) { const at = index++; return activeSlots[at] ??= { current: value }; },
     useState(value) {
-      const at = index++;
-      if (!(at in slots)) slots[at] = typeof value === 'function' ? value() : value;
-      return [slots[at], next => { slots[at] = typeof next === 'function' ? next(slots[at]) : next; }];
+      const at = index++, store = activeSlots;
+      if (!(at in store)) store[at] = typeof value === 'function' ? value() : value;
+      return [store[at], next => { store[at] = typeof next === 'function' ? next(store[at]) : next; }];
     },
     useEffect(effect, deps) {
-      const at = index++, previous = slots[at];
+      const at = index++, previous = activeSlots[at];
       if (!previous || deps.some((dep, i) => dep !== previous[i])) effects.push(effect);
-      slots[at] = deps;
+      activeSlots[at] = deps;
     },
   };
   const dialogs = { input: async () => 'reason', confirm: async () => true };
@@ -39,7 +40,10 @@ function setup(platform, screen) {
   const mocks = {
     '@expo/ui/swift-ui': swift,
     '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }),
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), Host: 'Host', Box: 'Box', Column: 'Column', RNHostView: 'RNHostView', Text: 'ComposeText',
+      DropdownMenu: Object.assign(() => {}, { Trigger: 'DropdownMenu.Trigger', Items: 'DropdownMenu.Items' }),
+      DropdownMenuItem: Object.assign(() => {}, { LeadingIcon: 'DropdownMenuItem.LeadingIcon', Text: 'DropdownMenuItem.Text' }) },
+    '@expo/ui/jetpack-compose/modifiers': { size: (...args) => ({ name: 'size', args }) },
     'expo-router': { router: {}, Stack: { Screen: 'Stack.Screen' }, useFocusEffect: callback => { focus = callback; } },
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', PlatformColor: value => value, StyleSheet: { create: value => value } },
@@ -67,17 +71,35 @@ function setup(platform, screen) {
   mod.filename = filename; mod.paths = module.paths;
   mod.require = id => id === 'react/jsx-runtime' ? jsx : id === 'react' ? react
     : Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
-  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+  mod._compile('const requestAnimationFrame = callback => { callback(); return 0; };\n' + ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
   const component = mod.exports[`Preparation${screen}${platform === 'android' ? 'Screen' : ''}`];
   const render = () => {
-    index = 0; effects = [];
+    activeSlots = slots; index = 0; effects = [];
     const tree = component();
     for (const effect of effects) effect();
     return tree;
   };
-  return { home, render, focus: () => focus(), loads: () => loads, sheetContent: () => sheetContent };
+  const renderChild = element => {
+    const oldSlots = activeSlots, oldIndex = index, oldEffects = effects;
+    if (!childSlots.has(element.type)) childSlots.set(element.type, []);
+    activeSlots = childSlots.get(element.type); index = 0; effects = [];
+    const tree = element.type(element.props), updates = effects;
+    activeSlots = oldSlots; index = oldIndex; effects = oldEffects;
+    updates.forEach(effect => effect()); return tree;
+  };
+  const historyMenu = row => {
+    let tree = renderChild(row);
+    findAll(tree, node => node.type === 'WorkerQueueCard')[0].props.onLongPress();
+    tree = renderChild(row);
+    const menu = findAll(tree, node => typeof node.type === 'function' && node.type.name === 'HistoryMenu')[0];
+    let content = renderChild(menu); content.props.onLayoutContent({ nativeEvent: { width: 48, height: 48 } });
+    content = renderChild(menu);
+    assert.equal(findAll(content, node => node.type === mocks['@expo/ui/jetpack-compose'].DropdownMenu)[0].props.expanded, true);
+    return content;
+  };
+  return { home, render, historyMenu, focus: () => focus(), loads: () => loads, sheetContent: () => sheetContent };
 }
 
 test('android history uses shared search and virtual list while retaining receipt actions', () => {
@@ -94,8 +116,8 @@ test('android history uses shared search and virtual list while retaining receip
   page = view.render();
   assert.equal(findAll(page, node => node.props?.title === 'BOPP').length, 1);
   assert.equal(findAll(page, node => node.props?.title === 'PET').length, 0);
-  findAll(page, node => node.props?.title === 'BOPP')[0].props.onLongPress();
-  assert.ok(findAll(view.sheetContent(), node => node.props?.title === 'Kirimni bekor qilish').length);
+  const menu = view.historyMenu(findAll(page, node => node.props?.title === 'BOPP')[0]);
+  assert.ok(findAll(menu, node => node.type === 'ComposeText' && node.props.children === 'Kirimni bekor qilish').length);
 });
 
 for (const platform of ['ios', 'android']) {
@@ -140,13 +162,15 @@ for (const platform of ['ios', 'android']) {
     view.home.snapshot = { history: [{ id: '1', name: 'First receipt', kind: 'receipt', can_reverse: true }] };
     let page = view.render();
     const row = findAll(page, node => node.props?.doc?.id === '1' || node.props?.title === 'First receipt')[0];
-    row.props.onLongPress();
     if (platform === 'ios') {
+      row.props.onLongPress();
       view.sheetContent().props.reverse();
       page = view.render();
       findAll(page, node => node.props?.doc?.id === '1' && node.props.confirm)[0].props.confirm('reason');
     } else {
-      findAll(view.sheetContent(), node => node.type === 'PreparationRow' && node.props.title === 'Kirimni bekor qilish')[0].props.onPress();
+      const menu = view.historyMenu(row);
+      const action = findAll(menu, node => typeof node.type === 'function' && node.props.onClick)[0];
+      assert.equal(action.props.enabled, true); action.props.onClick();
     }
     await new Promise(resolve => setImmediate(resolve));
     page = view.render();
