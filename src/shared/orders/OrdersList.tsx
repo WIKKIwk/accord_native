@@ -1,14 +1,7 @@
 import { List } from '@expo/ui';
-import type { ReactNode } from 'react';
-import type { PanGesture } from 'react-native-gesture-handler';
-import type { SharedValue } from 'react-native-reanimated';
+import { Fragment } from 'react';
+import type { OrdersListProps } from './OrdersList.types';
 
-type Props = {
-  children: ReactNode; onRefresh: () => Promise<void>; active: boolean; pagerGesture?: PanGesture;
-  headerOffset: SharedValue<number>; headerHeight: SharedValue<number>;
-  topInset: number; onEndReached?: () => void; passthrough?: (item: ReactNode) => boolean;
-};
-
-export function OrdersList({ children, onRefresh }: Props) {
-  return <List onRefresh={onRefresh}>{children}</List>;
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh }: OrdersListProps<T>) {
+  return <List onRefresh={onRefresh}>{children}{rows && renderRow ? rows.map((row, index) => <Fragment key={rowKey?.(row, index) ?? index}>{renderRow(row, index)}</Fragment>) : null}{footer}</List>;
 }

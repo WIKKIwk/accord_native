@@ -1,7 +1,7 @@
 import { workerPaddonListRoute } from './workerPaddonNavigation';
 import { ListItem, Spacer } from '@expo/ui';
 import { useFonts } from 'expo-font';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,8 @@ import { useNativeSheet } from './nativeSheet';
 import { OrderScreen } from './OrderScreen';
 import { workerOrderBusyTitle } from './workerOrderBlocking';
 import { useWorkerQueue } from './components/useWorkerQueue';
-import { useWorkerQueueSearch } from './components/useWorkerQueueSearch';
+import { useWorkerSearchInput } from './components/useWorkerSearchInput';
+import { WorkerSearchHeader } from './components/WorkerSearchHeader';
 import { workerQueueReadCanRetry } from './workerQueueReadError';
 import { WorkerQueueConnectionProgress } from './components/WorkerQueueConnectionProgress';
 import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu, type WorkerMenu } from './workerLongPress';
@@ -23,7 +24,6 @@ import { prepareWorkerLongPress, type WorkerPreparedActionSheet } from './worker
 import { workerLongPressFeedback } from './workerLongPressFeedback';
 import { MobileApiException } from './shared/mobileApiException';
 import { WorkerControlException } from './workerControlsApi';
-import { WorkerHeader } from './components/WorkerHeader';
 import { WorkerDrawer } from './components/WorkerDrawer';
 import { WorkerTabs } from './components/WorkerTabs';
 import { WorkerBottomBar } from './components/WorkerBottomBar';
@@ -50,7 +50,6 @@ import { useWorkerOrderText } from './components/useWorkerOrderText';
 import { workerPaddonApparatus } from './workerActivePaddon';
 import { WorkerCutControls, WorkerCutSheets, WorkerCutToolbarActions } from './components/WorkerCutControls';
 import { WorkerPaddons } from './components/WorkerPaddons';
-import { OrdersHeader } from './shared/orders/OrdersHeader';
 import { WorkerSheetPresentation } from './workerSheetPresentation';
 import { workerDailyWorkVisible, workerInventoryVisible } from './workerNavigation';
 import { workerQueueLimitLabels } from './workerQueuePresentation';
@@ -114,7 +113,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const qrLocation = useRef({ machine: '', window: '' });
   const [navBarHeight, setNavBarHeight] = useState(80);
   const insets = useSafeAreaInsets();
-  const [search, setSearch] = useState('');
+  const { input: searchInput, query: searchScope } = useWorkerSearchInput(sessionReadScope(session));
   const [queueLimit, setQueueLimit] = useState<QueueLimit>(DEFAULT_QUEUE_LIMIT);
   const [limitReady, setLimitReady] = useState(false);
   const [alert, setAlert] = useState<WorkerAlertData | null>(null);
@@ -135,7 +134,6 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const preflightCheck = useRef(0);
   const preflightReopenBusy = useRef(false);
   const queueScopeRef = useRef<string | null>(null);
-  const searchScope = useWorkerQueueSearch(search);
   const windowScope = JSON.stringify([searchScope, queueLimit]);
   const currentWindow = useRef(windowScope);
   const queueState = useWorkerQueue(session, searchScope, queueLimit, limitReady);
@@ -261,8 +259,13 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const chooseOrderAction = useCallback((action: WorkerActionChoice) => { pendingAction.current = action; }, []);
 
   const selectedMachine = queue?.machines.find(machine => machine.id === machineId);
-  const completedMatches = (queue?.completed ?? []).filter(order => !searchScope || [order.code, order.title, order.customer].some(value => value.toLocaleLowerCase().includes(searchScope.toLocaleLowerCase())));
-  const completed = queueLimit === 0 ? completedMatches : completedMatches.slice(0, queueLimit);
+  const completedOrders = queue?.completed;
+  const completed = useMemo(() => {
+    const query = searchScope.toLocaleLowerCase();
+    const matches = query ? (completedOrders ?? []).filter(order => [order.code, order.title, order.customer]
+      .some(value => value.toLocaleLowerCase().includes(query))) : completedOrders ?? [];
+    return queueLimit === 0 ? matches : matches.slice(0, queueLimit);
+  }, [completedOrders, searchScope, queueLimit]);
   const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
   const scannerMachineId = selectedMachine && canWorkMachine(selectedMachine.id) ? selectedMachine.id : '';
   const paddonMachine = workerPaddonApparatus(queue?.machines ?? [], machineId, session.assigned_apparatus);
@@ -509,9 +512,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     const height = event.nativeEvent.layout.height;
     if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
   }}>
-    {Platform.OS === 'android' ? <OrdersHeader search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
-      actions={cutActions} />
-      : <WorkerHeader search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')} />}
+    <WorkerSearchHeader key={readScope} input={searchInput} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
+      actions={Platform.OS === 'android' ? cutActions : undefined} />
   </View>;
   const content = (
     <WorkerCutControls session={session} apparatus={paddonMachine?.id ?? ''} visible={cutVisible}
@@ -520,14 +522,38 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       {!nativeNavigation && section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' && (Platform.OS !== 'android' || section === 'profile') ? header : null}
       {section === 'inventory' ? <WorkerInventoryScreen session={session} onBack={() => setSection('home')} /> : section === 'paddons' ? <WorkerPaddons key={paddonApparatus} session={session} apparatus={paddonApparatus} onBack={() => setSection('home')} onSelect={selectDestination} /> : section === 'instructions' ? <WorkerWorkInstructions session={session} onBack={() => setSection('home')} /> : section === 'profile' ? <ProfileScreen session={session} onLogout={onLogout} onDailyWork={() => selectDestination('daily')} /> : section === 'daily'
         ? <DailyWorkScreen session={session} onOpenDrawer={openDrawer} onBack={() => setSection('home')} /> : <>
-      <WorkerTabs session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={search} onSearchChange={setSearch} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
+      <WorkerTabs key={readScope} session={session} machines={queue?.machines ?? []} selected={machineId} onSelect={setMachineId} loading={loading && !queue} header={Platform.OS === 'android' ? header : undefined} headerOffset={headerOffset} fontFamily={orderHeadlineFontFamily} search={searchScope} onSearchChange={searchInput.change} onMenu={openDrawer} onProfile={() => selectDestination('profile')}
         toolbarActions={cutActions} completedLabel={p('worker.queue.tab.completed')} title={t('Buyurtmalar')} searchPlaceholder={p('worker.queue.search.open')}>
         {(tabId, pagerGesture, machinePicker) => {
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const canWork = canWorkMachine(tabId);
           const pageOrders = queue?.orders[tabId] ?? [];
           const pageActive = tabId === (machineId || 'completed');
-          return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={queueState.controller.refreshAll}>
+          const rows: readonly QueueOrder[] = tabId === 'completed' ? completed : pageOrders;
+          return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={queueState.controller.refreshAll}
+            rows={rows} rowKey={order => tabId === 'completed' ? `${(order as CompletedOrder).apparatusId}:${order.id}` : order.id}
+            footer={Platform.OS !== 'ios' ? <Spacer size={88} /> : undefined}
+            renderRow={(row, index) => {
+              if (tabId === 'completed') {
+                const order = row as CompletedOrder;
+                return <WorkerOrderListItem first={Platform.OS !== 'android' && index === 0} last={index === rows.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+                  session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
+                  headline={[order.code, order.title].filter(Boolean).join(' · ')}
+                  supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
+                  {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(order),
+                    statusDetail: [order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ') } : {})}
+                  onPress={() => openHistory(order)}
+                  onLongPress={!order.issueNote.trim() && canWorkMachine(order.apparatusId) ? () => openOrderActions(order.apparatusId, order, true) : undefined} />;
+              }
+              return <WorkerOrderListItem first={Platform.OS !== 'android' && index === 0} last={index === rows.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+                session={session} orderId={row.id} imageId={row.imageId} imageActive={pageActive} cardTone={row.cardTone}
+                headline={[row.code, row.title].filter(Boolean).join(' · ')}
+                supportingText={[row.temporarilyPaused ? p('worker.temporary_pause.status') : '', row.customer].filter(Boolean).join(' • ')}
+                {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(row),
+                  statusDetail: [row.temporarilyPaused ? p('worker.temporary_pause.status') : '', row.customer].filter(Boolean).join(' • ') } : {})}
+                onLongPress={canWork ? () => openOrderActions(tabId, row, false) : undefined}
+                onPress={() => openOrder({ apparatusId: tabId, orderId: row.id, preview: row, readOnly: !canWork })} />;
+            }}>
           <WorkerQueueFilter key="queue-filter" machinePicker={machinePicker} labels={workerQueueLimitLabels(locale, QUEUE_LIMITS)} value={queueLimit} enabled={limitReady} loading={!!queue && loading && loadedScope !== windowScope} backgroundColor={colors.surface} onChange={limit => {
             if (limit === queueLimit) return;
             setQueueLimit(limit);
@@ -538,30 +564,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
           {queue && !queue.machines.length ? <ListItem>{p('worker.queue.empty.apparatus')}</ListItem> : null}
           {tabId === 'completed' && !completed.length && !loading ? <ListItem>{p('worker.queue.completed.empty')}</ListItem> : null}
           {Platform.OS !== 'android' && tabId !== 'completed' && canWork ? <ListItem>{p('worker.queue.your.apparatus')}</ListItem> : null}
-          {tabId === 'completed' ? completed.map((order, index) => (
-            <WorkerOrderListItem key={`${order.apparatusId}:${order.id}`} first={Platform.OS !== 'android' && index === 0} last={index === completed.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
-              session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
-              headline={[order.code, order.title].filter(Boolean).join(' · ')}
-              supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
-              {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(order),
-                statusDetail: [order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ') } : {})}
-              onPress={() => openHistory(order)}
-              onLongPress={!order.issueNote.trim() && canWorkMachine(order.apparatusId) ? () => openOrderActions(order.apparatusId, order, true) : undefined} />
-          )) : null}
           {pageMachine && !pageOrders.length && !loading ? <ListItem>{p('worker.queue.empty.orders', { apparatus: pageMachine.name.trim() })}</ListItem> : null}
-          {tabId !== 'completed' ? pageOrders.map((order, index) => (
-            <WorkerOrderListItem key={order.id} first={Platform.OS !== 'android' && index === 0} last={index === pageOrders.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
-              session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
-              headline={[order.code, order.title].filter(Boolean).join(' · ')}
-              supportingText={[order.temporarilyPaused ? p('worker.temporary_pause.status') : '', order.customer].filter(Boolean).join(' • ')}
-              {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(order),
-                statusDetail: [order.temporarilyPaused ? p('worker.temporary_pause.status') : '', order.customer].filter(Boolean).join(' • ') } : {})}
-              onLongPress={canWork ? () => openOrderActions(tabId, order, false) : undefined}
-              onPress={() => {
-                openOrder({ apparatusId: tabId, orderId: order.id, preview: order, readOnly: !canWork });
-              }} />
-          )) : null}
-          {Platform.OS !== 'ios' && <Spacer size={88} />}
           </WorkerQueueList>;
         }}
       </WorkerTabs>

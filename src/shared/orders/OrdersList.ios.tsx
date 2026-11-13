@@ -1,17 +1,15 @@
 import { List } from '@expo/ui/swift-ui';
 import { listStyle, refreshable, scrollContentBackground, scrollEdgeEffectStyle } from '@expo/ui/swift-ui/modifiers';
-import type { ReactNode } from 'react';
-import type { PanGesture } from 'react-native-gesture-handler';
-import type { SharedValue } from 'react-native-reanimated';
+import { useCallback } from 'react';
+import type { OrdersListProps } from './OrdersList.types';
 
-type Props = {
-  children: ReactNode; onRefresh: () => Promise<void>; active: boolean; pagerGesture?: PanGesture;
-  headerOffset: SharedValue<number>; headerHeight: SharedValue<number>;
-  topInset: number; onEndReached?: () => void; passthrough?: (item: ReactNode) => boolean;
-};
+const indexKey = (_row: unknown, index: number) => String(index);
 
-export function OrdersList({ children, onRefresh }: Props) {
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh }: OrdersListProps<T>) {
+  const renderNativeRow = useCallback(({ item, index }: { item: T; index: number }) => <>{renderRow?.(item, index)}</>, [renderRow]);
   return <List modifiers={[listStyle('plain'), scrollContentBackground('hidden'), scrollEdgeEffectStyle('soft', 'top'), refreshable(onRefresh)]}>
     {children}
+    {rows && renderRow ? <List.ForEach data={rows} keyExtractor={rowKey ?? indexKey}>{renderNativeRow}</List.ForEach> : null}
+    {footer}
   </List>;
 }

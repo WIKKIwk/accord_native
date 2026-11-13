@@ -1,32 +1,27 @@
 import { Column, Host, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { Children, cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { RefreshControl, View, type FlatList } from 'react-native';
-import { GestureDetector, useNativeGesture, type PanGesture } from 'react-native-gesture-handler';
-import Animated, { scrollTo, useAnimatedReaction, useAnimatedRef, useAnimatedScrollHandler, useSharedValue, type SharedValue } from 'react-native-reanimated';
+import { GestureDetector, useNativeGesture } from 'react-native-gesture-handler';
+import Animated, { scrollTo, useAnimatedReaction, useAnimatedRef, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { OrderListItem } from './OrderListItem';
 import { WorkerOrderPalette } from '../../components/workerOrderPalette';
+import type { OrdersListProps } from './OrdersList.types';
 
-type Props = {
-  children: ReactNode; onRefresh: () => Promise<void>; active: boolean; pagerGesture?: PanGesture;
-  headerOffset: SharedValue<number>; headerHeight: SharedValue<number>;
-  topInset: number; onEndReached?: () => void; passthrough?: (item: ReactNode) => boolean;
-};
-
-export function OrdersList({ children, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached }: Props) {
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached }: OrdersListProps<T>) {
   const [refreshing, setRefreshing] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
   const colors = useMaterialColors();
-  const listRef = useAnimatedRef<FlatList<ReactNode>>();
+  const listRef = useAnimatedRef<FlatList<ReactNode | T>>();
   const scrollOffset = useSharedValue(0);
   const contentHeight = useSharedValue(0);
   const viewHeight = useSharedValue(0);
   const pageActive = useSharedValue(active);
   const imageFrame = useRef<number | null>(null);
   const imagesScheduled = useRef(false);
-  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { item: unknown }[] }) => {
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { item: unknown; key?: string }[] }) => {
     // Let the first visible order rows appear before starting thumbnail work.
-    if (imagesScheduled.current || !viewableItems.some(({ item }) => isValidElement(item) && item.type === OrderListItem)) return;
+    if (imagesScheduled.current || !viewableItems.some(({ item, key }) => key?.startsWith('row:') || (isValidElement(item) && item.type === OrderListItem))) return;
     imagesScheduled.current = true;
     imageFrame.current = requestAnimationFrame(() => {
       imageFrame.current = requestAnimationFrame(() => {
@@ -76,16 +71,32 @@ export function OrdersList({ children, onRefresh, active, pagerGesture, headerOf
       }
     },
   });
+  const headerItems = useMemo(() => Children.toArray(children), [children]);
+  const footerItems = useMemo(() => Children.toArray(footer), [footer]);
+  const dataRows = rows && renderRow ? rows : undefined;
+  const data = useMemo(() => [...headerItems, ...(dataRows ?? []), ...footerItems], [headerItems, dataRows, footerItems]);
+  const keyExtractor = useCallback((item: ReactNode | T, index: number) => {
+    const rowIndex = index - headerItems.length;
+    if (dataRows && rowIndex >= 0 && rowIndex < dataRows.length) return `row:${rowKey ? rowKey(item as T, rowIndex) : rowIndex}`;
+    const prefix = index >= headerItems.length + (dataRows?.length ?? 0) ? 'footer' : 'child';
+    return `${prefix}:${isValidElement(item) && item.key != null ? item.key : index}`;
+  }, [headerItems.length, dataRows, rowKey]);
+  const renderItem = useCallback(({ item, index }: { item: ReactNode | T; index: number }) => {
+    const rowIndex = index - headerItems.length;
+    const element = dataRows && renderRow && rowIndex >= 0 && rowIndex < dataRows.length
+      ? renderRow(item as T, rowIndex) : item as ReactNode;
+    return <View collapsable={false}>{isValidElement<{ imageActive: boolean }>(element) && element.type === OrderListItem
+      ? cloneElement(element, { imageActive: element.props.imageActive && imagesReady })
+      : passthrough?.(element) ? element
+      : <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>{element}</Column></Host>}</View>;
+  }, [headerItems.length, dataRows, renderRow, imagesReady, passthrough]);
 
-  return <WorkerOrderPalette.Provider value={colors}><GestureDetector gesture={scrollGesture}><Animated.FlatList ref={listRef} style={{ flex: 1 }} contentContainerStyle={{ paddingTop: topInset, minHeight: viewportHeight + Math.max(0, topInset - 48) }} data={Children.toArray(children)}
+  return <WorkerOrderPalette.Provider value={colors}><GestureDetector gesture={scrollGesture}><Animated.FlatList ref={listRef} style={{ flex: 1 }} contentContainerStyle={{ paddingTop: topInset, minHeight: viewportHeight + Math.max(0, topInset - 48) }} data={data} keyExtractor={keyExtractor}
     onLayout={event => { const height = event.nativeEvent.layout.height; setViewportHeight(height); viewHeight.set(height); }}
     onEndReached={onEndReached} onEndReachedThreshold={0.5}
     onContentSizeChange={(_width, height) => { contentHeight.set(height); }}
     onScroll={onScroll} scrollEventThrottle={16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
     onViewableItemsChanged={onViewableItemsChanged} extraData={imagesReady}
     refreshControl={<RefreshControl refreshing={refreshing} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} />}
-    renderItem={({ item }) => <View collapsable={false}>{isValidElement<{ imageActive: boolean }>(item) && item.type === OrderListItem
-      ? cloneElement(item, { imageActive: item.props.imageActive && imagesReady })
-      : passthrough?.(item) ? item
-      : <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>{item}</Column></Host>}</View>} /></GestureDetector></WorkerOrderPalette.Provider>;
+    renderItem={renderItem} /></GestureDetector></WorkerOrderPalette.Provider>;
 }

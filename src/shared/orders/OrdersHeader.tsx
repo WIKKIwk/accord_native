@@ -18,6 +18,8 @@ type Props = {
   onSearchFocus?: () => void; onSearchBlur?: () => void;
 } & ({ onMenu: () => void; onBack?: never } | { onMenu?: never; onBack: () => void });
 
+export type { Props as OrdersHeaderProps };
+
 /** The worker queue uses the same menu and search layout as V2. */
 export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, trailing, actions, onSearchFocus, onSearchBlur, searchPlaceholder = 'Buyurtmani izlash' }: Props) {
   const colors = useWorkerColors();

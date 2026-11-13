@@ -166,13 +166,14 @@ test('pending writes prevent a successful-looking row snapshot from being handed
 });
 
 function workerScreenHarness(platform, nativeNavigation = true) {
-  const hooks = [], effects = [], opened = [], updates = [], actionOptions = [], presentations = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz';
+  const hooks = [], effects = [], opened = [], updates = [], actionOptions = [], presentations = [], historyOpened = [], routes = []; let cursor = 0, locale = 'uz', rowElements = 0;
   const preparation = { calls: [], feedback: 0, result: { kind: 'menu', menu: { kind: 'bosma', actions: ['astatka', 'finish'], operation: 'print' } }, pending: null, error: null, paddonOptions: [] };
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
     useState(initial) { const id = cursor++; if (!hooks[id]) hooks[id] = { value: typeof initial === 'function' ? initial() : initial }; return [hooks[id].value, value => { hooks[id].value = typeof value === 'function' ? value(hooks[id].value) : value; }]; },
     useRef(initial) { const id = cursor++; if (!hooks[id]) hooks[id] = { current: initial }; return hooks[id]; },
     useCallback(fn, deps) { const id = cursor++; if (!hooks[id] || !equal(deps, hooks[id].deps)) hooks[id] = { deps, fn }; return hooks[id].fn; },
+    useMemo(fn, deps) { const id = cursor++; if (!hooks[id] || !equal(deps, hooks[id].deps)) hooks[id] = { deps, value: fn() }; return hooks[id].value; },
     useEffect(fn, deps) { const id = cursor++; if (!hooks[id] || !equal(deps, hooks[id].deps)) { const previous = hooks[id]; hooks[id] = { deps, cleanup: previous?.cleanup }; effects.push(() => { previous?.cleanup?.(); hooks[id].cleanup = fn(); }); } },
   };
   react.useLayoutEffect = react.useEffect;
@@ -183,6 +184,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
   const queueState = { queue: currentQueue, synchronized: false, loadedWindow: 'previous-query-window', loading: false,
     error: new Error('Connection reset'), reload: async () => {}, controller: { setWritePending() {} } };
   const jsx = (type, props, key) => {
+    if (type === 'WorkerOrderListItem') rowElements++;
     if (type === 'WorkerWipHistorySheet' && props?.ref) props.ref.current = { open: (...args) => historyOpened.push(args) };
     return { type, props: props ?? {}, key };
   };
@@ -193,7 +195,10 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     'expo-font': { useFonts: () => [true] }, 'expo-router': { router: { push: route => routes.push(route) }, useFocusEffect: effect => { preparation.blur = effect(); } },
     'react-native-reanimated': { useSharedValue: () => ({ set() {} }) },
     './components/useWorkerQueue': { useWorkerQueue: () => queueState },
-    './components/useWorkerQueueSearch': { useWorkerQueueSearch: value => value.trim() },
+    './components/useWorkerSearchInput': { useWorkerSearchInput: () => {
+      const [query, change] = react.useState('');
+      return { query: query.trim(), input: { change } };
+    } },
     './components/useWorkerPaddonNavigation': { useWorkerPaddonNavigation: (_visible, owner) => { preparation.paddonOwner = owner; return preparation.paddonOptions; } },
     './workerQueueReadError': { workerQueueReadCanRetry: () => true },
     './workerApi': api,
@@ -227,7 +232,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const s = session();
   s.capabilities.push('apparatus.queue.manage');
-  return { opened, updates, actionOptions, presentations, historyOpened, queueState, session: s, routes, preparation, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
+  return { opened, updates, actionOptions, presentations, historyOpened, queueState, session: s, routes, preparation, get rowElements() { return rowElements; }, setLocale(value) { locale = value; }, render() { cursor = 0; const tree = mod.exports.WorkerScreen({ session: s, nativeNavigation, onLogout() {} }); while (effects.length) effects.shift()(); return tree; } };
 }
 function nodes(tree, type, result = []) {
   if (!tree) return result;
@@ -235,6 +240,19 @@ function nodes(tree, type, result = []) {
   if (tree.type === type) result.push(tree);
   nodes(tree.props?.children, type, result); return result;
 }
+for (const platform of ['ios', 'android']) test(`${platform}: a 1000-order queue creates rows only when the native list requests them`, () => {
+  const x = workerScreenHarness(platform), original = x.queueState.queue.orders[station][0];
+  const rows = Array.from({ length: 1000 }, (_, index) => ({ ...original, id: `order-${index}`, code: String(index) }));
+  x.queueState.queue.orders[station] = rows;
+  const tree = x.render(), list = nodes(tree, 'WorkerTabs')[0].props.children(station);
+  assert.equal(list.props.rows, rows, 'pass the unchanged model array to native virtualization');
+  assert.equal(x.rowElements, 0, 'neither WorkerScreen nor its tab callback should construct all row elements');
+  assert.equal(nodes(list, 'WorkerOrderListItem').length, 0);
+  const requested = list.props.renderRow(rows[500], 500);
+  assert.equal(x.rowElements, 1); assert.equal(requested.props.orderId, 'order-500');
+  assert.equal(list.props.rowKey(rows[500], 500), 'order-500');
+  assert.equal(list.props.footer?.type, platform === 'android' ? 'Spacer' : undefined);
+});
 for (const platform of ['ios', 'android']) test(`${platform}: worker FAB uses assigned cutter eligibility independent of the selected queue tab`, () => {
   const x = workerScreenHarness(platform);
   let tree = x.render();
@@ -281,7 +299,7 @@ test('Android repeated scanner cancellation retains the selected tab, search, li
 for (const platform of ['ios', 'android']) test(`${platform} real WorkerScreen opens order sheet from retained unsynchronized rows with no stale action cursor`, async () => {
   const x = workerScreenHarness(platform); let tree = x.render(); await flush(); tree = x.render();
   const list = nodes(tree, 'WorkerTabs')[0].props.children(station, undefined, undefined);
-  const row = nodes(list, 'WorkerOrderListItem')[0];
+  const row = list.props.renderRow(list.props.rows[0], 0);
   assert.equal(row.props.statusText, platform === 'ios' ? 'worker.queue.status.in_progress' : undefined, 'iOS worker queue uses the requested small status indicator; other platform defaults are retained');
   assert.equal(row.props.supportingText, x.queueState.queue.orders[station][0].customer);
   assert.equal(nodes(list, 'WorkerQueueConnectionProgress')[0].props.active, true);
@@ -302,7 +320,10 @@ async function readyIosScreen() {
   x.queueState.error = null;
   return x;
 }
-const screenRows = (tree, tab = station) => nodes(nodes(tree, 'WorkerTabs')[0].props.children(tab, undefined, undefined), 'WorkerOrderListItem');
+const screenRows = (tree, tab = station) => {
+  const list = nodes(tree, 'WorkerTabs')[0].props.children(tab, undefined, undefined);
+  return list.props.rows.map(list.props.renderRow);
+};
 
 for (const platform of ['ios', 'android']) test(`${platform} open order receives each remote queue revision immediately without remounting its sheet`, async () => {
   const x = workerScreenHarness(platform, platform === 'ios');
