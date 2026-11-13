@@ -10,6 +10,8 @@ type Props = {
   onSelect: (id: string) => void;
   displayName: string;
   canTransfer?: boolean;
+  showDailyWork?: boolean;
+  paddons?: import('../shared/navigation/roleDrawerModel').RoleDrawerItem[];
   children: ReactNode;
   onOpen: () => void;
   active: string;

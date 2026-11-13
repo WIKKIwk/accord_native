@@ -4,6 +4,7 @@ export type WorkerDrawerProps = Pick<RoleDrawerProps, 'visible' | 'onOpen' | 'on
   displayName: string;
   canTransfer?: boolean;
   showDailyWork?: boolean;
+  paddons?: RoleDrawerItem[];
   active: string;
 };
 

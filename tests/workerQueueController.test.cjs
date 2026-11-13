@@ -177,7 +177,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     useEffect(fn, deps) { const id = cursor++; if (!hooks[id] || !equal(deps, hooks[id].deps)) { const previous = hooks[id]; hooks[id] = { deps, cleanup: previous?.cleanup }; effects.push(() => { previous?.cleanup?.(); hooks[id].cleanup = fn(); }); } },
   };
   react.useLayoutEffect = react.useEffect;
-  const sheet = { close() {}, open(value, options) { opened.push(value); actionOptions.push(options); presentations.push({ value, options }); }, update(value) { updates.push(value); }, isOpen: () => false };
+  const sheet = { close() { preparation.closes = (preparation.closes ?? 0) + 1; }, open(value, options) { opened.push(value); actionOptions.push(options); presentations.push({ value, options }); }, update(value) { updates.push(value); }, isOpen: () => false };
   const currentQueue = queue();
   currentQueue.orders[station][0].state = 'in_progress';
   currentQueue.snapshot.order_controls['work-1'] = { state: 'active' };
@@ -192,7 +192,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     react, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'react-native': { Platform: { OS: platform }, View: 'View', Modal: 'Modal', StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
-    'expo-font': { useFonts: () => [true] }, 'expo-router': { router: { push: route => routes.push(route) }, useFocusEffect: effect => { preparation.blur = effect(); } },
+    'expo-font': { useFonts: () => [true] }, 'expo-router': { useIsFocused: () => preparation.focused !== false, router: { push: route => routes.push(route) }, useFocusEffect: effect => { preparation.blur = effect(); } },
     'react-native-reanimated': { useSharedValue: () => ({ set() {} }) },
     './components/useWorkerQueue': { useWorkerQueue: () => queueState },
     './components/useWorkerSearchInput': { useWorkerSearchInput: () => {
@@ -435,6 +435,28 @@ test('worker drawer transfer opens the real inventory screen and permission loss
   assert.equal(nodes(tree, 'WorkerTabs').length, 1);
 });
 
+test('retained worker pages stop thumbnail and cutter work when covered without restarting their queue', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush();
+  x.queueState.synchronized = true; x.queueState.loadedWindow = '["",10]';
+  let tree = x.render();
+  assert.equal(nodes(tree, 'WorkerCutControls')[0].props.visible, true);
+  const queue = x.queueState.queue, controller = x.queueState.controller;
+  x.preparation.focused = false; tree = x.render();
+  assert.equal(nodes(tree, 'WorkerCutControls')[0].props.visible, false);
+  const covered = nodes(tree, 'WorkerTabs')[0].props.children(station);
+  assert.equal(covered.props.active, false);
+  assert.equal(screenRows(tree)[0].props.imageActive, false);
+  assert.equal(x.queueState.queue, queue); assert.equal(x.queueState.controller, controller);
+  x.preparation.focused = true; tree = x.render();
+  assert.equal(nodes(tree, 'WorkerCutControls')[0].props.visible, true);
+  assert.equal(nodes(tree, 'WorkerTabs')[0].props.children(station).props.active, true);
+});
+test('worker scope retirement dismisses every retained page including Paddons', async () => {
+  const x = workerScreenHarness('android', false); x.render(); await flush();
+  const before = x.preparation.closes ?? 0;
+  x.session.assigned_apparatus = []; x.render();
+  assert.equal(x.preparation.closes - before, 5);
+});
 test('Android drawer opens the assigned Paddon page with its own working navigation', async () => {
   const x = workerScreenHarness('android', false); x.render(); await flush(); let tree = x.render();
   nodes(tree, 'WorkerDrawer')[0].props.onSelect('paddons:cut'); tree = x.render();

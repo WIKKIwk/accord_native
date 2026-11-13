@@ -262,4 +262,22 @@ for (const platform of ['ios', 'android']) {
     if (platform === 'ios') assert.match(calls.at(-1)[1], /^\/ios-worker\/paddons\?apparatus=cut/);
     else assert.equal(calls.at(-1), 'paddons:cut');
   });
+  test(`${platform}: worker drawer reuses supplied Paddon destinations without starting its own catalog read`, () => {
+    const visibility = [], supplied = [{ id: 'paddons:cut', label: 'Paddon · Cut' }];
+    const api = load(`components/WorkerDrawer.${platform}.tsx`, {
+      '../shared/navigation/RoleDrawer': { RoleDrawer: 'SharedRoleDrawer' },
+      '../shared/navigation/roleDrawerLogout': {},
+      './useWorkerOrderText': { useWorkerOrderText: () => ({ t: value => value }) },
+      './useWorkerPaddonNavigation': { useWorkerPaddonNavigation: visible => { visibility.push(visible); return []; } },
+      'expo-router': { router: {} },
+    });
+    for (let opening = 0; opening < 3; opening++) {
+      const tree = api.WorkerDrawer({ visible: true, paddons: supplied, displayName: 'Worker', onSelect() {} });
+      assert(tree.props.items.some(item => item.id === 'paddons:cut'));
+    }
+    api.WorkerDrawer({ visible: true, paddons: [], displayName: 'Worker', onSelect() {} });
+    assert.deepEqual(visibility, [false, false, false, false]);
+    api.WorkerDrawer({ visible: true, displayName: 'Worker', onSelect() {} });
+    assert.equal(visibility.at(-1), true);
+  });
 }

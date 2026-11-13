@@ -2,7 +2,7 @@ import { workerPaddonListRoute } from './workerPaddonNavigation';
 import { ListItem, Spacer } from '@expo/ui';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { router, useFocusEffect, type Href } from 'expo-router';
+import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
@@ -61,6 +61,7 @@ type ActionScope = { window: string; scope: string; readScope: string; witness: 
 type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean; prepared: WorkerPreparedActionSheet; presentationId?: number; onChoose: (action: WorkerActionChoice) => void };
 
 export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer }: Props) {
+  const pageFocused = useIsFocused();
   const colors = useWorkerColors();
   const { p, t, locale } = useWorkerOrderText();
   const queueStateLabels: Record<string, string> = {
@@ -144,7 +145,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       return Array.isArray(source) && typeof source[0] === 'string' ? source[0] : null;
     } catch { return null; }
   }, [loadedScope]);
-  const showPaddons = useWorkerPaddonNavigation(true, session, queue?.catalog).length > 0;
+  const paddonDestinations = useWorkerPaddonNavigation(true, session, queue?.catalog);
+  const showPaddons = paddonDestinations.length > 0;
   const machineId = machineSelection === 'completed' || queue?.machines.some(machine => machine.id === machineSelection) ? machineSelection : (queue?.machines[0]?.id ?? '');
   const retryingQueue = !!queueState.error && workerQueueReadCanRetry(queueState.error);
   const error = queueState.error && !retryingQueue ? (queueState.error instanceof Error ? queueState.error.message : p('worker.error.sync')) : '';
@@ -179,7 +181,9 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     sheetPresentation.current.reset(); setHistoryPresentation(null);
     orderRoute.close(); actionsRoute.close(); historyRoute.close();
     dailyDestination.current = null; dailyRoute.close();
-  }, [readScope, orderRoute, actionsRoute, historyRoute, dailyRoute]);
+    paddonDestination.current = null; paddonRoute.close();
+    pendingQrSwitch.current = null;
+  }, [readScope, orderRoute, actionsRoute, historyRoute, dailyRoute, paddonRoute]);
   useEffect(() => { screenMounted.current = true; return () => { screenMounted.current = false; }; }, []);
   useLayoutEffect(() => { qrLocation.current = { machine: machineId, window: windowScope }; }, [machineId, windowScope]);
   // Render from an explicit snapshot; queueRef is updated only after children render.
@@ -272,7 +276,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
   const scannerMachineId = selectedMachine && canWorkMachine(selectedMachine.id) ? selectedMachine.id : '';
   const paddonMachine = workerPaddonApparatus(queue?.machines ?? [], machineId, session.assigned_apparatus);
-  const cutVisible = section === 'home' && queueState.synchronized && loadedScope === windowScope && !drawerOpen && !scannerOpen && !activeOrder && !actionOrder && !nativeOverlayOpen;
+  const cutVisible = pageFocused && section === 'home' && queueState.synchronized && loadedScope === windowScope && !drawerOpen && !scannerOpen && !activeOrder && !actionOrder && !nativeOverlayOpen;
   const cutBusyChanged = useCallback(() => { preflightCheck.current++; }, []);
   function finishQrScan(apparatusId: string, orderId: string, qr: string, switching = false) {
     const target: ActiveOrder = { apparatusId, orderId, ...(switching ? { initialSwitchQr: qr } : { initialScanQr: qr }) };
@@ -530,7 +534,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
           const pageMachine = queue?.machines.find(machine => machine.id === tabId);
           const canWork = canWorkMachine(tabId);
           const pageOrders = queue?.orders[tabId] ?? [];
-          const pageActive = tabId === (machineId || 'completed');
+          const pageActive = pageFocused && tabId === (machineId || 'completed');
           const rows: readonly QueueOrder[] = tabId === 'completed' ? completed : pageOrders;
           return <WorkerSearchQueueList key={tabId} active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={queueState.controller.refreshAll}
             input={searchInput} sourceQuery={sourceQuery} serverQuery={searchScope} serverReady={queueState.synchronized && loadedScope === windowScope}
@@ -602,7 +606,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     </WorkerCutControls>
   );
   if (nativeNavigation) return content;
-  return <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination} displayName={String(session.profile.display_name ?? '')} canTransfer={workerInventoryVisible(session)} showDailyWork={workerDailyWorkVisible(session)} active={section === 'home' ? 'queue' : section === 'inventory' ? 'transfer' : section}>{content}</WorkerDrawer>;
+  return <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination} displayName={String(session.profile.display_name ?? '')} canTransfer={workerInventoryVisible(session)} showDailyWork={workerDailyWorkVisible(session)} paddons={paddonDestinations} active={section === 'home' ? 'queue' : section === 'inventory' ? 'transfer' : section}>{content}</WorkerDrawer>;
 }
 const styles = StyleSheet.create({
   safe: { flex: 1 },
