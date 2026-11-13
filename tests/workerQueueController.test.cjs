@@ -197,11 +197,13 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     './components/useWorkerQueue': { useWorkerQueue: () => queueState },
     './components/useWorkerSearchInput': { useWorkerSearchInput: () => {
       const [query, change] = react.useState('');
-      return { query: query.trim(), input: { change } };
+      return { query: query.trim(), input: { change, getDraftQuery: () => preparation.draftQuery ?? query.trim() } };
     } },
     './components/useWorkerPaddonNavigation': { useWorkerPaddonNavigation: (_visible, owner) => { preparation.paddonOwner = owner; return preparation.paddonOptions; } },
-    './workerQueueReadError': { workerQueueReadCanRetry: () => true },
+    './workerQueueReadError': { workerQueueReadCanRetry: () => true,
+      workerQueueReadAuthorizationError: error => [401, 403].includes(error?.statusCode) || error?.code === 'permission_denied' },
     './workerApi': api,
+    './workerLongPress': { runWorkerMenuAction: async (...args) => { preparation.menuActionCursors.push(args[5]()); } },
     './workerLongPressFeedback': { workerLongPressFeedback() { preparation.feedback++; } },
     './workerLongPressPreparation': { prepareWorkerLongPress: async (...args) => {
       preparation.calls.push(args);
@@ -248,7 +250,7 @@ for (const platform of ['ios', 'android']) test(`${platform}: a 1000-order queue
   assert.equal(list.props.rows, rows, 'pass the unchanged model array to native virtualization');
   assert.equal(x.rowElements, 0, 'neither WorkerScreen nor its tab callback should construct all row elements');
   assert.equal(nodes(list, 'WorkerOrderListItem').length, 0);
-  const requested = list.props.renderRow(rows[500], 500);
+  const requested = list.props.renderRow(rows[500], 500, rows.length, false);
   assert.equal(x.rowElements, 1); assert.equal(requested.props.orderId, 'order-500');
   assert.equal(list.props.rowKey(rows[500], 500), 'order-500');
   assert.equal(list.props.footer?.type, platform === 'android' ? 'Spacer' : undefined);
@@ -299,7 +301,7 @@ test('Android repeated scanner cancellation retains the selected tab, search, li
 for (const platform of ['ios', 'android']) test(`${platform} real WorkerScreen opens order sheet from retained unsynchronized rows with no stale action cursor`, async () => {
   const x = workerScreenHarness(platform); let tree = x.render(); await flush(); tree = x.render();
   const list = nodes(tree, 'WorkerTabs')[0].props.children(station, undefined, undefined);
-  const row = list.props.renderRow(list.props.rows[0], 0);
+  const row = list.props.renderRow(list.props.rows[0], 0, list.props.rows.length, false);
   assert.equal(row.props.statusText, platform === 'ios' ? 'worker.queue.status.in_progress' : undefined, 'iOS worker queue uses the requested small status indicator; other platform defaults are retained');
   assert.equal(row.props.supportingText, x.queueState.queue.orders[station][0].customer);
   assert.equal(nodes(list, 'WorkerQueueConnectionProgress')[0].props.active, true);
@@ -322,8 +324,59 @@ async function readyIosScreen() {
 }
 const screenRows = (tree, tab = station) => {
   const list = nodes(tree, 'WorkerTabs')[0].props.children(tab, undefined, undefined);
-  return list.props.rows.map(list.props.renderRow);
+  return list.props.rows.map((row, index) => list.props.renderRow(row, index, list.props.rows.length, false));
 };
+
+for (const platform of ['ios', 'android']) test(`${platform}: local search previews open fresh detail without lending the previous query cursor`, async () => {
+  const x = workerScreenHarness(platform);
+  x.queueState.synchronized = true; x.queueState.loadedWindow = JSON.stringify(['', 10]); x.queueState.error = null;
+  x.render(); await flush();
+  x.preparation.draftQuery = 'film';
+  const tree = x.render(), list = nodes(tree, 'WorkerTabs')[0].props.children(station);
+  assert.equal(list.props.input.getDraftQuery(), 'film'); assert.equal(list.props.serverQuery, '');
+  assert.equal(list.props.sourceQuery, '');
+  const preview = list.props.renderRow(list.props.rows[0], 0, 1, true);
+  assert.equal(preview.props.last, true);
+  preview.props.onPress();
+  const opened = x.render(), detail = platform === 'ios' ? nodes(opened, 'OrderScreen')[0] : x.opened.at(-1);
+  assert.equal(detail.props.queueCursor, null);
+  assert.equal(detail.props.preview.id, 'work-1');
+});
+
+test('worker authorization withdrawal disables the retained local search baseline', () => {
+  const x = workerScreenHarness('android');
+  x.queueState.error = { code: 'permission_denied' };
+  const list = nodes(x.render(), 'WorkerTabs')[0].props.children(station);
+  assert.equal(list.props.previewAllowed, false);
+});
+
+for (const platform of ['ios', 'android']) test(`${platform}: long press during local search uses a point read without old queue authority`, async () => {
+  const x = workerScreenHarness(platform);
+  x.queueState.synchronized = true; x.queueState.loadedWindow = JSON.stringify(['', 10]); x.queueState.error = null;
+  x.render(); await flush();
+  x.preparation.draftQuery = 'film';
+  const list = nodes(x.render(), 'WorkerTabs')[0].props.children(station);
+  const preview = list.props.renderRow(list.props.rows[0], 0, 1, true);
+  await preview.props.onLongPress();
+  assert.equal(x.preparation.calls.length, 1);
+  assert.equal(x.preparation.calls[0][4](), null, 'raw query differs from the previous confirmed server window');
+});
+
+for (const platform of ['ios', 'android']) test(`${platform}: preflight confirmation also rejects the previous cursor for a local preview`, async () => {
+  const x = workerScreenHarness(platform);
+  x.queueState.synchronized = true; x.queueState.loadedWindow = JSON.stringify(['', 10]); x.queueState.error = null;
+  x.queueState.queue.orders[station][0].state = 'print_preflight_passed';
+  x.preparation.menuActionCursors = [];
+  x.preparation.result = { kind: 'menu', menu: { kind: 'reopen' } };
+  x.render(); await flush();
+  x.preparation.draftQuery = 'film';
+  const list = nodes(x.render(), 'WorkerTabs')[0].props.children(station);
+  await list.props.renderRow(list.props.rows[0], 0, 1, true).props.onLongPress();
+  const alert = nodes(x.render(), 'WorkerAlert')[0].props.alert;
+  assert.equal(typeof alert.onConfirm, 'function');
+  alert.onConfirm(); await flush();
+  assert.deepEqual(x.preparation.menuActionCursors, [null]);
+});
 
 for (const platform of ['ios', 'android']) test(`${platform} open order receives each remote queue revision immediately without remounting its sheet`, async () => {
   const x = workerScreenHarness(platform, platform === 'ios');

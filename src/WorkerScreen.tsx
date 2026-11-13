@@ -17,7 +17,7 @@ import { workerOrderBusyTitle } from './workerOrderBlocking';
 import { useWorkerQueue } from './components/useWorkerQueue';
 import { useWorkerSearchInput } from './components/useWorkerSearchInput';
 import { WorkerSearchHeader } from './components/WorkerSearchHeader';
-import { workerQueueReadCanRetry } from './workerQueueReadError';
+import { workerQueueReadAuthorizationError, workerQueueReadCanRetry } from './workerQueueReadError';
 import { WorkerQueueConnectionProgress } from './components/WorkerQueueConnectionProgress';
 import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu, type WorkerMenu } from './workerLongPress';
 import { prepareWorkerLongPress, type WorkerPreparedActionSheet } from './workerLongPressPreparation';
@@ -37,7 +37,7 @@ import { WorkerDailyPage } from './components/WorkerDailyPage';
 import { WorkerPaddonPage } from './components/WorkerPaddonPage';
 import { WorkerOrderListItem } from './components/WorkerOrderListItem';
 import { useWorkerColors } from './components/useWorkerColors';
-import { WorkerQueueList } from './components/WorkerQueueList';
+import { WorkerSearchQueueList } from './components/WorkerSearchQueueList';
 import { WorkerQueueFilter } from './components/WorkerQueueFilter';
 import { WorkerOrderSheet } from './components/WorkerOrderSheet';
 import { WorkerOrderDetails, WorkerOrderFreezeDetails } from './components/WorkerOrderDetails';
@@ -56,7 +56,7 @@ import { workerQueueLimitLabels } from './workerQueuePresentation';
 import { WorkerInventoryScreen } from './components/WorkerInventoryScreen';
 
 type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
-type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; presentationId?: number; onClose?: () => void };
+type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; requireFreshDetail?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; presentationId?: number; onClose?: () => void };
 type ActionScope = { window: string; scope: string; readScope: string; witness: SessionWitness | null };
 type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean; prepared: WorkerPreparedActionSheet; presentationId?: number; onChoose: (action: WorkerActionChoice) => void };
 
@@ -138,6 +138,12 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const currentWindow = useRef(windowScope);
   const queueState = useWorkerQueue(session, searchScope, queueLimit, limitReady);
   const { queue, loading, loadedWindow: loadedScope, reload } = queueState;
+  const sourceQuery = useMemo(() => {
+    try {
+      const source = JSON.parse(loadedScope ?? 'null');
+      return Array.isArray(source) && typeof source[0] === 'string' ? source[0] : null;
+    } catch { return null; }
+  }, [loadedScope]);
   const showPaddons = useWorkerPaddonNavigation(true, session, queue?.catalog).length > 0;
   const machineId = machineSelection === 'completed' || queue?.machines.some(machine => machine.id === machineSelection) ? machineSelection : (queue?.machines[0]?.id ?? '');
   const retryingQueue = !!queueState.error && workerQueueReadCanRetry(queueState.error);
@@ -178,16 +184,18 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   useLayoutEffect(() => { qrLocation.current = { machine: machineId, window: windowScope }; }, [machineId, windowScope]);
   // Render from an explicit snapshot; queueRef is updated only after children render.
   const renderOrderRoute = useCallback((target: ActiveOrder, onClose: () => void, renderQueue: WorkerQueue | null) => {
+    const cursor = queueState.synchronized && !target.requireFreshDetail &&
+      JSON.stringify([searchInput.getDraftQuery(), queueLimit]) === windowScope ? renderQueue?.snapshot ?? null : null;
     if (target.readOnly && target.preview) return <WorkerOrderDetails session={session}
       apparatusId={target.apparatusId}
-      order={target.preview} queueCursor={queueState.synchronized ? renderQueue?.snapshot ?? null : null} queueWindow={windowScope} onClose={onClose} />;
+      order={target.preview} queueCursor={cursor} queueWindow={windowScope} onClose={onClose} />;
     return <OrderScreen key={`${target.apparatusId}:${target.orderId}`} session={session} apparatusId={target.apparatusId} orderId={target.orderId} preview={target.preview}
       initialScanQr={target.initialScanQr} initialSwitchQr={target.initialSwitchQr}
       onSwitchCommitted={() => { const pending = pendingQrSwitch.current; if (pending && isSessionWitnessCurrent(pending.witness)) pending.committed = true; }}
-      queueCursor={queueState.synchronized ? renderQueue?.snapshot ?? null : null} busyOrderTitle={workerOrderBusyTitle(renderQueue, target.apparatusId, target.orderId)}
+      queueCursor={cursor} busyOrderTitle={workerOrderBusyTitle(renderQueue, target.apparatusId, target.orderId)}
       apparatusCatalog={renderQueue?.catalog} apparatus={renderQueue?.machines.find(machine => machine.id === target.apparatusId)} initialAction={target.initialAction} queueWindow={windowScope}
       onWritePending={onWritePending} onNotice={setOrderNotice} onClose={onClose} onChanged={() => { void latestReload.current(); }} />;
-  }, [session, windowScope, queueState.synchronized, onWritePending]);
+  }, [session, windowScope, queueState.synchronized, onWritePending, searchInput, queueLimit]);
   useEffect(() => {
     if (nativeOrder.current) orderRoute.update(renderOrderRoute(nativeOrder.current, orderRoute.close, queue));
   }, [queue, orderRoute, renderOrderRoute]);
@@ -251,21 +259,16 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   }
   const scopedCursor = useCallback((expected: ActionScope | null) => {
     const snapshot = queueRef.current?.snapshot;
-    return synchronizedQueue.current && expected && currentWindow.current === expected.window && queueScopeRef.current === expected.window && snapshot?.scope === expected.scope ? snapshot : null;
-  }, []);
+    const draftWindow = JSON.stringify([searchInput.getDraftQuery(), queueLimit]);
+    return synchronizedQueue.current && expected && draftWindow === currentWindow.current && currentWindow.current === expected.window && queueScopeRef.current === expected.window && snapshot?.scope === expected.scope ? snapshot : null;
+  }, [searchInput, queueLimit]);
   const actionContextCurrent = useCallback((expected: ActionScope | null) => !!expected && screenMounted.current &&
     !!activeSessionToken(session) && isSessionWitnessCurrent(expected.witness) && expected.readScope === sessionReadScope(session) &&
     currentWindow.current === expected.window, [session]);
   const chooseOrderAction = useCallback((action: WorkerActionChoice) => { pendingAction.current = action; }, []);
 
   const selectedMachine = queue?.machines.find(machine => machine.id === machineId);
-  const completedOrders = queue?.completed;
-  const completed = useMemo(() => {
-    const query = searchScope.toLocaleLowerCase();
-    const matches = query ? (completedOrders ?? []).filter(order => [order.code, order.title, order.customer]
-      .some(value => value.toLocaleLowerCase().includes(query))) : completedOrders ?? [];
-    return queueLimit === 0 ? matches : matches.slice(0, queueLimit);
-  }, [completedOrders, searchScope, queueLimit]);
+  const completed = queue?.completed ?? [];
   const canWorkMachine = (id: string) => canWorkOnApparatus(queue?.machines.find(machine => machine.id === id), session.assigned_apparatus);
   const scannerMachineId = selectedMachine && canWorkMachine(selectedMachine.id) ? selectedMachine.id : '';
   const paddonMachine = workerPaddonApparatus(queue?.machines ?? [], machineId, session.assigned_apparatus);
@@ -369,8 +372,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     const getCursor = () => {
       if (!screenMounted.current || !activeSessionToken(session) || !isSessionWitnessCurrent(witness) ||
           readScope !== sessionReadScope(session) || currentWindow.current !== expectedWindow) throw new Error(p('worker.error.sync'));
-      const snapshot = queueRef.current?.snapshot;
-      return synchronizedQueue.current && currentWindow.current === expectedWindow && queueScopeRef.current === expectedWindow && snapshot?.scope === scope ? snapshot : null;
+      return scopedCursor({ window: expectedWindow, scope, readScope, witness });
     };
     try {
       const data = prepared ? null : await readWorkerActionControl(session, apparatusId, orderId, getCursor);
@@ -530,13 +532,18 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
           const pageOrders = queue?.orders[tabId] ?? [];
           const pageActive = tabId === (machineId || 'completed');
           const rows: readonly QueueOrder[] = tabId === 'completed' ? completed : pageOrders;
-          return <WorkerQueueList active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={queueState.controller.refreshAll}
+          return <WorkerSearchQueueList key={tabId} active={pageActive} pagerGesture={pagerGesture} headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + 48} onRefresh={queueState.controller.refreshAll}
+            input={searchInput} sourceQuery={sourceQuery} serverQuery={searchScope} serverReady={queueState.synchronized && loadedScope === windowScope}
+            limit={queueLimit} loading={loading} previewAllowed={!workerQueueReadAuthorizationError(queueState.error)} filterServerRows={tabId === 'completed'}
+            searchText={order => [order.code, order.title, order.customer].join(' ')}
+            emptyState={tabId === 'completed' ? <ListItem>{p('worker.queue.completed.empty')}</ListItem>
+              : pageMachine ? <ListItem>{p('worker.queue.empty.orders', { apparatus: pageMachine.name.trim() })}</ListItem> : undefined}
             rows={rows} rowKey={order => tabId === 'completed' ? `${(order as CompletedOrder).apparatusId}:${order.id}` : order.id}
             footer={Platform.OS !== 'ios' ? <Spacer size={88} /> : undefined}
-            renderRow={(row, index) => {
+            renderRow={(row, index, visibleCount, preview) => {
               if (tabId === 'completed') {
                 const order = row as CompletedOrder;
-                return <WorkerOrderListItem first={Platform.OS !== 'android' && index === 0} last={index === rows.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+                return <WorkerOrderListItem first={Platform.OS !== 'android' && index === 0} last={index === visibleCount - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
                   session={session} orderId={order.id} imageId={order.imageId} imageActive={pageActive} cardTone={order.cardTone}
                   headline={[order.code, order.title].filter(Boolean).join(' · ')}
                   supportingText={[order.customer, order.completedAt ? new Date(order.completedAt * 1000).toLocaleString() : ''].filter(Boolean).join(' · ')}
@@ -545,14 +552,14 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
                   onPress={() => openHistory(order)}
                   onLongPress={!order.issueNote.trim() && canWorkMachine(order.apparatusId) ? () => openOrderActions(order.apparatusId, order, true) : undefined} />;
               }
-              return <WorkerOrderListItem first={Platform.OS !== 'android' && index === 0} last={index === rows.length - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
+              return <WorkerOrderListItem first={Platform.OS !== 'android' && index === 0} last={index === visibleCount - 1} fontFamily={orderFontFamily} headlineFontFamily={orderHeadlineFontFamily}
                 session={session} orderId={row.id} imageId={row.imageId} imageActive={pageActive} cardTone={row.cardTone}
                 headline={[row.code, row.title].filter(Boolean).join(' · ')}
                 supportingText={[row.temporarilyPaused ? p('worker.temporary_pause.status') : '', row.customer].filter(Boolean).join(' • ')}
                 {...(Platform.OS === 'ios' ? { statusText: queueStatusLabel(row),
                   statusDetail: [row.temporarilyPaused ? p('worker.temporary_pause.status') : '', row.customer].filter(Boolean).join(' • ') } : {})}
                 onLongPress={canWork ? () => openOrderActions(tabId, row, false) : undefined}
-                onPress={() => openOrder({ apparatusId: tabId, orderId: row.id, preview: row, readOnly: !canWork })} />;
+                onPress={() => openOrder({ apparatusId: tabId, orderId: row.id, preview: row, readOnly: !canWork, requireFreshDetail: preview })} />;
             }}>
           <WorkerQueueFilter key="queue-filter" machinePicker={machinePicker} labels={workerQueueLimitLabels(locale, QUEUE_LIMITS)} value={queueLimit} enabled={limitReady} loading={!!queue && loading && loadedScope !== windowScope} backgroundColor={colors.surface} onChange={limit => {
             if (limit === queueLimit) return;
@@ -562,10 +569,8 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
           <WorkerQueueConnectionProgress active={loading || retryingQueue} />
           {error ? <ListItem supportingText={error} onPress={() => { void reload(true); }}>{p('worker.action.retry')}</ListItem> : null}
           {queue && !queue.machines.length ? <ListItem>{p('worker.queue.empty.apparatus')}</ListItem> : null}
-          {tabId === 'completed' && !completed.length && !loading ? <ListItem>{p('worker.queue.completed.empty')}</ListItem> : null}
           {Platform.OS !== 'android' && tabId !== 'completed' && canWork ? <ListItem>{p('worker.queue.your.apparatus')}</ListItem> : null}
-          {pageMachine && !pageOrders.length && !loading ? <ListItem>{p('worker.queue.empty.orders', { apparatus: pageMachine.name.trim() })}</ListItem> : null}
-          </WorkerQueueList>;
+          </WorkerSearchQueueList>;
         }}
       </WorkerTabs>
       </>}

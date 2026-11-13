@@ -41,7 +41,7 @@ test('native draft edits notify only the search field until the latest text sett
   const stopQuery = input.subscribeQuery(() => queries.push(input.getQuery()));
   try {
     for (const raw of ['M', 'Mi', 'Mitti', 'Mitti ', 'Mitti brownie']) { input.change(raw); c.advance(40); }
-    assert.equal(input.getText(), 'Mitti brownie'); assert.equal(input.getQuery(), '');
+    assert.equal(input.getText(), 'Mitti brownie'); assert.equal(input.getDraftQuery(), 'Mitti brownie'); assert.equal(input.getQuery(), '');
     assert.deepEqual(text, ['M', 'Mi', 'Mitti', 'Mitti ', 'Mitti brownie']); assert.deepEqual(queries, []);
     c.advance(309); assert.deepEqual(queries, []);
     c.advance(1); assert.deepEqual(queries, ['Mitti brownie']);
@@ -66,9 +66,32 @@ test('clear uses the same delay and unchanged normalized queries never publish a
 test('query normalization retains complete Unicode code points while raw draft remains untouched', () => {
   const c = clock(), input = new WorkerSearchInput(), raw = `  ${'a'.repeat(119)}😀extra  `;
   try {
-    input.change(raw); c.advance(350);
+    input.change(raw);
+    assert.equal(input.getDraftQuery(), `${'a'.repeat(119)}😀`); assert.equal(input.getQuery(), '');
+    c.advance(350);
     assert.equal(input.getText(), raw); assert.equal(input.getQuery(), `${'a'.repeat(119)}😀`);
     assert.equal(Array.from(input.getQuery()).length, 120);
+  } finally { input.cancelPending(); c.restore(); }
+});
+
+test('normalized draft is ready before text listeners and unchanged trimmed snapshots skip draft renders', () => {
+  const c = clock(), input = new WorkerSearchInput('  Keks  '), notifications = [], queries = [];
+  let renderedDraft = input.getDraftQuery(), draftRenders = 0;
+  input.subscribeText(() => {
+    const next = input.getDraftQuery();
+    notifications.push([input.getText(), next]);
+    if (!Object.is(next, renderedDraft)) { renderedDraft = next; draftRenders++; }
+  });
+  input.subscribeQuery(() => queries.push(input.getQuery()));
+  try {
+    assert.equal(input.getText(), '  Keks  '); assert.equal(renderedDraft, 'Keks'); assert.equal(input.getQuery(), 'Keks');
+    input.change(' Keks ');
+    assert.deepEqual(notifications, [[' Keks ', 'Keks']]); assert.equal(draftRenders, 0);
+    input.change('  KEKS  ');
+    assert.equal(input.getText(), '  KEKS  '); assert.equal(input.getDraftQuery(), 'KEKS');
+    assert.equal(draftRenders, 1); assert.deepEqual(queries, []);
+    c.advance(349); assert.equal(input.getQuery(), 'Keks');
+    c.advance(1); assert.deepEqual(queries, ['KEKS']);
   } finally { input.cancelPending(); c.restore(); }
 });
 
