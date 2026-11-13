@@ -69,12 +69,14 @@ test('orders header uses a back button for preparation and keeps the worker menu
   const actions = [];
   const mocks = {
     'react/jsx-runtime': jsx,
-    react: { useEffect() {} },
+    react: { useEffect() {}, useRef: value => ({ current: value }), useCallback: fn => fn, useState: value => [value, () => {}] },
     '@expo/ui': { Host: 'Host', TextInput: 'TextInput', useNativeState: value => ({ get: () => value, set() {} }) },
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { Platform: { OS: 'android' }, Pressable: 'Pressable', View: 'View', StyleSheet: { create: value => value } },
     '../../components/useWorkerColors': { useWorkerColors: () => ({}) },
     '../navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
+    './OrdersSearchInput': { OrdersSearchInput: 'OrdersSearchInput' },
+    './SearchTextSync': { SearchTextSync: class {} },
   };
   const filename = path.resolve(__dirname, '../src/shared/orders/OrdersHeader.tsx'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;

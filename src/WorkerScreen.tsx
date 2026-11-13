@@ -15,6 +15,7 @@ import { useNativeSheet } from './nativeSheet';
 import { OrderScreen } from './OrderScreen';
 import { workerOrderBusyTitle } from './workerOrderBlocking';
 import { useWorkerQueue } from './components/useWorkerQueue';
+import { useWorkerQueueSearch } from './components/useWorkerQueueSearch';
 import { workerQueueReadCanRetry } from './workerQueueReadError';
 import { WorkerQueueConnectionProgress } from './components/WorkerQueueConnectionProgress';
 import { readWorkerActionControl, runWorkerMenuAction, workerLongPressMenu, type WorkerMenu } from './workerLongPress';
@@ -45,7 +46,6 @@ import { WorkerLongPressActions, type WorkerActionChoice } from './components/Wo
 import { WorkerAlert } from './components/WorkerAlert';
 import type { WorkerAlertData } from './components/workerDialogTypes';
 import { DEFAULT_QUEUE_LIMIT, QUEUE_LIMITS, loadQueueLimit, saveQueueLimit, type QueueLimit } from './workerQueueLimit';
-import { workerQueueSearch } from './workerQueueWindow';
 import { useWorkerOrderText } from './components/useWorkerOrderText';
 import { workerPaddonApparatus } from './workerActivePaddon';
 import { WorkerCutControls, WorkerCutSheets, WorkerCutToolbarActions } from './components/WorkerCutControls';
@@ -135,7 +135,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
   const preflightCheck = useRef(0);
   const preflightReopenBusy = useRef(false);
   const queueScopeRef = useRef<string | null>(null);
-  const searchScope = workerQueueSearch(search);
+  const searchScope = useWorkerQueueSearch(search);
   const windowScope = JSON.stringify([searchScope, queueLimit]);
   const currentWindow = useRef(windowScope);
   const queueState = useWorkerQueue(session, searchScope, queueLimit, limitReady);

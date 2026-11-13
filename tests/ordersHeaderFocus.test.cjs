@@ -12,14 +12,24 @@ function nodes(node, predicate) {
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
 function loadHeader(os) {
+  const hooks = []; let cursor = 0;
   const mocks = {
     'react/jsx-runtime': jsx,
-    react: { useEffect() {} },
+    react: {
+      useEffect() {}, useCallback: fn => fn,
+      useRef(value) { const id = cursor++; return hooks[id] ??= { current: value }; },
+      useState(initial) {
+        const id = cursor++, state = hooks[id] ??= { value: typeof initial === 'function' ? initial() : initial };
+        return [state.value, value => { state.value = typeof value === 'function' ? value(state.value) : value; }];
+      },
+    },
     '@expo/ui': { Host: 'Host', TextInput: 'TextInput', useNativeState: value => ({ get: () => value, set() {} }) },
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { Platform: { OS: os }, Pressable: 'Pressable', View: 'View', StyleSheet: { create: value => value } },
     '../../components/useWorkerColors': { useWorkerColors: () => ({}) },
     '../navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
+    './OrdersSearchInput': { OrdersSearchInput: 'OrdersSearchInput' },
+    './SearchTextSync': { SearchTextSync: class { nativeChanged() {} reactChanged() { return false; } } },
   };
   const filename = path.resolve(__dirname, '../src/shared/orders/OrdersHeader.tsx');
   const mod = new Module(filename, module);
@@ -28,26 +38,26 @@ function loadHeader(os) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
-  return mod.exports.OrdersHeader;
+  return props => { cursor = 0; return mod.exports.OrdersHeader(props); };
 }
 
 for (const platform of ['ios', 'android']) {
-  test(`${platform}: existing header defaults retain menu, profile, search and no focus callbacks`, () => {
+  test(`${platform}: existing header defaults retain menu, profile and search without caller focus callbacks`, () => {
     const OrdersHeader = loadHeader(platform), calls = [];
     const tree = OrdersHeader({ search: 'abc', onSearchChange: value => calls.push(['search', value]),
       onMenu: () => calls.push(['menu']), onProfile: () => calls.push(['profile']) });
     const buttons = nodes(tree, n => n.type === 'RoleHeaderButton');
     assert.deepEqual(buttons.map(n => [n.props.icon, n.props.label]), [['menu', 'Bo‘limlar'], ['profile', 'Profil']]);
     buttons[0].props.onPress(); buttons[1].props.onPress();
-    const input = nodes(tree, n => n.type === 'TextInput')[0];
-    assert.equal(input.props.onFocus, undefined); assert.equal(input.props.onBlur, undefined);
+    const input = nodes(tree, n => n.type === 'OrdersSearchInput')[0];
+    assert.equal(typeof input.props.onFocus, 'function'); assert.equal(typeof input.props.onBlur, 'function');
     input.props.onChangeText('next');
     const clear = nodes(tree, n => n.type === 'Pressable' && n.props.accessibilityLabel === 'Qidiruvni tozalash')[0];
     clear.props.onPress();
     assert.deepEqual(calls, [['menu'], ['profile'], ['search', 'next'], ['search', '']]);
   });
 
-  test(`${platform}: opting in lets a caller hide profile only while search is focused`, () => {
+  test(`${platform}: focusing search hides leading and profile while notifying the caller`, () => {
     const OrdersHeader = loadHeader(platform), calls = [];
     let focused = false;
     const render = () => OrdersHeader({ search: '', onSearchChange() {}, onBack: () => calls.push('back'),
@@ -56,15 +66,15 @@ for (const platform of ['ios', 'android']) {
       onSearchBlur: () => { focused = false; calls.push('blur'); } });
     let tree = render(), buttons = nodes(tree, n => n.type === 'RoleHeaderButton');
     assert.deepEqual(buttons.map(n => n.props.icon), ['back', 'profile']);
-    nodes(tree, n => n.type === 'TextInput')[0].props.onFocus();
+    nodes(tree, n => n.type === 'OrdersSearchInput')[0].props.onFocus();
     tree = render(); buttons = nodes(tree, n => n.type === 'RoleHeaderButton');
-    assert.deepEqual(buttons.map(n => n.props.icon), ['back']);
-    buttons[0].props.onPress();
-    nodes(tree, n => n.type === 'TextInput')[0].props.onBlur();
+    assert.deepEqual(buttons.map(n => n.props.icon), []);
+    nodes(tree, n => n.type === 'OrdersSearchInput')[0].props.onBlur();
     tree = render(); buttons = nodes(tree, n => n.type === 'RoleHeaderButton');
     assert.deepEqual(buttons.map(n => n.props.icon), ['back', 'profile']);
+    buttons[0].props.onPress();
     buttons[1].props.onPress();
-    assert.deepEqual(calls, ['focus', 'back', 'blur', 'profile']);
+    assert.deepEqual(calls, ['focus', 'blur', 'back', 'profile']);
   });
 
   test(`${platform}: a custom trailing action replaces profile and preserves the shared search`, () => {
@@ -73,9 +83,8 @@ for (const platform of ['ios', 'android']) {
     const tree = OrdersHeader({ search: 'chat', searchPlaceholder: 'Chatlardan qidirish', trailing,
       onSearchChange: value => calls.push(value), onMenu() {} });
     assert.deepEqual(nodes(tree, node => node.type === 'RoleHeaderButton').map(node => node.props.icon), ['menu']);
-    const input = nodes(tree, node => node.type === 'TextInput')[0];
+    const input = nodes(tree, node => node.type === 'OrdersSearchInput')[0];
     assert.equal(input.props.placeholder, 'Chatlardan qidirish');
-    assert.equal(input.props.textAlign, 'left');
     input.props.onChangeText('next');
     nodes(tree, node => node.type === 'ComposeButton')[0].props.onPress();
     assert.deepEqual(calls, ['next', 'compose']);

@@ -51,7 +51,7 @@ export function useWorkerQueue(session: Session, search: string, limit: QueueLim
     mounts.set(controller, (mounts.get(controller) ?? 0) + 1);
     controller.reserve();
     let foreground = AppState.currentState !== 'background';
-    const timer = setTimeout(() => { if (foreground) void controller.start(); }, search ? 350 : 0);
+    const timer = setTimeout(() => { if (foreground) void controller.start(); }, 0);
     const subscription = AppState.addEventListener('change', next => {
       if (next === 'active' && !foreground) { foreground = true; void controller.resume(); }
       else if (next === 'background' && foreground) { foreground = false; controller.pause(); }

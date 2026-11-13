@@ -193,6 +193,7 @@ function workerScreenHarness(platform, nativeNavigation = true) {
     'expo-font': { useFonts: () => [true] }, 'expo-router': { router: { push: route => routes.push(route) }, useFocusEffect: effect => { preparation.blur = effect(); } },
     'react-native-reanimated': { useSharedValue: () => ({ set() {} }) },
     './components/useWorkerQueue': { useWorkerQueue: () => queueState },
+    './components/useWorkerQueueSearch': { useWorkerQueueSearch: value => value.trim() },
     './components/useWorkerPaddonNavigation': { useWorkerPaddonNavigation: (_visible, owner) => { preparation.paddonOwner = owner; return preparation.paddonOptions; } },
     './workerQueueReadError': { workerQueueReadCanRetry: () => true },
     './workerApi': api,
@@ -754,6 +755,7 @@ test('useWorkerQueue replaces owners for a changed query or assignment scope whi
   };
   class Controller extends WorkerQueueController { constructor(...args) { super(...args); owners.push(this); } }
   let warmLease = 0, backgroundRestarts = 0;
+  const baselineWindows = [];
   const warm = { claim: () => ({ lease: ++warmLease, ready: null, pending: Promise.resolve(null) }),
     release(lease) { if (lease === warmLease) backgroundRestarts++; }, peek: () => null };
   const hook = load('components/useWorkerQueue', {
@@ -761,7 +763,7 @@ test('useWorkerQueue replaces owners for a changed query or assignment scope whi
     'react-native': { AppState: { currentState: 'active', addEventListener: (_name, listener) => { listeners.add(listener); return { remove: () => listeners.delete(listener) }; } } },
     '../auth': { activeSessionToken: value => value.token, sessionWitnessVersion: () => 0, subscribeSessionWitness: () => () => {} },
     '../sessionReadScope': scope, '../workerQueueController': { WorkerQueueController: Controller },
-    '../workerApi': { loadWorkerQueueBaseline: async () => queue(), loadWorkerQueueCatalog: async () => queue().catalog, loadWorkerQueueSnapshot: async () => queue(8).snapshot },
+    '../workerApi': { loadWorkerQueueBaseline: async (_session, search, limit) => { baselineWindows.push([search, limit]); return queue(); }, loadWorkerQueueCatalog: async () => queue().catalog, loadWorkerQueueSnapshot: async () => queue(8).snapshot },
     '../workerQueueReadError': { workerQueueReadCanRetry: () => true },
     '../workerLive': { subscribeWorkerLive: () => () => {} }, '../workerQueueWarmStore': { workerQueueWarmStore: warm },
     '../workerQueueCache': { cancelPendingWorkerQueueSave() {}, forgetWorkerQueue: async () => {}, restoreWorkerQueue: async () => null,
@@ -776,7 +778,8 @@ test('useWorkerQueue replaces owners for a changed query or assignment scope whi
     let changed = render('older', 20); assert.notEqual(changed.controller, first.controller); assert.equal(changed.queue, first.queue);
     await flush(); assert.equal(listeners.size, 1);
     assert.equal(backgroundRestarts, 0, 'changing a live page query must reserve the next page owner before the old release can restart background I/O');
-    c.advance(350); await flush(); changed = render('older', 20); assert.ok(changed.queue);
+    c.advance(0); await flush(); changed = render('older', 20); assert.ok(changed.queue);
+    assert.deepEqual(baselineWindows, [['', 10], ['older', 20]], 'a committed query starts immediately without another debounce');
     s.assigned_apparatus = []; const boundary = render('older', 20);
     assert.notEqual(boundary.controller, changed.controller); assert.equal(boundary.queue, null, 'old-account/assignment display cannot cross its read scope');
     await flush(); assert.equal(listeners.size, 1);
