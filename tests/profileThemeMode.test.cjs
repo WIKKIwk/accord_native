@@ -25,7 +25,7 @@ const react = { useEffect() {}, useState: initial => [initial, () => {}], useRef
   useSyncExternalStore: (_subscribe, snapshot) => snapshot() };
 const security = { hasPin: false, canUseBiometric: false, biometric: false };
 
-for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`Android ${role} profile exposes appearance choices with the correct palette`, async () => {
+for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi', 'homashyo_rezkachi', 'admin', 'future_role']) test(`Android ${role} profile exposes appearance choices with system colors`, async () => {
   const selected = [], sheets = [];
   let appearance = 'system', closed = 0;
   const ui = new Proxy({ useMaterialColors: () => ({}) }, { get: (target, name) => target[name] ?? name });
@@ -47,8 +47,7 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`Android
   const opener = findId(render(), 'profile-appearance');
   assert.deepEqual(nodes(opener, node => node.type === 'Text').map(node => node.props.children), ['themeModeTitle', 'themeModeBody', 'Auto']);
   opener.props.onClick();
-  const dynamic = role === 'tayyorlov_masteri' || role === 'aparatchi';
-  assert.equal(sheets[0].props.dynamicColors, dynamic);
+  assert.equal(sheets[0].props.dynamicColors, true);
   const options = ['system', 'light', 'dark'].map(id => findId(sheets[0], `profile-appearance-${id}`));
   assert.equal(options.filter(Boolean).length, 3);
   assert.deepEqual(nodes(options[0], node => node.type === 'Text')[0].props.children, ['Auto', ' · accountCurrent']);
@@ -58,7 +57,7 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`Android
   assert.deepEqual(nodes(findId(render(), 'profile-appearance'), node => node.type === 'Text').map(node => node.props.children), ['themeModeTitle', 'themeModeBody', 'Qorong‘i']);
   for (const id of ['profile-language', 'profile-theme']) {
     findId(render(), id).props.onClick();
-    assert.equal(sheets.at(-1).props.dynamicColors, dynamic);
+    assert.equal(sheets.at(-1).props.dynamicColors, true);
   }
 });
 

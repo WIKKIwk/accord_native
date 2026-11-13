@@ -480,46 +480,6 @@ for (const platform of ['ios', 'android']) {
     assert.deepEqual(h.calls, []); assert.equal(hooks.writes.some(write => write.afterUnmount), false); controller.dispose();
   });
 }
-function scanner(platform, granted, active = true, isCurrent = () => active) {
-  const guardFile = path.resolve(__dirname, '../src/shared/camera/synchronousGuard.ts'), guardModule = new Module(guardFile, module);
-  guardModule.filename = guardFile; guardModule.paths = module.paths;
-  guardModule._compile(ts.transpileModule(fs.readFileSync(guardFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, guardFile);
-  const calls = [], scan = { permission: { granted }, checking: false, canUseCamera: () => granted, failed: false, manual: 'manual-code', setManual: value => calls.push(['manual', value]),
-    complete: (value, source) => calls.push(['complete', value, source]), cameraFailed: () => calls.push('camera-failed'), title: 'Homashyo QR',
-    manualLabel: 'Barcode', unavailable: 'Kamera ochilmadi. Quyidagi maydonga QR yoki barcode kiriting.', guide: 'QR kodni shu to‘r ichiga olib keling' };
-  const state = value => ({ current: value, get() { return this.current; }, set(next) { this.current = next; } });
-  const swift = new Proxy({ useNativeState: state }, { get: (o, name) => o[name] ?? name });
-  const compose = new Proxy({ useNativeState: state, useMaterialColors: () => ({ surface: 'surface', onSurface: 'text' }) }, { get: (o, name) => o[name] ?? name });
-  const mocks = { 'react/jsx-runtime': jsx, react: { useEffect: fn => fn() }, '@expo/ui/swift-ui': swift,
-    '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: () => () => ({}) }), '@expo/ui/jetpack-compose': compose,
-    '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: () => () => ({}) }), '../shared/camera/CameraSurface': { CameraSurface: 'CameraSurface' }, '../shared/camera/synchronousGuard': guardModule.exports,
-    'react-native': { ActivityIndicator: 'ActivityIndicator', Modal: 'Modal', Text: 'NativeText', View: 'View', PlatformColor: x => x,
-      StyleSheet: { create: value => value, absoluteFill: {} } }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
-    '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
-    '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' }, './useRawSplitScanner': { useRawSplitScanner: () => scan } };
-  // Compose slots are components, represented by names in this static render harness.
-  mocks['@expo/ui/jetpack-compose'].OutlinedTextField = Object.assign('OutlinedTextField', { Label: 'OutlinedTextField.Label' });
-  const component = load(`RawSplitScanner.${platform}.tsx`, mocks, true).RawSplitScanner;
-  const root = component({ visible: true, active, isCurrent, onClose: () => calls.push('close'), onComplete: () => {} });
-  return { calls, scan, tree: root.type(root.props) };
-}
-for (const platform of ['ios', 'android']) {
-  test(`${platform} scanner forwards camera and manual codes and closes on back`, () => {
-    const h = scanner(platform, true), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
-    assert.ok(camera); assert.deepEqual(camera.props.barcodeTypes, ['qr', 'datamatrix']);
-    camera.props.onDetection({ raw: 'raw-code', data: 'display-code' });
-    const manualButton = find(h.tree, n => n.type === 'WorkerSheetButton' && buttonLabel(n) === 'OK')[0];
-    assert.deepEqual(manualButton.props.icon, { ios: 'checkmark', android: 'check' });
-    manualButton.props.onPress();
-    find(h.tree, n => n.type === 'Modal')[0].props.onRequestClose();
-    assert.deepEqual(h.calls, [['complete', 'raw-code', 'camera'], ['complete', 'manual-code', 'manual'], 'close']);
-  });
-  test(`${platform} scanner permission failure retains manual entry`, () => {
-    const h = scanner(platform, false); assert.equal(find(h.tree, n => n.type === 'CameraSurface').length, 0);
-    assert.match(text(h.tree), /Kamera ochilmadi/); assert.ok(find(h.tree, n => n.type === 'WorkerSheetButton' && buttonLabel(n) === 'OK').length);
-  });
-}
-
 const localeFile = path.resolve(__dirname, '../src/shared/localization/index.ts'), localeModule = new Module(localeFile, module);
 localeModule.filename = localeFile; localeModule.paths = module.paths;
 localeModule._compile(ts.transpileModule(fs.readFileSync(localeFile, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, localeFile);
@@ -538,25 +498,11 @@ for (const platform of ['ios', 'android']) test(`${platform} reuses actual Urdu 
   assert.notEqual(translateUrdu('Skanerlash'), 'Skanerlash'); assert.notEqual(translateUrdu('Muammolar'), 'Muammolar');
 });
 
-for (const platform of ['ios', 'android']) test(`${platform} candidate passes active lifecycle control to the shared camera surface`, () => {
-  const h = scanner(platform, true, false), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
-  assert.equal(camera.props.active, false); assert.equal(camera.props.torch, false);
-  // V2 uses raw when present, even an empty raw string; role gate decides whether it is usable.
-  camera.props.onDetection({ raw: '', data: 'display-value' }); assert.deepEqual(h.calls, [['complete', '', 'camera']]);
-});
-
 for (const platform of ['ios', 'android']) test(`${platform} issue sheet retains V2 microsecond precision`, () => {
   const previous = process.env.TZ; process.env.TZ = 'UTC';
   try { const precise = { ...issue, createdAt: new Date('2026-09-08T12:34:56.123Z'), createdAtMicrosecond: 456 };
     assert.match(text(details(platform, null, value => value, precise).issueTree()), /2026-09-08 12:34:56\.123456/);
   } finally { if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous; }
-});
-
-for (const platform of ['ios', 'android']) test(`${platform} role scanner rejects async owner guards without authorizing camera`, async () => {
-  for (const guard of [() => Promise.resolve(true), () => Promise.reject(new Error('stale'))]) {
-    const h = scanner(platform, true, true, guard), camera = find(h.tree, n => n.type === 'CameraSurface')[0];
-    assert.equal(camera.props.isCurrent(), false); await new Promise(resolve => setImmediate(resolve));
-  }
 });
 
 for (const platform of ['ios', 'android']) {

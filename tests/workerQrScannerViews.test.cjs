@@ -58,12 +58,12 @@ test('camera preview keeps its frame square and inside the preview on small phon
       '../shared/camera/CameraSurface': { CameraSurface: 'CameraSurface' },
     }).WorkerQrScannerPreview;
     const scanned = [], camera = { active: true, permission: { granted: true }, current: () => true, torch: false, ready: true, generation: 2,
-      scan: value => scanned.push(value), onError() {}, onReady() {} };
+      scan: (value, raw) => scanned.push([value, raw]), onError() {}, onReady() {} };
     const tree = render({ camera, torch: 'Torch' }), previewHeight = tree.props.style[1].height;
     const frame = nodes(tree, n => Array.isArray(n.props?.style) && n.props.style[0]?.borderWidth === 2)[0].props.style[1];
     assert.equal(frame.width, frame.height); assert(frame.height < previewHeight); assert(frame.width < width - 40);
     const surface = nodes(tree, n => n.type === 'CameraSurface')[0]; assert.deepEqual(surface.props.barcodeTypes, ['qr', 'datamatrix']);
-    surface.props.onDetection({ data: 'QR' }); assert.deepEqual(scanned, ['QR']);
+    surface.props.onDetection({ data: 'QR', raw: 'RAW' }); assert.deepEqual(scanned, [['QR', 'RAW']]);
     camera.active = false;
     assert.equal(nodes(render({ camera, torch: 'Torch' }), n => n.props?.style?.right === 12).length, 0);
   }

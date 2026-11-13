@@ -32,7 +32,6 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   const variant = useSyncExternalStore(subscribeTheme, currentVariant, currentVariant);
   const t = (key: string) => localizedGetter(key, locale);
   const colors = useMaterialColors();
-  const dynamicColors = session.profile.role === 'tayyorlov_masteri' || session.profile.role === 'aparatchi';
   const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
   const switchPin = useSwitchPinSetup(session);
@@ -81,7 +80,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   };
 
   const chooseLanguage = () => {
-    selectionSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
+    selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('languageTitle')}</Text>
       <Text color={colors.onSurfaceVariant}>{t('languageBody')}</Text>
       {languages.map(choice => <TextButton key={choice.id} onClick={() => {
@@ -92,7 +91,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   };
 
   const chooseAppearance = () => {
-    selectionSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
+    selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('themeModeTitle')}</Text>
       {appearanceChoices.map(choice => <TextButton key={choice.id} onClick={() => {
         selectionSheet.close();
@@ -104,7 +103,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   };
 
   const chooseTheme = () => {
-    selectionSheet.open(<Host dynamicColors={dynamicColors} style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
+    selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('themeTitle')}</Text>
       <Text color={colors.onSurfaceVariant}>{t('themeBody')}</Text>
       {themes.map(choice => <TextButton key={choice.id} onClick={() => {

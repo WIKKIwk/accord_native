@@ -4,15 +4,16 @@ import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-
 import { CameraSurface } from '../shared/camera/CameraSurface';
 import type { WorkerQrScannerModel } from './useWorkerQrScanner';
 
+type ScannerCamera = Omit<WorkerQrScannerModel['camera'], 'scan'> & { scan(value: string, raw?: string): void };
 /** Only the camera and its framing are shared; sheet chrome and controls are native. */
-export function WorkerQrScannerPreview({ camera, torch }: { camera: WorkerQrScannerModel['camera']; torch: ReactNode }) {
+export function WorkerQrScannerPreview({ camera, torch }: { camera: ScannerCamera; torch: ReactNode }) {
   const { width, height } = useWindowDimensions();
   const previewHeight = Math.min(360, Math.round(height * 0.38));
   const frameSize = Math.min(260, Math.round(previewHeight * 0.76), Math.round((Math.min(width, 560) - 40) * 0.68));
   return <View style={[styles.preview, { height: previewHeight }]}>
     <CameraSurface active={camera.active} permission={camera.permission} checking={!camera.permission} isCurrent={camera.current}
       facing="back" torch={camera.torch} barcodeTypes={['qr', 'datamatrix']} sessionKey={`worker-fab:${camera.generation}`}
-      style={StyleSheet.absoluteFill} onDetection={event => camera.scan(event.data)} onMountError={camera.onError} onReady={camera.onReady} />
+      style={StyleSheet.absoluteFill} onDetection={event => camera.scan(event.data, event.raw)} onMountError={camera.onError} onReady={camera.onReady} />
     {camera.active && !camera.unavailable && <View pointerEvents="none" style={styles.overlay}>
       <View style={[styles.frame, { width: frameSize, height: frameSize }]} />
       {!camera.ready && <ActivityIndicator color="#ffffff" size="large" style={styles.spinner} />}

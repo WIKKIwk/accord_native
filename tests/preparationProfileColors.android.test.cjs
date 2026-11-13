@@ -37,7 +37,7 @@ test('Android host can follow system colors while preserving text direction', ()
   assert.equal(configured.props.colorOverrides, theme.colors);
 });
 
-for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`${role} profile uses its surrounding Android theme`, () => {
+for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi', 'homashyo_rezkachi', 'admin']) test(`${role} profile uses Android system colors`, () => {
   const opened = [], sheets = [], materialOptions = [];
   const FieldGroup = Object.assign(() => {}, { Section: 'FieldSection' });
   const react = { useCallback: fn => fn, useLayoutEffect: fn => fn(), useRef: value => ({ current: value }),
@@ -46,26 +46,24 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi']) test(`${role}
     react,
     '@expo/ui': { Button: 'Button', Column: 'Column', FieldGroup, ListItem: 'ListItem', RNHostView: 'RNHostView', Row: 'Row', ScrollView: 'ScrollView', Spacer: 'Spacer', Text: 'Text', TextInput: 'TextInput', useNativeState: value => value },
     '@expo/ui/jetpack-compose': { PullToRefreshBox: 'PullToRefreshBox', useMaterialColors: options => { materialOptions.push(options); return { surfaceContainerLow: 'system-background', onSurfaceVariant: 'system-muted' }; } },
-    'react-native': { Alert: { alert() {} }, useColorScheme: () => 'light' },
+    'react-native': { Alert: { alert() {} } },
     '../profileModel': { profileDisplay: () => ({ name: 'Ibrohim', role: 'Master', phone: '123', apparatusLabels: [] }) },
     '../nativeSheet': { useNativeSheet: () => { const index = sheets.length, sheet = { isOpen: () => false, open: value => { opened[index] = value; }, close() {}, update() {} }; sheets.push(sheet); return sheet; } },
     '../shared/localization': { localizedGetter: key => key },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './BaseHost': { BaseHost: 'BaseHost' },
-    './useBaseTheme': { useBaseTheme: () => ({ colors: { onSurfaceVariant: 'configured-muted' } }) },
   };
   const { ProfileView } = load('ProfileView.android.tsx', mocks);
   const page = ProfileView({ session: { profile: { role } }, snapshot: { profile: {} }, editing: true, busy: false,
     onOpenEditor() {}, onCloseEditor() {}, onLogout() {}, onDailyWork() {} });
-  const dynamic = role === 'tayyorlov_masteri' || role === 'aparatchi';
   assert.deepEqual(materialOptions, [{}]);
-  assert.equal(page.props.dynamicColors, dynamic);
+  assert.equal(page.props.dynamicColors, true);
   const group = nodes(page, node => node.type === FieldGroup)[0];
-  assert.deepEqual(group.props.style, dynamic ? { backgroundColor: 'system-background' } : undefined);
+  assert.deepEqual(group.props.style, { backgroundColor: 'system-background' });
   const secondary = nodes(page, node => node.type === 'Text' && node.props.children === 'Master')[0];
-  assert.equal(secondary.props.textStyle.color, dynamic ? 'system-muted' : 'configured-muted');
-  assert.equal(opened[0].props.dynamicColors, dynamic);
+  assert.equal(secondary.props.textStyle.color, 'system-muted');
+  assert.equal(opened[0].props.dynamicColors, true);
   const settings = nodes(page, node => node.type === 'Button' && node.props.testID === 'profile-settings')[0];
   settings.props.onPress();
-  assert.equal(opened[1].props.dynamicColors, dynamic);
+  assert.equal(opened[1].props.dynamicColors, true);
 });

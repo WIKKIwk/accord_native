@@ -36,12 +36,13 @@ export function useRawSplitHomeScreen() {
     generation.current++; lease.current = next; open.current = true; setVisible(true); setCameraActive(true);
   };
   const scannerGeneration = generation.current;
-  const complete: (barcode: string, source?: RawSplitScanSource) => void = barcode => {
-    if (scannerGeneration !== generation.current || !isScannerCurrent()) return;
+  const complete: (barcode: string, source?: RawSplitScanSource) => boolean = barcode => {
+    if (scannerGeneration !== generation.current || !isScannerCurrent()) return false;
     const currentLease = lease.current!, dispatch = ++generation.current;
     hide(); runtime.home.setBarcode(barcode);
-    if (dispatch !== generation.current || !isOwnerCurrent() || !currentLease()) return;
+    if (dispatch !== generation.current || !isOwnerCurrent() || !currentLease()) return true;
     void runtime.home.lookup(barcode).catch(error => { if (dispatch === generation.current && isOwnerCurrent()) Alert.alert('Xatolik', String(error)); });
+    return true;
   };
   return { controller: runtime.home, visible, cameraActive, isScannerCurrent, scan, close, complete, issueRevision };
 }

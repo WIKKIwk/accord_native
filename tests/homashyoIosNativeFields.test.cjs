@@ -11,29 +11,18 @@ function find(node, predicate) {
   if (Array.isArray(node)) return node.flatMap(value => find(value, predicate));
   return [...(predicate(node) ? [node] : []), ...find(node.props?.children, predicate)];
 }
-test('iOS manual scanner retains its visible accessible label after a code is entered', () => {
-  const filename = path.resolve(__dirname, '../src/homashyo/RawSplitScanner.ios.tsx'), mod = new Module(filename, module);
-  const calls = [], scan = { manual: 'ROLL-123', manualLabel: 'QR / shtrix-kod', title: 'Skanerlash', permission: { granted: false },
-    unavailable: 'Kamera ochilmadi', setManual: value => calls.push(value), complete: (...args) => calls.push(args) };
-  const mocks = { 'react/jsx-runtime': jsx, react: { useEffect: effect => effect() },
-    '@expo/ui/swift-ui': new Proxy({ useNativeState: initial => { let value = initial; return { get: () => value, set: next => { value = next; } }; } }, { get: (o, key) => o[key] ?? key }),
-    '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_, key) => (...args) => ({ kind: key, args }) }),
-    'react-native': { ActivityIndicator: 'ActivityIndicator', KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', Text: 'NativeText', View: 'View', PlatformColor: name => name, StyleSheet: { create: value => value } },
-    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
-    '../shared/camera/CameraSurface': { CameraSurface: 'CameraSurface' }, '../shared/camera/synchronousGuard': {},
-    '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
-    './useRawSplitScanner': { useRawSplitScanner: () => scan } };
+test('shared scanner dialog retains the manual barcode label and value on iOS', () => {
+  const filename = path.resolve(__dirname, '../src/components/WorkerQrScannerDialogs.tsx'), mod = new Module(filename, module);
+  const calls = [], labels = { manual: 'Kodni kiriting', payload: 'QR / shtrix-kod', cancel: 'Bekor qilish', verify: 'Tekshirish' };
+  const model = { labels, error: '', manualOpen: true, manual: 'ROLL-123', busy: false,
+    setManual: value => calls.push(value), cancelManual() {}, confirmManual() {}, manualDismissed() {}, clearError() {} };
+  const mocks = { 'react/jsx-runtime': jsx, './WorkerAlert': { WorkerAlert: 'WorkerAlert' },
+    './WorkerFormDialog': { WorkerFormDialog: 'WorkerFormDialog' }, './WorkerFormField': { WorkerFormField: 'WorkerFormField' } };
   mod.filename = filename; mod.paths = module.paths; mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
-  const session = mod.exports.RawSplitScanner({ visible: true, active: true, isCurrent: () => true, onClose() {}, onComplete() {} });
-  const tree = session.type(session.props), field = find(tree, node => node.type === 'TextField')[0];
-  assert.equal(find(tree, node => node.type === 'KeyboardAvoidingView')[0].props.behavior, 'padding');
-  assert.equal(field.props.text.get(), 'ROLL-123');
-  assert.equal(find(tree, node => node.type === 'Text' && node.props.children === scan.manualLabel).length, 1);
-  assert.equal(field.props.placeholder, undefined);
-  assert.ok(field.props.modifiers.some(modifier => modifier.kind === 'accessibilityLabel' && modifier.args[0] === scan.manualLabel));
-  field.props.modifiers.find(modifier => modifier.kind === 'onSubmit').args[0]();
-  assert.deepEqual(calls, [['ROLL-123', 'manual']]);
+  const tree = mod.exports.WorkerQrScannerDialogs({ model }), field = find(tree, node => node.type === 'WorkerFormField')[0];
+  assert.equal(field.props.label, labels.payload); assert.equal(field.props.initialValue, 'ROLL-123');
+  field.props.onChangeText('ROLL-456'); assert.deepEqual(calls, ['ROLL-456']);
 });
 
 test('iOS printer picker reuses the dismissible native sheet and all existing transport choices', () => {

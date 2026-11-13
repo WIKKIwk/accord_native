@@ -110,7 +110,7 @@ function scannerHarness() {
 test('camera detection closes the scanner and looks up directly without another confirmation', async () => {
   const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render();
   assert.equal(flow.visible, true); assert.equal(flow.cameraActive, true); assert.equal(flow.isScannerCurrent(), true);
-  flow.complete('CODE-123'); await flush(); flow = h.render();
+  assert.equal(flow.complete('CODE-123'), true); await flush(); flow = h.render();
   assert.deepEqual(h.values, ['CODE-123']); assert.deepEqual(h.lookups, ['CODE-123']); assert.equal(h.alert(), undefined);
   assert.equal(flow.visible, false); assert.equal(flow.cameraActive, false); assert.equal(flow.isScannerCurrent(), false); h.unmount();
 });
@@ -155,7 +155,7 @@ test('a stale camera callback cannot look up after a second scan, Back, or backg
     if (action === 'second') { flow.scan(); flow = h.render(); flow.complete('NEW'); }
     else if (action === 'back') flow.close();
     else { h.app('background'); h.app('active'); }
-    oldComplete('OLD'); await flush();
+    assert.equal(oldComplete('OLD'), false); await flush();
     assert.deepEqual(h.lookups, action === 'second' ? ['NEW'] : [], action); assert.equal(h.alert(), undefined); h.unmount();
   }
 });

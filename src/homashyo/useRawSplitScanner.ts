@@ -23,7 +23,17 @@ export function useRawSplitScanner(active: boolean, isCurrent: () => boolean, on
     if (!active || !isSynchronouslyTrue(isCurrent)) return;
     const barcode = gate.current.accept(raw); if (barcode !== null) onComplete(barcode, source);
   }, [active, isCurrent, onComplete]);
+  const retry = useCallback(async () => {
+    if (!active || !isSynchronouslyTrue(isCurrent)) return;
+    setFailed(false);
+    if (!permission?.granted || permissionError) {
+      requested.current = true;
+      try { await requestPermission(); }
+      catch { if (isSynchronouslyTrue(isCurrent)) setFailed(true); }
+    }
+  }, [active, isCurrent, permission, permissionError, requestPermission]);
   return { permission, checking, canUseCamera, failed: failed || (active && !!permissionError), manual, setManual, complete, cameraFailed: () => setFailed(true),
+    retry,
     title: productionText('worker.material.scanner.title', locale), manualLabel: productionText('worker.material.scanner.manual', locale),
     unavailable: productionText('worker.scanner.unavailable', locale), guide: productionText('worker.scanner.guide', locale) };
 }
