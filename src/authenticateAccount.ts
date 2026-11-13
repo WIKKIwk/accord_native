@@ -5,7 +5,7 @@ type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
 const typedString = (value: unknown) => { if (value == null) return ''; if (typeof value !== 'string') throw new TypeError('Invalid profile string'); return value; };
 const typedList = (value: unknown): unknown[] => { if (value == null) return []; if (!Array.isArray(value)) throw new TypeError('Invalid profile list'); return value; };
-const roleNames = new Set(['supplier', 'werka', 'customer', 'aparatchi', 'qolipchi', 'boyoqchi', 'tayyorlov_masteri', 'material_taminotchi', 'admin', 'homashyo_rezkachi', 'sales_manager', 'brigader', 'rezka_master']);
+const roleNames = new Set(['supplier', 'werka', 'customer', 'aparatchi', 'qolipchi', 'boyoqchi', 'tayyorlov_masteri', 'material_taminotchi', 'admin', 'homashyo_rezkachi', 'sales_manager', 'brigader', 'rezka_master', 'metalayzer']);
 export class MobileLoginException extends Error { constructor(readonly statusCode: number) { super(`Login failed (${statusCode})`); } }
 
 export function profileFromLogin(payload: Obj) {

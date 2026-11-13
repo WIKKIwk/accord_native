@@ -125,6 +125,8 @@ export const appRoutes = {
   "preparation": "/preparation",
   "preparationFormulas": "/preparation-formulas",
   "preparationProduction": "/preparation-production",
+  /** @v2 AppRoutes.metalayzer */
+  "metalayzer": "/metalayzer",
   /** @v2 AppRoutes.rawMaterialSplit */
   "rawMaterialSplit": "/raw-material-split",
   /** @v2 AppRoutes.rawMaterialSplitHistory */
@@ -320,6 +322,9 @@ const routeCapabilities: Record<string, readonly string[]> = {
   ],
   "/preparation-production": [
     "preparation.access"
+  ],
+  "/metalayzer": [
+    "metalayzer.access"
   ],
   "/raw-material-split": [
     "raw_material.split"
@@ -666,6 +671,7 @@ export function homeRoute(session: Session | null): string {
   if (role === 'brigader' && has('brigader.access')) return appRoutes.brigaderHome;
   if (role === 'sales_manager' && has('sales.access')) return appRoutes.salesHome;
   if (role === 'homashyo_rezkachi' && has('raw_material.split')) return appRoutes.rawMaterialSplit;
+  if (role === 'metalayzer' && has('metalayzer.access')) return appRoutes.metalayzer;
   if (role === 'tayyorlov_masteri' && has('preparation.access')) return appRoutes.preparation;
   if (role === 'qolipchi' && has('qolip.manage')) return appRoutes.qolipHome;
   if (has('admin.access')) return appRoutes.adminHome;
@@ -695,6 +701,8 @@ export function canOpenRoute(session: Session | null, routeName: string | null):
   if (!loggedIn(session)) return false;
   const role = session.profile.role;
   const has = (code: string) => session.capabilities.includes(code);
+  if (role === 'metalayzer') return routeName === appRoutes.metalayzer && has('metalayzer.access');
+  if (routeName === appRoutes.metalayzer) return false;
   if (routeName === appRoutes.inventoryMovements && role === 'tayyorlov_masteri') return has('preparation.access');
   if (role === 'rezka_master') return has('rezka.master.access') && rezkaRoutes.has(routeName);
   if (role === 'brigader') return has('brigader.access') && brigaderRoutes.has(routeName);
@@ -713,6 +721,7 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.boyoqchiHome]: { ios: '/ios-boyoqchi' as Href, android: '/android-boyoqchi' as Href },
   [appRoutes.materialHome]: { ios: '/ios-material' as Href, android: '/android-material' as Href },
   [appRoutes.rawMaterialSplit]: { ios: '/ios-homashyo' as Href, android: '/android-homashyo' as Href },
+  [appRoutes.metalayzer]: { ios: '/ios-metalayzer' as Href, android: '/android-metalayzer' as Href },
   [appRoutes.rezkaSplit]: { ios: '/rezka-split' as Href, android: '/rezka-split' as Href },
 };
 
