@@ -3,7 +3,7 @@ import type { SavedAccount } from '../savedAccountStore';
 const roles: Record<string, string> = {
   tayyorlov_masteri: 'Tayyorlov masteri', homashyo_rezkachi: 'Homashyo rezkachisi', rezka_master: 'Rezka master',
   brigader: 'Brigader', sales_manager: 'Sotuv manageri', werka: 'Werka', customer: 'Haridor', aparatchi: 'Aparatchi',
-  qolipchi: 'Qolipchi', boyoqchi: 'Bo‘yoqchi', material_taminotchi: 'Material ta\'minotchisi', admin: 'Admin',
+  qolipchi: 'Qolipchi', boyoqchi: 'Bo‘yoqchi', material_taminotchi: 'Material ta\'minotchisi', admin: 'Admin', metalayzer: 'Metalayzer',
 };
 const trimmed = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 

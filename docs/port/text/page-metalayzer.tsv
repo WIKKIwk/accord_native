@@ -1,0 +1,10 @@
+both	Server javobi noto‘g‘ri.	Unrelated daily-work parser, not called by Metalayzer: src/dailyWork.ts:48
+both	Sessiya tugagan. Qayta kiring.	Unrelated daily-work reader, not called by Metalayzer: src/dailyWork.ts:77
+both	Kunlik ishlarni ko‘rishga ruxsat yo‘q.	Unrelated daily-work reader, not called by Metalayzer: src/dailyWork.ts:78
+both	Metalayzer sessiyasi mavjud emas	Developer-only context invariant, never displayed by a valid role tree: src/metalayzer/MetalayzerContext.tsx:9
+ios	#ffffff	Color literal, not displayed text: src/metalayzer/MetalayzerScanner.ios.tsx
+ios	#ffffff80	Color literal, not displayed text: src/metalayzer/MetalayzerScanner.ios.tsx
+android	#fff	Color literal, not displayed text: src/metalayzer/MetalayzerScanner.android.tsx
+both	Kutmoqda	Unrelated daily-work status type, not used by Metalayzer: src/dailyWork.ts:38
+both	Chiqish	V2 role drawer uses localized logoutTitle: lib/src/core/widgets/navigation/role_navigation_drawer.dart and core/localization/app_localizations_AppLocalizations_resplit_class_AppLocalizations_resplit2_methods_01.dart:358
+both	Orqaga	V2 scanner uses Flutter AppBar back button: lib/src/features/admin/presentation/raw_material_scan_dialog_declarations_part_03.dart:192; Flutter Uzbek backButtonTooltip is Orqaga

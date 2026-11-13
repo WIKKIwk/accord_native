@@ -64,7 +64,7 @@ export async function gscaleItemsPage(session: Session, options: GscaleItemsOpti
 
 export type WarehouseAssignment = { warehouse: string; principal_role: string; principal_ref: string; display_name: string };
 const roles = new Set(['supplier', 'werka', 'customer', 'aparatchi', 'qolipchi', 'boyoqchi', 'tayyorlov_masteri',
-  'material_taminotchi', 'admin', 'homashyo_rezkachi', 'sales_manager', 'brigader', 'rezka_master']);
+  'material_taminotchi', 'admin', 'homashyo_rezkachi', 'sales_manager', 'brigader', 'rezka_master', 'metalayzer']);
 /** @v2 adminWarehouseAssignments */
 export async function adminWarehouseAssignments(session: Session, warehouse = ''): Promise<WarehouseAssignment[]> {
   const query = new URLSearchParams();

@@ -13,6 +13,7 @@ const roleLabels: Record<string, string> = {
   customer: 'Mijoz',
   homashyo_rezkachi: 'Xomashyo kesuvchi',
   material_taminotchi: 'Material ta’minotchisi',
+  metalayzer: 'Metalayzer',
   qolipchi: 'Qolipchi',
   sales_manager: 'Sotuv menejeri',
   supplier: 'Yetkazib beruvchi',

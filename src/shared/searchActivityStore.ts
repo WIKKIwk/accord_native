@@ -11,7 +11,7 @@ const normalize = (value: string) => value.trim().toLowerCase();
 /** @v2 SessionProfile.accessRole */
 export function sessionAccessRole(session: Session): string | null {
   const role = session.profile.role, has = (capability: string) => session.capabilities.includes(capability);
-  const special = [['rezka_master', 'rezka.master.access'], ['brigader', 'brigader.access'],
+  const special = [['metalayzer', 'metalayzer.access'], ['rezka_master', 'rezka.master.access'], ['brigader', 'brigader.access'],
     ['sales_manager', 'sales.access'], ['homashyo_rezkachi', 'raw_material.split'],
     ['tayyorlov_masteri', 'preparation.access']];
   for (const [candidate, capability] of special) if (role === candidate && has(capability)) return enumNames[candidate] ?? candidate;
