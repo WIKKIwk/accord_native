@@ -5,6 +5,7 @@ import { PreparationList, usePreparationText } from '../preparation/PreparationU
 import { rawSplitHistorySubtitle, rawSplitHistoryTime, rawSplitHistoryTitle, rawSplitIssueTime } from './rawSplitHistoryPresentation';
 import type { RawSplitHistoryViewProps } from './rawSplitHistoryViewTypes';
 
+// @v2 RawMaterialSplitHistoryScreen
 export function RawSplitHistory({ controller, onResult, onIssue }: RawSplitHistoryViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), t = usePreparationText();
   // V2 starts the first reload in initState, before the initial frame.

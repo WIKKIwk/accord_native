@@ -10,6 +10,7 @@ import { rawSplitHistorySubtitle, rawSplitHistoryTime, rawSplitHistoryTitle, raw
 import type { RawSplitHistoryViewProps } from './rawSplitHistoryViewTypes';
 
 const passthrough = () => true;
+// @v2 RawMaterialSplitHistoryScreen
 export function RawSplitHistory({ controller, onResult, onIssue }: RawSplitHistoryViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const colors = useMaterialColors(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), t = usePreparationText();

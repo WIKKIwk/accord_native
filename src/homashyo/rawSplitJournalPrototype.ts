@@ -1,7 +1,7 @@
 /**
  * UNCONNECTED, FAIL-CLOSED EXPERIMENT. Nothing in the app imports this file.
  * There is no native adapter, transport, printer, recovery marker, outcome
- * verifier or acknowledgment verifier. The production write/print hold stays on.
+ * verifier or acknowledgment verifier. The role uses its existing V2 command flow.
  *
  * A missing journal may mean deletion, rollback, restoration or reinstall. Even a
  * present value can be an older valid snapshot. A caller's assertion, a version

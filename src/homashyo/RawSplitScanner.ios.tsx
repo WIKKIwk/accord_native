@@ -1,9 +1,9 @@
-import { Host, Text as SwiftText, TextField, useNativeState } from '@expo/ui/swift-ui';
-import { frame, onSubmit, submitLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
+import { Host, Text as SwiftText, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { accessibilityLabel, frame, onSubmit, submitLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
 import { CameraSurface } from '../shared/camera/CameraSurface';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { useEffect } from 'react';
-import { ActivityIndicator, Modal, PlatformColor, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, PlatformColor, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerIconButton } from '../components/WorkerIconButton';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
@@ -16,7 +16,7 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
   const scan = useRawSplitScanner(active, isCurrent, onComplete), input = useNativeState(''), insets = useSafeAreaInsets();
   useEffect(() => { if (input.get() !== scan.manual) input.set(scan.manual); }, [input, scan.manual]);
   return <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-    <View style={[styles.root, { backgroundColor: PlatformColor('systemBackground'), paddingTop: insets.top }]}>
+    <KeyboardAvoidingView behavior="padding" style={[styles.root, { backgroundColor: PlatformColor('systemBackground'), paddingTop: insets.top }]}>
       <View style={styles.header}><WorkerIconButton icon="back" label="Orqaga" onPress={onClose} />
         <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><SwiftText>{scan.title}</SwiftText></Host></View>
       <View style={styles.preview}>
@@ -31,10 +31,12 @@ function ScannerSession({ active, isCurrent, onClose, onComplete }: { active: bo
         </View>}
       </View>
       <View style={[styles.manual, { paddingBottom: Math.max(insets.bottom, 16) }]}><Host matchContents={{ vertical: true }} style={{ flex: 1 }}>
-        <TextField text={input} placeholder={scan.manualLabel} onTextChange={scan.setManual}
-          modifiers={[textFieldStyle('roundedBorder'), frame({ maxWidth: Infinity }), submitLabel('done'), onSubmit(() => scan.complete(scan.manual, 'manual'))]} />
+        <VStack alignment="leading" spacing={3}><SwiftText>{scan.manualLabel}</SwiftText>
+          <TextField text={input} onTextChange={scan.setManual}
+            modifiers={[accessibilityLabel(scan.manualLabel), textFieldStyle('roundedBorder'), frame({ maxWidth: Infinity }), submitLabel('done'), onSubmit(() => scan.complete(scan.manual, 'manual'))]} />
+        </VStack>
       </Host><View style={{ width: 92 }}><WorkerSheetButton label="OK" icon={{ ios: 'checkmark', android: 'check' }} variant="filled" onPress={() => scan.complete(scan.manual, 'manual')} /></View></View>
-    </View>
+    </KeyboardAvoidingView>
   </Modal>;
 }
 const styles = StyleSheet.create({ root: { flex: 1 }, header: { minHeight: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },

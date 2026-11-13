@@ -1,7 +1,7 @@
 # homashyo
 
 Status: functional port integrated on main; device verification and documented parity items remain open
-Stopped at: Real-account stock save, issue save, exact pending-command retry, printer selection and reprint now run through the existing APIs and native components. Final gates are being recorded below.
+Stopped at: Real-account stock save, issue save, exact pending-command retry, printer selection and reprint now run through the existing APIs and native components. Code and automated gates are complete for this checkpoint; phone/printer verification and the explicit parity items below remain open.
 
 ## Scope and source
 
@@ -21,7 +21,12 @@ The user explicitly requested work directly on `main` on 2026-11-13 and reuse of
 
 - Logic/API/pending recovery/native print tests: 151/151 passed before the final UI gate.
 - V2 recorded-contract replays run with the real V4 dispatch policy and fake transport/storage only. No live data was changed.
-- Final full-suite, platform typecheck, lint, ledger and text results are recorded in the next checkpoint.
+- Final Homashyo tests: 382/382 passed. Full Node suite: 6,423 passed, zero failed, 12 existing TODO cases (6,435 total); exit 0. The spec reporter prints the failing TODO bodies, but these are not test-suite failures.
+- Both `npx tsc --noEmit -p tsconfig.ios.json` and `-p tsconfig.android.json` passed with zero diagnostics. `npx expo lint --no-cache` passed with the existing AdminClosedHistoryOwner hook-dependency warning and no errors. `git diff --check` passed.
+- Ledger check passed: 1,264 source tags and 115 test tags resolve. The Homashyo routes and four actual surfaces are tagged on both platforms. The dynamic raw-material-split endpoint warning comes from `read()` composing a source-defined path/query, corresponding to V2 `_rawSplitRead`; no new endpoint was invented.
+- Text gate exits 1: zero missing V2 texts; 13 iOS/12 Android added strings and 58 global-only scope diagnostics per platform. Most diagnostics come from unrelated Boyoqchi/DailyWork selection, plus the existing local pending-status/error feedback and unsupported iOS USB explanation. No diagnostics were hidden by changing another role. The exception file has 69 data rows, carried forward with obsolete hold/Profile/transport entries removed or updated; no new acceptance row was added.
+- Commits include the eight prior Homashyo commits and `e6d49571` for enabled command/printing flows; the native UI/scanner checkpoint is committed separately on main. The only shared source edit in this checkpoint is two coverage comments in `src/shared/appRoutes.ts`.
+- V2 remained clean and read-only. No simulator, phone, live backend or physical printer was used.
 
 ## Surface audit
 
@@ -46,8 +51,12 @@ The user explicitly requested work directly on `main` on 2026-11-13 and reuse of
 | Shared test mode | TestModeController | The app-wide independent V2 test-mode store is deferred by D3. Demo-token writes fail before storage/network; the role does not implement a second test-mode system. |
 | Shared navigation and logout | RoleDock, AppRootNavigation, clearAppLock | Native tabs/Android dock use existing navigation rather than V2's exact root-stack reset/timing. Logout retains the current shared PIN cleanup limitation. Shared Chat and Profile behavior retain their own documented device checks. |
 | Source oracle / edge values | test/raw_material_split_test.dart, RawSplitIssue.createdAt | Historical independent f119 oracle has three failing widget cases; passing recordings and source-derived V4 tests are used, not those failed assertions. Extreme Dart calendar/URI/Unicode/Hermes cases need separate runtime verification. |
-| Text gate | .port/text-homashyo.md | Record current diagnostics after final changes. Shared formatLocalDateTime tagging pulls unrelated Boyoqchi and DailyWork files into this role's report; these must not be mistaken for reachable Homashyo UI. |
+| Text gate | .port/text-homashyo.md | Gate remains open at the exact counts above. Shared formatLocalDateTime tagging pulls unrelated Boyoqchi and DailyWork files into this role's report; the remaining role-local status/error feedback also needs an explicit parity verdict. |
 
 ## Deviations candidates
 
 The existing paired pending-status read gate blocks controls on failed local reads and waits for an in-flight writer before showing a clear status. V2 does not have this paired gate. Session guards and exact stock-response matching are retained. The unconnected journal experiment is not used by the role and is not a dependency for this port.
+
+## Phone smoke check
+
+Sign in as Homashyo rezkachisi; look up/scan a source; enter width/gross/core/length/waste; cancel and select the printer; save a balanced split; report and then save a measured discrepancy; open History/details and reprint a single roll/all without another stock write. Check Settings/PIN, account switching, swipe/back/outside dismissal and keyboards on both platforms.

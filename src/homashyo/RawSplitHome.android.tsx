@@ -1,4 +1,4 @@
-import { Host, IconButton, OutlinedTextField, RNHostView, Text as ComposeText, useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
+import { Host, IconButton, OutlinedTextField, RNHostView, Text as ComposeText, useMaterialColors, useNativeState, type TextFieldRef } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
@@ -10,12 +10,13 @@ import { rawSplitBalance, rawSplitNetLabel, rawSplitSourceSummary, rawSplitWaste
 import type { RawSplitHomeViewProps } from './rawSplitHomeViewTypes';
 import { useRawSplitWriteHoldText } from './useRawSplitWriteHoldText';
 
-function Input({ label, value, enabled, onChange, decimal = false, onDone, search = false, multiline = false, error = false }: {
+function Input({ label, value, enabled, onChange, decimal = false, onDone, search = false, multiline = false, error = false, onFocus }: {
   label: string; value: string; enabled: boolean; onChange: (value: string) => void; decimal?: boolean; onDone?: () => void;
-  search?: boolean; multiline?: boolean; error?: boolean }) {
-  const native = useNativeState(value);
+  search?: boolean; multiline?: boolean; error?: boolean; onFocus?: (field: TextFieldRef) => void }) {
+  const native = useNativeState(value), field = useRef<TextFieldRef>(null);
   useEffect(() => { if (native.get() !== value) native.set(value); }, [native, value]);
-  return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={native} enabled={enabled}
+  return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField ref={field} value={native} enabled={enabled}
+    onFocusChanged={focused => { if (focused && field.current) onFocus?.(field.current); }}
     singleLine={!multiline} minLines={multiline ? 2 : undefined} maxLines={multiline ? 3 : undefined} maxLength={multiline ? 1000 : undefined}
     isError={error} onValueChange={onChange} keyboardOptions={{ keyboardType: decimal ? 'decimal' : 'text', imeAction: search ? 'search' : 'done' }}
     keyboardActions={onDone ? search ? { onSearch: onDone } : { onDone } : undefined} modifiers={[fillMaxWidth()]}>
@@ -23,12 +24,16 @@ function Input({ label, value, enabled, onChange, decimal = false, onDone, searc
   </OutlinedTextField></Host>;
 }
 
+// @v2 RawMaterialSplitScreen
 export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplitHomeViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), colors = useMaterialColors(), t = usePreparationText();
   // V2 starts the first reload in initState, before the initial frame.
   useLayoutEffect(() => { if (controller.getSnapshot().pendingCheck === 'unread') void controller.reload(); }, [controller]);
   const writeHoldText = useRawSplitWriteHoldText();
   const locked = controller.locked, writesHeld = controller.writesHeld, plan = controller.widthPlan, check = controller.wasteCheck, source = state.source;
+  const focusedInput = useRef<TextFieldRef | null>(null);
+  const focusInput = (field: TextFieldRef) => { focusedInput.current = field; };
+  const dismissInput = () => { void focusedInput.current?.blur(); };
   const widthLabel = plan ? rawSplitWasteWidthLabel(plan) : null;
   const issueVisible = !!(source && plan && state.showIssue && check && check.kind !== null);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null), handledIssue = useRef(0);
@@ -60,7 +65,7 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
     <PreparationText>{t(state.snapshot === null ? 'Omborlar yuklanmoqda' : !state.snapshot.warehouses.length ? 'Ombor biriktirilmagan' :
       `Ombor: ${state.snapshot.warehouses.join(', ')}`)}</PreparationText>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><View style={{ flex: 1 }}><Input label="Rulon QR / shtrix-kodi"
-      value={state.barcode} enabled={!locked} search onChange={value => controller.setBarcode(value)} onDone={() => { void controller.lookup(); }} /></View>
+      value={state.barcode} enabled={!locked} search onFocus={focusInput} onChange={value => controller.setBarcode(value)} onDone={() => { void controller.lookup(); }} /></View>
       <Host matchContents><IconButton enabled={!locked} onClick={() => { void controller.lookup(); }}
         modifiers={[semantics({ contentDescription: 'Rulonni topish' }), testID('homashyo-lookup')]}><RNHostView matchContents>
           <SymbolView name={{ android: 'arrow_forward' }} size={22} tintColor={colors.onSurfaceVariant} /></RNHostView></IconButton></Host></View>
@@ -78,17 +83,17 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
             modifiers={[semantics({ contentDescription: 'Rulonni olib tashlash' })]}><RNHostView matchContents>
               <SymbolView name={{ android: 'close' }} size={20} tintColor={colors.onSurfaceVariant} /></RNHostView></IconButton></Host></View>
         <View style={{ flexDirection: 'row', gap: 12 }}><View style={{ flex: 1 }}><Input label="Eni (mm)" value={output.width} enabled={!locked}
-          decimal error={plan.errors[i] !== null} onDone={() => controller.confirmWidth()} onChange={value => controller.setOutput(i, 'width', value)} /></View>
-          <View style={{ flex: 1 }}><Input label="Og‘irlik (kg)" value={output.gross} enabled={!locked} decimal onChange={value => controller.setOutput(i, 'gross', value)} /></View></View>
+          decimal error={plan.errors[i] !== null} onFocus={focusInput} onDone={() => { dismissInput(); controller.confirmWidth(); }} onChange={value => controller.setOutput(i, 'width', value)} /></View>
+          <View style={{ flex: 1 }}><Input label="Og‘irlik (kg)" value={output.gross} enabled={!locked} decimal onFocus={focusInput} onChange={value => controller.setOutput(i, 'gross', value)} /></View></View>
         <View style={{ flexDirection: 'row', gap: 12 }}><View style={{ flex: 1 }}><Input label="Babina (kg)" value={output.bobina} enabled={!locked} decimal
-          onChange={value => controller.setOutput(i, 'bobina', value)} /></View><View style={{ flex: 1 }}><Input label="Metraj (m)" value={output.length}
-          enabled={!locked} decimal onChange={value => controller.setOutput(i, 'length', value)} /></View></View>
+          onFocus={focusInput} onChange={value => controller.setOutput(i, 'bobina', value)} /></View><View style={{ flex: 1 }}><Input label="Metraj (m)" value={output.length}
+          enabled={!locked} decimal onFocus={focusInput} onChange={value => controller.setOutput(i, 'length', value)} /></View></View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><View style={{ flex: 1 }}><PreparationText>{rawSplitNetLabel(output)}</PreparationText></View>
-          <View style={{ flex: 1 }}>{i === state.outputs.length - 1 && plan.canAdd && <WorkerSheetButton label={t('+ rulon')} variant="filled" disabled={locked} onPress={() => controller.addRoll()} />}</View></View>
+          <View style={{ flex: 1 }}>{i === state.outputs.length - 1 && plan.canAdd && <WorkerSheetButton label={t('+ rulon')} variant="filled" disabled={locked} onPress={() => { dismissInput(); controller.addRoll(); }} />}</View></View>
       </View>)}
-      <Input label="Atxot (kg) *" value={state.waste} enabled={!locked} decimal onChange={value => controller.setWaste(value)} />
+      <Input label="Atxot (kg) *" value={state.waste} enabled={!locked} decimal onFocus={focusInput} onChange={value => controller.setWaste(value)} />
       {state.showIssue && check?.kind !== null && check !== null && <View onLayout={event => setIssueLayout({ source, y: event.nativeEvent.layout.y })} style={{ gap: 12 }}><Text style={{ color: colors.error }}>{check.message}</Text>
-        <Input label={t('Farq sababi')} value={state.issueNote} enabled={!locked && !state.issueSaved} multiline onChange={value => controller.setIssueNote(value)} />
+        <Input label={t('Farq sababi')} value={state.issueNote} enabled={!locked && !state.issueSaved} multiline onFocus={focusInput} onChange={value => controller.setIssueNote(value)} />
         {state.issueError !== null && <Text style={{ color: colors.error }}>{state.issueError}</Text>}
         {state.issueSaved ? <PreparationText>{t(check.waste === null ? 'Muammo saqlandi. Chop etish uchun atxot kg ni son bilan kiriting.' :
           'Muammo saqlandi. Endi chop etishingiz mumkin.')}</PreparationText> :

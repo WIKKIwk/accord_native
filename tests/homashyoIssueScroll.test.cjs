@@ -35,6 +35,7 @@ function environment(platform) {
     '../components/WorkerSheetButton': { WorkerSheetButton: 'Button' }, '../preparation/PreparationUI': { usePreparationText: () => s => s },
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => s => s },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'Dropdown' }, './rawSplitHomePresentation': new Proxy({}, { get: () => () => '' }), './useRawSplitWriteHoldText': { useRawSplitWriteHoldText: () => 'hold' } };
+  mocks['./useRawSplitIssueScroll.ios'] = load('useRawSplitIssueScroll.ios.ts', { react: h.react, 'react-native': { ScrollView: 'ScrollView' } });
   const component = load(`RawSplitHome.${platform}.tsx`, mocks).RawSplitHome;
   return { state, render: issueRevision => h.render(() => component({ controller, issueRevision, onScan() {} })), unmount: h.unmount };
 }
@@ -43,16 +44,37 @@ function frames() { let next = 0; const tasks = new Map(), oldFrame = global.req
   return { count: () => tasks.size, run: () => { const entries = [...tasks.values()]; tasks.clear(); entries.forEach(fn => fn()); },
     restore: () => { global.requestAnimationFrame = oldFrame; global.cancelAnimationFrame = oldCancel; } };
 }
-test('iOS issue scroll targets the form once per revision and cancels pending work on unmount', () => {
+test('iOS 16 and later wait for native geometry and animate to the discrepancy form once per revision', () => {
   const f = frames(); try {
-    const h = environment('ios'); h.render(0); h.state.showIssue = true; let tree = h.render(1);
-    const scroll = find(tree, n => n.type === 'ScrollView')[0], binding = scroll.props.modifiers.find(m => m.kind === 'scrollPosition');
-    assert.equal(binding.args[1].anchor, 'top'); const target = binding.args[0];
-    assert.ok(find(tree, n => n.props?.modifiers?.some(m => m.kind === 'id' && m.args[0] === 'raw-split-issue')).length);
-    assert.ok(find(tree, n => n.props?.modifiers?.some(m => m.kind === 'scrollTargetLayout')).length);
-    assert.deepEqual(target.writes, [null]); assert.equal(f.count(), 1); f.run(); assert.deepEqual(target.writes, [null, 'raw-split-issue']);
-    h.render(1); assert.equal(f.count(), 0); tree = h.render(2); assert.equal(f.count(), 1); h.unmount(); assert.equal(f.count(), 0);
-    f.run(); assert.deepEqual(target.writes, [null, 'raw-split-issue', null]);
+    const h = environment('ios'); h.render(0); h.state.showIssue = true; let tree = h.render(1), moves = [];
+    assert.equal(tree.type, 'ScrollView'); assert.equal(tree.props.automaticallyAdjustKeyboardInsets, true);
+    tree.props.ref.current = { scrollTo: command => moves.push(command) };
+    const measure = tree => find(tree, n => n.props?.modifiers?.some(m => m.kind === 'onGeometryChange'))
+      .map(n => n.props.modifiers.find(m => m.kind === 'onGeometryChange').args[0]);
+    let [content, issue] = measure(tree);
+    assert.equal(f.count(), 0); content({ y: 50 }); issue({ y: 345 }); tree = h.render(1);
+    assert.equal(f.count(), 1); f.run(); assert.deepEqual(moves, [{ y: 295, animated: true }]);
+    // Native scroll moves both global frames, while their relative distance stays the same.
+    [content, issue] = measure(tree); content({ y: -245 }); issue({ y: 50 }); h.render(1);
+    assert.equal(f.count(), 0);
+    tree = h.render(2); assert.equal(f.count(), 1);
+    [content, issue] = measure(tree); issue({ y: 70 }); h.render(2);
+    assert.equal(f.count(), 1); f.run(); assert.deepEqual(moves[1], { y: 315, animated: true });
+    h.render(3); assert.equal(f.count(), 1); h.unmount(); assert.equal(f.count(), 0); f.run(); assert.equal(moves.length, 2);
+  } finally { f.restore(); }
+});
+test('iOS never reuses a previous source form geometry before the new source is laid out', () => {
+  const f = frames(); try {
+    const h = environment('ios'); h.state.showIssue = true; let tree = h.render(1), moves = [];
+    tree.props.ref.current = { scrollTo: command => moves.push(command) };
+    const measured = find(tree, n => n.props?.modifiers?.some(m => m.kind === 'onGeometryChange'))
+      .map(n => n.props.modifiers.find(m => m.kind === 'onGeometryChange').args[0]);
+    measured[0]({ y: 25 }); measured[1]({ y: 125 }); h.render(1); f.run(); assert.equal(moves[0].y, 100);
+    h.state.source = { itemName: 'New film', warehouse: 'Raw' }; tree = h.render(2);
+    assert.equal(f.count(), 0);
+    const issue = find(tree, n => n.props?.modifiers?.some(m => m.kind === 'onGeometryChange'))[1];
+    issue.props.modifiers.find(m => m.kind === 'onGeometryChange').args[0]({ y: 275 });
+    h.render(2); f.run(); assert.equal(moves[1].y, 250); h.unmount();
   } finally { f.restore(); }
 });
 test('Android waits for form layout, scrolls to its measured position and ignores old or cancelled revisions', () => {

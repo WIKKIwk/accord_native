@@ -1,7 +1,7 @@
 # homashyo-journal-20261109a
 
-Status: experiment blocked; Homashyo remains incomplete. The production stock, issue, retry, printer-selection and printing hold remains active.
-Stopped at: An independent review found missing recovery, server-outcome and acknowledgment authorities. Do not connect the experiment or lift the hold on the strength of these model tests.
+Status: historical unconnected experiment remains blocked. On 2026-11-13 the user requested the functional Homashyo port on main; the role now uses its existing V2 command/retry flow, not this experiment. See `homashyo.md` for the current production status.
+Stopped at: The experiment remains unconnected. The review and directions below are historical findings about that experiment, not prerequisites or a current hold on the ported role. Do not connect the experiment on the strength of its model tests.
 
 ## Open items
 | Where | Evidence | What is needed |

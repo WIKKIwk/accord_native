@@ -1,10 +1,11 @@
-import { Button, Host, HStack, Image, Menu, ScrollView, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
-import { accessibilityLabel, buttonStyle, disabled, foregroundStyle, frame, id, keyboardType, labelStyle, lineLimit, onSubmit, padding, scrollPosition, scrollTargetLayout, strokeBorder, submitLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
-import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
-import { PlatformColor } from 'react-native';
+import { Button, Host, HStack, Image, Menu, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { accessibilityLabel, buttonStyle, disabled, foregroundStyle, frame, keyboardType, labelStyle, lineLimit, onGeometryChange, onSubmit, padding, strokeBorder, submitLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
+import { useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
+import { PlatformColor, ScrollView } from 'react-native';
 import { usePreparationText } from '../preparation/PreparationUI';
 import { rawSplitBalance, rawSplitNetLabel, rawSplitSourceSummary, rawSplitWasteWidthLabel, rawSplitWidthSummary } from './rawSplitHomePresentation';
 import type { RawSplitHomeViewProps } from './rawSplitHomeViewTypes';
+import { useRawSplitIssueScroll } from './useRawSplitIssueScroll.ios';
 import { useRawSplitWriteHoldText } from './useRawSplitWriteHoldText';
 
 function Input({ label, value, enabled, onChange, decimal = false, onDone, search = false, multiline = false, error = false }: { label: string; value: string;
@@ -20,6 +21,7 @@ function Input({ label, value, enabled, onChange, decimal = false, onDone, searc
   </VStack>;
 }
 
+// @v2 RawMaterialSplitScreen
 export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplitHomeViewProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), t = usePreparationText();
   // V2 starts the first reload in initState, before the initial frame.
@@ -28,14 +30,12 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
   const locked = controller.locked, writesHeld = controller.writesHeld, plan = controller.widthPlan, check = controller.wasteCheck, source = state.source;
   const widthLabel = plan ? rawSplitWasteWidthLabel(plan) : null;
   const issueVisible = !!(source && plan && state.showIssue && check && check.kind !== null);
-  const issueTarget = useNativeState<string | null>(null), handledIssue = useRef(0);
-  useEffect(() => {
-    if (!issueVisible || issueRevision <= handledIssue.current) return;
-    issueTarget.set(null);
-    const frame = requestAnimationFrame(() => { handledIssue.current = issueRevision; issueTarget.set('raw-split-issue'); });
-    return () => cancelAnimationFrame(frame);
-  }, [issueRevision, issueTarget, issueVisible]);
-  return <Host style={{ flex: 1 }}><ScrollView modifiers={[scrollPosition(issueTarget, { anchor: 'top' })]}><VStack alignment="leading" spacing={12} modifiers={[padding({ horizontal: 16, vertical: 20 }), scrollTargetLayout()]}>
+  const { scroll, measureContent, measureIssueOrigin } = useRawSplitIssueScroll(source, issueVisible, issueRevision);
+  // The native RN scroll owner also supports iOS 16, where SwiftUI scrollPosition is unavailable.
+  return <ScrollView ref={scroll} style={{ flex: 1 }} keyboardShouldPersistTaps="always" automaticallyAdjustKeyboardInsets
+    contentContainerStyle={{ paddingBottom: 100 }}><Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+    <VStack alignment="leading" spacing={12} modifiers={[padding({ horizontal: 16, vertical: 20 }),
+      onGeometryChange(measureContent)]}>
     {state.error !== null && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{state.error}</Text>}
     {writesHeld && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{writeHoldText}</Text>}
     {state.snapshotError !== null && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{state.snapshotError}</Text>}
@@ -74,7 +74,7 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
           <Button label={t('+ rulon')} modifiers={[disabled(locked), buttonStyle('borderedProminent')]} onPress={() => controller.addRoll()} />}</HStack>
       </VStack>)}
       <Input label="Atxot (kg) *" value={state.waste} enabled={!locked} decimal onChange={value => controller.setWaste(value)} />
-      {state.showIssue && check?.kind !== null && check !== null && <VStack alignment="leading" spacing={8} modifiers={[id('raw-split-issue')]}><Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{check.message}</Text>
+      {state.showIssue && check?.kind !== null && check !== null && <VStack alignment="leading" spacing={8} modifiers={[onGeometryChange(measureIssueOrigin)]}><Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{check.message}</Text>
         <Input label={t('Farq sababi')} value={state.issueNote} enabled={!locked && !state.issueSaved} multiline onChange={value => controller.setIssueNote(value)} />
         {state.issueError !== null && <Text modifiers={[foregroundStyle(PlatformColor('systemRed'))]}>{state.issueError}</Text>}
         {state.issueSaved ? <Text>{t(check.waste === null ? 'Muammo saqlandi. Chop etish uchun atxot kg ni son bilan kiriting.' :
@@ -85,5 +85,5 @@ export function RawSplitHome({ controller, onScan, issueRevision = 0 }: RawSplit
       <Button label={t('Saqlash va chop etish')} systemImage="printer" modifiers={[disabled(locked || writesHeld), buttonStyle('borderedProminent')]}
         onPress={() => { void controller.save(); }} />
     </>}
-  </VStack></ScrollView></Host>;
+  </VStack></Host></ScrollView>;
 }

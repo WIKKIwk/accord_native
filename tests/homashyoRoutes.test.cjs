@@ -107,11 +107,12 @@ function scannerHarness() {
   return { render: () => h.render(() => useRawSplitHomeScreen()), values, lookups, alert: () => alert,
     invalidate: () => { valid = false; }, setGate: value => { gate++; ready = value; listener?.(); }, app: value => appListener(value), unmount: h.unmount };
 }
-test('scanner displays detected code and requires confirmation before source lookup', async () => {
+test('camera detection closes the scanner and looks up directly without another confirmation', async () => {
   const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render();
   assert.equal(flow.visible, true); assert.equal(flow.cameraActive, true); assert.equal(flow.isScannerCurrent(), true);
-  flow.complete('CODE-123'); assert.deepEqual(h.values, ['CODE-123']); assert.deepEqual(h.lookups, []);
-  assert.equal(h.alert()[1], 'CODE-123'); h.alert()[2][1].onPress(); await flush(); assert.deepEqual(h.lookups, ['CODE-123']); h.unmount();
+  flow.complete('CODE-123'); await flush(); flow = h.render();
+  assert.deepEqual(h.values, ['CODE-123']); assert.deepEqual(h.lookups, ['CODE-123']); assert.equal(h.alert(), undefined);
+  assert.equal(flow.visible, false); assert.equal(flow.cameraActive, false); assert.equal(flow.isScannerCurrent(), false); h.unmount();
 });
 test('manual scanner entry looks up directly without the camera confirmation', async () => {
   const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render();
@@ -124,10 +125,10 @@ test('manual scanner entry cannot start a lookup after its pending-state lease e
   flow.complete('OLD', 'manual'); await flush();
   assert.equal(h.alert(), undefined); assert.deepEqual(h.values, []); assert.deepEqual(h.lookups, []); h.unmount();
 });
-test('scanner rejects background, lost session, and confirmation after the session changes', async () => {
+test('scanner rejects camera events while backgrounded or after its session changes', async () => {
   const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); h.app('background');
-  flow.complete('wrong'); assert.deepEqual(h.values, []); h.app('active'); flow = h.render(); flow.complete('current');
-  h.invalidate(); h.alert()[2][1].onPress(); await flush(); assert.deepEqual(h.lookups, []); h.unmount();
+  flow.complete('BACKGROUND'); assert.deepEqual(h.values, []); h.app('active'); flow = h.render(); h.invalidate();
+  flow.complete('OLD-ACCOUNT'); await flush(); assert.deepEqual(h.values, []); assert.deepEqual(h.lookups, []); assert.equal(h.alert(), undefined); h.unmount();
 });
 test('history detail reuses native sheet and defers printer picker until sheet dismissal', async () => {
   let current = true, opened, options, closes = 0, selections = 0, reprints = 0;
@@ -146,19 +147,19 @@ test('history detail reuses native sheet and defers printer picker until sheet d
   current = true; const issue = { id: 'issue' }; flow.onIssue(issue, true); assert.equal(opened.type, 'IssueDetails'); assert.equal(opened.props.issue, issue);
 });
 
-test('a prior scan confirmation cannot look up after a second scan, Back, or background/resume', async () => {
+test('a stale camera callback cannot look up after a second scan, Back, or background/resume', async () => {
   for (const action of ['second', 'back', 'background']) {
-    const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); flow.complete('OLD');
-    const confirmOld = h.alert()[2][1].onPress; flow = h.render();
+    const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); const oldComplete = flow.complete;
     if (action === 'second') { flow.scan(); flow = h.render(); flow.complete('NEW'); }
-    else if (action === 'back') { flow.scan(); flow = h.render(); flow.close(); }
+    else if (action === 'back') flow.close();
     else { h.app('background'); h.app('active'); }
-    confirmOld(); await flush(); assert.deepEqual(h.lookups, [], action); h.unmount();
+    oldComplete('OLD'); await flush();
+    assert.deepEqual(h.lookups, action === 'second' ? ['NEW'] : [], action); assert.equal(h.alert(), undefined); h.unmount();
   }
 });
 test('repeated camera events cannot complete or look up a second detection', () => {
   const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); flow.complete('ONE'); flow.complete('TWO');
-  assert.deepEqual(h.values, ['ONE']); assert.equal(h.alert()[1], 'ONE'); assert.deepEqual(h.lookups, []); h.unmount();
+  assert.deepEqual(h.values, ['ONE']); assert.equal(h.alert(), undefined); assert.deepEqual(h.lookups, ['ONE']); h.unmount();
 });
 test('provider composes the real picker owner, enables only a current witness, and cancels on transition', async () => {
   const h = hooks(); h.react.createContext = () => ({ Provider: 'ContextProvider' }); let reset, witnessListener, runtimeOptions, disposals = 0, renderedRequest, current = true, locale = 'uz', noticeMessage = 'Chop etildi';
@@ -190,10 +191,11 @@ test('provider composes the real picker owner, enables only a current witness, a
   assert.equal(runtimeOptions.canMutate(), false); assert.equal(render().type, 'View'); h.unmount(); await flush();
 });
 
-test('late cancellation or dismiss from an old confirmation cannot close the next scanner', () => {
-  const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); flow.complete('OLD');
-  const oldAlert = h.alert(); flow = h.render(); flow.scan(); flow = h.render(); assert.equal(flow.isScannerCurrent(), true);
-  oldAlert[2][0].onPress(); oldAlert[3].onDismiss(); flow = h.render(); assert.equal(flow.isScannerCurrent(), true); assert.equal(flow.visible, true); h.unmount();
+test('a late camera callback from a closed scanner cannot consume a reopened scanner', () => {
+  const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); const oldComplete = flow.complete; flow.close();
+  flow = h.render(); flow.scan(); flow = h.render(); assert.equal(flow.isScannerCurrent(), true);
+  oldComplete('OLD'); flow = h.render(); assert.deepEqual(h.lookups, []); assert.equal(flow.isScannerCurrent(), true); assert.equal(flow.visible, true);
+  flow.complete('NEW'); assert.deepEqual(h.lookups, ['NEW']); assert.equal(h.alert(), undefined); h.unmount();
 });
 test('both profile routes reuse the shared Profile without a worker daily-work callback', () => {
   const context = { session: { profile: { role: 'homashyo_rezkachi' } }, onLogout() {} }, ProfileScreen = () => null, guard = () => true;
@@ -206,7 +208,7 @@ test('both profile routes reuse the shared Profile without a worker daily-work c
     const Screen = load(`homashyo/RawSplitProfileScreen.${platform}.tsx`, mocks, true).RawSplitProfileScreen;
     const profile = Screen().props.children; assert.equal(profile.type, ProfileScreen); assert.equal(profile.props.session, context.session);
     assert.equal(profile.props.onLogout, context.onLogout); assert.equal('onDailyWork' in profile.props, false);
-    assert.equal(profile.props.isCurrent, guard); assert.equal(profile.props.settingsUnavailableMessage, 'Profil sozlamalari hozircha mavjud emas.');
+    assert.equal(profile.props.isCurrent, guard); assert.equal(profile.props.settingsUnavailableMessage, undefined);
   }
 });
 
@@ -273,11 +275,11 @@ test('ordinary logout completion redirects when no other session or login exists
   assert.equal(h.logoutCalls(), 1); assert.equal(h.redirects(), 1); h.unmount();
 });
 
-test('scanner closes on a gate change and an old alert confirmation stays invalid after a successful recheck', async () => {
-  const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); assert.equal(flow.visible, true);
+test('scanner closes on a gate change and stale detections stay invalid after a successful recheck', async () => {
+  const h = scannerHarness(); let flow = h.render(); flow.scan(); flow = h.render(); assert.equal(flow.visible, true); const oldComplete = flow.complete;
   h.setGate(false); flow = h.render(); assert.equal(flow.visible, false); assert.equal(flow.isScannerCurrent(), false);
-  h.setGate(true); flow = h.render(); flow.scan(); flow = h.render(); flow.complete('OLD'); const confirm = h.alert()[2][1].onPress;
-  h.setGate(false); h.setGate(true); confirm(); await flush(); assert.deepEqual(h.lookups, []); h.unmount();
+  h.setGate(true); flow = h.render(); flow.scan(); flow = h.render(); oldComplete('OLD'); await flush(); assert.deepEqual(h.lookups, []);
+  flow.complete('CURRENT'); await flush(); assert.deepEqual(h.lookups, ['CURRENT']); assert.equal(h.alert(), undefined); h.unmount();
 });
 test('History dismiss-time picker and reprint cannot revive after a completed gate recheck', async () => {
   let generation = 0, opened, options, picks = 0, prints = 0, closes = 0;

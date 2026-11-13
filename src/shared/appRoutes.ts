@@ -125,7 +125,9 @@ export const appRoutes = {
   "preparation": "/preparation",
   "preparationFormulas": "/preparation-formulas",
   "preparationProduction": "/preparation-production",
+  /** @v2 AppRoutes.rawMaterialSplit */
   "rawMaterialSplit": "/raw-material-split",
+  /** @v2 AppRoutes.rawMaterialSplitHistory */
   "rawMaterialSplitHistory": "/raw-material-split-history",
   /** @v2 AppRoutes.boyoqchiAstatka */
   "boyoqchiAstatka": "/boyoqchi-astatka",

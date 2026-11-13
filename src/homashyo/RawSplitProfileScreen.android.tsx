@@ -6,6 +6,5 @@ import { useRawSplitProfileGuard } from './useRawSplitProfileGuard';
 
 export function RawSplitProfileScreen() {
   const { session, onLogout } = useRawSplitContext(), isCurrent = useRawSplitProfileGuard(), t = usePreparationText();
-  return <RawSplitFrame title={t('Profil')} page="profile"><ProfileScreen session={session} onLogout={onLogout} isCurrent={isCurrent}
-    settingsUnavailableMessage={t('Profil sozlamalari hozircha mavjud emas.')} /></RawSplitFrame>;
+  return <RawSplitFrame title={t('Profil')} page="profile"><ProfileScreen session={session} onLogout={onLogout} isCurrent={isCurrent} /></RawSplitFrame>;
 }

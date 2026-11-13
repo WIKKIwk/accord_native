@@ -14,6 +14,7 @@ function RawSplitDetailLine({ label, value }: RawSplitDetailRow) {
   </HStack>;
 }
 
+// @v2 RawSplitDetailsSheet
 export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPrinter, onSelectPrinter, onWifiChanged,
   onReprint, onReprintAll, onError, printBlocked = false }: RawSplitDetailsProps) {
   const [printing, setPrinting] = useState(false), inFlight = useRef(false), mounted = useRef(true), t = usePreparationText();
@@ -44,6 +45,7 @@ export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPr
   </VStack></ScrollView></Host>;
 }
 
+// @v2 RawSplitIssueDetailsSheet
 export function RawSplitIssueDetails({ issue, hasResult }: RawSplitIssueDetailsProps) {
   const t = usePreparationText(), date = rawSplitIssueFullTime(issue);
   return <Host style={{ minHeight: 300 }}><ScrollView><VStack alignment="leading" spacing={8} modifiers={[padding({ all: 20 })]}>

@@ -19,6 +19,7 @@ function RawSplitDetailLine({ label, value }: RawSplitDetailRow) {
   </Row></Host>;
 }
 
+// @v2 RawSplitDetailsSheet
 export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPrinter, onSelectPrinter, onWifiChanged,
   onReprint, onReprintAll, onError, printBlocked = false }: RawSplitDetailsProps) {
   const colors = useMaterialColors(), [printing, setPrinting] = useState(false), inFlight = useRef(false), mounted = useRef(true), t = usePreparationText();
@@ -52,6 +53,7 @@ export function RawSplitDetails({ result, printerLabel, showWifiSelector, wifiPr
   </ScrollView>;
 }
 
+// @v2 RawSplitIssueDetailsSheet
 export function RawSplitIssueDetails({ issue, hasResult }: RawSplitIssueDetailsProps) {
   const colors = useMaterialColors(), t = usePreparationText(), date = rawSplitIssueFullTime(issue);
   return <ScrollView contentContainerStyle={{ padding: 20, gap: 8, paddingBottom: 32 }}>

@@ -5,7 +5,7 @@ import { rawSplitSessionIsCurrent } from './rawSplitApi';
 import { useRawSplitContext } from './RawSplitContext';
 import type { RawSplitScanSource } from './useRawSplitScanner';
 
-/** Whole-preview detections require an explicit barcode check until native scan-window parity exists. */
+/** V2 closes the scanner and looks up the first detected or manually entered barcode. */
 export function useRawSplitHomeScreen() {
   const { ticket, runtime, issueRevision } = useRawSplitContext(), [visible, setVisible] = useState(false);
   const focused = useRef(false), foreground = useRef(AppState.currentState === 'active'), open = useRef(false), generation = useRef(0);
@@ -35,18 +35,13 @@ export function useRawSplitHomeScreen() {
     if (!isOwnerCurrent()) return; const next = runtime.home.captureClearLease(); if (!next) return;
     generation.current++; lease.current = next; open.current = true; setVisible(true); setCameraActive(true);
   };
-  const complete = (barcode: string, source: RawSplitScanSource = 'camera') => {
-    if (!isScannerCurrent()) return;
-    const currentLease = lease.current!; const selection = ++generation.current; open.current = false; setCameraActive(false); runtime.home.setBarcode(barcode);
-    const cancelSelection = () => { if (selection === generation.current) close(); };
-    const lookup = () => {
-      if (selection !== generation.current || !isOwnerCurrent() || !currentLease()) return;
-      const dispatch = ++generation.current; hide();
-      void runtime.home.lookup(barcode).catch(error => { if (dispatch === generation.current && isOwnerCurrent()) Alert.alert('Xatolik', String(error)); });
-    };
-    if (source === 'manual') { lookup(); return; }
-    Alert.alert('Skanerlangan kod', barcode, [{ text: 'Bekor qilish', style: 'cancel', onPress: cancelSelection },
-      { text: 'Rulonni topish', onPress: lookup }], { cancelable: true, onDismiss: cancelSelection });
+  const scannerGeneration = generation.current;
+  const complete: (barcode: string, source?: RawSplitScanSource) => void = barcode => {
+    if (scannerGeneration !== generation.current || !isScannerCurrent()) return;
+    const currentLease = lease.current!, dispatch = ++generation.current;
+    hide(); runtime.home.setBarcode(barcode);
+    if (dispatch !== generation.current || !isOwnerCurrent() || !currentLease()) return;
+    void runtime.home.lookup(barcode).catch(error => { if (dispatch === generation.current && isOwnerCurrent()) Alert.alert('Xatolik', String(error)); });
   };
   return { controller: runtime.home, visible, cameraActive, isScannerCurrent, scan, close, complete, issueRevision };
 }

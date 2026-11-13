@@ -66,9 +66,11 @@ for (const page of ['Home', 'History']) test(`iOS ${page} retains content while 
 });
 function androidFrame() {
   const calls = [], mocks = { 'react/jsx-runtime': jsx,
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'surface', onSurfaceVariant: 'muted' }) },
+    '@expo/ui/jetpack-compose': { Host: 'Host', IconButton: 'IconButton', RNHostView: 'RNHostView',
+      useMaterialColors: () => ({ surfaceContainerLow: 'surface', onSurfaceVariant: 'muted' }) },
+    '@expo/ui/jetpack-compose/modifiers': { semantics: value => ({ semantics: value }), testID: value => ({ testID: value }) },
     'expo-router': { router: { push: route => calls.push(route) } }, 'expo-symbols': { SymbolView: 'SymbolView' },
-    'react-native': { Pressable: 'Pressable', View: 'View' },
+    'react-native': { View: 'View' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
@@ -82,10 +84,12 @@ for (const page of ['home', 'history']) test(`Android ${page} mounts its native 
   const busy = h.render(page, true), children = busy.props.children;
   assert.equal(children[1].type, 'Busy'); assert.equal(find(children[0], n => n.type === 'RoleHeader').length, 1);
   assert.equal(find(children[2], n => n.type === 'Content').length, 1); assert.equal(children[3].type, 'Dock');
-  assert.ok(find(busy, n => n.type === 'Pressable').every(n => n.props.disabled === true));
+  const busyActions = find(busy, n => n.type === 'IconButton');
+  assert.equal(busyActions.length, page === 'home' ? 2 : 1);
+  assert.ok(busyActions.every(n => n.props.enabled === false));
   const idle = h.render(page, false); assert.equal(find(idle, n => n.type === 'Busy').length, 0);
-  const printer = find(idle, n => n.type === 'Pressable' && n.props.accessibilityLabel === 'Printer tanlash')[0];
-  assert.equal(printer.props.disabled, false); printer.props.onPress(); assert.deepEqual(h.calls, ['picker']);
+  const printer = find(idle, n => n.type === 'IconButton' && n.props.modifiers.some(modifier => modifier.semantics?.contentDescription === 'Printer tanlash'))[0];
+  assert.equal(printer.props.enabled, true); printer.props.onClick(); assert.deepEqual(h.calls, ['picker']);
 });
 test('Android profile keeps the existing no-busy default', () => {
   assert.equal(find(androidFrame().render('profile'), n => n.type === 'Busy').length, 0);

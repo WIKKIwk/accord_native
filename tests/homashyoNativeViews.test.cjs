@@ -153,7 +153,8 @@ function home(platform, translate = value => value) {
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../preparation/PreparationUI.android': { PreparationText: 'PreparationText', usePreparationText: () => translate },
     '../preparation/PreparationUI': { usePreparationText: () => translate },
     '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' }, './rawSplitHomePresentation': homePresentation,
-    './useRawSplitWriteHoldText': { useRawSplitWriteHoldText: () => 'saving paused' } };
+    './useRawSplitWriteHoldText': { useRawSplitWriteHoldText: () => 'saving paused' },
+    './useRawSplitIssueScroll.ios': { useRawSplitIssueScroll: () => ({ scroll: { current: null }, measureContent() {}, measureIssueOrigin() {} }) } };
   const component = load(`RawSplitHome.${platform}.tsx`, mocks, true).RawSplitHome;
   return { state, controller, calls, render: () => { layoutEffects.length = 0; return component({ controller, onScan: () => calls.push('scan') }); },
     runLayoutEffects: () => { while (layoutEffects.length) layoutEffects.shift()(); } };
