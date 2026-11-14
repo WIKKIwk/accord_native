@@ -80,7 +80,7 @@ test('shared navigation fills only the selected Google icon and keeps all destin
       RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => ({ onSecondaryContainer: 'selected', onSurfaceVariant: 'outline' }) },
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}), testID: value => value },
     'expo-symbols': { SymbolView: 'SymbolView' },
-    react: { useEffect() {} },
+    react: { useEffect() {}, useRef: value => ({ current: value }) },
     'react-native': { View: 'View', Keyboard: { metrics: () => undefined }, StyleSheet: { create: value => value } },
     'react-native-reanimated': { __esModule: true, default: { View: 'AnimatedView' },
       useSharedValue: value => ({ get: () => value, set: next => { value = next; } }), useAnimatedStyle: fn => fn() },
@@ -105,7 +105,7 @@ test('navigation can stay mounted in place behind the keyboard without changing 
   const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), NavigationBarItem: {} },
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}) }, 'expo-symbols': {},
-    react: { useEffect() {} },
+    react: { useEffect() {}, useRef: value => ({ current: value }) },
     'react-native': { View: 'View', Keyboard: { metrics: () => ({ height: 300 }) }, StyleSheet: { create: value => value } },
     'react-native-reanimated': { __esModule: true, default: { View: 'AnimatedView' },
       useSharedValue: value => ({ get: () => value, set: next => { value = next; } }), useAnimatedStyle: fn => fn() },
@@ -115,6 +115,40 @@ test('navigation can stay mounted in place behind the keyboard without changing 
   assert.deepEqual(overlay.props.style[1], { height: 96, transform: [{ translateY: 0 }] });
   const existing = RoleBottomBar(props);
   assert.deepEqual(existing.props.style[1], { height: 0, transform: [{ translateY: 204 }] });
+});
+
+test('the dock behind the keyboard ignores Compose height inflated by the IME', () => {
+  for (const startOpen of [false, true]) {
+    const refs = [], shared = [], effects = [], listeners = {};
+    let refIndex = 0, sharedIndex = 0, keyboard = startOpen ? { height: 286.9 } : undefined;
+    const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
+      '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), NavigationBarItem: {} },
+      '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}) }, 'expo-symbols': {},
+      react: { useEffect: fn => effects.push(fn), useRef: value => refs[refIndex++] ??= { current: value } },
+      'react-native': { View: 'View', Keyboard: { metrics: () => keyboard, addListener: (name, fn) => {
+        listeners[name] = fn; return { remove: () => delete listeners[name] };
+      } }, StyleSheet: { create: value => value } },
+      'react-native-reanimated': { __esModule: true, default: { View: 'AnimatedView' },
+        useSharedValue: initial => shared[sharedIndex++] ??= { value: initial, get() { return this.value; }, set(value) { this.value = value; } },
+        useAnimatedStyle: fn => fn() },
+    });
+    const render = () => { refIndex = sharedIndex = 0; return RoleBottomBar({ active: 'home', items: [], onSelect() {}, bottomInset: 16, avoidKeyboard: false }); };
+    let tree = render();
+    const cleanup = effects[0]();
+    if (!startOpen) {
+      tree.props.children.props.onLayout({ nativeEvent: { layout: { height: 112 } } });
+      tree = render(); assert.equal(tree.props.style[1].height, 112);
+      keyboard = { height: 286.9 }; listeners.keyboardDidShow({ endCoordinates: keyboard });
+    }
+    tree.props.children.props.onLayout({ nativeEvent: { layout: { height: 398.9 } } });
+    tree = render();
+    assert.equal(tree.props.style[1].height, startOpen ? 96 : 112);
+    assert.equal(tree.props.style[1].transform[0].translateY, 0);
+    keyboard = undefined; listeners.keyboardDidHide();
+    tree.props.children.props.onLayout({ nativeEvent: { layout: { height: 112 } } });
+    tree = render(); assert.equal(tree.props.style[1].height, 112);
+    cleanup();
+  }
 });
 
 test('shared header button keeps the worker menu icon and callback', () => {

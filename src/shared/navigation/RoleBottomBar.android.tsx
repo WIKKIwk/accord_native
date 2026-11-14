@@ -1,7 +1,7 @@
 import { Badge, BadgedBox, Host, Icon, NavigationBar, NavigationBarItem, RNHostView, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView, type AndroidSymbol } from 'expo-symbols';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Keyboard, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
@@ -36,11 +36,18 @@ export function RoleBottomBar({ active, items, onSelect, bottomInset = 0, avoidK
   const colors = useMaterialColors();
   const keyboardHeight = useSharedValue(Keyboard.metrics()?.height ?? 0);
   const barHeight = useSharedValue(80 + bottomInset);
+  const keyboardOpen = useRef(!!Keyboard.metrics()?.height), closedHeight = useRef(80 + bottomInset);
   useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', event => keyboardHeight.set(event.endCoordinates.height));
-    const hide = Keyboard.addListener('keyboardDidHide', () => keyboardHeight.set(0));
+    const show = Keyboard.addListener('keyboardDidShow', event => {
+      keyboardOpen.current = true; keyboardHeight.set(event.endCoordinates.height);
+      if (!avoidKeyboard) barHeight.set(closedHeight.current);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => { keyboardOpen.current = false; keyboardHeight.set(0); });
+    const height = Keyboard.metrics()?.height ?? 0;
+    keyboardOpen.current = height > 0; keyboardHeight.set(height);
+    if (!avoidKeyboard && height > 0) barHeight.set(closedHeight.current);
     return () => { show.remove(); hide.remove(); };
-  }, [keyboardHeight]);
+  }, [avoidKeyboard, barHeight, keyboardHeight]);
   const keyboardOverlay = useAnimatedStyle(() => {
     const height = avoidKeyboard ? Math.max(0, keyboardHeight.get()) : 0;
     // Keep the mounted bar at the window bottom behind the IME, while the
@@ -48,7 +55,12 @@ export function RoleBottomBar({ active, items, onSelect, bottomInset = 0, avoidK
     return { height: Math.max(0, barHeight.get() - height), transform: [{ translateY: Math.max(0, height - barHeight.get()) }] };
   });
   return <Animated.View style={[styles.root, keyboardOverlay]}>
-    <View onLayout={event => barHeight.set(event.nativeEvent.layout.height)}
+    <View onLayout={event => {
+      const height = event.nativeEvent.layout.height, open = keyboardOpen.current || !!Keyboard.metrics()?.height;
+      // Compose may include the IME inset in its intrinsic height; retain the closed height behind the keyboard.
+      if (!open) closedHeight.current = height;
+      if (avoidKeyboard || !open) barHeight.set(height);
+    }}
       style={[styles.bar, { backgroundColor: colors.surfaceContainerLow, paddingBottom: bottomInset }]}>
       <Host matchContents={{ vertical: true }} style={styles.navHost}>
         <NavigationBar containerColor={colors.surfaceContainerLow} tonalElevation={0} modifiers={[fillMaxWidth()]}>

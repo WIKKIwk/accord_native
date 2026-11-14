@@ -13,7 +13,7 @@ const palette = { onSecondaryContainer: 'selected', onSurface: 'surface', second
 const mocks = { 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { Badge: 'Badge', BadgedBox, Host: 'Host', Icon: 'Icon',
   NavigationBar: 'NavigationBar', NavigationBarItem, RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => palette },
   '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fillMaxWidth', testID: id => `testID:${id}` },
-  react: { useEffect() {} },
+  react: { useEffect() {}, useRef: value => ({ current: value }) },
   'react-native-reanimated': { default: { View: 'Animated.View' }, __esModule: true,
     useSharedValue: value => ({ get: () => value, set: next => { value = next; } }), useAnimatedStyle: fn => fn() },
   'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { View: 'View', StyleSheet: { create: value => value },
