@@ -240,19 +240,39 @@ type Props = { session: Session; title: string; section: 'control' | 'history'; 
 
 export function GScaleReceipt({ session, title, section, onSelect, control, history, connected, attention, refreshing, onRefresh, onDevices, onBack }: Props) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = useGScaleText();
-  const [frame, setFrame] = useState({ height: 0, fullHeight: 0 });
+  const { height: windowHeight } = useWindowDimensions();
+  const [frame, setFrame] = useState({ bottom: 0, fullBottom: 0, keyboardOverlap: 0 });
   const [dockHeight, setDockHeight] = useState(80 + insets.bottom);
-  // Keep the dock at the original window bottom when Android resizes the screen for the IME.
-  const resizeOffset = frame.height - frame.fullHeight;
-  return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}
-    onLayout={event => {
-      const height = event.nativeEvent.layout.height;
+  const root = useRef<ComponentRef<typeof View>>(null), keyboard = useRef(Keyboard.metrics()), measureRevision = useRef(0);
+  const measureFrame = useCallback(() => {
+    const revision = ++measureRevision.current;
+    root.current?.measureInWindow((_x, y, _width, height) => {
+      if (revision !== measureRevision.current || height <= 0) return;
+      const metrics = keyboard.current, bottom = y + height;
+      // A screen first mounted above an open keyboard has never reported its full height.
+      const resizedForKeyboard = metrics && Math.abs(bottom - metrics.screenY) <= insets.top + 2;
+      const unobscuredBottom = Math.max(bottom, windowHeight, bottom + (resizedForKeyboard ? Math.max(0, metrics.height) : 0));
+      const keyboardOverlap = metrics ? Math.max(0, bottom - metrics.screenY) : 0;
       setFrame(previous => {
-        const fullHeight = Math.max(previous.fullHeight, height);
-        return height === previous.height && fullHeight === previous.fullHeight ? previous : { height, fullHeight };
+        const fullBottom = Math.max(previous.fullBottom, unobscuredBottom);
+        return bottom === previous.bottom && fullBottom === previous.fullBottom && keyboardOverlap === previous.keyboardOverlap
+          ? previous : { bottom, fullBottom, keyboardOverlap };
       });
-    }}>
-    <KeyboardAvoidingView behavior="height" style={[styles.scrollViewport, { marginBottom: Math.max(0, dockHeight + resizeOffset) }]}>
+    });
+  }, [insets.top, windowHeight]);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', event => { keyboard.current = event.endCoordinates; measureFrame(); });
+    const hide = Keyboard.addListener('keyboardDidHide', () => { keyboard.current = undefined; measureFrame(); });
+    keyboard.current = Keyboard.metrics();
+    measureFrame();
+    const revision = measureRevision;
+    return () => { show.remove(); hide.remove(); revision.current++; };
+  }, [measureFrame]);
+  // Keep the dock at the original window bottom when Android resizes the screen for the IME.
+  const resizeOffset = frame.bottom - frame.fullBottom;
+  return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}>
+    <View ref={root} collapsable={false} style={[styles.root, { paddingTop: insets.top }]} onLayout={measureFrame}>
+    <KeyboardAvoidingView behavior="height" style={[styles.scrollViewport, { marginBottom: Math.max(0, dockHeight + resizeOffset, frame.keyboardOverlap) }]}>
     <View style={styles.header}>
       <RoleHeaderButton icon="back" label={t('Orqaga')} tintColor={colors.onSurfaceVariant} onPress={onBack} />
       <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><Text color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '600' }}>{title}</Text></Host>
@@ -274,6 +294,7 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
     <View style={[styles.dockOverlay, { bottom: resizeOffset }]}
       onLayout={event => setDockHeight(event.nativeEvent.layout.height)}>
       <PreparationDock avoidKeyboard={false} />
+    </View>
     </View>
   </GestureHandlerRootView>;
 }

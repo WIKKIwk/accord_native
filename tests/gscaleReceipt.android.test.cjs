@@ -43,7 +43,7 @@ function fixture() {
       KeyboardAvoidingView: 'KeyboardAvoidingView', Keyboard: { metrics: () => undefined, addListener: (name, fn) => {
         keyboardEvents[name] = fn; return { remove: () => { delete keyboardEvents[name]; } };
       } },
-      useWindowDimensions: () => ({ width: 400, fontScale: 1 }), StyleSheet: { create: value => value } },
+      useWindowDimensions: () => ({ width: 400, height: 800, fontScale: 1 }), StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     'react-native-gesture-handler': { GestureHandlerRootView: 'GestureHandlerRootView', GestureDetector: 'GestureDetector',
       useNativeGesture: config => { gestures.push(config); return config; } },
@@ -124,27 +124,33 @@ test('receipt reuses the pager and role dock with device, back, profile, history
 });
 
 test('receipt dock stays at the window bottom while the keyboard resizes the scroll area', () => {
-  const x = fixture(), state = [];
-  let cursor = 0;
+  const x = fixture(), state = [], refs = [];
+  let cursor = 0, refCursor = 0, height = 800;
   x.mocks.react.useState = initial => {
     const index = cursor++;
     if (!(index in state)) state[index] = initial;
     return [state[index], value => { state[index] = typeof value === 'function' ? value(state[index]) : value; }];
   };
+  x.mocks.react.useRef = initial => {
+    const index = refCursor++;
+    return refs[index] ??= { current: initial };
+  };
   const render = () => {
-    cursor = 0;
+    cursor = refCursor = 0;
     return x.GScaleReceipt({ session: {}, title: 'Homashyo kirimi', section: 'control', onSelect() {},
       control: [{ rows: [] }], history: [{ rows: [] }], connected: true, attention: false, refreshing: false,
       onRefresh() {}, onDevices() {}, onBack() {} });
   };
   let tree = render();
-  tree.props.onLayout({ nativeEvent: { layout: { height: 800 } } });
+  const frame = () => nodes(tree, node => node.type === 'View' && node.props.ref && node.props.collapsable === false)[0];
+  frame().props.ref.current = { measureInWindow: callback => callback(0, 0, 400, height) };
+  frame().props.onLayout();
   tree = render();
-  const dock = nodes(tree, node => node.type === 'View' && node.props.onLayout && nodes(node, child => child.type === 'PreparationDock').length)[0];
+  const dock = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'PreparationDock')[0];
   dock.props.onLayout({ nativeEvent: { layout: { height: 96 } } });
   tree = render();
   const check = (height, expectedBottom, expectedMargin) => {
-    const dockView = nodes(tree, node => node.type === 'View' && node.props.onLayout && nodes(node, child => child.type === 'PreparationDock').length)[0];
+    const dockView = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'PreparationDock')[0];
     const keyboardArea = nodes(tree, node => node.type === 'KeyboardAvoidingView')[0];
     assert.equal(dockView.props.style[1].bottom, expectedBottom);
     assert.equal(keyboardArea.props.style[1].marginBottom, expectedMargin);
@@ -152,12 +158,68 @@ test('receipt dock stays at the window bottom while the keyboard resizes the scr
     assert.equal(nodes(dockView, node => node.type === 'PreparationDock').length, 1);
   };
   check(800, 0, 96);
-  tree.props.onLayout({ nativeEvent: { layout: { height: 500 } } });
+  height = 500; frame().props.onLayout();
   tree = render(); check(500, -300, 0);
-  tree.props.onLayout({ nativeEvent: { layout: { height: 750 } } });
+  height = 750; frame().props.onLayout();
   tree = render(); check(750, -50, 46);
-  tree.props.onLayout({ nativeEvent: { layout: { height: 800 } } });
+  height = 800; frame().props.onLayout();
   tree = render(); check(800, 0, 96);
+});
+
+test('receipt keeps its dock behind an already open keyboard, including a late keyboard event', () => {
+  const scenarios = [
+    [true, 476, 500, 24, -300, 0, 704], [false, 476, 800, 24, -300, 0, 704],
+    [false, 476, 500, 24, -300, 0, 704], [true, 776, 800, 24, 0, 300, 704],
+    [true, 400, 424, 24, 0, 96, 328], [true, 800, 800, -200, -200, 100, 704],
+  ];
+  for (const [initiallyReported, initialHeight, windowHeight, initialY, expectedBottom, expectedMargin, expectedTop] of scenarios) {
+    const x = fixture(), state = [], refs = [];
+    let stateCursor = 0, refCursor = 0, metrics = initiallyReported ? { screenY: 500, height: 300 } : undefined;
+    x.mocks.react.useState = initial => {
+      const index = stateCursor++;
+      if (!(index in state)) state[index] = initial;
+      return [state[index], value => { state[index] = typeof value === 'function' ? value(state[index]) : value; }];
+    };
+    x.mocks.react.useRef = initial => {
+      const index = refCursor++;
+      return refs[index] ??= { current: initial };
+    };
+    x.mocks['react-native'].Keyboard.metrics = () => metrics;
+    x.mocks['react-native'].useWindowDimensions = () => ({ width: 400, height: windowHeight, fontScale: 1 });
+    const render = () => {
+      stateCursor = refCursor = 0;
+      return x.GScaleReceipt({ session: {}, title: 'Homashyo kirimi', section: 'control', onSelect() {},
+        control: [{ rows: [] }], history: [{ rows: [] }], connected: true, attention: false, refreshing: false,
+        onRefresh() {}, onDevices() {}, onBack() {} });
+    };
+    let tree = render(), height = initialHeight, y = initialY;
+    const frame = () => nodes(tree, node => node.type === 'View' && node.props.ref && node.props.collapsable === false)[0];
+    frame().props.ref.current = { measureInWindow: callback => callback(0, y, 400, height) };
+    frame().props.onLayout();
+    const cleanup = x.effects.at(-1)();
+    if (!initiallyReported) {
+      if (windowHeight === 800) {
+        tree = render();
+        const dock = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'PreparationDock')[0];
+        assert.equal(dock.props.style[1].bottom, -300, 'window dimensions must work even before a keyboard event');
+      }
+      metrics = { screenY: 500, height: 300 };
+      x.keyboardEvents.keyboardDidShow({ endCoordinates: metrics });
+    }
+    tree = render();
+    let dock = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'PreparationDock')[0];
+    assert.equal(dock.props.style[1].bottom, expectedBottom);
+    assert.equal(nodes(tree, node => node.type === 'KeyboardAvoidingView')[0].props.style[1].marginBottom, expectedMargin);
+    assert.equal(y + height - dock.props.style[1].bottom - 96, expectedTop);
+    metrics = undefined; height = initialHeight === 400 ? 400 : initialY < 0 ? 800 : 776; y = initialY < 0 ? 0 : 24;
+    x.keyboardEvents.keyboardDidHide();
+    frame().props.onLayout();
+    tree = render();
+    dock = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'PreparationDock')[0];
+    assert.equal(dock.props.style[1].bottom, 0);
+    assert.equal(nodes(tree, node => node.type === 'KeyboardAvoidingView')[0].props.style[1].marginBottom, 96);
+    cleanup();
+  }
 });
 
 test('keyboard resize reveals the focused field and a manual drag can scroll without losing focus', async () => {
