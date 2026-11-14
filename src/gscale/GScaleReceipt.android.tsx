@@ -2,7 +2,7 @@ import { Button, Column, Host, Icon, IconButton, OutlinedButton, OutlinedTextFie
   useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { background, cornerRadius, defaultMinSize, fillMaxWidth, onGloballyPositioned, padding, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ComponentRef, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { Keyboard, KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View,
   useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -240,8 +240,19 @@ type Props = { session: Session; title: string; section: 'control' | 'history'; 
 
 export function GScaleReceipt({ session, title, section, onSelect, control, history, connected, attention, refreshing, onRefresh, onDevices, onBack }: Props) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = useGScaleText();
-  return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}>
-    <KeyboardAvoidingView behavior="height" style={styles.scrollViewport}>
+  const [frame, setFrame] = useState({ height: 0, fullHeight: 0 });
+  const [dockHeight, setDockHeight] = useState(80 + insets.bottom);
+  // Keep the dock at the original window bottom when Android resizes the screen for the IME.
+  const resizeOffset = frame.height - frame.fullHeight;
+  return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}
+    onLayout={event => {
+      const height = event.nativeEvent.layout.height;
+      setFrame(previous => {
+        const fullHeight = Math.max(previous.fullHeight, height);
+        return height === previous.height && fullHeight === previous.fullHeight ? previous : { height, fullHeight };
+      });
+    }}>
+    <KeyboardAvoidingView behavior="height" style={[styles.scrollViewport, { marginBottom: Math.max(0, dockHeight + resizeOffset) }]}>
     <View style={styles.header}>
       <RoleHeaderButton icon="back" label={t('Orqaga')} tintColor={colors.onSurfaceVariant} onPress={onBack} />
       <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><Text color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '600' }}>{title}</Text></Host>
@@ -259,13 +270,17 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
         </Host> : <ReceiptHistory sections={history} />}
       </ReceiptScroll>}
     </OrdersWorkspace>
-    <PreparationDock />
     </KeyboardAvoidingView>
+    <View style={[styles.dockOverlay, { bottom: resizeOffset }]}
+      onLayout={event => setDockHeight(event.nativeEvent.layout.height)}>
+      <PreparationDock avoidKeyboard={false} />
+    </View>
   </GestureHandlerRootView>;
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 }, full: { width: '100%' }, scrollViewport: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 64, paddingHorizontal: 10 },
+  root: { flex: 1 }, full: { width: '100%' }, scrollViewport: { flex: 1 }, dockOverlay: { position: 'absolute', left: 0, right: 0 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 64, paddingHorizontal: 10 },
   content: { paddingTop: tabBarInset, paddingHorizontal: 14, paddingBottom: 24, flexGrow: 1 }, scrollContent: { gap: 10 },
   historyText: { flex: 1, padding: 10, gap: 4 }, historyTitle: { fontSize: 16, fontWeight: '500' },
 });

@@ -58,7 +58,7 @@ export function PreparationRow({ title, subtitle, onPress, onLongPress, disabled
   </Pressable>;
 }
 
-export function PreparationDock({ profile = false, chat = false }: { profile?: boolean; chat?: boolean }) {
+export function PreparationDock({ profile = false, chat = false, avoidKeyboard = true }: { profile?: boolean; chat?: boolean; avoidKeyboard?: boolean }) {
   const insets = useSafeAreaInsets(), t = usePreparationText();
   const active = profile ? 'profile' : chat ? 'chat' : 'home';
   const items: RoleNavigationItem[] = [
@@ -66,7 +66,7 @@ export function PreparationDock({ profile = false, chat = false }: { profile?: b
     { id: 'chat', label: t('Chat'), icon: 'chat_bubble', testID: 'preparation-chat' },
     { id: 'profile', label: t('Profil'), icon: 'person', testID: 'preparation-profile' },
   ];
-  return <RoleBottomBar active={active} items={items} bottomInset={insets.bottom} onSelect={id => {
+  return <RoleBottomBar active={active} items={items} bottomInset={insets.bottom} avoidKeyboard={avoidKeyboard} onSelect={id => {
     if (id === active && id !== 'home') return;
     if (id === 'home') router.dismissTo('/android-preparation' as Href);
     else if (id === 'chat') router.navigate('/android-preparation/chat' as Href);

@@ -6,7 +6,7 @@ import { Keyboard, StyleSheet, View, type ImageSourcePropType } from 'react-nati
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 export type RoleNavigationItem = { id: string; label: string; icon: AndroidSymbol; testID?: string; showBadge?: boolean };
-type Props = { active: string; items: readonly RoleNavigationItem[]; onSelect: (id: string) => void; bottomInset?: number };
+type Props = { active: string; items: readonly RoleNavigationItem[]; onSelect: (id: string) => void; bottomInset?: number; avoidKeyboard?: boolean };
 const navigationIcons: Partial<Record<AndroidSymbol, { outlined: ImageSourcePropType; filled: ImageSourcePropType }>> = {
   home: { outlined: require('../../../assets/icons/navigation/outlined/home.xml'), filled: require('../../../assets/icons/navigation/filled/home_fill.xml') },
   chat_bubble: { outlined: require('../../../assets/icons/navigation/outlined/chat_bubble.xml'), filled: require('../../../assets/icons/navigation/filled/chat_bubble_fill.xml') },
@@ -32,7 +32,7 @@ function NavItem({ item, active, onSelect }: { item: RoleNavigationItem; active:
   </NavigationBarItem>;
 }
 
-export function RoleBottomBar({ active, items, onSelect, bottomInset = 0 }: Props) {
+export function RoleBottomBar({ active, items, onSelect, bottomInset = 0, avoidKeyboard = true }: Props) {
   const colors = useMaterialColors();
   const keyboardHeight = useSharedValue(Keyboard.metrics()?.height ?? 0);
   const barHeight = useSharedValue(80 + bottomInset);
@@ -42,7 +42,7 @@ export function RoleBottomBar({ active, items, onSelect, bottomInset = 0 }: Prop
     return () => { show.remove(); hide.remove(); };
   }, [keyboardHeight]);
   const keyboardOverlay = useAnimatedStyle(() => {
-    const height = Math.max(0, keyboardHeight.get());
+    const height = avoidKeyboard ? Math.max(0, keyboardHeight.get()) : 0;
     // Keep the mounted bar at the window bottom behind the IME, while the
     // resized content uses the space that the keyboard now covers.
     return { height: Math.max(0, barHeight.get() - height), transform: [{ translateY: Math.max(0, height - barHeight.get()) }] };

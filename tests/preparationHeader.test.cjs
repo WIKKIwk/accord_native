@@ -99,6 +99,8 @@ test('Android preparation dock has home, chat and profile with role-scoped route
   assert.equal(home.type, 'RoleBottomBar');
   assert.equal(home.props.active, 'home');
   assert.equal(home.props.bottomInset, 24);
+  assert.equal(home.props.avoidKeyboard, true);
+  assert.equal(PreparationDock({ avoidKeyboard: false }).props.avoidKeyboard, false);
   assert.deepEqual(home.props.items.map(item => item.label), ['Tayyorlov', 'Chat', 'Profil']);
   home.props.onSelect('home'); home.props.onSelect('chat'); home.props.onSelect('profile');
   assert.deepEqual(calls, [['dismissTo', '/android-preparation'], ['navigate', '/android-preparation/chat'], ['navigate', '/android-preparation/profile']]);

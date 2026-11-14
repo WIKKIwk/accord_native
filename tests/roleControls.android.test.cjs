@@ -101,6 +101,22 @@ test('shared navigation fills only the selected Google icon and keeps all destin
   }
 });
 
+test('navigation can stay mounted in place behind the keyboard without changing the default', () => {
+  const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), NavigationBarItem: {} },
+    '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}) }, 'expo-symbols': {},
+    react: { useEffect() {} },
+    'react-native': { View: 'View', Keyboard: { metrics: () => ({ height: 300 }) }, StyleSheet: { create: value => value } },
+    'react-native-reanimated': { __esModule: true, default: { View: 'AnimatedView' },
+      useSharedValue: value => ({ get: () => value, set: next => { value = next; } }), useAnimatedStyle: fn => fn() },
+  });
+  const props = { active: 'home', items: [], onSelect() {}, bottomInset: 16 };
+  const overlay = RoleBottomBar({ ...props, avoidKeyboard: false });
+  assert.deepEqual(overlay.props.style[1], { height: 96, transform: [{ translateY: 0 }] });
+  const existing = RoleBottomBar(props);
+  assert.deepEqual(existing.props.style[1], { height: 0, transform: [{ translateY: 204 }] });
+});
+
 test('shared header button keeps the worker menu icon and callback', () => {
   const calls = [];
   const { RoleHeaderButton } = load('shared/navigation/RoleHeaderButton.tsx', {

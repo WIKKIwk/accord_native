@@ -104,8 +104,11 @@ test('receipt reuses the pager and role dock with device, back, profile, history
     connected: false, attention: true, refreshing: false, onDevices: () => x.calls.push('devices'),
     onBack: () => x.calls.push('back'), onRefresh: () => x.calls.push('refresh') });
   assert.equal(tree.type, 'GestureHandlerRootView', 'the standalone receipt route must provide a root for its pager and scroll gestures');
-  assert.equal(nodes(tree, node => node.type === 'KeyboardAvoidingView')[0].props.behavior, 'height');
+  const keyboardArea = nodes(tree, node => node.type === 'KeyboardAvoidingView')[0];
+  assert.equal(keyboardArea.props.behavior, 'height');
+  assert.equal(nodes(keyboardArea, node => node.type === 'PreparationDock').length, 0);
   assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 1);
+  assert.equal(nodes(tree, node => node.type === 'PreparationDock')[0].props.avoidKeyboard, false);
   const bar = nodes(tree, node => node.type === 'OrdersWorkspace')[0];
   assert.deepEqual(bar.props.tabs.map(tab => tab.name), ['Print', 'Print tarixi']);
   bar.props.onSelect('history'); assert.deepEqual(x.calls.at(-1), ['tab', 'history']);
@@ -118,6 +121,43 @@ test('receipt reuses the pager and role dock with device, back, profile, history
   assert.equal(x.gestures[0].requireToFail, pager);
   nodes(history, node => node.type === 'ScrollView')[0].props.refreshControl.props.onRefresh(); assert.equal(x.calls.at(-1), 'refresh');
   assert.equal(field.value, '5');
+});
+
+test('receipt dock stays at the window bottom while the keyboard resizes the scroll area', () => {
+  const x = fixture(), state = [];
+  let cursor = 0;
+  x.mocks.react.useState = initial => {
+    const index = cursor++;
+    if (!(index in state)) state[index] = initial;
+    return [state[index], value => { state[index] = typeof value === 'function' ? value(state[index]) : value; }];
+  };
+  const render = () => {
+    cursor = 0;
+    return x.GScaleReceipt({ session: {}, title: 'Homashyo kirimi', section: 'control', onSelect() {},
+      control: [{ rows: [] }], history: [{ rows: [] }], connected: true, attention: false, refreshing: false,
+      onRefresh() {}, onDevices() {}, onBack() {} });
+  };
+  let tree = render();
+  tree.props.onLayout({ nativeEvent: { layout: { height: 800 } } });
+  tree = render();
+  const dock = nodes(tree, node => node.type === 'View' && node.props.onLayout && nodes(node, child => child.type === 'PreparationDock').length)[0];
+  dock.props.onLayout({ nativeEvent: { layout: { height: 96 } } });
+  tree = render();
+  const check = (height, expectedBottom, expectedMargin) => {
+    const dockView = nodes(tree, node => node.type === 'View' && node.props.onLayout && nodes(node, child => child.type === 'PreparationDock').length)[0];
+    const keyboardArea = nodes(tree, node => node.type === 'KeyboardAvoidingView')[0];
+    assert.equal(dockView.props.style[1].bottom, expectedBottom);
+    assert.equal(keyboardArea.props.style[1].marginBottom, expectedMargin);
+    assert.equal(height - expectedBottom - 96, 704, 'the mounted dock must stay at the same window position');
+    assert.equal(nodes(dockView, node => node.type === 'PreparationDock').length, 1);
+  };
+  check(800, 0, 96);
+  tree.props.onLayout({ nativeEvent: { layout: { height: 500 } } });
+  tree = render(); check(500, -300, 0);
+  tree.props.onLayout({ nativeEvent: { layout: { height: 750 } } });
+  tree = render(); check(750, -50, 46);
+  tree.props.onLayout({ nativeEvent: { layout: { height: 800 } } });
+  tree = render(); check(800, 0, 96);
 });
 
 test('keyboard resize reveals the focused field and a manual drag can scroll without losing focus', async () => {
